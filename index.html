@@ -1269,6 +1269,37 @@
     .login-brand img{width:62px!important}
     .auth-column{gap:12px!important}
   }
+
+
+  /* Correção visual dos campos preenchidos/autocompletados.
+     Impede o Chrome/Edge e o Firefox de trocar o fundo escuro por branco. */
+  .auth-field input,
+  .auth-field input:hover,
+  .auth-field input:active,
+  .auth-field input:focus,
+  .auth-field input:not(:placeholder-shown){
+    background-color:#090b0f!important;
+    color:#fff!important;
+    caret-color:#fff!important;
+    color-scheme:dark;
+  }
+  .auth-field input:-webkit-autofill,
+  .auth-field input:-webkit-autofill:hover,
+  .auth-field input:-webkit-autofill:active,
+  .auth-field input:-webkit-autofill:focus{
+    -webkit-text-fill-color:#fff!important;
+    caret-color:#fff!important;
+    -webkit-box-shadow:0 0 0 1000px #090b0f inset!important;
+    box-shadow:0 0 0 1000px #090b0f inset!important;
+    border-color:rgba(72,143,255,.9)!important;
+    transition:background-color 9999s ease-out 0s;
+  }
+  .auth-field input:-moz-autofill{
+    background-color:#090b0f!important;
+    color:#fff!important;
+    box-shadow:0 0 0 1000px #090b0f inset!important;
+  }
+
 </style>
 
 <link rel="stylesheet" href="/admin/admin.css">
