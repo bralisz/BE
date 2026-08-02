@@ -495,10 +495,23 @@
     const input = document.getElementById('homeSearchInput');
     const logo = document.getElementById('logoBtn');
     const viewButtons = Array.from(document.querySelectorAll('[data-home-view]'));
+    const supportButton = topbar.querySelector('[data-public-action="support"]');
+    const tabButtons = [logo, ...viewButtons, supportButton].filter(Boolean);
     if (!topbar || !toggle || !input || topbar.dataset.homeReady === 'true') return;
     topbar.dataset.homeReady = 'true';
 
     let currentView = 'home';
+
+    const setActiveTab = activeButton => {
+      tabButtons.forEach(button => {
+        const active = button === activeButton;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+        if (button === logo) button.setAttribute('aria-current', active ? 'page' : 'false');
+      });
+    };
+
+    setActiveTab(logo);
 
     const setSearchOpen = open => {
       topbar.classList.toggle('search-open', open);
@@ -568,7 +581,7 @@
     viewButtons.forEach(button => {
       button.addEventListener('click', () => {
         currentView = button.dataset.homeView || 'videos';
-        viewButtons.forEach(item => item.classList.toggle('active', item === button));
+        setActiveTab(button);
         window.dispatchEvent(new Event('be:detail-close'));
         applyCatalogFilter();
         const catalog = document.getElementById('dynamicSections');
@@ -576,9 +589,13 @@
       });
     });
 
+    supportButton?.addEventListener('click', () => {
+      setActiveTab(supportButton);
+    });
+
     logo?.addEventListener('click', () => {
       currentView = 'home';
-      viewButtons.forEach(item => item.classList.remove('active'));
+      setActiveTab(logo);
       input.value = '';
       window.dispatchEvent(new Event('be:detail-close'));
       setSearchOpen(false);

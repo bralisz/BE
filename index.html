@@ -1895,16 +1895,26 @@
     justify-content:center;
     flex:0 0 auto;
     border-radius:999px;
-    background:#fff;
-    box-shadow:0 5px 18px rgba(0,0,0,.25);
+    background:transparent;
+    color:rgba(255,255,255,.76);
+    box-shadow:none;
+    transition:background .32s var(--ease),color .32s ease,box-shadow .32s ease,transform .22s var(--ease);
   }
-  .home-logo-pill:hover{transform:none;filter:brightness(.96)}
+  .home-logo-pill:hover{transform:none;background:rgba(255,255,255,.10)}
+  .home-logo-pill.active{
+    background:#fff;
+    color:#151616;
+    box-shadow:0 7px 22px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.96);
+  }
   .home-logo-pill .logo-mark{
     width:57px;
     height:41px;
     object-fit:contain;
     filter:none;
+    opacity:.78;
+    transition:opacity .28s ease,filter .28s ease;
   }
+  .home-logo-pill.active .logo-mark{opacity:1}
   .home-nav-links{
     display:flex;
     align-items:center;
@@ -1926,10 +1936,14 @@
     white-space:nowrap;
     transition:background .22s ease,color .22s ease,transform .22s var(--ease);
   }
-  .home-nav-link:hover,
-  .home-nav-link.active{
+  .home-nav-link:hover{
     color:#fff;
     background:rgba(255,255,255,.10);
+  }
+  .home-nav-link.active{
+    color:#151616;
+    background:#fff;
+    box-shadow:0 7px 22px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.96);
   }
   .home-nav-link:active{transform:scale(.97)}
 
@@ -2140,12 +2154,46 @@
   .video-catalog{
     position:relative;
     z-index:8;
-    width:100%;
+    isolation:isolate;
+    width:calc(100% - clamp(18px,2.2vw,34px));
     max-width:none;
-    margin:0;
-    /* Catálogo começa logo abaixo do banner, mantendo apenas uma separação curta. */
-    padding:clamp(24px,3.2vw,40px) 0 64px;
-    background:#030405;
+    margin:-38px auto 0;
+    padding:clamp(44px,4.2vw,58px) 0 64px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.16);
+    border-bottom:0;
+    border-radius:34px 34px 0 0;
+    background:
+      linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.018) 38%,rgba(3,4,5,.82) 74%),
+      rgba(7,9,10,.72);
+    -webkit-backdrop-filter:blur(30px) saturate(170%);
+    backdrop-filter:blur(30px) saturate(170%);
+    box-shadow:
+      0 -18px 52px rgba(0,0,0,.34),
+      0 26px 70px rgba(0,0,0,.48),
+      inset 0 1px 0 rgba(255,255,255,.17),
+      inset 0 -1px 0 rgba(255,255,255,.035);
+  }
+  .video-catalog::before{
+    content:'';
+    position:absolute;
+    z-index:-1;
+    inset:0;
+    pointer-events:none;
+    background:
+      radial-gradient(75% 54% at 18% 0%,rgba(255,255,255,.11),transparent 64%),
+      linear-gradient(180deg,rgba(255,255,255,.045),transparent 115px);
+  }
+  .video-catalog::after{
+    content:'';
+    position:absolute;
+    left:34px;
+    right:34px;
+    top:0;
+    height:1px;
+    pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.58) 22%,rgba(255,255,255,.18) 72%,transparent);
+    opacity:.52;
   }
   .video-rail-section{margin-bottom:34px}
   .video-rail-title{margin-left:clamp(24px,4vw,68px);font-size:18px;color:#fff;margin-bottom:11px}
@@ -2341,7 +2389,13 @@
     .detail-desc{font-size:13.5px;max-width:95%}
     .detail-actions{gap:10px}
     .detail-play,.detail-list{height:43px;padding:0 18px;font-size:14px}
-    .video-catalog{margin-top:0;padding-top:22px;background:#030405}
+    .video-catalog{
+      width:calc(100% - 12px);
+      margin-top:-26px;
+      padding-top:38px;
+      border-radius:26px 26px 0 0;
+    }
+    .video-catalog::after{left:22px;right:22px}
     .video-rail-title{font-size:17px}
     .video-card{flex-basis:clamp(210px,58vw,270px)}
   }
@@ -2480,7 +2534,7 @@
 <div class="topbar-wrap">
   <nav class="topbar home-topbar" id="topbar" aria-label="Navegação principal">
     <div class="home-nav-leading" id="homeNavLeading">
-      <button class="logo-btn home-logo-pill active" id="logoBtn" type="button" aria-label="BE — voltar para a Home" aria-current="page">
+      <button class="logo-btn home-logo-pill active" id="logoBtn" type="button" aria-label="BE — voltar para a Home" aria-current="page" aria-pressed="true">
         <img src="assets/logo.png" alt="BE" class="logo-mark">
       </button>
       <div class="home-nav-links" id="homeNavLinks">

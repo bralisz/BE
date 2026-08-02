@@ -1,0 +1,7 @@
+ATUALIZAÇÃO — GLASS NO DESTAQUE E TAB ATIVA
+
+- A linha reta entre o banner e a seção Destaque foi substituída por um painel arredondado.
+- A seção recebeu efeito glass inspirado no iPhone, com desfoque, brilho superior e transparência.
+- O painel sobrepõe levemente a imagem do banner para remover a divisão dura.
+- O fundo branco da navegação acompanha a opção selecionada: Início, Filmes, Vídeos ou Suporte.
+- O estado ativo mantém texto escuro e sombra suave para facilitar a leitura.
