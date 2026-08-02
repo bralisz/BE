@@ -1,9 +1,0 @@
-ATUALIZAÇÃO — HOME / AVATAR / DESTAQUE
-
-- Avatar reposicionado para a extrema superior direita da tela.
-- Avatar retirado de dentro da barra com blur para não sobrepor a lupa.
-- Barra superior ficou compacta: Suporte e lupa agora permanecem lado a lado, sem espaço vazio.
-- Informações do banner principal foram deslocadas um pouco para baixo.
-- Criada a seção fixa "Destaque" abaixo do banner.
-- Os cards dessa seção usam os vídeos selecionados como Destaque no dashboard.
-- Ajustes responsivos também aplicados em tablet e celular.
