@@ -77,7 +77,17 @@
 
 
   function adminLoginBackgroundMarkup() {
-    return `<div class="admin-login-bg" aria-hidden="true"><div class="admin-login-bg-slide active" style="background-image:url('/assets/login-admin-banner.jpg')"></div></div>`;
+    const backgrounds = [
+      '/assets/login-admin-banner.jpg',
+      '/assets/login-bg-1.png',
+      '/assets/login-bg-2.png',
+      '/assets/login-bg-3.png',
+      '/assets/login-bg-4.png',
+      '/assets/login-bg-5.png',
+      '/assets/login-bg-6.png',
+      '/assets/login-bg-7.png'
+    ];
+    return `<div class="admin-login-bg" aria-hidden="true">${backgrounds.map((src, index) => `<div class="admin-login-bg-slide ${index === 0 ? 'active' : ''}" style="background-image:url('${src}')"></div>`).join('')}</div>`;
   }
 
   function startAdminLoginBackground() {
@@ -85,18 +95,36 @@
     const slides = [...document.querySelectorAll('.admin-login-bg-slide')];
     const dots = [...document.querySelectorAll('.admin-login-dot')];
     if (!slides.length) return;
-    let active = 0;
+    const randomIndex = except => {
+      if (slides.length < 2) return 0;
+      let next = except;
+      while (next === except) {
+        if (window.crypto && window.crypto.getRandomValues) {
+          const value = new Uint32Array(1);
+          window.crypto.getRandomValues(value);
+          next = value[0] % slides.length;
+        } else {
+          next = Math.floor(Math.random() * slides.length);
+        }
+      }
+      return next;
+    };
+    let active = randomIndex(-1);
     const show = index => {
       active = (index + slides.length) % slides.length;
       slides.forEach((slide, slideIndex) => slide.classList.toggle('active', slideIndex === active));
       dots.forEach((dot, dotIndex) => dot.classList.toggle('active', dotIndex === active));
     };
+    const restart = () => {
+      if (adminLoginBgTimer) clearInterval(adminLoginBgTimer);
+      adminLoginBgTimer = setInterval(() => show(randomIndex(active)), 10000);
+    };
     dots.forEach(dot => dot.addEventListener('click', () => {
       show(Number(dot.dataset.adminBg || 0));
-      if (adminLoginBgTimer) clearInterval(adminLoginBgTimer);
-      adminLoginBgTimer = setInterval(() => show(active + 1), 20000);
+      restart();
     }));
-    adminLoginBgTimer = setInterval(() => show(active + 1), 20000);
+    show(active);
+    restart();
   }
 
   async function bootBackend() {
@@ -202,9 +230,11 @@
   function render() {
     if (!adminRoute()) {
       document.body.classList.remove('admin-mode');
+      document.documentElement.classList.remove('admin-mode');
       return;
     }
     document.body.classList.add('admin-mode');
+    document.documentElement.classList.add('admin-mode');
     if (!authReady) {
       document.body.innerHTML = '<div class="admin-loader">Verificando acesso…</div>';
       return;
@@ -250,6 +280,10 @@
   }
 
   function renderShell() {
+    if (adminLoginBgTimer) {
+      clearInterval(adminLoginBgTimer);
+      adminLoginBgTimer = null;
+    }
     const routes = ['dashboard','featured','sections','contents','gallery','users','settings'];
     const accountAvatar = user.photoURL
       ? `<img src="${esc(user.photoURL)}" alt="Foto de ${esc(user.displayName || 'usuário')}">`
@@ -667,6 +701,7 @@
       authReady = true;
       if (adminRoute()) {
         document.body.classList.add('admin-mode');
+        document.documentElement.classList.add('admin-mode');
         document.body.innerHTML = `<div class="admin-login"><div class="login-card"><h1>Backend não inicializado</h1><p>${esc(error.message)}</p><button class="a-btn primary" onclick="location.reload()">Tentar novamente</button></div></div>`;
       }
       console.error('Falha ao iniciar o backend:', error);

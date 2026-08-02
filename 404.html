@@ -25,7 +25,7 @@
       min-height:100svh;
       overflow:hidden;
       color:var(--text);
-      background:#090b10 url('/assets/404-bg.png') center 48% / cover no-repeat fixed;
+      background:#090b10 url('/assets/404-bg.png') 62% 48% / cover no-repeat fixed;
       font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     }
     body::before{
@@ -80,7 +80,7 @@
     }
     .eyebrow{display:flex;align-items:center;gap:10px;margin:0 0 22px;color:rgba(255,255,255,.62);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
     .eyebrow::before{content:"";width:28px;height:1px;background:rgba(255,255,255,.48)}
-    .code{margin:0;font-size:clamp(78px,12vw,132px);font-weight:850;line-height:.78;letter-spacing:-.085em;text-shadow:0 12px 34px rgba(0,0,0,.28)}
+    .code{margin:4px 0 0;font-size:clamp(78px,12vw,132px);font-weight:850;line-height:.78;letter-spacing:-.085em;text-shadow:0 12px 34px rgba(0,0,0,.28)}
     h1{margin:28px 0 12px;font-size:clamp(30px,4vw,43px);line-height:1.04;letter-spacing:-.045em}
     p{margin:0;color:var(--muted);font-size:15.5px;line-height:1.65}
     .actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:30px}
@@ -107,8 +107,11 @@
     .button.primary:hover{background:#5797fb}
     .button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
     .footer{justify-self:end;color:rgba(255,255,255,.45);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+    @media(min-width:761px) and (min-aspect-ratio:16/10){
+      body{background-size:108% auto;background-position:62% 48%}
+    }
     @media(max-width:760px){
-      body{overflow:auto;background-position:42% center;background-attachment:scroll}
+      body{overflow:auto;background-position:42% center;background-attachment:scroll;background-size:cover}
       body::before{background:linear-gradient(180deg,rgba(3,5,8,.25),rgba(3,5,8,.74))}
       .page{width:calc(100% - 24px);min-height:100svh}
       .brand{width:64px;height:58px;border-radius:19px}.brand img{width:48px;height:45px}
@@ -128,7 +131,6 @@
 
     <section class="content" aria-labelledby="error-title">
       <div class="card">
-        <div class="eyebrow">Erro de navegação</div>
         <div class="code" aria-hidden="true">404</div>
         <h1 id="error-title">Essa página saiu do roteiro.</h1>
         <p>O endereço pode ter mudado, sido removido ou nunca ter existido. Volte ao início para continuar explorando o site.</p>

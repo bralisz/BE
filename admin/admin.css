@@ -415,3 +415,30 @@ button:focus-visible,a:focus-visible{outline:2px solid rgba(139,185,255,.88)!imp
 @media(max-width:600px){
   .admin-login-bg-slide{background-position:46% center!important}
 }
+
+
+/* Correção final: impede o painel de deslocar e revelar uma faixa branca ao puxar o scroll acima do topo. */
+html.admin-mode{
+  min-height:100%;
+  background:#05070b;
+  overscroll-behavior:none;
+  scrollbar-gutter:stable;
+}
+html.admin-mode body.admin-mode{
+  min-height:100dvh;
+  width:100%;
+  overflow-x:hidden;
+  overscroll-behavior:none;
+  background:#05070b!important;
+}
+body.admin-mode .admin-shell{
+  position:relative;
+  min-height:100dvh;
+  background:
+    radial-gradient(ellipse 920px 620px at 16% -10%,rgba(255,255,255,.05),transparent 64%),
+    linear-gradient(180deg,#090b10,#040508);
+}
+body.admin-mode .admin-topbar{
+  top:0;
+  transform:translateZ(0);
+}
