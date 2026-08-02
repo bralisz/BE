@@ -2,14 +2,14 @@
   'use strict';
 
   const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','users'];
-  const LABELS = {dashboard:'Visão geral',featured:'Destaques',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Notícias',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
+  const LABELS = {dashboard:'Visão geral',featured:'Destaques',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
   const ADMIN_EMAIL = 'bralisofc@gmail.com';
   const CONTENT_CATEGORIES = [
     ['videos','Vídeos','▣'],
     ['movies','Filmes','▤'],
     ['series','Séries','▥'],
     ['shows','Shows','◉'],
-    ['news','Notícias','▦']
+    ['news','Álbuns','▦']
   ];
 
   let auth, db, user = null, authReady = false, loginBusy = false, adminLoginBgTimer = null;
@@ -391,7 +391,7 @@
     };
     const logHtml = recent.length ? recent.map(item => `<div class="activity-item"><span></span><div><strong>${esc(item.summary || item.action || 'Atividade registrada')}</strong><small>${formatDateTime(item.createdAt)}</small></div></div>`).join('') : '<div class="empty">Nenhuma atividade registrada.</div>';
 
-    content.innerHTML = `<section class="dashboard-hero"><div class="dashboard-copy"><h1>Painel de conteúdo</h1><p>Gerencie todas as áreas do site com facilidade.<br>Crie, edite, organize e publique conteúdos.</p><div class="dashboard-stats"><article><i>▤</i><div><strong>${counts.news || 0}</strong><span>Notícias publicadas</span></div></article><article><i>▣</i><div><strong>${counts.videos || 0}</strong><span>Vídeos cadastrados</span></div></article><article><i>◉</i><div><strong>${(counts.featured || 0) + (counts.sections || 0)}</strong><span>Destaques e seções</span></div></article></div></div></section><section class="dashboard-workspace"><div class="dashboard-side-column"><aside class="dashboard-side"><h2>Conteúdo</h2><button class="a-btn primary side-new" id="dashboardNewContent">＋ Novo conteúdo</button>${CONTENT_CATEGORIES.map((item, index) => `<button class="side-link ${index === 0 ? 'active' : ''}" data-route="contents/${item[0]}">${item[1]}<span>${counts[item[0]] || 0}</span></button>`).join('')}</aside><aside class="activity-log"><h2>Log de atividade</h2><div class="activity-list">${logHtml}</div></aside></div><div class="dashboard-panel"><div class="panel-head"><div><h2>Visão geral do conteúdo</h2><p>Veja os principais dados de acesso e engajamento dos vídeos.</p></div><button class="a-btn" data-route="contents">Ver conteúdos</button></div><div class="content-summary analytics-grid">${analyticsCard('Vídeo mais clicado', clicked, '↗')}${analyticsCard('Vídeo mais salvo', saved, '♡')}${analyticsCard('Vídeo mais visto', viewed, '◉')}<article class="analytics-card simple"><div class="analytics-label"><i>♙</i><span>Quantidade de usuários</span></div><strong class="analytics-number">${counts.users || 0}</strong><small>usuários cadastrados</small></article><article class="analytics-card simple"><div class="analytics-label"><i>▣</i><span>Total de vídeos vinculados</span></div><strong class="analytics-number">${counts.videos || 0}</strong><small>vídeos disponíveis no site</small></article><article class="analytics-card simple"><div class="analytics-label"><i>⌁</i><span>Total de interações</span></div><strong class="analytics-number">${totalInteractions.toLocaleString('pt-BR')}</strong><small>cliques, salvamentos e visualizações</small></article></div></div></section>`;
+    content.innerHTML = `<section class="dashboard-hero"><div class="dashboard-copy"><h1>Painel de conteúdo</h1><p>Gerencie todas as áreas do site com facilidade.<br>Crie, edite, organize e publique conteúdos.</p><div class="dashboard-stats"><article><i>▤</i><div><strong>${counts.news || 0}</strong><span>Álbuns cadastrados</span></div></article><article><i>▣</i><div><strong>${counts.videos || 0}</strong><span>Vídeos cadastrados</span></div></article><article><i>◉</i><div><strong>${(counts.featured || 0) + (counts.sections || 0)}</strong><span>Destaques e seções</span></div></article></div></div></section><section class="dashboard-workspace"><div class="dashboard-side-column"><aside class="dashboard-side"><h2>Conteúdo</h2><button class="a-btn primary side-new" id="dashboardNewContent">＋ Novo conteúdo</button>${CONTENT_CATEGORIES.map((item, index) => `<button class="side-link ${index === 0 ? 'active' : ''}" data-route="contents/${item[0]}">${item[1]}<span>${counts[item[0]] || 0}</span></button>`).join('')}</aside><aside class="activity-log"><h2>Log de atividade</h2><div class="activity-list">${logHtml}</div></aside></div><div class="dashboard-panel"><div class="panel-head"><div><h2>Visão geral do conteúdo</h2><p>Veja os principais dados de acesso e engajamento dos vídeos.</p></div><button class="a-btn" data-route="contents">Ver conteúdos</button></div><div class="content-summary analytics-grid">${analyticsCard('Vídeo mais clicado', clicked, '↗')}${analyticsCard('Vídeo mais salvo', saved, '♡')}${analyticsCard('Vídeo mais visto', viewed, '◉')}<article class="analytics-card simple"><div class="analytics-label"><i>♙</i><span>Quantidade de usuários</span></div><strong class="analytics-number">${counts.users || 0}</strong><small>usuários cadastrados</small></article><article class="analytics-card simple"><div class="analytics-label"><i>▣</i><span>Total de vídeos vinculados</span></div><strong class="analytics-number">${counts.videos || 0}</strong><small>vídeos disponíveis no site</small></article><article class="analytics-card simple"><div class="analytics-label"><i>⌁</i><span>Total de interações</span></div><strong class="analytics-number">${totalInteractions.toLocaleString('pt-BR')}</strong><small>cliques, salvamentos e visualizações</small></article></div></div></section>`;
     $('#dashboardNewContent').onclick = chooseContentCategory;
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
   }
@@ -399,7 +399,7 @@
   function chooseContentCategory() {
     const wrap = document.createElement('div');
     wrap.className = 'modal-backdrop';
-    wrap.innerHTML = `<div class="modal category-modal"><h2>Adicionar conteúdo</h2><p class="category-help">Escolha em qual categoria o novo conteúdo será cadastrado.</p><div class="category-picker">${CONTENT_CATEGORIES.map(([key,label,icon]) => `<button type="button" data-category="${key}"><i>${icon}</i><span>${label}</span><small>Criar novo item</small></button>`).join('')}</div><div class="modal-actions"><button type="button" class="a-btn" id="cancelCategory">Cancelar</button></div></div>`;
+    wrap.innerHTML = `<div class="modal category-modal"><h2>Adicionar conteúdo</h2><p class="category-help">Escolha em qual categoria o novo conteúdo será cadastrado.</p><div class="category-picker">${CONTENT_CATEGORIES.map(([key,label,icon]) => `<button type="button" data-category="${key}" ${key === 'news' ? 'disabled aria-disabled="true"' : ''}><i>${icon}</i><span>${label}</span><small>${key === 'news' ? 'Em breve' : 'Criar novo item'}</small></button>`).join('')}</div><div class="modal-actions"><button type="button" class="a-btn" id="cancelCategory">Cancelar</button></div></div>`;
     document.body.append(wrap);
     $('#cancelCategory').onclick = () => wrap.remove();
     wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
@@ -417,8 +417,8 @@
     const counts = {};
     await Promise.all(CONTENT_CATEGORIES.map(async ([key]) => { counts[key] = await countCollection(key).catch(() => 0); }));
     const label = LABELS[active] || active;
-    content.innerHTML = `<div class="admin-title-row content-title-row"><div><span class="dashboard-kicker">Conteúdos</span><h1>${esc(label)}</h1><p>Gerencie os conteúdos separados por categoria.</p></div><button class="a-btn primary" id="newContent">+ Adicionar conteúdo</button></div><section class="content-manager"><aside class="content-category-sidebar"><h2>Categorias</h2>${CONTENT_CATEGORIES.map(([key,categoryLabel,icon]) => `<button class="content-category-link ${key === active ? 'active' : ''}" data-content-category="${key}"><i>${icon}</i><span>${categoryLabel}</span><b>${counts[key] || 0}</b></button>`).join('')}</aside><div class="content-category-panel"><div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por título…"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="empty">Carregando…</div></div></div></section>`;
-    $('#newContent').onclick = chooseContentCategory;
+    content.innerHTML = `<div class="admin-title-row content-title-row"><div><span class="dashboard-kicker">Conteúdos</span><h1>${esc(label)}</h1><p>Gerencie os conteúdos separados por categoria.</p></div><button class="a-btn primary" id="newContent" ${active === 'news' ? 'disabled' : ''}>${active === 'news' ? 'Álbuns em breve' : '+ Adicionar conteúdo'}</button></div><section class="content-manager"><aside class="content-category-sidebar"><h2>Categorias</h2>${CONTENT_CATEGORIES.map(([key,categoryLabel,icon]) => `<button class="content-category-link ${key === active ? 'active' : ''}" data-content-category="${key}"><i>${icon}</i><span>${categoryLabel}</span><b>${counts[key] || 0}</b></button>`).join('')}</aside><div class="content-category-panel"><div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por título…"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="empty">Carregando…</div></div></div></section>`;
+    if ($('#newContent') && active !== 'news') $('#newContent').onclick = chooseContentCategory;
     document.querySelectorAll('[data-content-category]').forEach(button => button.onclick = () => go('contents/' + button.dataset.contentCategory));
     const items = await db.list(active, { orderBy: 'order', direction: 'asc' });
     const draw = () => {
@@ -432,6 +432,20 @@
     $('#search').oninput = draw;
     $('#statusFilter').onchange = draw;
     draw();
+
+    try {
+      const pendingEditor = JSON.parse(sessionStorage.getItem(ACTIVE_CONTENT_EDITOR_KEY) || 'null');
+      if (pendingEditor?.name === active && MODERN_CONTENT_COLLECTIONS.has(active) && !document.querySelector('.content-editor-modal')) {
+        const pendingItem = pendingEditor.itemId === 'new' ? null : items.find(entry => String(entry.id) === String(pendingEditor.itemId));
+        const pendingKey = contentDraftKey(active, pendingItem);
+        if (localStorage.getItem(pendingKey)) {
+          sessionStorage.removeItem(ACTIVE_CONTENT_EDITOR_KEY);
+          setTimeout(() => openEditor(active, pendingItem), 80);
+        } else {
+          sessionStorage.removeItem(ACTIVE_CONTENT_EDITOR_KEY);
+        }
+      }
+    } catch (_) {}
   }
 
   async function galleryPage() {
@@ -704,8 +718,219 @@
     });
   }
 
+
+  const CONTENT_DRAFT_PREFIX = 'be_admin_content_draft_v3';
+  const ACTIVE_CONTENT_EDITOR_KEY = 'be_admin_active_content_editor_v1';
+  const MODERN_CONTENT_COLLECTIONS = new Set(['videos','movies','series','shows']);
+
+  function contentDraftKey(name, item) {
+    return `${CONTENT_DRAFT_PREFIX}:${name}:${item?.id || 'new'}`;
+  }
+
+  function rememberActiveContentEditor(name, item) {
+    try {
+      sessionStorage.setItem(ACTIVE_CONTENT_EDITOR_KEY, JSON.stringify({ name, itemId: item?.id || 'new' }));
+    } catch (_) {}
+  }
+
+  function clearActiveContentEditor(name, item) {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(ACTIVE_CONTENT_EDITOR_KEY) || 'null');
+      if (!saved || (saved.name === name && String(saved.itemId || 'new') === String(item?.id || 'new'))) {
+        sessionStorage.removeItem(ACTIVE_CONTENT_EDITOR_KEY);
+      }
+    } catch (_) {
+      try { sessionStorage.removeItem(ACTIVE_CONTENT_EDITOR_KEY); } catch (_) {}
+    }
+  }
+
+  function readContentDraft(name, item) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(contentDraftKey(name, item)) || 'null');
+      if (!parsed || !parsed.data || parsed.name !== name) return null;
+      if (item?.updatedAt && parsed.baseUpdatedAt && new Date(item.updatedAt).getTime() > new Date(parsed.baseUpdatedAt).getTime()) return null;
+      return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function normalizedDraftData(data = {}) {
+    const copy = { ...data };
+    if ('active' in copy) copy.active = String(copy.active) !== 'false';
+    if ('order' in copy) copy.order = Number(copy.order) || 0;
+    return copy;
+  }
+
+  function modernContentEditorFields(name, item = {}, context = {}) {
+    const sections = context.sections || [];
+    const sectionLinked = ['videos','movies','series'].includes(name);
+    const isVisualTitle = ['movies','series'].includes(name);
+    const currentSection = sections.find(section => String(section.id) === String(item.sectionId || '')) || sections.find(section => {
+      const keys = [section.title, section.category, section.slug, section.id].map(value => String(value || '').trim().toLowerCase());
+      return [item.type, item.category, item.sectionName, item.sectionSearch].some(value => value && keys.includes(String(value).trim().toLowerCase()));
+    });
+    const sectionOptions = sections.map(section => `<option value="${esc(section.title || section.category || section.id)}"></option>`).join('');
+    const publicId = normalizePublicId(item.publicId) || generatePublicId(item.id || '');
+    const categoryName = LABELS[name] || 'Conteúdo';
+
+    return `<div class="content-editor-fields">
+      <section class="editor-field-group">
+        <div class="editor-group-heading"><span>01</span><div><h3>Informações principais</h3><p>Defina como o conteúdo será identificado e organizado.</p></div></div>
+        <div class="form-grid modern-form-grid">
+          <div class="field full"><label>${isVisualTitle ? 'Título interno / busca *' : 'Título *'}</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}" placeholder="Digite o título do conteúdo">${isVisualTitle ? '<small>O título visual no site será a logo. Este texto é usado na busca e no painel.</small>' : ''}</div>
+          ${sectionLinked ? `<div class="field full"><label>Seção do site *</label><input class="a-input" id="contentSectionSearch" name="sectionSearch" list="createdSectionsList" required autocomplete="off" value="${esc(currentSection?.title || currentSection?.category || item.sectionSearch || '')}" placeholder="Selecione uma seção criada"><input type="hidden" id="contentSectionId" name="sectionId" value="${esc(currentSection?.id || item.sectionId || '')}"><datalist id="createdSectionsList">${sectionOptions}</datalist><small>O conteúdo aparecerá automaticamente na seção escolhida.</small></div>` : `<div class="field full"><label>Tipo</label><input class="a-input" name="type" value="${esc(item.type || categoryName)}" placeholder="Ex.: Performance, documentário"></div>`}
+          <div class="field full"><label>Descrição</label><textarea class="a-textarea" rows="5" maxlength="1000" name="description" placeholder="Escreva uma descrição curta para o site">${esc(item.description || '')}</textarea><div class="field-counter"><span data-description-count>0</span>/1000</div></div>
+        </div>
+      </section>
+
+      <section class="editor-field-group">
+        <div class="editor-group-heading"><span>02</span><div><h3>Imagens e reprodução</h3><p>Use imagens nítidas; a prévia ao lado atualiza em tempo real.</p></div></div>
+        <div class="form-grid modern-form-grid">
+          ${imageField(isVisualTitle ? 'Imagem / thumbnail *' : 'Imagem / thumbnail *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}
+          ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
+          <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
+        </div>
+      </section>
+
+      <section class="editor-field-group">
+        <div class="editor-group-heading"><span>03</span><div><h3>Publicação</h3><p>Complete os detalhes e escolha quando o item ficará visível.</p></div></div>
+        <div class="form-grid modern-form-grid compact-fields">
+          <div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}" inputmode="numeric" placeholder="2026"></div>
+          <div class="field"><label>Duração</label><input class="a-input" name="duration" value="${esc(item.duration || item.videoDuration || item.runtime || '')}" placeholder="1h 42min"></div>
+          <div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>
+          <div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div>
+          ${name === 'videos' ? `<div class="field full"><label>ID público</label><div class="public-id-row"><input class="a-input" name="publicId" value="${esc(publicId)}" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" readonly><span>/${esc(publicId)}</span></div><small>O endereço público é criado automaticamente.</small></div>` : ''}
+        </div>
+      </section>
+    </div>`;
+  }
+
+  function modernContentPreview(name) {
+    const label = ({ videos:'Vídeo', movies:'Filme', series:'Série', shows:'Show' })[name] || 'Conteúdo';
+    return `<aside class="content-live-preview" aria-label="Prévia do conteúdo">
+      <div class="preview-pane-heading"><div><span>Preview ao vivo</span><strong>Como ficará no site</strong></div><i data-draft-indicator>Rascunho protegido</i></div>
+      <div class="editor-site-preview">
+        <div class="editor-preview-hero" data-preview-hero>
+          <div class="editor-preview-shade"></div>
+          <div class="editor-preview-copy">
+            <span class="editor-preview-type">${label}</span>
+            <div class="editor-preview-logo" data-preview-logo>Seu título</div>
+            <div class="editor-preview-meta"><span data-preview-duration>Duração</span><b></b><span data-preview-year>Ano</span></div>
+            <p data-preview-description>A descrição aparecerá aqui conforme você digitar.</p>
+            <button type="button" tabindex="-1"><span>▶</span> Assistir</button>
+          </div>
+        </div>
+        <div class="editor-preview-rail">
+          <small>Card da seção</small>
+          <div class="editor-preview-card" data-preview-card><span>Imagem do conteúdo</span></div>
+        </div>
+      </div>
+      <div class="preview-help"><span>✓</span><p>A prévia é atualizada enquanto você edita. O rascunho é salvo no navegador ao trocar de aba ou recarregar a página.</p></div>
+    </aside>`;
+  }
+
+  function setupModernContentEditor(root, name, item, draftKey, restoredDraft) {
+    const form = $('#editorForm', root);
+    if (!form) return { clearDraft() {} };
+    const status = $('[data-editor-draft-status]', root);
+    const indicator = $('[data-draft-indicator]', root);
+    const description = form.elements.description;
+    const descriptionCount = $('[data-description-count]', root);
+    const hero = $('[data-preview-hero]', root);
+    const previewLogo = $('[data-preview-logo]', root);
+    const previewDescription = $('[data-preview-description]', root);
+    const previewYear = $('[data-preview-year]', root);
+    const previewDuration = $('[data-preview-duration]', root);
+    const previewCard = $('[data-preview-card]', root);
+    let timer = null;
+    let dirty = Boolean(restoredDraft);
+
+    const fieldValue = name => String(form.elements[name]?.value || '').trim();
+    const setPreviewImage = (element, value, fallback) => {
+      element.style.backgroundImage = value ? `url("${value.replace(/"/g, '%22')}")` : '';
+      element.classList.toggle('has-image', Boolean(value));
+      if (fallback) {
+        const child = element.querySelector('span');
+        if (child) child.textContent = value ? '' : fallback;
+      }
+    };
+    const updatePreview = () => {
+      const title = fieldValue('title') || 'Seu título';
+      const image = fieldValue('imageUrl');
+      const logo = fieldValue('logoUrl');
+      const year = fieldValue('year') || 'Ano';
+      const duration = fieldValue('duration') || 'Duração';
+      const descriptionText = fieldValue('description') || 'A descrição aparecerá aqui conforme você digitar.';
+      setPreviewImage(hero, image, '');
+      setPreviewImage(previewCard, image, 'Imagem do conteúdo');
+      if (['movies','series'].includes(name) && logo) {
+        previewLogo.innerHTML = `<img src="${esc(logo)}" alt="${esc(title)}">`;
+      } else {
+        previewLogo.textContent = title;
+      }
+      previewDescription.textContent = descriptionText;
+      previewYear.textContent = year;
+      previewDuration.textContent = duration;
+      if (descriptionCount && description) descriptionCount.textContent = String(description.value.length);
+    };
+    const snapshot = () => Object.fromEntries(new FormData(form).entries());
+    const saveDraft = immediate => {
+      if (timer) clearTimeout(timer);
+      const execute = () => {
+        try {
+          localStorage.setItem(draftKey, JSON.stringify({
+            name,
+            data: snapshot(),
+            baseUpdatedAt: item?.updatedAt || '',
+            savedAt: new Date().toISOString()
+          }));
+          if (status) status.textContent = 'Rascunho salvo agora';
+          if (indicator) indicator.textContent = 'Rascunho salvo';
+        } catch (_) {
+          if (status) status.textContent = 'Não foi possível salvar o rascunho';
+        }
+      };
+      if (immediate) execute(); else timer = setTimeout(execute, 350);
+    };
+    const onInput = () => {
+      dirty = true;
+      updatePreview();
+      if (status) status.textContent = 'Salvando rascunho…';
+      if (indicator) indicator.textContent = 'Salvando…';
+      saveDraft(false);
+    };
+    form.addEventListener('input', onInput);
+    form.addEventListener('change', onInput);
+    const onVisibility = () => { if (document.visibilityState === 'hidden' && dirty) saveDraft(true); };
+    const onPageHide = () => { if (dirty) saveDraft(true); };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
+    updatePreview();
+    if (restoredDraft) {
+      if (status) status.textContent = 'Rascunho anterior restaurado';
+      if (indicator) indicator.textContent = 'Rascunho restaurado';
+      setTimeout(() => toast('Seu rascunho foi restaurado.'), 100);
+    }
+    return {
+      saveNow() { saveDraft(true); },
+      clearDraft() {
+        if (timer) clearTimeout(timer);
+        localStorage.removeItem(draftKey);
+        clearActiveContentEditor(name, item);
+        document.removeEventListener('visibilitychange', onVisibility);
+        window.removeEventListener('pagehide', onPageHide);
+      }
+    };
+  }
+
   async function openEditor(name, item = null, defaults = {}) {
-    const draft = item ? { ...item } : { ...defaults };
+    if (name === 'news') {
+      toast('A área de Álbuns será configurada em uma próxima etapa.');
+      return;
+    }
+    const storedDraft = MODERN_CONTENT_COLLECTIONS.has(name) ? readContentDraft(name, item) : null;
+    const draft = { ...(item ? { ...item } : { ...defaults }), ...(storedDraft ? normalizedDraftData(storedDraft.data) : {}) };
     if (name === 'videos' && !normalizePublicId(draft.publicId)) draft.publicId = generatePublicId(item?.id || '');
     if (name === 'featured' && !item) {
       const active = (await db.list('featured')).filter(entry => entry.active !== false);
@@ -743,13 +968,20 @@
     }
 
     const wrap = document.createElement('div');
-    wrap.className = 'modal-backdrop';
-    wrap.innerHTML = `<div class="modal ${name === 'featured' ? 'featured-editor-modal' : ''}"><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><form id="editorForm">${editorFields(name, draft, context)}<div class="modal-actions"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">Salvar</button></div></form></div>`;
+    const modernEditor = MODERN_CONTENT_COLLECTIONS.has(name);
+    const draftKey = contentDraftKey(name, item);
+    wrap.className = `modal-backdrop ${modernEditor ? 'content-editor-backdrop' : ''}`;
+    wrap.innerHTML = modernEditor
+      ? `<div class="modal content-editor-modal"><header class="content-editor-header"><div><span class="dashboard-kicker">${item ? 'Editar conteúdo' : 'Novo conteúdo'}</span><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><p>Organize as informações e acompanhe a aparência no site em tempo real.</p></div><div class="editor-header-status"><span class="editor-save-dot"></span><small data-editor-draft-status>${storedDraft ? 'Rascunho anterior encontrado' : 'Rascunho protegido no navegador'}</small></div></header><form id="editorForm" class="modern-content-form"><div class="content-editor-layout">${modernContentEditorFields(name, draft, context)}${modernContentPreview(name)}</div><div class="content-editor-actions"><div><strong>${item ? 'Alterações ainda não publicadas' : 'Novo conteúdo não publicado'}</strong><small>Salvar publica os dados no banco. O rascunho local evita perdas.</small></div><div class="content-editor-action-buttons"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">${item ? 'Salvar alterações' : 'Publicar conteúdo'}</button></div></div></form></div>`
+      : `<div class="modal ${name === 'featured' ? 'featured-editor-modal' : ''}"><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><form id="editorForm">${editorFields(name, draft, context)}<div class="modal-actions"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">Salvar</button></div></form></div>`;
     document.body.append(wrap);
-    $('#cancelModal').onclick = () => wrap.remove();
-    wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
+    if (modernEditor) rememberActiveContentEditor(name, item);
+    let draftController = { clearDraft() {}, saveNow() {} };
+    $('#cancelModal').onclick = () => { draftController.clearDraft(); wrap.remove(); };
+    if (!modernEditor) wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
     setupImagePreviews(wrap);
     if (name === 'featured') setupFeaturedContentPicker(wrap, context, draft);
+    if (modernEditor) draftController = setupModernContentEditor(wrap, name, item, draftKey, storedDraft);
 
     if (['videos','movies','series'].includes(name)) {
       const search = $('#contentSectionSearch', wrap);
@@ -854,12 +1086,13 @@
         const saved = item ? await db.set(name, item.id, data, { merge: true }) : await db.add(name, data);
         await logAction(item ? 'content_updated' : 'content_created', name, saved.id, `${LABELS[name] || name}: ${name === 'gallery' ? (data.itemType === 'banner' ? 'Banner' : data.category || 'Avatar') : data.title}`);
         toast('Salvo com sucesso.');
+        draftController.clearDraft();
         wrap.remove();
         loadPage();
       } catch (error) {
         toast(error.message, 'err');
         button.disabled = false;
-        button.textContent = 'Salvar';
+        button.textContent = modernEditor ? (item ? 'Salvar alterações' : 'Publicar conteúdo') : 'Salvar';
       }
     };
   }

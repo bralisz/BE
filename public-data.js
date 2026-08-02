@@ -211,6 +211,7 @@
       featuredBlock.className = 'video-rail-section featured-video-rail';
       featuredBlock.dataset.category = 'destaque';
       featuredBlock.dataset.collection = 'mixed';
+      featuredBlock.dataset.homeView = 'default';
       featuredBlock.innerHTML = `
         <a class="video-rail-title" href="#" aria-label="Ver todos: Destaque">
           <span>Destaque</span>
@@ -230,6 +231,37 @@
       host.append(featuredBlock);
       setupRail(featuredBlock);
     }
+
+
+    const appendLibrarySection = (title, collection, items) => {
+      const block = document.createElement('section');
+      block.className = 'video-rail-section film-library-section';
+      block.dataset.category = normalizeText(title);
+      block.dataset.collection = collection;
+      block.dataset.homeView = 'films';
+      block.hidden = true;
+      block.innerHTML = `
+        <a class="video-rail-title" href="#" aria-label="Ver todos: ${escapeHtml(title)}">
+          <span>${escapeHtml(title)}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+        <div class="video-rail-shell">
+          <button class="video-rail-arrow prev" type="button" aria-label="Ver conteúdos anteriores" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="video-rail" tabindex="0" aria-label="${escapeHtml(title)}">
+            ${items.length ? items.map(item => videoCard({ ...item, collection })).join('') : `<p class="video-rail-empty">Nenhum ${collection === 'movies' ? 'filme' : 'série'} publicado.</p>`}
+          </div>
+          <button class="video-rail-arrow next" type="button" aria-label="Ver mais conteúdos">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>`;
+      host.append(block);
+      setupRail(block);
+    };
+
+    appendLibrarySection('Filmes', 'movies', allMovies);
+    appendLibrarySection('Séries', 'series', allSeries);
 
     const normalizeSectionValue = value => normalizeText(String(value || '').replace(/-/g, ' '));
     const belongsToSection = (item, section, legacyIds, collection) => {
@@ -281,6 +313,7 @@
       block.className = 'video-rail-section';
       block.dataset.category = normalizeText(category);
       block.dataset.collection = 'mixed';
+      block.dataset.homeView = 'default';
       block.innerHTML = `
         <a class="video-rail-title" href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
           <span>${escapeHtml(section.title || 'Seção')}</span>
@@ -788,30 +821,38 @@
 
       sections.forEach(section => {
         const sectionCategory = section.dataset.category || '';
+        const sectionView = section.dataset.homeView || 'default';
         const cards = Array.from(section.querySelectorAll('.video-card'));
         let visibleInSection = 0;
+        const sectionMatchesView = currentView === 'films' ? sectionView === 'films' : sectionView !== 'films';
 
         cards.forEach(card => {
           const category = card.dataset.category || sectionCategory;
           const collection = card.dataset.collection || section.dataset.collection || 'videos';
           const title = card.dataset.titleSearch || normalizeText(card.getAttribute('aria-label'));
-          const viewMatches = currentView === 'films'
-            ? (collection === 'movies' || isFilm(category) || isFilm(sectionCategory))
+          const contentMatchesView = currentView === 'films'
+            ? (collection === 'movies' || collection === 'series')
             : currentView === 'videos'
               ? collection !== 'movies'
               : true;
           const searchMatches = !query || title.includes(query) || category.includes(query) || sectionCategory.includes(query);
-          const show = viewMatches && searchMatches;
+          const show = sectionMatchesView && contentMatchesView && searchMatches;
           card.hidden = !show;
           if (show) visibleInSection += 1;
         });
 
         const emptyNative = section.querySelector('.video-rail-empty');
-        const showSection = visibleInSection > 0 || (cards.length === 0 && currentView !== 'films' && !query);
+        const emptyLibrary = sectionView === 'films' && cards.length === 0;
+        const showSection = sectionMatchesView && (visibleInSection > 0 || (emptyLibrary && !query) || (cards.length === 0 && currentView !== 'films' && !query));
         section.hidden = !showSection;
         if (emptyNative) emptyNative.hidden = !showSection;
         visibleTotal += visibleInSection;
       });
+
+      const featuredSection = document.getElementById('featuredSection');
+      if (featuredSection && !document.body.classList.contains('detail-page-active')) {
+        featuredSection.hidden = currentView === 'films';
+      }
 
       let empty = host.querySelector('.home-filter-empty');
       if (!empty) {
@@ -822,8 +863,8 @@
       }
       empty.textContent = query
         ? `Nenhum conteúdo encontrado para “${input.value.trim()}”.`
-        : 'Nenhum filme publicado nessa categoria.';
-      empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && (currentView === 'films' || Boolean(query)));
+        : 'Nenhum filme ou série publicado.';
+      empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && Boolean(query));
     };
 
     viewButtons.forEach(button => {

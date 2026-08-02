@@ -2088,7 +2088,7 @@
     z-index:4;
     left:clamp(30px,4vw,68px);
     bottom:clamp(96px,12vh,132px);
-    width:min(470px,42vw);
+    width:min(640px,70vw);
     padding:0;
     gap:10px;
     justify-content:flex-end;
@@ -2113,8 +2113,9 @@
   .f-logo img{
     display:block;
     width:auto;
-    max-width:min(350px,34vw);
-    max-height:92px;
+    height:clamp(210px,20vw,280px);
+    max-width:min(620px,70vw);
+    max-height:none;
     object-fit:contain;
     object-position:left center;
     filter:drop-shadow(0 6px 24px rgba(0,0,0,.45));
@@ -2282,8 +2283,9 @@
   .detail-logo img{
     display:block;
     width:auto;
-    max-width:min(360px,36vw);
-    max-height:102px;
+    height:clamp(210px,20vw,280px);
+    max-width:min(640px,72vw);
+    max-height:none;
     object-fit:contain;
     object-position:left center;
     filter:drop-shadow(0 6px 24px rgba(0,0,0,.48));
@@ -2412,7 +2414,7 @@
     }
     .f-info{left:22px;right:22px;bottom:82px;width:auto;gap:9px}
     .f-logo{font-size:clamp(32px,10vw,48px);max-width:88%}
-    .f-logo img{max-width:68vw;max-height:76px}
+    .f-logo img{width:auto;height:clamp(145px,38vw,205px);max-width:88vw;max-height:none}
     .f-desc{font-size:12.5px;max-width:92%;-webkit-line-clamp:3}
     .f-play{height:42px;padding:0 18px}
     .f-fav{width:42px;height:42px}
@@ -2421,7 +2423,7 @@
     .detail-inner{width:auto;padding:118px 22px 84px}
     .detail-back{left:22px;top:86px}
     .detail-logo{font-size:clamp(32px,10vw,48px);max-width:88%}
-    .detail-logo img{max-width:68vw;max-height:78px}
+    .detail-logo img{width:auto;height:clamp(145px,38vw,205px);max-width:88vw;max-height:none}
     .detail-desc{font-size:13.5px;max-width:95%}
     .detail-actions{gap:10px}
     .detail-play{height:43px;padding:0 18px;font-size:14px}
@@ -2790,12 +2792,12 @@
   }
 </style>
 
-<link rel="stylesheet" href="/admin/admin.css?v=20260802-5">
+<link rel="stylesheet" href="/admin/admin.css?v=20260802-6">
 <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script defer src="/supabase-config.js"></script>
 <script defer src="/backend.js"></script>
-<script defer src="/admin/admin.js?v=20260802-5"></script>
-<script defer src="/public-data.js?v=20260802-5"></script>
+<script defer src="/admin/admin.js?v=20260802-6"></script>
+<script defer src="/public-data.js?v=20260802-6"></script>
 </head>
 <body>
 
