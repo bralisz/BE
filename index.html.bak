@@ -1043,7 +1043,7 @@
     <div class="login-bg-slide" style="background-image:url('assets/login-bg-7.png')"></div>
   </div>
   <div class="login-shell">
-    <a class="login-brand" href="#login" aria-label="Eilish+"><img src="assets/logo.png" alt="Eilish+"></a>
+    <a class="login-brand" href="#login" aria-label="BE"><img src="assets/logo.png" alt="BE"></a>
     <div class="login-copy">
       <div class="login-kicker">Conteúdo para fãs</div>
       <h1>O universo completo da<br><strong>Billie.</strong> Em um só lugar.</h1>

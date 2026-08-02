@@ -68,51 +68,6 @@
 
   ::selection{ background: rgba(45,127,249,0.35); color:#fff; }
 
-
-  /* Scroll da página — cinza-escuro translúcido, sem criar scroll dentro do card */
-  html,
-  body,
-  #authGate,
-  .avatar-picker-body,
-  .profile-modal{
-    scrollbar-width:thin;
-    scrollbar-color:rgba(66,70,78,.72) transparent;
-  }
-  html::-webkit-scrollbar,
-  body::-webkit-scrollbar,
-  #authGate::-webkit-scrollbar,
-  .avatar-picker-body::-webkit-scrollbar,
-  .profile-modal::-webkit-scrollbar{
-    width:10px;
-    height:10px;
-  }
-  html::-webkit-scrollbar-track,
-  body::-webkit-scrollbar-track,
-  #authGate::-webkit-scrollbar-track,
-  .avatar-picker-body::-webkit-scrollbar-track,
-  .profile-modal::-webkit-scrollbar-track{
-    background:transparent;
-  }
-  html::-webkit-scrollbar-thumb,
-  body::-webkit-scrollbar-thumb,
-  #authGate::-webkit-scrollbar-thumb,
-  .avatar-picker-body::-webkit-scrollbar-thumb,
-  .profile-modal::-webkit-scrollbar-thumb{
-    min-height:42px;
-    border:2px solid transparent;
-    border-radius:999px;
-    background:rgba(66,70,78,.72);
-    background-clip:padding-box;
-  }
-  html::-webkit-scrollbar-thumb:hover,
-  body::-webkit-scrollbar-thumb:hover,
-  #authGate::-webkit-scrollbar-thumb:hover,
-  .avatar-picker-body::-webkit-scrollbar-thumb:hover,
-  .profile-modal::-webkit-scrollbar-thumb:hover{
-    background:rgba(91,96,106,.86);
-    background-clip:padding-box;
-  }
-
   a{ color:inherit; text-decoration:none; }
   button{ font-family:inherit; cursor:pointer; }
 
@@ -1142,8 +1097,7 @@
     color:rgba(225,232,244,.62);
     font-size:12px;
   }
-  .auth-remember,
-  .auth-consent{
+  .auth-remember{
     display:flex;
     align-items:flex-start;
     gap:11px;
@@ -1153,8 +1107,7 @@
     line-height:1.45;
   }
   .auth-remember{align-items:center;font-size:12px}
-  .auth-remember input,
-  .auth-consent input{
+  .auth-remember input{
     width:19px;
     height:19px;
     margin-top:1px;
@@ -1286,7 +1239,7 @@
     <div class="login-bg-slide" style="background-image:url('assets/login-bg-7.png')"></div>
   </div>
   <div class="login-shell">
-    <a class="login-brand" href="#login" aria-label="Eilish+"><img src="assets/logo.png" alt="Eilish+"></a>
+    <a class="login-brand" href="#login" aria-label="BE"><img src="assets/logo.png" alt="BE"></a>
     <div class="login-copy">
       <div class="login-kicker">Conteúdo para fãs</div>
       <h1>O universo completo da<br><strong>Billie.</strong> Em um só lugar.</h1>
@@ -1334,7 +1287,6 @@
         <section class="auth-step" id="signupStep" aria-labelledby="signupStepTitle" hidden>
           <header class="auth-step-header">
             <h2 id="signupStepTitle">Crie sua conta</h2>
-            <p>Junte-se ao Eilish+ para desbloquear recursos exclusivos, montar sua lista personalizada e receber novidades das eras.</p>
           </header>
           <div class="selected-email-row">
             <span>E-mail selecionado: <strong id="signupSelectedEmail"></strong></span>
@@ -1356,7 +1308,6 @@
               <input id="signupPassword" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="Crie uma senha forte">
               <div class="auth-help">Mínimo de 6 caracteres com pelo menos um número ou caractere especial.</div>
             </div>
-            <label class="auth-consent"><input id="signupNewsletter" type="checkbox" checked> <span>Sim, quero receber updates, avisos de novos lançamentos e conteúdos do Eilish+.</span></label>
             <button class="auth-primary" type="submit">Escolher meu Avatar</button>
           </form>
           <p class="auth-switch-note">Já possui uma conta? <button class="auth-inline-link" id="switchToPassword" type="button">Entrar</button></p>
@@ -1934,7 +1885,6 @@
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
       try{
         var result=await auth.signUp({email:email,password:password,name:name,username:username,remember:true});
-        if(q('signupNewsletter').checked)localStorage.setItem('beNewsletterOptIn','1');else localStorage.removeItem('beNewsletterOptIn');
         if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}
         currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();setTimeout(function(){var avatarButton=document.querySelector('[data-public-action="avatar"]');if(avatarButton)avatarButton.click();},260);
       }catch(err){
