@@ -1,7 +1,0 @@
-ATUALIZAÇÃO APLICADA
-
-- Página 404: imagem de fundo reposicionada mais para a esquerda.
-- Página 404: removido o texto "Erro de navegação" acima do número 404.
-- Painel administrativo: corrigido o efeito de puxar o scroll acima do topo que revelava uma faixa branca e deslocava o layout.
-- Login público e login administrativo: banners agora começam em uma imagem aleatória a cada entrada.
-- Troca automática dos banners alterada para 10 segundos, evitando repetir a mesma imagem consecutivamente.
