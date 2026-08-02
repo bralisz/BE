@@ -1,0 +1,8 @@
+ATUALIZAÇÃO DO LOGIN
+
+- As imagens do login agora usam background-size: cover para preencher o monitor inteiro.
+- Foi aplicado zoom suave, escurecimento e desfoque preto para um acabamento inspirado no iPhone/iOS.
+- O cabeçalho do login agora fica alinhado à largura da caixa central.
+- A logo fica à esquerda.
+- O botão “Conectar Discord” fica à direita e mantém o mesmo login Discord já configurado.
+- Foram adicionados ajustes responsivos para desktop, notebooks e celulares.

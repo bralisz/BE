@@ -1586,6 +1586,149 @@
     .avatar-picker-footer{padding-bottom:max(17px,env(safe-area-inset-bottom))}
   }
 
+
+  /* ============================================================
+     LOGIN — atualização: fundo em cover + cabeçalho alinhado
+     ============================================================ */
+  #authGate{
+    background:#02050a!important;
+  }
+  .login-bg-stack{
+    inset:-12px!important;
+    background:#02050a!important;
+  }
+  .login-bg-slide{
+    inset:-2%!important;
+    background-size:cover!important;
+    background-position:center center!important;
+    background-repeat:no-repeat!important;
+    transform:scale(1.08)!important;
+    filter:blur(2.4px) brightness(.70) saturate(.88)!important;
+    transition:opacity 1.4s ease,transform 8s ease!important;
+    will-change:opacity,transform;
+  }
+  .login-bg-slide.active{
+    transform:scale(1.12)!important;
+  }
+  .login-bg-stack:after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 50% 42%,rgba(10,19,34,.08) 0%,rgba(0,0,0,.28) 58%,rgba(0,0,0,.62) 100%),
+      linear-gradient(180deg,rgba(0,0,0,.34) 0%,rgba(2,7,15,.45) 45%,rgba(0,0,0,.64) 100%)!important;
+    -webkit-backdrop-filter:blur(2px) saturate(105%);
+    backdrop-filter:blur(2px) saturate(105%);
+  }
+  .login-shell{
+    position:relative!important;
+    z-index:2!important;
+    width:min(620px,calc(100% - 40px))!important;
+    min-height:100dvh!important;
+    height:auto!important;
+    margin:0 auto!important;
+    padding:34px 0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:48px!important;
+    text-align:left!important;
+  }
+  .login-topbar{
+    width:100%;
+    max-width:560px;
+    min-height:58px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    padding:0 2px;
+  }
+  .login-brand{
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    width:auto!important;
+    min-width:70px;
+    margin:0!important;
+    padding:0!important;
+  }
+  .login-brand img{
+    width:82px!important;
+    height:76px!important;
+    max-height:none!important;
+    object-fit:contain!important;
+    filter:drop-shadow(0 10px 26px rgba(0,0,0,.46)) drop-shadow(0 0 18px rgba(47,123,237,.18))!important;
+  }
+  .discord-connect-button{
+    min-height:48px;
+    padding:0 22px;
+    border:1px solid rgba(255,255,255,.52);
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+    background:rgba(10,14,20,.36);
+    color:#fff;
+    -webkit-backdrop-filter:blur(18px) saturate(135%);
+    backdrop-filter:blur(18px) saturate(135%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 10px 28px rgba(0,0,0,.24);
+    font:750 14px var(--font-body);
+    white-space:nowrap;
+    transition:transform .2s var(--ease),background .2s ease,border-color .2s ease,box-shadow .2s ease;
+  }
+  .discord-connect-button svg{width:20px;height:20px;flex:0 0 auto;color:#aeb5ff}
+  .discord-connect-button:hover{
+    transform:translateY(-1px);
+    background:rgba(88,101,242,.22);
+    border-color:rgba(198,204,255,.78);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 14px 34px rgba(0,0,0,.30),0 0 24px rgba(88,101,242,.18);
+  }
+  .discord-connect-button:active{transform:scale(.985)}
+  .discord-connect-button:disabled{opacity:.58;cursor:wait;transform:none}
+  .auth-column{
+    width:100%!important;
+    max-width:560px!important;
+    margin:0!important;
+    display:block!important;
+  }
+  .auth-column .login-card{
+    width:100%!important;
+    background:rgba(18,21,27,.76)!important;
+    border:1px solid rgba(255,255,255,.13)!important;
+    -webkit-backdrop-filter:blur(32px) saturate(138%)!important;
+    backdrop-filter:blur(32px) saturate(138%)!important;
+    box-shadow:0 32px 90px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.055)!important;
+  }
+  .discord-login-wrap{display:none!important}
+
+  @media(max-height:760px) and (min-width:521px){
+    .login-shell{gap:24px!important;padding:20px 0!important;justify-content:flex-start!important}
+    .login-topbar{min-height:54px}
+    .login-brand img{width:70px!important;height:64px!important}
+    .auth-step{padding:26px!important}
+  }
+  @media(max-width:520px){
+    .login-shell{
+      width:calc(100% - 22px)!important;
+      padding:max(18px,env(safe-area-inset-top)) 0 max(24px,env(safe-area-inset-bottom))!important;
+      gap:28px!important;
+      justify-content:center!important;
+    }
+    .login-topbar{max-width:100%;min-height:50px;padding:0 4px}
+    .login-brand{min-width:54px}
+    .login-brand img{width:64px!important;height:58px!important}
+    .discord-connect-button{min-height:43px;padding:0 15px;font-size:12.5px;gap:7px}
+    .discord-connect-button svg{width:18px;height:18px}
+    .auth-column{max-width:100%!important}
+    .auth-column .login-card{border-radius:25px!important}
+  }
+
 </style>
 
 <link rel="stylesheet" href="/admin/admin.css">
@@ -1609,7 +1752,13 @@
     <div class="login-bg-slide" style="background-image:url('assets/login-bg-7.png')"></div>
   </div>
   <div class="login-shell">
-    <a class="login-brand" href="#login" aria-label="BE"><img src="assets/logo.png" alt="BE"></a>
+    <div class="login-topbar" aria-label="Ações de acesso">
+      <a class="login-brand" href="#login" aria-label="BE"><img src="assets/logo.png" alt="BE"></a>
+      <button class="discord-connect-button" id="discordAuthButton" type="button" aria-label="Conectar Discord">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg>
+        <span>Conectar Discord</span>
+      </button>
+    </div>
     <div class="auth-column">
       <section class="login-card" id="authCard" aria-label="Acessar ou criar conta">
         <section class="auth-step email-start" id="emailStep" aria-labelledby="emailStepTitle">
@@ -1682,11 +1831,6 @@
         <div class="auth-status" id="authStatus" aria-live="polite"></div>
       </section>
 
-      <div class="discord-login-wrap">
-        <button class="discord-icon-button" id="discordAuthButton" type="button" aria-label="Continuar com Discord" title="Continuar com Discord">
-          <img src="assets/discord-login.png" alt="">
-        </button>
-      </div>
     </div>
   </div>
   <div class="login-dots" id="loginDots" aria-hidden="true"></div>
