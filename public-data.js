@@ -53,6 +53,7 @@
           imageUrl: item.imageUrl || video.imageUrl || video.thumbnailUrl,
           bannerUrl: item.bannerUrl || video.bannerUrl || video.imageUrl || video.thumbnailUrl,
           contentUrl: item.contentUrl || video.videoUrl || video.contentUrl || video.link,
+          duration: item.duration || video.duration || video.videoDuration || video.runtime,
           year: item.year || video.year
         };
       } catch (_) {
@@ -69,10 +70,17 @@
       const image = item.bannerUrl || item.imageUrl || item.thumbnailUrl || '';
       const url = item.contentUrl || item.videoUrl || item.link || '#';
       const title = item.title || 'Destaque';
+      const duration = item.duration || item.videoDuration || item.runtime || '';
+      const year = item.year || '';
+      const meta = [
+        duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
+        duration && year ? '<span class="f-dot-sep"></span>' : '',
+        year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
+      ].join('');
       return `<div class="f-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
         <div class="f-info">
           <div class="f-logo">${item.logoUrl ? `<img src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
-          <div class="f-meta">${item.year ? `<span class="f-year">${escapeHtml(item.year)}</span>` : ''}</div>
+          <div class="f-meta">${meta}</div>
           <p class="f-desc">${escapeHtml(item.description || '')}</p>
           <div class="f-actions">
             <a class="f-play" href="${safeUrl(url)}" ${/^https?:\/\//i.test(url) ? 'target="_blank" rel="noopener"' : ''}>
