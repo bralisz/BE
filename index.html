@@ -1413,6 +1413,7 @@
       'auth/invalid-email':'Digite um e-mail válido.',
       'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
       'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
+      'auth/session-missing':'O login foi aceito, mas a sessão não pôde ser recuperada. Atualize a página e tente novamente.',
       'backend/not-configured':'Este recurso será ativado quando o Supabase estiver conectado.',
       'username-in-use':'Este @ já está em uso. Escolha outro.',
       'username-invalid':'O @ informado não é válido.'
@@ -1427,7 +1428,8 @@
   function initBackgrounds(){var slides=[].slice.call(document.querySelectorAll('.login-bg-slide')),dots=q('loginDots');if(!dots||!slides.length)return;dots.innerHTML=slides.map(function(_,i){return '<button class="login-dot '+(i===0?'active':'')+'" type="button" data-bg="'+i+'"></button>'}).join('');function show(i){bgIndex=(i+slides.length)%slides.length;slides.forEach(function(s,j){s.classList.toggle('active',j===bgIndex)});dots.querySelectorAll('.login-dot').forEach(function(d,j){d.classList.toggle('active',j===bgIndex)})}dots.addEventListener('click',function(e){var b=e.target.closest('[data-bg]');if(!b)return;show(Number(b.dataset.bg));restart()});function restart(){clearInterval(bgTimer);bgTimer=setInterval(function(){show(bgIndex+1)},20000)}restart()}
 
   async function finishPublicLogin(user){
-    if(!user)throw new Error('O sistema não retornou o usuário autenticado.');
+    if(!user&&auth&&typeof auth.getAuthenticatedUser==='function')user=await auth.getAuthenticatedUser();
+    if(!user){var sessionError=new Error('O login foi aceito, mas a sessão não pôde ser recuperada. Atualize a página e tente novamente.');sessionError.code='auth/session-missing';throw sessionError;}
     if(beBackend.isAdmin(user)){
       await auth.signOut();
       var adminError=new Error('A conta administrativa deve acessar #/admin.');
@@ -1458,7 +1460,7 @@
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=form.elements.namedItem('email').value.trim().toLowerCase(),password=form.elements.namedItem('password').value;
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando…');
-      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result.user);}catch(err){showLogin();setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
+      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
 
     q('signupForm').addEventListener('submit',async function(e){

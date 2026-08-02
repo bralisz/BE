@@ -77,6 +77,28 @@
     };
   }
 
+  async function resolveSupabaseUser(authResult) {
+    if (MODE !== 'supabase' || !supabaseClient) return currentUser;
+
+    let rawUser = authResult?.user || authResult?.session?.user || null;
+
+    if (!rawUser) {
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+      if (sessionError) console.warn('Não foi possível recuperar a sessão após o login:', sessionError.message);
+      rawUser = sessionData?.session?.user || null;
+    }
+
+    if (!rawUser) {
+      const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+      if (userError && userError.name !== 'AuthSessionMissingError') {
+        console.warn('Não foi possível recuperar o usuário após o login:', userError.message);
+      }
+      rawUser = userData?.user || null;
+    }
+
+    return normalizeUser(rawUser);
+  }
+
   function notify() {
     const snapshot = currentUser ? { ...currentUser } : null;
     listeners.forEach(listener => {
@@ -543,6 +565,9 @@
       clearLocalSession();
       notify();
     },
+    async getAuthenticatedUser() {
+      return currentUser ? { ...currentUser } : null;
+    },
     async sendPasswordReset() {
       throw backendError('backend/not-configured', 'O envio de e-mail será ativado quando o Supabase estiver conectado.');
     },
@@ -584,12 +609,23 @@
       return () => listeners.delete(callback);
     },
     async signInWithEmail({ email, password }) {
-      const { data: result, error } = await supabaseClient.auth.signInWithPassword({ email: String(email || '').trim().toLowerCase(), password });
+      const { data: result, error } = await supabaseClient.auth.signInWithPassword({
+        email: String(email || '').trim().toLowerCase(),
+        password
+      });
       if (error) throw mapAuthError(error);
-      currentUser = normalizeUser(result.user);
-      if (currentUser) await profiles.ensure(currentUser);
+
+      currentUser = await resolveSupabaseUser(result);
+      if (!currentUser) {
+        throw backendError(
+          'auth/session-missing',
+          'O login foi aceito, mas a sessão não pôde ser recuperada. Atualize a página e tente novamente.'
+        );
+      }
+
+      await profiles.ensure(currentUser);
       notify();
-      return { user: currentUser, session: result.session };
+      return { user: currentUser, session: result?.session || null };
     },
     async signUp({ email, password, name, username }) {
       const normalizedHandle = normalizeUsername(username);
@@ -617,6 +653,11 @@
       if (error) throw mapAuthError(error);
       currentUser = null;
       notify();
+    },
+    async getAuthenticatedUser() {
+      if (currentUser) return { ...currentUser };
+      currentUser = await resolveSupabaseUser(null);
+      return currentUser ? { ...currentUser } : null;
     },
     async sendPasswordReset(email) {
       const redirectTo = `${location.origin}/?password_recovery=1`;
@@ -658,13 +699,19 @@
       supabaseClient = window.supabase.createClient(config.url, config.publishableKey, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       });
+      // Registra o listener imediatamente. O trabalho que pode consultar o banco
+      // é disparado fora do callback para evitar travamentos do supabase-js.
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
+        const nextUser = normalizeUser(session?.user || null);
+        window.setTimeout(() => {
+          currentUser = nextUser;
+          notify();
+        }, 0);
+      });
+
       const { data: sessionData, error } = await supabaseClient.auth.getSession();
       if (error) console.warn('Não foi possível restaurar a sessão:', error.message);
-      currentUser = normalizeUser(sessionData && sessionData.session && sessionData.session.user);
-      supabaseClient.auth.onAuthStateChange((_event, session) => {
-        currentUser = normalizeUser(session && session.user);
-        notify();
-      });
+      currentUser = normalizeUser(sessionData?.session?.user || null);
     } else {
       const session = readLocalSession();
       if (session && session.email) {
