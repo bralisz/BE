@@ -66,6 +66,21 @@
     return `${location.origin}/?email_confirmed=1`;
   }
 
+  function oauthRedirectUrl(destination = 'home') {
+    const url = new URL(location.pathname || '/', location.origin);
+    url.searchParams.set('auth_callback', String(destination || 'home'));
+    return url.href;
+  }
+
+  function hasAuthCallbackPayload() {
+    const query = new URLSearchParams(location.search || '');
+    const hash = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
+    return Boolean(
+      query.get('code') || query.get('error') || query.get('error_code') ||
+      hash.get('access_token') || hash.get('refresh_token') || hash.get('error') || hash.get('error_code')
+    );
+  }
+
   function normalizeUser(raw) {
     if (!raw) return null;
     const metadata = raw.user_metadata || raw.raw_user_meta_data || {};
@@ -770,12 +785,17 @@
     },
     async signInWithGoogle() {
       const redirectTo = `${location.origin}${location.pathname}#/admin/dashboard`;
-      const { data: result, error } = await supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo, queryParams: { prompt: 'select_account' } } });
+      const { data: result, error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo, queryParams: { prompt: 'select_account' } }
+      });
       if (error) throw mapAuthError(error);
       return result;
     },
     async signInWithDiscord() {
-      const redirectTo = `${location.origin}${location.pathname}#home`;
+      sessionStorage.setItem('beOAuthDestination', 'home');
+      localStorage.setItem('beAuthExpected', '1');
+      const redirectTo = oauthRedirectUrl('discord');
       const { data: result, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'discord',
         options: { redirectTo }
@@ -796,15 +816,9 @@
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       });
 
-      // Restaura primeiro a sessão persistida. Registrar o listener antes desta
-      // leitura permitia que um evento INITIAL_SESSION vazio sobrescrevesse uma
-      // sessão válida durante o recarregamento da página.
-      const { data: sessionData, error } = await supabaseClient.auth.getSession();
-      if (error) console.warn('Não foi possível restaurar a sessão:', error.message);
-      currentUser = normalizeUser(sessionData?.session?.user || null);
-
-      // O callback permanece síncrono e delega qualquer nova leitura para a
-      // próxima tarefa, como recomendado pelo supabase-js.
+      // O listener é registrado imediatamente para não perder o evento SIGNED_IN
+      // emitido durante o retorno do Discord/Google. Eventos vazios nunca apagam
+      // uma sessão já confirmada; apenas SIGNED_OUT encerra a conta.
       supabaseClient.auth.onAuthStateChange((event, session) => {
         const eventUser = normalizeUser(session?.user || null);
         window.setTimeout(async () => {
@@ -820,14 +834,8 @@
             return;
           }
 
-          if (event === 'INITIAL_SESSION' && !currentUser) {
-            notify();
-            return;
-          }
+          if (event === 'INITIAL_SESSION' && currentUser) return;
 
-          // Eventos transitórios sem usuário não devem apagar silenciosamente uma
-          // sessão válida. Recuperamos a sessão com pequenas tentativas antes de
-          // alterar a interface. Somente SIGNED_OUT encerra imediatamente.
           try {
             const previousUser = currentUser;
             const recoveredUser = await resolveSupabaseUser(null);
@@ -847,6 +855,16 @@
           }
         }, 0);
       });
+
+      const { data: sessionData, error } = await supabaseClient.auth.getSession();
+      if (error) console.warn('Não foi possível restaurar a sessão:', error.message);
+      currentUser = normalizeUser(sessionData?.session?.user || null);
+
+      // O processamento do callback pode terminar alguns instantes depois da
+      // criação do cliente. Nessas URLs aguardamos a sessão antes de liberar a UI.
+      if (!currentUser && hasAuthCallbackPayload()) {
+        currentUser = await resolveSupabaseUser(sessionData);
+      }
     } else {
       const session = readLocalSession();
       if (session && session.email) {

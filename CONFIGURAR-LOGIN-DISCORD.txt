@@ -1,0 +1,33 @@
+CONFIGURAÇÃO DO LOGIN COM DISCORD
+
+O código do site já foi ajustado para:
+- retornar do Discord sem usar #home na URL de callback;
+- aguardar a sessão do Supabase antes de mostrar a tela de login novamente;
+- limpar os parâmetros OAuth da URL depois que o acesso for concluído;
+- mostrar uma mensagem mais clara caso o Discord devolva um erro.
+
+Ainda é obrigatório conferir estas configurações externas:
+
+1. DISCORD DEVELOPER PORTAL
+   Abra o aplicativo usado pelo site e vá em OAuth2 > Redirects.
+   Cadastre exatamente esta URL do projeto Supabase:
+
+   https://cxkevnnxibhezvospkce.supabase.co/auth/v1/callback
+
+   Não coloque a URL comum do site nesse campo do Discord.
+
+2. SUPABASE > AUTHENTICATION > PROVIDERS > DISCORD
+   - Ative o provedor Discord.
+   - Informe o Client ID e o Client Secret do mesmo aplicativo do Discord.
+
+3. SUPABASE > AUTHENTICATION > URL CONFIGURATION
+   - Site URL: coloque o endereço principal publicado do site.
+   - Redirect URLs: adicione o endereço publicado do site e as páginas usadas no login.
+
+   Exemplo:
+   https://SEU-DOMINIO/
+   https://SEU-DOMINIO/**
+
+4. Publique novamente todos os arquivos deste ZIP.
+
+Se o endereço do site mudar, atualize também o Site URL e a lista de Redirect URLs no Supabase.

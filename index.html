@@ -1867,8 +1867,12 @@
   }
   function normalizeUsername(value){return beBackend.normalizeUsername(value);}
   function validUsername(value){return beBackend.validUsername(value);}
-  function showLogin(){document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')history.replaceState(null,'','#login');}
-  function enterHome(){document.body.classList.remove('login-mode');history.replaceState(null,'','#home');window.scrollTo(0,0);}
+  function callbackParams(){var query=new URLSearchParams(location.search||''),hash=new URLSearchParams(String(location.hash||'').replace(/^#/,''));return {query:query,hash:hash};}
+  function hasAuthCallback(){var p=callbackParams();return Boolean(p.query.get('code')||p.query.get('error')||p.query.get('error_code')||p.query.get('auth_callback')||p.hash.get('access_token')||p.hash.get('refresh_token')||p.hash.get('error')||p.hash.get('error_code'));}
+  function authCallbackError(){var p=callbackParams();return p.query.get('error_description')||p.hash.get('error_description')||p.query.get('error')||p.hash.get('error')||'';}
+  function replaceRoute(hash){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});url.hash=hash;history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
+  function showLogin(){document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')replaceRoute('#login');}
+  function enterHome(){document.body.classList.remove('login-mode');sessionStorage.removeItem('beOAuthDestination');replaceRoute('#home');window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
     var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep')};
@@ -1892,7 +1896,7 @@
   async function recoverAuthenticatedUser(user){
     if(user)return user;
     if(!auth||typeof auth.getAuthenticatedUser!=='function')return null;
-    var waits=[0,100,220,450,800];
+    var waits=hasAuthCallback()?[0,100,250,500,900,1500,2500]:[0,100,220,450,800];
     for(var i=0;i<waits.length;i+=1){
       if(waits[i])await new Promise(function(resolve){setTimeout(resolve,waits[i])});
       user=await auth.getAuthenticatedUser();
@@ -1995,8 +1999,9 @@
       authReady=true;q('authLoading').hidden=true;
       if(authFlowBusy)return;
       if(!user){
-        var expectedSession=localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'));
-        if(expectedSession){
+        var callbackActive=hasAuthCallback(),callbackFailure=authCallbackError();
+        var expectedSession=callbackActive||localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'));
+        if(expectedSession&&!callbackFailure){
           try{
             var recoveredUser=await recoverAuthenticatedUser(null);
             if(recoveredUser){await finishPublicLogin(recoveredUser);return;}
@@ -2004,7 +2009,11 @@
         }
         localStorage.removeItem('beSessionUid');
         localStorage.removeItem('beAuthExpected');
-        showLogin();selectedAuthEmail='';setMode('email');return;
+        sessionStorage.removeItem('beOAuthDestination');
+        showLogin();selectedAuthEmail='';setMode('email');
+        if(callbackFailure)setStatus('O Discord não concluiu o login: '+decodeURIComponent(String(callbackFailure).replace(/\+/g,' ')),'error');
+        else if(callbackActive)setStatus('O retorno do Discord chegou, mas a sessão não foi criada. Confira as URLs de redirecionamento do Supabase e do Discord.','error');
+        return;
       }
       try{await finishPublicLogin(user);}catch(error){showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
