@@ -3,12 +3,14 @@
   if (location.hash.startsWith('#/admin')) return;
 
   window.addEventListener('load', async () => {
+    setupHomeNavigation();
     try {
       if (!window.beBackend) return;
       await window.beBackend.ready;
       await applySiteSettings();
       await renderFeatured();
       await renderVideoCatalog();
+      setupHomeNavigation();
     } catch (error) {
       console.warn('Conteúdo dinâmico indisponível:', error.message);
     }
@@ -76,6 +78,9 @@
             <a class="f-play" href="${safeUrl(url)}" ${/^https?:\/\//i.test(url) ? 'target="_blank" rel="noopener"' : ''}>
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
             </a>
+            <button class="f-fav" type="button" data-favorite-id="${escapeHtml(item.videoId || item.id || title)}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-9.7-9A5.4 5.4 0 0 1 12 6a5.4 5.4 0 0 1 9.7 6c-2.2 4.4-9.7 9-9.7 9Z"/></svg>
+            </button>
           </div>
         </div>
         <div class="f-media">${image ? `<img src="${safeUrl(image)}" alt="${escapeHtml(title)}" loading="eager">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
@@ -97,6 +102,7 @@
     host.addEventListener('mouseenter', stop);
     host.addEventListener('mouseleave', start);
     start();
+    setupFavoriteButtons(host);
     if (section) section.hidden = false;
   }
 
@@ -106,10 +112,13 @@
 
     const sections = (await beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }))
       .filter(section => section.active !== false);
-    if (!sections.length) return;
-
-    const allVideos = (await beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }))
-      .filter(video => video.active !== false);
+    const [videoRows, movieRows] = await Promise.all([
+      beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
+      beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => [])
+    ]);
+    const allVideos = videoRows.filter(video => video.active !== false);
+    const allMovies = movieRows.filter(movie => movie.active !== false);
+    if (!sections.length && !allMovies.length) return;
 
     const old = document.getElementById('dynamicSections');
     if (old) old.remove();
@@ -118,6 +127,31 @@
     host.id = 'dynamicSections';
     host.className = 'video-catalog';
     host.setAttribute('aria-label', 'Categorias de vídeos');
+
+    if (allMovies.length) {
+      const movieBlock = document.createElement('section');
+      movieBlock.className = 'video-rail-section';
+      movieBlock.dataset.category = 'filmes';
+      movieBlock.dataset.collection = 'movies';
+      movieBlock.innerHTML = `
+        <a class="video-rail-title" href="#" aria-label="Ver todos: Filmes">
+          <span>Filmes</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+        <div class="video-rail-shell">
+          <button class="video-rail-arrow prev" type="button" aria-label="Ver filmes anteriores" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="video-rail" tabindex="0" aria-label="Filmes">
+            ${allMovies.map(movie => videoCard({ ...movie, category: movie.category || 'filmes', collection: 'movies' })).join('')}
+          </div>
+          <button class="video-rail-arrow next" type="button" aria-label="Ver mais filmes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>`;
+      host.append(movieBlock);
+      setupRail(movieBlock);
+    }
 
     for (const section of sections) {
       const category = String(section.category || section.slug || section.id).trim().toLowerCase();
@@ -137,6 +171,8 @@
 
       const block = document.createElement('section');
       block.className = 'video-rail-section';
+      block.dataset.category = normalizeText(category);
+      block.dataset.collection = 'videos';
       block.innerHTML = `
         <a class="video-rail-title" href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
           <span>${escapeHtml(section.title || 'Seção')}</span>
@@ -147,7 +183,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <div class="video-rail" tabindex="0" aria-label="${escapeHtml(section.title || 'Vídeos')}">
-            ${videos.length ? videos.map(videoCard).join('') : '<p class="video-rail-empty">Nenhum vídeo publicado nesta seção.</p>'}
+            ${videos.length ? videos.map(video => videoCard({ ...video, collection: video.collection || 'videos' })).join('') : '<p class="video-rail-empty">Nenhum vídeo publicado nesta seção.</p>'}
           </div>
           <button class="video-rail-arrow next" type="button" aria-label="Ver mais vídeos">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
@@ -158,12 +194,16 @@
     }
 
     main.insertAdjacentElement('afterend', host);
+    window.dispatchEvent(new Event('be:catalog-ready'));
   }
 
   function videoCard(video) {
     const image = video.thumbnailUrl || video.imageUrl || video.bannerUrl || '';
     const href = video.videoUrl || video.contentUrl || video.link || '#';
-    return `<a class="video-card" href="${safeUrl(href)}" ${/^https?:\/\//i.test(href) ? 'target="_blank" rel="noopener"' : ''} aria-label="${escapeHtml(video.title || 'Abrir vídeo')}">
+    const title = video.title || 'Abrir vídeo';
+    const category = video.category || video.type || video.contentType || '';
+    const collection = video.collection || 'videos';
+    return `<a class="video-card" href="${safeUrl(href)}" ${/^https?:\/\//i.test(href) ? 'target="_blank" rel="noopener"' : ''} aria-label="${escapeHtml(title)}" data-title="${escapeHtml(normalizeText(title))}" data-category="${escapeHtml(normalizeText(category))}" data-collection="${escapeHtml(normalizeText(collection))}">
       <img src="${safeUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
     </a>`;
   }
@@ -195,6 +235,149 @@
     }, { passive: false });
 
     requestAnimationFrame(update);
+  }
+
+  function normalizeText(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+  }
+
+  function setupFavoriteButtons(host) {
+    const storageKey = 'beFeaturedFavorites';
+    let saved = [];
+    try { saved = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch (_) { saved = []; }
+    const favorites = new Set(Array.isArray(saved) ? saved.map(String) : []);
+
+    host.querySelectorAll('[data-favorite-id]').forEach(button => {
+      const id = String(button.dataset.favoriteId || '');
+      const sync = () => {
+        const active = favorites.has(id);
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+        button.setAttribute('aria-label', active ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
+      };
+      sync();
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (favorites.has(id)) favorites.delete(id); else favorites.add(id);
+        localStorage.setItem(storageKey, JSON.stringify(Array.from(favorites)));
+        sync();
+      });
+    });
+  }
+
+  function setupHomeNavigation() {
+    const topbar = document.getElementById('topbar');
+    const toggle = document.getElementById('homeSearchToggle');
+    const input = document.getElementById('homeSearchInput');
+    const logo = document.getElementById('logoBtn');
+    const viewButtons = Array.from(document.querySelectorAll('[data-home-view]'));
+    if (!topbar || !toggle || !input || topbar.dataset.homeReady === 'true') return;
+    topbar.dataset.homeReady = 'true';
+
+    let currentView = 'home';
+
+    const setSearchOpen = open => {
+      topbar.classList.toggle('search-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Fechar pesquisa' : 'Abrir pesquisa');
+      if (open) {
+        requestAnimationFrame(() => input.focus({ preventScroll: true }));
+      } else {
+        input.value = '';
+        applyCatalogFilter();
+        toggle.focus({ preventScroll: true });
+      }
+    };
+
+    const isFilm = category => {
+      const value = normalizeText(category);
+      return value === 'filme' || value === 'filmes' || value === 'movie' || value === 'movies' || value.includes('filme');
+    };
+
+    const applyCatalogFilter = () => {
+      const host = document.getElementById('dynamicSections');
+      if (!host) return;
+      const query = normalizeText(input.value);
+      const sections = Array.from(host.querySelectorAll('.video-rail-section'));
+      let visibleTotal = 0;
+
+      sections.forEach(section => {
+        const sectionCategory = section.dataset.category || '';
+        const cards = Array.from(section.querySelectorAll('.video-card'));
+        let visibleInSection = 0;
+
+        cards.forEach(card => {
+          const category = card.dataset.category || sectionCategory;
+          const collection = card.dataset.collection || section.dataset.collection || 'videos';
+          const title = card.dataset.title || normalizeText(card.getAttribute('aria-label'));
+          const viewMatches = currentView === 'films'
+            ? (collection === 'movies' || isFilm(category) || isFilm(sectionCategory))
+            : currentView === 'videos'
+              ? collection !== 'movies'
+              : true;
+          const searchMatches = !query || title.includes(query) || category.includes(query) || sectionCategory.includes(query);
+          const show = viewMatches && searchMatches;
+          card.hidden = !show;
+          if (show) visibleInSection += 1;
+        });
+
+        const emptyNative = section.querySelector('.video-rail-empty');
+        const showSection = visibleInSection > 0 || (cards.length === 0 && currentView !== 'films' && !query);
+        section.hidden = !showSection;
+        if (emptyNative) emptyNative.hidden = !showSection;
+        visibleTotal += visibleInSection;
+      });
+
+      let empty = host.querySelector('.home-filter-empty');
+      if (!empty) {
+        empty = document.createElement('div');
+        empty.className = 'home-filter-empty';
+        empty.setAttribute('role', 'status');
+        host.prepend(empty);
+      }
+      empty.textContent = query
+        ? `Nenhum conteúdo encontrado para “${input.value.trim()}”.`
+        : 'Nenhum filme publicado nessa categoria.';
+      empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && (currentView === 'films' || Boolean(query)));
+    };
+
+    viewButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        currentView = button.dataset.homeView || 'videos';
+        viewButtons.forEach(item => item.classList.toggle('active', item === button));
+        applyCatalogFilter();
+        const catalog = document.getElementById('dynamicSections');
+        if (catalog) catalog.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    logo?.addEventListener('click', () => {
+      currentView = 'home';
+      viewButtons.forEach(item => item.classList.remove('active'));
+      input.value = '';
+      setSearchOpen(false);
+      applyCatalogFilter();
+    });
+
+    toggle.addEventListener('click', () => setSearchOpen(!topbar.classList.contains('search-open')));
+    input.addEventListener('input', applyCatalogFilter);
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSearchOpen(false);
+      }
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && topbar.classList.contains('search-open')) setSearchOpen(false);
+    });
+    window.addEventListener('be:catalog-ready', applyCatalogFilter);
+
+    applyCatalogFilter();
   }
 
   function safeUrl(value) {

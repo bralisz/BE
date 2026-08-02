@@ -1850,6 +1850,351 @@
     .login-bg-slide{background-position:46% center!important}
   }
 
+
+
+  /* ============================================================
+     HOME CINEMATOGRÁFICA — navegação e destaque estilo streaming
+     ============================================================ */
+  body:not(.login-mode):not(.admin-mode){background:#030405}
+  body:not(.login-mode):not(.admin-mode) .bg,
+  body:not(.login-mode):not(.admin-mode) .bg-grain,
+  body:not(.login-mode):not(.admin-mode) .particles{display:none}
+
+  .topbar-wrap{
+    top:18px;
+    padding:0 22px;
+    align-items:flex-start;
+  }
+  .home-topbar{
+    width:min(920px,calc(100vw - 44px));
+    height:58px;
+    padding:5px 7px 5px 6px;
+    gap:6px;
+    border:1px solid rgba(255,255,255,.17);
+    border-radius:999px;
+    background:rgba(18,20,20,.68);
+    -webkit-backdrop-filter:blur(22px) saturate(150%);
+    backdrop-filter:blur(22px) saturate(150%);
+    box-shadow:0 14px 45px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.08);
+    transition:width .5s var(--ease),background .35s ease,box-shadow .35s ease;
+  }
+  .home-nav-leading{
+    min-width:0;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    flex:1 1 auto;
+    overflow:hidden;
+    transition:max-width .5s var(--ease),opacity .3s ease,transform .5s var(--ease);
+  }
+  .home-logo-pill{
+    width:88px;
+    height:46px;
+    padding:2px 12px;
+    justify-content:center;
+    flex:0 0 auto;
+    border-radius:999px;
+    background:#fff;
+    box-shadow:0 5px 18px rgba(0,0,0,.25);
+  }
+  .home-logo-pill:hover{transform:none;filter:brightness(.96)}
+  .home-logo-pill .logo-mark{
+    width:57px;
+    height:41px;
+    object-fit:contain;
+    filter:none;
+  }
+  .home-nav-links{
+    display:flex;
+    align-items:center;
+    min-width:0;
+    gap:1px;
+    overflow:hidden;
+    transition:max-width .5s var(--ease),opacity .28s ease,transform .5s var(--ease);
+  }
+  .home-nav-link{
+    height:44px;
+    padding:0 17px;
+    border:0;
+    border-radius:999px;
+    background:transparent;
+    color:rgba(255,255,255,.72);
+    font-size:14px;
+    font-weight:650;
+    white-space:nowrap;
+    transition:background .22s ease,color .22s ease,transform .22s var(--ease);
+  }
+  .home-nav-link:hover,
+  .home-nav-link.active{
+    color:#fff;
+    background:rgba(255,255,255,.10);
+  }
+  .home-nav-link:active{transform:scale(.97)}
+
+  .home-search-wrap{
+    width:46px;
+    height:46px;
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    overflow:hidden;
+    border-radius:999px;
+    background:transparent;
+    transition:width .5s var(--ease),background .3s ease,border-color .3s ease;
+  }
+  .home-search-wrap input{
+    width:0;
+    min-width:0;
+    height:44px;
+    padding:0;
+    border:0;
+    outline:0;
+    background:transparent;
+    color:#fff;
+    opacity:0;
+    font:550 14px var(--font-body);
+    transition:width .5s var(--ease),padding .5s var(--ease),opacity .24s ease;
+  }
+  .home-search-wrap input::placeholder{color:rgba(255,255,255,.46)}
+  .home-search-toggle{
+    width:46px;
+    height:46px;
+    flex:0 0 46px;
+    display:grid;
+    place-items:center;
+    border:0;
+    border-radius:50%;
+    background:transparent;
+    color:rgba(255,255,255,.78);
+    transition:background .22s ease,color .22s ease,transform .22s var(--ease);
+  }
+  .home-search-toggle:hover{background:rgba(255,255,255,.10);color:#fff}
+  .home-search-toggle svg{grid-area:1/1;width:20px;height:20px;transition:opacity .24s ease,transform .42s var(--ease)}
+  .home-close-icon{opacity:0;transform:rotate(-80deg) scale(.7)}
+  .home-user-menu{flex:0 0 auto;margin-left:1px}
+  .home-topbar .user-chip{
+    width:46px;
+    height:46px;
+    border-color:rgba(255,255,255,.13);
+    background:rgba(255,255,255,.065);
+  }
+  .home-topbar .avatar{width:36px;height:36px;border-color:rgba(255,255,255,.20)}
+
+  .home-topbar.search-open{width:min(720px,calc(100vw - 44px));background:rgba(12,14,14,.82)}
+  .home-topbar.search-open .home-nav-leading{
+    max-width:0;
+    opacity:0;
+    transform:translateX(-34px);
+    pointer-events:none;
+  }
+  .home-topbar.search-open .home-search-wrap{
+    width:100%;
+    flex:1 1 auto;
+    background:rgba(255,255,255,.075);
+  }
+  .home-topbar.search-open .home-search-wrap input{
+    width:100%;
+    padding:0 4px 0 18px;
+    opacity:1;
+  }
+  .home-topbar.search-open .home-search-icon{opacity:0;transform:rotate(80deg) scale(.7)}
+  .home-topbar.search-open .home-close-icon{opacity:1;transform:none}
+
+  main{
+    width:100%;
+    max-width:none;
+    margin:0;
+    padding:0;
+  }
+  .featured-wrap{
+    width:100%;
+    margin:0;
+    min-height:clamp(650px,82vh,880px);
+  }
+  .featured{
+    width:100%;
+    height:clamp(650px,82vh,880px);
+    border:0;
+    border-radius:0;
+    background:#070808;
+    box-shadow:none;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+  .f-slide{display:block;background:#070808}
+  .f-media{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+  }
+  .f-media img,
+  .f-media .ph{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:center 35%;
+    border-radius:0;
+    transform:scale(1.035);
+    filter:saturate(.88) contrast(1.02) brightness(.86);
+    transition:transform 8s ease,filter .8s ease;
+  }
+  .f-slide.active .f-media img,
+  .f-slide.active .f-media .ph{transform:scale(1)}
+  .f-media::after{
+    z-index:2;
+    background:
+      linear-gradient(90deg,rgba(3,5,5,.93) 0%,rgba(3,5,5,.72) 28%,rgba(3,5,5,.25) 57%,rgba(3,5,5,.08) 100%),
+      linear-gradient(180deg,rgba(0,0,0,.18) 0%,transparent 38%,rgba(2,3,3,.86) 100%);
+  }
+  .f-info{
+    position:absolute;
+    z-index:4;
+    left:clamp(28px,4vw,76px);
+    bottom:clamp(150px,18vh,210px);
+    width:min(570px,46vw);
+    padding:0;
+    gap:14px;
+    justify-content:flex-end;
+    background:none;
+  }
+  .f-logo{
+    width:auto;
+    height:auto;
+    min-height:0;
+    justify-content:flex-start;
+    border:0;
+    border-radius:0;
+    background:none;
+    color:#fff;
+    font:700 clamp(48px,6.3vw,92px)/.92 var(--font-display);
+    letter-spacing:-.065em;
+    text-transform:none;
+    text-shadow:0 4px 28px rgba(0,0,0,.42);
+    overflow:visible;
+  }
+  .f-logo::after{display:none}
+  .f-logo img{
+    display:block;
+    width:auto;
+    max-width:min(430px,38vw);
+    max-height:130px;
+    object-fit:contain;
+    object-position:left center;
+    filter:drop-shadow(0 6px 24px rgba(0,0,0,.45));
+  }
+  .f-meta{font-size:13px;gap:8px;color:rgba(255,255,255,.66)}
+  .f-year{color:rgba(255,255,255,.68)}
+  .f-desc{
+    max-width:520px;
+    color:rgba(255,255,255,.78);
+    font-size:clamp(14px,1.05vw,17px);
+    line-height:1.55;
+    -webkit-line-clamp:4;
+    text-shadow:0 2px 16px rgba(0,0,0,.55);
+  }
+  .f-actions{gap:10px;margin-top:7px}
+  .f-play{
+    height:48px;
+    padding:0 23px;
+    border-radius:999px;
+    background:#fff;
+    color:#101112;
+    font-size:14px;
+    box-shadow:0 8px 25px rgba(0,0,0,.24);
+  }
+  .f-play svg{fill:#101112;width:16px;height:16px}
+  .f-play:hover{box-shadow:0 10px 32px rgba(0,0,0,.36);filter:brightness(.94)}
+  .f-fav{
+    width:48px;
+    height:48px;
+    border-radius:50%;
+    border-color:rgba(255,255,255,.32);
+    background:rgba(18,20,20,.50);
+    -webkit-backdrop-filter:blur(16px);
+    backdrop-filter:blur(16px);
+  }
+  .f-fav:hover,.f-fav.active{background:#fff;color:#171818;border-color:#fff}
+  .f-fav.active svg{fill:currentColor}
+  .f-dots{bottom:118px;left:auto;right:clamp(24px,4vw,70px);transform:none}
+  .f-dot{width:7px;height:7px;background:rgba(255,255,255,.34)}
+  .f-dot.active{width:23px;background:#fff}
+
+  .video-catalog{
+    position:relative;
+    z-index:8;
+    width:100%;
+    max-width:none;
+    margin:-112px 0 0;
+    padding:0 0 70px;
+    background:linear-gradient(180deg,transparent 0,#030405 118px,#030405 100%);
+  }
+  .video-rail-section{margin-bottom:42px}
+  .video-rail-title{margin-left:clamp(24px,4vw,72px);font-size:22px;color:#fff}
+  .video-rail{
+    padding-left:clamp(24px,4vw,72px);
+    padding-right:clamp(24px,4vw,72px);
+    scroll-padding-left:clamp(24px,4vw,72px);
+  }
+  .video-card{
+    flex-basis:clamp(250px,24vw,380px);
+    border-color:rgba(255,255,255,.12);
+    background:#111;
+  }
+  .video-rail-section[hidden],.video-card[hidden]{display:none!important}
+  .home-filter-empty{
+    display:none;
+    margin:0 clamp(24px,4vw,72px) 52px;
+    padding:34px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:24px;
+    color:rgba(255,255,255,.66);
+    text-align:center;
+    background:rgba(255,255,255,.045);
+  }
+  .home-filter-empty.show{display:block}
+
+  @media(max-width:760px){
+    .topbar-wrap{top:10px;padding:0 10px}
+    .home-topbar{width:calc(100vw - 20px);height:54px;padding:4px 5px}
+    .home-logo-pill{width:66px;height:44px;padding:2px 8px}
+    .home-logo-pill .logo-mark{width:47px;height:37px}
+    .home-nav-link{height:42px;padding:0 11px;font-size:12.5px}
+    .home-search-wrap,.home-search-toggle,.home-topbar .user-chip{width:44px;height:44px;flex-basis:44px}
+    .home-topbar .avatar{width:34px;height:34px}
+    .home-topbar.search-open{width:calc(100vw - 20px)}
+    .featured-wrap,.featured{height:720px;min-height:720px}
+    .f-media img,.f-media .ph{object-position:62% center}
+    .f-media::after{
+      background:
+        linear-gradient(90deg,rgba(3,5,5,.70),rgba(3,5,5,.12) 75%),
+        linear-gradient(180deg,rgba(0,0,0,.16) 0%,transparent 35%,rgba(2,3,3,.96) 84%);
+    }
+    .f-info{left:22px;right:22px;bottom:125px;width:auto;gap:12px}
+    .f-logo{font-size:clamp(42px,14vw,70px);max-width:92%}
+    .f-logo img{max-width:74vw;max-height:100px}
+    .f-desc{font-size:14px;max-width:94%;-webkit-line-clamp:4}
+    .f-play{height:46px;padding:0 20px}
+    .f-fav{width:46px;height:46px}
+    .f-dots{bottom:82px;right:22px}
+    .video-catalog{margin-top:-82px;background:linear-gradient(180deg,transparent 0,#030405 90px,#030405 100%)}
+    .video-rail-title{font-size:19px}
+  }
+  @media(max-width:560px){
+    .home-nav-link[data-public-action="support"]{display:none}
+    .home-nav-link{padding:0 10px}
+    .featured-wrap,.featured{height:680px;min-height:680px}
+  }
+  @media(max-width:430px){
+    .home-nav-link{padding:0 8px;font-size:11.5px}
+    .home-logo-pill{width:58px}
+    .home-logo-pill .logo-mark{width:43px}
+    .home-search-wrap,.home-search-toggle,.home-topbar .user-chip{width:42px;height:42px;flex-basis:42px}
+  }
+
 </style>
 
 <link rel="stylesheet" href="/admin/admin.css">
@@ -1968,40 +2313,43 @@
      TOP BAR
      ============================================================ -->
 <div class="topbar-wrap">
-  <nav class="topbar glass" id="topbar">
-
-    <div class="tb-left">
-      <button class="logo-btn" id="logoBtn" aria-label="BE — voltar para a Home">
+  <nav class="topbar home-topbar" id="topbar" aria-label="Navegação principal">
+    <div class="home-nav-leading" id="homeNavLeading">
+      <button class="logo-btn home-logo-pill active" id="logoBtn" type="button" aria-label="BE — voltar para a Home" aria-current="page">
         <img src="assets/logo.png" alt="BE" class="logo-mark">
       </button>
+      <div class="home-nav-links" id="homeNavLinks">
+        <button class="home-nav-link" type="button" data-home-view="films">Filmes</button>
+        <button class="home-nav-link" type="button" data-home-view="videos">Vídeos</button>
+        <button class="home-nav-link" type="button" data-public-action="support">Suporte</button>
+      </div>
     </div>
 
-    <div class="tb-center"></div>
-
-    <div class="tb-right">
-      <div class="user-menu-wrap">
-        <button class="user-chip" id="userChip" aria-haspopup="true" aria-expanded="false" aria-label="Conta">
-          <span class="avatar"><img id="publicUserPhoto" alt="Foto do usuário" hidden><svg id="publicUserFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg></span>
-        </button>
-
-        <div class="user-dropdown user-dropdown-right" id="userDropdown">
-          <div class="dd-header" id="ddUsername">Visitante</div>
-          <div class="dd-divider"></div>
-          <button class="dd-item" data-public-action="avatar">Escolher avatar</button><button class="dd-item" data-public-action="profile">Perfil</button>
-          <button class="dd-item" data-public-action="settings">Configurações</button>
-          <button class="dd-item" data-public-action="support">Suporte</button>
-          <button class="dd-item" id="publicDashboardLink" data-public-action="dashboard" hidden>Dashboard</button>
-          <div class="dd-divider"></div>
-          <button class="dd-item danger" id="publicAuthAction" data-public-action="auth">Entrar</button>
-        </div>
-      </div>
-
-      <button class="icon-btn" id="notifBtn" aria-label="Notificações">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 8a6 6 0 0 1 12 0c0 4.2 1.2 6 2 7H4c.8-1 2-2.8 2-7Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
-        <span class="notif-dot"></span>
+    <div class="home-search-wrap" id="homeSearchWrap">
+      <label class="sr-only" for="homeSearchInput">Pesquisar conteúdos</label>
+      <input id="homeSearchInput" type="search" autocomplete="off" placeholder="Pesquisar filmes e vídeos" aria-label="Pesquisar filmes e vídeos">
+      <button class="home-search-toggle" id="homeSearchToggle" type="button" aria-label="Abrir pesquisa" aria-expanded="false">
+        <svg class="home-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+        <svg class="home-close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
     </div>
 
+    <div class="user-menu-wrap home-user-menu">
+      <button class="user-chip" id="userChip" aria-haspopup="true" aria-expanded="false" aria-label="Conta">
+        <span class="avatar"><img id="publicUserPhoto" alt="Foto do usuário" hidden><svg id="publicUserFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg></span>
+      </button>
+
+      <div class="user-dropdown user-dropdown-right" id="userDropdown">
+        <div class="dd-header" id="ddUsername">Visitante</div>
+        <div class="dd-divider"></div>
+        <button class="dd-item" data-public-action="avatar">Escolher avatar</button><button class="dd-item" data-public-action="profile">Perfil</button>
+        <button class="dd-item" data-public-action="settings">Configurações</button>
+        <button class="dd-item" data-public-action="support">Suporte</button>
+        <button class="dd-item" id="publicDashboardLink" data-public-action="dashboard" hidden>Dashboard</button>
+        <div class="dd-divider"></div>
+        <button class="dd-item danger" id="publicAuthAction" data-public-action="auth">Entrar</button>
+      </div>
+    </div>
   </nav>
 </div>
 

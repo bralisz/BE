@@ -1,0 +1,12 @@
+ATUALIZAÇÃO DA HOME — DESTAQUE E NAVEGAÇÃO
+
+- Home refeita com destaque em tela cheia inspirado em plataformas de streaming.
+- Descrição posicionada sobre o banner com botões Assistir e Favoritar.
+- Barra superior flutuante com logo em fundo branco, Filmes, Vídeos, Suporte, busca e avatar.
+- A busca abre com animação, troca a lupa por X e restaura a navegação ao fechar.
+- A busca filtra os conteúdos pelo título e categoria.
+- A aba Filmes exibe os itens cadastrados em Conteúdos > Filmes.
+- A aba Vídeos exibe apenas as seções e itens de vídeo.
+- O avatar permanece na extrema direita da barra.
+- Favoritos do destaque são salvos localmente no navegador.
+- Layout adaptado para desktop e celular.
