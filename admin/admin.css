@@ -690,3 +690,43 @@ body.admin-mode .admin-topbar{
   .editor-preview-hero{min-height:360px}
   .editor-preview-copy{padding:24px}
 }
+
+
+
+
+
+/* Editor integrado à área de Conteúdos: a navegação superior permanece visível */
+.admin-content.admin-editor-active{
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding:20px 28px 28px;
+}
+.content-editor-inline-shell{width:100%;min-width:0}
+.admin-content.admin-editor-active .content-editor-modal.inline{
+  width:100%;
+  height:calc(100dvh - 140px);
+  min-height:680px;
+  max-height:none;
+  margin:0;
+  padding:0;
+  border:1px solid rgba(125,181,255,.16);
+  border-radius:26px;
+  box-shadow:0 28px 90px rgba(0,0,0,.38);
+}
+.admin-content.admin-editor-active .content-editor-header{flex:0 0 auto}
+.admin-content.admin-editor-active .modern-content-form{min-height:0}
+@media(max-width:1040px){
+  .admin-content.admin-editor-active{padding:14px}
+  .admin-content.admin-editor-active .content-editor-modal.inline{
+    height:auto;
+    min-height:calc(100dvh - 120px);
+  }
+}
+@media(max-width:800px){
+  .admin-content.admin-editor-active{padding:12px 10px 24px}
+  .admin-content.admin-editor-active .content-editor-modal.inline{
+    min-height:calc(100dvh - 150px);
+    border-radius:20px;
+  }
+}

@@ -2,6 +2,9 @@
   'use strict';
   if (location.hash.startsWith('#/admin')) return;
 
+  const randomFeaturedPools = { videos: [], films: [] };
+  const lastRandomFeaturedId = { videos: '', films: '' };
+
   window.addEventListener('load', async () => {
     setupHomeNavigation();
     setupDetailControls();
@@ -143,6 +146,115 @@
     if (section) section.hidden = false;
   }
 
+  function ensureRandomFeaturedSection() {
+    let section = document.getElementById('randomFeaturedSection');
+    if (section) return section;
+    const homeFeatured = document.getElementById('featuredSection');
+    if (!homeFeatured) return null;
+    section = document.createElement('section');
+    section.className = 'featured-wrap tab-random-featured';
+    section.id = 'randomFeaturedSection';
+    section.hidden = true;
+    section.innerHTML = '<div class="featured" id="randomFeatured" aria-roledescription="destaque" aria-label="Destaque aleatório da categoria"></div>';
+    homeFeatured.insertAdjacentElement('afterend', section);
+    return section;
+  }
+
+  function randomIndex(max) {
+    if (max <= 1) return 0;
+    if (window.crypto?.getRandomValues) {
+      const value = new Uint32Array(1);
+      window.crypto.getRandomValues(value);
+      return value[0] % max;
+    }
+    return Math.floor(Math.random() * max);
+  }
+
+  function chooseRandomFeatured(view, force = false) {
+    const pool = randomFeaturedPools[view] || [];
+    if (!pool.length) return null;
+    const currentId = lastRandomFeaturedId[view];
+    if (!force && currentId) {
+      const current = pool.find(item => String(item.id || item.publicId || item.title) === currentId);
+      if (current) return current;
+    }
+    let selected = pool[randomIndex(pool.length)];
+    if (pool.length > 1 && currentId) {
+      let attempts = 0;
+      while (String(selected.id || selected.publicId || selected.title) === currentId && attempts < 8) {
+        selected = pool[randomIndex(pool.length)];
+        attempts += 1;
+      }
+    }
+    lastRandomFeaturedId[view] = String(selected.id || selected.publicId || selected.title || '');
+    return selected;
+  }
+
+  function renderRandomTabFeatured(view, force = false) {
+    const section = ensureRandomFeaturedSection();
+    const host = document.getElementById('randomFeatured');
+    if (!section || !host || !['videos', 'films'].includes(view)) {
+      if (section) section.hidden = true;
+      return;
+    }
+
+    const item = chooseRandomFeatured(view, force);
+    if (!item) {
+      host.innerHTML = '';
+      section.hidden = true;
+      return;
+    }
+
+    const collection = item.collection || (view === 'films' ? 'movies' : 'videos');
+    const title = item.title || item.name || 'Conteúdo';
+    const thumbnail = item.thumbnailUrl || item.imageUrl || item.bannerUrl || '';
+    const background = ['movies', 'series'].includes(collection)
+      ? thumbnail
+      : (item.bannerUrl || item.imageUrl || item.thumbnailUrl || '');
+    const duration = item.duration || item.videoDuration || item.runtime || '';
+    const year = item.year || '';
+    const contentUrl = item.videoUrl || item.contentUrl || item.link || '#';
+    const publicId = numericPublicId(item.publicId || item.id || title);
+    const meta = [
+      duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
+      duration && year ? '<span class="f-dot-sep"></span>' : '',
+      year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
+    ].join('');
+
+    host.innerHTML = `<div class="f-slide active" data-index="0">
+      <div class="f-info">
+        <div class="f-logo">${item.logoUrl ? `<img src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
+        <div class="f-meta">${meta}</div>
+        <p class="f-desc">${escapeHtml(item.description || '')}</p>
+        <div class="f-actions">
+          <button class="f-play" type="button" data-open-detail="true"
+            data-item-id="${escapeHtml(String(publicId))}"
+            data-record-id="${escapeHtml(String(item.id || ''))}"
+            data-title="${escapeHtml(title)}"
+            data-description="${escapeHtml(item.description || '')}"
+            data-year="${escapeHtml(year)}"
+            data-duration="${escapeHtml(duration)}"
+            data-content-url="${safeUrl(contentUrl)}"
+            data-image-url="${safeUrl(thumbnail)}"
+            data-banner-url="${safeUrl(background)}"
+            data-logo-url="${safeUrl(item.logoUrl || '')}"
+            data-collection="${escapeHtml(collection)}">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
+          </button>
+          <button class="f-fav" type="button" data-favorite-id="${escapeHtml(`${collection}:${item.id || publicId}`)}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-9.7-9A5.4 5.4 0 0 1 12 6a5.4 5.4 0 0 1 9.7 6c-2.2 4.4-9.7 9-9.7 9Z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="f-media">${background ? `<img src="${safeUrl(background)}" alt="${escapeHtml(title)}" loading="eager">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
+    </div>`;
+
+    section.dataset.featuredView = view;
+    section.hidden = false;
+    setupFavoriteButtons(host);
+    setupContentDetailInteractions(host);
+  }
+
   async function renderVideoCatalog() {
     const main = document.querySelector('main');
     if (!main) return;
@@ -158,6 +270,12 @@
     const allVideos = videoRows.filter(video => video.active !== false);
     const allMovies = movieRows.filter(movie => movie.active !== false);
     const allSeries = seriesRows.filter(series => series.active !== false);
+    randomFeaturedPools.videos = allVideos.map(item => ({ ...item, collection: 'videos' }));
+    randomFeaturedPools.films = [
+      ...allMovies.map(item => ({ ...item, collection: 'movies' })),
+      ...allSeries.map(item => ({ ...item, collection: 'series' }))
+    ];
+    ensureRandomFeaturedSection();
     const sourceMaps = {
       videos: new Map(allVideos.map(item => [String(item.id), item])),
       movies: new Map(allMovies.map(item => [String(item.id), item])),
@@ -585,6 +703,7 @@
   function openContentDetail(data, options = {}) {
     const section = document.getElementById('contentDetailSection');
     const featuredSection = document.getElementById('featuredSection');
+    const randomFeaturedSection = document.getElementById('randomFeaturedSection');
     const bg = document.getElementById('contentDetailBg');
     const logo = document.getElementById('contentDetailLogo');
     const meta = document.getElementById('contentDetailMeta');
@@ -644,6 +763,7 @@
 
     renderDetailRecommendations(data);
     if (featuredSection) featuredSection.hidden = true;
+    if (randomFeaturedSection) randomFeaturedSection.hidden = true;
     document.body.classList.add('detail-page-active');
     section.hidden = false;
     section.scrollIntoView({ behavior: options.instant ? 'auto' : 'smooth', block: 'start' });
@@ -652,6 +772,7 @@
   function closeContentDetail(scrollHome = false, updateRoute = true) {
     const section = document.getElementById('contentDetailSection');
     const featuredSection = document.getElementById('featuredSection');
+    const randomFeaturedSection = document.getElementById('randomFeaturedSection');
     if (section) section.hidden = true;
     document.body.classList.remove('detail-page-active');
     if (updateRoute && detailRouteId()) {
@@ -659,9 +780,19 @@
     }
     const recommendations = document.getElementById('detailRecommendations');
     if (recommendations) recommendations.hidden = true;
-    if (featuredSection && document.getElementById('featured')?.children.length) {
-      featuredSection.hidden = false;
-      if (scrollHome) featuredSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const activeView = document.body.dataset.homeView || 'home';
+    if (activeView === 'home') {
+      if (featuredSection && document.getElementById('featured')?.children.length) {
+        featuredSection.hidden = false;
+        if (scrollHome) featuredSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      if (randomFeaturedSection) randomFeaturedSection.hidden = true;
+    } else if (['films', 'videos'].includes(activeView)) {
+      if (featuredSection) featuredSection.hidden = true;
+      renderRandomTabFeatured(activeView, false);
+      if (scrollHome && randomFeaturedSection && !randomFeaturedSection.hidden) {
+        randomFeaturedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
   }
 
@@ -782,6 +913,7 @@
     topbar.dataset.homeReady = 'true';
 
     let currentView = 'home';
+    document.body.dataset.homeView = currentView;
 
     const setActiveTab = activeButton => {
       tabButtons.forEach(button => {
@@ -812,7 +944,7 @@
       return value === 'filme' || value === 'filmes' || value === 'movie' || value === 'movies' || value.includes('filme');
     };
 
-    const applyCatalogFilter = () => {
+    const applyCatalogFilter = (refreshFeatured = false) => {
       const host = document.getElementById('dynamicSections');
       if (!host) return;
       const query = normalizeText(input.value);
@@ -833,7 +965,7 @@
           const contentMatchesView = currentView === 'films'
             ? (collection === 'movies' || collection === 'series')
             : currentView === 'videos'
-              ? collection !== 'movies'
+              ? collection === 'videos'
               : true;
           const searchMatches = !query || title.includes(query) || category.includes(query) || sectionCategory.includes(query);
           const show = sectionMatchesView && contentMatchesView && searchMatches;
@@ -850,8 +982,15 @@
       });
 
       const featuredSection = document.getElementById('featuredSection');
-      if (featuredSection && !document.body.classList.contains('detail-page-active')) {
-        featuredSection.hidden = currentView === 'films';
+      const randomFeaturedSection = document.getElementById('randomFeaturedSection');
+      if (!document.body.classList.contains('detail-page-active')) {
+        if (currentView === 'home') {
+          if (featuredSection) featuredSection.hidden = !document.getElementById('featured')?.children.length;
+          if (randomFeaturedSection) randomFeaturedSection.hidden = true;
+        } else if (['films', 'videos'].includes(currentView)) {
+          if (featuredSection) featuredSection.hidden = true;
+          renderRandomTabFeatured(currentView, refreshFeatured);
+        }
       }
 
       let empty = host.querySelector('.home-filter-empty');
@@ -870,11 +1009,12 @@
     viewButtons.forEach(button => {
       button.addEventListener('click', () => {
         currentView = button.dataset.homeView || 'videos';
+        document.body.dataset.homeView = currentView;
         setActiveTab(button);
         window.dispatchEvent(new Event('be:detail-close'));
-        applyCatalogFilter();
-        const catalog = document.getElementById('dynamicSections');
-        if (catalog) catalog.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        applyCatalogFilter(true);
+        const destination = document.getElementById('randomFeaturedSection') || document.getElementById('dynamicSections');
+        if (destination && !destination.hidden) destination.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
 
@@ -884,6 +1024,7 @@
 
     logo?.addEventListener('click', () => {
       currentView = 'home';
+      document.body.dataset.homeView = currentView;
       setActiveTab(logo);
       input.value = '';
       window.dispatchEvent(new Event('be:detail-close'));

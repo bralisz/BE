@@ -1895,24 +1895,23 @@
     justify-content:center;
     flex:0 0 auto;
     border-radius:999px;
-    background:transparent;
-    color:rgba(255,255,255,.76);
-    box-shadow:none;
+    background:#fff;
+    color:#111;
+    box-shadow:0 7px 20px rgba(0,0,0,.22),inset 0 0 0 1px rgba(0,0,0,.05);
     transition:background .32s var(--ease),color .32s ease,box-shadow .32s ease,transform .22s var(--ease);
   }
-  .home-logo-pill:hover{transform:none;background:rgba(255,255,255,.08)}
-  /* A logo permanece sem fundo; o indicador branco pertence somente à tab selecionada. */
+  .home-logo-pill:hover{transform:none;background:#f1f1f1}
   .home-logo-pill.active{
-    background:transparent;
-    color:rgba(255,255,255,.76);
-    box-shadow:none;
+    background:#fff;
+    color:#111;
+    box-shadow:0 7px 20px rgba(0,0,0,.22),0 0 0 2px rgba(66,139,255,.72),inset 0 0 0 1px rgba(0,0,0,.05);
   }
   .home-logo-pill .logo-mark{
     width:57px;
     height:41px;
     object-fit:contain;
     filter:none;
-    opacity:.78;
+    opacity:1;
     transition:opacity .28s ease,filter .28s ease;
   }
   .home-logo-pill.active .logo-mark{opacity:1}
@@ -1999,7 +1998,7 @@
   .home-close-icon{opacity:0;transform:rotate(-80deg) scale(.7)}
   .home-user-menu{
     position:fixed;
-    top:18px;
+    top:21px;
     right:22px;
     z-index:102;
     flex:0 0 auto;
@@ -2007,12 +2006,13 @@
     pointer-events:auto;
   }
   .home-user-menu .user-chip{
-    width:46px;
-    height:46px;
-    border-color:rgba(255,255,255,.13);
-    background:rgba(255,255,255,.065);
+    width:54px;
+    height:54px;
+    border-color:rgba(255,255,255,.18);
+    background:rgba(255,255,255,.075);
+    box-shadow:0 10px 28px rgba(0,0,0,.28);
   }
-  .home-user-menu .avatar{width:36px;height:36px;border-color:rgba(255,255,255,.20)}
+  .home-user-menu .avatar{width:46px;height:46px;border-color:rgba(255,255,255,.30)}
 
   .home-topbar.search-open{width:min(650px,calc(100vw - 150px));background:rgba(12,14,14,.82)}
   .home-topbar.search-open .home-nav-leading{
@@ -2088,7 +2088,7 @@
     z-index:4;
     left:clamp(30px,4vw,68px);
     bottom:clamp(96px,12vh,132px);
-    width:min(640px,70vw);
+    width:min(470px,42vw);
     padding:0;
     gap:10px;
     justify-content:flex-end;
@@ -2113,9 +2113,8 @@
   .f-logo img{
     display:block;
     width:auto;
-    height:clamp(210px,20vw,280px);
-    max-width:min(620px,70vw);
-    max-height:none;
+    max-width:min(480px,42vw);
+    max-height:168px;
     object-fit:contain;
     object-position:left center;
     filter:drop-shadow(0 6px 24px rgba(0,0,0,.45));
@@ -2283,9 +2282,8 @@
   .detail-logo img{
     display:block;
     width:auto;
-    height:clamp(210px,20vw,280px);
-    max-width:min(640px,72vw);
-    max-height:none;
+    max-width:min(500px,46vw);
+    max-height:180px;
     object-fit:contain;
     object-position:left center;
     filter:drop-shadow(0 6px 24px rgba(0,0,0,.48));
@@ -2398,12 +2396,13 @@
   @media(max-width:760px){
     .topbar-wrap{top:10px;padding:0 10px}
     .home-topbar{width:max-content;max-width:calc(100vw - 76px);height:56px;padding:5px;gap:5px}
-    .home-user-menu{top:10px;right:10px}
+    .home-user-menu{top:14px;right:10px}
     .home-logo-pill{width:68px;height:44px;padding:0 8px}
     .home-logo-pill .logo-mark{width:47px;height:37px}
     .home-nav-link{width:66px;min-width:66px;height:44px;padding:0;font-size:12.5px}
-    .home-search-wrap,.home-search-toggle,.home-user-menu .user-chip{width:44px;height:44px;flex-basis:44px}
-    .home-user-menu .avatar{width:34px;height:34px}
+    .home-search-wrap,.home-search-toggle{width:44px;height:44px;flex-basis:44px}
+    .home-user-menu .user-chip{width:48px;height:48px;flex-basis:48px}
+    .home-user-menu .avatar{width:40px;height:40px}
     .home-topbar.search-open{width:calc(100vw - 76px)}
     .featured-wrap,.featured{height:690px;min-height:690px}
     .f-media img,.f-media .ph{object-position:62% center}
@@ -2414,7 +2413,7 @@
     }
     .f-info{left:22px;right:22px;bottom:82px;width:auto;gap:9px}
     .f-logo{font-size:clamp(32px,10vw,48px);max-width:88%}
-    .f-logo img{width:auto;height:clamp(145px,38vw,205px);max-width:88vw;max-height:none}
+    .f-logo img{max-width:82vw;max-height:148px}
     .f-desc{font-size:12.5px;max-width:92%;-webkit-line-clamp:3}
     .f-play{height:42px;padding:0 18px}
     .f-fav{width:42px;height:42px}
@@ -2423,7 +2422,7 @@
     .detail-inner{width:auto;padding:118px 22px 84px}
     .detail-back{left:22px;top:86px}
     .detail-logo{font-size:clamp(32px,10vw,48px);max-width:88%}
-    .detail-logo img{width:auto;height:clamp(145px,38vw,205px);max-width:88vw;max-height:none}
+    .detail-logo img{max-width:84vw;max-height:150px}
     .detail-desc{font-size:13.5px;max-width:95%}
     .detail-actions{gap:10px}
     .detail-play{height:43px;padding:0 18px;font-size:14px}
@@ -2463,10 +2462,12 @@
     transform:translateY(-10px);
   }
   body.profile-page-active #featuredSection,
+  body.profile-page-active #randomFeaturedSection,
   body.profile-page-active #contentDetailSection,
   body.profile-page-active .video-catalog,
   body.profile-page-active footer,
   body.settings-page-active #featuredSection,
+  body.settings-page-active #randomFeaturedSection,
   body.settings-page-active #contentDetailSection,
   body.settings-page-active .video-catalog,
   body.settings-page-active footer{display:none!important}
@@ -2792,12 +2793,12 @@
   }
 </style>
 
-<link rel="stylesheet" href="/admin/admin.css?v=20260802-6">
+<link rel="stylesheet" href="/admin/admin.css?v=20260802-7">
 <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script defer src="/supabase-config.js"></script>
 <script defer src="/backend.js"></script>
-<script defer src="/admin/admin.js?v=20260802-6"></script>
-<script defer src="/public-data.js?v=20260802-6"></script>
+<script defer src="/admin/admin.js?v=20260802-7"></script>
+<script defer src="/public-data.js?v=20260802-8"></script>
 </head>
 <body>
 

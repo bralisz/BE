@@ -44,6 +44,11 @@
   const adminRoute = () => adminHashRoute() || adminCallback();
   const now = () => beBackend.now();
   const normalizePublicId = value => /^\d{8}$/.test(String(value || '').trim()) ? String(value).trim() : '';
+  function adminProfileRoute() {
+    const raw = user?.profile?.username || user?.displayName || user?.email?.split('@')[0] || 'perfil';
+    const handle = beBackend.normalizeUsername(raw) || 'perfil';
+    return '/@' + encodeURIComponent(handle);
+  }
   function generatePublicId(seed = '') {
     let text = String(seed || '').trim();
     if (!text) {
@@ -330,7 +335,7 @@
       if (action === 'dashboard') return go('dashboard');
       if (action === 'settings') return go('settings');
       if (action === 'support') return toast('Área de suporte em preparação.');
-      if (action === 'profile') return toast('Área de perfil em preparação.');
+      if (action === 'profile') return location.assign(adminProfileRoute());
     });
     loadPage().catch(error => {
       console.error(error);
@@ -353,6 +358,7 @@
 
   async function dashboard() {
     const content = $('#adminContent');
+    content.classList.remove('admin-editor-active');
     content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando visão geral…</div>';
 
     const names = ['featured','sections','videos','movies','series','shows','news','users'];
@@ -394,6 +400,7 @@
     content.innerHTML = `<section class="dashboard-hero"><div class="dashboard-copy"><h1>Painel de conteúdo</h1><p>Gerencie todas as áreas do site com facilidade.<br>Crie, edite, organize e publique conteúdos.</p><div class="dashboard-stats"><article><i>▤</i><div><strong>${counts.news || 0}</strong><span>Álbuns cadastrados</span></div></article><article><i>▣</i><div><strong>${counts.videos || 0}</strong><span>Vídeos cadastrados</span></div></article><article><i>◉</i><div><strong>${(counts.featured || 0) + (counts.sections || 0)}</strong><span>Destaques e seções</span></div></article></div></div></section><section class="dashboard-workspace"><div class="dashboard-side-column"><aside class="dashboard-side"><h2>Conteúdo</h2><button class="a-btn primary side-new" id="dashboardNewContent">＋ Novo conteúdo</button>${CONTENT_CATEGORIES.map((item, index) => `<button class="side-link ${index === 0 ? 'active' : ''}" data-route="contents/${item[0]}">${item[1]}<span>${counts[item[0]] || 0}</span></button>`).join('')}</aside><aside class="activity-log"><h2>Log de atividade</h2><div class="activity-list">${logHtml}</div></aside></div><div class="dashboard-panel"><div class="panel-head"><div><h2>Visão geral do conteúdo</h2><p>Veja os principais dados de acesso e engajamento dos vídeos.</p></div><button class="a-btn" data-route="contents">Ver conteúdos</button></div><div class="content-summary analytics-grid">${analyticsCard('Vídeo mais clicado', clicked, '↗')}${analyticsCard('Vídeo mais salvo', saved, '♡')}${analyticsCard('Vídeo mais visto', viewed, '◉')}<article class="analytics-card simple"><div class="analytics-label"><i>♙</i><span>Quantidade de usuários</span></div><strong class="analytics-number">${counts.users || 0}</strong><small>usuários cadastrados</small></article><article class="analytics-card simple"><div class="analytics-label"><i>▣</i><span>Total de vídeos vinculados</span></div><strong class="analytics-number">${counts.videos || 0}</strong><small>vídeos disponíveis no site</small></article><article class="analytics-card simple"><div class="analytics-label"><i>⌁</i><span>Total de interações</span></div><strong class="analytics-number">${totalInteractions.toLocaleString('pt-BR')}</strong><small>cliques, salvamentos e visualizações</small></article></div></div></section>`;
     $('#dashboardNewContent').onclick = chooseContentCategory;
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
+    await maybeResumePendingContentEditor();
   }
 
   function chooseContentCategory() {
@@ -410,9 +417,29 @@
     });
   }
 
+
+  async function maybeResumePendingContentEditor() {
+    try {
+      if (document.querySelector('.content-editor-inline-shell')) return false;
+      const pending = JSON.parse(sessionStorage.getItem(ACTIVE_CONTENT_EDITOR_KEY) || 'null');
+      if (!pending || !MODERN_CONTENT_COLLECTIONS.has(pending.name)) return false;
+      const item = pending.itemId === 'new' ? null : await db.get(pending.name, pending.itemId).catch(() => null);
+      const draftKey = contentDraftKey(pending.name, item);
+      if (!localStorage.getItem(draftKey)) {
+        sessionStorage.removeItem(ACTIVE_CONTENT_EDITOR_KEY);
+        return false;
+      }
+      setTimeout(() => openEditor(pending.name, item), 70);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function contentsPage(active = 'videos') {
     if (!CONTENT_CATEGORIES.some(item => item[0] === active)) active = 'videos';
     const content = $('#adminContent');
+    content.classList.remove('admin-editor-active');
     content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando conteúdos…</div>';
     const counts = {};
     await Promise.all(CONTENT_CATEGORIES.map(async ([key]) => { counts[key] = await countCollection(key).catch(() => 0); }));
@@ -432,20 +459,7 @@
     $('#search').oninput = draw;
     $('#statusFilter').onchange = draw;
     draw();
-
-    try {
-      const pendingEditor = JSON.parse(sessionStorage.getItem(ACTIVE_CONTENT_EDITOR_KEY) || 'null');
-      if (pendingEditor?.name === active && MODERN_CONTENT_COLLECTIONS.has(active) && !document.querySelector('.content-editor-modal')) {
-        const pendingItem = pendingEditor.itemId === 'new' ? null : items.find(entry => String(entry.id) === String(pendingEditor.itemId));
-        const pendingKey = contentDraftKey(active, pendingItem);
-        if (localStorage.getItem(pendingKey)) {
-          sessionStorage.removeItem(ACTIVE_CONTENT_EDITOR_KEY);
-          setTimeout(() => openEditor(active, pendingItem), 80);
-        } else {
-          sessionStorage.removeItem(ACTIVE_CONTENT_EDITOR_KEY);
-        }
-      }
-    } catch (_) {}
+    await maybeResumePendingContentEditor();
   }
 
   async function galleryPage() {
@@ -967,25 +981,49 @@
       return;
     }
 
-    const wrap = document.createElement('div');
     const modernEditor = MODERN_CONTENT_COLLECTIONS.has(name);
     const draftKey = contentDraftKey(name, item);
-    wrap.className = `modal-backdrop ${modernEditor ? 'content-editor-backdrop' : ''}`;
-    wrap.innerHTML = modernEditor
-      ? `<div class="modal content-editor-modal"><header class="content-editor-header"><div><span class="dashboard-kicker">${item ? 'Editar conteúdo' : 'Novo conteúdo'}</span><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><p>Organize as informações e acompanhe a aparência no site em tempo real.</p></div><div class="editor-header-status"><span class="editor-save-dot"></span><small data-editor-draft-status>${storedDraft ? 'Rascunho anterior encontrado' : 'Rascunho protegido no navegador'}</small></div></header><form id="editorForm" class="modern-content-form"><div class="content-editor-layout">${modernContentEditorFields(name, draft, context)}${modernContentPreview(name)}</div><div class="content-editor-actions"><div><strong>${item ? 'Alterações ainda não publicadas' : 'Novo conteúdo não publicado'}</strong><small>Salvar publica os dados no banco. O rascunho local evita perdas.</small></div><div class="content-editor-action-buttons"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">${item ? 'Salvar alterações' : 'Publicar conteúdo'}</button></div></div></form></div>`
-      : `<div class="modal ${name === 'featured' ? 'featured-editor-modal' : ''}"><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><form id="editorForm">${editorFields(name, draft, context)}<div class="modal-actions"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">Salvar</button></div></form></div>`;
-    document.body.append(wrap);
+    let wrap = null;
+    let root = null;
+    if (modernEditor) {
+      const editorHash = '#/admin/contents/' + name;
+      if (location.hash !== editorHash) {
+        history.replaceState(null, '', location.pathname + (location.search || '') + editorHash);
+      }
+      const content = $('#adminContent');
+      content.classList.add('admin-editor-active');
+      content.innerHTML = `<section class="content-editor-inline-shell"><div class="content-editor-modal inline"><header class="content-editor-header"><div><span class="dashboard-kicker">${item ? 'Editar conteúdo' : 'Novo conteúdo'}</span><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><p>Organize as informações e acompanhe a aparência no site em tempo real.</p></div><div class="editor-header-status"><span class="editor-save-dot"></span><small data-editor-draft-status>${storedDraft ? 'Rascunho anterior encontrado' : 'Rascunho protegido no navegador'}</small></div></header><form id="editorForm" class="modern-content-form"><div class="content-editor-layout">${modernContentEditorFields(name, draft, context)}${modernContentPreview(name)}</div><div class="content-editor-actions"><div><strong>${item ? 'Alterações ainda não publicadas' : 'Novo conteúdo não publicado'}</strong><small>Salvar publica os dados no banco. O rascunho local evita perdas.</small></div><div class="content-editor-action-buttons"><button type="button" class="a-btn" id="footerCancelButton">Cancelar</button><button class="a-btn primary" type="submit">${item ? 'Salvar alterações' : 'Publicar conteúdo'}</button></div></div></form></div></section>`;
+      root = content;
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    } else {
+      wrap = document.createElement('div');
+      wrap.className = 'modal-backdrop';
+      wrap.innerHTML = `<div class="modal ${name === 'featured' ? 'featured-editor-modal' : ''}"><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><form id="editorForm">${editorFields(name, draft, context)}<div class="modal-actions"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">Salvar</button></div></form></div>`;
+      document.body.append(wrap);
+      root = wrap;
+    }
     if (modernEditor) rememberActiveContentEditor(name, item);
     let draftController = { clearDraft() {}, saveNow() {} };
-    $('#cancelModal').onclick = () => { draftController.clearDraft(); wrap.remove(); };
+    const closeEditor = () => {
+      draftController.clearDraft();
+      if (modernEditor) {
+        const content = $('#adminContent');
+        if (content) content.classList.remove('admin-editor-active');
+        contentsPage(name).catch(error => toast(error.message, 'err'));
+      } else if (wrap) {
+        wrap.remove();
+      }
+    };
+    if (!modernEditor && $('#cancelModal', root)) $('#cancelModal', root).onclick = closeEditor;
+    if (modernEditor && $('#footerCancelButton', root)) $('#footerCancelButton', root).onclick = closeEditor;
     if (!modernEditor) wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
-    setupImagePreviews(wrap);
-    if (name === 'featured') setupFeaturedContentPicker(wrap, context, draft);
-    if (modernEditor) draftController = setupModernContentEditor(wrap, name, item, draftKey, storedDraft);
+    setupImagePreviews(root);
+    if (name === 'featured') setupFeaturedContentPicker(root, context, draft);
+    if (modernEditor) draftController = setupModernContentEditor(root, name, item, draftKey, storedDraft);
 
     if (['videos','movies','series'].includes(name)) {
-      const search = $('#contentSectionSearch', wrap);
-      const hidden = $('#contentSectionId', wrap);
+      const search = $('#contentSectionSearch', root);
+      const hidden = $('#contentSectionId', root);
       const normalize = value => String(value || '').trim().toLowerCase();
       const syncSection = () => {
         const typed = normalize(search.value);
@@ -999,7 +1037,7 @@
     }
 
 
-    $('#editorForm').onsubmit = async event => {
+    $('#editorForm', root).onsubmit = async event => {
       event.preventDefault();
       const button = event.submitter;
       button.disabled = true;
@@ -1086,9 +1124,7 @@
         const saved = item ? await db.set(name, item.id, data, { merge: true }) : await db.add(name, data);
         await logAction(item ? 'content_updated' : 'content_created', name, saved.id, `${LABELS[name] || name}: ${name === 'gallery' ? (data.itemType === 'banner' ? 'Banner' : data.category || 'Avatar') : data.title}`);
         toast('Salvo com sucesso.');
-        draftController.clearDraft();
-        wrap.remove();
-        loadPage();
+        closeEditor();
       } catch (error) {
         toast(error.message, 'err');
         button.disabled = false;
