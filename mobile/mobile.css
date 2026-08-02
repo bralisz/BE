@@ -283,3 +283,38 @@
     cursor:pointer;
   }
 }
+
+/* Menu mobile público: navegação funcional, perfil no topo e saída no rodapé. */
+@media (max-width:760px){
+  .mobile-drawer-footer{
+    margin-top:auto;
+    padding:14px 0 0;
+    border-top:1px solid rgba(255,255,255,.08);
+  }
+  .mobile-logout-button{
+    width:100%;
+    min-height:56px;
+    padding:0 16px;
+    border:1px solid rgba(255,82,92,.24);
+    border-radius:17px;
+    background:rgba(255,55,68,.09);
+    color:#ff6570;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    text-align:left;
+    font-size:16px;
+    font-weight:750;
+    touch-action:manipulation;
+  }
+  .mobile-logout-button svg{width:22px;height:22px;flex:0 0 22px}
+  .mobile-logout-button:active{transform:scale(.98);background:rgba(255,55,68,.15)}
+  .mobile-logout-button[hidden]{display:none!important}
+
+  /* Filmes e séries ficam fora da Home e aparecem juntos, separados, na opção Filmes. */
+  body[data-home-view="home"] #dynamicSections .film-library-section{display:none!important}
+  body[data-home-view="films"] #dynamicSections .film-library-section:not([hidden]){display:block!important}
+
+  .mobile-drawer[aria-hidden="false"]{pointer-events:auto}
+  .mobile-drawer[aria-hidden="true"]{pointer-events:none}
+}
