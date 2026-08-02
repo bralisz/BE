@@ -61,6 +61,16 @@
     auth.onChange(async account => {
       authReady = true;
       const allowed = beBackend.isAdmin(account);
+
+      // O script do painel também é carregado na página pública. Antes, qualquer
+      // login de membro era interpretado como uma tentativa de entrar no painel
+      // e a sessão era encerrada imediatamente. Fora de uma rota #/admin, apenas
+      // mantemos o estado administrativo em memória e não alteramos a sessão.
+      if (!adminRoute()) {
+        user = account && allowed ? account : null;
+        return;
+      }
+
       if (account && allowed) {
         const firstLogin = !user;
         user = account;
