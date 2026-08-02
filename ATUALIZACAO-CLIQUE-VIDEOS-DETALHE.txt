@@ -1,0 +1,6 @@
+Atualização aplicada na Home:
+- Ao clicar em qualquer card de vídeo/filme, agora abre uma nova área de destaque detalhada.
+- A área segue o estilo solicitado, com imagem de fundo grande, título/logo, ano/duração, descrição e botões Play + Minha Lista.
+- Os itens marcados com X na referência não foram incluídos (sem chips/categorias extras).
+- A barra/tab superior permanece centralizada no topo.
+- Adicionado botão "Voltar" para retornar ao destaque principal.

@@ -2175,6 +2175,140 @@
   }
   .home-filter-empty.show{display:block}
 
+
+  .content-detail-wrap{
+    width:100%;
+    margin:0;
+    min-height:clamp(650px,100svh,900px);
+  }
+  .content-detail{
+    position:relative;
+    width:100%;
+    height:clamp(650px,100svh,900px);
+    min-height:clamp(650px,100svh,900px);
+    background:#070808;
+    overflow:hidden;
+  }
+  .content-detail[hidden],.content-detail-wrap[hidden]{display:none!important}
+  .detail-bg,
+  .detail-bg img,
+  .detail-bg .ph{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+  }
+  .detail-bg img,
+  .detail-bg .ph{
+    object-fit:cover;
+    object-position:center center;
+    filter:brightness(.68) saturate(.9);
+    transform:scale(1.03);
+  }
+  .detail-bg::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:1;
+    background:
+      linear-gradient(90deg,rgba(0,0,0,.92) 0%,rgba(0,0,0,.76) 30%,rgba(0,0,0,.18) 62%,rgba(0,0,0,.08) 100%),
+      linear-gradient(180deg,rgba(0,0,0,.18) 0%,transparent 40%,rgba(0,0,0,.75) 100%);
+  }
+  .detail-inner{
+    position:relative;
+    z-index:2;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-end;
+    gap:14px;
+    width:min(560px,44vw);
+    height:100%;
+    padding:clamp(118px,14vh,146px) 0 clamp(96px,12vh,128px) clamp(30px,4vw,68px);
+  }
+  .detail-back{
+    position:absolute;
+    top:clamp(82px,10vh,108px);
+    left:clamp(30px,4vw,68px);
+    z-index:3;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    height:40px;
+    padding:0 14px;
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:999px;
+    background:rgba(15,17,17,.48);
+    color:#fff;
+    -webkit-backdrop-filter:blur(12px);
+    backdrop-filter:blur(12px);
+    font:600 13px/1 var(--font-sans);
+    cursor:pointer;
+  }
+  .detail-back:hover{background:rgba(255,255,255,.12)}
+  .detail-logo{
+    color:#fff;
+    font:700 clamp(34px,4.7vw,62px)/1.02 var(--font-display);
+    letter-spacing:-.045em;
+    text-shadow:0 6px 28px rgba(0,0,0,.55);
+  }
+  .detail-logo img{
+    display:block;
+    width:auto;
+    max-width:min(360px,36vw);
+    max-height:102px;
+    object-fit:contain;
+    object-position:left center;
+    filter:drop-shadow(0 6px 24px rgba(0,0,0,.48));
+  }
+  .detail-meta{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    color:rgba(255,255,255,.9);
+    font-size:14px;
+  }
+  .detail-year{color:#fff;font-weight:700}
+  .detail-duration{color:#f3c84b;font-weight:700}
+  .detail-dot{width:4px;height:4px;border-radius:999px;background:rgba(255,255,255,.55)}
+  .detail-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .detail-play,
+  .detail-list{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    height:46px;
+    padding:0 22px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.16);
+    font:600 15px/1 var(--font-sans);
+    text-decoration:none;
+    transition:transform .22s ease,background .22s ease,border-color .22s ease,box-shadow .22s ease;
+  }
+  .detail-play{
+    background:#fff;
+    color:#101112;
+    box-shadow:0 10px 28px rgba(0,0,0,.22);
+  }
+  .detail-play svg{fill:#101112;width:16px;height:16px}
+  .detail-list{
+    background:rgba(255,255,255,.10);
+    color:#fff;
+    -webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
+  }
+  .detail-list svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.3}
+  .detail-play:hover,.detail-list:hover{transform:translateY(-1px);}
+  .detail-list.active{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3)}
+  .detail-desc{
+    max-width:540px;
+    color:rgba(255,255,255,.86);
+    font-size:clamp(14px,1.02vw,17px);
+    line-height:1.55;
+    text-shadow:0 3px 16px rgba(0,0,0,.42);
+  }
+
   @media(max-width:760px){
     .topbar-wrap{top:10px;padding:0 10px}
     .home-topbar{width:max-content;max-width:calc(100vw - 76px);height:54px;padding:4px 5px}
@@ -2199,6 +2333,14 @@
     .f-play{height:42px;padding:0 18px}
     .f-fav{width:42px;height:42px}
     .f-dots{bottom:66px;right:22px}
+    .content-detail-wrap,.content-detail{height:690px;min-height:690px}
+    .detail-inner{width:auto;padding:118px 22px 84px}
+    .detail-back{left:22px;top:86px}
+    .detail-logo{font-size:clamp(32px,10vw,48px);max-width:88%}
+    .detail-logo img{max-width:68vw;max-height:78px}
+    .detail-desc{font-size:13.5px;max-width:95%}
+    .detail-actions{gap:10px}
+    .detail-play,.detail-list{height:43px;padding:0 18px;font-size:14px}
     .video-catalog{margin-top:0;padding-top:22px;background:#030405}
     .video-rail-title{font-size:17px}
     .video-card{flex-basis:clamp(210px,58vw,270px)}
@@ -2207,6 +2349,7 @@
     .home-nav-link[data-public-action="support"]{display:none}
     .home-nav-link{padding:0 10px}
     .featured-wrap,.featured{height:660px;min-height:660px}
+    .content-detail-wrap,.content-detail{height:660px;min-height:660px}
   }
   @media(max-width:430px){
     .home-nav-link{padding:0 8px;font-size:11.5px}
@@ -2214,6 +2357,8 @@
     .home-logo-pill .logo-mark{width:43px}
     .home-search-wrap,.home-search-toggle,.home-user-menu .user-chip{width:42px;height:42px;flex-basis:42px}
   }
+
+
 
 </style>
 
@@ -2546,6 +2691,31 @@
         <button class="f-dot" data-goto="5" aria-label="Ir para o destaque 6"></button>
       </div>
 
+    </div>
+  </section>
+
+  <section class="content-detail-wrap" id="contentDetailSection" hidden aria-label="Detalhes do conteúdo">
+    <div class="content-detail" id="contentDetail">
+      <button class="detail-back" id="detailBackButton" type="button" aria-label="Voltar para a home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        Voltar
+      </button>
+      <div class="detail-bg" id="contentDetailBg"></div>
+      <div class="detail-inner">
+        <div class="detail-logo" id="contentDetailLogo">Selecione um vídeo</div>
+        <div class="detail-meta" id="contentDetailMeta"></div>
+        <div class="detail-actions">
+          <a class="detail-play" id="contentDetailPlay" href="#">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>
+            Assistir
+          </a>
+          <button class="detail-list" id="contentDetailList" type="button" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Minha Lista
+          </button>
+        </div>
+        <p class="detail-desc" id="contentDetailDesc"></p>
+      </div>
     </div>
   </section>
 

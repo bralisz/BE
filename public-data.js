@@ -4,6 +4,7 @@
 
   window.addEventListener('load', async () => {
     setupHomeNavigation();
+    setupDetailControls();
     try {
       if (!window.beBackend) return;
       await window.beBackend.ready;
@@ -11,6 +12,7 @@
       await renderFeatured();
       await renderVideoCatalog();
       setupHomeNavigation();
+      setupDetailControls();
     } catch (error) {
       console.warn('Conteúdo dinâmico indisponível:', error.message);
     }
@@ -48,13 +50,17 @@
         if (!video || video.active === false) return null;
         return {
           ...item,
+          id: item.id || video.id,
           title: item.title || video.title,
           description: item.description || video.description,
           imageUrl: item.imageUrl || video.imageUrl || video.thumbnailUrl,
           bannerUrl: item.bannerUrl || video.bannerUrl || video.imageUrl || video.thumbnailUrl,
           contentUrl: item.contentUrl || video.videoUrl || video.contentUrl || video.link,
           duration: item.duration || video.duration || video.videoDuration || video.runtime,
-          year: item.year || video.year
+          year: item.year || video.year,
+          logoUrl: item.logoUrl || video.logoUrl || '',
+          collection: 'videos',
+          category: 'destaque'
         };
       } catch (_) {
         return null;
@@ -83,10 +89,19 @@
           <div class="f-meta">${meta}</div>
           <p class="f-desc">${escapeHtml(item.description || '')}</p>
           <div class="f-actions">
-            <a class="f-play" href="${safeUrl(url)}" ${/^https?:\/\//i.test(url) ? 'target="_blank" rel="noopener"' : ''}>
+            <button class="f-play" type="button" data-open-detail="true"
+              data-item-id="${escapeHtml(String(item.id || item.videoId || title))}"
+              data-title="${escapeHtml(title)}"
+              data-description="${escapeHtml(item.description || '')}"
+              data-year="${escapeHtml(item.year || '')}"
+              data-duration="${escapeHtml(item.duration || '')}"
+              data-content-url="${safeUrl(url)}"
+              data-image-url="${safeUrl(item.imageUrl || '')}"
+              data-banner-url="${safeUrl(item.bannerUrl || item.imageUrl || '')}"
+              data-logo-url="${safeUrl(item.logoUrl || '')}">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
-            </a>
-            <button class="f-fav" type="button" data-favorite-id="${escapeHtml(item.videoId || item.id || title)}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
+            </button>
+            <button class="f-fav" type="button" data-favorite-id="${escapeHtml(String(item.videoId || item.id || title))}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-9.7-9A5.4 5.4 0 0 1 12 6a5.4 5.4 0 0 1 9.7 6c-2.2 4.4-9.7 9-9.7 9Z"/></svg>
             </button>
           </div>
@@ -111,6 +126,7 @@
     host.addEventListener('mouseleave', start);
     start();
     setupFavoriteButtons(host);
+    setupContentDetailInteractions(host);
     if (section) section.hidden = false;
   }
 
@@ -145,6 +161,7 @@
           videoUrl: item.contentUrl || video.videoUrl || video.contentUrl || video.link,
           duration: item.duration || video.duration || video.videoDuration || video.runtime,
           year: item.year || video.year,
+          logoUrl: item.logoUrl || video.logoUrl || '',
           category: 'destaque',
           collection: 'videos'
         };
@@ -251,6 +268,7 @@
     }
 
     main.insertAdjacentElement('afterend', host);
+    setupContentDetailInteractions(host);
     window.dispatchEvent(new Event('be:catalog-ready'));
   }
 
@@ -260,9 +278,153 @@
     const title = video.title || 'Abrir vídeo';
     const category = video.category || video.type || video.contentType || '';
     const collection = video.collection || 'videos';
-    return `<a class="video-card" href="${safeUrl(href)}" ${/^https?:\/\//i.test(href) ? 'target="_blank" rel="noopener"' : ''} aria-label="${escapeHtml(title)}" data-title="${escapeHtml(normalizeText(title))}" data-category="${escapeHtml(normalizeText(category))}" data-collection="${escapeHtml(normalizeText(collection))}">
+    const description = video.description || '';
+    const year = video.year || '';
+    const duration = video.duration || video.videoDuration || video.runtime || '';
+    const banner = video.bannerUrl || video.imageUrl || video.thumbnailUrl || '';
+    const logo = video.logoUrl || '';
+    const itemId = video.id || video.videoId || title;
+    return `<a class="video-card" href="${safeUrl(href)}" aria-label="${escapeHtml(title)}"
+      data-item-id="${escapeHtml(String(itemId))}"
+      data-open-detail="true"
+      data-title="${escapeHtml(title)}"
+      data-description="${escapeHtml(description)}"
+      data-year="${escapeHtml(year)}"
+      data-duration="${escapeHtml(duration)}"
+      data-content-url="${safeUrl(href)}"
+      data-image-url="${safeUrl(image)}"
+      data-banner-url="${safeUrl(banner)}"
+      data-logo-url="${safeUrl(logo)}"
+      data-title-search="${escapeHtml(normalizeText(title))}"
+      data-category="${escapeHtml(normalizeText(category))}"
+      data-collection="${escapeHtml(normalizeText(collection))}">
       <img src="${safeUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
     </a>`;
+  }
+
+  function setupContentDetailInteractions(host) {
+    if (!host) return;
+    host.querySelectorAll('[data-open-detail="true"]').forEach(card => {
+      if (card.dataset.detailBound === 'true') return;
+      card.dataset.detailBound = 'true';
+      card.addEventListener('click', event => {
+        event.preventDefault();
+        openContentDetail(card.dataset);
+      });
+    });
+  }
+
+  function setupDetailControls() {
+    const section = document.getElementById('contentDetailSection');
+    const back = document.getElementById('detailBackButton');
+    if (back && back.dataset.bound !== 'true') {
+      back.dataset.bound = 'true';
+      back.addEventListener('click', () => closeContentDetail(true));
+    }
+    if (section && section.dataset.bound !== 'true') {
+      section.dataset.bound = 'true';
+      window.addEventListener('be:detail-close', () => closeContentDetail(false));
+    }
+  }
+
+  function openContentDetail(data) {
+    const section = document.getElementById('contentDetailSection');
+    const featuredSection = document.getElementById('featuredSection');
+    const bg = document.getElementById('contentDetailBg');
+    const logo = document.getElementById('contentDetailLogo');
+    const meta = document.getElementById('contentDetailMeta');
+    const desc = document.getElementById('contentDetailDesc');
+    const play = document.getElementById('contentDetailPlay');
+    const list = document.getElementById('contentDetailList');
+    if (!section || !bg || !logo || !meta || !desc || !play || !list) return;
+
+    const title = data.title || 'Conteúdo';
+    const description = data.description || 'Descrição indisponível no momento.';
+    const year = data.year || '';
+    const duration = data.duration || '';
+    const contentUrl = data.contentUrl || '#';
+    const bannerUrl = data.bannerUrl || data.imageUrl || '';
+    const logoUrl = data.logoUrl || '';
+    const itemId = String(data.itemId || title);
+
+    bg.innerHTML = bannerUrl && bannerUrl !== '#'
+      ? `<img src="${safeUrl(bannerUrl)}" alt="${escapeHtml(title)}" loading="eager">`
+      : '<div class="ph ph-wide" style="height:100%"></div>';
+
+    if (logoUrl && logoUrl !== '#') {
+      logo.innerHTML = `<img src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
+    } else {
+      logo.textContent = title;
+    }
+
+    const metaParts = [];
+    if (year) metaParts.push(`<span class="detail-year">${escapeHtml(year)}</span>`);
+    if (year && duration) metaParts.push('<span class="detail-dot"></span>');
+    if (duration) metaParts.push(`<span class="detail-duration">${escapeHtml(duration)}</span>`);
+    meta.innerHTML = metaParts.join('');
+    desc.textContent = description;
+
+    play.href = safeUrlValue(contentUrl);
+    if (/^https?:\/\//i.test(contentUrl)) {
+      play.target = '_blank';
+      play.rel = 'noopener';
+    } else {
+      play.removeAttribute('target');
+      play.removeAttribute('rel');
+    }
+
+    list.dataset.favoriteId = itemId;
+    syncDetailListButton(list, itemId);
+    if (list.dataset.clickBound !== 'true') {
+      list.dataset.clickBound = 'true';
+      list.addEventListener('click', () => toggleDetailFavorite(list));
+    }
+
+    if (featuredSection) featuredSection.hidden = true;
+    section.hidden = false;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function closeContentDetail(scrollHome = false) {
+    const section = document.getElementById('contentDetailSection');
+    const featuredSection = document.getElementById('featuredSection');
+    if (section) section.hidden = true;
+    if (featuredSection && document.getElementById('featured')?.children.length) {
+      featuredSection.hidden = false;
+      if (scrollHome) featuredSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function detailFavoriteSet() {
+    const key = 'beDetailFavorites';
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) || '[]');
+      return new Set(Array.isArray(saved) ? saved.map(String) : []);
+    } catch (_) {
+      return new Set();
+    }
+  }
+
+  function saveDetailFavoriteSet(set) {
+    localStorage.setItem('beDetailFavorites', JSON.stringify(Array.from(set)));
+  }
+
+  function syncDetailListButton(button, itemId) {
+    const favorites = detailFavoriteSet();
+    const active = favorites.has(String(itemId || ''));
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+    button.innerHTML = `${active
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>Na Minha Lista'
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Minha Lista'}`;
+  }
+
+  function toggleDetailFavorite(button) {
+    const itemId = String(button.dataset.favoriteId || '');
+    const favorites = detailFavoriteSet();
+    if (favorites.has(itemId)) favorites.delete(itemId); else favorites.add(itemId);
+    saveDetailFavoriteSet(favorites);
+    syncDetailListButton(button, itemId);
   }
 
   function setupRail(section) {
@@ -371,7 +533,7 @@
         cards.forEach(card => {
           const category = card.dataset.category || sectionCategory;
           const collection = card.dataset.collection || section.dataset.collection || 'videos';
-          const title = card.dataset.title || normalizeText(card.getAttribute('aria-label'));
+          const title = card.dataset.titleSearch || normalizeText(card.getAttribute('aria-label'));
           const viewMatches = currentView === 'films'
             ? (collection === 'movies' || isFilm(category) || isFilm(sectionCategory))
             : currentView === 'videos'
@@ -407,6 +569,7 @@
       button.addEventListener('click', () => {
         currentView = button.dataset.homeView || 'videos';
         viewButtons.forEach(item => item.classList.toggle('active', item === button));
+        window.dispatchEvent(new Event('be:detail-close'));
         applyCatalogFilter();
         const catalog = document.getElementById('dynamicSections');
         if (catalog) catalog.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -417,6 +580,7 @@
       currentView = 'home';
       viewButtons.forEach(item => item.classList.remove('active'));
       input.value = '';
+      window.dispatchEvent(new Event('be:detail-close'));
       setSearchOpen(false);
       applyCatalogFilter();
     });
@@ -431,17 +595,22 @@
     });
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && topbar.classList.contains('search-open')) setSearchOpen(false);
+      if (event.key === 'Escape' && !topbar.classList.contains('search-open')) closeContentDetail();
     });
     window.addEventListener('be:catalog-ready', applyCatalogFilter);
 
     applyCatalogFilter();
   }
 
-  function safeUrl(value) {
+  function safeUrlValue(value) {
     const text = String(value || '').trim();
     if (!text) return '#';
-    if (/^(https?:\/\/|\/|#)/i.test(text)) return escapeHtml(text);
+    if (/^(https?:\/\/|\/|#)/i.test(text)) return text;
     return '#';
+  }
+
+  function safeUrl(value) {
+    return escapeHtml(safeUrlValue(value));
   }
 
   function escapeHtml(value) {
