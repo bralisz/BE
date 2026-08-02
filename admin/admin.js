@@ -501,19 +501,32 @@
   function editorFields(name, item = {}, context = {}) {
     const showMedia = !['sections','users'].includes(name);
     const sections = context.sections || [];
-    const currentSection = sections.find(section => String(section.id) === String(item.sectionId || '')) || sections.find(section => String(section.category || section.slug || '').toLowerCase() === String(item.category || '').toLowerCase());
+    const sectionLinkedContent = ['videos','movies','series'].includes(name);
+    const currentSection = sections.find(section => String(section.id) === String(item.sectionId || '')) || sections.find(section => {
+      const sectionKeys = [section.title, section.category, section.slug, section.id].map(value => String(value || '').trim().toLowerCase());
+      const itemKeys = [item.type, item.category, item.sectionName].map(value => String(value || '').trim().toLowerCase());
+      return itemKeys.some(value => value && sectionKeys.includes(value));
+    });
     const sectionOptions = sections.map(section => `<option value="${esc(section.title || section.category || section.id)}"></option>`).join('');
     const selectedFeaturedCollection = String(item.contentCollection || item.sourceCollection || (item.videoId ? 'videos' : '') || '').trim();
     const selectedFeaturedId = String(item.contentId || item.videoId || '').trim();
     const sectionFields = name === 'sections' ? `<div class="field"><label>Categoria / identificador *</label><input class="a-input" name="category" required value="${esc(item.category || item.slug || '')}" placeholder="ex.: vanity-fair"><small>Identificador interno usado também para manter compatibilidade com conteúdos antigos.</small></div><div class="field"><label>Quantidade inicial</label><input class="a-input" type="number" min="1" max="50" name="itemLimit" value="${esc(item.itemLimit ?? 12)}"></div>` : '';
-    const videoFields = name === 'videos' ? `<div class="field"><label>ID público do vídeo</label><input class="a-input" name="publicId" value="${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" readonly><small>O link público será /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}.</small></div><div class="field full"><label>Seção do vídeo *</label><input class="a-input" id="videoSectionSearch" name="sectionSearch" list="createdSectionsList" required autocomplete="off" value="${esc(currentSection?.title || currentSection?.category || '')}" placeholder="Digite ou selecione uma seção já criada"><input type="hidden" id="videoSectionId" name="sectionId" value="${esc(currentSection?.id || item.sectionId || '')}"><datalist id="createdSectionsList">${sectionOptions}</datalist><small>Digite o nome para filtrar. O vídeo será vinculado ao ID da seção, mesmo que ela seja renomeada depois.</small></div><div class="field full"><label>URL do vídeo</label><input class="a-input" name="videoUrl" value="${esc(item.videoUrl || item.contentUrl || item.link || '')}" placeholder="https://youtube.com/..."></div>` : '';
-    const featuredFields = name === 'featured' ? `<div class="field full featured-content-field"><label>Selecionar conteúdo publicado *</label><input type="hidden" name="contentId" id="featuredContentId" value="${esc(selectedFeaturedId)}"><input type="hidden" name="contentCollection" id="featuredContentCollection" value="${esc(selectedFeaturedCollection)}"><input type="hidden" name="videoId" id="featuredLegacyVideoId" value="${esc(selectedFeaturedCollection === 'videos' ? selectedFeaturedId : '')}"><div class="featured-picker" id="featuredContentPicker"><div class="featured-picker-toolbar"><label class="featured-picker-search" aria-label="Buscar conteúdo"><span aria-hidden="true">⌕</span><input type="search" id="featuredContentSearch" placeholder="Buscar por título, tipo ou ano…" autocomplete="off"></label><div class="featured-picker-tabs" role="tablist" aria-label="Filtrar tipo de conteúdo"><button type="button" class="active" data-featured-filter="all">Todos</button><button type="button" data-featured-filter="videos">Vídeos</button><button type="button" data-featured-filter="movies">Filmes</button><button type="button" data-featured-filter="series">Séries</button></div></div><div class="featured-selected" id="featuredSelectedSummary"><div class="featured-selected-empty"><span>▣</span><div><strong>Nenhum conteúdo selecionado</strong><small>Escolha um item da lista abaixo.</small></div></div></div><div class="featured-picker-list" id="featuredContentList" role="listbox" aria-label="Conteúdos publicados"></div><div class="featured-picker-empty" id="featuredContentEmpty" hidden>Nenhum conteúdo encontrado com esse filtro.</div></div><small>Você pode pesquisar e selecionar qualquer vídeo, filme ou série já publicado. Os dados do destaque serão preenchidos automaticamente e ainda poderão ser ajustados.</small></div>` : '';
+    const contentSectionFields = sectionLinkedContent ? `<div class="field full"><label>Tipo / seção do site *</label><input class="a-input" id="contentSectionSearch" name="sectionSearch" list="createdSectionsList" required autocomplete="off" value="${esc(currentSection?.title || currentSection?.category || '')}" placeholder="Selecione uma seção criada em Seções do site"><input type="hidden" id="contentSectionId" name="sectionId" value="${esc(currentSection?.id || item.sectionId || '')}"><datalist id="createdSectionsList">${sectionOptions}</datalist><small>Este campo usa somente as seções criadas em “Seções do site”. O conteúdo aparecerá automaticamente na seção escolhida.</small></div>` : '';
+    const typeField = sectionLinkedContent ? '' : `<div class="field"><label>Tipo</label><input class="a-input" name="type" value="${esc(item.type || name)}"></div>`;
+    const videoFields = name === 'videos' ? `<div class="field"><label>ID público do vídeo</label><input class="a-input" name="publicId" value="${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" readonly><small>O link público será /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}.</small></div><div class="field full"><label>URL do vídeo</label><input class="a-input" name="videoUrl" value="${esc(item.videoUrl || item.contentUrl || item.link || '')}" placeholder="https://youtube.com/..."></div>` : '';
+    const titleLabel = ['movies','series'].includes(name) ? 'Título interno / busca *' : 'Título *';
+    const titleHelp = ['movies','series'].includes(name) ? '<small>Este texto serve para busca, acessibilidade e administração. No site, o título visual será a logo cadastrada.</small>' : '';
+    const logoField = ['movies','series'].includes(name) ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : (name === 'featured' ? imageField('Logo do conteúdo', 'logoUrl', item.logoUrl || '') : '');
+    const featuredFields = name === 'featured' ? `<div class="field full featured-content-field"><label>Selecionar conteúdo publicado *</label><input type="hidden" name="contentId" id="featuredContentId" value="${esc(selectedFeaturedId)}"><input type="hidden" name="contentCollection" id="featuredContentCollection" value="${esc(selectedFeaturedCollection)}"><input type="hidden" name="videoId" id="featuredLegacyVideoId" value="${esc(selectedFeaturedCollection === 'videos' ? selectedFeaturedId : '')}"><input type="hidden" name="order" value="${esc(item.order ?? 0)}"><input type="hidden" name="active" value="${item.active === false ? 'false' : 'true'}"><div class="featured-picker" id="featuredContentPicker"><div class="featured-picker-toolbar"><label class="featured-picker-search" aria-label="Buscar conteúdo"><span aria-hidden="true">⌕</span><input type="search" id="featuredContentSearch" placeholder="Buscar por título, tipo ou ano…" autocomplete="off"></label><div class="featured-picker-tabs" role="tablist" aria-label="Filtrar tipo de conteúdo"><button type="button" class="active" data-featured-filter="all">Todos</button><button type="button" data-featured-filter="videos">Vídeos</button><button type="button" data-featured-filter="movies">Filmes</button><button type="button" data-featured-filter="series">Séries</button></div></div><div class="featured-selected" id="featuredSelectedSummary"><div class="featured-selected-empty"><span>▣</span><div><strong>Nenhum conteúdo selecionado</strong><small>Escolha um item da lista abaixo.</small></div></div></div><div class="featured-picker-list" id="featuredContentList" role="listbox" aria-label="Conteúdos publicados"></div><div class="featured-picker-empty" id="featuredContentEmpty" hidden>Nenhum conteúdo encontrado com esse filtro.</div></div><small>Você pode pesquisar e selecionar qualquer vídeo, filme ou série já publicado. A logo cadastrada no filme ou na série será usada como título visual no destaque.</small></div>` : '';
+    if (name === 'featured') {
+      return `<div class="form-grid featured-only-grid">${featuredFields}</div>`;
+    }
     if (name === 'gallery') {
       const type = String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
       const isBanner = type === 'banner';
       return `<div class="form-grid"><input type="hidden" name="itemType" value="${type}"><input type="hidden" name="title" value="${isBanner ? 'Banner' : 'Avatar'}">${isBanner ? '<input type="hidden" name="category" value="Banners de perfil">' : `<div class="field full"><label>Nome da categoria *</label><input class="a-input" name="category" required maxlength="60" value="${esc(item.category || '')}" placeholder="Ex.: Tour Film"><small>O avatar não terá nome individual; somente esta categoria será exibida.</small></div>`}${imageField(isBanner ? 'Link da imagem do banner *' : 'Link da imagem do avatar *', 'imageUrl', item.imageUrl || '')}<div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div><div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field full"><small>${isBanner ? 'O banner não possui nome individual. Prefira imagens horizontais em 16:6 ou 16:9.' : 'Avatares funcionam melhor em formato quadrado.'}</small></div></div>`;
     }
-    return `<div class="form-grid">${featuredFields}<div class="field full"><label>Título *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}"></div><div class="field"><label>Tipo</label><input class="a-input" name="type" value="${esc(item.type || name)}"></div><div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>${sectionFields}${videoFields}<div class="field full"><label>Descrição</label><textarea class="a-textarea" rows="4" maxlength="1000" name="description">${esc(item.description || '')}</textarea></div>${showMedia ? `${imageField('Imagem / thumbnail', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}${name === 'videos' ? '' : imageField('Banner', 'bannerUrl', item.bannerUrl || '')}${name === 'featured' ? imageField('Logo do conteúdo', 'logoUrl', item.logoUrl || '') : ''}${name === 'videos' ? '' : `<div class="field full"><label>Link do conteúdo</label><input class="a-input" name="contentUrl" value="${esc(item.contentUrl || item.link || '')}" placeholder="https://... ou /pagina"></div>`}` : ''}<div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field"><label>Duração</label><input class="a-input" name="duration" value="${esc(item.duration || item.videoDuration || item.runtime || '')}" placeholder="Ex.: 24 min ou 1h 42min"></div><div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}"></div></div>`;
+    return `<div class="form-grid">${featuredFields}<div class="field full"><label>${titleLabel}</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}">${titleHelp}</div>${typeField}<div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>${sectionFields}${contentSectionFields}${videoFields}<div class="field full"><label>Descrição</label><textarea class="a-textarea" rows="4" maxlength="1000" name="description">${esc(item.description || '')}</textarea></div>${showMedia ? `${imageField(['movies','series'].includes(name) ? 'Imagem / thumbnail (usada também como fundo)' : 'Imagem / thumbnail', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}${['videos','movies','series'].includes(name) ? '' : imageField('Banner', 'bannerUrl', item.bannerUrl || '')}${logoField}${name === 'videos' ? '' : `<div class="field full"><label>Link do conteúdo</label><input class="a-input" name="contentUrl" value="${esc(item.contentUrl || item.link || '')}" placeholder="https://... ou /pagina"></div>`}` : ''}<div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field"><label>Duração</label><input class="a-input" name="duration" value="${esc(item.duration || item.videoDuration || item.runtime || '')}" placeholder="Ex.: 24 min ou 1h 42min"></div><div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}"></div></div>`;
   }
 
   function featuredCollectionLabel(collection) {
@@ -570,6 +583,7 @@
       if (form.elements.contentUrl) form.elements.contentUrl.value = item.videoUrl || item.contentUrl || item.link || '';
       if (form.elements.duration) form.elements.duration.value = item.duration || item.videoDuration || item.runtime || '';
       if (form.elements.year) form.elements.year.value = item.year || '';
+      if (form.elements.logoUrl) form.elements.logoUrl.value = item.logoUrl || '';
       if (form.elements.type) form.elements.type.value = featuredCollectionLabel(item.collection).toLowerCase();
       form.querySelectorAll('.image-url-input').forEach(input => input.dispatchEvent(new Event('input')));
     };
@@ -699,7 +713,7 @@
     }
     const context = { sections: [], featuredContents: [] };
     try {
-      if (name === 'videos') context.sections = (await db.list('sections', { orderBy: 'order', direction: 'asc' })).filter(entry => entry.active !== false);
+      if (['videos','movies','series'].includes(name)) context.sections = (await db.list('sections', { orderBy: 'order', direction: 'asc' })).filter(entry => entry.active !== false);
       if (name === 'featured') {
         const collections = [
           ['videos', 'Vídeo'],
@@ -737,15 +751,15 @@
     setupImagePreviews(wrap);
     if (name === 'featured') setupFeaturedContentPicker(wrap, context, draft);
 
-    if (name === 'videos') {
-      const search = $('#videoSectionSearch', wrap);
-      const hidden = $('#videoSectionId', wrap);
+    if (['videos','movies','series'].includes(name)) {
+      const search = $('#contentSectionSearch', wrap);
+      const hidden = $('#contentSectionId', wrap);
       const normalize = value => String(value || '').trim().toLowerCase();
       const syncSection = () => {
         const typed = normalize(search.value);
         const match = context.sections.find(section => [section.title, section.category, section.slug, section.id].some(value => normalize(value) === typed));
         hidden.value = match ? match.id : '';
-        search.setCustomValidity(match ? '' : 'Selecione uma seção existente na lista.');
+        search.setCustomValidity(match ? '' : 'Selecione uma seção criada em Seções do site.');
       };
       search.addEventListener('input', syncSection);
       search.addEventListener('change', syncSection);
@@ -773,12 +787,23 @@
             : data.category.trim().toLowerCase().replace(/\s+/g, '-');
         }
         if (name === 'gallery') data.itemType = data.itemType === 'banner' ? 'banner' : 'avatar';
-        if (name === 'videos') {
+        if (['movies','series'].includes(name) && !String(data.logoUrl || '').trim()) {
+          throw new Error('Adicione a logo do título. Filmes e séries usam a logo no lugar do texto do cabeçalho.');
+        }
+        if (['movies','series'].includes(name)) {
+          // Filmes e séries usam a própria thumbnail como imagem de fundo.
+          data.bannerUrl = String(data.imageUrl || '').trim();
+        }
+        if (['videos','movies','series'].includes(name)) {
           const selected = context.sections.find(section => String(section.id) === String(data.sectionId || ''));
-          if (!selected) throw new Error('Selecione uma seção existente.');
+          if (!selected) throw new Error('Selecione uma seção criada em Seções do site.');
           data.sectionId = selected.id;
+          data.sectionName = String(selected.title || selected.category || selected.id).trim();
           data.category = String(selected.category || selected.slug || selected.id).trim().toLowerCase();
+          data.type = data.sectionName;
           delete data.sectionSearch;
+        }
+        if (name === 'videos') {
           data.publicId = normalizePublicId(data.publicId) || generatePublicId(item?.id || '');
           const existingVideos = await db.list('videos');
           const duplicated = existingVideos.some(video => video.id !== item?.id && String(normalizePublicId(video.publicId) || generatePublicId(video.id)) === data.publicId);
@@ -798,6 +823,22 @@
           data.contentCollection = selectedCollection;
           data.sourceCollection = selectedCollection;
           data.videoId = selectedCollection === 'videos' ? selectedContent.id : '';
+          // O destaque é totalmente vinculado ao conteúdo escolhido. Os dados visuais
+          // são lidos diretamente do vídeo, filme ou série, sem campos duplicados.
+          data.title = selectedContent.title || 'Destaque';
+          data.description = '';
+          data.imageUrl = '';
+          data.bannerUrl = '';
+          data.logoUrl = '';
+          data.contentUrl = '';
+          data.duration = '';
+          data.year = '';
+          if (!item) {
+            const existingFeatured = await db.list('featured');
+            data.order = existingFeatured.reduce((max, entry) => Math.max(max, Number(entry.order) || 0), -1) + 1;
+          } else {
+            data.order = Number(item.order) || 0;
+          }
         }
         data.active = data.active === 'true';
         data.updatedAt = now();

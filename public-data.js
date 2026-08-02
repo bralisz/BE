@@ -53,19 +53,23 @@
         const sourceId = item.contentId || item.videoId;
         const source = await beBackend.data.get(collection, sourceId);
         if (!source || source.active === false) return null;
+        const thumbnail = source.thumbnailUrl || source.imageUrl || source.bannerUrl || item.imageUrl || item.bannerUrl || '';
+        const background = ['movies', 'series'].includes(collection)
+          ? thumbnail
+          : (source.bannerUrl || source.imageUrl || source.thumbnailUrl || item.bannerUrl || item.imageUrl || '');
         return {
           ...item,
           id: source.id,
           sourceId: source.id,
           publicId: numericPublicId(source.publicId || source.id || source.title),
-          title: item.title || source.title,
-          description: item.description || source.description,
-          imageUrl: item.imageUrl || source.imageUrl || source.thumbnailUrl,
-          bannerUrl: item.bannerUrl || source.bannerUrl || source.imageUrl || source.thumbnailUrl,
-          contentUrl: item.contentUrl || source.videoUrl || source.contentUrl || source.link,
-          duration: item.duration || source.duration || source.videoDuration || source.runtime,
-          year: item.year || source.year,
-          logoUrl: item.logoUrl || source.logoUrl || '',
+          title: source.title || item.title,
+          description: source.description || item.description,
+          imageUrl: thumbnail,
+          bannerUrl: background,
+          contentUrl: source.videoUrl || source.contentUrl || source.link || item.contentUrl,
+          duration: source.duration || source.videoDuration || source.runtime || item.duration,
+          year: source.year || item.year,
+          logoUrl: source.logoUrl || item.logoUrl || '',
           collection,
           category: 'destaque'
         };
@@ -92,7 +96,7 @@
       ].join('');
       return `<div class="f-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
         <div class="f-info">
-          <div class="f-logo">${item.logoUrl ? `<img src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
+          <div class="f-logo">${item.logoUrl ? `<img src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
           <div class="f-meta">${meta}</div>
           <p class="f-desc">${escapeHtml(item.description || '')}</p>
           <div class="f-actions">
@@ -171,24 +175,28 @@
         const uniqueKey = `${collection}:${sourceId}`;
         if (!source || featuredSeen.has(uniqueKey)) return null;
         featuredSeen.add(uniqueKey);
+        const thumbnail = source.thumbnailUrl || source.imageUrl || source.bannerUrl || item.imageUrl || item.bannerUrl || '';
+        const background = ['movies', 'series'].includes(collection)
+          ? thumbnail
+          : (source.bannerUrl || source.imageUrl || source.thumbnailUrl || item.bannerUrl || item.imageUrl || '');
         return {
           ...source,
-          title: item.title || source.title,
-          description: item.description || source.description,
-          thumbnailUrl: item.imageUrl || source.thumbnailUrl || source.imageUrl || source.bannerUrl,
-          imageUrl: item.imageUrl || source.imageUrl || source.thumbnailUrl || source.bannerUrl,
-          bannerUrl: item.bannerUrl || source.bannerUrl || source.imageUrl || source.thumbnailUrl,
-          videoUrl: item.contentUrl || source.videoUrl || source.contentUrl || source.link,
-          contentUrl: item.contentUrl || source.contentUrl || source.videoUrl || source.link,
-          duration: item.duration || source.duration || source.videoDuration || source.runtime,
-          year: item.year || source.year,
-          logoUrl: item.logoUrl || source.logoUrl || '',
+          title: source.title || item.title,
+          description: source.description || item.description,
+          thumbnailUrl: thumbnail,
+          imageUrl: thumbnail,
+          bannerUrl: background,
+          videoUrl: source.videoUrl || source.contentUrl || source.link || item.contentUrl,
+          contentUrl: source.contentUrl || source.videoUrl || source.link || item.contentUrl,
+          duration: source.duration || source.videoDuration || source.runtime || item.duration,
+          year: source.year || item.year,
+          logoUrl: source.logoUrl || item.logoUrl || '',
           category: 'destaque',
           collection
         };
       })
       .filter(Boolean);
-    if (!sections.length && !allMovies.length && !featuredContents.length) return;
+    if (!sections.length && !featuredContents.length) return;
 
     const old = document.getElementById('dynamicSections');
     if (old) old.remove();
@@ -196,13 +204,13 @@
     const host = document.createElement('section');
     host.id = 'dynamicSections';
     host.className = 'video-catalog';
-    host.setAttribute('aria-label', 'Categorias de vídeos');
+    host.setAttribute('aria-label', 'Categorias de conteúdos');
 
     if (featuredContents.length) {
       const featuredBlock = document.createElement('section');
       featuredBlock.className = 'video-rail-section featured-video-rail';
       featuredBlock.dataset.category = 'destaque';
-      featuredBlock.dataset.collection = 'videos';
+      featuredBlock.dataset.collection = 'mixed';
       featuredBlock.innerHTML = `
         <a class="video-rail-title" href="#" aria-label="Ver todos: Destaque">
           <span>Destaque</span>
@@ -223,64 +231,69 @@
       setupRail(featuredBlock);
     }
 
-    if (allMovies.length) {
-      const movieBlock = document.createElement('section');
-      movieBlock.className = 'video-rail-section';
-      movieBlock.dataset.category = 'filmes';
-      movieBlock.dataset.collection = 'movies';
-      movieBlock.innerHTML = `
-        <a class="video-rail-title" href="#" aria-label="Ver todos: Filmes">
-          <span>Filmes</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-        </a>
-        <div class="video-rail-shell">
-          <button class="video-rail-arrow prev" type="button" aria-label="Ver filmes anteriores" hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
-          </button>
-          <div class="video-rail" tabindex="0" aria-label="Filmes">
-            ${allMovies.map(movie => videoCard({ ...movie, category: movie.category || 'filmes', collection: 'movies' })).join('')}
-          </div>
-          <button class="video-rail-arrow next" type="button" aria-label="Ver mais filmes">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
-          </button>
-        </div>`;
-      host.append(movieBlock);
-      setupRail(movieBlock);
-    }
+    const normalizeSectionValue = value => normalizeText(String(value || '').replace(/-/g, ' '));
+    const belongsToSection = (item, section, legacyIds, collection) => {
+      if (item.sectionId && String(item.sectionId) === String(section.id)) return true;
+      if (legacyIds.includes(String(item.id))) return true;
+
+      const sectionKeys = new Set([
+        normalizeSectionValue(section.title),
+        normalizeSectionValue(section.category),
+        normalizeSectionValue(section.slug),
+        normalizeSectionValue(section.id)
+      ].filter(Boolean));
+      const itemKeys = [item.category, item.type, item.sectionName]
+        .map(normalizeSectionValue)
+        .filter(Boolean);
+      if (itemKeys.some(value => sectionKeys.has(value))) return true;
+
+      // Compatibilidade com filmes e séries antigos que ainda não tinham sectionId.
+      if (!item.sectionId && collection === 'movies') {
+        return [...sectionKeys].some(value => ['filme', 'filmes', 'movie', 'movies'].includes(value));
+      }
+      if (!item.sectionId && collection === 'series') {
+        return [...sectionKeys].some(value => ['serie', 'series'].includes(value));
+      }
+      return false;
+    };
 
     for (const section of sections) {
       const category = String(section.category || section.slug || section.id).trim().toLowerCase();
-      const legacyIds = Array.isArray(section.contentIds) ? section.contentIds : [];
+      const legacyIds = (Array.isArray(section.contentIds) ? section.contentIds : []).map(String);
       const limit = Math.max(1, Number(section.itemLimit || 12));
 
-      let videos = allVideos.filter(video => {
-        if (video.sectionId && String(video.sectionId) === String(section.id)) return true;
-        const videoCategory = String(video.category || '').trim().toLowerCase();
-        return videoCategory === category || legacyIds.includes(video.id);
+      let sectionContents = [
+        ...allVideos.filter(item => belongsToSection(item, section, legacyIds, 'videos')).map(item => ({ ...item, collection: 'videos' })),
+        ...allMovies.filter(item => belongsToSection(item, section, legacyIds, 'movies')).map(item => ({ ...item, collection: 'movies' })),
+        ...allSeries.filter(item => belongsToSection(item, section, legacyIds, 'series')).map(item => ({ ...item, collection: 'series' }))
+      ].sort((a, b) => {
+        const orderDifference = Number(a.order || 0) - Number(b.order || 0);
+        if (orderDifference) return orderDifference;
+        return String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR');
       }).slice(0, limit);
 
-      if (!videos.length && legacyIds.length) {
+      if (!sectionContents.length && legacyIds.length) {
         const reads = await Promise.all(legacyIds.slice(0, limit).map(id => beBackend.data.get('contents', id)));
-        videos = reads.filter(item => item && item.active !== false);
+        sectionContents = reads.filter(item => item && item.active !== false).map(item => ({ ...item, collection: item.collection || 'videos' }));
       }
 
       const block = document.createElement('section');
       block.className = 'video-rail-section';
       block.dataset.category = normalizeText(category);
-      block.dataset.collection = 'videos';
+      block.dataset.collection = 'mixed';
       block.innerHTML = `
         <a class="video-rail-title" href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
           <span>${escapeHtml(section.title || 'Seção')}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </a>
         <div class="video-rail-shell">
-          <button class="video-rail-arrow prev" type="button" aria-label="Ver vídeos anteriores" hidden>
+          <button class="video-rail-arrow prev" type="button" aria-label="Ver conteúdos anteriores" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
           </button>
-          <div class="video-rail" tabindex="0" aria-label="${escapeHtml(section.title || 'Vídeos')}">
-            ${videos.length ? videos.map(video => videoCard({ ...video, collection: video.collection || 'videos' })).join('') : '<p class="video-rail-empty">Nenhum vídeo publicado nesta seção.</p>'}
+          <div class="video-rail" tabindex="0" aria-label="${escapeHtml(section.title || 'Conteúdos')}">
+            ${sectionContents.length ? sectionContents.map(item => videoCard(item)).join('') : '<p class="video-rail-empty">Nenhum conteúdo publicado nesta seção.</p>'}
           </div>
-          <button class="video-rail-arrow next" type="button" aria-label="Ver mais vídeos">
+          <button class="video-rail-arrow next" type="button" aria-label="Ver mais conteúdos">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
           </button>
         </div>`;
@@ -296,13 +309,15 @@
   function videoCard(video) {
     const image = video.thumbnailUrl || video.imageUrl || video.bannerUrl || '';
     const contentHref = video.videoUrl || video.contentUrl || video.link || '#';
-    const title = video.title || 'Abrir vídeo';
+    const title = video.title || 'Abrir conteúdo';
     const category = video.category || video.type || video.contentType || '';
     const collection = video.collection || 'videos';
     const description = video.description || '';
     const year = video.year || '';
     const duration = video.duration || video.videoDuration || video.runtime || '';
-    const banner = video.bannerUrl || video.imageUrl || video.thumbnailUrl || '';
+    const banner = ['movies', 'series'].includes(String(collection).toLowerCase())
+      ? image
+      : (video.bannerUrl || video.imageUrl || video.thumbnailUrl || '');
     const logo = video.logoUrl || '';
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
@@ -384,7 +399,9 @@
           duration: item.duration || item.videoDuration || item.runtime || '',
           contentUrl: item.videoUrl || item.contentUrl || item.link || '#',
           imageUrl: item.thumbnailUrl || item.imageUrl || item.bannerUrl || '',
-          bannerUrl: item.bannerUrl || item.imageUrl || item.thumbnailUrl || '',
+          bannerUrl: ['movies', 'series'].includes(collection)
+            ? (item.thumbnailUrl || item.imageUrl || item.bannerUrl || '')
+            : (item.bannerUrl || item.imageUrl || item.thumbnailUrl || ''),
           logoUrl: item.logoUrl || '',
           category: item.category || item.type || '',
           collection
@@ -433,7 +450,7 @@
   }
 
   function recommendationCard(data) {
-    const image = data.imageUrl || data.bannerUrl || '';
+    const image = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
     const title = data.title || 'Conteúdo';
     const contentHref = data.contentUrl || '#';
     const routeHref = detailRoutePath(data.itemId || numericPublicId(data.recordId || title));
@@ -446,7 +463,7 @@
       data-duration="${escapeHtml(data.duration || '')}"
       data-content-url="${safeUrl(contentHref)}"
       data-image-url="${safeUrl(image)}"
-      data-banner-url="${safeUrl(data.bannerUrl || image)}"
+      data-banner-url="${safeUrl(['movies', 'series'].includes(String(data.collection || '').toLowerCase()) ? image : (data.bannerUrl || image))}"
       data-logo-url="${safeUrl(data.logoUrl || '')}"
       data-category="${escapeHtml(data.category || '')}"
       data-collection="${escapeHtml(data.collection || '')}"
@@ -548,7 +565,11 @@
     const year = data.year || '';
     const duration = data.duration || '';
     const contentUrl = data.contentUrl || '#';
-    const bannerUrl = data.bannerUrl || data.imageUrl || '';
+    const collection = String(data.collection || '').toLowerCase();
+    const thumbnailUrl = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
+    const bannerUrl = ['movies', 'series'].includes(collection)
+      ? thumbnailUrl
+      : (data.bannerUrl || thumbnailUrl);
     const logoUrl = data.logoUrl || '';
     const itemId = String(data.itemId || title);
     if (options.updateRoute !== false) setDetailRoute(itemId, Boolean(options.replaceRoute));
@@ -559,6 +580,8 @@
 
     if (logoUrl && logoUrl !== '#') {
       logo.innerHTML = `<img src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
+    } else if (['movies', 'series'].includes(String(data.collection || '').toLowerCase())) {
+      logo.innerHTML = `<span class="sr-only">${escapeHtml(title)}</span>`;
     } else {
       logo.textContent = title;
     }

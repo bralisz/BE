@@ -469,6 +469,7 @@ body.admin-mode .admin-topbar{
    Vídeos, filmes e séries em uma lista pesquisável e responsiva.
    ============================================================ */
 .featured-editor-modal{width:min(920px,100%)}
+.featured-only-grid{grid-template-columns:minmax(0,1fr)}
 .featured-content-field>label{font-size:13px;color:#dbe7f7}
 .featured-picker{
   display:grid;
