@@ -146,7 +146,7 @@
       id: raw.id || raw.uid,
       email: raw.email || '',
       displayName: metadata.display_name || metadata.full_name || raw.displayName || raw.display_name || '',
-      photoURL: metadata.avatar_url || raw.photoURL || raw.avatar_url || '',
+      photoURL: metadata.profile_avatar_url || metadata.avatar_url || raw.photoURL || raw.avatar_url || '',
       emailVerified: Boolean(raw.email_confirmed_at || raw.emailVerified || MODE === 'local'),
       role: String(raw.email || '').toLowerCase() === ADMIN_EMAIL ? 'admin' : (raw.role || 'member'),
       raw
@@ -535,10 +535,27 @@
       if (MODE === 'supabase') {
         const metadata = user.raw?.user_metadata || user.raw?.raw_user_meta_data || {};
         const metadataUsername = normalizeUsername(metadata.username || '');
+
+        // O avatar salvo no perfil é a fonte principal. Isso impede que a foto
+        // do Google/Discord substitua o avatar escolhido sempre que o usuário
+        // entra novamente.
+        let savedAvatar = '';
+        try {
+          const { data: existingProfile, error: existingProfileError } = await supabaseClient
+            .from('profiles')
+            .select('avatar_url')
+            .eq('id', user.uid)
+            .maybeSingle();
+          if (existingProfileError) console.warn('Não foi possível consultar o avatar salvo:', existingProfileError.message);
+          savedAvatar = String(existingProfile?.avatar_url || '').trim();
+        } catch (avatarLookupError) {
+          console.warn('Não foi possível consultar o avatar salvo:', avatarLookupError?.message || avatarLookupError);
+        }
+
         const profileArgs = {
           p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
           p_username: metadataUsername || null,
-          p_avatar_url: String(user.photoURL || metadata.avatar_url || '').trim() || null
+          p_avatar_url: String(savedAvatar || metadata.profile_avatar_url || user.photoURL || metadata.avatar_url || '').trim() || null
         };
         let { data: rows, error } = await supabaseClient.rpc('ensure_my_profile', profileArgs);
 
@@ -560,7 +577,11 @@
         if (error) throw mapAuthError(error);
         const row = Array.isArray(rows) ? rows[0] : rows;
         if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
-        return profileFromRow(row);
+        const profile = profileFromRow(row);
+        if (currentUser?.uid === user.uid && profile.avatarUrl) {
+          currentUser = { ...currentUser, photoURL: profile.avatarUrl, profile };
+        }
+        return profile;
       }
 
       const existing = await data.get('users', user.uid);
@@ -612,7 +633,41 @@
       return data.set('users', userId, { ...payload, username, updatedAt: now() }, { merge: true });
     },
     async setAvatar(userId, avatarUrl, avatarId) {
-      return this.update(userId, { avatarUrl, avatarId });
+      const normalizedUrl = String(avatarUrl || '').trim();
+      const normalizedId = String(avatarId || '').trim();
+      const savedProfile = await this.update(userId, { avatarUrl: normalizedUrl, avatarId: normalizedId });
+
+      // Mantém o avatar escolhido sincronizado com a conta autenticada. O campo
+      // profile_avatar_url identifica que esta é uma escolha do usuário, e não
+      // apenas a foto recebida do provedor social.
+      if (MODE === 'supabase' && currentUser?.uid === userId) {
+        try {
+          const { data: authResult, error } = await supabaseClient.auth.updateUser({
+            data: {
+              avatar_url: normalizedUrl,
+              profile_avatar_url: normalizedUrl,
+              profile_avatar_id: normalizedId
+            }
+          });
+          if (error) throw error;
+          currentUser = normalizeUser(authResult?.user || currentUser);
+        } catch (metadataError) {
+          console.warn('O avatar foi salvo no perfil, mas não nos metadados da conta:', metadataError?.message || metadataError);
+        }
+      }
+
+      if (currentUser?.uid === userId) {
+        currentUser = { ...currentUser, photoURL: normalizedUrl, profile: savedProfile };
+        notify();
+      }
+
+      try {
+        window.dispatchEvent(new CustomEvent('be:profile-avatar-changed', {
+          detail: { userId, avatarUrl: normalizedUrl, avatarId: normalizedId, profile: savedProfile }
+        }));
+      } catch (_) {}
+
+      return savedProfile;
     }
   };
 

@@ -1,0 +1,14 @@
+AVATAR DO PERFIL SINCRONIZADO NO SITE TODO
+
+Alterações aplicadas:
+- o avatar escolhido na galeria passa a ser a foto principal da conta;
+- o avatar fica salvo em public.profiles e nos metadados do usuário;
+- a foto do Google/Discord não substitui mais o avatar escolhido em novos logins;
+- o mesmo avatar aparece no cabeçalho público, no perfil e no dashboard;
+- removido o problema visual de duas letras/fotos sobrepostas no botão do dashboard;
+- o cache de avatar agora é separado por conta.
+
+IMPORTANTE PARA QUEM JÁ INSTALOU O BANCO:
+Execute novamente o arquivo supabase/schema.sql no SQL Editor do Supabase para atualizar
+as funções que preservam o avatar escolhido. O script usa CREATE OR REPLACE e pode ser
+executado novamente.

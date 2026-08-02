@@ -1674,7 +1674,8 @@
     var currentProfile={};
 
     function escapePublic(value){return String(value||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-    function setMainAvatar(url,user){var shown=url||(user&&user.photoURL)||'';if(shown){photo.src=shown;photo.hidden=false;fallback.hidden=true;}else{photo.hidden=true;fallback.hidden=false;}}
+    function avatarCacheKey(user){return 'beSelectedAvatar:'+(user&&user.uid?user.uid:'guest');}
+    function setMainAvatar(url,user){var shown=url||(user&&user.photoURL)||'';if(shown){photo.src=shown;photo.hidden=false;fallback.hidden=true;}else{photo.removeAttribute('src');photo.hidden=true;fallback.hidden=false;}}
     function closeAvatarPicker(){avatarPicker.hidden=true;document.body.style.overflow='';}
     function closeProfile(){profileModal.hidden=true;document.body.style.overflow='';}
 
@@ -1687,10 +1688,22 @@
         var groups={};items.forEach(function(item){var cat=(item.category||'Outros').trim()||'Outros';(groups[cat]||(groups[cat]=[])).push(item);});
         avatarPickerBody.innerHTML='<div class="avatar-category-columns">'+Object.keys(groups).map(function(cat){return '<section class="avatar-category"><h3>'+escapePublic(cat)+'</h3><div class="avatar-options">'+groups[cat].map(function(item){return '<button class="avatar-option '+(selectedAvatar===item.imageUrl?'selected':'')+'" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'"><img src="'+escapePublic(item.imageUrl)+'" alt="'+escapePublic(item.title||'Avatar')+'"><span>'+escapePublic(item.title||'Avatar')+'</span></button>';}).join('')+'</div></section>';}).join('')+'</div>';
         avatarPickerBody.querySelectorAll('[data-avatar-url]').forEach(function(button){button.addEventListener('click',async function(){
-          var url=button.dataset.avatarUrl;selectedAvatar=url;currentProfile.avatarUrl=url;setMainAvatar(url,auth.currentUser);localStorage.setItem('beSelectedAvatar',url);
-          avatarPickerBody.querySelectorAll('.avatar-option').forEach(function(x){x.classList.toggle('selected',x===button);});
-          if(auth.currentUser){try{await beBackend.profiles.setAvatar(auth.currentUser.uid,url,button.dataset.avatarId);}catch(error){console.warn('Avatar não salvo no perfil:',error.message);}}
-          setTimeout(closeAvatarPicker,180);
+          var url=button.dataset.avatarUrl;button.disabled=true;
+          try{
+            if(auth.currentUser){
+              var savedProfile=await beBackend.profiles.setAvatar(auth.currentUser.uid,url,button.dataset.avatarId);
+              if(savedProfile)currentProfile=savedProfile;
+            }else{currentProfile.avatarUrl=url;}
+            selectedAvatar=(currentProfile&&currentProfile.avatarUrl)||url;
+            setMainAvatar(selectedAvatar,auth.currentUser);
+            localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
+            avatarPickerBody.querySelectorAll('.avatar-option').forEach(function(x){x.classList.toggle('selected',x===button);});
+            setTimeout(closeAvatarPicker,180);
+          }catch(error){
+            button.disabled=false;
+            console.warn('Avatar não salvo no perfil:',error.message);
+            alert('Não foi possível salvar o avatar. Tente novamente.');
+          }
         });});
       }catch(error){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Não foi possível carregar a galeria.</div>';console.warn(error);}
     }
@@ -1712,13 +1725,22 @@
       var isAdmin=false;
       if(currentUser){
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
-        username.textContent=currentProfile.displayName||currentProfile.username||currentUser.displayName||'Usuário';selectedAvatar=currentProfile.avatarUrl||localStorage.getItem('beSelectedAvatar')||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';
-      }else{username.textContent='Visitante';currentProfile={};selectedAvatar=localStorage.getItem('beSelectedAvatar')||'';setMainAvatar(selectedAvatar,null);authAction.textContent='Entrar';}
+        username.textContent=currentProfile.displayName||currentProfile.username||currentUser.displayName||'Usuário';selectedAvatar=currentProfile.avatarUrl||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';
+      }else{username.textContent='Visitante';currentProfile={};selectedAvatar=localStorage.getItem(avatarCacheKey(null))||'';setMainAvatar(selectedAvatar,null);authAction.textContent='Entrar';}
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
       var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}location.hash='#login';document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='support'){alert('Área de suporte em preparação.');}if(action==='settings'){alert('Área de configurações em preparação.');}
     });});
+    window.addEventListener('be:profile-avatar-changed',function(event){
+      var detail=event&&event.detail||{};
+      if(!auth.currentUser||detail.userId!==auth.currentUser.uid)return;
+      if(detail.profile)currentProfile=detail.profile;
+      else currentProfile.avatarUrl=detail.avatarUrl||'';
+      selectedAvatar=detail.avatarUrl||'';
+      localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
+      setMainAvatar(selectedAvatar,auth.currentUser);
+    });
     document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeAvatarPicker();closeProfile();}});
   }
   window.addEventListener('load',function(){setupPublicAccount().catch(function(error){console.error('Falha ao iniciar conta pública:',error);});});

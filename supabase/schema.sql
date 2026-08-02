@@ -131,7 +131,7 @@ begin
     coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'full_name', ''),
     v_username,
-    coalesce(new.raw_user_meta_data ->> 'avatar_url', ''),
+    coalesce(new.raw_user_meta_data ->> 'profile_avatar_url', new.raw_user_meta_data ->> 'avatar_url', ''),
     case when lower(coalesce(new.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
     true,
     coalesce(new.created_at, now()),
@@ -146,8 +146,10 @@ begin
     end,
     username = coalesce(excluded.username, p.username),
     avatar_url = case
+      when nullif(new.raw_user_meta_data ->> 'profile_avatar_url', '') is not null then new.raw_user_meta_data ->> 'profile_avatar_url'
+      when nullif(p.avatar_url, '') is not null then p.avatar_url
       when nullif(excluded.avatar_url, '') is not null then excluded.avatar_url
-      else p.avatar_url
+      else ''
     end,
     role = excluded.role,
     updated_at = now();
@@ -217,8 +219,9 @@ begin
     end,
     username = coalesce(v_username, p.username),
     avatar_url = case
+      when nullif(trim(coalesce(p.avatar_url, '')), '') is not null then p.avatar_url
       when nullif(trim(coalesce(p_avatar_url, '')), '') is not null then trim(p_avatar_url)
-      else p.avatar_url
+      else ''
     end,
     role = case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
     profile_complete = true,
@@ -241,7 +244,7 @@ select
   u.id,
   coalesce(u.email, ''),
   coalesce(u.raw_user_meta_data ->> 'display_name', u.raw_user_meta_data ->> 'full_name', ''),
-  coalesce(u.raw_user_meta_data ->> 'avatar_url', ''),
+  coalesce(u.raw_user_meta_data ->> 'profile_avatar_url', u.raw_user_meta_data ->> 'avatar_url', ''),
   case when lower(coalesce(u.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
   true,
   coalesce(u.created_at, now()),
@@ -254,8 +257,9 @@ on conflict (id) do update set
     else p.display_name
   end,
   avatar_url = case
+    when nullif(p.avatar_url, '') is not null then p.avatar_url
     when nullif(excluded.avatar_url, '') is not null then excluded.avatar_url
-    else p.avatar_url
+    else ''
   end,
   role = excluded.role,
   updated_at = now();

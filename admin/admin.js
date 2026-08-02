@@ -14,6 +14,23 @@
 
   let auth, db, user = null, authReady = false, loginBusy = false;
 
+  async function decorateAccountWithProfile(account) {
+    if (!account) return null;
+    try {
+      const profile = await beBackend.profiles.ensure(account);
+      if (!profile) return account;
+      return {
+        ...account,
+        displayName: profile.displayName || profile.username || account.displayName || '',
+        photoURL: profile.avatarUrl || account.photoURL || '',
+        profile
+      };
+    } catch (error) {
+      console.warn('Não foi possível aplicar o avatar do perfil no painel:', error?.message || error);
+      return account;
+    }
+  }
+
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
   const adminHashRoute = () => location.hash.startsWith('#/admin');
@@ -90,8 +107,9 @@
 
       if (account && allowed) {
         const firstLogin = !user;
-        user = account;
-        if (firstLogin) await logAction('admin_login', 'auth', account.uid, 'Login administrativo');
+        const decoratedAccount = await decorateAccountWithProfile(account);
+        user = { ...decoratedAccount, __profileReady: true };
+        if (firstLogin) await logAction('admin_login', 'auth', decoratedAccount.uid, 'Login administrativo');
         if (route() === 'login') go('dashboard');
         else render();
       } else {
@@ -171,6 +189,18 @@
       renderLogin();
       return;
     }
+    if (!user.__profileReady) {
+      document.body.innerHTML = '<div class="admin-loader">Carregando perfil…</div>';
+      Promise.resolve(decorateAccountWithProfile(user)).then(account => {
+        user = { ...account, __profileReady: true };
+        render();
+      }).catch(error => {
+        console.warn('Não foi possível carregar o perfil do administrador:', error?.message || error);
+        user = { ...user, __profileReady: true };
+        render();
+      });
+      return;
+    }
     if (route() === 'login') {
       go('dashboard');
       return;
@@ -202,10 +232,19 @@
 
   function renderShell() {
     const routes = ['dashboard','featured','sections','contents','gallery','users','settings'];
-    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img src="/assets/logo.png?v=3" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><button class="admin-avatar-button" id="accountToggle" aria-label="Abrir menu da conta" aria-expanded="false">${user.photoURL ? `<img src="${esc(user.photoURL)}" alt="Foto de ${esc(user.displayName || 'usuário')}">` : ''}<span>${esc((user.displayName || 'B').charAt(0).toUpperCase())}</span></button><div class="admin-account-menu" id="accountMenu"><div class="admin-account-name">${esc(user.displayName || 'Administrador')}</div><div class="admin-account-divider"></div><button type="button" data-account-action="profile">Perfil</button><button type="button" data-account-action="settings">Configurações</button><button type="button" data-account-action="support">Suporte</button><button type="button" data-account-action="dashboard">Dashboard</button><div class="admin-account-divider"></div><button type="button" class="danger" data-account-action="logout">Sair</button></div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
+    const accountAvatar = user.photoURL
+      ? `<img src="${esc(user.photoURL)}" alt="Foto de ${esc(user.displayName || 'usuário')}">`
+      : `<span>${esc((user.displayName || 'B').charAt(0).toUpperCase())}</span>`;
+    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img src="/assets/logo.png?v=3" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><button class="admin-avatar-button" id="accountToggle" aria-label="Abrir menu da conta" aria-expanded="false">${accountAvatar}</button><div class="admin-account-menu" id="accountMenu"><div class="admin-account-name">${esc(user.displayName || 'Administrador')}</div><div class="admin-account-divider"></div><button type="button" data-account-action="profile">Perfil</button><button type="button" data-account-action="settings">Configurações</button><button type="button" data-account-action="support">Suporte</button><button type="button" data-account-action="dashboard">Dashboard</button><div class="admin-account-divider"></div><button type="button" class="danger" data-account-action="logout">Sair</button></div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
     const accountToggle = $('#accountToggle');
     const accountMenu = $('#accountMenu');
+    const accountAvatarImage = accountToggle.querySelector('img');
+    if (accountAvatarImage) {
+      accountAvatarImage.addEventListener('error', () => {
+        accountToggle.innerHTML = `<span>${esc((user.displayName || 'B').charAt(0).toUpperCase())}</span>`;
+      }, { once: true });
+    }
     accountToggle.onclick = event => {
       event.stopPropagation();
       const open = accountMenu.classList.toggle('open');
@@ -593,6 +632,12 @@
       console.warn('Log não salvo', error);
     }
   }
+
+  window.addEventListener('be:profile-avatar-changed', event => {
+    if (!user || event?.detail?.userId !== user.uid) return;
+    user = { ...user, photoURL: event.detail.avatarUrl || '', profile: event.detail.profile || user.profile };
+    if (adminRoute()) render();
+  });
 
   window.addEventListener('hashchange', render);
   window.addEventListener('DOMContentLoaded', async () => {
