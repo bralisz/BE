@@ -77,13 +77,7 @@
 
 
   function adminLoginBackgroundMarkup() {
-    const slides = Array.from({ length: 7 }, (_, index) =>
-      `<div class="admin-login-bg-slide ${index === 0 ? 'active' : ''}" style="background-image:url('/assets/login-bg-${index + 1}.png')"></div>`
-    ).join('');
-    const dots = Array.from({ length: 7 }, (_, index) =>
-      `<button class="admin-login-dot ${index === 0 ? 'active' : ''}" type="button" data-admin-bg="${index}" aria-label="Exibir banner ${index + 1}"></button>`
-    ).join('');
-    return `<div class="admin-login-bg" aria-hidden="true">${slides}</div><div class="admin-login-dots">${dots}</div>`;
+    return `<div class="admin-login-bg" aria-hidden="true"><div class="admin-login-bg-slide active" style="background-image:url('/assets/login-admin-banner.jpg')"></div></div>`;
   }
 
   function startAdminLoginBackground() {

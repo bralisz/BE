@@ -393,3 +393,25 @@ button:focus-visible,a:focus-visible{outline:2px solid rgba(139,185,255,.88)!imp
   .admin-login .google-btn{min-height:58px!important;font-size:15px!important}
 }
 
+
+
+/* Banner estático compartilhado entre login e acesso administrativo */
+.admin-login-bg-slide{
+  background-position:center 44%!important;
+  filter:brightness(.68) saturate(.88) contrast(.96)!important;
+}
+.admin-login:after{
+  background:
+    linear-gradient(90deg,rgba(2,3,6,.42),rgba(2,3,6,.22) 50%,rgba(2,3,6,.42)),
+    linear-gradient(180deg,rgba(2,3,6,.22),rgba(2,3,6,.64))!important;
+}
+.admin-login .login-card{
+  background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(255,255,255,.025) 48%,rgba(6,8,12,.44)),rgba(17,20,26,.54)!important;
+  border-color:rgba(255,255,255,.16)!important;
+  -webkit-backdrop-filter:blur(32px) saturate(145%)!important;
+  backdrop-filter:blur(32px) saturate(145%)!important;
+  box-shadow:0 34px 96px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.12)!important;
+}
+@media(max-width:600px){
+  .admin-login-bg-slide{background-position:46% center!important}
+}

@@ -1827,6 +1827,29 @@
     .auth-primary{height:52px!important;min-height:52px!important;margin-top:8px!important}
   }
 
+
+  /* Banner estático do login — imagem enviada + acabamento glass */
+  .login-bg-slide{
+    background-position:center 44%!important;
+    filter:brightness(.68) saturate(.88) contrast(.96)!important;
+  }
+  .login-bg-stack:after{
+    background:
+      linear-gradient(90deg,rgba(2,3,6,.42),rgba(2,3,6,.22) 50%,rgba(2,3,6,.42)),
+      linear-gradient(180deg,rgba(2,3,6,.22),rgba(2,3,6,.64))!important;
+  }
+  .login-dots{display:none!important}
+  .auth-column .login-card{
+    background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(255,255,255,.025) 48%,rgba(6,8,12,.44)),rgba(17,20,26,.54)!important;
+    border-color:rgba(255,255,255,.16)!important;
+    -webkit-backdrop-filter:blur(32px) saturate(145%)!important;
+    backdrop-filter:blur(32px) saturate(145%)!important;
+    box-shadow:0 34px 96px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.12)!important;
+  }
+  @media(max-width:600px){
+    .login-bg-slide{background-position:46% center!important}
+  }
+
 </style>
 
 <link rel="stylesheet" href="/admin/admin.css">
@@ -1841,13 +1864,7 @@
 <div class="auth-loading" id="authLoading">Carregando sua conta…</div>
 <section id="authGate" aria-label="Entrar ou criar conta">
   <div class="login-bg-stack" id="loginBgStack" aria-hidden="true">
-    <div class="login-bg-slide active" style="background-image:url('assets/login-bg-1.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-2.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-3.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-4.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-5.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-6.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-7.png')"></div>
+    <div class="login-bg-slide active" style="background-image:url('assets/login-admin-banner.jpg')"></div>
   </div>
   <div class="login-shell">
     <div class="login-topbar" aria-label="Ações de acesso">
