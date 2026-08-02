@@ -501,19 +501,145 @@
   function editorFields(name, item = {}, context = {}) {
     const showMedia = !['sections','users'].includes(name);
     const sections = context.sections || [];
-    const videos = context.videos || [];
     const currentSection = sections.find(section => String(section.id) === String(item.sectionId || '')) || sections.find(section => String(section.category || section.slug || '').toLowerCase() === String(item.category || '').toLowerCase());
     const sectionOptions = sections.map(section => `<option value="${esc(section.title || section.category || section.id)}"></option>`).join('');
-    const videoOptions = videos.map(video => `<option value="${esc(video.id)}" ${String(item.videoId || '') === String(video.id) ? 'selected' : ''}>${esc(video.title || video.id)}</option>`).join('');
+    const selectedFeaturedCollection = String(item.contentCollection || item.sourceCollection || (item.videoId ? 'videos' : '') || '').trim();
+    const selectedFeaturedId = String(item.contentId || item.videoId || '').trim();
     const sectionFields = name === 'sections' ? `<div class="field"><label>Categoria / identificador *</label><input class="a-input" name="category" required value="${esc(item.category || item.slug || '')}" placeholder="ex.: vanity-fair"><small>Identificador interno usado também para manter compatibilidade com conteúdos antigos.</small></div><div class="field"><label>Quantidade inicial</label><input class="a-input" type="number" min="1" max="50" name="itemLimit" value="${esc(item.itemLimit ?? 12)}"></div>` : '';
     const videoFields = name === 'videos' ? `<div class="field"><label>ID público do vídeo</label><input class="a-input" name="publicId" value="${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" readonly><small>O link público será /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}.</small></div><div class="field full"><label>Seção do vídeo *</label><input class="a-input" id="videoSectionSearch" name="sectionSearch" list="createdSectionsList" required autocomplete="off" value="${esc(currentSection?.title || currentSection?.category || '')}" placeholder="Digite ou selecione uma seção já criada"><input type="hidden" id="videoSectionId" name="sectionId" value="${esc(currentSection?.id || item.sectionId || '')}"><datalist id="createdSectionsList">${sectionOptions}</datalist><small>Digite o nome para filtrar. O vídeo será vinculado ao ID da seção, mesmo que ela seja renomeada depois.</small></div><div class="field full"><label>URL do vídeo</label><input class="a-input" name="videoUrl" value="${esc(item.videoUrl || item.contentUrl || item.link || '')}" placeholder="https://youtube.com/..."></div>` : '';
-    const featuredFields = name === 'featured' ? `<div class="field full"><label>Selecionar vídeo já adicionado *</label><select class="a-select" name="videoId" id="featuredVideoSelect" required><option value="">Escolha um vídeo cadastrado</option>${videoOptions}</select><small>O destaque usará automaticamente o título, descrição, thumbnail e link desse vídeo. Você ainda pode ajustar os campos abaixo.</small></div>` : '';
+    const featuredFields = name === 'featured' ? `<div class="field full featured-content-field"><label>Selecionar conteúdo publicado *</label><input type="hidden" name="contentId" id="featuredContentId" value="${esc(selectedFeaturedId)}"><input type="hidden" name="contentCollection" id="featuredContentCollection" value="${esc(selectedFeaturedCollection)}"><input type="hidden" name="videoId" id="featuredLegacyVideoId" value="${esc(selectedFeaturedCollection === 'videos' ? selectedFeaturedId : '')}"><div class="featured-picker" id="featuredContentPicker"><div class="featured-picker-toolbar"><label class="featured-picker-search" aria-label="Buscar conteúdo"><span aria-hidden="true">⌕</span><input type="search" id="featuredContentSearch" placeholder="Buscar por título, tipo ou ano…" autocomplete="off"></label><div class="featured-picker-tabs" role="tablist" aria-label="Filtrar tipo de conteúdo"><button type="button" class="active" data-featured-filter="all">Todos</button><button type="button" data-featured-filter="videos">Vídeos</button><button type="button" data-featured-filter="movies">Filmes</button><button type="button" data-featured-filter="series">Séries</button></div></div><div class="featured-selected" id="featuredSelectedSummary"><div class="featured-selected-empty"><span>▣</span><div><strong>Nenhum conteúdo selecionado</strong><small>Escolha um item da lista abaixo.</small></div></div></div><div class="featured-picker-list" id="featuredContentList" role="listbox" aria-label="Conteúdos publicados"></div><div class="featured-picker-empty" id="featuredContentEmpty" hidden>Nenhum conteúdo encontrado com esse filtro.</div></div><small>Você pode pesquisar e selecionar qualquer vídeo, filme ou série já publicado. Os dados do destaque serão preenchidos automaticamente e ainda poderão ser ajustados.</small></div>` : '';
     if (name === 'gallery') {
       const type = String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
       const isBanner = type === 'banner';
       return `<div class="form-grid"><input type="hidden" name="itemType" value="${type}"><input type="hidden" name="title" value="${isBanner ? 'Banner' : 'Avatar'}">${isBanner ? '<input type="hidden" name="category" value="Banners de perfil">' : `<div class="field full"><label>Nome da categoria *</label><input class="a-input" name="category" required maxlength="60" value="${esc(item.category || '')}" placeholder="Ex.: Tour Film"><small>O avatar não terá nome individual; somente esta categoria será exibida.</small></div>`}${imageField(isBanner ? 'Link da imagem do banner *' : 'Link da imagem do avatar *', 'imageUrl', item.imageUrl || '')}<div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div><div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field full"><small>${isBanner ? 'O banner não possui nome individual. Prefira imagens horizontais em 16:6 ou 16:9.' : 'Avatares funcionam melhor em formato quadrado.'}</small></div></div>`;
     }
     return `<div class="form-grid">${featuredFields}<div class="field full"><label>Título *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}"></div><div class="field"><label>Tipo</label><input class="a-input" name="type" value="${esc(item.type || name)}"></div><div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>${sectionFields}${videoFields}<div class="field full"><label>Descrição</label><textarea class="a-textarea" rows="4" maxlength="1000" name="description">${esc(item.description || '')}</textarea></div>${showMedia ? `${imageField('Imagem / thumbnail', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}${name === 'videos' ? '' : imageField('Banner', 'bannerUrl', item.bannerUrl || '')}${name === 'featured' ? imageField('Logo do conteúdo', 'logoUrl', item.logoUrl || '') : ''}${name === 'videos' ? '' : `<div class="field full"><label>Link do conteúdo</label><input class="a-input" name="contentUrl" value="${esc(item.contentUrl || item.link || '')}" placeholder="https://... ou /pagina"></div>`}` : ''}<div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field"><label>Duração</label><input class="a-input" name="duration" value="${esc(item.duration || item.videoDuration || item.runtime || '')}" placeholder="Ex.: 24 min ou 1h 42min"></div><div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}"></div></div>`;
+  }
+
+  function featuredCollectionLabel(collection) {
+    return ({ videos: 'Vídeo', movies: 'Filme', series: 'Série' })[collection] || 'Conteúdo';
+  }
+
+  function setupFeaturedContentPicker(root, context, currentItem = {}) {
+    const items = Array.isArray(context.featuredContents) ? context.featuredContents : [];
+    const picker = $('#featuredContentPicker', root);
+    if (!picker) return;
+
+    const form = $('#editorForm', root);
+    const search = $('#featuredContentSearch', root);
+    const list = $('#featuredContentList', root);
+    const empty = $('#featuredContentEmpty', root);
+    const summary = $('#featuredSelectedSummary', root);
+    const contentIdInput = $('#featuredContentId', root);
+    const collectionInput = $('#featuredContentCollection', root);
+    const legacyVideoInput = $('#featuredLegacyVideoId', root);
+    const filterButtons = [...picker.querySelectorAll('[data-featured-filter]')];
+    let activeFilter = 'all';
+
+    const normalize = value => String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+    const itemKey = item => `${item.collection}:${item.id}`;
+    const selectedKey = () => contentIdInput.value && collectionInput.value
+      ? `${collectionInput.value}:${contentIdInput.value}`
+      : '';
+    const imageOf = item => item.thumbnailUrl || item.imageUrl || item.bannerUrl || '';
+    const metaOf = item => [featuredCollectionLabel(item.collection), item.year || '', item.duration || item.videoDuration || item.runtime || '']
+      .filter(Boolean)
+      .join(' · ');
+
+    const renderSummary = item => {
+      if (!item) {
+        summary.innerHTML = '<div class="featured-selected-empty"><span>▣</span><div><strong>Nenhum conteúdo selecionado</strong><small>Escolha um item da lista abaixo.</small></div></div>';
+        return;
+      }
+      const image = imageOf(item);
+      summary.innerHTML = `<div class="featured-selected-card">${image ? `<img src="${esc(image)}" alt="">` : '<span class="featured-selected-placeholder">▣</span>'}<div><small>Selecionado para o destaque</small><strong>${esc(item.title || item.id)}</strong><span>${esc(metaOf(item))}</span></div><i aria-hidden="true">✓</i></div>`;
+      const preview = summary.querySelector('img');
+      if (preview) preview.addEventListener('error', () => preview.replaceWith(Object.assign(document.createElement('span'), { className: 'featured-selected-placeholder', textContent: '▣' })));
+    };
+
+    const fillFromContent = item => {
+      if (!form || !item) return;
+      if (form.elements.title) form.elements.title.value = item.title || '';
+      if (form.elements.description) form.elements.description.value = item.description || '';
+      if (form.elements.imageUrl) form.elements.imageUrl.value = item.imageUrl || item.thumbnailUrl || item.bannerUrl || '';
+      if (form.elements.bannerUrl) form.elements.bannerUrl.value = item.bannerUrl || item.imageUrl || item.thumbnailUrl || '';
+      if (form.elements.contentUrl) form.elements.contentUrl.value = item.videoUrl || item.contentUrl || item.link || '';
+      if (form.elements.duration) form.elements.duration.value = item.duration || item.videoDuration || item.runtime || '';
+      if (form.elements.year) form.elements.year.value = item.year || '';
+      if (form.elements.type) form.elements.type.value = featuredCollectionLabel(item.collection).toLowerCase();
+      form.querySelectorAll('.image-url-input').forEach(input => input.dispatchEvent(new Event('input')));
+    };
+
+    const choose = (item, fillFields = true) => {
+      if (!item) return;
+      contentIdInput.value = item.id;
+      collectionInput.value = item.collection;
+      legacyVideoInput.value = item.collection === 'videos' ? item.id : '';
+      renderSummary(item);
+      if (fillFields) fillFromContent(item);
+      list.querySelectorAll('[data-featured-key]').forEach(button => {
+        const selected = button.dataset.featuredKey === itemKey(item);
+        button.classList.toggle('selected', selected);
+        button.setAttribute('aria-selected', String(selected));
+      });
+    };
+
+    const draw = () => {
+      const term = normalize(search.value);
+      const current = selectedKey();
+      const filtered = items.filter(item => {
+        if (activeFilter !== 'all' && item.collection !== activeFilter) return false;
+        if (!term) return true;
+        return normalize([
+          item.title,
+          item.description,
+          item.year,
+          item.duration,
+          item.type,
+          featuredCollectionLabel(item.collection)
+        ].filter(Boolean).join(' ')).includes(term);
+      });
+
+      list.innerHTML = filtered.map(item => {
+        const image = imageOf(item);
+        const key = itemKey(item);
+        const selected = key === current;
+        return `<button type="button" class="featured-content-option ${selected ? 'selected' : ''}" data-featured-key="${esc(key)}" role="option" aria-selected="${selected}">${image ? `<img src="${esc(image)}" alt="" loading="lazy">` : '<span class="featured-content-placeholder">▣</span>'}<span class="featured-content-copy"><span class="featured-content-badge ${esc(item.collection)}">${esc(featuredCollectionLabel(item.collection))}</span><strong>${esc(item.title || item.id)}</strong><small>${esc([item.year || '', item.duration || item.videoDuration || item.runtime || ''].filter(Boolean).join(' · ') || 'Sem informações adicionais')}</small></span><span class="featured-content-check" aria-hidden="true">✓</span></button>`;
+      }).join('');
+      empty.hidden = filtered.length > 0;
+      list.hidden = filtered.length === 0;
+
+      list.querySelectorAll('[data-featured-key]').forEach(button => {
+        const content = items.find(item => itemKey(item) === button.dataset.featuredKey);
+        button.addEventListener('click', () => choose(content, true));
+        const image = button.querySelector('img');
+        if (image) image.addEventListener('error', () => image.replaceWith(Object.assign(document.createElement('span'), { className: 'featured-content-placeholder', textContent: '▣' })));
+      });
+    };
+
+    search.addEventListener('input', draw);
+    filterButtons.forEach(button => button.addEventListener('click', () => {
+      activeFilter = button.dataset.featuredFilter || 'all';
+      filterButtons.forEach(item => item.classList.toggle('active', item === button));
+      draw();
+    }));
+
+    const initialCollection = String(currentItem.contentCollection || currentItem.sourceCollection || (currentItem.videoId ? 'videos' : collectionInput.value) || '').trim();
+    const initialId = String(currentItem.contentId || currentItem.videoId || contentIdInput.value || '').trim();
+    const initial = items.find(item => item.collection === initialCollection && String(item.id) === initialId);
+    if (initial) {
+      contentIdInput.value = initial.id;
+      collectionInput.value = initial.collection;
+      legacyVideoInput.value = initial.collection === 'videos' ? initial.id : '';
+      renderSummary(initial);
+    } else {
+      renderSummary(null);
+    }
+    draw();
   }
 
   function validImageSource(value) {
@@ -571,13 +697,29 @@
       const active = (await db.list('featured')).filter(entry => entry.active !== false);
       if (active.length >= 6) toast('O limite de 6 destaques ativos foi atingido.', 'err');
     }
-    const context = { sections: [], videos: [] };
+    const context = { sections: [], featuredContents: [] };
     try {
       if (name === 'videos') context.sections = (await db.list('sections', { orderBy: 'order', direction: 'asc' })).filter(entry => entry.active !== false);
       if (name === 'featured') {
-        context.videos = (await db.list('videos', { orderBy: 'order', direction: 'asc' })).filter(entry => entry.active !== false);
-        if (!context.videos.length) {
-          toast('Cadastre pelo menos um vídeo antes de criar um destaque.', 'err');
+        const collections = [
+          ['videos', 'Vídeo'],
+          ['movies', 'Filme'],
+          ['series', 'Série']
+        ];
+        const rows = await Promise.all(collections.map(async ([collection, label]) => {
+          const entries = await db.list(collection, { orderBy: 'order', direction: 'asc' }).catch(() => []);
+          return entries
+            .filter(entry => entry.active !== false)
+            .map(entry => ({ ...entry, collection, collectionLabel: label }));
+        }));
+        context.featuredContents = rows.flat().sort((a, b) => {
+          const aDate = new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
+          const bDate = new Date(b.updatedAt || b.createdAt || 0).getTime() || 0;
+          if (aDate !== bDate) return bDate - aDate;
+          return String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR');
+        });
+        if (!context.featuredContents.length) {
+          toast('Cadastre pelo menos um vídeo, filme ou série antes de criar um destaque.', 'err');
           return;
         }
       }
@@ -588,11 +730,12 @@
 
     const wrap = document.createElement('div');
     wrap.className = 'modal-backdrop';
-    wrap.innerHTML = `<div class="modal"><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><form id="editorForm">${editorFields(name, draft, context)}<div class="modal-actions"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">Salvar</button></div></form></div>`;
+    wrap.innerHTML = `<div class="modal ${name === 'featured' ? 'featured-editor-modal' : ''}"><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><form id="editorForm">${editorFields(name, draft, context)}<div class="modal-actions"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">Salvar</button></div></form></div>`;
     document.body.append(wrap);
     $('#cancelModal').onclick = () => wrap.remove();
     wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
     setupImagePreviews(wrap);
+    if (name === 'featured') setupFeaturedContentPicker(wrap, context, draft);
 
     if (name === 'videos') {
       const search = $('#videoSectionSearch', wrap);
@@ -609,27 +752,6 @@
       syncSection();
     }
 
-    if (name === 'featured') {
-      const select = $('#featuredVideoSelect', wrap);
-      const fillFromVideo = () => {
-        const video = context.videos.find(entry => entry.id === select.value);
-        if (!video) return;
-        const form = $('#editorForm', wrap);
-        form.elements.title.value = video.title || '';
-        form.elements.description.value = video.description || '';
-        form.elements.imageUrl.value = video.imageUrl || video.thumbnailUrl || video.bannerUrl || '';
-        form.elements.bannerUrl.value = video.bannerUrl || video.imageUrl || video.thumbnailUrl || '';
-        form.elements.contentUrl.value = video.videoUrl || video.contentUrl || video.link || '';
-        if (form.elements.duration) form.elements.duration.value = video.duration || video.videoDuration || video.runtime || '';
-        form.elements.year.value = video.year || '';
-        form.querySelectorAll('.image-url-input').forEach(input => input.dispatchEvent(new Event('input')));
-      };
-      select.addEventListener('change', fillFromVideo);
-      if (!item && context.videos.length) {
-        select.value = context.videos[0].id;
-        fillFromVideo();
-      }
-    }
 
     $('#editorForm').onsubmit = async event => {
       event.preventDefault();
@@ -664,6 +786,18 @@
             do { data.publicId = generatePublicId(); }
             while (existingVideos.some(video => String(normalizePublicId(video.publicId) || generatePublicId(video.id)) === data.publicId));
           }
+        }
+        if (name === 'featured') {
+          const allowedCollections = ['videos', 'movies', 'series'];
+          const selectedCollection = String(data.contentCollection || '').trim();
+          const selectedId = String(data.contentId || '').trim();
+          if (!allowedCollections.includes(selectedCollection) || !selectedId) throw new Error('Selecione um vídeo, filme ou série para o destaque.');
+          const selectedContent = context.featuredContents.find(entry => entry.collection === selectedCollection && String(entry.id) === selectedId);
+          if (!selectedContent) throw new Error('O conteúdo selecionado não está mais disponível. Atualize a lista e tente novamente.');
+          data.contentId = selectedContent.id;
+          data.contentCollection = selectedCollection;
+          data.sourceCollection = selectedCollection;
+          data.videoId = selectedCollection === 'videos' ? selectedContent.id : '';
         }
         data.active = data.active === 'true';
         data.updatedAt = now();

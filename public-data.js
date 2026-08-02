@@ -42,26 +42,31 @@
     if (section) section.hidden = true;
 
     let featured = (await beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }))
-      .filter(item => item.active !== false && item.videoId)
+      .filter(item => item.active !== false && (item.contentId || item.videoId))
       .slice(0, 6);
 
     featured = await Promise.all(featured.map(async item => {
       try {
-        const video = await beBackend.data.get('videos', item.videoId);
-        if (!video || video.active === false) return null;
+        const collection = ['videos', 'movies', 'series'].includes(item.contentCollection || item.sourceCollection)
+          ? (item.contentCollection || item.sourceCollection)
+          : 'videos';
+        const sourceId = item.contentId || item.videoId;
+        const source = await beBackend.data.get(collection, sourceId);
+        if (!source || source.active === false) return null;
         return {
           ...item,
-          id: video.id,
-          publicId: numericPublicId(video.publicId || video.id || video.title),
-          title: item.title || video.title,
-          description: item.description || video.description,
-          imageUrl: item.imageUrl || video.imageUrl || video.thumbnailUrl,
-          bannerUrl: item.bannerUrl || video.bannerUrl || video.imageUrl || video.thumbnailUrl,
-          contentUrl: item.contentUrl || video.videoUrl || video.contentUrl || video.link,
-          duration: item.duration || video.duration || video.videoDuration || video.runtime,
-          year: item.year || video.year,
-          logoUrl: item.logoUrl || video.logoUrl || '',
-          collection: 'videos',
+          id: source.id,
+          sourceId: source.id,
+          publicId: numericPublicId(source.publicId || source.id || source.title),
+          title: item.title || source.title,
+          description: item.description || source.description,
+          imageUrl: item.imageUrl || source.imageUrl || source.thumbnailUrl,
+          bannerUrl: item.bannerUrl || source.bannerUrl || source.imageUrl || source.thumbnailUrl,
+          contentUrl: item.contentUrl || source.videoUrl || source.contentUrl || source.link,
+          duration: item.duration || source.duration || source.videoDuration || source.runtime,
+          year: item.year || source.year,
+          logoUrl: item.logoUrl || source.logoUrl || '',
+          collection,
           category: 'destaque'
         };
       } catch (_) {
@@ -93,7 +98,7 @@
           <div class="f-actions">
             <button class="f-play" type="button" data-open-detail="true"
               data-item-id="${escapeHtml(String(item.publicId || numericPublicId(item.id || item.videoId || title)))}"
-              data-record-id="${escapeHtml(String(item.id || item.videoId || ''))}"
+              data-record-id="${escapeHtml(String(item.sourceId || item.id || item.contentId || item.videoId || ''))}"
               data-title="${escapeHtml(title)}"
               data-description="${escapeHtml(item.description || '')}"
               data-year="${escapeHtml(item.year || '')}"
@@ -101,10 +106,11 @@
               data-content-url="${safeUrl(url)}"
               data-image-url="${safeUrl(item.imageUrl || '')}"
               data-banner-url="${safeUrl(item.bannerUrl || item.imageUrl || '')}"
-              data-logo-url="${safeUrl(item.logoUrl || '')}">
+              data-logo-url="${safeUrl(item.logoUrl || '')}"
+              data-collection="${escapeHtml(item.collection || 'videos')}">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
             </button>
-            <button class="f-fav" type="button" data-favorite-id="${escapeHtml(String(item.videoId || item.id || title))}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
+            <button class="f-fav" type="button" data-favorite-id="${escapeHtml(String(`${item.collection || 'videos'}:${item.sourceId || item.contentId || item.videoId || item.id || title}`))}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-9.7-9A5.4 5.4 0 0 1 12 6a5.4 5.4 0 0 1 9.7 6c-2.2 4.4-9.7 9-9.7 9Z"/></svg>
             </button>
           </div>
@@ -139,38 +145,50 @@
 
     const sections = (await beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }))
       .filter(section => section.active !== false);
-    const [videoRows, movieRows, featuredRows] = await Promise.all([
+    const [videoRows, movieRows, seriesRows, featuredRows] = await Promise.all([
       beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
       beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => []),
+      beBackend.data.list('series', { orderBy: 'order', direction: 'asc' }).catch(() => []),
       beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => [])
     ]);
     const allVideos = videoRows.filter(video => video.active !== false);
     const allMovies = movieRows.filter(movie => movie.active !== false);
-    const videosById = new Map(allVideos.map(video => [String(video.id), video]));
+    const allSeries = seriesRows.filter(series => series.active !== false);
+    const sourceMaps = {
+      videos: new Map(allVideos.map(item => [String(item.id), item])),
+      movies: new Map(allMovies.map(item => [String(item.id), item])),
+      series: new Map(allSeries.map(item => [String(item.id), item]))
+    };
     const featuredSeen = new Set();
-    const featuredVideos = featuredRows
-      .filter(item => item.active !== false && item.videoId)
+    const featuredContents = featuredRows
+      .filter(item => item.active !== false && (item.contentId || item.videoId))
       .map(item => {
-        const video = videosById.get(String(item.videoId));
-        if (!video || featuredSeen.has(String(item.videoId))) return null;
-        featuredSeen.add(String(item.videoId));
+        const collection = ['videos', 'movies', 'series'].includes(item.contentCollection || item.sourceCollection)
+          ? (item.contentCollection || item.sourceCollection)
+          : 'videos';
+        const sourceId = String(item.contentId || item.videoId || '');
+        const source = sourceMaps[collection]?.get(sourceId);
+        const uniqueKey = `${collection}:${sourceId}`;
+        if (!source || featuredSeen.has(uniqueKey)) return null;
+        featuredSeen.add(uniqueKey);
         return {
-          ...video,
-          title: item.title || video.title,
-          description: item.description || video.description,
-          thumbnailUrl: item.imageUrl || video.thumbnailUrl || video.imageUrl || video.bannerUrl,
-          imageUrl: item.imageUrl || video.imageUrl || video.thumbnailUrl || video.bannerUrl,
-          bannerUrl: item.bannerUrl || video.bannerUrl || video.imageUrl || video.thumbnailUrl,
-          videoUrl: item.contentUrl || video.videoUrl || video.contentUrl || video.link,
-          duration: item.duration || video.duration || video.videoDuration || video.runtime,
-          year: item.year || video.year,
-          logoUrl: item.logoUrl || video.logoUrl || '',
+          ...source,
+          title: item.title || source.title,
+          description: item.description || source.description,
+          thumbnailUrl: item.imageUrl || source.thumbnailUrl || source.imageUrl || source.bannerUrl,
+          imageUrl: item.imageUrl || source.imageUrl || source.thumbnailUrl || source.bannerUrl,
+          bannerUrl: item.bannerUrl || source.bannerUrl || source.imageUrl || source.thumbnailUrl,
+          videoUrl: item.contentUrl || source.videoUrl || source.contentUrl || source.link,
+          contentUrl: item.contentUrl || source.contentUrl || source.videoUrl || source.link,
+          duration: item.duration || source.duration || source.videoDuration || source.runtime,
+          year: item.year || source.year,
+          logoUrl: item.logoUrl || source.logoUrl || '',
           category: 'destaque',
-          collection: 'videos'
+          collection
         };
       })
       .filter(Boolean);
-    if (!sections.length && !allMovies.length && !featuredVideos.length) return;
+    if (!sections.length && !allMovies.length && !featuredContents.length) return;
 
     const old = document.getElementById('dynamicSections');
     if (old) old.remove();
@@ -180,7 +198,7 @@
     host.className = 'video-catalog';
     host.setAttribute('aria-label', 'Categorias de vídeos');
 
-    if (featuredVideos.length) {
+    if (featuredContents.length) {
       const featuredBlock = document.createElement('section');
       featuredBlock.className = 'video-rail-section featured-video-rail';
       featuredBlock.dataset.category = 'destaque';
@@ -195,7 +213,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <div class="video-rail" tabindex="0" aria-label="Destaque">
-            ${featuredVideos.map(video => videoCard(video)).join('')}
+            ${featuredContents.map(item => videoCard(item)).join('')}
           </div>
           <button class="video-rail-arrow next" type="button" aria-label="Ver mais destaques">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
@@ -349,7 +367,7 @@
     }
 
     if (!window.beBackend) return false;
-    for (const collection of ['videos', 'movies', 'contents']) {
+    for (const collection of ['videos', 'movies', 'series', 'contents']) {
       try {
         const items = await beBackend.data.list(collection, { orderBy: 'order', direction: 'asc' });
         const item = (items || []).find(candidate => {
