@@ -1,8 +1,0 @@
-ATUALIZAÇÃO — ÁREA DE DETALHES DOS VÍDEOS
-
-- Ao clicar em qualquer card de vídeo ou no botão Assistir do destaque, abre uma área cinematográfica com a imagem em tela ampla.
-- A tab de navegação continua fixa e centralizada no topo.
-- A nova área mostra título ou logo, botão Assistir, botão Minha Lista, ano/duração e descrição.
-- As etiquetas de categoria foram removidas, conforme a marcação vermelha da referência.
-- Incluído botão discreto para voltar aos vídeos e suporte à tecla Esc.
-- Layout responsivo para computador e celular.
