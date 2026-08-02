@@ -1,8 +1,0 @@
-ATUALIZAÇÃO — CONFIGURAÇÕES E GALERIA
-
-1. Configurações agora usam a rota #config e abrem como uma página própria.
-2. A tab principal continua fixa e centralizada nessa página.
-3. No Dashboard Admin > Galeria, Avatares e Banners de perfil ficam em seções separadas.
-4. Banners não possuem nome individual.
-5. Avatares não possuem nome individual; somente o nome da categoria é exibido.
-6. Seletores públicos de avatar e banner também não exibem nomes individuais.
