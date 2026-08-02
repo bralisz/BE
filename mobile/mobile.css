@@ -22,7 +22,10 @@
     align-items:center;
     justify-content:space-between;
     gap:12px;
-    background:linear-gradient(180deg,rgba(3,4,4,.96),rgba(3,4,4,.78) 72%,transparent);
+    background:transparent;
+    box-shadow:none;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
     pointer-events:none;
   }
   .mobile-app-bar>*{pointer-events:auto}
