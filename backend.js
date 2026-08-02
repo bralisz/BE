@@ -190,6 +190,16 @@
   function mapAuthError(error) {
     const message = String(error && error.message || '');
     const code = String(error && (error.code || error.status) || '');
+    if (code === 'over_email_send_rate_limit' || /email rate limit|rate limit.*email|too many requests/i.test(message)) {
+      return backendError(
+        'auth/email-rate-limit',
+        'O limite temporário de e-mails do Supabase foi atingido. Aguarde e tente novamente mais tarde ou continue com o Discord.',
+        error
+      );
+    }
+    if (/provider is not enabled|unsupported provider/i.test(message)) {
+      return backendError('auth/provider-not-enabled', 'O login com Discord ainda não foi ativado no Supabase.', error);
+    }
     if (/email not confirmed/i.test(message)) return backendError('auth/email-not-confirmed', 'Confirme seu e-mail antes de entrar.', error);
     if (/invalid login credentials/i.test(message)) return backendError('auth/invalid-credential', 'E-mail ou senha incorretos.', error);
     if (/already registered|already been registered|user already/i.test(message)) return backendError('auth/email-already-in-use', 'Este e-mail já possui uma conta.', error);
@@ -588,6 +598,9 @@
     async signInWithGoogle() {
       throw backendError('backend/not-configured', 'Conecte o projeto ao Supabase para usar o login Google do administrador.');
     },
+    async signInWithDiscord() {
+      throw backendError('backend/not-configured', 'Conecte o projeto ao Supabase para usar o login com Discord.');
+    },
     async localAdminExists(email = ADMIN_EMAIL) {
       const database = loadLocalDatabase();
       return Boolean(database.accounts[String(email).toLowerCase()]);
@@ -687,6 +700,15 @@
       if (error) throw mapAuthError(error);
       return result;
     },
+    async signInWithDiscord() {
+      const redirectTo = `${location.origin}${location.pathname}#home`;
+      const { data: result, error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'discord',
+        options: { redirectTo }
+      });
+      if (error) throw mapAuthError(error);
+      return result;
+    },
     async localAdminExists() { return false; },
     async setupLocalAdmin() { throw backendError('backend/wrong-mode', 'O acesso local não é usado quando o Supabase está conectado.'); }
   };
@@ -699,19 +721,43 @@
       supabaseClient = window.supabase.createClient(config.url, config.publishableKey, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
       });
-      // Registra o listener imediatamente. O trabalho que pode consultar o banco
-      // é disparado fora do callback para evitar travamentos do supabase-js.
-      supabaseClient.auth.onAuthStateChange((_event, session) => {
-        const nextUser = normalizeUser(session?.user || null);
-        window.setTimeout(() => {
-          currentUser = nextUser;
-          notify();
-        }, 0);
-      });
 
+      // Restaura primeiro a sessão persistida. Registrar o listener antes desta
+      // leitura permitia que um evento INITIAL_SESSION vazio sobrescrevesse uma
+      // sessão válida durante o recarregamento da página.
       const { data: sessionData, error } = await supabaseClient.auth.getSession();
       if (error) console.warn('Não foi possível restaurar a sessão:', error.message);
       currentUser = normalizeUser(sessionData?.session?.user || null);
+
+      // O callback permanece síncrono e delega qualquer nova leitura para a
+      // próxima tarefa, como recomendado pelo supabase-js.
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        const eventUser = normalizeUser(session?.user || null);
+        window.setTimeout(async () => {
+          if (event === 'SIGNED_OUT') {
+            currentUser = null;
+            notify();
+            return;
+          }
+
+          if (eventUser) {
+            currentUser = eventUser;
+            notify();
+            return;
+          }
+
+          // Eventos sem usuário não devem apagar silenciosamente uma sessão que
+          // continua armazenada. Confirma o estado atual antes de atualizar a UI.
+          try {
+            const { data: latestSession, error: latestError } = await supabaseClient.auth.getSession();
+            if (latestError) console.warn('Não foi possível confirmar a sessão:', latestError.message);
+            currentUser = normalizeUser(latestSession?.session?.user || null);
+            notify();
+          } catch (latestError) {
+            console.warn('Não foi possível confirmar a sessão:', latestError?.message || latestError);
+          }
+        }, 0);
+      });
     } else {
       const session = readLocalSession();
       if (session && session.email) {

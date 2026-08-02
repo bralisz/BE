@@ -33,16 +33,17 @@
   async function renderFeatured() {
     const host = document.getElementById('featured');
     if (!host) return;
+    const section = host.closest('.featured-wrap');
+    if (section) section.hidden = true;
 
     let featured = (await beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }))
-      .filter(item => item.active !== false)
+      .filter(item => item.active !== false && item.videoId)
       .slice(0, 6);
 
     featured = await Promise.all(featured.map(async item => {
-      if (!item.videoId) return item;
       try {
         const video = await beBackend.data.get('videos', item.videoId);
-        if (!video || video.active === false) return item;
+        if (!video || video.active === false) return null;
         return {
           ...item,
           title: item.title || video.title,
@@ -53,11 +54,14 @@
           year: item.year || video.year
         };
       } catch (_) {
-        return item;
+        return null;
       }
-    }));
+    })).then(items => items.filter(Boolean));
 
-    if (!featured.length) return;
+    if (!featured.length) {
+      host.innerHTML = '';
+      return;
+    }
 
     host.innerHTML = featured.map((item, index) => {
       const image = item.bannerUrl || item.imageUrl || item.thumbnailUrl || '';
@@ -93,6 +97,7 @@
     host.addEventListener('mouseenter', stop);
     host.addEventListener('mouseleave', start);
     start();
+    if (section) section.hidden = false;
   }
 
   async function renderVideoCatalog() {
