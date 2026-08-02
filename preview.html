@@ -932,18 +932,19 @@
 
 
   /* ============================================================
-     AUTENTICAÇÃO — fluxo por e-mail com visual iOS
+     AUTENTICAÇÃO — fluxo por e-mail com visual inspirado no iOS
      ============================================================ */
   #authGate{
-    overflow-y:auto;
-    overflow-x:hidden;
-    background:#07101b;
-  }
-  body.login-mode{overflow:hidden!important}
-  .login-shell{
-    height:auto;
     min-height:100dvh;
-    padding-bottom:42px;
+    overflow-x:hidden;
+    overflow-y:auto;
+  }
+  .login-shell{
+    width:min(1440px,calc(100% - 72px));
+    min-height:100dvh;
+    height:auto;
+    grid-template-rows:100px auto 48px;
+    padding:0 0 30px;
   }
   .auth-column{
     grid-column:1;
@@ -955,7 +956,7 @@
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:16px;
+    gap:18px;
   }
   .auth-column .login-card{
     grid-column:auto;
@@ -967,269 +968,247 @@
     padding:0;
     border-radius:30px;
     text-align:left;
-    background:rgba(25,27,31,.76);
+    background:linear-gradient(145deg,rgba(28,29,32,.82),rgba(19,20,23,.74));
     border:1px solid rgba(255,255,255,.12);
-    box-shadow:
-      0 30px 90px rgba(0,0,0,.55),
-      inset 0 1px 0 rgba(255,255,255,.045);
-    -webkit-backdrop-filter:blur(32px) saturate(135%);
-    backdrop-filter:blur(32px) saturate(135%);
+    box-shadow:0 30px 90px rgba(0,0,0,.54),inset 0 1px 0 rgba(255,255,255,.045);
+    backdrop-filter:blur(30px) saturate(120%);
+    -webkit-backdrop-filter:blur(30px) saturate(120%);
   }
+  .auth-step{padding:32px 30px 31px}
   .auth-step[hidden]{display:none!important}
-  .auth-step{
-    padding:32px;
-    animation:authStepIn .34s var(--ease) both;
-  }
-  @keyframes authStepIn{
-    from{opacity:0;transform:translateY(10px) scale(.988)}
-    to{opacity:1;transform:none}
-  }
   .auth-step-header{margin-bottom:25px}
   .auth-step-header h2{
-    max-width:440px;
-    font:700 clamp(28px,2.75vw,38px)/1.12 var(--font-display);
+    margin:0;
+    font:700 clamp(29px,3vw,38px)/1.08 var(--font-display);
     letter-spacing:-.045em;
     color:#fff;
-    text-wrap:balance;
+    text-align:left;
   }
   .auth-step-header p{
-    margin-top:12px;
-    color:rgba(225,232,244,.68);
+    margin:12px 0 0;
+    color:rgba(225,233,246,.67);
     font-size:15px;
-    line-height:1.58;
+    line-height:1.55;
   }
-  .email-start .auth-step-header{margin-bottom:18px}
-  .email-start .auth-step-header h2{
-    font-size:clamp(22px,2.1vw,29px);
+  .auth-start-step .auth-step-header{margin-bottom:18px}
+  .auth-start-step .auth-step-header h2{
+    font-size:clamp(21px,2vw,25px);
     line-height:1.25;
-    letter-spacing:-.035em;
+    letter-spacing:-.025em;
   }
-  .auth-form{display:grid;grid-template-columns:1fr;gap:16px}
-  .auth-field{display:grid;gap:8px}
-  .auth-field label{
+  .auth-column .auth-form{display:grid;grid-template-columns:1fr;gap:17px}
+  .auth-column .auth-field{display:grid;gap:8px;min-width:0}
+  .auth-column .auth-field label{
+    color:rgba(218,227,242,.73);
     font-size:12px;
-    line-height:1.2;
     font-weight:750;
-    letter-spacing:.045em;
+    letter-spacing:.055em;
     text-transform:uppercase;
-    color:rgba(222,229,241,.72);
   }
-  .auth-field input{
+  .auth-column .auth-field input{
     width:100%;
+    min-width:0;
     height:60px;
-    padding:0 21px;
+    padding:0 20px;
+    border:1px solid rgba(255,255,255,.13);
     border-radius:17px;
-    border:1px solid rgba(255,255,255,.11);
-    background:rgba(5,7,10,.88);
+    background:rgba(4,7,11,.80);
     color:#fff;
     font:500 17px var(--font-body);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.018);
-    transition:border-color .2s ease,box-shadow .2s ease,background .2s ease;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
   }
-  .auth-field input::placeholder{color:rgba(255,255,255,.38)}
-  .auth-field input:focus{
+  .auth-column .auth-field input::placeholder{color:rgba(255,255,255,.38)}
+  .auth-column .auth-field input:focus{
     outline:none;
-    border-color:rgba(72,143,255,.9)!important;
-    box-shadow:0 0 0 4px rgba(45,127,249,.16)!important;
-    background:rgba(8,10,14,.95);
+    border-color:rgba(53,129,244,.9)!important;
+    background:rgba(5,9,14,.92);
+    box-shadow:0 0 0 4px rgba(44,121,236,.16)!important;
   }
-  .auth-field input:-webkit-autofill,
-  .auth-field input:-webkit-autofill:hover,
-  .auth-field input:-webkit-autofill:focus{
+  .auth-column .auth-field input:-webkit-autofill,
+  .auth-column .auth-field input:-webkit-autofill:hover,
+  .auth-column .auth-field input:-webkit-autofill:focus{
     -webkit-text-fill-color:#fff;
-    -webkit-box-shadow:0 0 0 1000px #090b0f inset;
+    -webkit-box-shadow:0 0 0 1000px #090d13 inset;
     caret-color:#fff;
   }
-  .auth-primary{
-    width:100%;
-    height:64px;
-    margin-top:16px;
-    border:0;
-    border-radius:999px;
-    color:#fff;
-    background:#2878ed!important;
-    box-shadow:0 14px 32px rgba(37,99,235,.26);
-    font:750 17px var(--font-body);
-    transition:transform .2s var(--ease),filter .2s ease,box-shadow .2s ease;
+  .auth-column .auth-help{
+    margin-top:-2px;
+    color:rgba(217,226,241,.62);
+    font-size:11px;
+    line-height:1.45;
   }
-  .auth-primary:hover{
-    background:#337ff0!important;
-    transform:translateY(-1px);
-    filter:brightness(1.04);
-    box-shadow:0 17px 38px rgba(37,99,235,.32);
-  }
-  .auth-primary:active{transform:scale(.992)}
-  .auth-primary:disabled{opacity:.62;cursor:wait;transform:none;filter:none}
-  .email-start .auth-primary{margin-top:16px}
   .selected-email-row{
-    min-height:56px;
-    margin-bottom:24px;
-    padding:13px 18px;
     display:flex;
     align-items:center;
     justify-content:space-between;
-    gap:14px;
+    gap:16px;
+    min-height:56px;
+    margin:0 0 25px;
+    padding:13px 17px;
+    border:1px solid rgba(255,255,255,.12);
     border-radius:16px;
-    border:1px solid rgba(255,255,255,.11);
     background:rgba(255,255,255,.055);
-    color:rgba(225,232,244,.68);
-    font-size:14px;
+    color:rgba(226,233,245,.72);
+    font-size:13px;
+    line-height:1.35;
   }
-  .selected-email-row span{min-width:0;overflow-wrap:anywhere}
-  .selected-email-row strong{color:#fff;font-weight:750}
-  .selected-email-row button,
-  .auth-inline-link{
+  .selected-email-row strong{color:#fff;font-weight:750;overflow-wrap:anywhere}
+  .selected-email-row button{
     flex:0 0 auto;
     border:0;
-    background:transparent;
-    color:#2d7ff9;
-    font:750 14px var(--font-body);
+    background:none;
+    color:#2f80ed;
     padding:5px 0;
+    font:750 13px var(--font-body);
   }
-  .selected-email-row button:hover,
-  .auth-inline-link:hover{text-decoration:underline}
+  .selected-email-row button:hover{text-decoration:underline}
+  .auth-column .auth-primary{
+    width:100%;
+    height:64px;
+    margin-top:2px;
+    border:0;
+    border-radius:999px;
+    background:#2878ed!important;
+    color:#fff;
+    font:800 18px var(--font-body);
+    box-shadow:0 13px 28px rgba(31,105,218,.24);
+    transition:transform .2s var(--ease),filter .2s ease,box-shadow .2s ease;
+  }
+  .auth-column .auth-primary:hover{
+    background:#3182f3!important;
+    transform:translateY(-1px);
+    box-shadow:0 16px 32px rgba(31,105,218,.30);
+  }
+  .auth-column .auth-primary:active{transform:scale(.99)}
+  .auth-column .auth-primary:disabled{opacity:.60;cursor:wait;transform:none}
   .auth-options{
     display:flex;
     align-items:center;
     justify-content:space-between;
     gap:14px;
-    margin-top:-1px;
-    color:rgba(225,232,244,.62);
+    color:rgba(225,233,246,.62);
     font-size:12px;
   }
-  .auth-remember,
-  .auth-consent{
-    display:flex;
-    align-items:flex-start;
-    gap:11px;
-    cursor:pointer;
-    color:rgba(225,232,244,.68);
-    font-size:14px;
-    line-height:1.45;
-  }
-  .auth-remember{align-items:center;font-size:12px}
-  .auth-remember input,
-  .auth-consent input{
-    width:19px;
-    height:19px;
-    margin-top:1px;
-    flex:0 0 auto;
-    accent-color:#2878ed;
-  }
+  .auth-remember{display:flex;align-items:center;gap:9px;cursor:pointer}
+  .auth-remember input{width:17px;height:17px;accent-color:#2878ed}
   .auth-link{
     border:0;
     background:none;
-    color:#4a91ff;
-    font:650 12px var(--font-body);
+    color:#3988f5;
     padding:0;
+    font:700 12px var(--font-body);
   }
   .auth-link:hover{text-decoration:underline}
-  .auth-help{
-    margin-top:-1px;
-    color:rgba(225,232,244,.56);
-    font-size:11.5px;
-    line-height:1.45;
-  }
-  .username-field input{text-transform:lowercase}
-  .auth-switch-note{
+  .auth-switch{
     margin-top:18px;
     text-align:center;
-    color:rgba(225,232,244,.50);
+    color:rgba(225,233,246,.56);
     font-size:12px;
   }
-  .auth-status{
+  .auth-switch button{margin-left:4px}
+  .marketing-option{
+    display:grid;
+    grid-template-columns:22px 1fr;
+    gap:12px;
+    align-items:start;
+    margin:3px 0 4px;
+    color:rgba(220,229,243,.70);
+    font-size:13px;
+    line-height:1.48;
+    cursor:pointer;
+  }
+  .marketing-option input{
+    width:18px;
+    height:18px;
+    margin:2px 0 0;
+    accent-color:#2878ed;
+  }
+  .auth-column .auth-status{
     min-height:0;
-    margin:0 32px 26px;
-    font-size:12.5px;
+    margin:0 30px 24px;
+    font-size:12px;
     line-height:1.45;
   }
-  .auth-status:empty{display:none}
-  .auth-status.error{color:#ffaaa5}
-  .auth-status.ok{color:#8ce8b5}
-  .discord-login-wrap{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-height:72px;
-  }
+  .auth-column .auth-status:empty{display:none}
+  .discord-login-wrap{display:flex;align-items:center;justify-content:center;min-height:72px}
   .discord-icon-button{
-    width:68px;
-    height:68px;
+    width:66px;
+    height:66px;
     padding:0;
     border:0;
     border-radius:50%;
     overflow:hidden;
     background:transparent;
-    box-shadow:0 14px 34px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.08);
+    box-shadow:0 14px 34px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.09);
     transition:transform .22s var(--ease),filter .22s ease,box-shadow .22s ease;
   }
   .discord-icon-button:hover{
     transform:translateY(-3px) scale(1.045);
     filter:brightness(1.08);
-    box-shadow:0 18px 40px rgba(0,0,0,.48),0 0 24px rgba(88,101,242,.24);
+    box-shadow:0 18px 40px rgba(0,0,0,.48),0 0 25px rgba(88,101,242,.28);
   }
   .discord-icon-button:active{transform:scale(.97)}
   .discord-icon-button:disabled{opacity:.58;cursor:wait;transform:none}
   .discord-icon-button img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
 
   @media(max-height:820px) and (min-width:901px){
-    .login-shell{padding-top:18px;padding-bottom:32px}
-    .auth-step{padding:26px}
-    .auth-step-header{margin-bottom:18px}
+    .login-shell{grid-template-rows:82px auto 38px;padding-bottom:18px}
+    .login-brand img{width:72px}
+    .auth-step{padding:25px 27px 26px}
+    .auth-step-header{margin-bottom:19px}
+    .auth-step-header h2{font-size:30px}
     .auth-step-header p{font-size:13px;margin-top:8px}
-    .selected-email-row{margin-bottom:18px}
-    .auth-form{gap:12px}
-    .auth-field input{height:52px}
-    .auth-primary{height:54px;margin-top:8px}
-    .auth-status{margin:0 26px 20px}
+    .auth-column .auth-field input{height:52px;font-size:15px}
+    .auth-column .auth-primary{height:54px;font-size:16px}
+    .selected-email-row{min-height:50px;margin-bottom:19px}
     .discord-icon-button{width:58px;height:58px}
     .discord-login-wrap{min-height:60px}
   }
   @media(max-width:900px){
-    #authGate{overflow-y:auto}
+    body.login-mode{overflow:hidden!important}
     .login-shell{
       width:min(560px,calc(100% - 28px));
-      height:auto;
       min-height:100dvh;
       display:flex;
       flex-direction:column;
       gap:18px;
-      padding:18px 0 34px;
+      padding:20px 0 32px;
       text-align:center;
     }
-    .auth-column{order:2;width:100%;gap:14px}
-    .auth-column .login-card{max-height:none;overflow:visible;text-align:left}
-    .login-copy{order:1}
-    .login-brand{order:0}
-    .login-dots{order:3}
+    .login-brand{position:static;align-self:center;order:0}
+    .login-brand img{width:70px}
+    .login-copy{display:none!important}
+    .auth-column{order:1;width:100%;gap:16px}
+    .auth-column .login-card{width:100%;max-height:none;overflow:visible}
+    .login-dots{order:2}
   }
   @media(max-width:520px){
-    .login-shell{width:calc(100% - 20px);padding-top:14px}
+    .login-shell{width:calc(100% - 20px);padding-top:15px}
+    .login-brand img{width:62px}
     .auth-column .login-card{border-radius:25px}
-    .auth-step{padding:24px 20px}
-    .auth-step-header{margin-bottom:20px}
-    .auth-step-header h2{font-size:27px}
-    .email-start .auth-step-header h2{font-size:21px}
+    .auth-step{padding:26px 20px 25px}
+    .auth-step-header{margin-bottom:21px}
+    .auth-step-header h2{font-size:29px}
+    .auth-start-step .auth-step-header h2{font-size:20px}
     .auth-step-header p{font-size:14px}
-    .auth-field input{height:56px;padding:0 17px;font-size:16px}
-    .auth-primary{height:60px;font-size:16px;margin-top:12px}
-    .selected-email-row{padding:12px 14px;font-size:13px}
-    .auth-options{align-items:flex-start}
-    .auth-status{margin:0 20px 22px}
-    .discord-icon-button{width:62px;height:62px}
+    .auth-column .auth-field input{height:58px;padding:0 16px;font-size:16px}
+    .auth-column .auth-primary{height:62px;font-size:17px}
+    .selected-email-row{align-items:flex-start;padding:13px 14px;font-size:12px}
+    .auth-options{align-items:flex-start;gap:10px}
+    .discord-icon-button{width:61px;height:61px}
   }
 </style>
 
 <link rel="stylesheet" href="/admin/admin.css">
-<script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script defer src="/supabase-config.js"></script>
-<script defer src="/backend.js"></script>
-<script defer src="/admin/admin.js"></script>
-<script defer src="/public-data.js"></script>
-</head>
-<body>
 
-<div class="auth-loading" id="authLoading">Carregando sua conta…</div>
+
+
+
+
+</head>
+<body class="login-mode">
+
+<div class="auth-loading" id="authLoading" hidden>Carregando sua conta…</div>
 <section id="authGate" aria-label="Entrar ou criar conta">
   <div class="login-bg-stack" id="loginBgStack" aria-hidden="true">
     <div class="login-bg-slide active" style="background-image:url('assets/login-bg-1.png')"></div>
@@ -1248,31 +1227,29 @@
       <p>Todas as eras, shows históricos, bastidores e materiais reunidos em uma experiência feita para fãs.</p>
     </div>
     <div class="auth-column">
-      <section class="login-card" id="authCard" aria-label="Acessar ou criar conta">
-        <section class="auth-step email-start" id="emailStep" aria-labelledby="emailStepTitle">
+      <section class="login-card" id="authCard" aria-label="Acessar sua conta">
+        <section class="auth-step auth-start-step" id="emailStep" aria-labelledby="emailStepTitle">
           <header class="auth-step-header">
             <h2 id="emailStepTitle">Insira seu e-mail para começar a explorar.</h2>
           </header>
           <form class="auth-form" id="emailLookupForm">
             <div class="auth-field">
-              <label class="sr-only" for="authEmail">E-mail</label>
-              <input id="authEmail" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="seuemail@exemplo.com">
+              <input id="lookupEmail" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="seuemail@exemplo.com" aria-label="E-mail">
             </div>
             <button class="auth-primary" type="submit">Acessar a Plataforma</button>
           </form>
         </section>
 
-        <section class="auth-step" id="passwordStep" aria-labelledby="passwordStepTitle" hidden>
+        <section class="auth-step" id="loginStep" aria-labelledby="loginStepTitle" hidden>
           <header class="auth-step-header">
-            <h2 id="passwordStepTitle">Bem-vindo de volta</h2>
-            <p>Digite sua senha para acessar seu perfil e continuar explorando.</p>
+            <h2 id="loginStepTitle">Bem-vindo de volta</h2>
+            <p>Digite sua senha para acessar seu perfil.</p>
           </header>
           <div class="selected-email-row">
             <span>E-mail selecionado: <strong id="loginSelectedEmail"></strong></span>
-            <button class="change-auth-email" type="button">Alterar</button>
+            <button class="change-email" type="button">Alterar</button>
           </div>
           <form class="auth-form" id="loginForm">
-            <input id="loginEmail" name="email" type="hidden">
             <div class="auth-field">
               <label for="loginPassword">Senha</label>
               <input id="loginPassword" name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="Digite sua senha">
@@ -1283,7 +1260,7 @@
             </div>
             <button class="auth-primary" type="submit">Entrar</button>
           </form>
-          <p class="auth-switch-note">Ainda não possui uma conta? <button class="auth-inline-link" id="switchToSignup" type="button">Criar conta</button></p>
+          <div class="auth-switch">Não possui conta?<button class="auth-link" id="openSignupManually" type="button">Criar conta</button></div>
         </section>
 
         <section class="auth-step" id="signupStep" aria-labelledby="signupStepTitle" hidden>
@@ -1293,10 +1270,9 @@
           </header>
           <div class="selected-email-row">
             <span>E-mail selecionado: <strong id="signupSelectedEmail"></strong></span>
-            <button class="change-auth-email" type="button">Alterar</button>
+            <button class="change-email" type="button">Alterar</button>
           </div>
           <form class="auth-form" id="signupForm">
-            <input id="signupEmail" name="email" type="hidden">
             <div class="auth-field">
               <label for="signupName">Nome completo</label>
               <input id="signupName" name="name" type="text" autocomplete="name" minlength="2" maxlength="50" required placeholder="Digite seu nome">
@@ -1304,17 +1280,18 @@
             <div class="auth-field username-field">
               <label for="signupUsername">Nome de exibição (nome de usuário)</label>
               <input id="signupUsername" name="username" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="20" required placeholder="Escolha um nome de usuário" aria-describedby="signupUsernameHelp">
-              <div class="auth-help" id="signupUsernameHelp">Seu perfil será @seuusuario. Use letras minúsculas, números, ponto ou underline.</div>
             </div>
             <div class="auth-field">
               <label for="signupPassword">Senha</label>
-              <input id="signupPassword" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="Crie uma senha forte">
-              <div class="auth-help">Mínimo de 6 caracteres com pelo menos um número ou caractere especial.</div>
+              <input id="signupPassword" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="Crie uma senha forte" aria-describedby="signupPasswordHelp">
+              <div class="auth-help" id="signupPasswordHelp">Mínimo de 6 caracteres com pelo menos um número ou caractere especial.</div>
             </div>
-            <label class="auth-consent"><input id="signupNewsletter" type="checkbox" checked> <span>Sim, quero receber updates, avisos de novos lançamentos e conteúdos do Eilish+.</span></label>
+            <label class="marketing-option">
+              <input id="newsletterOptIn" type="checkbox" checked>
+              <span>Sim, quero receber updates, avisos de novos lançamentos e conteúdos do Eilish+.</span>
+            </label>
             <button class="auth-primary" type="submit">Escolher meu Avatar</button>
           </form>
-          <p class="auth-switch-note">Já possui uma conta? <button class="auth-inline-link" id="switchToPassword" type="button">Entrar</button></p>
         </section>
 
         <div class="auth-status" id="authStatus" aria-live="polite"></div>
@@ -1583,339 +1560,10 @@
   </div>
 </footer>
 
-<script>
-(function(){
-  "use strict";
-
-  /* -------- particles -------- */
-  var field = document.getElementById('particles');
-  var COUNT = window.innerWidth < 600 ? 14 : 26;
-  for (var i = 0; i < COUNT; i++){
-    var p = document.createElement('div');
-    p.className = 'particle';
-    var size = 1 + Math.random() * 2.2;
-    p.style.width = size + 'px';
-    p.style.height = size + 'px';
-    p.style.left = Math.random() * 100 + 'vw';
-    p.style.bottom = (-10 - Math.random() * 20) + 'vh';
-    var dur = 14 + Math.random() * 18;
-    p.style.animationDuration = dur + 's';
-    p.style.animationDelay = (-Math.random() * dur) + 's';
-    field.appendChild(p);
-  }
-
-  var topbar = document.getElementById('topbar');
-
-  /* -------- logo -> home -------- */
-  document.getElementById('logoBtn').addEventListener('click', function(){
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-
-  /* -------- user dropdown -------- */
-  var userChip = document.getElementById('userChip');
-  var userDropdown = document.getElementById('userDropdown');
-
-  function toggleDropdown(force){
-    var open = typeof force === 'boolean' ? force : !userDropdown.classList.contains('open');
-    userDropdown.classList.toggle('open', open);
-    userChip.setAttribute('aria-expanded', String(open));
-  }
-  userChip.addEventListener('click', function(e){
-    e.stopPropagation();
-    toggleDropdown();
-  });
-  document.addEventListener('click', function(e){
-    if (!userDropdown.contains(e.target) && e.target !== userChip) toggleDropdown(false);
-  });
-  document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape') toggleDropdown(false);
-  });
 
 
-  /* -------- user account and profile -------- */
-  async function setupPublicAccount(){
-    if(location.hash.startsWith('#/admin')) return;
-    if(!window.beBackend) return;
-    await window.beBackend.ready;
-    var auth=beBackend.auth;
-    var photo=document.getElementById('publicUserPhoto');
-    var fallback=document.getElementById('publicUserFallback');
-    var username=document.getElementById('ddUsername');
-    var dashboard=document.getElementById('publicDashboardLink');
-    var authAction=document.getElementById('publicAuthAction');
-    var avatarPicker=document.getElementById('avatarPicker');
-    var avatarPickerBody=document.getElementById('avatarPickerBody');
-    var avatarPickerClose=document.getElementById('avatarPickerClose');
-    var profileModal=document.getElementById('profileModal');
-    var profileBody=document.getElementById('profileBody');
-    var profileClose=document.getElementById('profileClose');
-    var selectedAvatar='';
-    var currentProfile={};
-
-    function escapePublic(value){return String(value||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-    function setMainAvatar(url,user){var shown=url||(user&&user.photoURL)||'';if(shown){photo.src=shown;photo.hidden=false;fallback.hidden=true;}else{photo.hidden=true;fallback.hidden=false;}}
-    function closeAvatarPicker(){avatarPicker.hidden=true;document.body.style.overflow='';}
-    function closeProfile(){profileModal.hidden=true;document.body.style.overflow='';}
-
-    async function openAvatarPicker(){
-      toggleDropdown(false);avatarPicker.hidden=false;document.body.style.overflow='hidden';
-      avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Carregando avatares…</div>';
-      try{
-        var items=(await beBackend.data.list('gallery',{orderBy:'order',direction:'asc'})).filter(function(item){return item.active!==false&&item.imageUrl;});
-        if(!items.length){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Nenhum avatar disponível no momento.</div>';return;}
-        var groups={};items.forEach(function(item){var cat=(item.category||'Outros').trim()||'Outros';(groups[cat]||(groups[cat]=[])).push(item);});
-        avatarPickerBody.innerHTML='<div class="avatar-category-columns">'+Object.keys(groups).map(function(cat){return '<section class="avatar-category"><h3>'+escapePublic(cat)+'</h3><div class="avatar-options">'+groups[cat].map(function(item){return '<button class="avatar-option '+(selectedAvatar===item.imageUrl?'selected':'')+'" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'"><img src="'+escapePublic(item.imageUrl)+'" alt="'+escapePublic(item.title||'Avatar')+'"><span>'+escapePublic(item.title||'Avatar')+'</span></button>';}).join('')+'</div></section>';}).join('')+'</div>';
-        avatarPickerBody.querySelectorAll('[data-avatar-url]').forEach(function(button){button.addEventListener('click',async function(){
-          var url=button.dataset.avatarUrl;selectedAvatar=url;currentProfile.avatarUrl=url;setMainAvatar(url,auth.currentUser);localStorage.setItem('beSelectedAvatar',url);
-          avatarPickerBody.querySelectorAll('.avatar-option').forEach(function(x){x.classList.toggle('selected',x===button);});
-          if(auth.currentUser){try{await beBackend.profiles.setAvatar(auth.currentUser.uid,url,button.dataset.avatarId);}catch(error){console.warn('Avatar não salvo no perfil:',error.message);}}
-          setTimeout(closeAvatarPicker,180);
-        });});
-      }catch(error){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Não foi possível carregar a galeria.</div>';console.warn(error);}
-    }
-
-    function renderProfile(){
-      var user=auth.currentUser;
-      if(!user){profileBody.innerHTML='<div class="profile-login-required"><h3>Entre para acessar seu perfil</h3><p>Use seu e-mail e senha para continuar.</p><button class="profile-btn primary" id="profileLogin" type="button">Entrar com e-mail</button></div>';document.getElementById('profileLogin').onclick=function(){closeProfile();location.hash='#login';document.body.classList.add('login-mode');};return;}
-      var avatar=currentProfile.avatarUrl||user.photoURL||'';
-      profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview">'+(avatar?'<img src="'+escapePublic(avatar)+'" alt="Avatar do perfil">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>')+'</div><div><h3>'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher avatar da galeria</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
-      document.getElementById('profileChooseAvatar').onclick=function(){closeProfile();openAvatarPicker();};document.getElementById('profileCancel').onclick=closeProfile;
-      var bio=document.getElementById('profileBio'),count=document.getElementById('profileBioCount');function updateCount(){count.textContent=bio.value.length;}bio.addEventListener('input',updateCount);updateCount();
-      document.getElementById('profileForm').addEventListener('submit',async function(e){e.preventDefault();var form=e.currentTarget,msg=document.getElementById('profileMessage'),submit=form.querySelector('[type="submit"]');var displayName=form.displayName.value.trim(),handle=beBackend.normalizeUsername(form.username.value),bioText=form.bio.value.trim();form.username.value=handle;if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='profile-message err';return;}submit.disabled=true;msg.textContent='Salvando…';msg.className='profile-message';try{var payload={displayName:displayName,username:handle,bio:bioText,email:user.email||'',updatedAt:beBackend.now()};currentProfile=await beBackend.profiles.update(user.uid,payload);await auth.updateCurrentUser({displayName:displayName});username.textContent=displayName||(handle?'@'+handle:'Usuário');msg.textContent='Perfil salvo com sucesso.';msg.className='profile-message ok';setTimeout(closeProfile,700);}catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso. Escolha outro.':'Não foi possível salvar: '+error.message;msg.className='profile-message err';}finally{submit.disabled=false;}});
-    }
-
-    function openProfile(){toggleDropdown(false);profileModal.hidden=false;document.body.style.overflow='hidden';renderProfile();}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPicker.addEventListener('click',function(e){if(e.target===avatarPicker)closeAvatarPicker();});profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});
-    auth.onChange(async function(currentUser){
-      dashboard.hidden=true;
-      var isAdmin=false;
-      if(currentUser){
-        try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
-        username.textContent=currentProfile.displayName||currentProfile.username||currentUser.displayName||'Usuário';selectedAvatar=currentProfile.avatarUrl||localStorage.getItem('beSelectedAvatar')||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';
-      }else{username.textContent='Visitante';currentProfile={};selectedAvatar=localStorage.getItem('beSelectedAvatar')||'';setMainAvatar(selectedAvatar,null);authAction.textContent='Entrar';}
-      dashboard.hidden=!isAdmin;
-    });
-    document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
-      var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}location.hash='#login';document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='support'){alert('Área de suporte em preparação.');}if(action==='settings'){alert('Área de configurações em preparação.');}
-    });});
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeAvatarPicker();closeProfile();}});
-  }
-  window.addEventListener('load',function(){setupPublicAccount().catch(function(error){console.error('Falha ao iniciar conta pública:',error);});});
-
-  /* -------- widget cursor glow (tilt-lite) -------- */
-  var widgets = document.querySelectorAll('[data-tilt]');
-  widgets.forEach(function(w){
-    w.addEventListener('mousemove', function(e){
-      var r = w.getBoundingClientRect();
-      var x = ((e.clientX - r.left) / r.width) * 100;
-      var y = ((e.clientY - r.top) / r.height) * 100;
-      w.style.setProperty('--mx', x + '%');
-      w.style.setProperty('--my', y + '%');
-    });
-  });
-
-  /* -------- staggered entrance for widgets -------- */
-  var items = document.querySelectorAll('.widget');
-  items.forEach(function(el, idx){
-    el.style.animationDelay = (idx * 0.06) + 's';
-  });
-
-  /* -------- featured carousel -------- */
-  var featured = document.getElementById('featured');
-  if (featured && !featured.closest('.featured-wrap').hidden){
-    var fSlides = Array.prototype.slice.call(featured.querySelectorAll('.f-slide'));
-    var fDots = Array.prototype.slice.call(document.querySelectorAll('.f-dot'));
-    var fIndex = 0;
-    var AUTOPLAY_MS = 10000;
-    var fTimer = null;
-
-    function goToSlide(i){
-      fIndex = (i + fSlides.length) % fSlides.length;
-      fSlides.forEach(function(s, idx){ s.classList.toggle('active', idx === fIndex); });
-      fDots.forEach(function(d, idx){ d.classList.toggle('active', idx === fIndex); });
-    }
-    function nextSlide(){ goToSlide(fIndex + 1); }
-    function startAutoplay(){
-      stopAutoplay();
-      fTimer = window.setInterval(nextSlide, AUTOPLAY_MS);
-    }
-    function stopAutoplay(){
-      if (fTimer){ window.clearInterval(fTimer); fTimer = null; }
-    }
-
-    fDots.forEach(function(dot){
-      dot.addEventListener('click', function(){
-        goToSlide(parseInt(dot.getAttribute('data-goto'), 10));
-        startAutoplay();
-      });
-    });
-
-    featured.addEventListener('mouseenter', stopAutoplay);
-    featured.addEventListener('mouseleave', startAutoplay);
-
-    goToSlide(0);
-    startAutoplay();
-  }
-
-})();
-</script>
 
 
-<script>
-(function(){
-  'use strict';
-  if(location.hash.startsWith('#/admin')) return;
-
-  var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
-
-  function q(id){return document.getElementById(id)}
-  function setStatus(message,type){var el=q('authStatus');if(!el)return;el.textContent=message||'';el.className='auth-status '+(type||'');}
-  function friendly(error){
-    var code=(error&&error.code)||'';
-    var map={
-      'auth/invalid-credential':'E-mail ou senha incorretos.',
-      'auth/user-not-found':'Conta não encontrada.',
-      'auth/wrong-password':'E-mail ou senha incorretos.',
-      'auth/email-already-in-use':'Este e-mail já possui uma conta.',
-      'auth/weak-password':'Use uma senha com pelo menos 6 caracteres.',
-      'auth/invalid-email':'Digite um e-mail válido.',
-      'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
-      'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
-      'auth/session-missing':'O login foi aceito, mas a sessão não pôde ser recuperada. Atualize a página e tente novamente.',
-      'auth/email-rate-limit':'O limite temporário de e-mails do Supabase foi atingido. Aguarde e tente novamente mais tarde ou continue com o Discord.',
-      'auth/provider-not-enabled':'O login com Discord ainda não foi ativado no Supabase.',
-      'backend/not-configured':'Este recurso será ativado quando o Supabase estiver conectado.',
-      'username-in-use':'Este @ já está em uso. Escolha outro.',
-      'username-invalid':'O @ informado não é válido.'
-    };
-    return map[code]||(error&&error.message)||'Não foi possível concluir. Tente novamente.';
-  }
-  function normalizeUsername(value){return beBackend.normalizeUsername(value);}
-  function validUsername(value){return beBackend.validUsername(value);}
-  function showLogin(){document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')history.replaceState(null,'','#login');}
-  function enterHome(){document.body.classList.remove('login-mode');history.replaceState(null,'','#home');window.scrollTo(0,0);}
-  function setMode(mode,email){
-    if(email)selectedAuthEmail=String(email).trim().toLowerCase();
-    var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep')};
-    Object.keys(steps).forEach(function(key){if(steps[key])steps[key].hidden=key!==mode;});
-    q('authGate').dataset.authStep=mode;
-    if(selectedAuthEmail){
-      q('loginEmail').value=selectedAuthEmail;
-      q('signupEmail').value=selectedAuthEmail;
-      q('loginSelectedEmail').textContent=selectedAuthEmail;
-      q('signupSelectedEmail').textContent=selectedAuthEmail;
-      q('authEmail').value=selectedAuthEmail;
-    }
-    setStatus('');
-    window.requestAnimationFrame(function(){
-      var target=mode==='email'?q('authEmail'):mode==='password'?q('loginPassword'):q('signupName');
-      if(target)target.focus({preventScroll:true});
-    });
-  }
-  function initBackgrounds(){var slides=[].slice.call(document.querySelectorAll('.login-bg-slide')),dots=q('loginDots');if(!dots||!slides.length)return;dots.innerHTML=slides.map(function(_,i){return '<button class="login-dot '+(i===0?'active':'')+'" type="button" data-bg="'+i+'"></button>'}).join('');function show(i){bgIndex=(i+slides.length)%slides.length;slides.forEach(function(s,j){s.classList.toggle('active',j===bgIndex)});dots.querySelectorAll('.login-dot').forEach(function(d,j){d.classList.toggle('active',j===bgIndex)})}dots.addEventListener('click',function(e){var b=e.target.closest('[data-bg]');if(!b)return;show(Number(b.dataset.bg));restart()});function restart(){clearInterval(bgTimer);bgTimer=setInterval(function(){show(bgIndex+1)},20000)}restart()}
-
-  async function finishPublicLogin(user){
-    if(!user&&auth&&typeof auth.getAuthenticatedUser==='function')user=await auth.getAuthenticatedUser();
-    if(!user){var sessionError=new Error('O login foi aceito, mas a sessão não pôde ser recuperada. Atualize a página e tente novamente.');sessionError.code='auth/session-missing';throw sessionError;}
-    localStorage.setItem('beAuthExpected','1');
-    localStorage.setItem('beSessionUid',user.uid);
-    try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
-    setStatus('');
-    enterHome();
-  }
-
-  async function boot(){
-    auth=beBackend.auth;
-    q('signupUsername').addEventListener('input',function(){this.value=normalizeUsername(this.value)});
-
-    q('discordAuthButton').onclick=async function(){
-      var button=this;
-      if(authFlowBusy)return;
-      authFlowBusy=true;button.disabled=true;setStatus('');
-      try{await auth.signInWithDiscord();}catch(err){setStatus(friendly(err),'error');authFlowBusy=false;button.disabled=false;}
-    };
-
-    q('emailLookupForm').addEventListener('submit',async function(e){
-      e.preventDefault();
-      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=form.elements.namedItem('email').value.trim().toLowerCase();
-      if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('Verificando sua conta…');
-      try{
-        var exists=typeof auth.accountExists==='function'?await auth.accountExists(email):null;
-        selectedAuthEmail=email;
-        if(exists===false){setMode('signup',email);}
-        else if(exists===true){setMode('password',email);}
-        else{
-          setMode('password',email);
-          setStatus('Não foi possível confirmar automaticamente. Digite sua senha ou escolha “Criar conta”.');
-        }
-      }catch(err){setStatus(friendly(err),'error');}
-      finally{authFlowBusy=false;if(b)b.disabled=false;}
-    });
-
-    document.querySelectorAll('.change-auth-email').forEach(function(button){
-      button.addEventListener('click',function(){
-        q('loginPassword').value='';
-        q('signupPassword').value='';
-        setMode('email',selectedAuthEmail);
-      });
-    });
-    q('switchToSignup').addEventListener('click',function(){setMode('signup',selectedAuthEmail)});
-    q('switchToPassword').addEventListener('click',function(){setMode('password',selectedAuthEmail)});
-
-    q('forgotPassword').onclick=async function(){
-      var email=selectedAuthEmail||q('loginEmail').value.trim();
-      if(!email){setMode('email');setStatus('Digite seu e-mail para receber o link de redefinição.','error');return;}
-      try{await auth.sendPasswordReset(email);setStatus('Enviamos um link de redefinição para seu e-mail.','ok')}catch(err){setStatus(friendly(err),'error')}
-    };
-
-    q('loginForm').addEventListener('submit',async function(e){
-      e.preventDefault();
-      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
-      if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando…');
-      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setMode('password',email);setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
-    });
-
-    q('signupForm').addEventListener('submit',async function(e){
-      e.preventDefault();
-      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),name=form.elements.namedItem('name').value.trim(),username=normalizeUsername(form.elements.namedItem('username').value),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
-      form.elements.namedItem('username').value=username;
-      if(name.length<2){setStatus('Digite seu nome completo.','error');return;}
-      if(!validUsername(username)){setStatus('O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.','error');form.elements.namedItem('username').focus();return;}
-      if(!/(?=.*[0-9!@#$%^&*._-]).{6,}/.test(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
-      if(email===beBackend.ADMIN_EMAIL){setStatus('A conta administrativa deve ser acessada pelo painel.','error');return;}
-      if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
-      try{
-        var result=await auth.signUp({email:email,password:password,name:name,username:username,remember:true});
-        if(q('signupNewsletter').checked)localStorage.setItem('beNewsletterOptIn','1');else localStorage.removeItem('beNewsletterOptIn');
-        if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}
-        currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();setTimeout(function(){var avatarButton=document.querySelector('[data-public-action="avatar"]');if(avatarButton)avatarButton.click();},260);
-      }catch(err){
-        showLogin();
-        if(err&&err.code==='auth/email-already-in-use')setMode('password',email);else setMode('signup',email);
-        setStatus(friendly(err),'error');
-      }finally{authFlowBusy=false;if(b)b.disabled=false;}
-    });
-
-    auth.onChange(async function(user){
-      authReady=true;q('authLoading').hidden=true;
-      if(authFlowBusy)return;
-      if(!user){localStorage.removeItem('beSessionUid');showLogin();selectedAuthEmail='';setMode('email');return;}
-      try{await finishPublicLogin(user);}catch(error){showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
-    });
-
-    window.addEventListener('hashchange',function(){if(location.hash.startsWith('#/admin'))return;if(!authReady)return;if(auth.currentUser)enterHome();else showLogin();});
-  }
-
-  async function startAuthentication(){
-    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){q('authLoading').hidden=true;showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');console.error('Falha ao iniciar autenticação:',error);}
-  }
-
-  document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode('email');startAuthentication()});
-})();
-</script>
 
 </body>
 </html>

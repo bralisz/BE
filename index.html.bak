@@ -932,291 +932,93 @@
 
 
   /* ============================================================
-     AUTENTICAÇÃO — fluxo por e-mail com visual iOS
+     LOGIN — bloco cinza escuro com entrar e cadastro em sequência
      ============================================================ */
-  #authGate{
-    overflow-y:auto;
-    overflow-x:hidden;
-    background:#07101b;
-  }
-  body.login-mode{overflow:hidden!important}
-  .login-shell{
-    height:auto;
-    min-height:100dvh;
-    padding-bottom:42px;
-  }
   .auth-column{
-    grid-column:1;
-    grid-row:2;
-    align-self:center;
-    justify-self:start;
-    width:100%;
-    min-width:0;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:16px;
+    grid-column:1;grid-row:2;align-self:center;justify-self:start;
+    width:100%;min-height:0;display:flex;flex-direction:column;
+    align-items:center;gap:15px;
   }
   .auth-column .login-card{
-    grid-column:auto;
-    grid-row:auto;
-    justify-self:auto;
-    width:100%;
-    max-height:none;
-    overflow:visible;
-    padding:0;
-    border-radius:30px;
-    text-align:left;
-    background:rgba(25,27,31,.76);
-    border:1px solid rgba(255,255,255,.12);
-    box-shadow:
-      0 30px 90px rgba(0,0,0,.55),
-      inset 0 1px 0 rgba(255,255,255,.045);
-    -webkit-backdrop-filter:blur(32px) saturate(135%);
-    backdrop-filter:blur(32px) saturate(135%);
+    grid-column:auto;grid-row:auto;justify-self:auto;
+    width:100%;max-height:calc(100dvh - 260px);overflow-y:auto;
+    padding:0;border-radius:28px 28px 46px 28px;text-align:left;
+    background:rgba(25,25,27,.96);
+    border:1px solid rgba(255,255,255,.10);
+    box-shadow:0 30px 90px rgba(0,0,0,.60),inset 0 1px 0 rgba(255,255,255,.035);
+    backdrop-filter:blur(24px) saturate(115%);
+    scrollbar-width:thin;
+    scrollbar-color:rgba(59,130,246,.58) transparent;
   }
-  .auth-step[hidden]{display:none!important}
-  .auth-step{
-    padding:32px;
-    animation:authStepIn .34s var(--ease) both;
+  .auth-column .login-card::-webkit-scrollbar{width:7px}
+  .auth-column .login-card::-webkit-scrollbar-track{background:transparent;margin:18px 0}
+  .auth-column .login-card::-webkit-scrollbar-thumb{background:rgba(59,130,246,.48);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+  .auth-column .login-card::-webkit-scrollbar-thumb:hover{background:rgba(96,165,250,.72);background-clip:padding-box}
+  .auth-card-header{padding:27px 28px 23px;border-bottom:1px solid rgba(255,255,255,.075)}
+  .auth-eyebrow{display:block;margin-bottom:8px;font:700 10px var(--font-mono);letter-spacing:.18em;text-transform:uppercase;color:#6ea8ff}
+  .auth-card-header h2{font:700 clamp(27px,2.6vw,36px)/1.06 var(--font-display);letter-spacing:-.045em;text-align:left;color:#fff}
+  .auth-card-header p{margin-top:9px;color:rgba(255,255,255,.52);font-size:13px;line-height:1.5}
+  .auth-section{padding:24px 28px 26px}
+  .auth-section-heading{margin-bottom:17px}
+  .auth-section-heading h3{font:700 21px/1.1 var(--font-display);letter-spacing:-.025em;color:#fff}
+  .auth-section-heading p{margin-top:6px;font-size:12px;line-height:1.45;color:rgba(255,255,255,.48)}
+  .auth-section-divider{height:1px;background:rgba(255,255,255,.075);margin:0}
+  .auth-column .auth-form,#signupForm{display:grid;grid-template-columns:1fr;gap:13px}
+  #signupForm .auth-primary{grid-column:auto}
+  .auth-column .auth-field{gap:7px}
+  .auth-column .auth-field label{font-size:12px;font-weight:650;color:rgba(255,255,255,.78)}
+  .auth-column .auth-field input{
+    width:100%;height:50px;padding:0 15px;border-radius:14px;
+    border:1px solid rgba(255,255,255,.09);background:#242426;color:#fff;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
   }
-  @keyframes authStepIn{
-    from{opacity:0;transform:translateY(10px) scale(.988)}
-    to{opacity:1;transform:none}
+  .auth-column .auth-field input::placeholder{color:rgba(255,255,255,.34)}
+  .auth-column .auth-field input:focus{border-color:#4b8ef7!important;box-shadow:0 0 0 3px rgba(59,130,246,.15)!important;background:#28282b}
+  .auth-column .auth-field input:-webkit-autofill,
+  .auth-column .auth-field input:-webkit-autofill:hover,
+  .auth-column .auth-field input:-webkit-autofill:focus{
+    -webkit-text-fill-color:#fff;-webkit-box-shadow:0 0 0 1000px #242426 inset;caret-color:#fff;
   }
-  .auth-step-header{margin-bottom:25px}
-  .auth-step-header h2{
-    max-width:440px;
-    font:700 clamp(28px,2.75vw,38px)/1.12 var(--font-display);
-    letter-spacing:-.045em;
-    color:#fff;
-    text-wrap:balance;
+  .auth-column .auth-options{margin-top:0;color:rgba(255,255,255,.52)}
+  .auth-column .auth-link{color:#72aaff}
+  .auth-column .auth-primary{
+    width:100%;height:50px;margin-top:2px;border-radius:14px;
+    background:linear-gradient(135deg,#3b82f6,#2563eb)!important;
+    box-shadow:0 11px 26px rgba(37,99,235,.22);
   }
-  .auth-step-header p{
-    margin-top:12px;
-    color:rgba(225,232,244,.68);
-    font-size:15px;
-    line-height:1.58;
-  }
-  .email-start .auth-step-header{margin-bottom:18px}
-  .email-start .auth-step-header h2{
-    font-size:clamp(22px,2.1vw,29px);
-    line-height:1.25;
-    letter-spacing:-.035em;
-  }
-  .auth-form{display:grid;grid-template-columns:1fr;gap:16px}
-  .auth-field{display:grid;gap:8px}
-  .auth-field label{
-    font-size:12px;
-    line-height:1.2;
-    font-weight:750;
-    letter-spacing:.045em;
-    text-transform:uppercase;
-    color:rgba(222,229,241,.72);
-  }
-  .auth-field input{
-    width:100%;
-    height:60px;
-    padding:0 21px;
-    border-radius:17px;
-    border:1px solid rgba(255,255,255,.11);
-    background:rgba(5,7,10,.88);
-    color:#fff;
-    font:500 17px var(--font-body);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.018);
-    transition:border-color .2s ease,box-shadow .2s ease,background .2s ease;
-  }
-  .auth-field input::placeholder{color:rgba(255,255,255,.38)}
-  .auth-field input:focus{
-    outline:none;
-    border-color:rgba(72,143,255,.9)!important;
-    box-shadow:0 0 0 4px rgba(45,127,249,.16)!important;
-    background:rgba(8,10,14,.95);
-  }
-  .auth-field input:-webkit-autofill,
-  .auth-field input:-webkit-autofill:hover,
-  .auth-field input:-webkit-autofill:focus{
-    -webkit-text-fill-color:#fff;
-    -webkit-box-shadow:0 0 0 1000px #090b0f inset;
-    caret-color:#fff;
-  }
-  .auth-primary{
-    width:100%;
-    height:64px;
-    margin-top:16px;
-    border:0;
-    border-radius:999px;
-    color:#fff;
-    background:#2878ed!important;
-    box-shadow:0 14px 32px rgba(37,99,235,.26);
-    font:750 17px var(--font-body);
-    transition:transform .2s var(--ease),filter .2s ease,box-shadow .2s ease;
-  }
-  .auth-primary:hover{
-    background:#337ff0!important;
-    transform:translateY(-1px);
-    filter:brightness(1.04);
-    box-shadow:0 17px 38px rgba(37,99,235,.32);
-  }
-  .auth-primary:active{transform:scale(.992)}
-  .auth-primary:disabled{opacity:.62;cursor:wait;transform:none;filter:none}
-  .email-start .auth-primary{margin-top:16px}
-  .selected-email-row{
-    min-height:56px;
-    margin-bottom:24px;
-    padding:13px 18px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:14px;
-    border-radius:16px;
-    border:1px solid rgba(255,255,255,.11);
-    background:rgba(255,255,255,.055);
-    color:rgba(225,232,244,.68);
-    font-size:14px;
-  }
-  .selected-email-row span{min-width:0;overflow-wrap:anywhere}
-  .selected-email-row strong{color:#fff;font-weight:750}
-  .selected-email-row button,
-  .auth-inline-link{
-    flex:0 0 auto;
-    border:0;
-    background:transparent;
-    color:#2d7ff9;
-    font:750 14px var(--font-body);
-    padding:5px 0;
-  }
-  .selected-email-row button:hover,
-  .auth-inline-link:hover{text-decoration:underline}
-  .auth-options{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:14px;
-    margin-top:-1px;
-    color:rgba(225,232,244,.62);
-    font-size:12px;
-  }
-  .auth-remember,
-  .auth-consent{
-    display:flex;
-    align-items:flex-start;
-    gap:11px;
-    cursor:pointer;
-    color:rgba(225,232,244,.68);
-    font-size:14px;
-    line-height:1.45;
-  }
-  .auth-remember{align-items:center;font-size:12px}
-  .auth-remember input,
-  .auth-consent input{
-    width:19px;
-    height:19px;
-    margin-top:1px;
-    flex:0 0 auto;
-    accent-color:#2878ed;
-  }
-  .auth-link{
-    border:0;
-    background:none;
-    color:#4a91ff;
-    font:650 12px var(--font-body);
-    padding:0;
-  }
-  .auth-link:hover{text-decoration:underline}
-  .auth-help{
-    margin-top:-1px;
-    color:rgba(225,232,244,.56);
-    font-size:11.5px;
-    line-height:1.45;
-  }
-  .username-field input{text-transform:lowercase}
-  .auth-switch-note{
-    margin-top:18px;
-    text-align:center;
-    color:rgba(225,232,244,.50);
-    font-size:12px;
-  }
-  .auth-status{
-    min-height:0;
-    margin:0 32px 26px;
-    font-size:12.5px;
-    line-height:1.45;
-  }
-  .auth-status:empty{display:none}
-  .auth-status.error{color:#ffaaa5}
-  .auth-status.ok{color:#8ce8b5}
-  .discord-login-wrap{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-height:72px;
-  }
+  .auth-column .auth-primary:hover{background:linear-gradient(135deg,#5798ff,#3476e7)!important;transform:translateY(-1px)}
+  .auth-column .auth-primary:disabled{opacity:.62;cursor:wait;transform:none}
+  .auth-column .auth-help{margin-top:-1px;color:rgba(255,255,255,.38);font-size:10.5px;line-height:1.4}
+  .auth-column .auth-status{min-height:0;margin:0 28px 22px;font-size:12px}
+  .auth-column .auth-status:empty{display:none}
+  .discord-login-wrap{display:flex;align-items:center;justify-content:center;min-height:70px}
   .discord-icon-button{
-    width:68px;
-    height:68px;
-    padding:0;
-    border:0;
-    border-radius:50%;
-    overflow:hidden;
-    background:transparent;
-    box-shadow:0 14px 34px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.08);
+    width:66px;height:66px;padding:0;border:0;border-radius:50%;overflow:hidden;
+    background:transparent;box-shadow:0 14px 34px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.08);
     transition:transform .22s var(--ease),filter .22s ease,box-shadow .22s ease;
   }
-  .discord-icon-button:hover{
-    transform:translateY(-3px) scale(1.045);
-    filter:brightness(1.08);
-    box-shadow:0 18px 40px rgba(0,0,0,.48),0 0 24px rgba(88,101,242,.24);
-  }
+  .discord-icon-button:hover{transform:translateY(-3px) scale(1.045);filter:brightness(1.08);box-shadow:0 18px 40px rgba(0,0,0,.48),0 0 24px rgba(88,101,242,.24)}
   .discord-icon-button:active{transform:scale(.97)}
   .discord-icon-button:disabled{opacity:.58;cursor:wait;transform:none}
   .discord-icon-button img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
 
   @media(max-height:820px) and (min-width:901px){
-    .login-shell{padding-top:18px;padding-bottom:32px}
-    .auth-step{padding:26px}
-    .auth-step-header{margin-bottom:18px}
-    .auth-step-header p{font-size:13px;margin-top:8px}
-    .selected-email-row{margin-bottom:18px}
-    .auth-form{gap:12px}
-    .auth-field input{height:52px}
-    .auth-primary{height:54px;margin-top:8px}
-    .auth-status{margin:0 26px 20px}
-    .discord-icon-button{width:58px;height:58px}
-    .discord-login-wrap{min-height:60px}
+    .auth-column .login-card{max-height:calc(100dvh - 220px)}
+    .auth-card-header{padding:21px 24px 18px}.auth-section{padding:20px 24px 22px}
+    .auth-column .auth-field input{height:47px}.auth-column .auth-primary{height:47px}
+    .discord-icon-button{width:58px;height:58px}.discord-login-wrap{min-height:60px}
   }
   @media(max-width:900px){
-    #authGate{overflow-y:auto}
-    .login-shell{
-      width:min(560px,calc(100% - 28px));
-      height:auto;
-      min-height:100dvh;
-      display:flex;
-      flex-direction:column;
-      gap:18px;
-      padding:18px 0 34px;
-      text-align:center;
-    }
     .auth-column{order:2;width:100%;gap:14px}
-    .auth-column .login-card{max-height:none;overflow:visible;text-align:left}
-    .login-copy{order:1}
-    .login-brand{order:0}
-    .login-dots{order:3}
+    .auth-column .login-card{max-height:72dvh;overflow-y:auto;padding:0;text-align:left}
+    .login-copy{order:1}.login-brand{order:0}.login-dots{order:3}
   }
   @media(max-width:520px){
-    .login-shell{width:calc(100% - 20px);padding-top:14px}
-    .auth-column .login-card{border-radius:25px}
-    .auth-step{padding:24px 20px}
-    .auth-step-header{margin-bottom:20px}
-    .auth-step-header h2{font-size:27px}
-    .email-start .auth-step-header h2{font-size:21px}
-    .auth-step-header p{font-size:14px}
-    .auth-field input{height:56px;padding:0 17px;font-size:16px}
-    .auth-primary{height:60px;font-size:16px;margin-top:12px}
-    .selected-email-row{padding:12px 14px;font-size:13px}
-    .auth-options{align-items:flex-start}
-    .auth-status{margin:0 20px 22px}
-    .discord-icon-button{width:62px;height:62px}
+    .auth-column .login-card{max-height:74dvh;border-radius:24px 24px 38px 24px}
+    .auth-card-header{padding:22px 20px 19px}.auth-section{padding:21px 20px 23px}
+    .auth-card-header h2{font-size:27px}.auth-section-heading h3{font-size:20px}
+    .auth-column .auth-options{gap:10px;font-size:11px}.auth-column .auth-link{font-size:11px}
+    .discord-icon-button{width:61px;height:61px}
   }
 </style>
 
@@ -1248,73 +1050,40 @@
       <p>Todas as eras, shows históricos, bastidores e materiais reunidos em uma experiência feita para fãs.</p>
     </div>
     <div class="auth-column">
-      <section class="login-card" id="authCard" aria-label="Acessar ou criar conta">
-        <section class="auth-step email-start" id="emailStep" aria-labelledby="emailStepTitle">
-          <header class="auth-step-header">
-            <h2 id="emailStepTitle">Insira seu e-mail para começar a explorar.</h2>
-          </header>
-          <form class="auth-form" id="emailLookupForm">
-            <div class="auth-field">
-              <label class="sr-only" for="authEmail">E-mail</label>
-              <input id="authEmail" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="seuemail@exemplo.com">
-            </div>
-            <button class="auth-primary" type="submit">Acessar a Plataforma</button>
-          </form>
-        </section>
+      <section class="login-card" id="authCard" aria-label="Entrar ou criar uma conta">
+        <header class="auth-card-header">
+          <span class="auth-eyebrow">Sua conta</span>
+          <h2>Entrar ou criar conta</h2>
+          <p>Escolha uma das opções abaixo para continuar.</p>
+        </header>
 
-        <section class="auth-step" id="passwordStep" aria-labelledby="passwordStepTitle" hidden>
-          <header class="auth-step-header">
-            <h2 id="passwordStepTitle">Bem-vindo de volta</h2>
-            <p>Digite sua senha para acessar seu perfil e continuar explorando.</p>
-          </header>
-          <div class="selected-email-row">
-            <span>E-mail selecionado: <strong id="loginSelectedEmail"></strong></span>
-            <button class="change-auth-email" type="button">Alterar</button>
+        <section class="auth-section" id="loginSection" aria-labelledby="loginSectionTitle">
+          <div class="auth-section-heading">
+            <h3 id="loginSectionTitle">Entrar</h3>
+            <p>Acesse seu perfil com e-mail e senha.</p>
           </div>
           <form class="auth-form" id="loginForm">
-            <input id="loginEmail" name="email" type="hidden">
-            <div class="auth-field">
-              <label for="loginPassword">Senha</label>
-              <input id="loginPassword" name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="Digite sua senha">
-            </div>
-            <div class="auth-options">
-              <label class="auth-remember"><input id="rememberLogin" type="checkbox" checked> Lembrar de mim</label>
-              <button class="auth-link" id="forgotPassword" type="button">Esqueci minha senha</button>
-            </div>
+            <div class="auth-field"><label for="loginEmail">E-mail</label><input id="loginEmail" name="email" type="email" autocomplete="email" required placeholder="seuemail@exemplo.com"></div>
+            <div class="auth-field"><label for="loginPassword">Senha</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="Sua senha"></div>
+            <div class="auth-options"><label class="auth-remember"><input id="rememberLogin" type="checkbox" checked> Lembrar de mim</label><button class="auth-link" id="forgotPassword" type="button">Esqueci minha senha</button></div>
             <button class="auth-primary" type="submit">Entrar</button>
           </form>
-          <p class="auth-switch-note">Ainda não possui uma conta? <button class="auth-inline-link" id="switchToSignup" type="button">Criar conta</button></p>
         </section>
 
-        <section class="auth-step" id="signupStep" aria-labelledby="signupStepTitle" hidden>
-          <header class="auth-step-header">
-            <h2 id="signupStepTitle">Crie sua conta</h2>
-            <p>Junte-se ao Eilish+ para desbloquear recursos exclusivos, montar sua lista personalizada e receber novidades das eras.</p>
-          </header>
-          <div class="selected-email-row">
-            <span>E-mail selecionado: <strong id="signupSelectedEmail"></strong></span>
-            <button class="change-auth-email" type="button">Alterar</button>
+        <div class="auth-section-divider" aria-hidden="true"></div>
+
+        <section class="auth-section" id="signupSection" aria-labelledby="signupSectionTitle">
+          <div class="auth-section-heading">
+            <h3 id="signupSectionTitle">Criar conta</h3>
+            <p>Cadastre seus dados para criar seu perfil.</p>
           </div>
           <form class="auth-form" id="signupForm">
-            <input id="signupEmail" name="email" type="hidden">
-            <div class="auth-field">
-              <label for="signupName">Nome completo</label>
-              <input id="signupName" name="name" type="text" autocomplete="name" minlength="2" maxlength="50" required placeholder="Digite seu nome">
-            </div>
-            <div class="auth-field username-field">
-              <label for="signupUsername">Nome de exibição (nome de usuário)</label>
-              <input id="signupUsername" name="username" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="20" required placeholder="Escolha um nome de usuário" aria-describedby="signupUsernameHelp">
-              <div class="auth-help" id="signupUsernameHelp">Seu perfil será @seuusuario. Use letras minúsculas, números, ponto ou underline.</div>
-            </div>
-            <div class="auth-field">
-              <label for="signupPassword">Senha</label>
-              <input id="signupPassword" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="Crie uma senha forte">
-              <div class="auth-help">Mínimo de 6 caracteres com pelo menos um número ou caractere especial.</div>
-            </div>
-            <label class="auth-consent"><input id="signupNewsletter" type="checkbox" checked> <span>Sim, quero receber updates, avisos de novos lançamentos e conteúdos do Eilish+.</span></label>
-            <button class="auth-primary" type="submit">Escolher meu Avatar</button>
+            <div class="auth-field"><label for="signupName">Nome completo</label><input id="signupName" name="name" type="text" autocomplete="name" minlength="2" maxlength="50" required placeholder="Digite seu nome"></div>
+            <div class="auth-field username-field"><label for="signupUsername">Nome de usuário</label><input id="signupUsername" name="username" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="20" required placeholder="seuusuario" aria-describedby="signupUsernameHelp"><div class="auth-help" id="signupUsernameHelp">Seu perfil será @seuusuario. Use letras minúsculas, números, ponto ou underline.</div></div>
+            <div class="auth-field"><label for="signupEmail">E-mail</label><input id="signupEmail" name="email" type="email" autocomplete="email" required placeholder="seuemail@exemplo.com"></div>
+            <div class="auth-field"><label for="signupPassword">Senha</label><input id="signupPassword" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="Crie uma senha forte"><div class="auth-help">Mínimo de 6 caracteres.</div></div>
+            <button class="auth-primary" type="submit">Criar conta</button>
           </form>
-          <p class="auth-switch-note">Já possui uma conta? <button class="auth-inline-link" id="switchToPassword" type="button">Entrar</button></p>
         </section>
 
         <div class="auth-status" id="authStatus" aria-live="polite"></div>
@@ -1766,7 +1535,7 @@
   'use strict';
   if(location.hash.startsWith('#/admin')) return;
 
-  var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
+  var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null;
 
   function q(id){return document.getElementById(id)}
   function setStatus(message,type){var el=q('authStatus');if(!el)return;el.textContent=message||'';el.className='auth-status '+(type||'');}
@@ -1794,23 +1563,13 @@
   function validUsername(value){return beBackend.validUsername(value);}
   function showLogin(){document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')history.replaceState(null,'','#login');}
   function enterHome(){document.body.classList.remove('login-mode');history.replaceState(null,'','#home');window.scrollTo(0,0);}
-  function setMode(mode,email){
-    if(email)selectedAuthEmail=String(email).trim().toLowerCase();
-    var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep')};
-    Object.keys(steps).forEach(function(key){if(steps[key])steps[key].hidden=key!==mode;});
-    q('authGate').dataset.authStep=mode;
-    if(selectedAuthEmail){
-      q('loginEmail').value=selectedAuthEmail;
-      q('signupEmail').value=selectedAuthEmail;
-      q('loginSelectedEmail').textContent=selectedAuthEmail;
-      q('signupSelectedEmail').textContent=selectedAuthEmail;
-      q('authEmail').value=selectedAuthEmail;
+  function setMode(mode){
+    var card=q('authCard');
+    if(card){
+      var target=mode==='signup'?q('signupSection'):q('loginSection');
+      card.scrollTop=target&&mode==='signup'?Math.max(0,target.offsetTop-22):0;
     }
     setStatus('');
-    window.requestAnimationFrame(function(){
-      var target=mode==='email'?q('authEmail'):mode==='password'?q('loginPassword'):q('signupName');
-      if(target)target.focus({preventScroll:true});
-    });
   }
   function initBackgrounds(){var slides=[].slice.call(document.querySelectorAll('.login-bg-slide')),dots=q('loginDots');if(!dots||!slides.length)return;dots.innerHTML=slides.map(function(_,i){return '<button class="login-dot '+(i===0?'active':'')+'" type="button" data-bg="'+i+'"></button>'}).join('');function show(i){bgIndex=(i+slides.length)%slides.length;slides.forEach(function(s,j){s.classList.toggle('active',j===bgIndex)});dots.querySelectorAll('.login-dot').forEach(function(d,j){d.classList.toggle('active',j===bgIndex)})}dots.addEventListener('click',function(e){var b=e.target.closest('[data-bg]');if(!b)return;show(Number(b.dataset.bg));restart()});function restart(){clearInterval(bgTimer);bgTimer=setInterval(function(){show(bgIndex+1)},20000)}restart()}
 
@@ -1835,74 +1594,36 @@
       try{await auth.signInWithDiscord();}catch(err){setStatus(friendly(err),'error');authFlowBusy=false;button.disabled=false;}
     };
 
-    q('emailLookupForm').addEventListener('submit',async function(e){
-      e.preventDefault();
-      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=form.elements.namedItem('email').value.trim().toLowerCase();
-      if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('Verificando sua conta…');
-      try{
-        var exists=typeof auth.accountExists==='function'?await auth.accountExists(email):null;
-        selectedAuthEmail=email;
-        if(exists===false){setMode('signup',email);}
-        else if(exists===true){setMode('password',email);}
-        else{
-          setMode('password',email);
-          setStatus('Não foi possível confirmar automaticamente. Digite sua senha ou escolha “Criar conta”.');
-        }
-      }catch(err){setStatus(friendly(err),'error');}
-      finally{authFlowBusy=false;if(b)b.disabled=false;}
-    });
-
-    document.querySelectorAll('.change-auth-email').forEach(function(button){
-      button.addEventListener('click',function(){
-        q('loginPassword').value='';
-        q('signupPassword').value='';
-        setMode('email',selectedAuthEmail);
-      });
-    });
-    q('switchToSignup').addEventListener('click',function(){setMode('signup',selectedAuthEmail)});
-    q('switchToPassword').addEventListener('click',function(){setMode('password',selectedAuthEmail)});
-
     q('forgotPassword').onclick=async function(){
-      var email=selectedAuthEmail||q('loginEmail').value.trim();
-      if(!email){setMode('email');setStatus('Digite seu e-mail para receber o link de redefinição.','error');return;}
+      var email=q('loginEmail').value.trim();
+      if(!email){setStatus('Digite seu e-mail para receber o link de redefinição.','error');q('loginEmail').focus();return}
       try{await auth.sendPasswordReset(email);setStatus('Enviamos um link de redefinição para seu e-mail.','ok')}catch(err){setStatus(friendly(err),'error')}
     };
 
     q('loginForm').addEventListener('submit',async function(e){
       e.preventDefault();
-      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
+      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=form.elements.namedItem('email').value.trim().toLowerCase(),password=form.elements.namedItem('password').value;
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando…');
-      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setMode('password',email);setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
+      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
 
     q('signupForm').addEventListener('submit',async function(e){
       e.preventDefault();
-      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),name=form.elements.namedItem('name').value.trim(),username=normalizeUsername(form.elements.namedItem('username').value),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
+      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),name=form.elements.namedItem('name').value.trim(),username=normalizeUsername(form.elements.namedItem('username').value),email=form.elements.namedItem('email').value.trim().toLowerCase(),password=form.elements.namedItem('password').value;
       form.elements.namedItem('username').value=username;
       if(name.length<2){setStatus('Digite seu nome completo.','error');return;}
       if(!validUsername(username)){setStatus('O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.','error');form.elements.namedItem('username').focus();return;}
-      if(!/(?=.*[0-9!@#$%^&*._-]).{6,}/.test(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
       if(email===beBackend.ADMIN_EMAIL){setStatus('A conta administrativa deve ser acessada pelo painel.','error');return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
-      try{
-        var result=await auth.signUp({email:email,password:password,name:name,username:username,remember:true});
-        if(q('signupNewsletter').checked)localStorage.setItem('beNewsletterOptIn','1');else localStorage.removeItem('beNewsletterOptIn');
-        if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}
-        currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();setTimeout(function(){var avatarButton=document.querySelector('[data-public-action="avatar"]');if(avatarButton)avatarButton.click();},260);
-      }catch(err){
-        showLogin();
-        if(err&&err.code==='auth/email-already-in-use')setMode('password',email);else setMode('signup',email);
-        setStatus(friendly(err),'error');
-      }finally{authFlowBusy=false;if(b)b.disabled=false;}
+      try{var result=await auth.signUp({email:email,password:password,name:name,username:username,remember:true});if(result.needsEmailConfirmation){showLogin();setMode('login');setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();}catch(err){showLogin();setStatus(friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
 
     auth.onChange(async function(user){
       authReady=true;q('authLoading').hidden=true;
       if(authFlowBusy)return;
-      if(!user){localStorage.removeItem('beSessionUid');showLogin();selectedAuthEmail='';setMode('email');return;}
+      if(!user){localStorage.removeItem('beSessionUid');showLogin();return;}
       try{await finishPublicLogin(user);}catch(error){showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
 
@@ -1913,7 +1634,7 @@
     try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){q('authLoading').hidden=true;showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');console.error('Falha ao iniciar autenticação:',error);}
   }
 
-  document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode('email');startAuthentication()});
+  document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode('login');startAuthentication()});
 })();
 </script>
 

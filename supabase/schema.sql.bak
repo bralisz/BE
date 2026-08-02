@@ -62,28 +62,6 @@ $$;
 revoke all on function public.is_admin() from public;
 grant execute on function public.is_admin() to anon, authenticated;
 
-
--- Permite ao primeiro passo da tela de acesso decidir entre entrar e criar
--- conta. O retorno contém somente verdadeiro/falso e nunca expõe dados do
--- usuário. Para reduzir abuso em produção, aplique rate limiting na borda.
-create or replace function public.account_exists(p_email text)
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select exists (
-    select 1
-    from auth.users u
-    where lower(u.email) = lower(trim(coalesce(p_email, '')))
-  );
-$$;
-
-alter function public.account_exists(text) owner to postgres;
-revoke all on function public.account_exists(text) from public;
-grant execute on function public.account_exists(text) to anon, authenticated;
-
 -- Cria/atualiza o perfil sempre que um usuário nasce no Supabase Auth.
 -- SECURITY DEFINER permite que o gatilho grave em public.profiles sem ser
 -- bloqueado pela RLS, mas os valores usados vêm somente do próprio auth.users.
