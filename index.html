@@ -1351,6 +1351,241 @@
     .auth-input-with-icon input{padding-left:52px!important}
   }
 
+
+  /* ============================================================
+     iOS / iPhone UI — botões, perfil inicial e seletor de avatar
+     ============================================================ */
+  :root{
+    --ios-blue:#2f7bed;
+    --ios-blue-hover:#3d87f5;
+    --ios-surface:#252b32;
+    --ios-surface-hover:#303740;
+    --ios-line:rgba(255,255,255,.14);
+    --ios-text:#f7f8fb;
+    --ios-muted:rgba(235,240,248,.60);
+  }
+
+  /* Ações principais e secundárias com o formato arredondado do iOS. */
+  .auth-primary,
+  .profile-btn,
+  .onboarding-btn,
+  .avatar-picker-cancel,
+  .f-play{
+    min-height:54px;
+    border:1px solid var(--ios-line)!important;
+    border-radius:999px!important;
+    padding:0 24px!important;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+    color:var(--ios-text)!important;
+    background:var(--ios-surface)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 9px 25px rgba(0,0,0,.18)!important;
+    font:750 16px var(--font-body)!important;
+    text-decoration:none;
+    transition:transform .18s ease,background .18s ease,filter .18s ease,box-shadow .18s ease!important;
+  }
+  .auth-primary,
+  .profile-btn.primary,
+  .onboarding-btn.primary,
+  .f-play{
+    border-color:transparent!important;
+    background:var(--ios-blue)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 12px 28px rgba(47,123,237,.25)!important;
+  }
+  .f-play svg{fill:#fff!important;color:#fff!important}
+  .auth-primary:hover,
+  .profile-btn.primary:hover,
+  .onboarding-btn.primary:hover,
+  .f-play:hover{background:var(--ios-blue-hover)!important;filter:none!important;transform:translateY(-1px)!important}
+  .profile-btn:not(.primary):hover,
+  .onboarding-btn:not(.primary):hover,
+  .avatar-picker-cancel:hover{background:var(--ios-surface-hover)!important;transform:translateY(-1px)!important}
+  .auth-primary:active,
+  .profile-btn:active,
+  .onboarding-btn:active,
+  .avatar-picker-cancel:active,
+  .f-play:active{transform:scale(.985)!important}
+  .auth-primary:disabled,
+  .profile-btn:disabled,
+  .onboarding-btn:disabled{opacity:.56;cursor:wait;transform:none!important}
+
+  /* Controles menores permanecem compactos, mas usam superfícies do iOS. */
+  .dd-item,
+  .login-tab,
+  .selected-email-row button,
+  .auth-inline-link,
+  .auth-link{
+    border-radius:13px;
+    transition:background .18s ease,color .18s ease,transform .18s ease;
+  }
+  .dd-item{min-height:44px;padding:0 14px!important}
+  .dd-item:hover{background:rgba(255,255,255,.07)!important;transform:none}
+  .login-tab.active{background:rgba(255,255,255,.11)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important}
+  .user-chip,.icon-btn,.f-fav,.discord-icon-button{
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 8px 24px rgba(0,0,0,.20);
+  }
+  button:focus-visible,a:focus-visible{outline:3px solid rgba(82,151,255,.72);outline-offset:3px}
+
+  /* Painel obrigatório exibido após o primeiro login. */
+  .onboarding-backdrop{
+    position:fixed;inset:0;z-index:225;
+    display:grid;place-items:center;
+    padding:24px;
+    background:rgba(0,4,10,.78);
+    backdrop-filter:blur(18px) saturate(120%);
+  }
+  .onboarding-backdrop[hidden]{display:none}
+  .onboarding-modal{
+    width:min(900px,100%);
+    max-height:92dvh;
+    overflow:auto;
+    border:1px solid rgba(255,255,255,.13);
+    border-radius:34px;
+    background:linear-gradient(180deg,rgba(17,22,29,.98),rgba(8,11,16,.98));
+    box-shadow:0 38px 110px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .onboarding-header{padding:34px 38px 0;text-align:center}
+  .onboarding-header .eyebrow{margin:0 0 8px;color:#6da7ff;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .onboarding-header h2{margin:0;font:750 clamp(28px,4vw,42px)/1.08 var(--font-display);letter-spacing:-.045em}
+  .onboarding-header p{margin:11px auto 0;max-width:570px;color:var(--ios-muted);font-size:15px;line-height:1.55}
+  .onboarding-grid{display:grid;grid-template-columns:260px minmax(0,1fr);gap:38px;padding:36px 38px 38px;align-items:center}
+  .onboarding-avatar-column{display:flex;flex-direction:column;align-items:center;gap:18px}
+  .onboarding-avatar-preview{
+    width:176px;height:176px;border-radius:50%;overflow:hidden;
+    display:grid;place-items:center;
+    background:radial-gradient(circle at 35% 28%,#4b5c70,#171d25 72%);
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 22px 55px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .onboarding-avatar-preview img{width:100%;height:100%;object-fit:cover}
+  .onboarding-avatar-preview svg{width:74px;height:74px;opacity:.72}
+  .onboarding-avatar-column .onboarding-btn{width:100%;max-width:220px;min-height:50px;font-size:15px!important}
+  .onboarding-form{display:grid;gap:17px}
+  .onboarding-label{font-size:13px;font-weight:760;color:rgba(244,247,252,.82)}
+  .onboarding-handle-wrap{
+    height:62px;display:flex;align-items:center;
+    border:1px solid rgba(255,255,255,.14);border-radius:18px;
+    background:#080b10;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+    transition:border-color .18s ease,box-shadow .18s ease;
+  }
+  .onboarding-handle-wrap:focus-within{border-color:#4d94ff;box-shadow:0 0 0 4px rgba(45,127,249,.16)}
+  .onboarding-prefix{padding-left:19px;color:#7eb2ff;font-size:21px;font-weight:800}
+  .onboarding-handle-wrap input{
+    min-width:0;flex:1;height:100%;border:0;outline:0;background:transparent;color:#fff;
+    padding:0 19px 0 4px;font:650 18px var(--font-body);text-transform:lowercase;
+  }
+  .onboarding-handle-wrap input::placeholder{color:rgba(255,255,255,.31)}
+  .onboarding-help{margin:0;color:var(--ios-muted);font-size:12.5px;line-height:1.5}
+  .onboarding-preview{min-height:48px;padding:13px 15px;border-radius:15px;background:rgba(255,255,255,.045);color:rgba(240,244,250,.7);font-size:14px}
+  .onboarding-preview strong{color:#fff}
+  .onboarding-message{min-height:20px;font-size:13px;line-height:1.45}
+  .onboarding-message.ok{color:#87e8b3}.onboarding-message.err{color:#ff9e9e}
+  .onboarding-actions{display:grid;grid-template-columns:1fr;gap:11px;margin-top:2px}
+  .onboarding-actions .onboarding-btn{width:100%}
+
+  /* Seletor de avatar em tela cheia, com fileiras horizontais como no exemplo. */
+  .avatar-picker-backdrop{
+    position:fixed!important;inset:0!important;z-index:240!important;
+    display:block!important;padding:0!important;
+    background:#02070f!important;backdrop-filter:none!important;
+  }
+  .avatar-picker-backdrop[hidden]{display:none!important}
+  .avatar-picker-modal{
+    width:100%!important;height:100dvh!important;max-height:none!important;
+    display:flex!important;flex-direction:column!important;
+    border:0!important;border-radius:0!important;
+    overflow:hidden!important;background:#02070f!important;box-shadow:none!important;
+  }
+  .avatar-picker-header{
+    flex:0 0 auto;display:flex!important;align-items:center!important;justify-content:center!important;
+    min-height:112px;padding:25px 78px 18px!important;
+    border:0!important;background:linear-gradient(180deg,#02070f 70%,rgba(2,7,15,.88));
+    position:relative;
+  }
+  .avatar-picker-header>div{text-align:center}
+  .avatar-picker-header h2{margin:0!important;font:760 clamp(30px,4vw,48px)/1 var(--font-display)!important;letter-spacing:-.045em}
+  .avatar-picker-header p{display:none}
+  .avatar-picker-close{
+    display:none!important;
+    position:absolute;right:24px;top:23px;width:46px;height:46px;border:1px solid rgba(255,255,255,.11)!important;
+    border-radius:50%!important;background:rgba(255,255,255,.06)!important;color:#fff!important;font-size:25px!important;
+  }
+  .avatar-picker-close:hover{background:rgba(255,255,255,.12)!important}
+  .avatar-picker-body{
+    flex:1;min-height:0;overflow-y:auto!important;overflow-x:hidden!important;
+    padding:8px 46px 28px!important;scrollbar-color:rgba(255,255,255,.2) transparent;
+  }
+  .avatar-category-columns{display:grid!important;grid-template-columns:1fr!important;gap:28px!important}
+  .avatar-category{padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;min-width:0}
+  .avatar-category h3{
+    margin:0 0 16px!important;padding:0!important;border:0!important;
+    color:#fff;font:750 clamp(20px,2vw,27px)/1.2 var(--font-body)!important;
+    text-transform:none!important;letter-spacing:-.02em!important;
+  }
+  .avatar-rail-shell{position:relative;min-width:0}
+  .avatar-options{
+    display:flex!important;grid-template-columns:none!important;gap:34px!important;
+    overflow-x:auto;overflow-y:hidden;padding:4px 14px 10px 8px;
+    scroll-behavior:smooth;scroll-snap-type:x proximity;scrollbar-width:none;
+  }
+  .avatar-options::-webkit-scrollbar{display:none}
+  .avatar-option{
+    position:relative!important;flex:0 0 clamp(88px,8vw,124px)!important;
+    width:clamp(88px,8vw,124px)!important;height:clamp(88px,8vw,124px)!important;
+    aspect-ratio:1!important;padding:0!important;border:3px solid transparent!important;border-radius:50%!important;
+    overflow:hidden!important;background:#111923!important;scroll-snap-align:start;
+    box-shadow:0 13px 30px rgba(0,0,0,.28);
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease!important;
+  }
+  .avatar-option:hover{transform:scale(1.045)!important;border-color:rgba(255,255,255,.34)!important}
+  .avatar-option.selected{border-color:#fff!important;box-shadow:0 0 0 5px #2f7bed,0 15px 32px rgba(0,0,0,.34)!important}
+  .avatar-option img{width:100%!important;height:100%!important;object-fit:cover!important;border-radius:50%!important;display:block}
+  .avatar-option span{display:none!important}
+  .avatar-rail-arrow{
+    position:absolute;z-index:4;top:50%;transform:translateY(-50%);
+    width:46px;height:116px;border:0!important;background:rgba(11,18,27,.82)!important;color:#fff!important;
+    display:grid;place-items:center;backdrop-filter:blur(10px);box-shadow:0 10px 28px rgba(0,0,0,.28);
+  }
+  .avatar-rail-arrow.prev{left:-38px;border-radius:0 16px 16px 0!important}
+  .avatar-rail-arrow.next{right:-38px;border-radius:16px 0 0 16px!important}
+  .avatar-rail-arrow:hover{background:rgba(24,34,47,.94)!important}
+  .avatar-rail-arrow[hidden]{display:none!important}
+  .avatar-rail-arrow svg{width:29px;height:29px}
+  .avatar-picker-empty{padding:70px 20px!important;text-align:center;color:var(--ios-muted)!important}
+  .avatar-picker-footer{
+    flex:0 0 auto;display:flex;justify-content:center;padding:14px 24px 22px;
+    background:linear-gradient(0deg,#02070f 65%,rgba(2,7,15,.74));
+  }
+  .avatar-picker-cancel{min-width:164px;min-height:52px}
+
+  /* Perfil normal também adota o acabamento do novo painel. */
+  .profile-modal{border-radius:32px!important;background:linear-gradient(180deg,#151a21,#090c11)!important;border-color:rgba(255,255,255,.13)!important}
+  .profile-avatar-preview{border-radius:50%!important}
+  .profile-field input,.profile-field textarea{border-radius:17px!important;background:#080b10!important;border-color:rgba(255,255,255,.13)!important}
+  .profile-actions{align-items:center}
+
+  @media(max-width:760px){
+    .onboarding-backdrop{padding:10px}
+    .onboarding-modal{border-radius:27px}
+    .onboarding-header{padding:26px 22px 0}
+    .onboarding-grid{grid-template-columns:1fr;gap:25px;padding:27px 22px 25px}
+    .onboarding-avatar-preview{width:138px;height:138px}
+    .onboarding-avatar-column{gap:13px}
+    .avatar-picker-header{min-height:88px;padding:20px 62px 13px!important}
+    .avatar-picker-header h2{font-size:29px!important}
+    .avatar-picker-close{right:14px;top:16px;width:42px;height:42px}
+    .avatar-picker-body{padding:7px 20px 22px!important}
+    .avatar-category-columns{gap:25px!important}
+    .avatar-category h3{font-size:20px!important;margin-bottom:13px!important}
+    .avatar-options{gap:21px!important;padding-left:4px}
+    .avatar-option{flex-basis:88px!important;width:88px!important;height:88px!important}
+    .avatar-rail-arrow{display:none!important}
+    .avatar-picker-footer{padding-bottom:max(17px,env(safe-area-inset-bottom))}
+  }
+
 </style>
 
 <link rel="stylesheet" href="/admin/admin.css">
@@ -1695,10 +1930,40 @@
   </section>
 </div>
 
+<div class="onboarding-backdrop" id="profileOnboarding" hidden>
+  <section class="onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle" aria-describedby="onboardingDescription">
+    <header class="onboarding-header">
+      <p class="eyebrow">Configure seu perfil</p>
+      <h2 id="onboardingTitle">Escolha seu @ de usuário</h2>
+      <p id="onboardingDescription">Esse nome será exclusivo e aparecerá no seu perfil dentro da plataforma.</p>
+    </header>
+    <div class="onboarding-grid">
+      <div class="onboarding-avatar-column">
+        <div class="onboarding-avatar-preview" id="onboardingAvatarPreview" aria-label="Foto atual do perfil"></div>
+        <button class="onboarding-btn" id="onboardingChooseAvatar" type="button">Escolher foto</button>
+      </div>
+      <form class="onboarding-form" id="onboardingForm">
+        <label class="onboarding-label" for="onboardingUsername">Seu @ exclusivo</label>
+        <div class="onboarding-handle-wrap">
+          <span class="onboarding-prefix" aria-hidden="true">@</span>
+          <input id="onboardingUsername" name="username" type="text" minlength="3" maxlength="20" pattern="[a-z0-9._]{3,20}" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="seunome">
+        </div>
+        <p class="onboarding-help">Use de 3 a 20 caracteres: letras minúsculas, números, ponto ou underline.</p>
+        <div class="onboarding-preview">Seu perfil será exibido como <strong id="onboardingHandlePreview">@seunome</strong></div>
+        <div class="onboarding-message" id="onboardingMessage" aria-live="polite"></div>
+        <div class="onboarding-actions">
+          <button class="onboarding-btn primary" type="submit">Continuar</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+
 <div class="avatar-picker-backdrop" id="avatarPicker" hidden>
   <section class="avatar-picker-modal" role="dialog" aria-modal="true" aria-labelledby="avatarPickerTitle">
-    <header class="avatar-picker-header"><div><h2 id="avatarPickerTitle">Escolha seu avatar</h2><p>Selecione um ícone da galeria para usar no site.</p></div><button class="avatar-picker-close" id="avatarPickerClose" type="button" aria-label="Fechar">×</button></header>
+    <header class="avatar-picker-header"><div><h2 id="avatarPickerTitle">Alterar imagem do perfil</h2><p>Selecione um ícone da galeria para usar no site.</p></div><button class="avatar-picker-close" id="avatarPickerClose" type="button" aria-label="Fechar">×</button></header>
     <div class="avatar-picker-body" id="avatarPickerBody"><div class="avatar-picker-empty">Carregando avatares…</div></div>
+    <footer class="avatar-picker-footer"><button class="avatar-picker-cancel" id="avatarPickerCancel" type="button">Cancelar</button></footer>
   </section>
 </div>
 
@@ -1774,26 +2039,63 @@
     var avatarPicker=document.getElementById('avatarPicker');
     var avatarPickerBody=document.getElementById('avatarPickerBody');
     var avatarPickerClose=document.getElementById('avatarPickerClose');
+    var avatarPickerCancel=document.getElementById('avatarPickerCancel');
     var profileModal=document.getElementById('profileModal');
     var profileBody=document.getElementById('profileBody');
     var profileClose=document.getElementById('profileClose');
+    var profileOnboarding=document.getElementById('profileOnboarding');
+    var onboardingForm=document.getElementById('onboardingForm');
+    var onboardingUsername=document.getElementById('onboardingUsername');
+    var onboardingHandlePreview=document.getElementById('onboardingHandlePreview');
+    var onboardingMessage=document.getElementById('onboardingMessage');
+    var onboardingChooseAvatar=document.getElementById('onboardingChooseAvatar');
+    var onboardingAvatarPreview=document.getElementById('onboardingAvatarPreview');
     var selectedAvatar='';
     var currentProfile={};
+    var onboardingShownFor='';
 
     function escapePublic(value){return String(value||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     function avatarCacheKey(user){return 'beSelectedAvatar:'+(user&&user.uid?user.uid:'guest');}
-    function setMainAvatar(url,user){var shown=url||(user&&user.photoURL)||'';if(shown){photo.src=shown;photo.hidden=false;fallback.hidden=true;}else{photo.removeAttribute('src');photo.hidden=true;fallback.hidden=false;}}
-    function closeAvatarPicker(){avatarPicker.hidden=true;document.body.style.overflow='';}
-    function closeProfile(){profileModal.hidden=true;document.body.style.overflow='';}
+    function setMainAvatar(url,user){var shown=url||(user&&user.photoURL)||'';if(shown){photo.src=shown;photo.hidden=false;fallback.hidden=true;}else{photo.removeAttribute('src');photo.hidden=true;fallback.hidden=false;}updateOnboardingAvatar();}
+    function fallbackAvatarSvg(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>';}
+    function updateOnboardingAvatar(){if(!onboardingAvatarPreview)return;var user=auth&&auth.currentUser;var shown=selectedAvatar||(currentProfile&&currentProfile.avatarUrl)||(user&&user.photoURL)||'';onboardingAvatarPreview.innerHTML=shown?'<img src="'+escapePublic(shown)+'" alt="Foto do perfil">':fallbackAvatarSvg();}
+    function syncBodyScroll(){var locked=!avatarPicker.hidden||!profileModal.hidden||!profileOnboarding.hidden;document.body.style.overflow=locked?'hidden':'';}
+    function closeAvatarPicker(){avatarPicker.hidden=true;syncBodyScroll();}
+    function closeProfile(){profileModal.hidden=true;syncBodyScroll();}
+    function closeOnboarding(force){if(!force&&auth.currentUser&&!String(currentProfile.username||'').trim())return;profileOnboarding.hidden=true;syncBodyScroll();}
+
+    function setupAvatarRails(){
+      avatarPickerBody.querySelectorAll('.avatar-category').forEach(function(section){
+        var rail=section.querySelector('.avatar-options');
+        var prev=section.querySelector('.avatar-rail-arrow.prev');
+        var next=section.querySelector('.avatar-rail-arrow.next');
+        if(!rail||!prev||!next)return;
+        function amount(){return Math.max(rail.clientWidth*.78,320);}
+        function update(){var max=rail.scrollWidth-rail.clientWidth;prev.hidden=rail.scrollLeft<=4;next.hidden=max<=4||rail.scrollLeft>=max-4;}
+        prev.addEventListener('click',function(){rail.scrollBy({left:-amount(),behavior:'smooth'});});
+        next.addEventListener('click',function(){rail.scrollBy({left:amount(),behavior:'smooth'});});
+        rail.addEventListener('scroll',update,{passive:true});
+        requestAnimationFrame(update);
+      });
+    }
+
+    function avatarCategoryTitle(category){
+      var value=String(category||'Outros').trim()||'Outros';
+      return /^(padr[aã]o|cl[aá]ssicos?)$/i.test(value)?'Os clássicos':value;
+    }
 
     async function openAvatarPicker(){
-      toggleDropdown(false);avatarPicker.hidden=false;document.body.style.overflow='hidden';
+      toggleDropdown(false);avatarPicker.hidden=false;syncBodyScroll();
       avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Carregando avatares…</div>';
       try{
         var items=(await beBackend.data.list('gallery',{orderBy:'order',direction:'asc'})).filter(function(item){return item.active!==false&&item.imageUrl;});
         if(!items.length){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Nenhum avatar disponível no momento.</div>';return;}
-        var groups={};items.forEach(function(item){var cat=(item.category||'Outros').trim()||'Outros';(groups[cat]||(groups[cat]=[])).push(item);});
-        avatarPickerBody.innerHTML='<div class="avatar-category-columns">'+Object.keys(groups).map(function(cat){return '<section class="avatar-category"><h3>'+escapePublic(cat)+'</h3><div class="avatar-options">'+groups[cat].map(function(item){return '<button class="avatar-option '+(selectedAvatar===item.imageUrl?'selected':'')+'" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'"><img src="'+escapePublic(item.imageUrl)+'" alt="'+escapePublic(item.title||'Avatar')+'"><span>'+escapePublic(item.title||'Avatar')+'</span></button>';}).join('')+'</div></section>';}).join('')+'</div>';
+        var groups={};
+        items.forEach(function(item){var cat=(item.category||'Outros').trim()||'Outros';(groups[cat]||(groups[cat]=[])).push(item);});
+        avatarPickerBody.innerHTML='<div class="avatar-category-columns">'+Object.keys(groups).map(function(cat){
+          return '<section class="avatar-category"><h3>'+escapePublic(avatarCategoryTitle(cat))+'</h3><div class="avatar-rail-shell"><button class="avatar-rail-arrow prev" type="button" aria-label="Ver avatares anteriores" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button><div class="avatar-options">'+groups[cat].map(function(item){return '<button class="avatar-option '+(selectedAvatar===item.imageUrl?'selected':'')+'" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'" aria-label="'+escapePublic(item.title||'Avatar')+'"><img src="'+escapePublic(item.imageUrl)+'" alt="'+escapePublic(item.title||'Avatar')+'"><span>'+escapePublic(item.title||'Avatar')+'</span></button>';}).join('')+'</div><button class="avatar-rail-arrow next" type="button" aria-label="Ver mais avatares"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button></div></section>';
+        }).join('')+'</div>';
+        setupAvatarRails();
         avatarPickerBody.querySelectorAll('[data-avatar-url]').forEach(function(button){button.addEventListener('click',async function(){
           var url=button.dataset.avatarUrl;button.disabled=true;
           try{
@@ -1819,21 +2121,64 @@
       var user=auth.currentUser;
       if(!user){profileBody.innerHTML='<div class="profile-login-required"><h3>Entre para acessar seu perfil</h3><p>Use seu e-mail e senha para continuar.</p><button class="profile-btn primary" id="profileLogin" type="button">Entrar com e-mail</button></div>';document.getElementById('profileLogin').onclick=function(){closeProfile();location.hash='#login';document.body.classList.add('login-mode');};return;}
       var avatar=currentProfile.avatarUrl||user.photoURL||'';
-      profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview">'+(avatar?'<img src="'+escapePublic(avatar)+'" alt="Avatar do perfil">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>')+'</div><div><h3>'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher avatar da galeria</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
+      profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview">'+(avatar?'<img src="'+escapePublic(avatar)+'" alt="Avatar do perfil">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>')+'</div><div><h3>'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher foto</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
       document.getElementById('profileChooseAvatar').onclick=function(){closeProfile();openAvatarPicker();};document.getElementById('profileCancel').onclick=closeProfile;
       var bio=document.getElementById('profileBio'),count=document.getElementById('profileBioCount');function updateCount(){count.textContent=bio.value.length;}bio.addEventListener('input',updateCount);updateCount();
-      document.getElementById('profileForm').addEventListener('submit',async function(e){e.preventDefault();var form=e.currentTarget,msg=document.getElementById('profileMessage'),submit=form.querySelector('[type="submit"]');var displayName=form.displayName.value.trim(),handle=beBackend.normalizeUsername(form.username.value),bioText=form.bio.value.trim();form.username.value=handle;if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='profile-message err';return;}submit.disabled=true;msg.textContent='Salvando…';msg.className='profile-message';try{var payload={displayName:displayName,username:handle,bio:bioText,email:user.email||'',updatedAt:beBackend.now()};currentProfile=await beBackend.profiles.update(user.uid,payload);await auth.updateCurrentUser({displayName:displayName});username.textContent=displayName||(handle?'@'+handle:'Usuário');msg.textContent='Perfil salvo com sucesso.';msg.className='profile-message ok';setTimeout(closeProfile,700);}catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso. Escolha outro.':'Não foi possível salvar: '+error.message;msg.className='profile-message err';}finally{submit.disabled=false;}});
+      document.getElementById('profileForm').addEventListener('submit',async function(e){e.preventDefault();var form=e.currentTarget,msg=document.getElementById('profileMessage'),submit=form.querySelector('[type="submit"]');var displayName=form.displayName.value.trim(),handle=beBackend.normalizeUsername(form.username.value),bioText=form.bio.value.trim();form.username.value=handle;if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='profile-message err';return;}submit.disabled=true;msg.textContent='Salvando…';msg.className='profile-message';try{var payload={displayName:displayName,username:handle,bio:bioText,email:user.email||'',updatedAt:beBackend.now()};currentProfile=await beBackend.profiles.update(user.uid,payload);await auth.updateCurrentUser({displayName:displayName});username.textContent=handle?'@'+handle:(displayName||'Usuário');msg.textContent='Perfil salvo com sucesso.';msg.className='profile-message ok';setTimeout(closeProfile,700);}catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso. Escolha outro.':'Não foi possível salvar: '+error.message;msg.className='profile-message err';}finally{submit.disabled=false;}});
     }
 
-    function openProfile(){toggleDropdown(false);profileModal.hidden=false;document.body.style.overflow='hidden';renderProfile();}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPicker.addEventListener('click',function(e){if(e.target===avatarPicker)closeAvatarPicker();});profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});
+
+    function openOnboarding(user){
+      if(!user||beBackend.isAdmin(user)||String(currentProfile.username||'').trim())return;
+      onboardingShownFor=user.uid;
+      profileOnboarding.hidden=false;
+      onboardingMessage.textContent='';onboardingMessage.className='onboarding-message';
+      onboardingUsername.value='';
+      onboardingHandlePreview.textContent='@seunome';
+      updateOnboardingAvatar();syncBodyScroll();
+      setTimeout(function(){onboardingUsername.focus({preventScroll:true});},120);
+    }
+
+    onboardingUsername.addEventListener('input',function(){
+      var normalized=beBackend.normalizeUsername(onboardingUsername.value);
+      if(onboardingUsername.value!==normalized)onboardingUsername.value=normalized;
+      onboardingHandlePreview.textContent='@'+(normalized||'seunome');
+      onboardingMessage.textContent='';onboardingMessage.className='onboarding-message';
+    });
+    onboardingChooseAvatar.addEventListener('click',openAvatarPicker);
+    onboardingForm.addEventListener('submit',async function(event){
+      event.preventDefault();
+      var user=auth.currentUser;
+      if(!user)return;
+      var handle=beBackend.normalizeUsername(onboardingUsername.value);
+      onboardingUsername.value=handle;
+      if(!beBackend.validUsername(handle)){
+        onboardingMessage.textContent='Escolha um @ de 3 a 20 caracteres usando apenas letras minúsculas, números, ponto ou underline.';
+        onboardingMessage.className='onboarding-message err';
+        onboardingUsername.focus();return;
+      }
+      var submit=onboardingForm.querySelector('[type="submit"]');
+      submit.disabled=true;onboardingMessage.textContent='Salvando seu perfil…';onboardingMessage.className='onboarding-message';
+      try{
+        currentProfile=await beBackend.profiles.update(user.uid,{username:handle,displayName:currentProfile.displayName||user.displayName||'',email:user.email||'',profileComplete:true,updatedAt:beBackend.now()});
+        username.textContent='@'+handle;
+        onboardingMessage.textContent='Perfil configurado com sucesso.';onboardingMessage.className='onboarding-message ok';
+        setTimeout(function(){closeOnboarding(true);},420);
+      }catch(error){
+        onboardingMessage.textContent=error&&error.code==='username-in-use'?'Esse @ já está em uso. Tente outro.':'Não foi possível salvar seu @. '+(error&&error.message?error.message:'Tente novamente.');
+        onboardingMessage.className='onboarding-message err';
+      }finally{submit.disabled=false;}
+    });
+
+    function openProfile(){toggleDropdown(false);profileModal.hidden=false;syncBodyScroll();renderProfile();}
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});
     auth.onChange(async function(currentUser){
       dashboard.hidden=true;
       var isAdmin=false;
       if(currentUser){
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
-        username.textContent=currentProfile.displayName||currentProfile.username||currentUser.displayName||'Usuário';selectedAvatar=currentProfile.avatarUrl||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';
-      }else{username.textContent='Visitante';currentProfile={};selectedAvatar=localStorage.getItem(avatarCacheKey(null))||'';setMainAvatar(selectedAvatar,null);authAction.textContent='Entrar';}
+        username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=currentProfile.avatarUrl||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
+      }else{username.textContent='Visitante';currentProfile={};selectedAvatar=localStorage.getItem(avatarCacheKey(null))||'';setMainAvatar(selectedAvatar,null);authAction.textContent='Entrar';onboardingShownFor='';closeOnboarding(true);}
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
@@ -1846,9 +2191,9 @@
       else currentProfile.avatarUrl=detail.avatarUrl||'';
       selectedAvatar=detail.avatarUrl||'';
       localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
-      setMainAvatar(selectedAvatar,auth.currentUser);
+      setMainAvatar(selectedAvatar,auth.currentUser);updateOnboardingAvatar();
     });
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeAvatarPicker();closeProfile();}});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeAvatarPicker();closeProfile();closeOnboarding(false);}});
   }
   window.addEventListener('load',function(){setupPublicAccount().catch(function(error){console.error('Falha ao iniciar conta pública:',error);});});
 
@@ -2054,7 +2399,7 @@
       try{
         var result=await auth.signUp({email:email,password:password,name:name,username:'',remember:true});
         if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}
-        currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();setTimeout(function(){var avatarButton=document.querySelector('[data-public-action="avatar"]');if(avatarButton)avatarButton.click();},260);
+        currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();
       }catch(err){
         showLogin();
         if(err&&err.code==='auth/email-already-in-use')setMode('password',email);else setMode('signup',email);

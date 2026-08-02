@@ -188,3 +188,24 @@ margin-bottom:24px!important;
   .admin-login .login-card{padding:25px 20px!important;border-radius:24px!important}
   .admin-login .login-card img{height:72px}
 }
+
+
+/* iOS / iPhone button language shared with the public site */
+:root{--ios-blue:#2f7bed;--ios-blue-hover:#3d87f5;--ios-surface:#252b32;--ios-surface-hover:#303740;--ios-line:rgba(255,255,255,.14)}
+.a-btn,.google-btn{
+  min-height:48px;padding:0 19px;border:1px solid var(--ios-line);border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--ios-surface);color:#fff;font-weight:750;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 9px 24px rgba(0,0,0,.17);
+  transition:transform .18s ease,background .18s ease,box-shadow .18s ease;
+}
+.a-btn:hover,.google-btn:hover{background:var(--ios-surface-hover);border-color:rgba(255,255,255,.19);transform:translateY(-1px)}
+.a-btn.primary{background:var(--ios-blue);border-color:transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 12px 28px rgba(47,123,237,.25)}
+.a-btn.primary:hover{background:var(--ios-blue-hover)}
+.a-btn:active,.google-btn:active{transform:scale(.985)}
+.modal-actions .a-btn{min-width:112px}
+.admin-nav button,.admin-topbar .admin-nav button,.side-link,.content-summary button,.category-picker button,.admin-account-menu button{
+  border-color:rgba(255,255,255,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+.admin-nav button.active,.admin-topbar .admin-nav button.active{background:var(--ios-blue);box-shadow:0 9px 24px rgba(47,123,237,.24)}
+button:focus-visible,a:focus-visible{outline:3px solid rgba(82,151,255,.72);outline-offset:3px}
