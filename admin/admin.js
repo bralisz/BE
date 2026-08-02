@@ -12,7 +12,7 @@
     ['news','Notícias','▦']
   ];
 
-  let auth, db, user = null, authReady = false, loginBusy = false;
+  let auth, db, user = null, authReady = false, loginBusy = false, adminLoginBgTimer = null;
 
   async function decorateAccountWithProfile(account) {
     if (!account) return null;
@@ -73,6 +73,36 @@
     if (code === 'auth/invalid-credential' || code === 'auth/user-not-found') return 'E-mail ou senha incorretos.';
     if (code === 'auth/network-request-failed') return 'Falha de conexão. Verifique a internet e tente novamente.';
     return (error && error.message) || 'Não foi possível entrar no painel.';
+  }
+
+
+  function adminLoginBackgroundMarkup() {
+    const slides = Array.from({ length: 7 }, (_, index) =>
+      `<div class="admin-login-bg-slide ${index === 0 ? 'active' : ''}" style="background-image:url('/assets/login-bg-${index + 1}.png')"></div>`
+    ).join('');
+    const dots = Array.from({ length: 7 }, (_, index) =>
+      `<button class="admin-login-dot ${index === 0 ? 'active' : ''}" type="button" data-admin-bg="${index}" aria-label="Exibir banner ${index + 1}"></button>`
+    ).join('');
+    return `<div class="admin-login-bg" aria-hidden="true">${slides}</div><div class="admin-login-dots">${dots}</div>`;
+  }
+
+  function startAdminLoginBackground() {
+    if (adminLoginBgTimer) clearInterval(adminLoginBgTimer);
+    const slides = [...document.querySelectorAll('.admin-login-bg-slide')];
+    const dots = [...document.querySelectorAll('.admin-login-dot')];
+    if (!slides.length) return;
+    let active = 0;
+    const show = index => {
+      active = (index + slides.length) % slides.length;
+      slides.forEach((slide, slideIndex) => slide.classList.toggle('active', slideIndex === active));
+      dots.forEach((dot, dotIndex) => dot.classList.toggle('active', dotIndex === active));
+    };
+    dots.forEach(dot => dot.addEventListener('click', () => {
+      show(Number(dot.dataset.adminBg || 0));
+      if (adminLoginBgTimer) clearInterval(adminLoginBgTimer);
+      adminLoginBgTimer = setInterval(() => show(active + 1), 20000);
+    }));
+    adminLoginBgTimer = setInterval(() => show(active + 1), 20000);
   }
 
   async function bootBackend() {
@@ -210,11 +240,13 @@
 
   async function renderLogin() {
     if (beBackend.mode === 'supabase') {
-      document.body.innerHTML = `<div class="admin-login"><div class="login-card"><img src="/assets/logo.png?v=3" alt="BE"><h1>Painel Administrativo</h1><p>Gerencie os destaques, seções e conteúdos do site com segurança.</p><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span> Entrar com Google</button><p id="loginHelp" style="font-size:12px;margin-top:18px">Acesso exclusivo para administradores autorizados.</p></div></div><div class="toast-area"></div>`;
+      document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="login-card"><img src="/assets/logo.png?v=3" alt="BE"><h1>Painel Administrativo</h1><p>Gerencie os destaques, seções e conteúdos do site com segurança.</p><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span> Entrar com Google</button><p id="loginHelp" style="font-size:12px;margin-top:18px">Acesso exclusivo para administradores autorizados.</p></div></div></div><div class="toast-area"></div>`;
+      startAdminLoginBackground();
       $('#googleLogin').onclick = loginWithGoogle;
     } else {
       const exists = await auth.localAdminExists(ADMIN_EMAIL);
-      document.body.innerHTML = `<div class="admin-login"><div class="login-card"><img src="/assets/logo.png?v=3" alt="BE"><h1>Painel Administrativo</h1><p>Modo local temporário. Os dados ficam somente neste navegador até o Supabase ser conectado.</p><form id="localAdminForm"><label style="display:block;text-align:left;margin:18px 0 8px;color:var(--a-muted)">E-mail administrativo</label><input class="a-input" value="${esc(ADMIN_EMAIL)}" readonly><label style="display:block;text-align:left;margin:14px 0 8px;color:var(--a-muted)">Senha</label><input class="a-input" name="password" type="password" minlength="6" required placeholder="Digite uma senha"><button class="a-btn primary" style="width:100%;margin-top:18px" type="submit">${exists ? 'Entrar no painel local' : 'Criar acesso administrativo local'}</button></form><p style="font-size:12px;margin-top:18px">Este acesso local não deve ser usado como segurança de produção.</p></div></div><div class="toast-area"></div>`;
+      document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="login-card"><img src="/assets/logo.png?v=3" alt="BE"><h1>Painel Administrativo</h1><p>Modo local temporário. Os dados ficam somente neste navegador até o Supabase ser conectado.</p><form id="localAdminForm"><label style="display:block;text-align:left;margin:18px 0 8px;color:var(--a-muted)">E-mail administrativo</label><input class="a-input" value="${esc(ADMIN_EMAIL)}" readonly><label style="display:block;text-align:left;margin:14px 0 8px;color:var(--a-muted)">Senha</label><input class="a-input" name="password" type="password" minlength="6" required placeholder="Digite uma senha"><button class="a-btn primary" style="width:100%;margin-top:18px" type="submit">${exists ? 'Entrar no painel local' : 'Criar acesso administrativo local'}</button></form><p style="font-size:12px;margin-top:18px">Este acesso local não deve ser usado como segurança de produção.</p></div></div></div><div class="toast-area"></div>`;
+      startAdminLoginBackground();
       $('#localAdminForm').onsubmit = loginLocal;
     }
     const savedError = sessionStorage.getItem('adminAuthError');

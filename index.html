@@ -790,8 +790,8 @@
   body.login-mode #authGate{display:block}
   body.login-mode .topbar-wrap,body.login-mode main,body.login-mode footer,body.login-mode .bg,body.login-mode .bg-grain,body.login-mode .particles{display:none!important}
   .login-bg-stack{position:absolute;inset:-24px;overflow:hidden;background:#050a11}
-  .login-bg-slide{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transform:scale(1.055);filter:blur(8px);transition:opacity 1.4s ease,transform 20s linear}
-  .login-bg-slide.active{opacity:1;transform:scale(1.015)}
+  .login-bg-slide{position:absolute;inset:0;background-size:contain;background-repeat:no-repeat;background-position:center;background-color:#020711;opacity:0;transform:none;filter:none;transition:opacity 1.4s ease}
+  .login-bg-slide.active{opacity:1;transform:none}
   .login-bg-stack:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(6,16,29,.9) 0%,rgba(6,14,25,.64) 42%,rgba(4,9,16,.74) 100%),linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.48))}
   .login-shell{position:relative;z-index:2;width:min(1180px,calc(100% - 48px));height:100%;margin:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(390px,490px);gap:70px;align-items:center}
   .login-brand{align-self:start;padding-top:54px}.login-brand img{width:88px;height:auto;filter:drop-shadow(0 8px 24px rgba(0,0,0,.35))}
@@ -833,7 +833,7 @@
      ============================================================ */
   #authGate{min-height:100dvh}
   .login-bg-stack{inset:0}
-  .login-bg-slide{filter:blur(2px);transform:scale(1.04);background-position:center 18%}
+  .login-bg-slide{filter:none;transform:none;background-size:contain;background-repeat:no-repeat;background-position:center;background-color:#020711}
   .login-bg-stack:after{
     background:
       linear-gradient(90deg,rgba(2,8,20,.94) 0%,rgba(5,15,34,.84) 43%,rgba(3,9,21,.52) 68%,rgba(2,7,16,.80) 100%),
@@ -869,8 +869,8 @@
   .login-tabs{margin-bottom:20px;background:rgba(255,255,255,.055)}
   .login-tab.active{background:linear-gradient(135deg,rgba(59,130,246,.38),rgba(37,99,235,.24));color:#fff}
   .auth-form{gap:13px}
-  #signupForm{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;row-gap:10px;align-items:start}
-  #signupForm .auth-primary{grid-column:1/-1}
+  #signupForm{grid-template-columns:1fr;row-gap:14px;align-items:start}
+  #signupForm .auth-primary{grid-column:auto}
   .auth-field input{height:52px;background:rgba(238,244,255,.98);border:1px solid rgba(255,255,255,.22)}
   .auth-options{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:rgba(234,242,255,.60);margin-top:-2px}
   .auth-remember{display:flex;align-items:center;gap:8px;cursor:pointer}
@@ -929,6 +929,8 @@
 
   .auth-help{margin-top:-1px;color:rgba(234,242,255,.56);font-size:11px;line-height:1.45}
   .auth-field.username-field input{text-transform:lowercase}
+  #signupForm{grid-template-columns:1fr!important;row-gap:14px!important}
+  #signupForm .auth-primary{grid-column:auto!important}
 
 
   /* ============================================================
@@ -1431,11 +1433,6 @@
             <div class="auth-field">
               <label for="signupName">Nome completo</label>
               <input id="signupName" name="name" type="text" autocomplete="name" minlength="2" maxlength="50" required placeholder="Digite seu nome">
-            </div>
-            <div class="auth-field username-field">
-              <label for="signupUsername">Nome de exibição (nome de usuário)</label>
-              <input id="signupUsername" name="username" type="text" inputmode="text" autocomplete="username" minlength="3" maxlength="20" required placeholder="Escolha um nome de usuário" aria-describedby="signupUsernameHelp">
-              <div class="auth-help" id="signupUsernameHelp">Seu perfil será @seuusuario. Use letras minúsculas, números, ponto ou underline.</div>
             </div>
             <div class="auth-field">
               <label for="signupPassword">Senha</label>
@@ -1997,8 +1994,6 @@
 
   async function boot(){
     auth=beBackend.auth;
-    q('signupUsername').addEventListener('input',function(){this.value=normalizeUsername(this.value)});
-
     q('discordAuthButton').onclick=async function(){
       var button=this;
       if(authFlowBusy)return;
@@ -2050,27 +2045,20 @@
 
     q('signupForm').addEventListener('submit',async function(e){
       e.preventDefault();
-      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),name=form.elements.namedItem('name').value.trim(),username=normalizeUsername(form.elements.namedItem('username').value),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
-      form.elements.namedItem('username').value=username;
+      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),name=form.elements.namedItem('name').value.trim(),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
       if(name.length<2){setStatus('Digite seu nome completo.','error');return;}
-      if(!validUsername(username)){setStatus('O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.','error');form.elements.namedItem('username').focus();return;}
       if(!/(?=.*[0-9!@#$%^&*._-]).{6,}/.test(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
       if(email===beBackend.ADMIN_EMAIL){setStatus('A conta administrativa deve ser acessada pelo painel.','error');return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
       try{
-        if(typeof auth.usernameAvailable==='function'){
-          var usernameIsAvailable=await auth.usernameAvailable(username);
-          if(usernameIsAvailable===false){var usernameError=new Error('Este nome de usuário já está em uso. Escolha outro.');usernameError.code='username-in-use';throw usernameError;}
-        }
-        var result=await auth.signUp({email:email,password:password,name:name,username:username,remember:true});
+        var result=await auth.signUp({email:email,password:password,name:name,username:'',remember:true});
         if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}
         currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();setTimeout(function(){var avatarButton=document.querySelector('[data-public-action="avatar"]');if(avatarButton)avatarButton.click();},260);
       }catch(err){
         showLogin();
         if(err&&err.code==='auth/email-already-in-use')setMode('password',email);else setMode('signup',email);
         setStatus(friendly(err),'error');
-        if(err&&err.code==='username-in-use')setTimeout(function(){form.elements.namedItem('username').focus();form.elements.namedItem('username').select();},0);
       }finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
 

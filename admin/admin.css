@@ -123,3 +123,68 @@ margin-bottom:24px!important;
 /* Galeria de avatares */
 .gallery-title-row{align-items:flex-end}.gallery-admin-toolbar{display:flex;gap:12px;margin-bottom:18px}.gallery-admin-toolbar .a-input{max-width:420px}.gallery-admin-toolbar .a-select{max-width:190px}.gallery-category-board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}.gallery-category-panel{min-width:0;padding:20px;border:1px solid var(--a-line);border-radius:24px;background:var(--a-panel);box-shadow:0 18px 60px rgba(0,0,0,.2)}.gallery-category-panel>header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}.gallery-category-panel header small{display:block;color:var(--a-muted);font-size:11px;text-transform:uppercase;letter-spacing:.13em}.gallery-category-panel h2{margin:4px 0 0;font-size:20px}.gallery-category-panel header>span{padding:7px 10px;border:1px solid var(--a-line);border-radius:999px;color:var(--a-muted);font-size:12px}.gallery-avatar-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.gallery-avatar-card{min-width:0;padding:10px;border:1px solid rgba(125,181,255,.13);border-radius:18px;background:rgba(2,8,19,.52)}.gallery-avatar-card.is-hidden{opacity:.55}.gallery-avatar-image{aspect-ratio:1;border-radius:14px;overflow:hidden;background:#050b16;display:grid;place-items:center;color:var(--a-muted);font-size:12px}.gallery-avatar-image img{width:100%;height:100%;object-fit:cover}.gallery-avatar-info{display:grid;gap:3px;padding:10px 2px 8px}.gallery-avatar-info strong{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gallery-avatar-info small{color:var(--a-muted);font-size:10px}.gallery-avatar-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}.gallery-avatar-actions .a-btn{padding:7px 5px;font-size:11px}.image-input-row{display:flex;gap:8px}.image-input-row .a-input{flex:1}.image-source-hint,.image-validation{font-size:11px;color:var(--a-muted)}.image-validation.err{color:#ff8d99}.image-validation.ok{color:#77ddb9}
 @media(max-width:1150px){.gallery-category-board{grid-template-columns:1fr}.gallery-avatar-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:760px){.gallery-admin-toolbar{flex-direction:column}.gallery-admin-toolbar .a-input,.gallery-admin-toolbar .a-select{max-width:none}.gallery-avatar-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Login administrativo centralizado com o mesmo banner responsivo do site */
+.admin-login{
+  position:relative;
+  isolation:isolate;
+  min-height:100dvh;
+  width:100%;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  padding:clamp(18px,4vw,48px);
+  background:#020711;
+}
+.admin-login-bg{position:absolute;inset:0;z-index:-2;overflow:hidden;background:#020711}
+.admin-login-bg-slide{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  background-size:contain;
+  background-repeat:no-repeat;
+  background-position:center;
+  background-color:#020711;
+  transition:opacity 1.4s ease;
+}
+.admin-login-bg-slide.active{opacity:1}
+.admin-login:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(2,7,18,.42),rgba(2,7,18,.70)),
+    radial-gradient(circle at 50% 45%,rgba(37,99,235,.16),transparent 52%);
+}
+.admin-login-content{position:relative;width:min(470px,100%);margin:auto;display:grid;place-items:center}
+.admin-login .login-card{
+  grid-column:auto!important;
+  grid-row:auto!important;
+  justify-self:center!important;
+  align-self:center!important;
+  width:min(470px,100%)!important;
+  max-width:470px!important;
+  margin:0 auto!important;
+  padding:clamp(26px,4vw,38px)!important;
+  text-align:center!important;
+  border:1px solid rgba(112,169,255,.24)!important;
+  border-radius:28px!important;
+  background:linear-gradient(145deg,rgba(8,20,42,.91),rgba(6,14,29,.86))!important;
+  box-shadow:0 32px 100px rgba(0,0,0,.60),0 0 70px rgba(37,99,235,.10)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(140%);
+  backdrop-filter:blur(28px) saturate(140%);
+}
+.admin-login .login-card img{width:auto;height:86px;max-width:130px;object-fit:contain}
+.admin-login .login-card h1{margin:18px 0 8px;font-size:clamp(30px,4vw,40px);line-height:1.1}
+.admin-login .login-card p{margin-left:auto;margin-right:auto}
+.admin-login-dots{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:8px;z-index:2}
+.admin-login-dot{width:7px;height:7px;padding:0;border:0;border-radius:999px;background:rgba(255,255,255,.30);transition:.3s}
+.admin-login-dot.active{width:25px;background:#3b82f6}
+@media(max-width:600px){
+  .admin-login{padding:18px 12px 46px}
+  .admin-login .login-card{padding:25px 20px!important;border-radius:24px!important}
+  .admin-login .login-card img{height:72px}
+}

@@ -709,11 +709,11 @@
       const normalizedHandle = normalizeUsername(username);
       if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw backendError('auth/invalid-email', 'Digite um e-mail válido.');
       if (String(password || '').length < 6) throw backendError('auth/weak-password', 'Use uma senha com pelo menos 6 caracteres.');
-      if (!validUsername(normalizedHandle)) throw backendError('username-invalid', 'O @ deve ter de 3 a 20 caracteres.');
+      if (normalizedHandle && !validUsername(normalizedHandle)) throw backendError('username-invalid', 'O @ deve ter de 3 a 20 caracteres.');
       const database = loadLocalDatabase();
       if (database.accounts[normalizedEmail]) throw backendError('auth/email-already-in-use', 'Este e-mail já possui uma conta.');
       const profilesList = Object.values(localCollection(database, 'users'));
-      if (profilesList.some(profile => String(profile.username || '').toLowerCase() === normalizedHandle)) throw backendError('username-in-use', 'Este @ já está em uso.');
+      if (normalizedHandle && profilesList.some(profile => String(profile.username || '').toLowerCase() === normalizedHandle)) throw backendError('username-in-use', 'Este @ já está em uso.');
       const userId = uid();
       const salt = uid();
       const account = {
@@ -839,9 +839,11 @@
     },
     async signUp({ email, password, name, username }) {
       const normalizedHandle = normalizeUsername(username);
-      if (!validUsername(normalizedHandle)) throw backendError('username-invalid', 'O @ deve ter de 3 a 20 caracteres.');
-      const usernameIsAvailable = await this.usernameAvailable(normalizedHandle);
-      if (usernameIsAvailable === false) throw backendError('username-in-use', 'Este nome de usuário já está em uso. Escolha outro.');
+      if (normalizedHandle && !validUsername(normalizedHandle)) throw backendError('username-invalid', 'O @ deve ter de 3 a 20 caracteres.');
+      if (normalizedHandle) {
+        const usernameIsAvailable = await this.usernameAvailable(normalizedHandle);
+        if (usernameIsAvailable === false) throw backendError('username-in-use', 'Este nome de usuário já está em uso. Escolha outro.');
+      }
       const { data: result, error } = await supabaseClient.auth.signUp({
         email: String(email || '').trim().toLowerCase(),
         password,

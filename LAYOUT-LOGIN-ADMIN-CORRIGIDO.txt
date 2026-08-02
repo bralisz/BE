@@ -1,0 +1,7 @@
+AJUSTES APLICADOS
+
+1. O painel de acesso #/admin foi centralizado.
+2. O painel administrativo usa os mesmos banners do login.
+3. Os banners usam 'contain', preservando a imagem inteira em monitor, notebook, tablet e celular.
+4. O cadastro agora mostra somente Nome completo e Senha.
+5. O nome de usuário deixou de ser obrigatório no cadastro e pode ser escolhido depois no Perfil.
