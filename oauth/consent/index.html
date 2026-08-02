@@ -23,7 +23,39 @@
     .status{min-height:21px;margin-top:16px;font-size:13px;line-height:1.45;text-align:center;color:#ffb4ae}.status.ok{color:#91e9b8}
     [hidden]{display:none!important}
     @media(max-width:520px){.card{padding:24px 18px;border-radius:22px}.actions{grid-template-columns:1fr}h1{font-size:26px}}
-  </style>
+  
+
+    /* Glass iOS sem neon */
+    body{
+      background:
+        radial-gradient(ellipse 800px 560px at 50% -12%,rgba(255,255,255,.05),transparent 64%),
+        linear-gradient(145deg,#05070b,#0a0d13)!important;
+    }
+    .card{
+      background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.025) 48%,rgba(8,10,15,.42)),rgba(18,22,29,.62)!important;
+      border-color:rgba(255,255,255,.15)!important;
+      -webkit-backdrop-filter:blur(32px) saturate(145%);
+      backdrop-filter:blur(32px) saturate(145%);
+      box-shadow:0 28px 82px rgba(0,0,0,.46),inset 0 1px 0 rgba(255,255,255,.12)!important;
+    }
+    .logo{filter:drop-shadow(0 8px 20px rgba(0,0,0,.34))!important}
+    .details,.scope{
+      background:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.03))!important;
+      border-color:rgba(255,255,255,.12)!important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.055)!important;
+    }
+    .approve{
+      background:#3884f4!important;
+      border:1px solid rgba(255,255,255,.15)!important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 12px 30px rgba(0,0,0,.30)!important;
+    }
+    .deny,.back{
+      background:linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.04))!important;
+      border-color:rgba(255,255,255,.16)!important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.075),0 10px 26px rgba(0,0,0,.22)!important;
+    }
+
+</style>
 </head>
 <body>
   <main class="card">
