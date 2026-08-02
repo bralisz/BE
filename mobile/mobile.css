@@ -215,3 +215,71 @@
   .mobile-menu-toggle,.mobile-profile-button{width:42px;height:42px}
   .mobile-brand{min-width:100px;height:42px;padding-inline:16px}
 }
+
+/* Correção mobile: o breakpoint legado deixava o slide com altura zero. */
+@media (max-width:760px){
+  body:not(.login-mode):not(.admin-mode) .mobile-app-bar{z-index:10020!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-drawer-backdrop{z-index:10030!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-drawer{z-index:10040!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-search-panel{z-index:10050!important}
+
+  body:not(.login-mode):not(.admin-mode) .featured-wrap,
+  body:not(.login-mode):not(.admin-mode) .tab-random-featured{
+    position:relative!important;
+    overflow:hidden!important;
+  }
+  body:not(.login-mode):not(.admin-mode) .featured{
+    position:relative!important;
+    overflow:hidden!important;
+  }
+  body:not(.login-mode):not(.admin-mode) .featured .f-slide{
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    display:block!important;
+    opacity:0!important;
+    visibility:hidden!important;
+    z-index:1!important;
+    pointer-events:none!important;
+  }
+  body:not(.login-mode):not(.admin-mode) .featured .f-slide.active{
+    opacity:1!important;
+    visibility:visible!important;
+    z-index:2!important;
+    pointer-events:auto!important;
+  }
+  body:not(.login-mode):not(.admin-mode) .featured .f-media{
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    display:block!important;
+    opacity:1!important;
+  }
+  body:not(.login-mode):not(.admin-mode) .featured .f-media img,
+  body:not(.login-mode):not(.admin-mode) .featured .f-media .ph{
+    display:block!important;
+    opacity:1!important;
+  }
+  body:not(.login-mode):not(.admin-mode) .featured .f-info{
+    position:absolute!important;
+    z-index:5!important;
+  }
+  body:not(.login-mode):not(.admin-mode) .featured .f-dots{
+    z-index:8!important;
+  }
+
+  .mobile-menu-toggle,
+  .mobile-brand,
+  .mobile-profile-button,
+  .mobile-drawer-close,
+  .mobile-drawer-profile,
+  .mobile-drawer-link,
+  .mobile-drawer-backdrop{
+    touch-action:manipulation;
+    cursor:pointer;
+  }
+}
