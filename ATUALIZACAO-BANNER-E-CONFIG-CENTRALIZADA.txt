@@ -1,7 +1,0 @@
-ATUALIZAÇÃO — BANNER DO PERFIL E CONFIGURAÇÕES
-
-- O banner escolhido agora é aplicado imediatamente no fundo completo da página de perfil.
-- A seleção é recuperada do perfil, dos metadados da conta e do armazenamento local como compatibilidade.
-- O banner permanece visível mesmo quando o banco ainda não possui as colunas banner_url e banner_id.
-- A página /config agora abre como uma área própria, centralizada na tela e alinhada ao meio.
-- Em telas menores, as opções das configurações passam automaticamente para uma coluna.
