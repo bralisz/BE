@@ -2,8 +2,8 @@
   'use strict';
   if (location.hash.startsWith('#/admin')) return;
 
-  const randomFeaturedPools = { videos: [], films: [] };
-  const lastRandomFeaturedId = { videos: '', films: '' };
+  const randomFeaturedPools = { videos: [], films: [], movies: [], series: [] };
+  const lastRandomFeaturedId = { videos: '', films: '', movies: '', series: '' };
 
   window.addEventListener('load', async () => {
     setupHomeNavigation();
@@ -141,9 +141,25 @@
     host.addEventListener('mouseenter', stop);
     host.addEventListener('mouseleave', start);
     start();
+    bindBannerImageFallbacks(host);
     setupFavoriteButtons(host);
     setupContentDetailInteractions(host);
     if (section) section.hidden = false;
+  }
+
+  function bindBannerImageFallbacks(root) {
+    if (!root) return;
+    root.querySelectorAll('img[data-fallback-src]').forEach(image => {
+      if (image.dataset.fallbackBound === 'true') return;
+      image.dataset.fallbackBound = 'true';
+      image.addEventListener('error', () => {
+        const fallback = image.dataset.fallbackSrc || '';
+        if (fallback && image.src !== fallback && image.dataset.fallbackUsed !== 'true') {
+          image.dataset.fallbackUsed = 'true';
+          image.src = fallback;
+        }
+      });
+    });
   }
 
   function ensureRandomFeaturedSection() {
@@ -193,7 +209,7 @@
   function renderRandomTabFeatured(view, force = false) {
     const section = ensureRandomFeaturedSection();
     const host = document.getElementById('randomFeatured');
-    if (!section || !host || !['videos', 'films'].includes(view)) {
+    if (!section || !host || !['videos', 'films', 'movies', 'series'].includes(view)) {
       if (section) section.hidden = true;
       return;
     }
@@ -205,7 +221,7 @@
       return;
     }
 
-    const collection = item.collection || (view === 'films' ? 'movies' : 'videos');
+    const collection = item.collection || (['films','movies'].includes(view) ? 'movies' : view === 'series' ? 'series' : 'videos');
     const title = item.title || item.name || 'Conteúdo';
     const thumbnail = item.thumbnailUrl || item.imageUrl || item.bannerUrl || '';
     const background = ['movies', 'series'].includes(collection)
@@ -246,11 +262,12 @@
           </button>
         </div>
       </div>
-      <div class="f-media">${background ? `<img src="${safeUrl(background)}" alt="${escapeHtml(title)}" loading="eager">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
+      <div class="f-media">${background ? `<img src="${safeUrl(background)}" data-fallback-src="${safeUrl(thumbnail)}" alt="${escapeHtml(title)}" loading="eager">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
     </div>`;
 
     section.dataset.featuredView = view;
     section.hidden = false;
+    bindBannerImageFallbacks(host);
     setupFavoriteButtons(host);
     setupContentDetailInteractions(host);
   }
@@ -271,10 +288,9 @@
     const allMovies = movieRows.filter(movie => movie.active !== false);
     const allSeries = seriesRows.filter(series => series.active !== false);
     randomFeaturedPools.videos = allVideos.map(item => ({ ...item, collection: 'videos' }));
-    randomFeaturedPools.films = [
-      ...allMovies.map(item => ({ ...item, collection: 'movies' })),
-      ...allSeries.map(item => ({ ...item, collection: 'series' }))
-    ];
+    randomFeaturedPools.movies = allMovies.map(item => ({ ...item, collection: 'movies' }));
+    randomFeaturedPools.series = allSeries.map(item => ({ ...item, collection: 'series' }));
+    randomFeaturedPools.films = [...randomFeaturedPools.movies, ...randomFeaturedPools.series];
     ensureRandomFeaturedSection();
     const sourceMaps = {
       videos: new Map(allVideos.map(item => [String(item.id), item])),
@@ -787,7 +803,7 @@
         if (scrollHome) featuredSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
       if (randomFeaturedSection) randomFeaturedSection.hidden = true;
-    } else if (['films', 'videos'].includes(activeView)) {
+    } else if (['films', 'movies', 'series', 'videos'].includes(activeView)) {
       if (featuredSection) featuredSection.hidden = true;
       renderRandomTabFeatured(activeView, false);
       if (scrollHome && randomFeaturedSection && !randomFeaturedSection.hidden) {
@@ -956,7 +972,8 @@
         const sectionView = section.dataset.homeView || 'default';
         const cards = Array.from(section.querySelectorAll('.video-card'));
         let visibleInSection = 0;
-        const sectionMatchesView = currentView === 'films' ? sectionView === 'films' : sectionView !== 'films';
+        const libraryView = ['films','movies','series'].includes(currentView);
+        const sectionMatchesView = libraryView ? sectionView === 'films' : currentView === 'videos' ? sectionView !== 'films' : true;
 
         cards.forEach(card => {
           const category = card.dataset.category || sectionCategory;
@@ -964,9 +981,13 @@
           const title = card.dataset.titleSearch || normalizeText(card.getAttribute('aria-label'));
           const contentMatchesView = currentView === 'films'
             ? (collection === 'movies' || collection === 'series')
-            : currentView === 'videos'
-              ? collection === 'videos'
-              : true;
+            : currentView === 'movies'
+              ? collection === 'movies'
+              : currentView === 'series'
+                ? collection === 'series'
+                : currentView === 'videos'
+                  ? collection === 'videos'
+                  : true;
           const searchMatches = !query || title.includes(query) || category.includes(query) || sectionCategory.includes(query);
           const show = sectionMatchesView && contentMatchesView && searchMatches;
           card.hidden = !show;
@@ -987,7 +1008,7 @@
         if (currentView === 'home') {
           if (featuredSection) featuredSection.hidden = !document.getElementById('featured')?.children.length;
           if (randomFeaturedSection) randomFeaturedSection.hidden = true;
-        } else if (['films', 'videos'].includes(currentView)) {
+        } else if (['films', 'movies', 'series', 'videos'].includes(currentView)) {
           if (featuredSection) featuredSection.hidden = true;
           renderRandomTabFeatured(currentView, refreshFeatured);
         }
