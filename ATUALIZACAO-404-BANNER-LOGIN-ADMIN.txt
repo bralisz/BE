@@ -1,7 +1,0 @@
-ATUALIZAÇÃO CONCLUÍDA
-
-- Página 404 redesenhada com a primeira imagem enviada como fundo.
-- Card 404 com glassmorphism, botões de início e página anterior.
-- Segunda imagem definida como banner fixo do login.
-- O acesso administrativo usa o mesmo banner e acabamento glass.
-- Mantidos os ajustes de tela sem zoom e sem scroll no desktop.
