@@ -1,0 +1,8 @@
+ATUALIZAÇÃO — MENU DO PERFIL SIMPLIFICADO
+
+- Removido o nome de usuário do menu suspenso.
+- Removida a opção “Escolher avatar”.
+- Removida a opção “Suporte”.
+- Removida a opção “Dashboard” do menu.
+- Mantidas apenas as opções visíveis: Perfil, Configurações e Entrar/Sair.
+- O seletor de avatar continua disponível dentro da tela de Perfil.

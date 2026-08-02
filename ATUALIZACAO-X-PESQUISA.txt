@@ -1,0 +1,4 @@
+Correção aplicada na pesquisa da Home:
+
+- Removido o X nativo exibido pelo navegador dentro do campo de busca.
+- Mantido somente o X personalizado com animação usado para fechar a aba de pesquisa.

@@ -2142,9 +2142,10 @@
     z-index:8;
     width:100%;
     max-width:none;
-    margin:-82px 0 0;
-    padding:0 0 64px;
-    background:linear-gradient(180deg,transparent 0,#030405 90px,#030405 100%);
+    margin:0;
+    /* Faixa preta que separa completamente o banner do catálogo. */
+    padding:clamp(170px,22vh,240px) 0 64px;
+    background:#030405;
   }
   .video-rail-section{margin-bottom:34px}
   .video-rail-title{margin-left:clamp(24px,4vw,68px);font-size:18px;color:#fff;margin-bottom:11px}
@@ -2198,7 +2199,7 @@
     .f-play{height:42px;padding:0 18px}
     .f-fav{width:42px;height:42px}
     .f-dots{bottom:66px;right:22px}
-    .video-catalog{margin-top:-64px;background:linear-gradient(180deg,transparent 0,#030405 72px,#030405 100%)}
+    .video-catalog{margin-top:0;padding-top:96px;background:#030405}
     .video-rail-title{font-size:17px}
     .video-card{flex-basis:clamp(210px,58vw,270px)}
   }
@@ -2360,12 +2361,12 @@
     </button>
 
     <div class="user-dropdown user-dropdown-right" id="userDropdown">
-      <div class="dd-header" id="ddUsername">Visitante</div>
-      <div class="dd-divider"></div>
-      <button class="dd-item" data-public-action="avatar">Escolher avatar</button><button class="dd-item" data-public-action="profile">Perfil</button>
+      <!-- Elementos mantidos ocultos apenas para compatibilidade com a conta pública. -->
+      <div class="dd-header" id="ddUsername" hidden aria-hidden="true"></div>
+      <button id="publicDashboardLink" type="button" hidden aria-hidden="true" tabindex="-1" style="display:none!important"></button>
+
+      <button class="dd-item" data-public-action="profile">Perfil</button>
       <button class="dd-item" data-public-action="settings">Configurações</button>
-      <button class="dd-item" data-public-action="support">Suporte</button>
-      <button class="dd-item" id="publicDashboardLink" data-public-action="dashboard" hidden>Dashboard</button>
       <div class="dd-divider"></div>
       <button class="dd-item danger" id="publicAuthAction" data-public-action="auth">Entrar</button>
     </div>
