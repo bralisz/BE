@@ -1,8 +1,0 @@
-ATUALIZAÇÃO VISUAL
-
-- Removido o efeito glass da seção de catálogo/Destaque.
-- Mantida borda arredondada escura e discreta, sem a linha clara.
-- A logo não recebe mais fundo branco.
-- O indicador branco acompanha apenas a tab selecionada.
-- Todas as tabs ativas usam o mesmo tamanho do espaço da logo.
-- O botão “Minha Lista” nos detalhes foi trocado por um ícone de coração.
