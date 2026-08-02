@@ -1,9 +1,0 @@
-ATUALIZAÇÃO DE LAYOUT — LOGIN E ADMIN
-
-- Removido o zoom/scale das imagens de fundo no #login e no #/admin.
-- Fundo configurado com background-size: cover para preencher o monitor.
-- Removido o scroll da tela de login na versão desktop.
-- Logo, botão Conectar Discord e card usam a mesma largura e ficam centralizados/alinhados.
-- Login administrativo remodelado no mesmo estilo do login público.
-- #/admin exibe somente a logo e o botão Conectar via Google.
-- Mantido o efeito glass iOS sem neon.
