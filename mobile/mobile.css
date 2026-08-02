@@ -355,3 +355,30 @@
     -webkit-tap-highlight-color:transparent;
   }
 }
+
+/* Correção final: avatar e o contorno externo são círculos perfeitos. */
+@media (max-width:760px){
+  .mobile-profile-button,
+  .mobile-profile-button > span,
+  .mobile-drawer-avatar{
+    aspect-ratio:1 / 1!important;
+    border-radius:50%!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+    clip-path:circle(50% at 50% 50%);
+  }
+  .mobile-profile-button > span{
+    width:100%!important;
+    height:100%!important;
+    display:grid!important;
+    place-items:center!important;
+  }
+  .mobile-profile-button img,
+  .mobile-drawer-avatar img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    border-radius:50%!important;
+    display:block!important;
+  }
+}

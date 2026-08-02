@@ -4043,3 +4043,29 @@
 
 </body>
 </html>
+<style id="be-profile-perfect-circle-fix">
+/* Avatares e contornos sempre perfeitamente circulares. */
+.user-chip,
+.avatar,
+.profile-avatar-preview,
+.profile-page-avatar,
+.public-profile-avatar{
+  aspect-ratio:1 / 1!important;
+  border-radius:50%!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+  clip-path:circle(50% at 50% 50%);
+}
+.user-chip{padding:3px!important}
+.avatar{width:100%!important;height:100%!important}
+.avatar img,
+.profile-avatar-preview img,
+.profile-page-avatar img,
+.public-profile-avatar img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  border-radius:50%!important;
+  display:block!important;
+}
+</style>
