@@ -318,3 +318,19 @@
   .mobile-drawer[aria-hidden="false"]{pointer-events:auto}
   .mobile-drawer[aria-hidden="true"]{pointer-events:none}
 }
+
+
+/* O botão esquerdo permanece acima do banner e recebe o toque diretamente. */
+@media (max-width:760px){
+  body:not(.login-mode):not(.admin-mode) #mobileAppBar{
+    pointer-events:auto!important;
+    isolation:isolate;
+  }
+  body:not(.login-mode):not(.admin-mode) #mobileMenuToggle{
+    position:relative!important;
+    z-index:10060!important;
+    pointer-events:auto!important;
+    touch-action:manipulation!important;
+    -webkit-tap-highlight-color:transparent;
+  }
+}

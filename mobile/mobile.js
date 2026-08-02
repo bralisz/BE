@@ -163,7 +163,34 @@
   }
 
   function bindMobileActions() {
-    bindActivation(document.getElementById('mobileMenuToggle'), () => openDrawer(true));
+    const menuToggle = document.getElementById('mobileMenuToggle');
+
+    // Abertura direta e em captura para impedir que o banner intercepte o toque.
+    const toggleDrawer = event => {
+      if (!isMobile()) return;
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
+      event?.stopImmediatePropagation?.();
+      openDrawer(!document.body.classList.contains('mobile-drawer-open'));
+    };
+
+    if (menuToggle) {
+      menuToggle.onclick = toggleDrawer;
+      menuToggle.ontouchend = toggleDrawer;
+      menuToggle.onpointerup = toggleDrawer;
+    }
+
+    if (!document.documentElement.dataset.mobileMenuCaptureBound) {
+      document.documentElement.dataset.mobileMenuCaptureBound = 'true';
+      document.addEventListener('pointerdown', event => {
+        const target = event.target?.closest?.('#mobileMenuToggle');
+        if (!target || !isMobile()) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openDrawer(!document.body.classList.contains('mobile-drawer-open'));
+      }, { capture:true, passive:false });
+    }
+
     bindActivation(document.getElementById('mobileDrawerClose'), () => openDrawer(false));
     bindActivation(document.getElementById('mobileDrawerBackdrop'), () => openDrawer(false));
     bindActivation(document.getElementById('mobileHomeBrand'), () => selectView('home'));
