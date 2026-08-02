@@ -421,28 +421,35 @@
 
   async function galleryPage() {
     const content = $('#adminContent');
-    content.innerHTML = `<div class="admin-title-row gallery-title-row"><div><span class="dashboard-kicker">Avatares do site</span><h1>Galeria de ícones</h1><p>Adicione imagens por link e organize os avatares em categorias. As categorias aparecem lado a lado para facilitar a visualização.</p></div><button class="a-btn primary" id="newGalleryItem">+ Adicionar avatar</button></div><div class="gallery-admin-toolbar"><input class="a-input" id="gallerySearch" placeholder="Buscar avatar ou categoria…"><select class="a-select" id="galleryStatus"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="galleryAdminBoard"><div class="empty">Carregando galeria…</div></div>`;
-    $('#newGalleryItem').onclick = () => openEditor('gallery');
+    content.innerHTML = `<div class="admin-title-row gallery-title-row"><div><span class="dashboard-kicker">Imagens dos perfis</span><h1>Galeria</h1><p>Gerencie avatares e banners de fundo usados pelos usuários em seus perfis.</p></div><div class="gallery-title-actions"><button class="a-btn" id="newGalleryAvatar">+ Adicionar avatar</button><button class="a-btn primary" id="newGalleryBanner">+ Adicionar banner</button></div></div><div class="gallery-admin-toolbar"><input class="a-input" id="gallerySearch" placeholder="Buscar imagem ou categoria…"><select class="a-select" id="galleryType"><option value="">Todos os tipos</option><option value="avatar">Avatares</option><option value="banner">Banners de perfil</option></select><select class="a-select" id="galleryStatus"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="galleryAdminBoard"><div class="empty">Carregando galeria…</div></div>`;
+    $('#newGalleryAvatar').onclick = () => openEditor('gallery', null, { itemType: 'avatar' });
+    $('#newGalleryBanner').onclick = () => openEditor('gallery', null, { itemType: 'banner', category: 'Banners de perfil' });
     const items = await db.list('gallery', { orderBy: 'order', direction: 'asc' });
+    const itemType = item => String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
     const draw = () => {
       const search = $('#gallerySearch').value.trim().toLowerCase();
       const status = $('#galleryStatus').value;
+      const typeFilter = $('#galleryType').value;
       const filtered = items.filter(item => {
-        const text = `${item.title || ''} ${item.category || ''}`.toLowerCase();
-        return (!search || text.includes(search)) && (!status || String(item.active !== false) === status);
+        const type = itemType(item);
+        const text = `${item.title || ''} ${item.category || ''} ${type}`.toLowerCase();
+        return (!search || text.includes(search)) && (!status || String(item.active !== false) === status) && (!typeFilter || type === typeFilter);
       });
       const groups = new Map();
       filtered.forEach(item => {
-        const category = (item.category || 'Sem categoria').trim() || 'Sem categoria';
-        if (!groups.has(category)) groups.set(category, []);
-        groups.get(category).push(item);
+        const type = itemType(item);
+        const category = (item.category || (type === 'banner' ? 'Banners de perfil' : 'Sem categoria')).trim() || 'Sem categoria';
+        const key = `${type}::${category}`;
+        if (!groups.has(key)) groups.set(key, { type, category, items: [] });
+        groups.get(key).items.push(item);
       });
       const board = $('#galleryAdminBoard');
-      board.innerHTML = groups.size ? `<div class="gallery-category-board">${[...groups.entries()].map(([category, avatars]) => `<section class="gallery-category-panel"><header><div><small>Categoria</small><h2>${esc(category)}</h2></div><span>${avatars.length} ${avatars.length === 1 ? 'avatar' : 'avatares'}</span></header><div class="gallery-avatar-grid">${avatars.map(item => `<article class="gallery-avatar-card ${item.active === false ? 'is-hidden' : ''}"><div class="gallery-avatar-image">${item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="${esc(item.title || category)}" loading="lazy">` : '<span>Sem imagem</span>'}</div><div class="gallery-avatar-info"><strong>${esc(item.title || 'Avatar')}</strong><small>${item.active === false ? 'Oculto' : 'Ativo'} · ordem ${esc(item.order ?? 0)}</small></div><div class="gallery-avatar-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></article>`).join('')}</div></section>`).join('')}</div>` : '<div class="empty">Nenhum avatar encontrado.</div>';
+      board.innerHTML = groups.size ? `<div class="gallery-category-board">${[...groups.values()].map(group => `<section class="gallery-category-panel ${group.type === 'banner' ? 'banner-panel' : ''}"><header><div><small>${group.type === 'banner' ? 'Banners de perfil' : 'Categoria de avatares'}</small><h2>${esc(group.category)}</h2></div><span>${group.items.length} ${group.items.length === 1 ? 'imagem' : 'imagens'}</span></header><div class="gallery-avatar-grid ${group.type === 'banner' ? 'gallery-banner-grid' : ''}">${group.items.map(item => `<article class="gallery-avatar-card ${group.type === 'banner' ? 'is-banner' : ''} ${item.active === false ? 'is-hidden' : ''}"><div class="gallery-avatar-image">${item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="${esc(item.title || group.category)}" loading="lazy">` : '<span>Sem imagem</span>'}</div><div class="gallery-avatar-info"><strong>${esc(item.title || (group.type === 'banner' ? 'Banner' : 'Avatar'))}</strong><small>${item.active === false ? 'Oculto' : 'Ativo'} · ordem ${esc(item.order ?? 0)}</small></div><div class="gallery-avatar-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></article>`).join('')}</div></section>`).join('')}</div>` : '<div class="empty">Nenhuma imagem encontrada.</div>';
       board.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => openEditor('gallery', items.find(item => item.id === button.dataset.edit)));
       board.querySelectorAll('[data-del]').forEach(button => button.onclick = () => confirmDelete('gallery', button.dataset.del));
     };
     $('#gallerySearch').oninput = draw;
+    $('#galleryType').onchange = draw;
     $('#galleryStatus').onchange = draw;
     draw();
   }
@@ -481,7 +488,10 @@
     const sectionFields = name === 'sections' ? `<div class="field"><label>Categoria / identificador *</label><input class="a-input" name="category" required value="${esc(item.category || item.slug || '')}" placeholder="ex.: vanity-fair"><small>Identificador interno usado também para manter compatibilidade com conteúdos antigos.</small></div><div class="field"><label>Quantidade inicial</label><input class="a-input" type="number" min="1" max="50" name="itemLimit" value="${esc(item.itemLimit ?? 12)}"></div>` : '';
     const videoFields = name === 'videos' ? `<div class="field full"><label>Seção do vídeo *</label><input class="a-input" id="videoSectionSearch" name="sectionSearch" list="createdSectionsList" required autocomplete="off" value="${esc(currentSection?.title || currentSection?.category || '')}" placeholder="Digite ou selecione uma seção já criada"><input type="hidden" id="videoSectionId" name="sectionId" value="${esc(currentSection?.id || item.sectionId || '')}"><datalist id="createdSectionsList">${sectionOptions}</datalist><small>Digite o nome para filtrar. O vídeo será vinculado ao ID da seção, mesmo que ela seja renomeada depois.</small></div><div class="field full"><label>URL do vídeo</label><input class="a-input" name="videoUrl" value="${esc(item.videoUrl || item.contentUrl || item.link || '')}" placeholder="https://youtube.com/..."></div>` : '';
     const featuredFields = name === 'featured' ? `<div class="field full"><label>Selecionar vídeo já adicionado *</label><select class="a-select" name="videoId" id="featuredVideoSelect" required><option value="">Escolha um vídeo cadastrado</option>${videoOptions}</select><small>O destaque usará automaticamente o título, descrição, thumbnail e link desse vídeo. Você ainda pode ajustar os campos abaixo.</small></div>` : '';
-    if (name === 'gallery') return `<div class="form-grid"><div class="field"><label>Nome do avatar *</label><input class="a-input" name="title" required maxlength="80" value="${esc(item.title || '')}" placeholder="Ex.: Billie ao vivo"></div><div class="field"><label>Categoria *</label><input class="a-input" name="category" required maxlength="60" value="${esc(item.category || '')}" placeholder="Ex.: Tour Film"></div>${imageField('Link da imagem do avatar *', 'imageUrl', item.imageUrl || '')}<div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div><div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field full"><small>Use imagens quadradas. O sistema recorta automaticamente para o formato do avatar.</small></div></div>`;
+    if (name === 'gallery') {
+      const type = String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
+      return `<div class="form-grid"><div class="field"><label>Tipo de imagem *</label><select class="a-select" name="itemType"><option value="avatar" ${type === 'avatar' ? 'selected' : ''}>Avatar</option><option value="banner" ${type === 'banner' ? 'selected' : ''}>Banner de perfil</option></select></div><div class="field"><label>Nome da imagem *</label><input class="a-input" name="title" required maxlength="80" value="${esc(item.title || '')}" placeholder="Ex.: Billie ao vivo"></div><div class="field full"><label>Categoria *</label><input class="a-input" name="category" required maxlength="60" value="${esc(item.category || (type === 'banner' ? 'Banners de perfil' : ''))}" placeholder="Ex.: Tour Film"></div>${imageField(type === 'banner' ? 'Link da imagem do banner *' : 'Link da imagem do avatar *', 'imageUrl', item.imageUrl || '')}<div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div><div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field full"><small>Avatares funcionam melhor em formato quadrado. Para banners, prefira imagens horizontais em 16:6 ou 16:9.</small></div></div>`;
+    }
     return `<div class="form-grid">${featuredFields}<div class="field full"><label>Título *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}"></div><div class="field"><label>Tipo</label><input class="a-input" name="type" value="${esc(item.type || name)}"></div><div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>${sectionFields}${videoFields}<div class="field full"><label>Descrição</label><textarea class="a-textarea" rows="4" maxlength="1000" name="description">${esc(item.description || '')}</textarea></div>${showMedia ? `${imageField('Imagem / thumbnail', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}${name === 'videos' ? '' : imageField('Banner', 'bannerUrl', item.bannerUrl || '')}${name === 'featured' ? imageField('Logo do conteúdo', 'logoUrl', item.logoUrl || '') : ''}${name === 'videos' ? '' : `<div class="field full"><label>Link do conteúdo</label><input class="a-input" name="contentUrl" value="${esc(item.contentUrl || item.link || '')}" placeholder="https://... ou /pagina"></div>`}` : ''}<div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field"><label>Duração</label><input class="a-input" name="duration" value="${esc(item.duration || item.videoDuration || item.runtime || '')}" placeholder="Ex.: 24 min ou 1h 42min"></div><div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}"></div></div>`;
   }
 
@@ -533,7 +543,8 @@
     });
   }
 
-  async function openEditor(name, item = null) {
+  async function openEditor(name, item = null, defaults = {}) {
+    const draft = item ? item : { ...defaults };
     if (name === 'featured' && !item) {
       const active = (await db.list('featured')).filter(entry => entry.active !== false);
       if (active.length >= 6) toast('O limite de 6 destaques ativos foi atingido.', 'err');
@@ -555,7 +566,7 @@
 
     const wrap = document.createElement('div');
     wrap.className = 'modal-backdrop';
-    wrap.innerHTML = `<div class="modal"><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><form id="editorForm">${editorFields(name, item || {}, context)}<div class="modal-actions"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">Salvar</button></div></form></div>`;
+    wrap.innerHTML = `<div class="modal"><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><form id="editorForm">${editorFields(name, draft, context)}<div class="modal-actions"><button type="button" class="a-btn" id="cancelModal">Cancelar</button><button class="a-btn primary" type="submit">Salvar</button></div></form></div>`;
     document.body.append(wrap);
     $('#cancelModal').onclick = () => wrap.remove();
     wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
@@ -617,6 +628,7 @@
             ? data.category.trim()
             : data.category.trim().toLowerCase().replace(/\s+/g, '-');
         }
+        if (name === 'gallery') data.itemType = data.itemType === 'banner' ? 'banner' : 'avatar';
         if (name === 'videos') {
           const selected = context.sections.find(section => String(section.id) === String(data.sectionId || ''));
           if (!selected) throw new Error('Selecione uma seção existente.');

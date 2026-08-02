@@ -442,3 +442,13 @@ body.admin-mode .admin-topbar{
   top:0;
   transform:translateZ(0);
 }
+
+
+/* Galeria: avatares e banners de perfil */
+.gallery-title-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.gallery-admin-toolbar{grid-template-columns:minmax(220px,1fr) minmax(160px,220px) minmax(150px,200px)!important}
+.gallery-category-panel.banner-panel{border-color:rgba(120,173,255,.2)}
+.gallery-avatar-grid.gallery-banner-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.gallery-avatar-card.is-banner .gallery-avatar-image{aspect-ratio:16/6;border-radius:14px}
+.gallery-avatar-card.is-banner .gallery-avatar-image img{border-radius:14px;object-fit:cover}
+@media(max-width:760px){.gallery-title-actions{width:100%;justify-content:flex-start}.gallery-admin-toolbar{grid-template-columns:1fr!important}.gallery-avatar-grid.gallery-banner-grid{grid-template-columns:1fr}}

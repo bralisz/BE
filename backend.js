@@ -305,6 +305,8 @@
       bio: row.bio || '',
       avatarUrl: row.avatar_url || '',
       avatarId: row.avatar_id || '',
+      bannerUrl: row.banner_url || '',
+      bannerId: row.banner_id || '',
       role: row.role || 'member',
       profileComplete: row.profile_complete !== false,
       createdAt: row.created_at || '',
@@ -317,7 +319,7 @@
     const row = { id };
     const mappings = {
       email: 'email', displayName: 'display_name', username: 'username', bio: 'bio',
-      avatarUrl: 'avatar_url', avatarId: 'avatar_id', role: 'role',
+      avatarUrl: 'avatar_url', avatarId: 'avatar_id', bannerUrl: 'banner_url', bannerId: 'banner_id', role: 'role',
       profileComplete: 'profile_complete', createdAt: 'created_at',
       updatedAt: 'updated_at', lastLoginAt: 'last_login_at'
     };
@@ -593,6 +595,8 @@
         bio: existing?.bio || '',
         avatarUrl: existing?.avatarUrl || user.photoURL || '',
         avatarId: existing?.avatarId || '',
+        bannerUrl: existing?.bannerUrl || '',
+        bannerId: existing?.bannerId || '',
         role: String(user.email || '').toLowerCase() === ADMIN_EMAIL ? 'admin' : (existing?.role || 'member'),
         profileComplete: true,
         lastLoginAt: now(),
@@ -612,6 +616,8 @@
         if (Object.prototype.hasOwnProperty.call(payload, 'bio')) updateRow.bio = String(payload.bio || '');
         if (Object.prototype.hasOwnProperty.call(payload, 'avatarUrl')) updateRow.avatar_url = String(payload.avatarUrl || '');
         if (Object.prototype.hasOwnProperty.call(payload, 'avatarId')) updateRow.avatar_id = String(payload.avatarId || '');
+        if (Object.prototype.hasOwnProperty.call(payload, 'bannerUrl')) updateRow.banner_url = String(payload.bannerUrl || '');
+        if (Object.prototype.hasOwnProperty.call(payload, 'bannerId')) updateRow.banner_id = String(payload.bannerId || '');
         if (Object.prototype.hasOwnProperty.call(payload, 'profileComplete')) updateRow.profile_complete = payload.profileComplete !== false;
 
         const { data: rows, error } = await supabaseClient
@@ -667,6 +673,21 @@
         }));
       } catch (_) {}
 
+      return savedProfile;
+    },
+    async setBanner(userId, bannerUrl, bannerId) {
+      const normalizedUrl = String(bannerUrl || '').trim();
+      const normalizedId = String(bannerId || '').trim();
+      const savedProfile = await this.update(userId, { bannerUrl: normalizedUrl, bannerId: normalizedId });
+      if (currentUser?.uid === userId) {
+        currentUser = { ...currentUser, profile: savedProfile };
+        notify();
+      }
+      try {
+        window.dispatchEvent(new CustomEvent('be:profile-banner-changed', {
+          detail: { userId, bannerUrl: normalizedUrl, bannerId: normalizedId, profile: savedProfile }
+        }));
+      } catch (_) {}
       return savedProfile;
     }
   };
@@ -731,7 +752,7 @@
       database.accounts[normalizedEmail] = account;
       localCollection(database, 'users')[userId] = {
         id: userId, uid: userId, email: normalizedEmail,
-        displayName: account.displayName, username: normalizedHandle, bio: '', avatarUrl: '', avatarId: '',
+        displayName: account.displayName, username: normalizedHandle, bio: '', avatarUrl: '', avatarId: '', bannerUrl: '', bannerId: '',
         profileComplete: true, role: account.role, createdAt: now(), updatedAt: now(), lastLoginAt: now()
       };
       saveLocalDatabase(database);
@@ -772,6 +793,23 @@
     },
     async signInWithDiscord() {
       throw backendError('backend/not-configured', 'Conecte o projeto ao Supabase para usar o login com Discord.');
+    },
+    async connectDiscord() {
+      throw backendError('backend/not-configured', 'A conexão com Discord requer o Supabase configurado.');
+    },
+    async deleteAccount() {
+      if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para continuar.');
+      const database = loadLocalDatabase();
+      const email = String(currentUser.email || '').toLowerCase();
+      const userId = currentUser.uid;
+      if (email) delete database.accounts[email];
+      delete localCollection(database, 'users')[userId];
+      saveLocalDatabase(database);
+      currentUser = null;
+      clearLocalSession();
+      localStorage.removeItem('beAuthExpected');
+      localStorage.removeItem('beSessionUid');
+      notify();
     },
     async localAdminExists(email = ADMIN_EMAIL) {
       const database = loadLocalDatabase();
@@ -918,6 +956,29 @@
       });
       if (error) throw mapAuthError(error);
       return result;
+    },
+    async connectDiscord() {
+      if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para conectar o Discord.');
+      if (typeof supabaseClient.auth.linkIdentity !== 'function') throw backendError('auth/link-not-supported', 'A conexão de identidades não está disponível nesta versão do Supabase.');
+      sessionStorage.setItem('beOAuthDestination', 'home');
+      localStorage.setItem('beAuthExpected', '1');
+      const redirectTo = oauthRedirectUrl('discord-link');
+      const { data: result, error } = await supabaseClient.auth.linkIdentity({
+        provider: 'discord',
+        options: { redirectTo }
+      });
+      if (error) throw mapAuthError(error);
+      return result;
+    },
+    async deleteAccount() {
+      if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para continuar.');
+      const { error } = await supabaseClient.rpc('delete_my_account');
+      if (error) throw mapAuthError(error);
+      try { await supabaseClient.auth.signOut(); } catch (_) {}
+      currentUser = null;
+      localStorage.removeItem('beAuthExpected');
+      localStorage.removeItem('beSessionUid');
+      notify();
     },
     async localAdminExists() { return false; },
     async setupLocalAdmin() { throw backendError('backend/wrong-mode', 'O acesso local não é usado quando o Supabase está conectado.'); }

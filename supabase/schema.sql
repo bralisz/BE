@@ -11,12 +11,17 @@ create table if not exists public.profiles (
   bio text not null default '',
   avatar_url text not null default '',
   avatar_id text not null default '',
+  banner_url text not null default '',
+  banner_id text not null default '',
   role text not null default 'member' check (role in ('member', 'admin')),
   profile_complete boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   last_login_at timestamptz
 );
+
+alter table public.profiles add column if not exists banner_url text not null default '';
+alter table public.profiles add column if not exists banner_id text not null default '';
 
 create table if not exists public.content_items (
   id uuid primary key default gen_random_uuid(),
@@ -384,6 +389,30 @@ with check (public.is_admin());
 
 grant select on public.content_items, public.site_settings to anon, authenticated;
 grant insert, update, delete on public.content_items, public.site_settings to authenticated;
+
+-- Permite que o usuário autenticado exclua somente a própria conta.
+-- A remoção em auth.users apaga o perfil automaticamente por ON DELETE CASCADE.
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'Usuário não autenticado';
+  end if;
+
+  delete from auth.users where id = v_uid;
+end;
+$$;
+
+alter function public.delete_my_account() owner to postgres;
+revoke all on function public.delete_my_account() from public;
+grant execute on function public.delete_my_account() to authenticated;
+
 grant select, insert, update on public.profiles to authenticated;
 grant select, insert on public.admin_logs to authenticated;
 
