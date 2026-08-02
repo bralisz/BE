@@ -1,8 +1,0 @@
-ATUALIZAÇÃO — DESTAQUES E THUMBNAIL DE FILMES/SÉRIES
-
-- O formulário de adicionar/editar Destaques agora mostra apenas o seletor de conteúdo e os botões de ação.
-- Os campos visuais duplicados abaixo do seletor foram removidos.
-- O destaque passa a ler título, descrição, logo, duração, ano, link e imagens diretamente do conteúdo selecionado.
-- Filmes e séries agora usam a imagem/thumbnail como fundo no destaque e na página de detalhes.
-- O campo Banner foi removido do cadastro de filmes e séries; a thumbnail também é salva como fundo para compatibilidade.
-- Versão dos arquivos estáticos atualizada para evitar cache antigo no navegador.
