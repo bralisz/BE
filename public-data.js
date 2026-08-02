@@ -13,6 +13,7 @@
       await renderVideoCatalog();
       setupHomeNavigation();
       setupDetailControls();
+      await openContentDetailFromRoute();
     } catch (error) {
       console.warn('Conteúdo dinâmico indisponível:', error.message);
     }
@@ -284,14 +285,15 @@
     const banner = video.bannerUrl || video.imageUrl || video.thumbnailUrl || '';
     const logo = video.logoUrl || '';
     const itemId = video.id || video.videoId || title;
-    return `<a class="video-card" href="${safeUrl(href)}" aria-label="${escapeHtml(title)}"
+    const routeHref = detailRouteHash(itemId);
+    return `<a class="video-card" href="${safeUrl(routeHref)}" aria-label="${escapeHtml(title)}"
       data-item-id="${escapeHtml(String(itemId))}"
       data-open-detail="true"
       data-title="${escapeHtml(title)}"
       data-description="${escapeHtml(description)}"
       data-year="${escapeHtml(year)}"
       data-duration="${escapeHtml(duration)}"
-      data-content-url="${safeUrl(href)}"
+      data-content-url="${safeUrl(contentHref)}"
       data-image-url="${safeUrl(image)}"
       data-banner-url="${safeUrl(banner)}"
       data-logo-url="${safeUrl(logo)}"
@@ -302,6 +304,63 @@
     </a>`;
   }
 
+  function detailRouteId() {
+    const match = String(location.hash || '').match(/^#\/video\/([^/?#]+)/i);
+    if (!match) return '';
+    try { return decodeURIComponent(match[1]); } catch (_) { return match[1]; }
+  }
+
+  function detailRouteHash(itemId) {
+    return '#/video/' + encodeURIComponent(String(itemId || '').trim());
+  }
+
+  function setDetailRoute(itemId, replace = false) {
+    if (!itemId) return;
+    const hash = detailRouteHash(itemId);
+    if (location.hash === hash) return;
+    const url = location.pathname + (location.search || '') + hash;
+    if (replace) history.replaceState({ beRoute: 'video', itemId: String(itemId) }, '', url);
+    else history.pushState({ beRoute: 'video', itemId: String(itemId) }, '', url);
+  }
+
+  async function openContentDetailFromRoute() {
+    const itemId = detailRouteId();
+    if (!itemId) {
+      if (document.body.classList.contains('detail-page-active')) closeContentDetail(false, false);
+      return false;
+    }
+
+    const cards = Array.from(document.querySelectorAll('[data-open-detail="true"]'));
+    const card = cards.find(item => String(item.dataset.itemId || '') === itemId);
+    if (card) {
+      openContentDetail(cardDataWithSection(card), { updateRoute: false, instant: true });
+      return true;
+    }
+
+    if (!window.beBackend) return false;
+    for (const collection of ['videos', 'movies', 'contents']) {
+      try {
+        const item = await beBackend.data.get(collection, itemId);
+        if (!item || item.active === false) continue;
+        openContentDetail({
+          itemId: item.id || itemId,
+          title: item.title || 'Conteúdo',
+          description: item.description || '',
+          year: item.year || '',
+          duration: item.duration || item.videoDuration || item.runtime || '',
+          contentUrl: item.videoUrl || item.contentUrl || item.link || '#',
+          imageUrl: item.thumbnailUrl || item.imageUrl || item.bannerUrl || '',
+          bannerUrl: item.bannerUrl || item.imageUrl || item.thumbnailUrl || '',
+          logoUrl: item.logoUrl || '',
+          category: item.category || item.type || '',
+          collection
+        }, { updateRoute: false, instant: true });
+        return true;
+      } catch (_) {}
+    }
+    return false;
+  }
+
   function setupContentDetailInteractions(host) {
     if (!host) return;
     host.querySelectorAll('[data-open-detail="true"]').forEach(card => {
@@ -309,7 +368,7 @@
       card.dataset.detailBound = 'true';
       card.addEventListener('click', event => {
         event.preventDefault();
-        openContentDetail(cardDataWithSection(card));
+        openContentDetail(cardDataWithSection(card), { updateRoute: true });
       });
     });
   }
@@ -341,14 +400,15 @@
   function recommendationCard(data) {
     const image = data.imageUrl || data.bannerUrl || '';
     const title = data.title || 'Conteúdo';
-    const href = data.contentUrl || '#';
-    return `<a class="detail-reco-card" href="${safeUrl(href)}" data-open-detail="true"
+    const contentHref = data.contentUrl || '#';
+    const routeHref = detailRouteHash(data.itemId || title);
+    return `<a class="detail-reco-card" href="${safeUrl(routeHref)}" data-open-detail="true"
       data-item-id="${escapeHtml(String(data.itemId || title))}"
       data-title="${escapeHtml(title)}"
       data-description="${escapeHtml(data.description || '')}"
       data-year="${escapeHtml(data.year || '')}"
       data-duration="${escapeHtml(data.duration || '')}"
-      data-content-url="${safeUrl(href)}"
+      data-content-url="${safeUrl(contentHref)}"
       data-image-url="${safeUrl(image)}"
       data-banner-url="${safeUrl(data.bannerUrl || image)}"
       data-logo-url="${safeUrl(data.logoUrl || '')}"
@@ -364,36 +424,60 @@
 
   function renderDetailRecommendations(current) {
     const panel = document.getElementById('detailRecommendations');
-    const recommendationRail = document.getElementById('detailRecommendationRail');
     const moreRail = document.getElementById('detailMoreRail');
+    const recommendationRail = document.getElementById('detailRecommendationRail');
+    const sameSectionRail = document.getElementById('detailSameSectionRail');
     const catalog = document.getElementById('dynamicSections');
-    if (!panel || !recommendationRail || !moreRail || !catalog) return;
+    if (!panel || !moreRail || !recommendationRail || !sameSectionRail || !catalog) return;
 
     const currentId = String(current.itemId || current.title || '');
     const sourceKey = String(current.sourceSectionKey || '');
     const category = String(current.category || '');
     const collection = String(current.collection || '');
-    const all = Array.from(catalog.querySelectorAll('.video-card')).map(cardDataWithSection)
-      .filter(item => String(item.itemId || item.title || '') !== currentId);
+    const uniqueById = items => items.filter((item, index, array) => {
+      const id = String(item.itemId || item.title || '');
+      return array.findIndex(other => String(other.itemId || other.title || '') === id) === index;
+    });
 
-    const randomItems = shuffleItems(all).slice(0, 10);
-    const sameSection = sourceKey ? all.filter(item => item.sourceSectionKey === sourceKey) : [];
+    const all = uniqueById(Array.from(catalog.querySelectorAll('.video-card'))
+      .map(cardDataWithSection)
+      .filter(item => String(item.itemId || item.title || '') !== currentId));
+
+    const sameSection = sourceKey
+      ? all.filter(item => String(item.sourceSectionKey || '') === sourceKey)
+      : [];
     const similarCategory = all.filter(item => {
-      if (sameSection.some(match => String(match.itemId) === String(item.itemId))) return false;
-      const categoryMatch = category && item.category === category;
-      const collectionMatch = collection && item.collection === collection;
+      const categoryMatch = category && String(item.category || '') === category;
+      const collectionMatch = collection && String(item.collection || '') === collection;
       return categoryMatch || collectionMatch;
     });
-    const moreItems = [...shuffleItems(sameSection), ...shuffleItems(similarCategory)]
-      .filter((item, index, array) => array.findIndex(other => String(other.itemId) === String(item.itemId)) === index)
-      .slice(0, 10);
 
-    recommendationRail.innerHTML = randomItems.length
-      ? randomItems.map(recommendationCard).join('')
-      : '<p class="detail-reco-empty">Nenhum outro vídeo disponível.</p>';
+    // 1ª seção: 7 conteúdos relacionados por categoria, coleção ou seção.
+    const moreItems = uniqueById([
+      ...shuffleItems(similarCategory),
+      ...shuffleItems(sameSection),
+      ...shuffleItems(all)
+    ]).slice(0, 7);
+
+    // 2ª seção: volta a exibir 10 recomendações aleatórias.
+    const randomItems = shuffleItems(all).slice(0, 10);
+
+    // 3ª seção: 5 vídeos da mesma seção; usa conteúdos semelhantes como reserva.
+    const sameSectionItems = uniqueById([
+      ...shuffleItems(sameSection),
+      ...shuffleItems(similarCategory),
+      ...shuffleItems(all)
+    ]).slice(0, 5);
+
     moreRail.innerHTML = moreItems.length
       ? moreItems.map(recommendationCard).join('')
       : '<p class="detail-reco-empty">Nenhum vídeo semelhante disponível.</p>';
+    recommendationRail.innerHTML = randomItems.length
+      ? randomItems.map(recommendationCard).join('')
+      : '<p class="detail-reco-empty">Nenhum outro vídeo disponível.</p>';
+    sameSectionRail.innerHTML = sameSectionItems.length
+      ? sameSectionItems.map(recommendationCard).join('')
+      : '<p class="detail-reco-empty">Nenhum vídeo disponível nesta seção.</p>';
 
     setupContentDetailInteractions(panel);
     panel.hidden = false;
@@ -412,7 +496,7 @@
     }
   }
 
-  function openContentDetail(data) {
+  function openContentDetail(data, options = {}) {
     const section = document.getElementById('contentDetailSection');
     const featuredSection = document.getElementById('featuredSection');
     const bg = document.getElementById('contentDetailBg');
@@ -431,6 +515,7 @@
     const bannerUrl = data.bannerUrl || data.imageUrl || '';
     const logoUrl = data.logoUrl || '';
     const itemId = String(data.itemId || title);
+    if (options.updateRoute !== false) setDetailRoute(itemId, Boolean(options.replaceRoute));
 
     bg.innerHTML = bannerUrl && bannerUrl !== '#'
       ? `<img src="${safeUrl(bannerUrl)}" alt="${escapeHtml(title)}" loading="eager">`
@@ -469,14 +554,17 @@
     if (featuredSection) featuredSection.hidden = true;
     document.body.classList.add('detail-page-active');
     section.hidden = false;
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    section.scrollIntoView({ behavior: options.instant ? 'auto' : 'smooth', block: 'start' });
   }
 
-  function closeContentDetail(scrollHome = false) {
+  function closeContentDetail(scrollHome = false, updateRoute = true) {
     const section = document.getElementById('contentDetailSection');
     const featuredSection = document.getElementById('featuredSection');
     if (section) section.hidden = true;
     document.body.classList.remove('detail-page-active');
+    if (updateRoute && detailRouteId()) {
+      history.pushState({ beRoute: 'home' }, '', location.pathname + (location.search || '') + '#home');
+    }
     const recommendations = document.getElementById('detailRecommendations');
     if (recommendations) recommendations.hidden = true;
     if (featuredSection && document.getElementById('featured')?.children.length) {
@@ -579,6 +667,16 @@
       });
     });
   }
+
+  window.addEventListener('hashchange', () => {
+    if (detailRouteId()) openContentDetailFromRoute();
+    else if (document.body.classList.contains('detail-page-active')) closeContentDetail(false, false);
+  });
+  window.addEventListener('popstate', () => {
+    if (detailRouteId()) openContentDetailFromRoute();
+    else if (document.body.classList.contains('detail-page-active')) closeContentDetail(false, false);
+  });
+  window.addEventListener('be:open-video-route', () => openContentDetailFromRoute());
 
   function setupHomeNavigation() {
     const topbar = document.getElementById('topbar');

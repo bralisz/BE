@@ -1,0 +1,7 @@
+ATUALIZAÇÃO — RECOMENDAÇÕES NOS DETALHES
+
+- Agora são exibidas 3 seções abaixo dos detalhes do vídeo.
+- 1ª seção: Mais desse conteúdo — até 7 vídeos.
+- 2ª seção: Recomendação — até 10 vídeos aleatórios.
+- 3ª seção: Da mesma seção — até 5 vídeos.
+- Corrigido também o link interno dos cards de recomendação.

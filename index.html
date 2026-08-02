@@ -2342,6 +2342,57 @@
     text-shadow:0 3px 16px rgba(0,0,0,.42);
   }
 
+  body.detail-page-active .video-catalog{display:none!important}
+  body.detail-page-active footer{display:none!important}
+  .detail-recommendations{
+    width:100%;
+    padding:34px clamp(24px,4vw,68px) 72px;
+    background:#050607;
+  }
+  .detail-recommendations[hidden]{display:none!important}
+  .detail-reco-group + .detail-reco-group{margin-top:42px}
+  .detail-reco-group h2{
+    margin:0 0 15px;
+    color:#fff;
+    font:750 clamp(20px,2vw,27px)/1.1 var(--font-display);
+    letter-spacing:-.025em;
+  }
+  .detail-reco-rail{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:15px;
+  }
+  .detail-reco-card{
+    min-width:0;
+    color:#fff;
+    text-decoration:none;
+    transition:transform .22s ease,opacity .22s ease;
+  }
+  .detail-reco-card:hover{transform:translateY(-3px)}
+  .detail-reco-thumb{
+    display:block;
+    width:100%;
+    aspect-ratio:16/9;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:15px;
+    background:#111;
+    box-shadow:0 12px 28px rgba(0,0,0,.24);
+  }
+  .detail-reco-thumb img{width:100%;height:100%;display:block;object-fit:cover}
+  .detail-reco-name{
+    display:block;
+    margin-top:10px;
+    overflow:hidden;
+    color:rgba(255,255,255,.88);
+    font-size:14px;
+    font-weight:650;
+    line-height:1.35;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .detail-reco-empty{grid-column:1/-1;margin:0;color:rgba(255,255,255,.55);font-size:14px}
+
   @media(max-width:760px){
     .topbar-wrap{top:10px;padding:0 10px}
     .home-topbar{width:max-content;max-width:calc(100vw - 76px);height:56px;padding:5px;gap:5px}
@@ -2375,6 +2426,10 @@
     .detail-actions{gap:10px}
     .detail-play{height:43px;padding:0 18px;font-size:14px}
     .detail-list{width:43px;min-width:43px;height:43px;padding:0}
+    .detail-recommendations{padding:28px 18px 54px}
+    .detail-reco-rail{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+    .detail-reco-rail::-webkit-scrollbar{display:none}
+    .detail-reco-card{flex:0 0 min(78vw,310px)}
     .video-catalog{
       width:100%;
       margin-top:-20px;
@@ -3031,10 +3086,6 @@
 
   <section class="content-detail-wrap" id="contentDetailSection" hidden aria-label="Detalhes do conteúdo">
     <div class="content-detail" id="contentDetail">
-      <button class="detail-back" id="detailBackButton" type="button" aria-label="Voltar para a home">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-        Voltar
-      </button>
       <div class="detail-bg" id="contentDetailBg"></div>
       <div class="detail-inner">
         <div class="detail-logo" id="contentDetailLogo">Selecione um vídeo</div>
@@ -3050,6 +3101,21 @@
         </div>
         <p class="detail-desc" id="contentDetailDesc"></p>
       </div>
+    </div>
+  </section>
+
+  <section class="detail-recommendations" id="detailRecommendations" hidden aria-label="Recomendações do conteúdo">
+    <div class="detail-reco-group">
+      <h2>Mais desse conteúdo</h2>
+      <div class="detail-reco-rail" id="detailMoreRail"></div>
+    </div>
+    <div class="detail-reco-group">
+      <h2>Recomendação</h2>
+      <div class="detail-reco-rail" id="detailRecommendationRail"></div>
+    </div>
+    <div class="detail-reco-group">
+      <h2>Da mesma seção</h2>
+      <div class="detail-reco-rail" id="detailSameSectionRail"></div>
     </div>
   </section>
 
@@ -3328,12 +3394,18 @@
       return String(date.getFullYear()||new Date().getFullYear());
     }
     function isConfigRoute(){return location.hash.toLowerCase()==='#config'||location.hash.toLowerCase()==='#/config';}
+    function isProfileRoute(){return /^#\/perfil\/@[^/?#]+/i.test(location.hash);}
+    function profileRouteHash(){
+      var handle=beBackend.normalizeUsername((currentProfile&&currentProfile.username)||'perfil');
+      return '#/perfil/@'+encodeURIComponent(handle||'perfil');
+    }
     function replacePublicHash(hash){history.replaceState(null,'',location.pathname+(location.search||'')+hash);}
-    function closePublicPages(){
+    function pushPublicHash(hash){if(location.hash!==hash)history.pushState(null,'',location.pathname+(location.search||'')+hash);}
+    function closePublicPages(updateRoute){
       document.body.classList.remove('profile-page-active','settings-page-active');
       profilePage.hidden=true;
       settingsPage.hidden=true;
-      if(isConfigRoute())replacePublicHash('#home');
+      if(updateRoute!==false&&(isConfigRoute()||isProfileRoute()))pushPublicHash('#home');
     }
     function renderProfilePage(){
       var user=auth.currentUser;
@@ -3442,7 +3514,7 @@
         });});
       }catch(error){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Não foi possível carregar os banners.</div>';console.warn(error);}
     }
-    function openPublicProfile(){toggleDropdown(false);if(isConfigRoute())replacePublicHash('#home');renderProfilePage();settingsPage.hidden=true;profilePage.hidden=false;document.body.classList.remove('settings-page-active');document.body.classList.add('profile-page-active');window.scrollTo({top:0,behavior:'auto'});}
+    function openPublicProfile(updateRoute){toggleDropdown(false);renderProfilePage();settingsPage.hidden=true;profilePage.hidden=false;document.body.classList.remove('settings-page-active','login-mode');document.body.classList.add('profile-page-active');var route=profileRouteHash();if(updateRoute!==false)pushPublicHash(route);else if(isProfileRoute()&&location.hash!==route)replacePublicHash(route);window.scrollTo({top:0,behavior:'auto'});}
     function openSettingsPage(updateRoute){toggleDropdown(false);renderSettingsPage();profilePage.hidden=true;settingsPage.hidden=false;document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');if(updateRoute!==false&&!isConfigRoute())location.hash='#config';window.scrollTo({top:0,behavior:'auto'});}
 
     function renderProfile(){
@@ -3498,14 +3570,14 @@
       }finally{submit.disabled=false;}
     });
 
-    function openProfile(){openPublicProfile();}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});document.getElementById('settingsClosePage').addEventListener('click',openPublicProfile);document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',closePublicPages);});window.addEventListener('be:open-config',function(){openSettingsPage(false);});
+    function openProfile(){openPublicProfile(true);}
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});
     auth.onChange(async function(currentUser){
       dashboard.hidden=true;
       var isAdmin=false;
       if(currentUser){
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
-        username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=currentProfile.avatarUrl||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
+        username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=currentProfile.avatarUrl||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false);},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
       }else{username.textContent='Visitante';currentProfile={};selectedAvatar=localStorage.getItem(avatarCacheKey(null))||'';setMainAvatar(selectedAvatar,null);authAction.textContent='Entrar';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
       dashboard.hidden=!isAdmin;
     });
@@ -3630,8 +3702,10 @@
   function authCallbackError(){var p=callbackParams();return p.query.get('error_description')||p.hash.get('error_description')||p.query.get('error')||p.hash.get('error')||'';}
   function replaceRoute(hash){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});url.hash=hash;history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
   function isConfigRoute(){var hash=location.hash.toLowerCase();return hash==='#config'||hash==='#/config';}
+  function isProfileRoute(){return /^#\/perfil\/@[^/?#]+/i.test(location.hash);}
+  function isVideoRoute(){return /^#\/video\/[^/?#]+/i.test(location.hash);}
   function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active');document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')replaceRoute('#login');}
-  function enterHome(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode');sessionStorage.removeItem('beOAuthDestination');replaceRoute('#home');window.scrollTo(0,0);}
+  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('#home');window.scrollTo(0,0);}
   function enterConfig(){document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('#config');window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
@@ -3706,7 +3780,10 @@
     localStorage.setItem('beSessionUid',user.uid);
     try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
     setStatus('');
-    if(isConfigRoute())enterConfig();else enterHome();
+    if(isConfigRoute())enterConfig();
+    else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}
+    else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}
+    else enterHome();
     return user;
   }
 
@@ -3804,7 +3881,14 @@
       try{await finishPublicLogin(user);}catch(error){showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
 
-    window.addEventListener('hashchange',function(){if(location.hash.startsWith('#/admin'))return;if(!authReady)return;if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}if(auth.currentUser)enterHome();else showLogin();});
+    window.addEventListener('hashchange',function(){
+      if(location.hash.startsWith('#/admin'))return;
+      if(!authReady)return;
+      if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}
+      if(isProfileRoute()){if(auth.currentUser){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else showLogin();return;}
+      if(isVideoRoute()){if(auth.currentUser){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else showLogin();return;}
+      if(auth.currentUser)enterHome();else showLogin();
+    });
   }
 
   async function startAuthentication(){

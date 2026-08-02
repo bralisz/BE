@@ -1,0 +1,8 @@
+ATUALIZAÇÃO — ROTAS DE VÍDEO, PERFIL E BANNER
+
+- Corrigido o salvamento do banner do perfil com compatibilidade para instalações do Supabase que ainda não executaram a migração banner_url/banner_id.
+- Removido o botão "Voltar" da tela de detalhes.
+- Cada vídeo agora possui uma rota própria no navegador: #/video/ID.
+- A rota do perfil agora usa o formato: #/perfil/@usuario.
+- A seção "Recomendação" nos detalhes foi limitada a 3 vídeos aleatórios.
+- "Mais desse conteúdo" continua priorizando vídeos da mesma seção e conteúdos semelhantes.

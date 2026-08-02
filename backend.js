@@ -524,6 +524,34 @@
 
   const data = MODE === 'supabase' ? supabaseData : localData;
 
+  function profileBannerCacheKey(userId) {
+    return 'beProfileBanner:' + String(userId || 'guest');
+  }
+
+  function readProfileBannerCache(userId) {
+    try {
+      const raw = localStorage.getItem(profileBannerCacheKey(userId));
+      if (!raw) return { bannerUrl: '', bannerId: '' };
+      const parsed = JSON.parse(raw);
+      return {
+        bannerUrl: String(parsed?.bannerUrl || ''),
+        bannerId: String(parsed?.bannerId || '')
+      };
+    } catch (_) {
+      return { bannerUrl: '', bannerId: '' };
+    }
+  }
+
+  function writeProfileBannerCache(userId, bannerUrl, bannerId) {
+    try {
+      localStorage.setItem(profileBannerCacheKey(userId), JSON.stringify({
+        bannerUrl: String(bannerUrl || ''),
+        bannerId: String(bannerId || ''),
+        updatedAt: now()
+      }));
+    } catch (_) {}
+  }
+
   const profiles = {
     async get(userId) {
       return data.get('users', userId);
@@ -580,8 +608,14 @@
         const row = Array.isArray(rows) ? rows[0] : rows;
         if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
         const profile = profileFromRow(row);
-        if (currentUser?.uid === user.uid && profile.avatarUrl) {
-          currentUser = { ...currentUser, photoURL: profile.avatarUrl, profile };
+        const cachedBanner = readProfileBannerCache(user.uid);
+        const metadataBannerUrl = String(metadata.profile_banner_url || metadata.banner_url || '').trim();
+        const metadataBannerId = String(metadata.profile_banner_id || metadata.banner_id || '').trim();
+        profile.bannerUrl = metadataBannerUrl || profile.bannerUrl || cachedBanner.bannerUrl;
+        profile.bannerId = metadataBannerId || profile.bannerId || cachedBanner.bannerId;
+        if (profile.bannerUrl) writeProfileBannerCache(user.uid, profile.bannerUrl, profile.bannerId);
+        if (currentUser?.uid === user.uid) {
+          currentUser = { ...currentUser, photoURL: profile.avatarUrl || currentUser.photoURL, profile };
         }
         return profile;
       }
@@ -678,14 +712,62 @@
     async setBanner(userId, bannerUrl, bannerId) {
       const normalizedUrl = String(bannerUrl || '').trim();
       const normalizedId = String(bannerId || '').trim();
-      const savedProfile = await this.update(userId, { bannerUrl: normalizedUrl, bannerId: normalizedId });
+      const previousProfile = currentUser?.profile || {};
+      let savedProfile = null;
+      let databaseError = null;
+
+      try {
+        savedProfile = await this.update(userId, { bannerUrl: normalizedUrl, bannerId: normalizedId });
+      } catch (error) {
+        // Mantém o seletor funcionando mesmo quando a instalação ainda não
+        // executou a migração banner_url/banner_id no Supabase.
+        databaseError = error;
+        console.warn('Banner salvo por compatibilidade; atualize o schema do Supabase quando possível:', error?.message || error);
+      }
+
+      writeProfileBannerCache(userId, normalizedUrl, normalizedId);
+
+      if (MODE === 'supabase' && currentUser?.uid === userId) {
+        try {
+          const existingMetadata = currentUser.raw?.user_metadata || {};
+          const { data: authResult, error } = await supabaseClient.auth.updateUser({
+            data: {
+              ...existingMetadata,
+              profile_banner_url: normalizedUrl,
+              profile_banner_id: normalizedId
+            }
+          });
+          if (error) throw error;
+          currentUser = { ...normalizeUser(authResult?.user || currentUser.raw || currentUser), profile: savedProfile || previousProfile };
+        } catch (metadataError) {
+          console.warn('O banner ficou salvo neste navegador, mas não nos metadados da conta:', metadataError?.message || metadataError);
+        }
+      }
+
+      if (!savedProfile) {
+        savedProfile = {
+          ...previousProfile,
+          uid: userId,
+          id: userId,
+          bannerUrl: normalizedUrl,
+          bannerId: normalizedId,
+          updatedAt: now()
+        };
+      }
+
       if (currentUser?.uid === userId) {
         currentUser = { ...currentUser, profile: savedProfile };
         notify();
       }
       try {
         window.dispatchEvent(new CustomEvent('be:profile-banner-changed', {
-          detail: { userId, bannerUrl: normalizedUrl, bannerId: normalizedId, profile: savedProfile }
+          detail: {
+            userId,
+            bannerUrl: normalizedUrl,
+            bannerId: normalizedId,
+            profile: savedProfile,
+            compatibilityFallback: Boolean(databaseError)
+          }
         }));
       } catch (_) {}
       return savedProfile;
