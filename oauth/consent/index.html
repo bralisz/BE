@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Autorizar acesso — Eilish+</title>
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eff6ff;background:#030a14}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 0,rgba(37,99,235,.24),transparent 42%),linear-gradient(145deg,#020711,#07162b)}
+    .card{width:min(520px,100%);padding:30px;border-radius:26px;background:rgba(8,20,39,.92);border:1px solid rgba(125,185,255,.22);box-shadow:0 32px 90px rgba(0,0,0,.52);backdrop-filter:blur(18px)}
+    .logo{display:block;width:78px;max-height:66px;object-fit:contain;margin:0 auto 22px;filter:drop-shadow(0 8px 24px rgba(37,99,235,.35))}
+    h1{font-size:30px;line-height:1.1;letter-spacing:-.035em;text-align:center;margin:0}
+    .lead{color:rgba(239,246,255,.68);line-height:1.55;text-align:center;margin:12px 0 24px}
+    .details{display:grid;gap:14px;padding:18px;border-radius:17px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+    .row{display:grid;gap:5px}.label{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7db9ff}.value{font-size:14px;overflow-wrap:anywhere}
+    .scopes{display:grid;gap:8px;margin:0;padding:0;list-style:none}.scope{padding:10px 12px;border-radius:12px;background:rgba(37,99,235,.12);color:#dbeafe;font-size:13px}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+    button,.back{min-height:50px;border-radius:999px;font-weight:800;font-size:14px;cursor:pointer;text-decoration:none;display:grid;place-items:center}
+    button:disabled{opacity:.58;cursor:wait}.approve{border:0;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white}.deny,.back{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#eef6ff}
+    .status{min-height:21px;margin-top:16px;font-size:13px;line-height:1.45;text-align:center;color:#ffb4ae}.status.ok{color:#91e9b8}
+    [hidden]{display:none!important}
+    @media(max-width:520px){.card{padding:24px 18px;border-radius:22px}.actions{grid-template-columns:1fr}h1{font-size:26px}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img class="logo" src="/assets/logo.png" alt="Eilish+">
+    <section id="loading">
+      <h1>Carregando autorização…</h1>
+      <p class="lead">Estamos verificando sua conta e o aplicativo solicitante.</p>
+    </section>
+    <section id="consent" hidden>
+      <h1>Autorizar <span id="clientName">aplicativo</span>?</h1>
+      <p class="lead">Este aplicativo está pedindo permissão para usar sua conta Eilish+.</p>
+      <div class="details">
+        <div class="row"><span class="label">Aplicativo</span><span class="value" id="clientValue"></span></div>
+        <div class="row"><span class="label">Endereço de retorno</span><span class="value" id="redirectUri"></span></div>
+        <div class="row" id="scopeRow"><span class="label">Permissões solicitadas</span><ul class="scopes" id="scopeList"></ul></div>
+      </div>
+      <div class="actions">
+        <button class="deny" id="deny" type="button">Negar</button>
+        <button class="approve" id="approve" type="button">Autorizar</button>
+      </div>
+    </section>
+    <section id="error" hidden>
+      <h1>Não foi possível continuar</h1>
+      <p class="lead" id="errorText">A solicitação de autorização é inválida ou expirou.</p>
+      <a class="back" href="/">Voltar ao site</a>
+    </section>
+    <div class="status" id="status" aria-live="polite"></div>
+  </main>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="/supabase-config.js"></script>
+  <script>
+  (async function(){
+    'use strict';
+    var loading=document.getElementById('loading'),consent=document.getElementById('consent'),errorBox=document.getElementById('error'),errorText=document.getElementById('errorText'),status=document.getElementById('status');
+    function fail(message){loading.hidden=true;consent.hidden=true;errorBox.hidden=false;errorText.textContent=message||'A solicitação de autorização é inválida ou expirou.';}
+    function scopeLabel(scope){var labels={openid:'Confirmar sua identidade',email:'Ver seu endereço de e-mail',profile:'Ver seu perfil básico'};return labels[scope]||scope;}
+    try{
+      var config=window.BE_SUPABASE_CONFIG||{};
+      if(!window.supabase||!config.url||!config.publishableKey)throw new Error('A conexão com o Supabase não foi configurada.');
+      var authorizationId=new URLSearchParams(location.search).get('authorization_id');
+      if(!authorizationId)throw new Error('O parâmetro authorization_id não foi informado.');
+      var client=window.supabase.createClient(config.url,config.publishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      var sessionResult=await client.auth.getSession();
+      if(sessionResult.error)throw sessionResult.error;
+      if(!sessionResult.data||!sessionResult.data.session){
+        sessionStorage.setItem('beOauthReturn',location.href);
+        location.replace('/#login');
+        return;
+      }
+      if(!client.auth.oauth||typeof client.auth.oauth.getAuthorizationDetails!=='function')throw new Error('Atualize a biblioteca do Supabase para usar o servidor OAuth.');
+      var result=await client.auth.oauth.getAuthorizationDetails(authorizationId);
+      if(result.error)throw result.error;
+      var details=result.data;
+      if(!details)throw new Error('A solicitação de autorização não foi encontrada.');
+      if(!Object.prototype.hasOwnProperty.call(details,'authorization_id')&&details.redirect_url){location.replace(details.redirect_url);return;}
+      var name=(details.client&&details.client.name)||'aplicativo';
+      document.getElementById('clientName').textContent=name;
+      document.getElementById('clientValue').textContent=name;
+      document.getElementById('redirectUri').textContent=details.redirect_uri||'Não informado';
+      var scopes=String(details.scope||'').trim().split(/\s+/).filter(Boolean),scopeList=document.getElementById('scopeList');
+      if(scopes.length){scopes.forEach(function(scope){var item=document.createElement('li');item.className='scope';item.textContent=scopeLabel(scope);scopeList.appendChild(item);});}else{document.getElementById('scopeRow').hidden=true;}
+      loading.hidden=true;consent.hidden=false;
+      async function decide(approved){
+        var approve=document.getElementById('approve'),deny=document.getElementById('deny');approve.disabled=true;deny.disabled=true;status.className='status';status.textContent=approved?'Autorizando…':'Negando acesso…';
+        try{
+          var response=approved?await client.auth.oauth.approveAuthorization(authorizationId):await client.auth.oauth.denyAuthorization(authorizationId);
+          if(response.error)throw response.error;
+          if(!response.data||!response.data.redirect_url)throw new Error('O Supabase não retornou o endereço de redirecionamento.');
+          location.assign(response.data.redirect_url);
+        }catch(decisionError){status.textContent=decisionError.message||'Não foi possível concluir a decisão.';approve.disabled=false;deny.disabled=false;}
+      }
+      document.getElementById('approve').onclick=function(){decide(true)};
+      document.getElementById('deny').onclick=function(){decide(false)};
+    }catch(err){fail(err&&err.message);console.error('Falha no consentimento OAuth:',err);}
+  })();
+  </script>
+</body>
+</html>

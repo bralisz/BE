@@ -1,6 +1,3 @@
--- Execute este arquivo no SQL Editor do Supabase.
--- Depois, preencha y/supabase-config.js com a URL e a chave pública do projeto.
-
 create extension if not exists pgcrypto;
 create extension if not exists citext;
 
