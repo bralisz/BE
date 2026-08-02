@@ -2690,6 +2690,11 @@
   }
 
 
+
+  /* #config é uma página própria; a navegação principal continua centralizada. */
+  body.settings-page-active main{min-height:100vh;background:#040506}
+  body.settings-page-active .settings-page-shell{display:block}
+  .banner-option span{display:none!important}
 </style>
 
 <link rel="stylesheet" href="/admin/admin.css">
@@ -3290,7 +3295,7 @@
         var groups={};
         items.forEach(function(item){var cat=(item.category||'Outros').trim()||'Outros';(groups[cat]||(groups[cat]=[])).push(item);});
         avatarPickerBody.innerHTML='<div class="avatar-category-columns">'+Object.keys(groups).map(function(cat){
-          return '<section class="avatar-category"><h3>'+escapePublic(avatarCategoryTitle(cat))+'</h3><div class="avatar-rail-shell"><button class="avatar-rail-arrow prev" type="button" aria-label="Ver avatares anteriores" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button><div class="avatar-options">'+groups[cat].map(function(item){return '<button class="avatar-option '+(selectedAvatar===item.imageUrl?'selected':'')+'" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'" aria-label="'+escapePublic(item.title||'Avatar')+'"><img src="'+escapePublic(item.imageUrl)+'" alt="'+escapePublic(item.title||'Avatar')+'"><span>'+escapePublic(item.title||'Avatar')+'</span></button>';}).join('')+'</div><button class="avatar-rail-arrow next" type="button" aria-label="Ver mais avatares"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button></div></section>';
+          return '<section class="avatar-category"><h3>'+escapePublic(avatarCategoryTitle(cat))+'</h3><div class="avatar-rail-shell"><button class="avatar-rail-arrow prev" type="button" aria-label="Ver avatares anteriores" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button><div class="avatar-options">'+groups[cat].map(function(item){return '<button class="avatar-option '+(selectedAvatar===item.imageUrl?'selected':'')+'" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'" aria-label="Avatar da categoria '+escapePublic(cat)+'"><img src="'+escapePublic(item.imageUrl)+'" alt="Avatar da categoria '+escapePublic(cat)+'"></button>';}).join('')+'</div><button class="avatar-rail-arrow next" type="button" aria-label="Ver mais avatares"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button></div></section>';
         }).join('')+'</div>';
         setupAvatarRails();
         avatarPickerBody.querySelectorAll('[data-avatar-url]').forEach(function(button){button.addEventListener('click',async function(){
@@ -3322,10 +3327,13 @@
       var date=new Date(source);
       return String(date.getFullYear()||new Date().getFullYear());
     }
+    function isConfigRoute(){return location.hash.toLowerCase()==='#config'||location.hash.toLowerCase()==='#/config';}
+    function replacePublicHash(hash){history.replaceState(null,'',location.pathname+(location.search||'')+hash);}
     function closePublicPages(){
       document.body.classList.remove('profile-page-active','settings-page-active');
       profilePage.hidden=true;
       settingsPage.hidden=true;
+      if(isConfigRoute())replacePublicHash('#home');
     }
     function renderProfilePage(){
       var user=auth.currentUser;
@@ -3421,7 +3429,7 @@
         var groups={};
         items.forEach(function(item){var cat=(item.category||'Banners de perfil').trim()||'Banners de perfil';(groups[cat]||(groups[cat]=[])).push(item);});
         bannerPickerBody.innerHTML=Object.keys(groups).map(function(cat){
-          return '<section class="banner-group"><h3>'+escapePublic(cat)+'</h3><div class="banner-grid">'+groups[cat].map(function(item){return '<button class="banner-option '+((currentProfile.bannerUrl||'')===item.imageUrl?'selected':'')+'" type="button" data-banner-url="'+escapePublic(item.imageUrl)+'" data-banner-id="'+escapePublic(item.id)+'"><img src="'+escapePublic(item.imageUrl)+'" alt="'+escapePublic(item.title||'Banner')+'"><span>'+escapePublic(item.title||'Banner')+'</span></button>';}).join('')+'</div></section>';
+          return '<section class="banner-group"><h3>'+escapePublic(cat)+'</h3><div class="banner-grid">'+groups[cat].map(function(item){return '<button class="banner-option '+((currentProfile.bannerUrl||'')===item.imageUrl?'selected':'')+'" type="button" data-banner-url="'+escapePublic(item.imageUrl)+'" data-banner-id="'+escapePublic(item.id)+'" aria-label="Selecionar banner de perfil"><img src="'+escapePublic(item.imageUrl)+'" alt="Banner de perfil"></button>';}).join('')+'</div></section>';
         }).join('');
         bannerPickerBody.querySelectorAll('[data-banner-url]').forEach(function(button){button.addEventListener('click',async function(){
           button.disabled=true;
@@ -3434,8 +3442,8 @@
         });});
       }catch(error){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Não foi possível carregar os banners.</div>';console.warn(error);}
     }
-    function openPublicProfile(){toggleDropdown(false);renderProfilePage();settingsPage.hidden=true;profilePage.hidden=false;document.body.classList.remove('settings-page-active');document.body.classList.add('profile-page-active');window.scrollTo({top:0,behavior:'auto'});}
-    function openSettingsPage(){toggleDropdown(false);renderSettingsPage();profilePage.hidden=true;settingsPage.hidden=false;document.body.classList.remove('profile-page-active');document.body.classList.add('settings-page-active');window.scrollTo({top:0,behavior:'auto'});}
+    function openPublicProfile(){toggleDropdown(false);if(isConfigRoute())replacePublicHash('#home');renderProfilePage();settingsPage.hidden=true;profilePage.hidden=false;document.body.classList.remove('settings-page-active');document.body.classList.add('profile-page-active');window.scrollTo({top:0,behavior:'auto'});}
+    function openSettingsPage(updateRoute){toggleDropdown(false);renderSettingsPage();profilePage.hidden=true;settingsPage.hidden=false;document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');if(updateRoute!==false&&!isConfigRoute())location.hash='#config';window.scrollTo({top:0,behavior:'auto'});}
 
     function renderProfile(){
       var user=auth.currentUser;
@@ -3491,18 +3499,18 @@
     });
 
     function openProfile(){openPublicProfile();}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',openSettingsPage);document.getElementById('settingsClosePage').addEventListener('click',openPublicProfile);document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',closePublicPages);});
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});document.getElementById('settingsClosePage').addEventListener('click',openPublicProfile);document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',closePublicPages);});window.addEventListener('be:open-config',function(){openSettingsPage(false);});
     auth.onChange(async function(currentUser){
       dashboard.hidden=true;
       var isAdmin=false;
       if(currentUser){
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
-        username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=currentProfile.avatarUrl||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(openSettingsPage,180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
+        username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=currentProfile.avatarUrl||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
       }else{username.textContent='Visitante';currentProfile={};selectedAvatar=localStorage.getItem(avatarCacheKey(null))||'';setMainAvatar(selectedAvatar,null);authAction.textContent='Entrar';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
-      var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}location.hash='#login';document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='support'){alert('Área de suporte em preparação.');return;}if(action==='settings'){openSettingsPage();return;}
+      var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}location.hash='#login';document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='support'){alert('Área de suporte em preparação.');return;}if(action==='settings'){openSettingsPage(true);return;}
     });});
     window.addEventListener('be:profile-avatar-changed',function(event){
       var detail=event&&event.detail||{};
@@ -3621,8 +3629,10 @@
   function hasAuthCallback(){var p=callbackParams();return Boolean(p.query.get('code')||p.query.get('error')||p.query.get('error_code')||p.query.get('auth_callback')||p.hash.get('access_token')||p.hash.get('refresh_token')||p.hash.get('error')||p.hash.get('error_code'));}
   function authCallbackError(){var p=callbackParams();return p.query.get('error_description')||p.hash.get('error_description')||p.query.get('error')||p.hash.get('error')||'';}
   function replaceRoute(hash){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});url.hash=hash;history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
+  function isConfigRoute(){var hash=location.hash.toLowerCase();return hash==='#config'||hash==='#/config';}
   function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active');document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')replaceRoute('#login');}
   function enterHome(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode');sessionStorage.removeItem('beOAuthDestination');replaceRoute('#home');window.scrollTo(0,0);}
+  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('#config');window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
     var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep')};
@@ -3696,7 +3706,7 @@
     localStorage.setItem('beSessionUid',user.uid);
     try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
     setStatus('');
-    enterHome();
+    if(isConfigRoute())enterConfig();else enterHome();
     return user;
   }
 
@@ -3794,7 +3804,7 @@
       try{await finishPublicLogin(user);}catch(error){showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
 
-    window.addEventListener('hashchange',function(){if(location.hash.startsWith('#/admin'))return;if(!authReady)return;if(auth.currentUser)enterHome();else showLogin();});
+    window.addEventListener('hashchange',function(){if(location.hash.startsWith('#/admin'))return;if(!authReady)return;if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}if(auth.currentUser)enterHome();else showLogin();});
   }
 
   async function startAuthentication(){

@@ -421,35 +421,40 @@
 
   async function galleryPage() {
     const content = $('#adminContent');
-    content.innerHTML = `<div class="admin-title-row gallery-title-row"><div><span class="dashboard-kicker">Imagens dos perfis</span><h1>Galeria</h1><p>Gerencie avatares e banners de fundo usados pelos usuários em seus perfis.</p></div><div class="gallery-title-actions"><button class="a-btn" id="newGalleryAvatar">+ Adicionar avatar</button><button class="a-btn primary" id="newGalleryBanner">+ Adicionar banner</button></div></div><div class="gallery-admin-toolbar"><input class="a-input" id="gallerySearch" placeholder="Buscar imagem ou categoria…"><select class="a-select" id="galleryType"><option value="">Todos os tipos</option><option value="avatar">Avatares</option><option value="banner">Banners de perfil</option></select><select class="a-select" id="galleryStatus"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="galleryAdminBoard"><div class="empty">Carregando galeria…</div></div>`;
-    $('#newGalleryAvatar').onclick = () => openEditor('gallery', null, { itemType: 'avatar' });
-    $('#newGalleryBanner').onclick = () => openEditor('gallery', null, { itemType: 'banner', category: 'Banners de perfil' });
+    content.innerHTML = `<div class="admin-title-row gallery-title-row"><div><span class="dashboard-kicker">Imagens dos perfis</span><h1>Galeria</h1><p>Avatares e banners ficam organizados em seções separadas.</p></div></div><div class="gallery-admin-toolbar"><input class="a-input" id="gallerySearch" placeholder="Buscar categoria…"><select class="a-select" id="galleryStatus"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="galleryAdminBoard"><div class="empty">Carregando galeria…</div></div>`;
     const items = await db.list('gallery', { orderBy: 'order', direction: 'asc' });
     const itemType = item => String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
     const draw = () => {
       const search = $('#gallerySearch').value.trim().toLowerCase();
       const status = $('#galleryStatus').value;
-      const typeFilter = $('#galleryType').value;
       const filtered = items.filter(item => {
         const type = itemType(item);
-        const text = `${item.title || ''} ${item.category || ''} ${type}`.toLowerCase();
-        return (!search || text.includes(search)) && (!status || String(item.active !== false) === status) && (!typeFilter || type === typeFilter);
+        const category = String(item.category || (type === 'banner' ? 'Banners de perfil' : 'Sem categoria'));
+        return (!search || category.toLowerCase().includes(search)) && (!status || String(item.active !== false) === status);
       });
-      const groups = new Map();
-      filtered.forEach(item => {
-        const type = itemType(item);
-        const category = (item.category || (type === 'banner' ? 'Banners de perfil' : 'Sem categoria')).trim() || 'Sem categoria';
-        const key = `${type}::${category}`;
-        if (!groups.has(key)) groups.set(key, { type, category, items: [] });
-        groups.get(key).items.push(item);
+      const avatars = filtered.filter(item => itemType(item) === 'avatar');
+      const banners = filtered.filter(item => itemType(item) === 'banner');
+      const avatarGroups = new Map();
+      avatars.forEach(item => {
+        const category = String(item.category || 'Sem categoria').trim() || 'Sem categoria';
+        if (!avatarGroups.has(category)) avatarGroups.set(category, []);
+        avatarGroups.get(category).push(item);
       });
+      const card = (item, type, category) => `<article class="gallery-avatar-card ${type === 'banner' ? 'is-banner' : ''} ${item.active === false ? 'is-hidden' : ''}"><div class="gallery-avatar-image">${item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="${type === 'banner' ? 'Banner de perfil' : `Avatar da categoria ${esc(category)}`}" loading="lazy">` : '<span>Sem imagem</span>'}</div><div class="gallery-avatar-info"><small>${item.active === false ? 'Oculto' : 'Ativo'} · ordem ${esc(item.order ?? 0)}</small></div><div class="gallery-avatar-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></article>`;
+      const avatarContent = avatarGroups.size
+        ? `<div class="gallery-category-board">${[...avatarGroups.entries()].map(([category, groupItems]) => `<section class="gallery-category-panel"><header><div><small>Categoria de avatares</small><h2>${esc(category)}</h2></div><span>${groupItems.length} ${groupItems.length === 1 ? 'avatar' : 'avatares'}</span></header><div class="gallery-avatar-grid">${groupItems.map(item => card(item, 'avatar', category)).join('')}</div></section>`).join('')}</div>`
+        : '<div class="empty">Nenhum avatar encontrado.</div>';
+      const bannerContent = banners.length
+        ? `<section class="gallery-category-panel banner-panel gallery-banner-panel"><header><div><small>Banners de fundo</small><h2>Banners de perfil</h2></div><span>${banners.length} ${banners.length === 1 ? 'banner' : 'banners'}</span></header><div class="gallery-avatar-grid gallery-banner-grid">${banners.map(item => card(item, 'banner', 'Banners de perfil')).join('')}</div></section>`
+        : '<div class="empty">Nenhum banner encontrado.</div>';
       const board = $('#galleryAdminBoard');
-      board.innerHTML = groups.size ? `<div class="gallery-category-board">${[...groups.values()].map(group => `<section class="gallery-category-panel ${group.type === 'banner' ? 'banner-panel' : ''}"><header><div><small>${group.type === 'banner' ? 'Banners de perfil' : 'Categoria de avatares'}</small><h2>${esc(group.category)}</h2></div><span>${group.items.length} ${group.items.length === 1 ? 'imagem' : 'imagens'}</span></header><div class="gallery-avatar-grid ${group.type === 'banner' ? 'gallery-banner-grid' : ''}">${group.items.map(item => `<article class="gallery-avatar-card ${group.type === 'banner' ? 'is-banner' : ''} ${item.active === false ? 'is-hidden' : ''}"><div class="gallery-avatar-image">${item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="${esc(item.title || group.category)}" loading="lazy">` : '<span>Sem imagem</span>'}</div><div class="gallery-avatar-info"><strong>${esc(item.title || (group.type === 'banner' ? 'Banner' : 'Avatar'))}</strong><small>${item.active === false ? 'Oculto' : 'Ativo'} · ordem ${esc(item.order ?? 0)}</small></div><div class="gallery-avatar-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></article>`).join('')}</div></section>`).join('')}</div>` : '<div class="empty">Nenhuma imagem encontrada.</div>';
+      board.innerHTML = `<section class="gallery-type-section"><div class="gallery-type-heading"><div><span class="dashboard-kicker">Avatar</span><h2>Avatares</h2><p>Os nomes aparecem apenas nas categorias.</p></div><button class="a-btn primary" id="newGalleryAvatar">+ Adicionar avatar</button></div>${avatarContent}</section><section class="gallery-type-section"><div class="gallery-type-heading"><div><span class="dashboard-kicker">Banner</span><h2>Banners de perfil</h2><p>Imagens horizontais sem nome individual.</p></div><button class="a-btn primary" id="newGalleryBanner">+ Adicionar banner</button></div>${bannerContent}</section>`;
+      $('#newGalleryAvatar').onclick = () => openEditor('gallery', null, { itemType: 'avatar' });
+      $('#newGalleryBanner').onclick = () => openEditor('gallery', null, { itemType: 'banner', category: 'Banners de perfil' });
       board.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => openEditor('gallery', items.find(item => item.id === button.dataset.edit)));
       board.querySelectorAll('[data-del]').forEach(button => button.onclick = () => confirmDelete('gallery', button.dataset.del));
     };
     $('#gallerySearch').oninput = draw;
-    $('#galleryType').onchange = draw;
     $('#galleryStatus').onchange = draw;
     draw();
   }
@@ -490,7 +495,8 @@
     const featuredFields = name === 'featured' ? `<div class="field full"><label>Selecionar vídeo já adicionado *</label><select class="a-select" name="videoId" id="featuredVideoSelect" required><option value="">Escolha um vídeo cadastrado</option>${videoOptions}</select><small>O destaque usará automaticamente o título, descrição, thumbnail e link desse vídeo. Você ainda pode ajustar os campos abaixo.</small></div>` : '';
     if (name === 'gallery') {
       const type = String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
-      return `<div class="form-grid"><div class="field"><label>Tipo de imagem *</label><select class="a-select" name="itemType"><option value="avatar" ${type === 'avatar' ? 'selected' : ''}>Avatar</option><option value="banner" ${type === 'banner' ? 'selected' : ''}>Banner de perfil</option></select></div><div class="field"><label>Nome da imagem *</label><input class="a-input" name="title" required maxlength="80" value="${esc(item.title || '')}" placeholder="Ex.: Billie ao vivo"></div><div class="field full"><label>Categoria *</label><input class="a-input" name="category" required maxlength="60" value="${esc(item.category || (type === 'banner' ? 'Banners de perfil' : ''))}" placeholder="Ex.: Tour Film"></div>${imageField(type === 'banner' ? 'Link da imagem do banner *' : 'Link da imagem do avatar *', 'imageUrl', item.imageUrl || '')}<div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div><div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field full"><small>Avatares funcionam melhor em formato quadrado. Para banners, prefira imagens horizontais em 16:6 ou 16:9.</small></div></div>`;
+      const isBanner = type === 'banner';
+      return `<div class="form-grid"><input type="hidden" name="itemType" value="${type}"><input type="hidden" name="title" value="${isBanner ? 'Banner' : 'Avatar'}">${isBanner ? '<input type="hidden" name="category" value="Banners de perfil">' : `<div class="field full"><label>Nome da categoria *</label><input class="a-input" name="category" required maxlength="60" value="${esc(item.category || '')}" placeholder="Ex.: Tour Film"><small>O avatar não terá nome individual; somente esta categoria será exibida.</small></div>`}${imageField(isBanner ? 'Link da imagem do banner *' : 'Link da imagem do avatar *', 'imageUrl', item.imageUrl || '')}<div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div><div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field full"><small>${isBanner ? 'O banner não possui nome individual. Prefira imagens horizontais em 16:6 ou 16:9.' : 'Avatares funcionam melhor em formato quadrado.'}</small></div></div>`;
     }
     return `<div class="form-grid">${featuredFields}<div class="field full"><label>Título *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}"></div><div class="field"><label>Tipo</label><input class="a-input" name="type" value="${esc(item.type || name)}"></div><div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>${sectionFields}${videoFields}<div class="field full"><label>Descrição</label><textarea class="a-textarea" rows="4" maxlength="1000" name="description">${esc(item.description || '')}</textarea></div>${showMedia ? `${imageField('Imagem / thumbnail', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}${name === 'videos' ? '' : imageField('Banner', 'bannerUrl', item.bannerUrl || '')}${name === 'featured' ? imageField('Logo do conteúdo', 'logoUrl', item.logoUrl || '') : ''}${name === 'videos' ? '' : `<div class="field full"><label>Link do conteúdo</label><input class="a-input" name="contentUrl" value="${esc(item.contentUrl || item.link || '')}" placeholder="https://... ou /pagina"></div>`}` : ''}<div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field"><label>Duração</label><input class="a-input" name="duration" value="${esc(item.duration || item.videoDuration || item.runtime || '')}" placeholder="Ex.: 24 min ou 1h 42min"></div><div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}"></div></div>`;
   }
@@ -648,7 +654,7 @@
           if (active.length >= 6 && !item) throw new Error('Não é possível ativar mais de 6 destaques.');
         }
         const saved = item ? await db.set(name, item.id, data, { merge: true }) : await db.add(name, data);
-        await logAction(item ? 'content_updated' : 'content_created', name, saved.id, `${LABELS[name] || name}: ${data.title}`);
+        await logAction(item ? 'content_updated' : 'content_created', name, saved.id, `${LABELS[name] || name}: ${name === 'gallery' ? (data.itemType === 'banner' ? 'Banner' : data.category || 'Avatar') : data.title}`);
         toast('Salvo com sucesso.');
         wrap.remove();
         loadPage();

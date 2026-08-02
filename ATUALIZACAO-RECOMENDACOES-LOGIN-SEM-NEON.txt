@@ -1,0 +1,8 @@
+ATUALIZAÇÃO — DETALHES COM RECOMENDAÇÕES
+
+- Ao abrir qualquer vídeo, são exibidas duas listas abaixo do banner de detalhes.
+- "Recomendação" seleciona até 10 vídeos aleatórios do catálogo.
+- "Mais desse conteúdo" prioriza vídeos da mesma seção e conteúdos semelhantes.
+- Os cards das recomendações também abrem seus próprios detalhes.
+- O catálogo principal fica oculto enquanto a tela de detalhes estiver aberta.
+- O brilho/neon do botão principal em #login foi removido, inclusive no hover e foco.

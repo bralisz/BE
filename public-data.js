@@ -309,9 +309,94 @@
       card.dataset.detailBound = 'true';
       card.addEventListener('click', event => {
         event.preventDefault();
-        openContentDetail(card.dataset);
+        openContentDetail(cardDataWithSection(card));
       });
     });
+  }
+
+  function cardDataWithSection(card) {
+    const section = card?.closest?.('.video-rail-section');
+    const sectionTitle = card?.dataset?.sourceSectionTitle || section?.querySelector?.('.video-rail-title span')?.textContent?.trim() || '';
+    const sectionKey = card?.dataset?.sourceSectionKey || [
+      section?.dataset?.collection || card?.dataset?.collection || '',
+      section?.dataset?.category || card?.dataset?.category || '',
+      sectionTitle
+    ].join('|');
+    return {
+      ...(card?.dataset || {}),
+      sourceSectionKey: sectionKey,
+      sourceSectionTitle: sectionTitle
+    };
+  }
+
+  function shuffleItems(items) {
+    const copy = items.slice();
+    for (let index = copy.length - 1; index > 0; index -= 1) {
+      const swap = Math.floor(Math.random() * (index + 1));
+      [copy[index], copy[swap]] = [copy[swap], copy[index]];
+    }
+    return copy;
+  }
+
+  function recommendationCard(data) {
+    const image = data.imageUrl || data.bannerUrl || '';
+    const title = data.title || 'Conteúdo';
+    const href = data.contentUrl || '#';
+    return `<a class="detail-reco-card" href="${safeUrl(href)}" data-open-detail="true"
+      data-item-id="${escapeHtml(String(data.itemId || title))}"
+      data-title="${escapeHtml(title)}"
+      data-description="${escapeHtml(data.description || '')}"
+      data-year="${escapeHtml(data.year || '')}"
+      data-duration="${escapeHtml(data.duration || '')}"
+      data-content-url="${safeUrl(href)}"
+      data-image-url="${safeUrl(image)}"
+      data-banner-url="${safeUrl(data.bannerUrl || image)}"
+      data-logo-url="${safeUrl(data.logoUrl || '')}"
+      data-category="${escapeHtml(data.category || '')}"
+      data-collection="${escapeHtml(data.collection || '')}"
+      data-source-section-key="${escapeHtml(data.sourceSectionKey || '')}"
+      data-source-section-title="${escapeHtml(data.sourceSectionTitle || '')}"
+      aria-label="Abrir ${escapeHtml(title)}">
+      <span class="detail-reco-thumb">${image && image !== '#' ? `<img src="${safeUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">` : '<span class="ph ph-wide" style="height:100%"></span>'}</span>
+      <span class="detail-reco-name">${escapeHtml(title)}</span>
+    </a>`;
+  }
+
+  function renderDetailRecommendations(current) {
+    const panel = document.getElementById('detailRecommendations');
+    const recommendationRail = document.getElementById('detailRecommendationRail');
+    const moreRail = document.getElementById('detailMoreRail');
+    const catalog = document.getElementById('dynamicSections');
+    if (!panel || !recommendationRail || !moreRail || !catalog) return;
+
+    const currentId = String(current.itemId || current.title || '');
+    const sourceKey = String(current.sourceSectionKey || '');
+    const category = String(current.category || '');
+    const collection = String(current.collection || '');
+    const all = Array.from(catalog.querySelectorAll('.video-card')).map(cardDataWithSection)
+      .filter(item => String(item.itemId || item.title || '') !== currentId);
+
+    const randomItems = shuffleItems(all).slice(0, 10);
+    const sameSection = sourceKey ? all.filter(item => item.sourceSectionKey === sourceKey) : [];
+    const similarCategory = all.filter(item => {
+      if (sameSection.some(match => String(match.itemId) === String(item.itemId))) return false;
+      const categoryMatch = category && item.category === category;
+      const collectionMatch = collection && item.collection === collection;
+      return categoryMatch || collectionMatch;
+    });
+    const moreItems = [...shuffleItems(sameSection), ...shuffleItems(similarCategory)]
+      .filter((item, index, array) => array.findIndex(other => String(other.itemId) === String(item.itemId)) === index)
+      .slice(0, 10);
+
+    recommendationRail.innerHTML = randomItems.length
+      ? randomItems.map(recommendationCard).join('')
+      : '<p class="detail-reco-empty">Nenhum outro vídeo disponível.</p>';
+    moreRail.innerHTML = moreItems.length
+      ? moreItems.map(recommendationCard).join('')
+      : '<p class="detail-reco-empty">Nenhum vídeo semelhante disponível.</p>';
+
+    setupContentDetailInteractions(panel);
+    panel.hidden = false;
   }
 
   function setupDetailControls() {
@@ -380,7 +465,9 @@
       list.addEventListener('click', () => toggleDetailFavorite(list));
     }
 
+    renderDetailRecommendations(data);
     if (featuredSection) featuredSection.hidden = true;
+    document.body.classList.add('detail-page-active');
     section.hidden = false;
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -389,6 +476,9 @@
     const section = document.getElementById('contentDetailSection');
     const featuredSection = document.getElementById('featuredSection');
     if (section) section.hidden = true;
+    document.body.classList.remove('detail-page-active');
+    const recommendations = document.getElementById('detailRecommendations');
+    if (recommendations) recommendations.hidden = true;
     if (featuredSection && document.getElementById('featured')?.children.length) {
       featuredSection.hidden = false;
       if (scrollHome) featuredSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
