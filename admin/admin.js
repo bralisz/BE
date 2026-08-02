@@ -159,7 +159,7 @@
     const button = $('#googleLogin');
     if (button) {
       button.disabled = true;
-      button.innerHTML = '<span class="google-icon">G</span> Redirecionando…';
+      button.innerHTML = '<span class="google-icon">G</span><span>Conectando ao Google…</span>';
     }
     try {
       await auth.signInWithGoogle();
@@ -168,7 +168,7 @@
       loginBusy = false;
       if (button) {
         button.disabled = false;
-        button.innerHTML = '<span class="google-icon">G</span> Entrar com Google';
+        button.innerHTML = '<span class="google-icon">G</span><span>Conectar via Google</span>';
       }
     }
   }
@@ -239,16 +239,9 @@
   }
 
   async function renderLogin() {
-    if (beBackend.mode === 'supabase') {
-      document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="login-card"><img src="/assets/logo.png?v=3" alt="BE"><h1>Painel Administrativo</h1><p>Gerencie os destaques, seções e conteúdos do site com segurança.</p><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span> Entrar com Google</button><p id="loginHelp" style="font-size:12px;margin-top:18px">Acesso exclusivo para administradores autorizados.</p></div></div></div><div class="toast-area"></div>`;
-      startAdminLoginBackground();
-      $('#googleLogin').onclick = loginWithGoogle;
-    } else {
-      const exists = await auth.localAdminExists(ADMIN_EMAIL);
-      document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="login-card"><img src="/assets/logo.png?v=3" alt="BE"><h1>Painel Administrativo</h1><p>Modo local temporário. Os dados ficam somente neste navegador até o Supabase ser conectado.</p><form id="localAdminForm"><label style="display:block;text-align:left;margin:18px 0 8px;color:var(--a-muted)">E-mail administrativo</label><input class="a-input" value="${esc(ADMIN_EMAIL)}" readonly><label style="display:block;text-align:left;margin:14px 0 8px;color:var(--a-muted)">Senha</label><input class="a-input" name="password" type="password" minlength="6" required placeholder="Digite uma senha"><button class="a-btn primary" style="width:100%;margin-top:18px" type="submit">${exists ? 'Entrar no painel local' : 'Criar acesso administrativo local'}</button></form><p style="font-size:12px;margin-top:18px">Este acesso local não deve ser usado como segurança de produção.</p></div></div></div><div class="toast-area"></div>`;
-      startAdminLoginBackground();
-      $('#localAdminForm').onsubmit = loginLocal;
-    }
+    document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="admin-login-topbar"><a class="admin-login-logo" href="/" aria-label="Voltar ao site"><img src="/assets/logo.png?v=3" alt="BE"></a></div><div class="login-card" aria-label="Acesso administrativo"><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span><span>Conectar via Google</span></button></div></div></div><div class="toast-area"></div>`;
+    startAdminLoginBackground();
+    $('#googleLogin').onclick = loginWithGoogle;
     const savedError = sessionStorage.getItem('adminAuthError');
     if (savedError) {
       sessionStorage.removeItem('adminAuthError');
