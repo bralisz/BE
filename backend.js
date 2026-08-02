@@ -23,6 +23,10 @@
     return new Date().toISOString();
   }
 
+  function wait(milliseconds) {
+    return new Promise(resolve => window.setTimeout(resolve, milliseconds));
+  }
+
   function uid() {
     if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
     return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
@@ -80,23 +84,29 @@
   async function resolveSupabaseUser(authResult) {
     if (MODE !== 'supabase' || !supabaseClient) return currentUser;
 
-    let rawUser = authResult?.user || authResult?.session?.user || null;
+    const immediateUser = authResult?.user || authResult?.session?.user || null;
+    if (immediateUser) return normalizeUser(immediateUser);
 
-    if (!rawUser) {
+    // Em alguns navegadores o Supabase conclui o login alguns milissegundos
+    // antes de disponibilizar a sessão persistida. Tentamos novamente por um
+    // curto período para não devolver o usuário à tela de login por engano.
+    const retryDelays = [0, 80, 180, 360, 700];
+    for (const retryDelay of retryDelays) {
+      if (retryDelay) await wait(retryDelay);
+
       const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
       if (sessionError) console.warn('Não foi possível recuperar a sessão após o login:', sessionError.message);
-      rawUser = sessionData?.session?.user || null;
-    }
+      const sessionUser = sessionData?.session?.user || null;
+      if (sessionUser) return normalizeUser(sessionUser);
 
-    if (!rawUser) {
       const { data: userData, error: userError } = await supabaseClient.auth.getUser();
       if (userError && userError.name !== 'AuthSessionMissingError') {
         console.warn('Não foi possível recuperar o usuário após o login:', userError.message);
       }
-      rawUser = userData?.user || null;
+      if (userData?.user) return normalizeUser(userData.user);
     }
 
-    return normalizeUser(rawUser);
+    return null;
   }
 
   function notify() {
@@ -205,7 +215,10 @@
     if (/already registered|already been registered|user already/i.test(message)) return backendError('auth/email-already-in-use', 'Este e-mail já possui uma conta.', error);
     if (/password/i.test(message) && /6|weak|short/i.test(message)) return backendError('auth/weak-password', 'Use uma senha com pelo menos 6 caracteres.', error);
     if (/email/i.test(message) && /invalid/i.test(message)) return backendError('auth/invalid-email', 'Digite um e-mail válido.', error);
-    if (/duplicate key|unique/i.test(message) && /username/i.test(message)) return backendError('username-in-use', 'Este @ já está em uso.', error);
+    if (
+      /username already in use|username is already in use|profiles_username|username.*já.*uso/i.test(message) ||
+      ((code === '23505' || /duplicate key|unique/i.test(message)) && /username/i.test(message))
+    ) return backendError('username-in-use', 'Este nome de usuário já está em uso. Escolha outro.', error);
     return backendError(code || 'backend/error', message || 'Não foi possível concluir a operação.', error);
   }
 
@@ -450,11 +463,28 @@
       if (MODE === 'supabase') {
         const metadata = user.raw?.user_metadata || user.raw?.raw_user_meta_data || {};
         const metadataUsername = normalizeUsername(metadata.username || '');
-        const { data: rows, error } = await supabaseClient.rpc('ensure_my_profile', {
+        const profileArgs = {
           p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
           p_username: metadataUsername || null,
           p_avatar_url: String(user.photoURL || metadata.avatar_url || '').trim() || null
-        });
+        };
+        let { data: rows, error } = await supabaseClient.rpc('ensure_my_profile', profileArgs);
+
+        // Contas antigas podem ter guardado nos metadados um @ que outra pessoa
+        // já usa. Isso não deve impedir o login: carregamos o perfil sem reaplicar
+        // o @ antigo e o usuário poderá escolher outro depois.
+        if (error && metadataUsername) {
+          const mappedError = mapAuthError(error);
+          if (mappedError.code === 'username-in-use') {
+            console.warn('O nome de usuário salvo nos metadados já está em uso; carregando o perfil sem ele.');
+            ({ data: rows, error } = await supabaseClient.rpc('ensure_my_profile', {
+              ...profileArgs,
+              p_username: null
+            }));
+          } else {
+            throw mappedError;
+          }
+        }
         if (error) throw mapAuthError(error);
         const row = Array.isArray(rows) ? rows[0] : rows;
         if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
@@ -527,6 +557,13 @@
       const database = loadLocalDatabase();
       return Boolean(database.accounts[normalizedEmail]);
     },
+    async usernameAvailable(username) {
+      const normalizedHandle = normalizeUsername(username);
+      if (!validUsername(normalizedHandle)) throw backendError('username-invalid', 'O @ informado não é válido.');
+      const database = loadLocalDatabase();
+      const profilesList = Object.values(localCollection(database, 'users'));
+      return !profilesList.some(profile => String(profile.username || '').toLowerCase() === normalizedHandle);
+    },
     async signInWithEmail({ email, password, remember = true }) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
       const database = loadLocalDatabase();
@@ -579,6 +616,8 @@
     async signOut() {
       currentUser = null;
       clearLocalSession();
+      localStorage.removeItem('beAuthExpected');
+      localStorage.removeItem('beSessionUid');
       notify();
     },
     async getAuthenticatedUser() {
@@ -637,6 +676,16 @@
       }
       return Boolean(data);
     },
+    async usernameAvailable(username) {
+      const normalizedHandle = normalizeUsername(username);
+      if (!validUsername(normalizedHandle)) throw backendError('username-invalid', 'O @ informado não é válido.');
+      const { data, error } = await supabaseClient.rpc('username_available', { p_username: normalizedHandle });
+      if (error) {
+        console.warn('Não foi possível verificar o nome de usuário:', error.message);
+        return null;
+      }
+      return Boolean(data);
+    },
     async signInWithEmail({ email, password }) {
       const { data: result, error } = await supabaseClient.auth.signInWithPassword({
         email: String(email || '').trim().toLowerCase(),
@@ -644,21 +693,28 @@
       });
       if (error) throw mapAuthError(error);
 
-      currentUser = await resolveSupabaseUser(result);
+      currentUser = normalizeUser(result?.user || result?.session?.user || null) || await resolveSupabaseUser(result);
       if (!currentUser) {
         throw backendError(
           'auth/session-missing',
-          'O login foi aceito, mas a sessão não pôde ser recuperada. Atualize a página e tente novamente.'
+          'Não foi possível concluir a sessão de login. Tente entrar novamente.'
         );
       }
 
-      await profiles.ensure(currentUser);
+      // Uma falha no perfil não deve desfazer uma autenticação que já foi aceita.
+      try {
+        await profiles.ensure(currentUser);
+      } catch (profileError) {
+        console.warn('O login foi concluído, mas o perfil será carregado novamente pela página:', profileError?.message || profileError);
+      }
       notify();
       return { user: currentUser, session: result?.session || null };
     },
     async signUp({ email, password, name, username }) {
       const normalizedHandle = normalizeUsername(username);
       if (!validUsername(normalizedHandle)) throw backendError('username-invalid', 'O @ deve ter de 3 a 20 caracteres.');
+      const usernameIsAvailable = await this.usernameAvailable(normalizedHandle);
+      if (usernameIsAvailable === false) throw backendError('username-in-use', 'Este nome de usuário já está em uso. Escolha outro.');
       const { data: result, error } = await supabaseClient.auth.signUp({
         email: String(email || '').trim().toLowerCase(),
         password,
@@ -681,6 +737,8 @@
       const { error } = await supabaseClient.auth.signOut();
       if (error) throw mapAuthError(error);
       currentUser = null;
+      localStorage.removeItem('beAuthExpected');
+      localStorage.removeItem('beSessionUid');
       notify();
     },
     async getAuthenticatedUser() {
@@ -762,12 +820,27 @@
             return;
           }
 
-          // Eventos sem usuário não devem apagar silenciosamente uma sessão que
-          // continua armazenada. Confirma o estado atual antes de atualizar a UI.
+          if (event === 'INITIAL_SESSION' && !currentUser) {
+            notify();
+            return;
+          }
+
+          // Eventos transitórios sem usuário não devem apagar silenciosamente uma
+          // sessão válida. Recuperamos a sessão com pequenas tentativas antes de
+          // alterar a interface. Somente SIGNED_OUT encerra imediatamente.
           try {
-            const { data: latestSession, error: latestError } = await supabaseClient.auth.getSession();
-            if (latestError) console.warn('Não foi possível confirmar a sessão:', latestError.message);
-            currentUser = normalizeUser(latestSession?.session?.user || null);
+            const previousUser = currentUser;
+            const recoveredUser = await resolveSupabaseUser(null);
+            if (recoveredUser) {
+              currentUser = recoveredUser;
+              notify();
+              return;
+            }
+            if (previousUser) {
+              console.warn('Evento de autenticação sem sessão ignorado para evitar logout transitório.');
+              return;
+            }
+            currentUser = null;
             notify();
           } catch (latestError) {
             console.warn('Não foi possível confirmar a sessão:', latestError?.message || latestError);

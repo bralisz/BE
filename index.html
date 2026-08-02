@@ -1777,11 +1777,11 @@
       'auth/invalid-email':'Digite um e-mail válido.',
       'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
       'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
-      'auth/session-missing':'O login foi aceito, mas a sessão não pôde ser recuperada. Atualize a página e tente novamente.',
+      'auth/session-missing':'Não foi possível concluir a sessão de login. Tente entrar novamente.',
       'auth/email-rate-limit':'O limite temporário de e-mails do Supabase foi atingido. Aguarde e tente novamente mais tarde ou continue com o Discord.',
       'auth/provider-not-enabled':'O login com Discord ainda não foi ativado no Supabase.',
       'backend/not-configured':'Este recurso será ativado quando o Supabase estiver conectado.',
-      'username-in-use':'Este @ já está em uso. Escolha outro.',
+      'username-in-use':'Este nome de usuário já está em uso. Escolha outro.',
       'username-invalid':'O @ informado não é válido.'
     };
     return map[code]||(error&&error.message)||'Não foi possível concluir. Tente novamente.';
@@ -1810,14 +1810,27 @@
   }
   function initBackgrounds(){var slides=[].slice.call(document.querySelectorAll('.login-bg-slide')),dots=q('loginDots');if(!dots||!slides.length)return;dots.innerHTML=slides.map(function(_,i){return '<button class="login-dot '+(i===0?'active':'')+'" type="button" data-bg="'+i+'"></button>'}).join('');function show(i){bgIndex=(i+slides.length)%slides.length;slides.forEach(function(s,j){s.classList.toggle('active',j===bgIndex)});dots.querySelectorAll('.login-dot').forEach(function(d,j){d.classList.toggle('active',j===bgIndex)})}dots.addEventListener('click',function(e){var b=e.target.closest('[data-bg]');if(!b)return;show(Number(b.dataset.bg));restart()});function restart(){clearInterval(bgTimer);bgTimer=setInterval(function(){show(bgIndex+1)},20000)}restart()}
 
+  async function recoverAuthenticatedUser(user){
+    if(user)return user;
+    if(!auth||typeof auth.getAuthenticatedUser!=='function')return null;
+    var waits=[0,100,220,450,800];
+    for(var i=0;i<waits.length;i+=1){
+      if(waits[i])await new Promise(function(resolve){setTimeout(resolve,waits[i])});
+      user=await auth.getAuthenticatedUser();
+      if(user)return user;
+    }
+    return null;
+  }
+
   async function finishPublicLogin(user){
-    if(!user&&auth&&typeof auth.getAuthenticatedUser==='function')user=await auth.getAuthenticatedUser();
-    if(!user){var sessionError=new Error('O login foi aceito, mas a sessão não pôde ser recuperada. Atualize a página e tente novamente.');sessionError.code='auth/session-missing';throw sessionError;}
+    user=await recoverAuthenticatedUser(user);
+    if(!user){var sessionError=new Error('Não foi possível concluir a sessão de login. Tente entrar novamente.');sessionError.code='auth/session-missing';throw sessionError;}
     localStorage.setItem('beAuthExpected','1');
     localStorage.setItem('beSessionUid',user.uid);
     try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
     setStatus('');
     enterHome();
+    return user;
   }
 
   async function boot(){
@@ -1884,6 +1897,10 @@
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
       try{
+        if(typeof auth.usernameAvailable==='function'){
+          var usernameIsAvailable=await auth.usernameAvailable(username);
+          if(usernameIsAvailable===false){var usernameError=new Error('Este nome de usuário já está em uso. Escolha outro.');usernameError.code='username-in-use';throw usernameError;}
+        }
         var result=await auth.signUp({email:email,password:password,name:name,username:username,remember:true});
         if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}
         currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();setTimeout(function(){var avatarButton=document.querySelector('[data-public-action="avatar"]');if(avatarButton)avatarButton.click();},260);
@@ -1891,13 +1908,25 @@
         showLogin();
         if(err&&err.code==='auth/email-already-in-use')setMode('password',email);else setMode('signup',email);
         setStatus(friendly(err),'error');
+        if(err&&err.code==='username-in-use')setTimeout(function(){form.elements.namedItem('username').focus();form.elements.namedItem('username').select();},0);
       }finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
 
     auth.onChange(async function(user){
       authReady=true;q('authLoading').hidden=true;
       if(authFlowBusy)return;
-      if(!user){localStorage.removeItem('beSessionUid');showLogin();selectedAuthEmail='';setMode('email');return;}
+      if(!user){
+        var expectedSession=localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'));
+        if(expectedSession){
+          try{
+            var recoveredUser=await recoverAuthenticatedUser(null);
+            if(recoveredUser){await finishPublicLogin(recoveredUser);return;}
+          }catch(recoveryError){console.warn('Não foi possível confirmar a sessão:',recoveryError);}
+        }
+        localStorage.removeItem('beSessionUid');
+        localStorage.removeItem('beAuthExpected');
+        showLogin();selectedAuthEmail='';setMode('email');return;
+      }
       try{await finishPublicLogin(user);}catch(error){showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
 

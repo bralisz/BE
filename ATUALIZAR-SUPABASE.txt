@@ -1,0 +1,14 @@
+CORREÇÃO DE LOGIN E NOME DE USUÁRIO
+
+1. Abra o painel do Supabase.
+2. Entre em SQL Editor.
+3. Abra este arquivo do projeto:
+   supabase/migrations/20260802_username_and_session_fix.sql
+4. Copie todo o conteúdo, cole no SQL Editor e execute uma única vez.
+5. Publique novamente os arquivos do site.
+
+A atualização:
+- verifica o nome de usuário antes de criar a conta;
+- mostra a mensagem em português quando o nome já existe;
+- permite o login de contas antigas que ficaram com um nome repetido nos metadados;
+- evita que eventos transitórios do Supabase devolvam o usuário à tela de login.

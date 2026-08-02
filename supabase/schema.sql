@@ -84,6 +84,25 @@ alter function public.account_exists(text) owner to postgres;
 revoke all on function public.account_exists(text) from public;
 grant execute on function public.account_exists(text) to anon, authenticated;
 
+-- Informa somente se um nome de usuário pode ser usado, sem expor perfis.
+create or replace function public.username_available(p_username text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select not exists (
+    select 1
+    from public.profiles p
+    where p.username = nullif(lower(trim(coalesce(p_username, ''))), '')::public.citext
+  );
+$$;
+
+alter function public.username_available(text) owner to postgres;
+revoke all on function public.username_available(text) from public;
+grant execute on function public.username_available(text) to anon, authenticated;
+
 -- Cria/atualiza o perfil sempre que um usuário nasce no Supabase Auth.
 -- SECURITY DEFINER permite que o gatilho grave em public.profiles sem ser
 -- bloqueado pela RLS, mas os valores usados vêm somente do próprio auth.users.
@@ -168,7 +187,10 @@ begin
   if v_username is not null and exists (
     select 1 from public.profiles p where p.username = v_username and p.id <> v_uid
   ) then
-    raise exception 'username already in use' using errcode = '23505';
+    -- Metadados antigos podem apontar para um @ que já foi usado por outra
+    -- conta. Ignorar esse valor mantém o login funcionando sem sobrescrever o
+    -- perfil existente.
+    v_username := null;
   end if;
 
   return query
