@@ -411,6 +411,24 @@
     },
     async ensure(user) {
       if (!user) throw backendError('auth/not-authenticated', 'Faça login para acessar o perfil.');
+
+      // No Supabase, a criação/garantia do perfil passa por uma função SQL
+      // SECURITY DEFINER. Ela usa auth.uid() e evita que um INSERT feito no
+      // navegador seja bloqueado pelas políticas RLS durante o login/OAuth.
+      if (MODE === 'supabase') {
+        const metadata = user.raw?.user_metadata || user.raw?.raw_user_meta_data || {};
+        const metadataUsername = normalizeUsername(metadata.username || '');
+        const { data: rows, error } = await supabaseClient.rpc('ensure_my_profile', {
+          p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
+          p_username: metadataUsername || null,
+          p_avatar_url: String(user.photoURL || metadata.avatar_url || '').trim() || null
+        });
+        if (error) throw mapAuthError(error);
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
+        return profileFromRow(row);
+      }
+
       const existing = await data.get('users', user.uid);
       const base = {
         uid: user.uid,
@@ -431,6 +449,27 @@
     async update(userId, payload) {
       const username = normalizeUsername(payload.username);
       if (username && !validUsername(username)) throw backendError('username-invalid', 'O @ informado não é válido.');
+
+      if (MODE === 'supabase') {
+        const updateRow = { updated_at: now() };
+        if (Object.prototype.hasOwnProperty.call(payload, 'displayName')) updateRow.display_name = String(payload.displayName || '').trim();
+        if (Object.prototype.hasOwnProperty.call(payload, 'username')) updateRow.username = username || null;
+        if (Object.prototype.hasOwnProperty.call(payload, 'bio')) updateRow.bio = String(payload.bio || '');
+        if (Object.prototype.hasOwnProperty.call(payload, 'avatarUrl')) updateRow.avatar_url = String(payload.avatarUrl || '');
+        if (Object.prototype.hasOwnProperty.call(payload, 'avatarId')) updateRow.avatar_id = String(payload.avatarId || '');
+        if (Object.prototype.hasOwnProperty.call(payload, 'profileComplete')) updateRow.profile_complete = payload.profileComplete !== false;
+
+        const { data: rows, error } = await supabaseClient
+          .from('profiles')
+          .update(updateRow)
+          .eq('id', userId)
+          .select('*');
+        if (error) throw mapAuthError(error);
+        const row = rows && rows[0];
+        if (!row) throw backendError('profile/not-found', 'Perfil não encontrado para atualização.');
+        return profileFromRow(row);
+      }
+
       if (username) {
         const all = await data.list('users');
         const taken = all.find(profile => String(profile.username || '').toLowerCase() === username && profile.id !== userId && profile.uid !== userId);

@@ -1,17 +1,7 @@
+begin;
+
 create extension if not exists pgcrypto;
 create extension if not exists citext;
-
-create or replace function public.is_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com';
-$$;
-
-grant execute on function public.is_admin() to anon, authenticated;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -59,73 +49,234 @@ create table if not exists public.admin_logs (
   created_at timestamptz not null default now()
 );
 
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com';
+$$;
+
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to anon, authenticated;
+
+-- Cria/atualiza o perfil sempre que um usuário nasce no Supabase Auth.
+-- SECURITY DEFINER permite que o gatilho grave em public.profiles sem ser
+-- bloqueado pela RLS, mas os valores usados vêm somente do próprio auth.users.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
+declare
+  v_username public.citext;
 begin
-  insert into public.profiles (
-    id,
-    email,
-    display_name,
-    username,
-    role,
-    profile_complete
+  v_username := nullif(lower(trim(coalesce(new.raw_user_meta_data ->> 'username', ''))), '')::public.citext;
+
+  if v_username is not null and exists (
+    select 1 from public.profiles p where p.username = v_username and p.id <> new.id
+  ) then
+    v_username := null;
+  end if;
+
+  insert into public.profiles as p (
+    id, email, display_name, username, avatar_url, role,
+    profile_complete, created_at, updated_at, last_login_at
   ) values (
     new.id,
     coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'full_name', ''),
-    nullif(lower(coalesce(new.raw_user_meta_data ->> 'username', '')), ''),
+    v_username,
+    coalesce(new.raw_user_meta_data ->> 'avatar_url', ''),
     case when lower(coalesce(new.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
-    true
+    true,
+    coalesce(new.created_at, now()),
+    now(),
+    now()
   )
   on conflict (id) do update set
     email = excluded.email,
-    display_name = excluded.display_name,
+    display_name = case
+      when nullif(excluded.display_name, '') is not null then excluded.display_name
+      else p.display_name
+    end,
+    username = coalesce(excluded.username, p.username),
+    avatar_url = case
+      when nullif(excluded.avatar_url, '') is not null then excluded.avatar_url
+      else p.avatar_url
+    end,
+    role = excluded.role,
     updated_at = now();
+
   return new;
 end;
 $$;
 
+alter function public.handle_new_user() owner to postgres;
+
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert or update of email, raw_user_meta_data on auth.users
-  for each row execute procedure public.handle_new_user();
+  for each row execute function public.handle_new_user();
+
+-- Função segura usada pelo navegador depois do login. Ela sempre usa auth.uid()
+-- e nunca aceita um id de usuário enviado pelo cliente.
+create or replace function public.ensure_my_profile(
+  p_display_name text default null,
+  p_username text default null,
+  p_avatar_url text default null
+)
+returns setof public.profiles
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
+  v_username public.citext := nullif(lower(trim(coalesce(p_username, ''))), '')::public.citext;
+begin
+  if v_uid is null then
+    raise exception 'authentication required' using errcode = '42501';
+  end if;
+
+  if v_username is not null and exists (
+    select 1 from public.profiles p where p.username = v_username and p.id <> v_uid
+  ) then
+    raise exception 'username already in use' using errcode = '23505';
+  end if;
+
+  return query
+  insert into public.profiles as p (
+    id, email, display_name, username, avatar_url, role,
+    profile_complete, created_at, updated_at, last_login_at
+  ) values (
+    v_uid,
+    v_email,
+    coalesce(trim(p_display_name), ''),
+    v_username,
+    coalesce(trim(p_avatar_url), ''),
+    case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    true,
+    now(),
+    now(),
+    now()
+  )
+  on conflict (id) do update set
+    email = v_email,
+    display_name = case
+      when nullif(trim(coalesce(p_display_name, '')), '') is not null then trim(p_display_name)
+      else p.display_name
+    end,
+    username = coalesce(v_username, p.username),
+    avatar_url = case
+      when nullif(trim(coalesce(p_avatar_url, '')), '') is not null then trim(p_avatar_url)
+      else p.avatar_url
+    end,
+    role = case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    profile_complete = true,
+    updated_at = now(),
+    last_login_at = now()
+  returning *;
+end;
+$$;
+
+alter function public.ensure_my_profile(text, text, text) owner to postgres;
+revoke all on function public.ensure_my_profile(text, text, text) from public, anon;
+grant execute on function public.ensure_my_profile(text, text, text) to authenticated;
+
+-- Usuários que já existiam antes do gatilho recebem um perfil agora.
+insert into public.profiles as p (
+  id, email, display_name, avatar_url, role,
+  profile_complete, created_at, updated_at
+)
+select
+  u.id,
+  coalesce(u.email, ''),
+  coalesce(u.raw_user_meta_data ->> 'display_name', u.raw_user_meta_data ->> 'full_name', ''),
+  coalesce(u.raw_user_meta_data ->> 'avatar_url', ''),
+  case when lower(coalesce(u.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+  true,
+  coalesce(u.created_at, now()),
+  now()
+from auth.users u
+on conflict (id) do update set
+  email = excluded.email,
+  display_name = case
+    when nullif(excluded.display_name, '') is not null then excluded.display_name
+    else p.display_name
+  end,
+  avatar_url = case
+    when nullif(excluded.avatar_url, '') is not null then excluded.avatar_url
+    else p.avatar_url
+  end,
+  role = excluded.role,
+  updated_at = now();
 
 alter table public.profiles enable row level security;
 alter table public.content_items enable row level security;
 alter table public.site_settings enable row level security;
 alter table public.admin_logs enable row level security;
 
-drop policy if exists "profiles read own or admin" on public.profiles;
+-- Apaga qualquer política antiga/conflitante somente da tabela profiles.
+do $$
+declare
+  p record;
+begin
+  for p in
+    select policyname
+    from pg_policies
+    where schemaname = 'public' and tablename = 'profiles'
+  loop
+    execute format('drop policy if exists %I on public.profiles', p.policyname);
+  end loop;
+end $$;
+
 create policy "profiles read own or admin"
 on public.profiles for select
 to authenticated
-using (auth.uid() = id or public.is_admin());
+using ((select auth.uid()) = id or public.is_admin());
 
-drop policy if exists "profiles insert own or admin" on public.profiles;
 create policy "profiles insert own or admin"
 on public.profiles for insert
 to authenticated
-with check (auth.uid() = id or public.is_admin());
+with check (
+  public.is_admin()
+  or (
+    (select auth.uid()) = id
+    and lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+    and role = case
+      when lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com' then 'admin'
+      else 'member'
+    end
+  )
+);
 
-drop policy if exists "profiles update own or admin" on public.profiles;
 create policy "profiles update own or admin"
 on public.profiles for update
 to authenticated
-using (auth.uid() = id or public.is_admin())
-with check (auth.uid() = id or public.is_admin());
+using ((select auth.uid()) = id or public.is_admin())
+with check (
+  public.is_admin()
+  or (
+    (select auth.uid()) = id
+    and lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+    and role = case
+      when lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com' then 'admin'
+      else 'member'
+    end
+  )
+);
 
+-- Recria as políticas das outras tabelas sem alterar seus dados.
 drop policy if exists "content read published" on public.content_items;
 create policy "content read published"
 on public.content_items for select
 to anon, authenticated
-using (
-  public.is_admin()
-  or coalesce(lower(data ->> 'active'), 'true') = 'true'
-);
+using (public.is_admin() or coalesce(lower(data ->> 'active'), 'true') = 'true');
 
 drop policy if exists "content admin insert" on public.content_items;
 create policy "content admin insert"
@@ -202,3 +353,6 @@ values
 ('00000000-0000-0000-0000-000000000006', 'gallery', '{"title":"Avatar 6","category":"Padrão","imageUrl":"/assets/avatars/avatar-06.webp","order":6,"active":true}'::jsonb),
 ('00000000-0000-0000-0000-000000000007', 'gallery', '{"title":"Avatar 7","category":"Padrão","imageUrl":"/assets/avatars/avatar-07.webp","order":7,"active":true}'::jsonb)
 on conflict (id) do nothing;
+
+notify pgrst, 'reload schema';
+commit;

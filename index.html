@@ -800,7 +800,7 @@
   .login-card h2{font:700 32px/1.08 var(--font-display);letter-spacing:-.035em}.login-sub{margin:9px 0 25px;color:rgba(234,242,255,.62);line-height:1.45}.login-tabs{display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:13px;background:rgba(255,255,255,.055);margin-bottom:22px}.login-tab{border:0;border-radius:10px;background:transparent;color:rgba(255,255,255,.58);padding:10px;font-weight:700}.login-tab.active{background:rgba(255,255,255,.11);color:#fff;box-shadow:0 5px 18px rgba(0,0,0,.18)}
   .auth-form{display:grid;gap:14px}.auth-form[hidden]{display:none}.auth-field{display:grid;gap:7px}.auth-field label{font-size:12px;font-weight:700;color:rgba(255,255,255,.76)}.auth-field input{height:54px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:#edf3ff;color:#101723;padding:0 16px;font:500 15px var(--font-body)}.auth-field input:focus{outline:none;border-color:#6eb4ff;box-shadow:0 0 0 4px rgba(45,127,249,.18)}
   .auth-primary,.auth-google{height:56px;border-radius:999px;font-weight:800;font-size:15px}.auth-primary{border:0;background:#2878ed;color:#fff;margin-top:4px}.auth-primary:hover{background:#3384f7}.auth-google{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px}.auth-google:hover{background:rgba(255,255,255,.12)}.auth-google svg{width:20px;height:20px}.auth-sep{display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.38);font-size:12px;margin:4px 0}.auth-sep:before,.auth-sep:after{content:"";height:1px;flex:1;background:rgba(255,255,255,.1)}
-  .auth-status{min-height:21px;font-size:13px;line-height:1.4}.auth-status.error{color:#ffaaa5}.auth-status.ok{color:#8ce8b5}.auth-resend{display:block;margin:2px auto 0;border:0;background:transparent;color:#7db9ff;font-size:12px;font-weight:800;padding:5px 8px}.auth-resend:hover{text-decoration:underline}.auth-resend[hidden]{display:none}.auth-foot{margin-top:16px;font-size:11px;line-height:1.45;color:rgba(255,255,255,.38);text-align:center}.login-dots{position:absolute;z-index:3;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:8px}.login-dot{width:6px;height:6px;border:0;border-radius:99px;background:rgba(255,255,255,.32);padding:0;transition:.3s}.login-dot.active{width:24px;background:#ff9628}
+  .auth-status{min-height:21px;font-size:13px;line-height:1.4}.auth-status.error{color:#ffaaa5}.auth-status.ok{color:#8ce8b5}.auth-foot{margin-top:16px;font-size:11px;line-height:1.45;color:rgba(255,255,255,.38);text-align:center}.login-dots{position:absolute;z-index:3;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:8px}.login-dot{width:6px;height:6px;border:0;border-radius:99px;background:rgba(255,255,255,.32);padding:0;transition:.3s}.login-dot.active{width:24px;background:#ff9628}
   .auth-loading{position:fixed;inset:0;z-index:999;background:#050816;display:grid;place-items:center;color:rgba(255,255,255,.72);font-weight:600}.auth-loading[hidden]{display:none}
   @media(max-width:850px){.login-shell{grid-template-columns:1fr;width:min(520px,calc(100% - 28px));gap:0}.login-brand{position:absolute;top:22px;left:0;padding:0}.login-brand img{width:70px}.login-copy{display:none}.login-card{justify-self:center;padding:26px;max-height:calc(100vh - 110px);margin-top:64px}.login-dots{bottom:12px}}
   @media(max-width:480px){.login-shell{width:calc(100% - 20px)}.login-card{padding:22px;border-radius:23px}.login-card h2{font-size:27px}.auth-field input{height:50px}.auth-primary,.auth-google{height:52px}}
@@ -958,7 +958,6 @@
         <button class="auth-primary" type="submit">Criar conta</button>
       </form>
       <div class="auth-status" id="authStatus" aria-live="polite"></div>
-      <button class="auth-resend" id="resendConfirmation" type="button" hidden>Reenviar e-mail de confirmação</button>
     </section>
   </div>
   <div class="login-dots" id="loginDots" aria-hidden="true"></div>
@@ -1414,7 +1413,6 @@
       'auth/invalid-email':'Digite um e-mail válido.',
       'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
       'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
-      'auth/email-not-confirmed':'Confirme seu e-mail antes de entrar. Depois, volte e tente novamente.',
       'backend/not-configured':'Este recurso será ativado quando o Supabase estiver conectado.',
       'username-in-use':'Este @ já está em uso. Escolha outro.',
       'username-invalid':'O @ informado não é válido.'
@@ -1425,9 +1423,7 @@
   function validUsername(value){return beBackend.validUsername(value);}
   function showLogin(){document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')history.replaceState(null,'','#login');}
   function enterHome(){document.body.classList.remove('login-mode');history.replaceState(null,'','#home');window.scrollTo(0,0);}
-  function setResendEmail(email){var button=q('resendConfirmation');if(!button)return;var value=String(email||localStorage.getItem('bePendingConfirmationEmail')||'').trim().toLowerCase();button.dataset.email=value;button.hidden=!value;}
-  function takeOauthReturn(){try{var stored=sessionStorage.getItem('beOauthReturn');if(!stored)return '';var url=new URL(stored,location.origin),path=String((window.BE_SUPABASE_CONFIG&&window.BE_SUPABASE_CONFIG.oauthAuthorizationPath)||'/oauth/consent');if(url.origin===location.origin&&url.pathname===path){sessionStorage.removeItem('beOauthReturn');return url.href;}}catch(_){}sessionStorage.removeItem('beOauthReturn');return '';}
-  function setMode(mode){var signup=mode==='signup';q('loginTab').classList.toggle('active',!signup);q('signupTab').classList.toggle('active',signup);q('loginForm').hidden=signup;q('signupForm').hidden=!signup;q('authTitle').textContent=signup?'Crie sua conta':'Bem-vindo de volta!';q('authSubtitle').textContent=signup?'Cadastre seu nome, seu @, e-mail e senha. Você confirmará o e-mail antes do primeiro acesso.':'Entre usando seu e-mail e sua senha.';q('resendConfirmation').hidden=true;setStatus('');}
+  function setMode(mode){var signup=mode==='signup';q('loginTab').classList.toggle('active',!signup);q('signupTab').classList.toggle('active',signup);q('loginForm').hidden=signup;q('signupForm').hidden=!signup;q('authTitle').textContent=signup?'Crie sua conta':'Bem-vindo de volta!';q('authSubtitle').textContent=signup?'Cadastre seu nome, seu @, e-mail e senha.':'Entre usando seu e-mail e sua senha.';setStatus('');}
   function initBackgrounds(){var slides=[].slice.call(document.querySelectorAll('.login-bg-slide')),dots=q('loginDots');if(!dots||!slides.length)return;dots.innerHTML=slides.map(function(_,i){return '<button class="login-dot '+(i===0?'active':'')+'" type="button" data-bg="'+i+'"></button>'}).join('');function show(i){bgIndex=(i+slides.length)%slides.length;slides.forEach(function(s,j){s.classList.toggle('active',j===bgIndex)});dots.querySelectorAll('.login-dot').forEach(function(d,j){d.classList.toggle('active',j===bgIndex)})}dots.addEventListener('click',function(e){var b=e.target.closest('[data-bg]');if(!b)return;show(Number(b.dataset.bg));restart()});function restart(){clearInterval(bgTimer);bgTimer=setInterval(function(){show(bgIndex+1)},20000)}restart()}
 
   async function finishPublicLogin(user){
@@ -1442,9 +1438,6 @@
     localStorage.setItem('beSessionUid',user.uid);
     try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
     setStatus('');
-    localStorage.removeItem('bePendingConfirmationEmail');
-    var oauthReturn=takeOauthReturn();
-    if(oauthReturn){location.assign(oauthReturn);return;}
     enterHome();
   }
 
@@ -1460,19 +1453,12 @@
       try{await auth.sendPasswordReset(email);setStatus('Enviamos um link de redefinição para seu e-mail.','ok')}catch(err){setStatus(friendly(err),'error')}
     };
 
-    q('resendConfirmation').onclick=async function(){
-      var button=this,email=String(button.dataset.email||q('loginEmail').value||localStorage.getItem('bePendingConfirmationEmail')||'').trim().toLowerCase();
-      if(!email){setStatus('Digite o e-mail usado no cadastro.','error');return;}
-      button.disabled=true;setStatus('Reenviando a confirmação…');
-      try{await auth.resendSignupConfirmation(email);localStorage.setItem('bePendingConfirmationEmail',email);setStatus('Novo e-mail de confirmação enviado. Confira também a pasta de spam.','ok');setResendEmail(email);}catch(err){setStatus(friendly(err),'error');setResendEmail(email);}finally{button.disabled=false;}
-    };
-
     q('loginForm').addEventListener('submit',async function(e){
       e.preventDefault();
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=form.elements.namedItem('email').value.trim().toLowerCase(),password=form.elements.namedItem('password').value;
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando…');
-      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result.user);}catch(err){showLogin();if(err&&err.code==='auth/email-not-confirmed'){localStorage.setItem('bePendingConfirmationEmail',email);setResendEmail(email);}setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
+      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result.user);}catch(err){showLogin();setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
 
     q('signupForm').addEventListener('submit',async function(e){
@@ -1484,13 +1470,13 @@
       if(email===beBackend.ADMIN_EMAIL){setStatus('A conta administrativa deve ser acessada pelo painel.','error');return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
-      try{var result=await auth.signUp({email:email,password:password,name:name,username:username,remember:true});if(result.needsEmailConfirmation){localStorage.setItem('bePendingConfirmationEmail',email);showLogin();setMode('login');q('loginEmail').value=email;setStatus('Enviamos um link de confirmação para '+email+'. Confirme o endereço antes do primeiro acesso.','ok');setResendEmail(email);return;}currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');await finishPublicLogin(result.user);}catch(err){showLogin();setStatus(friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
+      try{var result=await auth.signUp({email:email,password:password,name:name,username:username,remember:true});if(result.needsEmailConfirmation){showLogin();setMode('login');setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();}catch(err){showLogin();setStatus(friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
 
     auth.onChange(async function(user){
       authReady=true;q('authLoading').hidden=true;
       if(authFlowBusy)return;
-      if(!user){localStorage.removeItem('beSessionUid');showLogin();var pending=localStorage.getItem('bePendingConfirmationEmail');if(pending){q('loginEmail').value=pending;setResendEmail(pending);}return;}
+      if(!user){localStorage.removeItem('beSessionUid');showLogin();return;}
       try{await finishPublicLogin(user);}catch(error){showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
 
