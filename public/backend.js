@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const ADMIN_EMAIL = 'bralisofc@gmail.com';
+  const ADMIN_EMAIL = String(window.BE_SUPABASE_CONFIG?.adminEmail || 'bralisofc@gmail.com').trim().toLowerCase();
   const DB_KEY = 'be_local_database_v2';
   const LOCAL_SESSION_KEY = 'be_local_session_v2';
   const MODE = hasSupabaseConfig() ? 'supabase' : 'local';
