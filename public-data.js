@@ -412,11 +412,12 @@
   function syncDetailListButton(button, itemId) {
     const favorites = detailFavoriteSet();
     const active = favorites.has(String(itemId || ''));
+    const label = active ? 'Remover dos favoritos' : 'Adicionar aos favoritos';
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
-    button.innerHTML = `${active
-      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>Na Minha Lista'
-      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Minha Lista'}`;
+    button.setAttribute('aria-label', label);
+    button.setAttribute('title', label);
+    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>';
   }
 
   function toggleDetailFavorite(button) {
