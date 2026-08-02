@@ -1,0 +1,28 @@
+CORREÇÃO DO LOGIN DO PAINEL ADMINISTRATIVO
+
+O código foi ajustado para corrigir o retorno do Google ao painel #/admin.
+
+O problema anterior:
+- o redirectTo usava #/admin/dashboard;
+- o Supabase também devolve access_token e refresh_token usando o fragmento #;
+- o navegador terminava com dois # e a biblioteca não conseguia restaurar a sessão.
+
+O que foi corrigido:
+- o Google retorna para /?auth_callback=admin;
+- o fragmento # fica reservado somente para os dados temporários do Supabase;
+- após restaurar a sessão, os tokens são removidos da barra de endereço;
+- o administrador é enviado automaticamente para #/admin/dashboard;
+- links antigos no formato #/admin/dashboard#access_token=... também são reconhecidos;
+- o e-mail administrativo continua definido como bralisofc@gmail.com.
+
+CONFIRA NO SUPABASE
+Authentication > URL Configuration
+
+Site URL:
+https://billieilish-tv.vercel.app/
+
+Additional Redirect URLs:
+https://billieilish-tv.vercel.app/
+https://billieilish-tv.vercel.app/**
+
+Depois, publique novamente todos os arquivos deste ZIP na Vercel.

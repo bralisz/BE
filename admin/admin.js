@@ -16,9 +16,15 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
-  const route = () => location.hash.replace(/^#\/admin\/?/, '') || 'dashboard';
+  const adminHashRoute = () => location.hash.startsWith('#/admin');
+  const adminCallback = () => {
+    const queryDestination = new URLSearchParams(location.search || '').get('auth_callback');
+    if (queryDestination === 'admin') return true;
+    try { return sessionStorage.getItem('beOAuthDestination') === 'admin'; } catch (_) { return false; }
+  };
+  const route = () => adminHashRoute() ? (location.hash.replace(/^#\/admin\/?/, '') || 'dashboard') : 'dashboard';
   const go = value => { location.hash = '#/admin/' + value; };
-  const adminRoute = () => location.hash.startsWith('#/admin');
+  const adminRoute = () => adminHashRoute() || adminCallback();
   const now = () => beBackend.now();
   const formatDate = value => {
     if (!value) return '—';
@@ -55,6 +61,17 @@
   async function bootBackend() {
     if (!window.beBackend) throw new Error('O adaptador de dados não foi carregado.');
     await window.beBackend.ready;
+
+    // Depois que o Supabase consumiu o token, garantimos que o painel esteja
+    // na rota administrativa limpa, sem credenciais visíveis na barra.
+    if (adminCallback() && !adminHashRoute()) {
+      const url = new URL(location.href);
+      ['code','error','error_code','error_description','auth_callback','oauth'].forEach(name => url.searchParams.delete(name));
+      url.hash = '#/admin/dashboard';
+      history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
+      try { sessionStorage.removeItem('beOAuthDestination'); } catch (_) {}
+    }
+
     auth = beBackend.auth;
     db = beBackend.data;
 

@@ -72,11 +72,68 @@
     return url.href;
   }
 
+  function authHashParams() {
+    const rawHash = String(location.hash || '').replace(/^#/, '');
+    const nestedHashIndex = rawHash.indexOf('#');
+    const payload = nestedHashIndex >= 0 ? rawHash.slice(nestedHashIndex + 1) : rawHash;
+    return new URLSearchParams(payload);
+  }
+
+  function authCallbackDestination() {
+    const query = new URLSearchParams(location.search || '');
+    const fromQuery = String(query.get('auth_callback') || '').trim().toLowerCase();
+    if (fromQuery) return fromQuery;
+
+    const rawHash = String(location.hash || '');
+    if (rawHash.startsWith('#/admin')) return 'admin';
+
+    try {
+      const stored = String(sessionStorage.getItem('beOAuthDestination') || '').trim().toLowerCase();
+      if (stored) return stored;
+    } catch (_) {}
+    return 'home';
+  }
+
+  function normalizeLegacyAuthHash() {
+    const rawHash = String(location.hash || '').replace(/^#/, '');
+    const nestedHashIndex = rawHash.indexOf('#');
+    if (nestedHashIndex < 0) return false;
+
+    const routePart = rawHash.slice(0, nestedHashIndex);
+    const payload = rawHash.slice(nestedHashIndex + 1);
+    if (!/^(?:access_token|refresh_token|error|error_code)=/i.test(payload)) return false;
+
+    const destination = routePart.startsWith('/admin') ? 'admin' : 'home';
+    try { sessionStorage.setItem('beOAuthDestination', destination); } catch (_) {}
+
+    const url = new URL(location.href);
+    if (!url.searchParams.get('auth_callback')) url.searchParams.set('auth_callback', destination);
+    url.hash = '#' + payload;
+    history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
+    return true;
+  }
+
+  function authCallbackError() {
+    const query = new URLSearchParams(location.search || '');
+    const hash = authHashParams();
+    return query.get('error_description') || hash.get('error_description') ||
+      query.get('error') || hash.get('error') || '';
+  }
+
+  function cleanAuthCallbackUrl(destination = 'home') {
+    const url = new URL(location.href);
+    ['code', 'error', 'error_code', 'error_description', 'auth_callback', 'oauth'].forEach(name => {
+      url.searchParams.delete(name);
+    });
+    url.hash = destination === 'admin' ? '#/admin/dashboard' : '#home';
+    history.replaceState(null, '', url.pathname + (url.search || '') + url.hash);
+  }
+
   function hasAuthCallbackPayload() {
     const query = new URLSearchParams(location.search || '');
-    const hash = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
+    const hash = authHashParams();
     return Boolean(
-      query.get('code') || query.get('error') || query.get('error_code') ||
+      query.get('code') || query.get('error') || query.get('error_code') || query.get('auth_callback') ||
       hash.get('access_token') || hash.get('refresh_token') || hash.get('error') || hash.get('error_code')
     );
   }
@@ -784,7 +841,9 @@
       return currentUser;
     },
     async signInWithGoogle() {
-      const redirectTo = `${location.origin}${location.pathname}#/admin/dashboard`;
+      sessionStorage.setItem('beOAuthDestination', 'admin');
+      localStorage.setItem('beAuthExpected', '1');
+      const redirectTo = oauthRedirectUrl('admin');
       const { data: result, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo, queryParams: { prompt: 'select_account' } }
@@ -811,6 +870,13 @@
 
   async function initialize() {
     if (MODE === 'supabase') {
+      // Corrige callbacks antigos no formato #/admin/dashboard#access_token=...
+      // antes de o Supabase tentar detectar a sessão na URL.
+      normalizeLegacyAuthHash();
+
+      const callbackActive = hasAuthCallbackPayload();
+      const callbackDestination = authCallbackDestination();
+      const callbackFailure = authCallbackError();
       const config = window.BE_SUPABASE_CONFIG;
       supabaseClient = window.supabase.createClient(config.url, config.publishableKey, {
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
@@ -862,8 +928,20 @@
 
       // O processamento do callback pode terminar alguns instantes depois da
       // criação do cliente. Nessas URLs aguardamos a sessão antes de liberar a UI.
-      if (!currentUser && hasAuthCallbackPayload()) {
+      if (!currentUser && callbackActive && !callbackFailure) {
         currentUser = await resolveSupabaseUser(sessionData);
+      }
+
+      // O retorno do painel usa query string para não disputar o único fragmento
+      // (#) disponível com os tokens do fluxo implícito do Supabase.
+      if (callbackActive && callbackDestination === 'admin') {
+        if (callbackFailure) {
+          sessionStorage.setItem('adminAuthError', decodeURIComponent(String(callbackFailure).replace(/\+/g, ' ')));
+        } else if (!currentUser) {
+          sessionStorage.setItem('adminAuthError', 'O Google concluiu o login, mas a sessão não foi restaurada. Tente entrar novamente.');
+        }
+        sessionStorage.removeItem('beOAuthDestination');
+        cleanAuthCallbackUrl('admin');
       }
     } else {
       const session = readLocalSession();

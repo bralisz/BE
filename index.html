@@ -1300,6 +1300,55 @@
     box-shadow:0 0 0 1000px #090b0f inset!important;
   }
 
+
+  /* Ajustes solicitados: ícone no e-mail, botão em degradê e logo maior */
+  .auth-input-with-icon{
+    position:relative;
+    width:100%;
+  }
+  .auth-input-with-icon .auth-input-icon{
+    position:absolute;
+    left:20px;
+    top:50%;
+    width:22px;
+    height:22px;
+    transform:translateY(-50%);
+    color:rgba(255,255,255,.58);
+    pointer-events:none;
+    z-index:2;
+    transition:color .2s ease,filter .2s ease;
+  }
+  .auth-input-with-icon input{
+    padding-left:58px!important;
+  }
+  .auth-input-with-icon:focus-within .auth-input-icon{
+    color:#73b5ff;
+    filter:drop-shadow(0 0 8px rgba(74,145,255,.45));
+  }
+  .auth-primary{
+    background:linear-gradient(135deg,#2563eb 0%,#4f46e5 52%,#7c3aed 100%)!important;
+    box-shadow:0 15px 36px rgba(79,70,229,.32),inset 0 1px 0 rgba(255,255,255,.18)!important;
+  }
+  .auth-primary:hover{
+    background:linear-gradient(135deg,#3b82f6 0%,#6366f1 52%,#8b5cf6 100%)!important;
+    box-shadow:0 18px 42px rgba(99,102,241,.40),inset 0 1px 0 rgba(255,255,255,.22)!important;
+  }
+  .login-shell{
+    padding-top:150px!important;
+  }
+  .login-brand{top:24px!important}
+  .login-brand img{
+    width:120px!important;
+    max-height:110px!important;
+  }
+  @media(max-width:520px){
+    .login-shell{padding:120px 0 28px!important}
+    .login-brand{top:18px!important}
+    .login-brand img{width:92px!important;max-height:86px!important}
+    .auth-input-with-icon .auth-input-icon{left:17px;width:21px;height:21px}
+    .auth-input-with-icon input{padding-left:52px!important}
+  }
+
 </style>
 
 <link rel="stylesheet" href="/admin/admin.css">
@@ -1333,7 +1382,13 @@
           <form class="auth-form" id="emailLookupForm">
             <div class="auth-field">
               <label class="sr-only" for="authEmail">E-mail</label>
-              <input id="authEmail" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="seuemail@exemplo.com">
+              <div class="auth-input-with-icon">
+                <svg class="auth-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+                  <path d="m4.5 7 7.5 5.5L19.5 7"></path>
+                </svg>
+                <input id="authEmail" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="seuemail@exemplo.com">
+              </div>
             </div>
             <button class="auth-primary" type="submit">Acessar a Plataforma</button>
           </form>
@@ -1709,7 +1764,8 @@
 
   /* -------- user account and profile -------- */
   async function setupPublicAccount(){
-    if(location.hash.startsWith('#/admin')) return;
+    var callbackDestination=new URLSearchParams(location.search||'').get('auth_callback');
+    if(location.hash.startsWith('#/admin')||callbackDestination==='admin') return;
     if(!window.beBackend) return;
     await window.beBackend.ready;
     var auth=beBackend.auth;
@@ -1839,7 +1895,8 @@
 <script>
 (function(){
   'use strict';
-  if(location.hash.startsWith('#/admin')) return;
+  var initialCallbackDestination=new URLSearchParams(location.search||'').get('auth_callback');
+  if(location.hash.startsWith('#/admin')||initialCallbackDestination==='admin') return;
 
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
 
@@ -1867,7 +1924,7 @@
   }
   function normalizeUsername(value){return beBackend.normalizeUsername(value);}
   function validUsername(value){return beBackend.validUsername(value);}
-  function callbackParams(){var query=new URLSearchParams(location.search||''),hash=new URLSearchParams(String(location.hash||'').replace(/^#/,''));return {query:query,hash:hash};}
+  function callbackParams(){var query=new URLSearchParams(location.search||''),raw=String(location.hash||'').replace(/^#/,''),nested=raw.indexOf('#'),payload=nested>=0?raw.slice(nested+1):raw,hash=new URLSearchParams(payload);return {query:query,hash:hash};}
   function hasAuthCallback(){var p=callbackParams();return Boolean(p.query.get('code')||p.query.get('error')||p.query.get('error_code')||p.query.get('auth_callback')||p.hash.get('access_token')||p.hash.get('refresh_token')||p.hash.get('error')||p.hash.get('error_code'));}
   function authCallbackError(){var p=callbackParams();return p.query.get('error_description')||p.hash.get('error_description')||p.query.get('error')||p.hash.get('error')||'';}
   function replaceRoute(hash){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});url.hash=hash;history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
