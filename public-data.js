@@ -120,13 +120,37 @@
 
     const sections = (await beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }))
       .filter(section => section.active !== false);
-    const [videoRows, movieRows] = await Promise.all([
+    const [videoRows, movieRows, featuredRows] = await Promise.all([
       beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => [])
+      beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => []),
+      beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => [])
     ]);
     const allVideos = videoRows.filter(video => video.active !== false);
     const allMovies = movieRows.filter(movie => movie.active !== false);
-    if (!sections.length && !allMovies.length) return;
+    const videosById = new Map(allVideos.map(video => [String(video.id), video]));
+    const featuredSeen = new Set();
+    const featuredVideos = featuredRows
+      .filter(item => item.active !== false && item.videoId)
+      .map(item => {
+        const video = videosById.get(String(item.videoId));
+        if (!video || featuredSeen.has(String(item.videoId))) return null;
+        featuredSeen.add(String(item.videoId));
+        return {
+          ...video,
+          title: item.title || video.title,
+          description: item.description || video.description,
+          thumbnailUrl: item.imageUrl || video.thumbnailUrl || video.imageUrl || video.bannerUrl,
+          imageUrl: item.imageUrl || video.imageUrl || video.thumbnailUrl || video.bannerUrl,
+          bannerUrl: item.bannerUrl || video.bannerUrl || video.imageUrl || video.thumbnailUrl,
+          videoUrl: item.contentUrl || video.videoUrl || video.contentUrl || video.link,
+          duration: item.duration || video.duration || video.videoDuration || video.runtime,
+          year: item.year || video.year,
+          category: 'destaque',
+          collection: 'videos'
+        };
+      })
+      .filter(Boolean);
+    if (!sections.length && !allMovies.length && !featuredVideos.length) return;
 
     const old = document.getElementById('dynamicSections');
     if (old) old.remove();
@@ -135,6 +159,31 @@
     host.id = 'dynamicSections';
     host.className = 'video-catalog';
     host.setAttribute('aria-label', 'Categorias de vídeos');
+
+    if (featuredVideos.length) {
+      const featuredBlock = document.createElement('section');
+      featuredBlock.className = 'video-rail-section featured-video-rail';
+      featuredBlock.dataset.category = 'destaque';
+      featuredBlock.dataset.collection = 'videos';
+      featuredBlock.innerHTML = `
+        <a class="video-rail-title" href="#" aria-label="Ver todos: Destaque">
+          <span>Destaque</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+        <div class="video-rail-shell">
+          <button class="video-rail-arrow prev" type="button" aria-label="Ver destaques anteriores" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="video-rail" tabindex="0" aria-label="Destaque">
+            ${featuredVideos.map(video => videoCard(video)).join('')}
+          </div>
+          <button class="video-rail-arrow next" type="button" aria-label="Ver mais destaques">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>`;
+      host.append(featuredBlock);
+      setupRail(featuredBlock);
+    }
 
     if (allMovies.length) {
       const movieBlock = document.createElement('section');

@@ -1,0 +1,6 @@
+ATUALIZAÇÃO — LUPA RESTAURADA
+
+- A lupa de pesquisa foi mantida e fixada imediatamente ao lado de “Suporte”.
+- O espaço vazio entre “Suporte” e a lupa continua removido.
+- O avatar permanece separado, na extrema superior direita.
+- A abertura e o fechamento do campo de pesquisa continuam funcionando normalmente.
