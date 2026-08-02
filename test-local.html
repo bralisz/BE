@@ -1198,6 +1198,59 @@
     .auth-options{align-items:flex-start;gap:10px}
     .discord-icon-button{width:61px;height:61px}
   }
+
+
+  /* Login final — formulário e Discord centralizados */
+  .login-copy{display:none!important}
+  .login-shell{
+    width:min(560px,calc(100% - 32px))!important;
+    min-height:100dvh!important;
+    height:auto!important;
+    margin:0 auto!important;
+    padding:104px 0 46px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:16px!important;
+    text-align:left!important;
+  }
+  .login-brand{
+    position:absolute!important;
+    top:24px!important;
+    left:50%!important;
+    transform:translateX(-50%)!important;
+    width:auto!important;
+    padding:0!important;
+    margin:0!important;
+    align-self:auto!important;
+    justify-self:auto!important;
+  }
+  .login-brand img{width:76px!important;max-height:68px!important}
+  .auth-column{
+    width:100%!important;
+    max-width:520px!important;
+    margin:auto 0!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:16px!important;
+    grid-column:auto!important;
+    grid-row:auto!important;
+    align-self:auto!important;
+    justify-self:auto!important;
+    order:1!important;
+  }
+  .auth-column .login-card{width:100%!important}
+  .discord-login-wrap{width:100%!important;justify-content:center!important}
+  .login-dots{display:none!important}
+  @media(max-width:520px){
+    .login-shell{width:calc(100% - 20px)!important;padding:86px 0 28px!important;gap:12px!important}
+    .login-brand{top:16px!important}
+    .login-brand img{width:62px!important}
+    .auth-column{gap:12px!important}
+  }
 </style>
 
 <link rel="stylesheet" href="admin/admin.css">
@@ -1222,11 +1275,6 @@
   </div>
   <div class="login-shell">
     <a class="login-brand" href="#login" aria-label="BE"><img src="assets/logo.png" alt="BE"></a>
-    <div class="login-copy">
-      <div class="login-kicker">Conteúdo para fãs</div>
-      <h1>O universo completo da<br><strong>Billie.</strong> Em um só lugar.</h1>
-      <p>Todas as eras, shows históricos, bastidores e materiais reunidos em uma experiência feita para fãs.</p>
-    </div>
     <div class="auth-column">
       <section class="login-card" id="authCard" aria-label="Acessar sua conta">
         <section class="auth-step auth-start-step" id="emailStep" aria-labelledby="emailStepTitle">
