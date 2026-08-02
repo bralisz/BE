@@ -1,8 +1,0 @@
-ATUALIZAÇÃO — PERFIL, SENHA E SELETOR DE AVATAR
-
-- Removido o texto “Configure seu perfil” da configuração inicial.
-- Removido o rótulo visível “Seu @ exclusivo”, preservando a acessibilidade do campo.
-- Login e criação de conta agora validam a mesma regra de senha:
-  mínimo de 6 caracteres e pelo menos um número ou caractere especial.
-- O seletor de avatar recebeu fundo escuro uniforme e painéis glass inspirados no iOS.
-- Ajustados bordas, blur, transparência, sombras e espaçamento no desktop e no celular.
