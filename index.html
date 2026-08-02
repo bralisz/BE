@@ -2753,8 +2753,41 @@
 
   /* #config é uma página própria; a navegação principal continua centralizada. */
   body.settings-page-active main{min-height:100vh;background:#040506}
-  body.settings-page-active .settings-page-shell{display:block}
+  body.settings-page-active .settings-page-shell{
+    position:fixed!important;
+    inset:0!important;
+    z-index:40!important;
+    display:flex!important;
+    overflow-y:auto!important;
+    padding:112px 24px 38px!important;
+    background:#040506!important;
+  }
+  body.settings-page-active .settings-wrap{
+    width:min(1120px,100%)!important;
+    margin:auto!important;
+    padding:0!important;
+  }
+  body.settings-page-active .settings-header{width:100%;align-items:center!important}
+  body.settings-page-active #settingsPageBody{width:100%}
+  body.settings-page-active #settingsPageBody>.settings-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr)!important;
+    gap:18px!important;
+    align-items:start!important;
+  }
+  .profile-page-banner{z-index:0!important}
+  .profile-page-banner-fallback{z-index:0!important}
+  .profile-page-banner[hidden],.profile-page-banner-fallback[hidden]{display:none!important}
+  .profile-page-hero.has-profile-banner{background-repeat:no-repeat!important;background-size:cover!important;background-position:center center!important}
   .banner-option span{display:none!important}
+  @media(max-width:980px){
+    body.settings-page-active #settingsPageBody>.settings-grid{grid-template-columns:1fr!important}
+    body.settings-page-active .settings-stack+.settings-stack{margin-top:0!important}
+  }
+  @media(max-width:640px){
+    body.settings-page-active .settings-page-shell{padding:96px 14px 24px!important}
+    body.settings-page-active .settings-header{align-items:flex-start!important}
+  }
 </style>
 
 <link rel="stylesheet" href="/admin/admin.css">
@@ -3413,6 +3446,42 @@
       settingsPage.hidden=true;
       if(updateRoute!==false&&(isConfigRoute()||isProfileRoute()))pushPublicRoute('/');
     }
+    function readCachedProfileBanner(user){
+      if(!user||!user.uid)return {bannerUrl:'',bannerId:''};
+      try{
+        var parsed=JSON.parse(localStorage.getItem('beProfileBanner:'+user.uid)||'{}');
+        return {bannerUrl:String(parsed.bannerUrl||''),bannerId:String(parsed.bannerId||'')};
+      }catch(_){return {bannerUrl:'',bannerId:''};}
+    }
+    function resolvedProfileBanner(user){
+      if(!user)return {bannerUrl:'',bannerId:''};
+      var cached=readCachedProfileBanner(user);
+      var metadata=user&&user.raw&&(user.raw.user_metadata||user.raw.raw_user_meta_data)||{};
+      var bannerUrl=String(cached.bannerUrl||(currentProfile&&currentProfile.bannerUrl)||metadata.profile_banner_url||metadata.banner_url||'').trim();
+      var bannerId=String(cached.bannerId||(currentProfile&&currentProfile.bannerId)||metadata.profile_banner_id||metadata.banner_id||'').trim();
+      if(currentProfile&&bannerUrl){currentProfile.bannerUrl=bannerUrl;currentProfile.bannerId=bannerId;}
+      return {bannerUrl:bannerUrl,bannerId:bannerId};
+    }
+    function applyProfileBanner(bannerUrl){
+      var hero=profilePage&&profilePage.querySelector('.profile-page-hero');
+      var url=String(bannerUrl||'').trim();
+      if(!url){
+        if(hero){hero.classList.remove('has-profile-banner');hero.style.backgroundImage='';}
+        profilePageBanner.hidden=true;profilePageBanner.style.display='none';
+        profilePageBannerImg.removeAttribute('src');
+        profilePageBannerFallback.hidden=false;profilePageBannerFallback.style.display='block';
+        return;
+      }
+      if(hero){
+        hero.classList.add('has-profile-banner');
+        hero.style.backgroundImage='url('+JSON.stringify(url)+')';
+        hero.style.backgroundSize='cover';
+        hero.style.backgroundPosition='center center';
+      }
+      profilePageBannerImg.src=url;
+      profilePageBanner.hidden=false;profilePageBanner.removeAttribute('hidden');profilePageBanner.style.display='block';
+      profilePageBannerFallback.hidden=true;profilePageBannerFallback.setAttribute('hidden','');profilePageBannerFallback.style.display='none';
+    }
     function renderProfilePage(){
       var user=auth.currentUser;
       if(!user){
@@ -3428,14 +3497,15 @@
       var displayName=currentProfile.displayName||user.displayName||'Usuário';
       var handle=currentProfile.username?'@'+currentProfile.username:'@perfil';
       var avatar=currentProfile.avatarUrl||user.photoURL||'';
-      var banner=currentProfile.bannerUrl||'';
+      var bannerState=resolvedProfileBanner(user);
+      var banner=bannerState.bannerUrl;
       profilePageName.textContent=displayName;
       profilePageHandle.textContent=handle;
       profilePageBadge.textContent='Perfil';
       profilePageMetaLabel.textContent='Conta pessoal';
       profilePageMemberSince.textContent='Membro desde '+publicProfileYear();
       profilePageAvatar.innerHTML=avatar?'<img src="'+escapePublic(avatar)+'" alt="Avatar do perfil">':profileFallbackAvatar();
-      if(banner){profilePageBannerImg.src=banner;profilePageBanner.hidden=false;profilePageBannerFallback.hidden=true;}else{profilePageBanner.hidden=true;profilePageBannerImg.removeAttribute('src');profilePageBannerFallback.hidden=false;}
+      applyProfileBanner(banner);
     }
     function renderSettingsPage(){
       var user=auth.currentUser;
@@ -3445,7 +3515,8 @@
         return;
       }
       var avatar=currentProfile.avatarUrl||user.photoURL||'';
-      var banner=currentProfile.bannerUrl||'';
+      var bannerState=resolvedProfileBanner(user);
+      var banner=bannerState.bannerUrl;
       var identities=user&&user.raw&&Array.isArray(user.raw.identities)?user.raw.identities:[];
       var providers=user&&user.raw&&user.raw.app_metadata&&Array.isArray(user.raw.app_metadata.providers)?user.raw.app_metadata.providers:[];
       var discordConnected=providers.indexOf('discord')>=0||identities.some(function(identity){return String(identity.provider||'').toLowerCase()==='discord';});
@@ -3506,8 +3577,9 @@
         if(!items.length){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Nenhum banner disponível no momento.</div>';return;}
         var groups={};
         items.forEach(function(item){var cat=(item.category||'Banners de perfil').trim()||'Banners de perfil';(groups[cat]||(groups[cat]=[])).push(item);});
+        var selectedBanner=resolvedProfileBanner(auth.currentUser).bannerUrl;
         bannerPickerBody.innerHTML=Object.keys(groups).map(function(cat){
-          return '<section class="banner-group"><h3>'+escapePublic(cat)+'</h3><div class="banner-grid">'+groups[cat].map(function(item){return '<button class="banner-option '+((currentProfile.bannerUrl||'')===item.imageUrl?'selected':'')+'" type="button" data-banner-url="'+escapePublic(item.imageUrl)+'" data-banner-id="'+escapePublic(item.id)+'" aria-label="Selecionar banner de perfil"><img src="'+escapePublic(item.imageUrl)+'" alt="Banner de perfil"></button>';}).join('')+'</div></section>';
+          return '<section class="banner-group"><h3>'+escapePublic(cat)+'</h3><div class="banner-grid">'+groups[cat].map(function(item){return '<button class="banner-option '+(selectedBanner===item.imageUrl?'selected':'')+'" type="button" data-banner-url="'+escapePublic(item.imageUrl)+'" data-banner-id="'+escapePublic(item.id)+'" aria-label="Selecionar banner de perfil"><img src="'+escapePublic(item.imageUrl)+'" alt="Banner de perfil"></button>';}).join('')+'</div></section>';
         }).join('');
         bannerPickerBody.querySelectorAll('[data-banner-url]').forEach(function(button){button.addEventListener('click',async function(){
           if(!auth.currentUser)return;
@@ -3516,6 +3588,8 @@
           var bannerId=button.dataset.bannerId||'';
           currentProfile={...(currentProfile||{}),bannerUrl:bannerUrl,bannerId:bannerId};
           try{localStorage.setItem('beProfileBanner:'+auth.currentUser.uid,JSON.stringify({bannerUrl:bannerUrl,bannerId:bannerId,updatedAt:beBackend.now()}));}catch(_){ }
+          bannerPickerBody.querySelectorAll('.banner-option').forEach(function(option){option.classList.toggle('selected',option===button);});
+          applyProfileBanner(bannerUrl);
           renderProfilePage();
           try{
             var savedProfile=await beBackend.profiles.setBanner(auth.currentUser.uid,bannerUrl,bannerId);
@@ -3604,6 +3678,7 @@
       var isAdmin=false;
       if(currentUser){
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
+        var restoredBanner=resolvedProfileBanner(currentUser);if(restoredBanner.bannerUrl){currentProfile.bannerUrl=restoredBanner.bannerUrl;currentProfile.bannerId=restoredBanner.bannerId;}
         username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=currentProfile.avatarUrl||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false);},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
       }else{username.textContent='Visitante';currentProfile={};selectedAvatar=localStorage.getItem(avatarCacheKey(null))||'';setMainAvatar(selectedAvatar,null);authAction.textContent='Entrar';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
       dashboard.hidden=!isAdmin;
@@ -3623,8 +3698,13 @@
     window.addEventListener('be:profile-banner-changed',function(event){
       var detail=event&&event.detail||{};
       if(!auth.currentUser||detail.userId!==auth.currentUser.uid)return;
-      if(detail.profile)currentProfile=detail.profile;
-      else currentProfile.bannerUrl=detail.bannerUrl||'';
+      var latestUrl=String(detail.bannerUrl||(detail.profile&&detail.profile.bannerUrl)||resolvedProfileBanner(auth.currentUser).bannerUrl||'');
+      var latestId=String(detail.bannerId||(detail.profile&&detail.profile.bannerId)||'');
+      currentProfile={...(currentProfile||{}),...(detail.profile||{}),bannerUrl:latestUrl,bannerId:latestId};
+      if(latestUrl){
+        try{localStorage.setItem('beProfileBanner:'+auth.currentUser.uid,JSON.stringify({bannerUrl:latestUrl,bannerId:latestId,updatedAt:beBackend.now()}));}catch(_){ }
+      }
+      applyProfileBanner(latestUrl);
       renderProfilePage();
       if(document.body.classList.contains('settings-page-active'))renderSettingsPage();
     });
