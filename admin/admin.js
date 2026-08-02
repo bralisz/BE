@@ -43,6 +43,21 @@
   const go = value => { location.hash = '#/admin/' + value; };
   const adminRoute = () => adminHashRoute() || adminCallback();
   const now = () => beBackend.now();
+  const normalizePublicId = value => /^\d{8}$/.test(String(value || '').trim()) ? String(value).trim() : '';
+  function generatePublicId(seed = '') {
+    let text = String(seed || '').trim();
+    if (!text) {
+      const random = new Uint32Array(2);
+      if (window.crypto?.getRandomValues) window.crypto.getRandomValues(random);
+      text = `${Date.now()}-${random[0] || Math.random()}-${random[1] || Math.random()}`;
+    }
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return String(10000000 + ((hash >>> 0) % 90000000));
+  }
   const formatDate = value => {
     if (!value) return '—';
     const date = value instanceof Date ? value : new Date(value);
@@ -469,7 +484,7 @@
       const search = $('#search').value.toLowerCase();
       const status = $('#statusFilter').value;
       const rows = items.filter(item => (!search || String(item.title || item.name || item.displayName || item.email || '').toLowerCase().includes(search)) && (!status || String(item.active) === status));
-      $('#list').innerHTML = rows.length ? `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.displayName || item.email || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}</small></td><td>${esc(item.type || name)}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions">${name === 'users' ? '' : `<button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button>`}</div></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhum item encontrado.</div>';
+      $('#list').innerHTML = rows.length ? `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.displayName || item.email || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}${name === 'videos' ? `<br>Link: /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id))}` : ''}</small></td><td>${esc(item.type || name)}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions">${name === 'users' ? '' : `<button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button>`}</div></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhum item encontrado.</div>';
       document.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => openEditor(name, items.find(item => item.id === button.dataset.edit)));
       document.querySelectorAll('[data-del]').forEach(button => button.onclick = () => confirmDelete(name, button.dataset.del));
     };
@@ -491,7 +506,7 @@
     const sectionOptions = sections.map(section => `<option value="${esc(section.title || section.category || section.id)}"></option>`).join('');
     const videoOptions = videos.map(video => `<option value="${esc(video.id)}" ${String(item.videoId || '') === String(video.id) ? 'selected' : ''}>${esc(video.title || video.id)}</option>`).join('');
     const sectionFields = name === 'sections' ? `<div class="field"><label>Categoria / identificador *</label><input class="a-input" name="category" required value="${esc(item.category || item.slug || '')}" placeholder="ex.: vanity-fair"><small>Identificador interno usado também para manter compatibilidade com conteúdos antigos.</small></div><div class="field"><label>Quantidade inicial</label><input class="a-input" type="number" min="1" max="50" name="itemLimit" value="${esc(item.itemLimit ?? 12)}"></div>` : '';
-    const videoFields = name === 'videos' ? `<div class="field full"><label>Seção do vídeo *</label><input class="a-input" id="videoSectionSearch" name="sectionSearch" list="createdSectionsList" required autocomplete="off" value="${esc(currentSection?.title || currentSection?.category || '')}" placeholder="Digite ou selecione uma seção já criada"><input type="hidden" id="videoSectionId" name="sectionId" value="${esc(currentSection?.id || item.sectionId || '')}"><datalist id="createdSectionsList">${sectionOptions}</datalist><small>Digite o nome para filtrar. O vídeo será vinculado ao ID da seção, mesmo que ela seja renomeada depois.</small></div><div class="field full"><label>URL do vídeo</label><input class="a-input" name="videoUrl" value="${esc(item.videoUrl || item.contentUrl || item.link || '')}" placeholder="https://youtube.com/..."></div>` : '';
+    const videoFields = name === 'videos' ? `<div class="field"><label>ID público do vídeo</label><input class="a-input" name="publicId" value="${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" readonly><small>O link público será /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}.</small></div><div class="field full"><label>Seção do vídeo *</label><input class="a-input" id="videoSectionSearch" name="sectionSearch" list="createdSectionsList" required autocomplete="off" value="${esc(currentSection?.title || currentSection?.category || '')}" placeholder="Digite ou selecione uma seção já criada"><input type="hidden" id="videoSectionId" name="sectionId" value="${esc(currentSection?.id || item.sectionId || '')}"><datalist id="createdSectionsList">${sectionOptions}</datalist><small>Digite o nome para filtrar. O vídeo será vinculado ao ID da seção, mesmo que ela seja renomeada depois.</small></div><div class="field full"><label>URL do vídeo</label><input class="a-input" name="videoUrl" value="${esc(item.videoUrl || item.contentUrl || item.link || '')}" placeholder="https://youtube.com/..."></div>` : '';
     const featuredFields = name === 'featured' ? `<div class="field full"><label>Selecionar vídeo já adicionado *</label><select class="a-select" name="videoId" id="featuredVideoSelect" required><option value="">Escolha um vídeo cadastrado</option>${videoOptions}</select><small>O destaque usará automaticamente o título, descrição, thumbnail e link desse vídeo. Você ainda pode ajustar os campos abaixo.</small></div>` : '';
     if (name === 'gallery') {
       const type = String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
@@ -550,7 +565,8 @@
   }
 
   async function openEditor(name, item = null, defaults = {}) {
-    const draft = item ? item : { ...defaults };
+    const draft = item ? { ...item } : { ...defaults };
+    if (name === 'videos' && !normalizePublicId(draft.publicId)) draft.publicId = generatePublicId(item?.id || '');
     if (name === 'featured' && !item) {
       const active = (await db.list('featured')).filter(entry => entry.active !== false);
       if (active.length >= 6) toast('O limite de 6 destaques ativos foi atingido.', 'err');
@@ -641,6 +657,13 @@
           data.sectionId = selected.id;
           data.category = String(selected.category || selected.slug || selected.id).trim().toLowerCase();
           delete data.sectionSearch;
+          data.publicId = normalizePublicId(data.publicId) || generatePublicId(item?.id || '');
+          const existingVideos = await db.list('videos');
+          const duplicated = existingVideos.some(video => video.id !== item?.id && String(normalizePublicId(video.publicId) || generatePublicId(video.id)) === data.publicId);
+          if (duplicated) {
+            do { data.publicId = generatePublicId(); }
+            while (existingVideos.some(video => String(normalizePublicId(video.publicId) || generatePublicId(video.id)) === data.publicId));
+          }
         }
         data.active = data.active === 'true';
         data.updatedAt = now();

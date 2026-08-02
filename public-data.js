@@ -51,7 +51,8 @@
         if (!video || video.active === false) return null;
         return {
           ...item,
-          id: item.id || video.id,
+          id: video.id,
+          publicId: numericPublicId(video.publicId || video.id || video.title),
           title: item.title || video.title,
           description: item.description || video.description,
           imageUrl: item.imageUrl || video.imageUrl || video.thumbnailUrl,
@@ -91,7 +92,8 @@
           <p class="f-desc">${escapeHtml(item.description || '')}</p>
           <div class="f-actions">
             <button class="f-play" type="button" data-open-detail="true"
-              data-item-id="${escapeHtml(String(item.id || item.videoId || title))}"
+              data-item-id="${escapeHtml(String(item.publicId || numericPublicId(item.id || item.videoId || title)))}"
+              data-record-id="${escapeHtml(String(item.id || item.videoId || ''))}"
               data-title="${escapeHtml(title)}"
               data-description="${escapeHtml(item.description || '')}"
               data-year="${escapeHtml(item.year || '')}"
@@ -275,7 +277,7 @@
 
   function videoCard(video) {
     const image = video.thumbnailUrl || video.imageUrl || video.bannerUrl || '';
-    const href = video.videoUrl || video.contentUrl || video.link || '#';
+    const contentHref = video.videoUrl || video.contentUrl || video.link || '#';
     const title = video.title || 'Abrir vídeo';
     const category = video.category || video.type || video.contentType || '';
     const collection = video.collection || 'videos';
@@ -284,10 +286,12 @@
     const duration = video.duration || video.videoDuration || video.runtime || '';
     const banner = video.bannerUrl || video.imageUrl || video.thumbnailUrl || '';
     const logo = video.logoUrl || '';
-    const itemId = video.id || video.videoId || title;
-    const routeHref = detailRouteHash(itemId);
+    const recordId = video.id || video.videoId || title;
+    const itemId = numericPublicId(video.publicId || recordId);
+    const routeHref = detailRoutePath(itemId);
     return `<a class="video-card" href="${safeUrl(routeHref)}" aria-label="${escapeHtml(title)}"
       data-item-id="${escapeHtml(String(itemId))}"
+      data-record-id="${escapeHtml(String(recordId))}"
       data-open-detail="true"
       data-title="${escapeHtml(title)}"
       data-description="${escapeHtml(description)}"
@@ -304,21 +308,28 @@
     </a>`;
   }
 
-  function detailRouteId() {
-    const match = String(location.hash || '').match(/^#\/video\/([^/?#]+)/i);
-    if (!match) return '';
-    try { return decodeURIComponent(match[1]); } catch (_) { return match[1]; }
+  function cleanPathname() {
+    try { return decodeURIComponent(String(location.pathname || '/')).replace(/\/+$/, '') || '/'; }
+    catch (_) { return String(location.pathname || '/').replace(/\/+$/, '') || '/'; }
   }
 
-  function detailRouteHash(itemId) {
-    return '#/video/' + encodeURIComponent(String(itemId || '').trim());
+  function detailRouteId() {
+    const pathMatch = cleanPathname().match(/^\/(\d{6,12})$/);
+    if (pathMatch) return pathMatch[1];
+    const legacyMatch = String(location.hash || '').match(/^#\/video\/([^/?#]+)/i);
+    if (!legacyMatch) return '';
+    try { return decodeURIComponent(legacyMatch[1]); } catch (_) { return legacyMatch[1]; }
+  }
+
+  function detailRoutePath(itemId) {
+    return '/' + encodeURIComponent(String(itemId || '').trim());
   }
 
   function setDetailRoute(itemId, replace = false) {
     if (!itemId) return;
-    const hash = detailRouteHash(itemId);
-    if (location.hash === hash) return;
-    const url = location.pathname + (location.search || '') + hash;
+    const path = detailRoutePath(itemId);
+    if (cleanPathname() === path && !location.hash) return;
+    const url = path + (location.search || '');
     if (replace) history.replaceState({ beRoute: 'video', itemId: String(itemId) }, '', url);
     else history.pushState({ beRoute: 'video', itemId: String(itemId) }, '', url);
   }
@@ -340,10 +351,15 @@
     if (!window.beBackend) return false;
     for (const collection of ['videos', 'movies', 'contents']) {
       try {
-        const item = await beBackend.data.get(collection, itemId);
+        const items = await beBackend.data.list(collection, { orderBy: 'order', direction: 'asc' });
+        const item = (items || []).find(candidate => {
+          const candidateId = numericPublicId(candidate.publicId || candidate.id || candidate.title);
+          return String(candidate.id || '') === itemId || candidateId === itemId;
+        });
         if (!item || item.active === false) continue;
         openContentDetail({
-          itemId: item.id || itemId,
+          itemId: numericPublicId(item.publicId || item.id || itemId),
+          recordId: item.id || '',
           title: item.title || 'Conteúdo',
           description: item.description || '',
           year: item.year || '',
@@ -383,6 +399,7 @@
     ].join('|');
     return {
       ...(card?.dataset || {}),
+      recordId: card?.dataset?.recordId || '',
       sourceSectionKey: sectionKey,
       sourceSectionTitle: sectionTitle
     };
@@ -401,9 +418,10 @@
     const image = data.imageUrl || data.bannerUrl || '';
     const title = data.title || 'Conteúdo';
     const contentHref = data.contentUrl || '#';
-    const routeHref = detailRouteHash(data.itemId || title);
+    const routeHref = detailRoutePath(data.itemId || numericPublicId(data.recordId || title));
     return `<a class="detail-reco-card" href="${safeUrl(routeHref)}" data-open-detail="true"
-      data-item-id="${escapeHtml(String(data.itemId || title))}"
+      data-item-id="${escapeHtml(String(data.itemId || numericPublicId(data.recordId || title)))}"
+      data-record-id="${escapeHtml(String(data.recordId || ''))}"
       data-title="${escapeHtml(title)}"
       data-description="${escapeHtml(data.description || '')}"
       data-year="${escapeHtml(data.year || '')}"
@@ -563,7 +581,7 @@
     if (section) section.hidden = true;
     document.body.classList.remove('detail-page-active');
     if (updateRoute && detailRouteId()) {
-      history.pushState({ beRoute: 'home' }, '', location.pathname + (location.search || '') + '#home');
+      history.pushState({ beRoute: 'home' }, '', '/' + (location.search || ''));
     }
     const recommendations = document.getElementById('detailRecommendations');
     if (recommendations) recommendations.hidden = true;
@@ -806,6 +824,17 @@
     window.addEventListener('be:catalog-ready', applyCatalogFilter);
 
     applyCatalogFilter();
+  }
+
+  function numericPublicId(value) {
+    const text = String(value || 'video').trim();
+    if (/^\d{8}$/.test(text)) return text;
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return String(10000000 + ((hash >>> 0) % 90000000));
   }
 
   function safeUrlValue(value) {

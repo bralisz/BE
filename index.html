@@ -2473,16 +2473,17 @@
     position:relative;
     width:100%;
     min-height:100vh;
-    padding-top:96px;
     background:#040506;
   }
+  .profile-page-shell{padding-top:0}
+  .settings-page-shell{padding-top:96px}
   .profile-page-shell[hidden],
   .settings-page-shell[hidden]{display:none!important}
   .profile-page-hero{
     position:relative;
-    min-height:560px;
+    min-height:100svh;
     overflow:hidden;
-    border-radius:0 0 34px 34px;
+    border-radius:0;
     background:#0a0b0d;
   }
   .profile-page-banner,
@@ -2531,12 +2532,15 @@
   .profile-page-more:hover{background:rgba(255,255,255,.12)}
   .profile-page-more svg{width:21px;height:21px}
   .profile-page-info{
-    position:relative;
+    position:absolute;
     z-index:2;
+    left:0;
+    right:0;
+    bottom:0;
     display:flex;
     align-items:flex-end;
     gap:20px;
-    padding:340px clamp(22px,4vw,60px) 28px;
+    padding:180px clamp(22px,4vw,60px) 38px;
   }
   .profile-page-avatar{
     width:132px;
@@ -2560,7 +2564,7 @@
   .profile-page-meta strong{color:#fff}
 
   .profile-page-badge,#profilePageMetaLabel,.profile-page-dot{display:none!important}
-  .profile-page-hero{min-height:calc(100svh - 96px)}
+  .profile-page-hero{min-height:100svh}
   .profile-page-dot{width:4px;height:4px;border-radius:999px;background:rgba(255,255,255,.38)}
   .profile-page-body{padding:28px clamp(22px,4vw,60px) 56px}
   .profile-page-card,
@@ -2636,10 +2640,11 @@
   .banner-picker-empty{padding:54px 20px;text-align:center;color:rgba(255,255,255,.58)}
   @media(max-width:980px){.settings-grid{grid-template-columns:1fr}.settings-card + .settings-card{margin-top:0}.settings-stack .settings-card{margin-top:18px}}
   @media(max-width:760px){
-    .profile-page-shell,.settings-page-shell{padding-top:86px}
-    .profile-page-hero{min-height:500px;border-radius:0 0 28px 28px}
+    .profile-page-shell{padding-top:0}
+    .settings-page-shell{padding-top:86px}
+    .profile-page-hero{min-height:100svh;border-radius:0}
     .profile-page-more{top:96px;right:16px;width:44px;height:44px}
-    .profile-page-info{padding:308px 18px 24px;gap:14px;align-items:flex-end}
+    .profile-page-info{padding:150px 18px 28px;gap:14px;align-items:flex-end}
     .profile-page-avatar{width:108px;height:108px}
     .profile-page-name{font-size:clamp(28px,10vw,42px)}
     .profile-page-handle{font-size:22px}
@@ -3393,19 +3398,20 @@
       var date=new Date(source);
       return String(date.getFullYear()||new Date().getFullYear());
     }
-    function isConfigRoute(){return location.hash.toLowerCase()==='#config'||location.hash.toLowerCase()==='#/config';}
-    function isProfileRoute(){return /^#\/perfil\/@[^/?#]+/i.test(location.hash);}
-    function profileRouteHash(){
+    function cleanPathname(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
+    function isConfigRoute(){var path=cleanPathname().toLowerCase();var hash=location.hash.toLowerCase();return path==='/config'||hash==='#config'||hash==='#/config';}
+    function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
+    function profileRoutePath(){
       var handle=beBackend.normalizeUsername((currentProfile&&currentProfile.username)||'perfil');
-      return '#/perfil/@'+encodeURIComponent(handle||'perfil');
+      return '/@'+encodeURIComponent(handle||'perfil');
     }
-    function replacePublicHash(hash){history.replaceState(null,'',location.pathname+(location.search||'')+hash);}
-    function pushPublicHash(hash){if(location.hash!==hash)history.pushState(null,'',location.pathname+(location.search||'')+hash);}
+    function replacePublicRoute(path){history.replaceState({beRoute:'public'},'',path+(location.search||''));}
+    function pushPublicRoute(path){if(cleanPathname()!==path||location.hash)history.pushState({beRoute:'public'},'',path+(location.search||''));}
     function closePublicPages(updateRoute){
       document.body.classList.remove('profile-page-active','settings-page-active');
       profilePage.hidden=true;
       settingsPage.hidden=true;
-      if(updateRoute!==false&&(isConfigRoute()||isProfileRoute()))pushPublicHash('#home');
+      if(updateRoute!==false&&(isConfigRoute()||isProfileRoute()))pushPublicRoute('/');
     }
     function renderProfilePage(){
       var user=auth.currentUser;
@@ -3504,18 +3510,39 @@
           return '<section class="banner-group"><h3>'+escapePublic(cat)+'</h3><div class="banner-grid">'+groups[cat].map(function(item){return '<button class="banner-option '+((currentProfile.bannerUrl||'')===item.imageUrl?'selected':'')+'" type="button" data-banner-url="'+escapePublic(item.imageUrl)+'" data-banner-id="'+escapePublic(item.id)+'" aria-label="Selecionar banner de perfil"><img src="'+escapePublic(item.imageUrl)+'" alt="Banner de perfil"></button>';}).join('')+'</div></section>';
         }).join('');
         bannerPickerBody.querySelectorAll('[data-banner-url]').forEach(function(button){button.addEventListener('click',async function(){
+          if(!auth.currentUser)return;
           button.disabled=true;
+          var bannerUrl=button.dataset.bannerUrl||'';
+          var bannerId=button.dataset.bannerId||'';
+          currentProfile={...(currentProfile||{}),bannerUrl:bannerUrl,bannerId:bannerId};
+          try{localStorage.setItem('beProfileBanner:'+auth.currentUser.uid,JSON.stringify({bannerUrl:bannerUrl,bannerId:bannerId,updatedAt:beBackend.now()}));}catch(_){ }
+          renderProfilePage();
           try{
-            var savedProfile=await beBackend.profiles.setBanner(auth.currentUser.uid,button.dataset.bannerUrl,button.dataset.bannerId);
-            if(savedProfile)currentProfile=savedProfile;
-            renderProfilePage();renderSettingsPage();
-            setTimeout(closeBannerPicker,180);
-          }catch(error){button.disabled=false;alert('Não foi possível salvar o banner. Tente novamente.');console.warn(error);}
+            var savedProfile=await beBackend.profiles.setBanner(auth.currentUser.uid,bannerUrl,bannerId);
+            if(savedProfile)currentProfile={...savedProfile,bannerUrl:bannerUrl,bannerId:bannerId};
+          }catch(error){
+            console.warn('O banner foi mantido no perfil local; o banco não aceitou a atualização:',error&&error.message?error.message:error);
+          }
+          renderProfilePage();
+          if(document.body.classList.contains('settings-page-active'))renderSettingsPage();
+          setTimeout(closeBannerPicker,120);
         });});
       }catch(error){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Não foi possível carregar os banners.</div>';console.warn(error);}
     }
-    function openPublicProfile(updateRoute){toggleDropdown(false);renderProfilePage();settingsPage.hidden=true;profilePage.hidden=false;document.body.classList.remove('settings-page-active','login-mode');document.body.classList.add('profile-page-active');var route=profileRouteHash();if(updateRoute!==false)pushPublicHash(route);else if(isProfileRoute()&&location.hash!==route)replacePublicHash(route);window.scrollTo({top:0,behavior:'auto'});}
-    function openSettingsPage(updateRoute){toggleDropdown(false);renderSettingsPage();profilePage.hidden=true;settingsPage.hidden=false;document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');if(updateRoute!==false&&!isConfigRoute())location.hash='#config';window.scrollTo({top:0,behavior:'auto'});}
+    function openPublicProfile(updateRoute){
+      toggleDropdown(false);settingsPage.hidden=true;profilePage.hidden=false;
+      document.body.classList.remove('settings-page-active','login-mode');document.body.classList.add('profile-page-active');
+      try{renderProfilePage();}catch(error){console.error('Falha ao renderizar perfil:',error);}
+      var route=profileRoutePath();if(updateRoute!==false)pushPublicRoute(route);else if(isProfileRoute()&&(cleanPathname()!==route||location.hash))replacePublicRoute(route);
+      window.scrollTo({top:0,behavior:'auto'});
+    }
+    function openSettingsPage(updateRoute){
+      toggleDropdown(false);profilePage.hidden=true;settingsPage.hidden=false;
+      document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');
+      try{renderSettingsPage();}catch(error){console.error('Falha ao renderizar configurações:',error);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
+      if(updateRoute!==false&&!isConfigRoute())pushPublicRoute('/config');
+      window.scrollTo({top:0,behavior:'auto'});
+    }
 
     function renderProfile(){
       var user=auth.currentUser;
@@ -3571,7 +3598,7 @@
     });
 
     function openProfile(){openPublicProfile(true);}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){if(!auth.currentUser)return;if(isConfigRoute())openSettingsPage(false);else if(isProfileRoute())openPublicProfile(false);else closePublicPages(false);});
     auth.onChange(async function(currentUser){
       dashboard.hidden=true;
       var isAdmin=false;
@@ -3602,8 +3629,10 @@
       if(document.body.classList.contains('settings-page-active'))renderSettingsPage();
     });
     document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeAvatarPicker();closeBannerPicker();closeProfile();closeOnboarding(false);}});
+    setTimeout(function(){if(!auth.currentUser)return;if(isConfigRoute())openSettingsPage(false);else if(isProfileRoute())openPublicProfile(false);},0);
   }
-  window.addEventListener('load',function(){setupPublicAccount().catch(function(error){console.error('Falha ao iniciar conta pública:',error);});});
+  function startPublicAccount(){setupPublicAccount().catch(function(error){console.error('Falha ao iniciar conta pública:',error);});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startPublicAccount,{once:true});else startPublicAccount();
 
   /* -------- widget cursor glow (tilt-lite) -------- */
   var widgets = document.querySelectorAll('[data-tilt]');
@@ -3700,13 +3729,14 @@
   function callbackParams(){var query=new URLSearchParams(location.search||''),raw=String(location.hash||'').replace(/^#/,''),nested=raw.indexOf('#'),payload=nested>=0?raw.slice(nested+1):raw,hash=new URLSearchParams(payload);return {query:query,hash:hash};}
   function hasAuthCallback(){var p=callbackParams();return Boolean(p.query.get('code')||p.query.get('error')||p.query.get('error_code')||p.query.get('auth_callback')||p.hash.get('access_token')||p.hash.get('refresh_token')||p.hash.get('error')||p.hash.get('error_code'));}
   function authCallbackError(){var p=callbackParams();return p.query.get('error_description')||p.hash.get('error_description')||p.query.get('error')||p.hash.get('error')||'';}
-  function replaceRoute(hash){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});url.hash=hash;history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
-  function isConfigRoute(){var hash=location.hash.toLowerCase();return hash==='#config'||hash==='#/config';}
-  function isProfileRoute(){return /^#\/perfil\/@[^/?#]+/i.test(location.hash);}
-  function isVideoRoute(){return /^#\/video\/[^/?#]+/i.test(location.hash);}
+  function cleanPathname(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
+  function replaceRoute(route){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});if(String(route||'').startsWith('/')){url.pathname=route;url.hash='';}else{url.pathname='/';url.hash=route||'';}history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
+  function isConfigRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/config'||hash==='#config'||hash==='#/config';}
+  function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
+  function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
   function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active');document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')replaceRoute('#login');}
-  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('#home');window.scrollTo(0,0);}
-  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('#config');window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
+  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.scrollTo(0,0);}
+  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
     var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep')};
@@ -3881,14 +3911,16 @@
       try{await finishPublicLogin(user);}catch(error){showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
 
-    window.addEventListener('hashchange',function(){
+    function handlePublicRoute(){
       if(location.hash.startsWith('#/admin'))return;
       if(!authReady)return;
       if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}
       if(isProfileRoute()){if(auth.currentUser){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else showLogin();return;}
       if(isVideoRoute()){if(auth.currentUser){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else showLogin();return;}
-      if(auth.currentUser)enterHome();else showLogin();
-    });
+      if(auth.currentUser)enterHome(true);else showLogin();
+    }
+    window.addEventListener('hashchange',handlePublicRoute);
+    window.addEventListener('popstate',handlePublicRoute);
   }
 
   async function startAuthentication(){

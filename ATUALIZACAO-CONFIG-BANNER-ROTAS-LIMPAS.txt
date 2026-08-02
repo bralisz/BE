@@ -1,0 +1,9 @@
+ATUALIZAÇÃO — CONFIGURAÇÕES, BANNER E ROTAS LIMPAS
+
+• Corrigida a tela preta ao abrir /config.
+• Corrigido o seletor de banner: a escolha é aplicada imediatamente e permanece disponível mesmo quando o banco ainda não possui as colunas de banner.
+• O banner agora ocupa todo o fundo da página de perfil.
+• O perfil usa a rota limpa /@usuario.
+• Cada vídeo possui um ID público numérico de 8 dígitos e abre em /ID, por exemplo: /13313199.
+• Mantida compatibilidade com links antigos por hash.
+• Adicionadas regras de rewrite no vercel.json para abrir /config, /@usuario e /ID diretamente.
