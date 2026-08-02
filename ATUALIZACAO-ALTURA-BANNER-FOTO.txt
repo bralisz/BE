@@ -1,0 +1,5 @@
+ATUALIZAÇÃO — ALTURA DO BANNER/FOTO
+
+- A altura da área principal foi aumentada para a foto descer até a linha indicada.
+- A seção "Destaque" permanece logo abaixo da foto, sem espaço vazio exagerado.
+- Ajuste aplicado também nas versões para celular.
