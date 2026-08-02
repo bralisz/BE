@@ -1,6 +1,0 @@
-ATUALIZAÇÃO — POSIÇÃO DA ÁREA DESTAQUE
-
-- A seção “Destaque” foi movida para imediatamente abaixo do banner principal.
-- Removido o grande espaço preto vazio que existia antes do título e dos cards.
-- Mantida uma separação curta e responsiva entre o banner e o catálogo.
-- Ajuste aplicado também para telas menores.
