@@ -1,6 +1,6 @@
 ATUALIZAÇÃO — DESTAQUE ABAIXO DA DIVISÓRIA PRETA
 
-- Removida a sobreposição da seção “Destaque” sobre o banner principal.
-- Adicionada uma faixa preta de separação entre o banner e o catálogo.
-- A seção “Destaque” agora começa somente abaixo dessa divisória.
+- A seção “Destaque” permanece abaixo do banner principal, sem sobreposição.
+- A faixa preta de separação foi reduzida para eliminar o grande espaço vazio.
+- O título e os cards agora começam logo após o banner, na posição indicada.
 - Espaçamento responsivo ajustado para computador, tablet e celular.
