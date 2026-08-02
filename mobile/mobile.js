@@ -7,6 +7,7 @@
 
   const icon = name => ({
     menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+    search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>',
     close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
     home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg>',
     film:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4"/></svg>',
@@ -23,6 +24,32 @@
     const drawer = document.getElementById('mobileDrawer');
     if (toggle) toggle.setAttribute('aria-expanded', String(shouldOpen));
     if (drawer) drawer.setAttribute('aria-hidden', String(!shouldOpen));
+  }
+
+  function syncMobileSearch(value) {
+    const desktopInput = document.getElementById('homeSearchInput');
+    if (!desktopInput) return;
+    desktopInput.value = String(value || '');
+    desktopInput.dispatchEvent(new Event('input', { bubbles:true }));
+  }
+
+  function openMobileSearch(open, clearOnClose = true) {
+    const shouldOpen = Boolean(open) && isMobile();
+    const input = document.getElementById('mobileSearchInput');
+    const button = document.getElementById('mobileSearchButton');
+    document.body.classList.toggle('mobile-search-open', shouldOpen);
+    if (button) {
+      button.setAttribute('aria-expanded', String(shouldOpen));
+      button.setAttribute('aria-label', shouldOpen ? 'Fechar pesquisa' : 'Abrir pesquisa');
+    }
+    if (shouldOpen) {
+      openDrawer(false);
+      window.requestAnimationFrame(() => input?.focus({ preventScroll:true }));
+    } else if (clearOnClose && input) {
+      input.value = '';
+      syncMobileSearch('');
+      button?.focus({ preventScroll:true });
+    }
   }
 
   function setActiveDestination(destination) {
@@ -56,10 +83,12 @@
     }
     setActiveDestination(destination);
     openDrawer(false);
+    openMobileSearch(false);
   }
 
   function openProfile() {
     openDrawer(false);
+    openMobileSearch(false);
     const currentUser = window.beBackend?.auth?.currentUser;
     if (!currentUser) {
       location.hash = '#login';
@@ -100,9 +129,15 @@
     bar.className = 'mobile-app-bar';
     bar.id = 'mobileAppBar';
     bar.innerHTML = `
-      <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-label="Abrir menu" aria-controls="mobileDrawer" aria-expanded="false">${icon('menu')}</button>
-      <button class="mobile-brand" id="mobileHomeBrand" type="button" aria-label="Ir para a Home"><img src="/assets/logo.png" alt="BE"></button>
-      <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar">${icon('user')}</span></button>`;
+      <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar">${icon('user')}</span></button>
+      <div class="mobile-search-control" id="mobileSearchControl">
+        <label class="sr-only" for="mobileSearchInput">Pesquisar conteúdos</label>
+        <input id="mobileSearchInput" type="search" autocomplete="off" placeholder="Pesquisar filmes e vídeos" aria-label="Pesquisar filmes e vídeos">
+        <button class="mobile-search-button" id="mobileSearchButton" type="button" aria-label="Abrir pesquisa" aria-expanded="false">
+          <span class="mobile-search-icon">${icon('search')}</span>
+          <span class="mobile-search-close-icon">${icon('close')}</span>
+        </button>
+      </div>`;
 
     const backdrop = document.createElement('button');
     backdrop.className = 'mobile-drawer-backdrop';
@@ -163,37 +198,26 @@
   }
 
   function bindMobileActions() {
-    const menuToggle = document.getElementById('mobileMenuToggle');
+    const searchButton = document.getElementById('mobileSearchButton');
+    const searchInput = document.getElementById('mobileSearchInput');
 
-    // Abertura direta e em captura para impedir que o banner intercepte o toque.
-    const toggleDrawer = event => {
-      if (!isMobile()) return;
-      event?.preventDefault?.();
-      event?.stopPropagation?.();
-      event?.stopImmediatePropagation?.();
-      openDrawer(!document.body.classList.contains('mobile-drawer-open'));
-    };
+    bindActivation(searchButton, () => {
+      openMobileSearch(!document.body.classList.contains('mobile-search-open'));
+    });
 
-    if (menuToggle) {
-      menuToggle.onclick = toggleDrawer;
-      menuToggle.ontouchend = toggleDrawer;
-      menuToggle.onpointerup = toggleDrawer;
-    }
-
-    if (!document.documentElement.dataset.mobileMenuCaptureBound) {
-      document.documentElement.dataset.mobileMenuCaptureBound = 'true';
-      document.addEventListener('pointerdown', event => {
-        const target = event.target?.closest?.('#mobileMenuToggle');
-        if (!target || !isMobile()) return;
-        event.preventDefault();
-        event.stopPropagation();
-        openDrawer(!document.body.classList.contains('mobile-drawer-open'));
-      }, { capture:true, passive:false });
+    if (searchInput && searchInput.dataset.mobileSearchBound !== 'true') {
+      searchInput.dataset.mobileSearchBound = 'true';
+      searchInput.addEventListener('input', () => syncMobileSearch(searchInput.value));
+      searchInput.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          openMobileSearch(false);
+        }
+      });
     }
 
     bindActivation(document.getElementById('mobileDrawerClose'), () => openDrawer(false));
     bindActivation(document.getElementById('mobileDrawerBackdrop'), () => openDrawer(false));
-    bindActivation(document.getElementById('mobileHomeBrand'), () => selectView('home'));
     bindActivation(document.getElementById('mobileProfileButton'), openProfile);
     bindActivation(document.getElementById('mobileDrawerProfile'), openProfile);
     bindActivation(document.getElementById('mobileLogoutButton'), logout);
@@ -263,11 +287,19 @@
     createMobileUI();
     syncActiveFromPublicView();
     window.addEventListener('be:catalog-ready', syncActiveFromPublicView);
-    window.addEventListener('resize', () => { if (!isMobile()) openDrawer(false); });
-    window.addEventListener('popstate', () => openDrawer(false));
-    window.addEventListener('hashchange', () => openDrawer(false));
+    window.addEventListener('resize', () => {
+      if (!isMobile()) {
+        openDrawer(false);
+        openMobileSearch(false);
+      }
+    });
+    window.addEventListener('popstate', () => { openDrawer(false); openMobileSearch(false, false); });
+    window.addEventListener('hashchange', () => { openDrawer(false); openMobileSearch(false, false); });
     document.addEventListener('keydown', event => {
-      if (event.key === 'Escape') openDrawer(false);
+      if (event.key === 'Escape') {
+        openDrawer(false);
+        openMobileSearch(false);
+      }
     });
   }
 
