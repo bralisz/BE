@@ -253,7 +253,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       accounts: {},
       collections: {
         featured: {}, sections: {}, contents: {}, videos: {}, movies: {}, series: {},
-        shows: {}, news: {}, gallery, users: {}, settings: {}, admin_logs: {}
+        shows: {}, news: {}, gallery, users: {}, settings: {}, admin_logs: {}, notifications: {}
       }
     };
   }
@@ -1217,6 +1217,17 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
           }
 
           if (eventUser) {
+            const sameAccount = Boolean(currentUser && currentUser.uid === eventUser.uid);
+            const passiveRefresh = event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION';
+            if (sameAccount && passiveRefresh) {
+              currentUser = {
+                ...currentUser,
+                email: eventUser.email || currentUser.email,
+                emailVerified: eventUser.emailVerified || currentUser.emailVerified,
+                raw: eventUser.raw || currentUser.raw
+              };
+              return;
+            }
             currentUser = await hydratePrivileges(eventUser);
             notify();
             return;
@@ -2471,6 +2482,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   const icon = name => ({
     menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
     search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>',
+    bell:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',
     close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
     home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg>',
     film:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4"/></svg>',
@@ -2593,13 +2605,16 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     bar.id = 'mobileAppBar';
     bar.innerHTML = `
       <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar">${icon('user')}</span></button>
-      <div class="mobile-search-control" id="mobileSearchControl">
-        <label class="sr-only" for="mobileSearchInput">Pesquisar conteúdos</label>
-        <input id="mobileSearchInput" type="search" autocomplete="off" placeholder="Pesquisar filmes e vídeos" aria-label="Pesquisar filmes e vídeos">
-        <button class="mobile-search-button" id="mobileSearchButton" type="button" aria-label="Abrir pesquisa" aria-expanded="false">
-          <span class="mobile-search-icon">${icon('search')}</span>
-          <span class="mobile-search-close-icon">${icon('close')}</span>
-        </button>
+      <div class="mobile-header-actions">
+        <button class="mobile-notification-button" id="mobileNotificationButton" type="button" aria-label="Abrir notificações" aria-expanded="false">${icon('bell')}<span class="notification-unread-dot" id="mobileNotificationUnreadDot" hidden></span></button>
+        <div class="mobile-search-control" id="mobileSearchControl">
+          <label class="sr-only" for="mobileSearchInput">Pesquisar conteúdos</label>
+          <input id="mobileSearchInput" type="search" autocomplete="off" placeholder="Pesquisar filmes e vídeos" aria-label="Pesquisar filmes e vídeos">
+          <button class="mobile-search-button" id="mobileSearchButton" type="button" aria-label="Abrir pesquisa" aria-expanded="false">
+            <span class="mobile-search-icon">${icon('search')}</span>
+            <span class="mobile-search-close-icon">${icon('close')}</span>
+          </button>
+        </div>
       </div>`;
 
     const backdrop = document.createElement('button');

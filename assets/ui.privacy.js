@@ -431,7 +431,7 @@
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
-      var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}location.hash='#login';document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='support'){alert('Área de suporte em preparação.');return;}if(action==='settings'){openSettingsPage(true);return;}
+      var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}location.hash='#login';document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='support'){window.dispatchEvent(new CustomEvent('be:open-support'));return;}if(action==='settings'){openSettingsPage(true);return;}
     });});
     window.addEventListener('be:profile-avatar-changed',function(event){
       var detail=event&&event.detail||{};
@@ -526,8 +526,9 @@
   if(location.hash.startsWith('#/admin')||initialCallbackDestination==='admin') return;
 
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
-  function hideSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=true;}
-  function showSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=false;}
+  function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
+  function hideSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=true;setSiteLoading(false);}
+  function showSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
   window.addEventListener('be:content-ready',hideSiteSkeleton);
 
   function q(id){return document.getElementById(id)}
@@ -564,10 +565,14 @@
   function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
   function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
   function isLegalRoute(){return /^#\/?(?:terms|privacy|cookies|dmca)$/i.test(String(location.hash||''));}
-  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
-  function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active');document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')replaceRoute('#login');}
-  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.scrollTo(0,0);}
-  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
+  function isNotificationsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/atualizacoes'||path==='/notificacoes'||/^#\/?(?:atualizacoes|notificacoes|updates|notifications)(?:\/|$)/i.test(hash);}
+  function isSupportRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/suporte'||hash==='#suporte'||hash==='#/suporte'||hash==='#support'||hash==='#/support';}
+  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
+  function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
+  function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
+  function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')replaceRoute('#login');}
+  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.scrollTo(0,0);}
+  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
     var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep')};
@@ -654,7 +659,9 @@
     try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
     if(!(await enforceAccountAccess(user)))return null;
     setStatus('');
-    if(isConfigRoute())enterConfig();
+    if(isNotificationsRoute())showNotificationsRoute();
+    else if(isSupportRoute())showSupportRoute();
+    else if(isConfigRoute())enterConfig();
     else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}
     else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}
     else enterHome();
@@ -732,6 +739,8 @@
       authReady=true;
       if(authFlowBusy)return;
       if(user&&!(await enforceAccountAccess(user)))return;
+      if(isNotificationsRoute()){hideSiteSkeleton();showNotificationsRoute();return;}
+      if(isSupportRoute()){hideSiteSkeleton();showSupportRoute();return;}
       if(isLegalRoute()){hideSiteSkeleton();showLegalRoute();return;}
       if(!user){
         hideSiteSkeleton();
@@ -760,6 +769,8 @@
 
     function handlePublicRoute(){
       if(location.hash.startsWith('#/admin'))return;
+      if(isNotificationsRoute()){showNotificationsRoute();return;}
+      if(isSupportRoute()){showSupportRoute();return;}
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
       if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}
@@ -770,11 +781,10 @@
     window.addEventListener('hashchange',handlePublicRoute);
     window.addEventListener('popstate',handlePublicRoute);
     window.setInterval(function(){if(auth.currentUser)enforceAccountAccess(auth.currentUser);},60000);
-    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&auth.currentUser)enforceAccountAccess(auth.currentUser);});
   }
 
   async function startAuthentication(){
-    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){hideSiteSkeleton();if(isLegalRoute())showLegalRoute();else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}console.error('Falha ao iniciar autenticação:',error);}
+    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){hideSiteSkeleton();if(isNotificationsRoute())showNotificationsRoute();else if(isSupportRoute())showSupportRoute();else if(isLegalRoute())showLegalRoute();else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}console.error('Falha ao iniciar autenticação:',error);}
   }
 
   document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode('email');startAuthentication()});

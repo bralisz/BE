@@ -13,6 +13,30 @@
       "destination": "/index.html"
     },
     {
+      "source": "/suporte",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/suporte/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/atualizacoes",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/atualizacoes/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notificacoes",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notificacoes/",
+      "destination": "/index.html"
+    },
+    {
       "source": "/@:username",
       "destination": "/index.html"
     },
