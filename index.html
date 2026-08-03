@@ -882,7 +882,7 @@
   .auth-primary{background:linear-gradient(135deg,#3b82f6,#2563eb)!important;box-shadow:0 12px 30px rgba(37,99,235,.25)}
   .social-auth{margin-top:13px}
   .social-auth .auth-sep{margin:0 0 11px;color:rgba(234,242,255,.46)}
-  .auth-discord{width:100%;height:50px;border:1px solid rgba(255,255,255,.15);border-radius:999px;background:linear-gradient(135deg,#5865f2,#4752c4);color:#fff;display:flex;align-items:center;justify-content:center;gap:11px;font:800 14px var(--font-body);box-shadow:0 12px 28px rgba(88,101,242,.22);transition:transform .2s var(--ease),filter .2s var(--ease)}
+  .auth-discord{width:100%;height:50px;border:1px solid rgba(255,255,255,.15);border-radius:999px;background:linear-gradient(135deg,#5865f2,#4752c4);color:#fff;display:flex;align-items:center;justify-content:center;gap:11px;font:800 14px var(--font-body);box-shadow:0 12px 28px rgba(0,0,0,.26);transition:transform .2s var(--ease),filter .2s var(--ease)}
   .auth-discord:hover{transform:translateY(-1px);filter:brightness(1.08)}
   .auth-discord:disabled{opacity:.62;cursor:wait;transform:none}
   .auth-discord svg{width:23px;height:23px;fill:currentColor}
@@ -1167,7 +1167,7 @@
   .discord-icon-button:hover{
     transform:translateY(-3px) scale(1.045);
     filter:brightness(1.08);
-    box-shadow:0 18px 40px rgba(0,0,0,.48),0 0 24px rgba(88,101,242,.24);
+    box-shadow:0 18px 40px rgba(0,0,0,.48);
   }
   .discord-icon-button:active{transform:scale(.97)}
   .discord-icon-button:disabled{opacity:.58;cursor:wait;transform:none}
@@ -1329,12 +1329,12 @@
     filter:drop-shadow(0 0 8px rgba(74,145,255,.45));
   }
   .auth-primary{
-    background:linear-gradient(135deg,#2563eb 0%,#4f46e5 52%,#7c3aed 100%)!important;
-    box-shadow:0 15px 36px rgba(79,70,229,.32),inset 0 1px 0 rgba(255,255,255,.18)!important;
+    background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%)!important;
+    box-shadow:0 12px 28px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.18)!important;
   }
   .auth-primary:hover{
-    background:linear-gradient(135deg,#3b82f6 0%,#6366f1 52%,#8b5cf6 100%)!important;
-    box-shadow:0 18px 42px rgba(99,102,241,.40),inset 0 1px 0 rgba(255,255,255,.22)!important;
+    background:linear-gradient(135deg,#60a5fa 0%,#2f7bed 100%)!important;
+    box-shadow:0 15px 32px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.22)!important;
   }
   .login-shell{
     padding-top:150px!important;
@@ -1701,9 +1701,9 @@
   .discord-connect-button svg{width:20px;height:20px;flex:0 0 auto;color:#aeb5ff}
   .discord-connect-button:hover{
     transform:translateY(-1px);
-    background:rgba(88,101,242,.22);
+    background:rgba(255,255,255,.10);
     border-color:rgba(198,204,255,.78);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 14px 34px rgba(0,0,0,.30),0 0 24px rgba(88,101,242,.18);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 14px 34px rgba(0,0,0,.30);
   }
   .discord-connect-button:active{transform:scale(.985)}
   .discord-connect-button:disabled{opacity:.58;cursor:wait;transform:none}
@@ -2799,7 +2799,7 @@
 <script defer src="/supabase-config.js"></script>
 <script defer src="/backend.js"></script>
 <script defer src="/admin/admin.js?v=20260802-7"></script>
-<script defer src="/public-data.js?v=20260802-8"></script>
+<script defer src="/public-data.js?v=20260803-homefilmsfix"></script>
 <script defer src="/mobile/mobile.js?v=20260802-7"></script>
 
 <style id="desktop-search-visibility-fix">
@@ -4068,4 +4068,50 @@
   border-radius:50%!important;
   display:block!important;
 }
+
+  /* Botões sem neon roxo */
+  .auth-primary,
+  .auth-primary:hover,
+  .auth-google,
+  .auth-google:hover,
+  .auth-discord,
+  .auth-discord:hover,
+  .discord-icon-button,
+  .discord-icon-button:hover,
+  .discord-connect-button,
+  .discord-connect-button:hover,
+  .profile-btn,
+  .profile-btn:hover,
+  .onboarding-btn,
+  .onboarding-btn:hover,
+  .avatar-picker-cancel,
+  .avatar-picker-cancel:hover,
+  .f-play,
+  .f-play:hover {
+    filter:none!important;
+  }
+  .auth-primary,
+  .profile-btn.primary,
+  .onboarding-btn.primary,
+  .f-play {
+    background:linear-gradient(135deg,#3b82f6,#2563eb)!important;
+    box-shadow:0 12px 28px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.16)!important;
+  }
+  .auth-primary:hover,
+  .profile-btn.primary:hover,
+  .onboarding-btn.primary:hover,
+  .f-play:hover {
+    background:linear-gradient(135deg,#60a5fa,#2f7bed)!important;
+    box-shadow:0 14px 30px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.18)!important;
+  }
+  .auth-discord,
+  .discord-icon-button,
+  .discord-connect-button {
+    box-shadow:0 12px 28px rgba(0,0,0,.28)!important;
+  }
+  .auth-discord:hover,
+  .discord-icon-button:hover,
+  .discord-connect-button:hover {
+    box-shadow:0 15px 32px rgba(0,0,0,.32)!important;
+  }
 </style>

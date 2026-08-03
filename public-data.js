@@ -973,7 +973,13 @@
         const cards = Array.from(section.querySelectorAll('.video-card'));
         let visibleInSection = 0;
         const libraryView = ['films','movies','series'].includes(currentView);
-        const sectionMatchesView = libraryView ? sectionView === 'films' : currentView === 'videos' ? sectionView !== 'films' : true;
+        const sectionMatchesView = libraryView
+          ? sectionView === 'films'
+          : currentView === 'videos'
+            ? sectionView !== 'films'
+            : currentView === 'home'
+              ? sectionView !== 'films'
+              : true;
 
         cards.forEach(card => {
           const category = card.dataset.category || sectionCategory;
