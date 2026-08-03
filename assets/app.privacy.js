@@ -2888,23 +2888,59 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
 ;(function(){
   'use strict';
-  var loaded=false;
+  var loaded=false,loading=false;
   function isAdminRoute(){
     var callback=new URLSearchParams(location.search||'').get('auth_callback');
     var remembered='';
     try{remembered=sessionStorage.getItem('beOAuthDestination')||'';}catch(_){ }
     return String(location.hash||'').startsWith('#/admin')||callback==='admin'||remembered==='admin';
   }
-  function loadAdmin(){
-    if(loaded||!isAdminRoute())return;
-    loaded=true;
-    var script=document.createElement('script');
-    script.src='/assets/chunk-a7d9f4.js?v=20260803-runtime';script.async=false;
-    script.onerror=function(){loaded=false;document.body.innerHTML='<div class=\"admin-loader\">Não foi possível carregar o painel. Atualize a página.</div>';console.error('Não foi possível carregar o painel administrativo.');};
-    document.head.appendChild(script);
+  function adminFrame(content){
+    document.documentElement.classList.add('admin-mode');
+    document.body.classList.add('admin-mode');
+    document.body.innerHTML='<div style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#05070b;color:#fff;font-family:Inter,system-ui,sans-serif">'+content+'</div>';
+  }
+  function showLogin(message){
+    adminFrame('<section style="width:min(430px,100%);padding:32px;border:1px solid rgba(255,255,255,.13);border-radius:28px;background:#0a0d12;text-align:center"><a href="/" aria-label="Voltar ao site"><img src="/assets/logo.png?v=3" alt="BE" style="width:68px;height:68px;object-fit:contain"></a><h1 style="margin:20px 0 8px;font-size:28px">Dashboard Admin</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">'+(message||'Entre com a conta administrativa autorizada.')+'</p><button id="protectedAdminGoogle" type="button" style="width:100%;min-height:54px;margin-top:24px;border:0;border-radius:16px;background:#347ff1;color:#fff;font-weight:800;font-size:16px;cursor:pointer">Conectar via Google</button></section>');
+    var button=document.getElementById('protectedAdminGoogle');
+    if(button)button.onclick=async function(){
+      button.disabled=true;button.textContent='Conectando…';
+      try{await window.beBackend.ready;await window.beBackend.auth.signInWithGoogle();}
+      catch(error){button.disabled=false;button.textContent='Conectar via Google';alert(error&&error.message||'Não foi possível entrar.');}
+    };
+  }
+  function showDenied(){
+    adminFrame('<section style="width:min(460px,100%);padding:32px;border:1px solid rgba(255,255,255,.13);border-radius:28px;background:#0a0d12;text-align:center"><h1 style="margin:0 0 10px;font-size:27px">Acesso não autorizado</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">Esta conta não possui permissão administrativa.</p><a href="/" style="display:inline-grid;place-items:center;min-height:48px;margin-top:22px;padding:0 22px;border-radius:15px;background:#347ff1;color:#fff;text-decoration:none;font-weight:800">Voltar ao site</a></section>');
+  }
+  async function loadAdmin(){
+    if(loaded||loading||!isAdminRoute())return;
+    loading=true;
+    try{
+      if(!window.beBackend)throw new Error('O sistema de autenticação não foi carregado.');
+      await window.beBackend.ready;
+      var account=window.beBackend.auth.currentUser||null;
+      if(!account){showLogin();return;}
+      if(!window.beBackend.isAdmin(account)){showDenied();return;}
+      var client=window.beBackend.client;
+      var sessionResult=client&&client.auth?await client.auth.getSession():null;
+      var token=sessionResult&&sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.access_token;
+      if(!token){showLogin('Sua sessão expirou. Entre novamente.');return;}
+      adminFrame('<div style="color:#9fb9df;font-size:16px">Carregando painel seguro…</div>');
+      var response=await fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'same-origin'});
+      if(!response.ok)throw new Error('O painel não pôde ser autorizado.');
+      var source=await response.text();
+      (new Function(source))();
+      loaded=true;
+    }catch(error){
+      adminFrame('<section style="width:min(480px,100%);padding:30px;border:1px solid rgba(255,255,255,.13);border-radius:24px;background:#0a0d12;text-align:center"><h1 style="margin:0 0 10px;font-size:25px">Não foi possível carregar o painel</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">'+String(error&&error.message||'Atualize a página e tente novamente.').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})+'</p></section>');
+    }finally{loading=false;}
   }
   loadAdmin();
   window.addEventListener('hashchange',loadAdmin);
+  window.addEventListener('pageshow',loadAdmin);
+  window.setTimeout(function(){
+    try{window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(loadAdmin);}catch(_){ }
+  },0);
 })();
 
 ;
