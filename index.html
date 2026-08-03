@@ -728,6 +728,7 @@
   .footer-social-link:hover{color:#fff;transform:translateY(-2px);background:rgba(255,255,255,.06)}
   .footer-social-link svg{width:23px;height:23px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .footer-social-link.is-x svg{fill:currentColor;stroke:none;width:20px;height:20px}
+  .footer-social-link.is-discord svg{fill:currentColor;stroke:none;width:23px;height:23px}
   @media(max-width:700px){
     footer{padding:38px 20px 22px}
     .footer-card{min-height:0;padding:24px 4px 30px;align-items:flex-start;flex-direction:column;gap:24px}
@@ -2825,12 +2826,12 @@
   }
 </style>
 
-<link rel="stylesheet" href="/admin/admin.css?v=20260803-footer-social">
+<link rel="stylesheet" href="/admin/admin.css?v=20260803-discord-footer">
 <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script defer src="/supabase-config.js"></script>
 <script defer src="/backend.js"></script>
-<script defer src="/admin/admin.js?v=20260803-footer-social"></script>
-<script defer src="/public-data.js?v=20260803-footer-social"></script>
+<script defer src="/admin/admin.js?v=20260803-discord-footer"></script>
+<script defer src="/public-data.js?v=20260803-discord-footer"></script>
 <script defer src="/mobile/mobile.js?v=20260802-7"></script>
 
 <style id="desktop-search-visibility-fix">
@@ -3339,7 +3340,6 @@
 
     <main class="legal-page-content">
       <article class="legal-article" data-legal-page="terms" hidden>
-        <span class="legal-kicker">BETV</span>
         <h1>Terms &amp; Conditions</h1>
         <p class="legal-updated">Última atualização: 3 de agosto de 2026.</p>
         <p>Ao acessar ou utilizar o BETV, você concorda com estes termos. Caso não concorde, não utilize a plataforma.</p>
@@ -3362,7 +3362,6 @@
       </article>
 
       <article class="legal-article" data-legal-page="privacy" hidden>
-        <span class="legal-kicker">BETV</span>
         <h1>Privacy Policy</h1>
         <p class="legal-updated">Última atualização: 3 de agosto de 2026.</p>
         <p>Esta política explica como o BETV trata dados necessários para autenticação, perfis, segurança e funcionamento da plataforma. O projeto busca coletar somente o necessário e aplicar medidas razoáveis de proteção.</p>
@@ -3387,7 +3386,6 @@
       </article>
 
       <article class="legal-article" data-legal-page="cookies" hidden>
-        <span class="legal-kicker">BETV</span>
         <h1>Cookies</h1>
         <p class="legal-updated">Última atualização: 3 de agosto de 2026.</p>
         <p>O BETV utiliza cookies e armazenamento local do navegador para manter funções essenciais, lembrar escolhas e proteger a experiência do usuário.</p>
@@ -3408,7 +3406,6 @@
       </article>
 
       <article class="legal-article" data-legal-page="dmca" hidden>
-        <span class="legal-kicker">BETV</span>
         <h1>DMCA / Copyright</h1>
         <p class="legal-updated">Última atualização: 3 de agosto de 2026.</p>
         <p>O BETV respeita direitos autorais, marcas, imagem e demais direitos de propriedade intelectual. O projeto é independente, não comercial, feito por fãs e não oficial.</p>
@@ -3460,6 +3457,9 @@
       </a>
       <a class="footer-social-link is-x" id="footerX" href="#" target="_blank" rel="noopener noreferrer" aria-label="X" title="X" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.4L6.47 22H3.36l7.26-8.3L2.97 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.84h1.72L8.43 4.05H6.58L17.8 19.84Z"></path></svg>
+      </a>
+      <a class="footer-social-link is-discord" id="footerDiscord" href="#" target="_blank" rel="noopener noreferrer" aria-label="Discord" title="Discord" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg>
       </a>
     </nav>
   </div>

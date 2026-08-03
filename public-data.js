@@ -27,6 +27,7 @@
     if (!raw) return '';
     if (network === 'instagram' && raw.startsWith('@')) raw = `https://www.instagram.com/${raw.slice(1)}`;
     if (network === 'x' && raw.startsWith('@')) raw = `https://x.com/${raw.slice(1)}`;
+    if (network === 'discord' && !/^[a-z][a-z0-9+.-]*:/i.test(raw) && !raw.includes('/')) raw = `https://discord.gg/${raw}`;
     if (!/^[a-z][a-z0-9+.-]*:/i.test(raw)) raw = `https://${raw}`;
     try {
       const url = new URL(raw);
@@ -62,6 +63,7 @@
     applyFooterLink('footerInstagram', data.instagram, 'instagram');
     applyFooterLink('footerWebsite', data.website || data.siteUrl, 'website');
     applyFooterLink('footerX', data.xUrl || data.twitter || data.x, 'x');
+    applyFooterLink('footerDiscord', data.discordUrl || data.discord || data.discordInvite, 'discord');
   }
 
   async function renderFeatured() {
