@@ -751,3 +751,13 @@ body.admin-mode button.a-btn.primary,
 .settings-section-heading{display:flex;flex-direction:column;gap:5px;padding-top:8px}
 .settings-section-heading strong{font-size:15px;color:#fff}
 .settings-section-heading small{color:var(--a-muted);font-size:12px;line-height:1.5}
+
+/* Renderização progressiva de listas e painéis extensos. */
+@supports (content-visibility: auto) {
+  .table-wrap,
+  .gallery-category-panel,
+  .content-category-panel {
+    content-visibility: auto;
+    contain-intrinsic-size: 520px;
+  }
+}

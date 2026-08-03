@@ -125,7 +125,7 @@
       ].join('');
       return `<div class="f-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
         <div class="f-info">
-          <div class="f-logo">${item.logoUrl ? `<img src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
+          <div class="f-logo">${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
           <div class="f-meta">${meta}</div>
           <p class="f-desc">${escapeHtml(item.description || '')}</p>
           <div class="f-actions">
@@ -148,7 +148,7 @@
             </button>
           </div>
         </div>
-        <div class="f-media">${image ? `<img src="${safeUrl(image)}" alt="${escapeHtml(title)}" loading="eager">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
+        <div class="f-media">${image ? `<img decoding="async" src="${safeUrl(image)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
       </div>`;
     }).join('') + `<div class="f-dots" id="featuredDots">${featured.map((_, index) => `<button class="f-dot ${index === 0 ? 'active' : ''}" data-goto="${index}" aria-label="Ir para o destaque ${index + 1}"></button>`).join('')}</div>`;
 
@@ -265,7 +265,7 @@
 
     host.innerHTML = `<div class="f-slide active" data-index="0">
       <div class="f-info">
-        <div class="f-logo">${item.logoUrl ? `<img src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
+        <div class="f-logo">${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
         <div class="f-meta">${meta}</div>
         <p class="f-desc">${escapeHtml(item.description || '')}</p>
         <div class="f-actions">
@@ -288,7 +288,7 @@
           </button>
         </div>
       </div>
-      <div class="f-media">${background ? `<img src="${safeUrl(background)}" data-fallback-src="${safeUrl(thumbnail)}" alt="${escapeHtml(title)}" loading="eager">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
+      <div class="f-media">${background ? `<img decoding="async" src="${safeUrl(background)}" data-fallback-src="${safeUrl(thumbnail)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
     </div>`;
 
     section.dataset.featuredView = view;
@@ -769,11 +769,11 @@
     if (options.updateRoute !== false) setDetailRoute(itemId, Boolean(options.replaceRoute));
 
     bg.innerHTML = bannerUrl && bannerUrl !== '#'
-      ? `<img src="${safeUrl(bannerUrl)}" alt="${escapeHtml(title)}" loading="eager">`
+      ? `<img decoding="async" src="${safeUrl(bannerUrl)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">`
       : '<div class="ph ph-wide" style="height:100%"></div>';
 
     if (logoUrl && logoUrl !== '#') {
-      logo.innerHTML = `<img src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
+      logo.innerHTML = `<img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
     } else if (['movies', 'series'].includes(String(data.collection || '').toLowerCase())) {
       logo.innerHTML = `<span class="sr-only">${escapeHtml(title)}</span>`;
     } else {

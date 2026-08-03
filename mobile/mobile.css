@@ -385,3 +385,13 @@
     display:block!important;
   }
 }
+
+/* Renderização progressiva de blocos abaixo da dobra. */
+@supports (content-visibility: auto) {
+  .home-sections > section,
+  .detail-recommendations,
+  .site-footer {
+    content-visibility: auto;
+    contain-intrinsic-size: 420px;
+  }
+}

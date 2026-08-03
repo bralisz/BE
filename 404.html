@@ -126,7 +126,7 @@
 <body>
   <main class="page">
     <a class="brand" href="/#home" aria-label="Voltar para a página inicial">
-      <img src="/assets/logo.png" alt="BE">
+      <img loading="eager" decoding="async" fetchpriority="high" src="/assets/logo.png" alt="BE">
     </a>
 
     <section class="content" aria-labelledby="error-title">
@@ -149,5 +149,6 @@
 
     <div class="footer">BE · Página não encontrada</div>
   </main>
+  <script defer src="/lazy-loading.js?v=1"></script>
 </body>
 </html>

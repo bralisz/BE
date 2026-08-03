@@ -59,7 +59,7 @@
 </head>
 <body>
   <main class="card">
-    <img class="logo" src="/assets/logo.png" alt="BE">
+    <img loading="eager" decoding="async" fetchpriority="high" class="logo" src="/assets/logo.png" alt="BE">
     <section id="loading">
       <h1>Carregando autorização…</h1>
       <p class="lead">Estamos verificando sua conta e o aplicativo solicitante.</p>
@@ -132,5 +132,6 @@
     }catch(err){fail(err&&err.message);console.error('Falha no consentimento OAuth:',err);}
   })();
   </script>
+  <script defer src="/lazy-loading.js?v=1"></script>
 </body>
 </html>

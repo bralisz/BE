@@ -283,7 +283,7 @@
   }
 
   async function renderLogin() {
-    document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="admin-login-topbar"><a class="admin-login-logo" href="/" aria-label="Voltar ao site"><img src="/assets/logo.png?v=3" alt="BE"></a></div><div class="login-card" aria-label="Acesso administrativo"><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span><span>Conectar via Google</span></button></div></div></div><div class="toast-area"></div>`;
+    document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="admin-login-topbar"><a class="admin-login-logo" href="/" aria-label="Voltar ao site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/logo.png?v=3" alt="BE"></a></div><div class="login-card" aria-label="Acesso administrativo"><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span><span>Conectar via Google</span></button></div></div></div><div class="toast-area"></div>`;
     startAdminLoginBackground();
     $('#googleLogin').onclick = loginWithGoogle;
     const savedError = sessionStorage.getItem('adminAuthError');
@@ -306,9 +306,9 @@
     }
     const routes = ['dashboard','featured','sections','contents','gallery','users','settings'];
     const accountAvatar = user.photoURL
-      ? `<img src="${esc(user.photoURL)}" alt="Foto de ${esc(user.displayName || 'usuário')}">`
+      ? `<img loading="lazy" decoding="async" src="${esc(user.photoURL)}" alt="Foto de ${esc(user.displayName || 'usuário')}">`
       : `<span>${esc((user.displayName || 'B').charAt(0).toUpperCase())}</span>`;
-    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img src="/assets/logo.png?v=3" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><button class="admin-avatar-button" id="accountToggle" aria-label="Abrir menu da conta" aria-expanded="false">${accountAvatar}</button><div class="admin-account-menu" id="accountMenu"><div class="admin-account-name">${esc(user.displayName || 'Administrador')}</div><div class="admin-account-divider"></div><button type="button" data-account-action="profile">Perfil</button><button type="button" data-account-action="settings">Configurações</button><button type="button" data-account-action="support">Suporte</button><button type="button" data-account-action="dashboard">Dashboard</button><div class="admin-account-divider"></div><button type="button" class="danger" data-account-action="logout">Sair</button></div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
+    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/logo.png?v=3" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><button class="admin-avatar-button" id="accountToggle" aria-label="Abrir menu da conta" aria-expanded="false">${accountAvatar}</button><div class="admin-account-menu" id="accountMenu"><div class="admin-account-name">${esc(user.displayName || 'Administrador')}</div><div class="admin-account-divider"></div><button type="button" data-account-action="profile">Perfil</button><button type="button" data-account-action="settings">Configurações</button><button type="button" data-account-action="support">Suporte</button><button type="button" data-account-action="dashboard">Dashboard</button><div class="admin-account-divider"></div><button type="button" class="danger" data-account-action="logout">Sair</button></div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
     const accountToggle = $('#accountToggle');
     const accountMenu = $('#accountMenu');
@@ -393,7 +393,7 @@
       const title = video ? (video.title || video.name || 'Vídeo sem título') : 'Nenhum vídeo';
       const image = video && (video.imageUrl || video.thumbnailUrl || video.bannerUrl || '');
       const value = leader ? leader.value : 0;
-      return `<article class="analytics-card"><div class="analytics-label"><i>${icon}</i><span>${label}</span></div><div class="analytics-video">${image ? `<img src="${esc(image)}" alt="">` : '<div class="analytics-placeholder">▣</div>'}<div><strong>${esc(title)}</strong><small>${value.toLocaleString('pt-BR')} pessoas</small></div></div></article>`;
+      return `<article class="analytics-card"><div class="analytics-label"><i>${icon}</i><span>${label}</span></div><div class="analytics-video">${image ? `<img loading="lazy" decoding="async" src="${esc(image)}" alt="">` : '<div class="analytics-placeholder">▣</div>'}<div><strong>${esc(title)}</strong><small>${value.toLocaleString('pt-BR')} pessoas</small></div></div></article>`;
     };
     const logHtml = recent.length ? recent.map(item => `<div class="activity-item"><span></span><div><strong>${esc(item.summary || item.action || 'Atividade registrada')}</strong><small>${formatDateTime(item.createdAt)}</small></div></div>`).join('') : '<div class="empty">Nenhuma atividade registrada.</div>';
 
@@ -483,7 +483,7 @@
         if (!avatarGroups.has(category)) avatarGroups.set(category, []);
         avatarGroups.get(category).push(item);
       });
-      const card = (item, type, category) => `<article class="gallery-avatar-card ${type === 'banner' ? 'is-banner' : ''} ${item.active === false ? 'is-hidden' : ''}"><div class="gallery-avatar-image">${item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="${type === 'banner' ? 'Banner de perfil' : `Avatar da categoria ${esc(category)}`}" loading="lazy">` : '<span>Sem imagem</span>'}</div><div class="gallery-avatar-info"><small>${item.active === false ? 'Oculto' : 'Ativo'} · ordem ${esc(item.order ?? 0)}</small></div><div class="gallery-avatar-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></article>`;
+      const card = (item, type, category) => `<article class="gallery-avatar-card ${type === 'banner' ? 'is-banner' : ''} ${item.active === false ? 'is-hidden' : ''}"><div class="gallery-avatar-image">${item.imageUrl ? `<img decoding="async" src="${esc(item.imageUrl)}" alt="${type === 'banner' ? 'Banner de perfil' : `Avatar da categoria ${esc(category)}`}" loading="lazy">` : '<span>Sem imagem</span>'}</div><div class="gallery-avatar-info"><small>${item.active === false ? 'Oculto' : 'Ativo'} · ordem ${esc(item.order ?? 0)}</small></div><div class="gallery-avatar-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></article>`;
       const avatarContent = avatarGroups.size
         ? `<div class="gallery-category-board">${[...avatarGroups.entries()].map(([category, groupItems]) => `<section class="gallery-category-panel"><header><div><small>Categoria de avatares</small><h2>${esc(category)}</h2></div><span>${groupItems.length} ${groupItems.length === 1 ? 'avatar' : 'avatares'}</span></header><div class="gallery-avatar-grid">${groupItems.map(item => card(item, 'avatar', category)).join('')}</div></section>`).join('')}</div>`
         : '<div class="empty">Nenhum avatar encontrado.</div>';
@@ -523,7 +523,7 @@
 
   function imageField(label, name, value = '') {
     const safe = esc(value);
-    return `<div class="field full image-url-field"><label>${label}</label><div class="image-source-hint">Cole uma URL pública (https://...) ou use um arquivo publicado em <code>/assets/...</code>.</div><div class="image-input-row"><input class="a-input image-url-input" name="${name}" value="${safe}" placeholder="/assets/banners/exemplo.webp ou https://..."><button class="a-btn image-clear" type="button">Limpar</button></div><div class="image-validation" aria-live="polite"></div><div class="image-preview-wrap" ${value ? '' : 'hidden'}><img class="preview image-live-preview" src="${safe}" alt="Prévia de ${esc(label)}"></div></div>`;
+    return `<div class="field full image-url-field"><label>${label}</label><div class="image-source-hint">Cole uma URL pública (https://...) ou use um arquivo publicado em <code>/assets/...</code>.</div><div class="image-input-row"><input class="a-input image-url-input" name="${name}" value="${safe}" placeholder="/assets/banners/exemplo.webp ou https://..."><button class="a-btn image-clear" type="button">Limpar</button></div><div class="image-validation" aria-live="polite"></div><div class="image-preview-wrap" ${value ? '' : 'hidden'}><img loading="lazy" decoding="async" class="preview image-live-preview" src="${safe}" alt="Prévia de ${esc(label)}"></div></div>`;
   }
 
   function editorFields(name, item = {}, context = {}) {
@@ -597,7 +597,7 @@
         return;
       }
       const image = imageOf(item);
-      summary.innerHTML = `<div class="featured-selected-card">${image ? `<img src="${esc(image)}" alt="">` : '<span class="featured-selected-placeholder">▣</span>'}<div><small>Selecionado para o destaque</small><strong>${esc(item.title || item.id)}</strong><span>${esc(metaOf(item))}</span></div><i aria-hidden="true">✓</i></div>`;
+      summary.innerHTML = `<div class="featured-selected-card">${image ? `<img loading="lazy" decoding="async" src="${esc(image)}" alt="">` : '<span class="featured-selected-placeholder">▣</span>'}<div><small>Selecionado para o destaque</small><strong>${esc(item.title || item.id)}</strong><span>${esc(metaOf(item))}</span></div><i aria-hidden="true">✓</i></div>`;
       const preview = summary.querySelector('img');
       if (preview) preview.addEventListener('error', () => preview.replaceWith(Object.assign(document.createElement('span'), { className: 'featured-selected-placeholder', textContent: '▣' })));
     };
@@ -650,7 +650,7 @@
         const image = imageOf(item);
         const key = itemKey(item);
         const selected = key === current;
-        return `<button type="button" class="featured-content-option ${selected ? 'selected' : ''}" data-featured-key="${esc(key)}" role="option" aria-selected="${selected}">${image ? `<img src="${esc(image)}" alt="" loading="lazy">` : '<span class="featured-content-placeholder">▣</span>'}<span class="featured-content-copy"><span class="featured-content-badge ${esc(item.collection)}">${esc(featuredCollectionLabel(item.collection))}</span><strong>${esc(item.title || item.id)}</strong><small>${esc([item.year || '', item.duration || item.videoDuration || item.runtime || ''].filter(Boolean).join(' · ') || 'Sem informações adicionais')}</small></span><span class="featured-content-check" aria-hidden="true">✓</span></button>`;
+        return `<button type="button" class="featured-content-option ${selected ? 'selected' : ''}" data-featured-key="${esc(key)}" role="option" aria-selected="${selected}">${image ? `<img decoding="async" src="${esc(image)}" alt="" loading="lazy">` : '<span class="featured-content-placeholder">▣</span>'}<span class="featured-content-copy"><span class="featured-content-badge ${esc(item.collection)}">${esc(featuredCollectionLabel(item.collection))}</span><strong>${esc(item.title || item.id)}</strong><small>${esc([item.year || '', item.duration || item.videoDuration || item.runtime || ''].filter(Boolean).join(' · ') || 'Sem informações adicionais')}</small></span><span class="featured-content-check" aria-hidden="true">✓</span></button>`;
       }).join('');
       empty.hidden = filtered.length > 0;
       list.hidden = filtered.length === 0;
@@ -879,7 +879,7 @@
       setPreviewImage(hero, image, '');
       setPreviewImage(previewCard, image, 'Imagem do conteúdo');
       if (['movies','series'].includes(name) && logo) {
-        previewLogo.innerHTML = `<img src="${esc(logo)}" alt="${esc(title)}">`;
+        previewLogo.innerHTML = `<img loading="lazy" decoding="async" src="${esc(logo)}" alt="${esc(title)}">`;
       } else {
         previewLogo.textContent = title;
       }

@@ -1268,7 +1268,7 @@
     <div class="login-bg-slide active" style="background-image:url('assets/login-admin-banner.jpg')"></div>
   </div>
   <div class="login-shell">
-    <a class="login-brand" href="#login" aria-label="BE"><img src="assets/logo.png" alt="BE"></a>
+    <a class="login-brand" href="#login" aria-label="BE"><img loading="lazy" decoding="async" src="assets/logo.png" alt="BE"></a>
     <div class="auth-column">
       <section class="login-card" id="authCard" aria-label="Acessar sua conta">
         <section class="auth-step auth-start-step" id="emailStep" aria-labelledby="emailStepTitle">
@@ -1337,7 +1337,7 @@
 
       <div class="discord-login-wrap">
         <button class="discord-icon-button" id="discordAuthButton" type="button" aria-label="Continuar com Discord" title="Continuar com Discord">
-          <img src="assets/discord-login.png" alt="">
+          <img loading="lazy" decoding="async" src="assets/discord-login.png" alt="">
         </button>
       </div>
     </div>
@@ -1358,7 +1358,7 @@
 
     <div class="tb-left">
       <button class="logo-btn" id="logoBtn" aria-label="BE — voltar para a Home">
-        <img src="assets/logo.png" alt="BE" class="logo-mark">
+        <img loading="lazy" decoding="async" src="assets/logo.png" alt="BE" class="logo-mark">
       </button>
     </div>
 
@@ -1367,7 +1367,7 @@
     <div class="tb-right">
       <div class="user-menu-wrap">
         <button class="user-chip" id="userChip" aria-haspopup="true" aria-expanded="false" aria-label="Conta">
-          <span class="avatar"><img id="publicUserPhoto" alt="Foto do usuário" hidden><svg id="publicUserFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg></span>
+          <span class="avatar"><img loading="lazy" decoding="async" id="publicUserPhoto" alt="Foto do usuário" hidden><svg id="publicUserFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg></span>
         </button>
 
         <div class="user-dropdown user-dropdown-right" id="userDropdown">
@@ -1680,7 +1680,7 @@
         var items=(await beBackend.data.list('gallery',{orderBy:'order',direction:'asc'})).filter(function(item){return item.active!==false&&item.imageUrl;});
         if(!items.length){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Nenhum avatar disponível no momento.</div>';return;}
         var groups={};items.forEach(function(item){var cat=(item.category||'Outros').trim()||'Outros';(groups[cat]||(groups[cat]=[])).push(item);});
-        avatarPickerBody.innerHTML='<div class="avatar-category-columns">'+Object.keys(groups).map(function(cat){return '<section class="avatar-category"><h3>'+escapePublic(cat)+'</h3><div class="avatar-options">'+groups[cat].map(function(item){return '<button class="avatar-option '+(selectedAvatar===item.imageUrl?'selected':'')+'" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'"><img src="'+escapePublic(item.imageUrl)+'" alt="'+escapePublic(item.title||'Avatar')+'"><span>'+escapePublic(item.title||'Avatar')+'</span></button>';}).join('')+'</div></section>';}).join('')+'</div>';
+        avatarPickerBody.innerHTML='<div class="avatar-category-columns">'+Object.keys(groups).map(function(cat){return '<section class="avatar-category"><h3>'+escapePublic(cat)+'</h3><div class="avatar-options">'+groups[cat].map(function(item){return '<button class="avatar-option '+(selectedAvatar===item.imageUrl?'selected':'')+'" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'"><img loading="lazy" decoding="async" src="'+escapePublic(item.imageUrl)+'" alt="'+escapePublic(item.title||'Avatar')+'"><span>'+escapePublic(item.title||'Avatar')+'</span></button>';}).join('')+'</div></section>';}).join('')+'</div>';
         avatarPickerBody.querySelectorAll('[data-avatar-url]').forEach(function(button){button.addEventListener('click',async function(){
           var url=button.dataset.avatarUrl;button.disabled=true;
           try{
@@ -1706,7 +1706,7 @@
       var user=auth.currentUser;
       if(!user){profileBody.innerHTML='<div class="profile-login-required"><h3>Entre para acessar seu perfil</h3><p>Use seu e-mail e senha para continuar.</p><button class="profile-btn primary" id="profileLogin" type="button">Entrar com e-mail</button></div>';document.getElementById('profileLogin').onclick=function(){closeProfile();location.hash='#login';document.body.classList.add('login-mode');};return;}
       var avatar=currentProfile.avatarUrl||user.photoURL||'';
-      profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview">'+(avatar?'<img src="'+escapePublic(avatar)+'" alt="Avatar do perfil">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>')+'</div><div><h3>'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher avatar da galeria</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
+      profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview">'+(avatar?'<img loading="lazy" decoding="async" src="'+escapePublic(avatar)+'" alt="Avatar do perfil">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>')+'</div><div><h3>'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher avatar da galeria</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
       document.getElementById('profileChooseAvatar').onclick=function(){closeProfile();openAvatarPicker();};document.getElementById('profileCancel').onclick=closeProfile;
       var bio=document.getElementById('profileBio'),count=document.getElementById('profileBioCount');function updateCount(){count.textContent=bio.value.length;}bio.addEventListener('input',updateCount);updateCount();
       document.getElementById('profileForm').addEventListener('submit',async function(e){e.preventDefault();var form=e.currentTarget,msg=document.getElementById('profileMessage'),submit=form.querySelector('[type="submit"]');var displayName=form.displayName.value.trim(),handle=beBackend.normalizeUsername(form.username.value),bioText=form.bio.value.trim();form.username.value=handle;if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='profile-message err';return;}submit.disabled=true;msg.textContent='Salvando…';msg.className='profile-message';try{var payload={displayName:displayName,username:handle,bio:bioText,email:user.email||'',updatedAt:beBackend.now()};currentProfile=await beBackend.profiles.update(user.uid,payload);await auth.updateCurrentUser({displayName:displayName});username.textContent=displayName||(handle?'@'+handle:'Usuário');msg.textContent='Perfil salvo com sucesso.';msg.className='profile-message ok';setTimeout(closeProfile,700);}catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso. Escolha outro.':'Não foi possível salvar: '+error.message;msg.className='profile-message err';}finally{submit.disabled=false;}});
@@ -1998,5 +1998,6 @@
 })();
 </script>
 
+  <script defer src="/lazy-loading.js?v=1"></script>
 </body>
 </html>
