@@ -746,7 +746,6 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
       if (currentUser?.uid === userId) {
         currentUser = { ...currentUser, photoURL: normalizedUrl, profile: savedProfile };
-        notify();
       }
 
       try {
@@ -805,7 +804,6 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
       if (currentUser?.uid === userId) {
         currentUser = { ...currentUser, profile: savedProfile };
-        notify();
       }
       try {
         window.dispatchEvent(new CustomEvent('be:profile-banner-changed', {
@@ -1218,7 +1216,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
           if (eventUser) {
             const sameAccount = Boolean(currentUser && currentUser.uid === eventUser.uid);
-            const passiveRefresh = event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION';
+            const passiveRefresh = event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED';
             if (sameAccount && passiveRefresh) {
               currentUser = {
                 ...currentUser,

@@ -4427,3 +4427,12 @@ body.support-page-active > .support-page-shell{
     flex-basis:36px;
   }
 }
+
+
+/* Navegação dedicada do suporte. */
+body.support-page-active .home-nav-link[data-home-view]{
+  display:none!important;
+}
+body.support-page-active .home-nav-links{
+  max-width:94px;
+}
