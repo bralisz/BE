@@ -91,6 +91,14 @@
     var selectedAvatar='';
     var currentProfile={};
     var onboardingShownFor='';
+    var avatarPickerReturnView='';
+    var bannerPickerReturnView='';
+    var settingsSaveConfirm=document.getElementById('settingsSaveConfirm');
+    var settingsSaveCancel=document.getElementById('settingsSaveCancel');
+    var settingsSaveApprove=document.getElementById('settingsSaveApprove');
+    var settingsSaveToast=document.getElementById('settingsSaveToast');
+    var settingsConfirmResolver=null;
+    var settingsToastTimer=null;
 
     function escapePublic(value){return String(value||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     function avatarCacheKey(user){return 'beSelectedAvatar:'+(user&&user.uid?user.uid:'guest');}
@@ -98,10 +106,33 @@
     function setMainAvatar(url){var shown=String(url||'').trim();if(shown){photo.src=shown;photo.hidden=false;fallback.hidden=true;}else{photo.removeAttribute('src');photo.hidden=true;fallback.hidden=false;}updateOnboardingAvatar();}
     function fallbackAvatarSvg(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>';}
     function updateOnboardingAvatar(){if(!onboardingAvatarPreview)return;var shown=selectedAvatar||selectedProfileAvatar(currentProfile)||'';onboardingAvatarPreview.innerHTML=shown?'<img loading="lazy" decoding="async" src="'+escapePublic(shown)+'" alt="Foto do perfil">':fallbackAvatarSvg();}
-    function syncBodyScroll(){var locked=!avatarPicker.hidden||!bannerPicker.hidden||!profileModal.hidden||!profileOnboarding.hidden;document.body.style.overflow=locked?'hidden':'';}
-    function closeAvatarPicker(){avatarPicker.hidden=true;syncBodyScroll();}
-    function closeBannerPicker(){bannerPicker.hidden=true;syncBodyScroll();}
+    function syncBodyScroll(){var locked=!avatarPicker.hidden||!bannerPicker.hidden||!profileModal.hidden||!profileOnboarding.hidden||(settingsSaveConfirm&&!settingsSaveConfirm.hidden);document.body.style.overflow=locked?'hidden':'';}
+    function keepSettingsOpen(){
+      if(!auth.currentUser)return;
+      profilePage.hidden=true;settingsPage.hidden=false;
+      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active');
+      document.body.classList.add('settings-page-active');
+      if(!isConfigRoute())replacePublicRoute('/config');
+    }
+    function closeAvatarPicker(){var returnView=avatarPickerReturnView;avatarPicker.hidden=true;avatarPickerReturnView='';syncBodyScroll();if(returnView==='settings')keepSettingsOpen();}
+    function closeBannerPicker(){var returnView=bannerPickerReturnView;bannerPicker.hidden=true;bannerPickerReturnView='';syncBodyScroll();if(returnView==='settings')keepSettingsOpen();}
     function closeProfile(){profileModal.hidden=true;syncBodyScroll();}
+    function resolveSettingsConfirm(value){
+      if(!settingsSaveConfirm||settingsSaveConfirm.hidden)return;
+      settingsSaveConfirm.hidden=true;syncBodyScroll();
+      var resolve=settingsConfirmResolver;settingsConfirmResolver=null;if(resolve)resolve(Boolean(value));
+    }
+    function askSettingsSave(){
+      if(!settingsSaveConfirm)return Promise.resolve(true);
+      if(settingsConfirmResolver)resolveSettingsConfirm(false);
+      settingsSaveConfirm.hidden=false;syncBodyScroll();
+      return new Promise(function(resolve){settingsConfirmResolver=resolve;setTimeout(function(){if(settingsSaveApprove)settingsSaveApprove.focus({preventScroll:true});},40);});
+    }
+    function showSettingsSaved(){
+      if(!settingsSaveToast)return;
+      clearTimeout(settingsToastTimer);settingsSaveToast.hidden=false;
+      settingsToastTimer=setTimeout(function(){settingsSaveToast.hidden=true;},2200);
+    }
     function closeOnboarding(force){if(!force&&auth.currentUser&&!String(currentProfile.username||'').trim())return;profileOnboarding.hidden=true;document.body.classList.remove('profile-onboarding-active');profileOnboarding.setAttribute('aria-hidden','true');syncBodyScroll();}
 
     function setupAvatarRails(){
@@ -124,6 +155,7 @@
     }
 
     async function openAvatarPicker(){
+      avatarPickerReturnView=document.body.classList.contains('settings-page-active')||isConfigRoute()?'settings':(document.body.classList.contains('profile-page-active')?'profile':'');
       toggleDropdown(false);avatarPicker.hidden=false;syncBodyScroll();
       avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Carregando avatares…</div>';
       try{
@@ -146,6 +178,7 @@
             setMainAvatar(selectedAvatar);
             localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
             avatarPickerBody.querySelectorAll('.avatar-option').forEach(function(x){x.classList.toggle('selected',x===button);});
+            if(avatarPickerReturnView==='settings'){renderSettingsPage();keepSettingsOpen();showSettingsSaved();}
             setTimeout(closeAvatarPicker,180);
           }catch(error){
             button.disabled=false;
@@ -255,10 +288,12 @@
       var discordConnected=providers.indexOf('discord')>=0||identities.some(function(identity){return String(identity.provider||'').toLowerCase()==='discord';});
       settingsPageBody.innerHTML=''
         +'<div class="settings-grid settings-grid-aligned">'
-        +  '<section class="settings-card settings-account-card"><h2>Conta</h2><p>Altere o nome exibido e o @ do seu perfil.</p><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></section>'
         +  '<section class="settings-card settings-profile-card"><h2>Perfil</h2><p>Escolha o banner de fundo do perfil e troque o avatar.</p><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></section>'
-        +  '<section class="settings-card settings-connections-card"><h2>Conexões conectadas</h2><p>Conecte o Discord à sua conta.</p><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></section>'
-        +  '<section class="settings-card settings-session-card"><h2>Conta e sessão</h2><p>Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status" id="settingsDeleteStatus"></div></section>'
+        +  '<div class="settings-side-stack">'
+        +    '<section class="settings-card settings-account-card"><h2>Conta</h2><p>Altere o nome exibido e o @ do seu perfil.</p><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></section>'
+        +    '<section class="settings-card settings-connections-card"><h2>Conexões conectadas</h2><p>Conecte o Discord à sua conta.</p><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></section>'
+        +    '<section class="settings-card settings-session-card"><h2>Conta e sessão</h2><p>Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status" id="settingsDeleteStatus"></div></section>'
+        +  '</div>'
         +'</div>';
       document.getElementById('settingsChooseAvatar').onclick=function(){openAvatarPicker();};
       document.getElementById('settingsChooseBanner').onclick=function(){openBannerPicker();};
@@ -289,18 +324,20 @@
         var handle=beBackend.normalizeUsername(form.username.value);
         form.username.value=handle;
         if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='settings-status err';return;}
+        var approved=await askSettingsSave();if(!approved){keepSettingsOpen();return;}
         submit.disabled=true;msg.textContent='Salvando…';msg.className='settings-status';
         try{
           currentProfile=await beBackend.profiles.update(user.uid,{displayName:displayName,username:handle,updatedAt:beBackend.now()});
           await auth.updateCurrentUser({displayName:displayName});
           username.textContent='@'+handle;
-          renderProfilePage();
-          msg.textContent='Conta atualizada com sucesso.';msg.className='settings-status ok';
+          renderProfilePage();keepSettingsOpen();
+          msg.textContent='Conta atualizada com sucesso.';msg.className='settings-status ok';showSettingsSaved();
         }catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso.':'Não foi possível salvar: '+error.message;msg.className='settings-status err';}
         finally{submit.disabled=false;}
       });
     }
     async function openBannerPicker(){
+      bannerPickerReturnView=document.body.classList.contains('settings-page-active')||isConfigRoute()?'settings':'';
       bannerPicker.hidden=false;syncBodyScroll();
       bannerPickerBody.innerHTML='<div class="banner-picker-empty">Carregando banners…</div>';
       try{
@@ -333,7 +370,7 @@
             console.warn('O banner foi mantido no perfil local; o banco não aceitou a atualização:',error&&error.message?error.message:error);
           }
           renderProfilePage();
-          if(document.body.classList.contains('settings-page-active'))renderSettingsPage();
+          if(bannerPickerReturnView==='settings'||document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();showSettingsSaved();}
           setTimeout(closeBannerPicker,120);
         });});
       }catch(error){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Não foi possível carregar os banners.</div>';console.warn(error);}
@@ -418,7 +455,7 @@
     });
 
     function openProfile(){openPublicProfile(true);}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){if(!auth.currentUser)return;if(isConfigRoute())openSettingsPage(false);else if(isProfileRoute())openPublicProfile(false);else closePublicPages(false);});
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){if(!auth.currentUser)return;if(isConfigRoute())openSettingsPage(false);else if(isProfileRoute())openPublicProfile(false);else closePublicPages(false);});
     auth.onChange(async function(currentUser){
       dashboard.hidden=true;
       var isAdmin=false;
@@ -440,7 +477,7 @@
       else currentProfile={...(currentProfile||{}),avatarUrl:detail.avatarUrl||'',avatarId:detail.avatarId||''};
       selectedAvatar=detail.avatarUrl||'';
       localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
-      setMainAvatar(selectedAvatar);updateOnboardingAvatar();renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();
+      setMainAvatar(selectedAvatar);updateOnboardingAvatar();renderProfilePage();if(document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();}
     });
     window.addEventListener('be:profile-banner-changed',function(event){
       var detail=event&&event.detail||{};
@@ -453,9 +490,9 @@
       }
       applyProfileBanner(latestUrl);
       renderProfilePage();
-      if(document.body.classList.contains('settings-page-active'))renderSettingsPage();
+      if(document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();}
     });
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeAvatarPicker();closeBannerPicker();closeProfile();closeOnboarding(false);}});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(settingsSaveConfirm&&!settingsSaveConfirm.hidden){resolveSettingsConfirm(false);return;}closeAvatarPicker();closeBannerPicker();closeProfile();closeOnboarding(false);}});
     setTimeout(function(){if(!auth.currentUser)return;if(isConfigRoute())openSettingsPage(false);else if(isProfileRoute())openPublicProfile(false);},0);
   }
   function startPublicAccount(){setupPublicAccount().catch(function(error){console.error('Falha ao iniciar conta pública:',error);});}
@@ -898,7 +935,7 @@
       if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
     });
     syncLegalAvatar();
-    document.title=({terms:'Terms & Conditions',privacy:'Privacy Policy',cookies:'Cookies',dmca:'DMCA / Copyright'}[route])+' — BETV';
+    document.title='Billie Eilish TV';
     window.scrollTo(0,0);
     return true;
   }
@@ -906,7 +943,7 @@
     history.pushState({beRoute:'home'},'',location.pathname+(location.search||''));
     document.body.classList.remove('legal-page-active');
     if(legalPage)legalPage.hidden=true;
-    document.title='BETV';
+    document.title='Billie Eilish TV';
     window.dispatchEvent(new PopStateEvent('popstate'));
     window.scrollTo(0,0);
   }

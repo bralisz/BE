@@ -13,11 +13,14 @@
   var desktopList=document.getElementById('notificationPreviewList');
   var desktopViewAll=document.getElementById('notificationViewAll');
   var desktopDot=document.getElementById('notificationUnreadDot');
+  var desktopMarkAll=document.getElementById('notificationMarkAll');
+  var desktopClose=document.getElementById('notificationDropdownClose');
   var mobilePopover=document.getElementById('mobileNotificationPopover');
   var mobileList=document.getElementById('mobileNotificationPreviewList');
   var mobileViewAll=document.getElementById('mobileNotificationViewAll');
   var mobileClose=document.getElementById('mobileNotificationClose');
   var mobileDot=document.getElementById('mobileNotificationUnreadDot');
+  var mobileMarkAll=document.getElementById('mobileNotificationMarkAll');
   var notifications=[];
   var loaded=false;
   var loadingPromise=null;
@@ -107,7 +110,7 @@
     if(currentMobileDot)currentMobileDot.hidden=!unread;
   }
 
-  function markSeen(){
+  function markAllRead(){
     var currentMobileDot=document.getElementById('mobileNotificationUnreadDot')||mobileDot;
     var latest=notifications.length&&dateValue(notifications[0]);
     localStorage.setItem(STORAGE_KEY,String(latest?latest.getTime():Date.now()));
@@ -116,11 +119,11 @@
   }
 
   function previewMarkup(items){
-    if(!items.length)return '<div class="notification-preview-empty"><strong>Nenhuma atualização</strong><span>As novidades publicadas aparecerão aqui.</span></div>';
+    if(!items.length)return '<div class="notification-preview-empty"><strong>Nenhuma atualização</strong></div>';
     return items.slice(0,4).map(function(item){
       return '<button class="notification-preview-item" type="button" data-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
-        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização do BETV')+'</strong><span>'+esc(trimText(item.description,100)||'Confira esta atualização.')+'</span><small>'+esc(formatShortDate(item))+'</small></span>'+
+        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(item.description,100)||'Confira esta atualização.')+'</span><small>'+esc(formatShortDate(item))+'</small></span>'+
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
       '</button>';
     }).join('');
@@ -142,8 +145,8 @@
 
   function renderPage(id){
     if(!notifications.length){
-      pageNav.innerHTML='<div class="notification-page-empty"><strong>Nenhuma atualização publicada.</strong><span>Quando houver novidades, elas aparecerão aqui.</span></div>';
-      pageContent.innerHTML='<div class="notification-page-empty"><strong>Sem atualizações no momento.</strong></div>';
+      pageNav.innerHTML='<div class="notification-page-empty"><strong>Nenhuma atualização</strong></div>';
+      pageContent.innerHTML='<div class="notification-page-empty"><strong>Nenhuma atualização</strong></div>';
       return;
     }
     var active=notifications.find(function(item){return String(item.id)===String(id);})||notifications[0];
@@ -151,7 +154,7 @@
     pageNav.innerHTML=notifications.map(function(item){
       var selected=String(item.id)===selectedId;
       return '<button class="notification-page-link '+(selected?'active':'')+'" type="button" data-notification-page-id="'+esc(item.id)+'" aria-current="'+(selected?'page':'false')+'">'+
-        '<strong>'+esc(item.title||'Atualização do BETV')+'</strong>'+
+        '<strong>'+esc(item.title||'Atualização')+'</strong>'+
         '<span>'+esc(trimText(item.description,92)||'Confira esta atualização.')+'</span>'+
         '<small>'+esc(formatDate(item))+'</small>'+
       '</button>';
@@ -160,8 +163,7 @@
       button.addEventListener('click',function(){openPage(button.dataset.notificationPageId,true);});
     });
     pageContent.innerHTML='<article class="notification-article">'+
-      '<span class="notification-article-kicker">Atualização BETV</span>'+
-      '<h1>'+esc(active.title||'Atualização do BETV')+'</h1>'+
+      '<h1>'+esc(active.title||'Atualização')+'</h1>'+
       '<p class="notification-article-date">'+esc(formatDate(active))+'</p>'+
       '<div class="notification-article-body">'+esc(active.description||'').replace(/\r?\n/g,'<br>')+'</div>'+
     '</article>';
@@ -208,8 +210,7 @@
     page.hidden=false;
     page.setAttribute('aria-hidden','false');
     selectedId=String(id||'');
-    document.title='Atualizações — BETV';
-    markSeen();
+    document.title='Billie Eilish TV';
     if(updateRoute!==false)setNotificationRoute(selectedId,false);
     window.dispatchEvent(new CustomEvent('be:close-support'));
     await loadNotifications(false);
@@ -228,7 +229,7 @@
       url.hash='';
       history.pushState({beRoute:'home'},'',url.pathname+(url.search||''));
     }
-    if(document.title==='Atualizações — BETV')document.title='BETV';
+    document.title='Billie Eilish TV';
   }
 
   function toggleDesktop(event){
@@ -242,7 +243,7 @@
     if(userChip)userChip.setAttribute('aria-expanded','false');
     desktopDropdown.classList.toggle('open',open);
     desktopButton.setAttribute('aria-expanded',String(open));
-    if(open){markSeen();loadNotifications(false);}
+    if(open){loadNotifications(false);}
   }
 
   function toggleMobile(event){
@@ -253,11 +254,14 @@
     mobilePopover.hidden=!open;
     var button=getMobileButton();
     if(button)button.setAttribute('aria-expanded',String(open));
-    if(open){markSeen();loadNotifications(false);}
+    if(open){loadNotifications(false);}
   }
 
   if(desktopButton)desktopButton.addEventListener('click',toggleDesktop);
   if(desktopDropdown)desktopDropdown.addEventListener('click',function(event){event.stopPropagation();});
+  if(desktopMarkAll)desktopMarkAll.addEventListener('click',function(event){event.stopPropagation();markAllRead();});
+  if(desktopClose)desktopClose.addEventListener('click',function(event){event.stopPropagation();closeDesktop();});
+  if(mobileMarkAll)mobileMarkAll.addEventListener('click',function(event){event.stopPropagation();markAllRead();});
   if(desktopViewAll)desktopViewAll.addEventListener('click',function(){openPage('',true);});
   if(mobilePopover)mobilePopover.addEventListener('click',function(event){event.stopPropagation();});
   if(mobileViewAll)mobileViewAll.addEventListener('click',function(){openPage('',true);});

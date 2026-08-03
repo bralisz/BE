@@ -4215,3 +4215,155 @@ body.notification-page-active > #notificationPage{
   .notification-preview-item,
   .notification-page-link{transition:none!important}
 }
+
+
+.profile-page-meta{display:none!important}
+.notification-unread-dot{
+  width:11px;
+  height:11px;
+  border-color:#101213;
+  background:#0a84ff;
+  box-shadow:0 0 0 3px rgba(10,132,255,.18),0 0 16px rgba(10,132,255,.55);
+}
+.notification-dropdown-header{
+  align-items:center;
+  padding:10px 10px 12px 14px;
+}
+.notification-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.notification-mark-all{
+  min-height:34px;
+  padding:0 12px;
+  border:0;
+  border-radius:999px;
+  background:rgba(10,132,255,.14);
+  color:#58a9ff;
+  font:700 12px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;
+  cursor:pointer;
+}
+.notification-mark-all:hover{background:rgba(10,132,255,.22)}
+.notification-header-close{
+  width:34px;
+  height:34px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:50%;
+  background:#1c1c1e;
+  color:#a1a1a6;
+  cursor:pointer;
+}
+.notification-header-close svg{width:17px;height:17px}
+.notification-preview-empty{min-height:104px}
+.notification-preview-empty span{display:none!important}
+.notification-page-heading{align-items:center}
+.notification-page-heading span,.notification-article-kicker{display:none!important}
+.notification-page-empty span{display:none!important}
+.mobile-notification-head{align-items:center}
+.mobile-notification-head>strong{font-size:18px}
+.mobile-notification-head .notification-header-actions{display:flex}
+.mobile-notification-head .notification-mark-all{width:auto;height:34px;padding:0 11px;background:rgba(10,132,255,.14);color:#58a9ff}
+.mobile-notification-head .notification-header-close{width:36px;height:36px;background:#1c1c1e;color:#a1a1a6}
+
+body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned{
+  grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr)!important;
+  align-items:start!important;
+}
+.settings-grid-aligned>.settings-profile-card{
+  margin:0!important;
+  height:auto!important;
+  min-height:520px;
+  padding:30px;
+  display:flex;
+  flex-direction:column;
+}
+.settings-side-stack{
+  min-width:0;
+  display:grid;
+  gap:20px;
+  align-content:start;
+}
+.settings-side-stack>.settings-card{
+  margin:0!important;
+  height:auto;
+  padding:26px;
+  display:flex;
+  flex-direction:column;
+}
+.settings-side-stack .settings-account-card form{display:flex;flex-direction:column}
+.settings-side-stack .settings-account-card .settings-btn-row{margin-top:18px;padding-top:0}
+.settings-profile-card .settings-btn-row{margin-top:auto;padding-top:22px}
+.settings-profile-card .settings-status{margin-top:10px}
+.settings-profile-card .settings-banner-preview{min-height:190px}
+
+.ios-confirm-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:10090;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:rgba(0,0,0,.42);
+  -webkit-backdrop-filter:blur(10px) saturate(115%);
+  backdrop-filter:blur(10px) saturate(115%);
+}
+.ios-confirm-backdrop[hidden]{display:none!important}
+.ios-confirm-dialog{
+  width:min(292px,calc(100vw - 40px));
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:22px;
+  background:rgba(38,38,41,.94);
+  color:#fff;
+  box-shadow:0 26px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;
+  transform:translateZ(0);
+}
+.ios-confirm-copy{padding:21px 20px 19px;text-align:center}
+.ios-confirm-copy h2{margin:0 0 7px;font-size:17px;line-height:1.25;letter-spacing:-.01em}
+.ios-confirm-copy p{margin:0;color:rgba(255,255,255,.72);font-size:13px;line-height:1.38}
+.ios-confirm-actions{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid rgba(255,255,255,.16)}
+.ios-confirm-actions button{
+  min-height:48px;
+  border:0;
+  background:transparent;
+  color:#0a84ff;
+  font:500 17px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;
+  cursor:pointer;
+}
+.ios-confirm-actions button+button{border-left:1px solid rgba(255,255,255,.16)}
+.ios-confirm-actions button.primary{font-weight:700}
+.ios-confirm-actions button:active{background:rgba(255,255,255,.08)}
+.ios-save-toast{
+  position:fixed;
+  z-index:10100;
+  left:50%;
+  top:max(22px,env(safe-area-inset-top));
+  transform:translateX(-50%);
+  min-height:48px;
+  padding:0 17px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:999px;
+  background:rgba(29,29,31,.92);
+  color:#fff;
+  box-shadow:0 18px 50px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.08);
+  -webkit-backdrop-filter:blur(22px) saturate(135%);
+  backdrop-filter:blur(22px) saturate(135%);
+  font:700 13px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;
+}
+.ios-save-toast[hidden]{display:none!important}
+.ios-save-toast svg{width:19px;height:19px;color:#30d158}
+
+@media(max-width:980px){
+  body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned{grid-template-columns:1fr!important}
+  .settings-grid-aligned>.settings-profile-card{min-height:0}
+}
+@media(max-width:640px){
+  .settings-grid-aligned>.settings-profile-card,.settings-side-stack>.settings-card{padding:22px}
+  .settings-profile-card .settings-banner-preview{min-height:130px}
+  .notification-header-actions{gap:5px}
+  .notification-mark-all{padding:0 9px;font-size:11px}
+}

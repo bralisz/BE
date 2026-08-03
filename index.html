@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BE — Billie Eilish</title>
+<title>Billie Eilish TV</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -163,7 +163,13 @@
       <span class="notification-unread-dot" id="notificationUnreadDot" hidden></span>
     </button>
     <div class="notification-dropdown" id="notificationDropdown" aria-label="Notificações recentes">
-      <div class="notification-dropdown-header"><strong>Notificações</strong><span>Atualizações do BETV</span></div>
+      <div class="notification-dropdown-header">
+        <strong>Notificações</strong>
+        <div class="notification-header-actions">
+          <button class="notification-mark-all" id="notificationMarkAll" type="button">Ler todos</button>
+          <button class="notification-header-close" id="notificationDropdownClose" type="button" aria-label="Fechar notificações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        </div>
+      </div>
       <div class="notification-preview-list" id="notificationPreviewList"><div class="notification-preview-empty">Carregando…</div></div>
       <button class="notification-view-all" id="notificationViewAll" type="button">Ver todas as atualizações</button>
     </div>
@@ -460,6 +466,22 @@
     <div class="banner-picker-body" id="bannerPickerBody"><div class="banner-picker-empty">Carregando banners…</div></div>
   </section>
 </div>
+<div class="ios-confirm-backdrop" id="settingsSaveConfirm" hidden>
+  <section class="ios-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="settingsSaveConfirmTitle" aria-describedby="settingsSaveConfirmText">
+    <div class="ios-confirm-copy">
+      <h2 id="settingsSaveConfirmTitle">Salvar alterações?</h2>
+      <p id="settingsSaveConfirmText">Seu nome e seu @ serão atualizados no perfil.</p>
+    </div>
+    <div class="ios-confirm-actions">
+      <button id="settingsSaveCancel" type="button">Cancelar</button>
+      <button class="primary" id="settingsSaveApprove" type="button">Salvar</button>
+    </div>
+  </section>
+</div>
+<div class="ios-save-toast" id="settingsSaveToast" hidden role="status" aria-live="polite">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4.2 4.2L19 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span>Alterações salvas</span>
+</div>
 <section class="support-page-shell" id="supportPage" hidden aria-label="Central de suporte do BETV">
   <div class="support-page-inner">
     <header class="support-hero">
@@ -539,14 +561,20 @@
   </div>
 </section>
 <div class="mobile-notification-popover" id="mobileNotificationPopover" hidden aria-label="Notificações recentes">
-  <div class="mobile-notification-head"><div><strong>Notificações</strong><span>Atualizações do BETV</span></div><button id="mobileNotificationClose" type="button" aria-label="Fechar notificações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+  <div class="mobile-notification-head">
+    <strong>Notificações</strong>
+    <div class="notification-header-actions">
+      <button class="notification-mark-all" id="mobileNotificationMarkAll" type="button">Ler todos</button>
+      <button class="notification-header-close" id="mobileNotificationClose" type="button" aria-label="Fechar notificações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+  </div>
   <div class="notification-preview-list" id="mobileNotificationPreviewList"><div class="notification-preview-empty">Carregando…</div></div>
   <button class="notification-view-all" id="mobileNotificationViewAll" type="button">Ver todas as atualizações</button>
 </div>
 <section class="notification-page-shell" id="notificationPage" hidden aria-label="Log de atualizações do BETV">
   <header class="notification-page-header">
     <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/assets/logo.png?v=3" alt="BETV"></button>
-    <div class="notification-page-heading"><span>BETV</span><strong>Atualizações</strong></div>
+    <div class="notification-page-heading"><strong>Atualizações</strong></div>
     <button class="notification-page-close" id="notificationPageClose" type="button" aria-label="Fechar atualizações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></button>
   </header>
   <div class="notification-page-wrap">
@@ -692,8 +720,8 @@
     </nav>
   </div>
 </footer>
-<script src="/assets/ui.privacy.js?v=20260803-notifications-1"></script>
-<script src="/assets/support.js?v=20260803-notifications-1"></script>
-<script src="/assets/notifications.js?v=20260803-notifications-1"></script>
+<script src="/assets/ui.privacy.js?v=20260803-config-notifications-2"></script>
+<script src="/assets/support.js?v=20260803-config-notifications-2"></script>
+<script src="/assets/notifications.js?v=20260803-config-notifications-2"></script>
 </body>
 </html>

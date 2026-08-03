@@ -75,7 +75,7 @@
     if(dropdown)dropdown.classList.remove('open');
     if(chip)chip.setAttribute('aria-expanded','false');
     setSupportTab(true);
-    document.title='Suporte — BETV';
+    document.title='Billie Eilish TV';
     window.scrollTo(0,0);
   }
 
@@ -87,7 +87,7 @@
       history.pushState({beRoute:'home'},'','/'+(location.search||''));
     }
     if(resetTab!==false)setSupportTab(false);
-    if(document.title==='Suporte — BETV')document.title='BETV';
+    document.title='Billie Eilish TV';
   }
 
   function filterFaq(){
