@@ -7,6 +7,7 @@
   var status=document.getElementById('supportSearchStatus');
   var noResults=document.getElementById('supportNoResults');
   var faqList=document.getElementById('supportFaqList');
+  var faqSection=faqList?faqList.closest('.support-faq'):null;
   var supportButton=document.querySelector('.home-nav-link[data-public-action="support"]');
   var logoButton=document.getElementById('logoBtn');
   var leading=document.getElementById('homeNavLeading');
@@ -61,10 +62,17 @@
     positionIndicator(active?supportButton:logoButton);
   }
 
+  function setSupportRoute(replace){
+    var url=new URL(location.href);
+    url.pathname='/';
+    url.hash='suporte';
+    var target=url.pathname+(url.search||'')+url.hash;
+    if(replace)history.replaceState({beRoute:'support'},'',target);
+    else history.pushState({beRoute:'support'},'',target);
+  }
+
   function openSupport(updateRoute){
-    if(updateRoute!==false&&!isSupportRoute()){
-      history.pushState({beRoute:'support'},'','/'+(location.search||'')+'#suporte');
-    }
+    if(updateRoute!==false&&!isSupportRoute())setSupportRoute(false);
     document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','detail-page-active','notification-page-active');
     window.dispatchEvent(new CustomEvent('be:close-notifications'));
     document.body.classList.add('support-page-active');
@@ -77,6 +85,9 @@
     setSupportTab(true);
     document.title='Billie Eilish TV';
     window.scrollTo(0,0);
+    if(updateRoute!==false){
+      window.requestAnimationFrame(function(){if(!isSupportRoute())setSupportRoute(true);});
+    }
   }
 
   function closeSupport(updateRoute,resetTab){
@@ -99,11 +110,14 @@
       if(!match)item.open=false;
       if(match)visible+=1;
     });
+    var empty=Boolean(query)&&visible===0;
     if(clearButton)clearButton.hidden=!input.value;
-    if(noResults)noResults.hidden=visible!==0;
+    if(noResults)noResults.hidden=true;
+    if(faqSection)faqSection.hidden=empty;
+    page.classList.toggle('support-filter-empty',empty);
     if(status){
-      status.textContent=visible===0
-        ? 'Nenhuma pergunta frequente encontrada.'
+      status.textContent=empty
+        ? 'Nenhuma pergunta frequente encontrada. Use a área para relatar o problema.'
         : visible+' '+(visible===1?'pergunta frequente encontrada.':'perguntas frequentes encontradas.');
     }
   }
@@ -133,6 +147,7 @@
     var target=event.target&&event.target.closest?event.target.closest('[data-public-action="support"],[data-mobile-destination="support"],.home-nav-link[data-home-view],#logoBtn,[data-public-action="profile"],[data-public-action="settings"],[data-public-action="auth"]'):null;
     if(!target)return;
     if(target.matches('[data-public-action="support"],[data-mobile-destination="support"]')){
+      event.preventDefault();
       openSupport(true);
       return;
     }

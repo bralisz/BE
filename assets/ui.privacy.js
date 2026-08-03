@@ -311,11 +311,32 @@
         catch(error){msg.textContent='Não foi possível sair: '+(error&&error.message?error.message:'Tente novamente.');msg.className='settings-status err';this.disabled=false;}
       };
       document.getElementById('settingsDeleteAccount').onclick=async function(){
+        var button=this;
         var msg=document.getElementById('settingsDeleteStatus');
-        if(!confirm('Tem certeza que deseja excluir sua conta? Esta ação não poderá ser desfeita.'))return;
-        this.disabled=true;msg.textContent='Excluindo conta…';msg.className='settings-status';
-        try{await auth.deleteAccount();closePublicPages(false);showLogin();}
-        catch(error){msg.textContent='Não foi possível excluir: '+(error&&error.message?error.message:'Tente novamente.');msg.className='settings-status err';this.disabled=false;}
+        var deletingUser=auth.currentUser;
+        if(!confirm('Excluir esta conta permanentemente? Todos os dados do perfil serão removidos e você será desconectado do site.'))return;
+        button.disabled=true;msg.textContent='Excluindo conta…';msg.className='settings-status';
+        try{
+          await auth.deleteAccount();
+          try{await auth.signOut();}catch(_){ }
+          try{
+            if(deletingUser&&deletingUser.uid){
+              localStorage.removeItem('beSelectedAvatar:'+deletingUser.uid);
+              localStorage.removeItem('beProfileBanner:'+deletingUser.uid);
+            }
+            localStorage.removeItem('beAuthExpected');
+            localStorage.removeItem('beSessionUid');
+            sessionStorage.removeItem('beOpenSettingsAfterDiscord');
+            sessionStorage.removeItem('beOAuthDestination');
+          }catch(_){ }
+          closePublicPages(false);
+          showLogin();
+          window.alert('Conta excluída com sucesso. Você foi desconectado do site.');
+        }catch(error){
+          msg.textContent='Não foi possível excluir: '+(error&&error.message?error.message:'Tente novamente.');
+          msg.className='settings-status err';
+          button.disabled=false;
+        }
       };
       document.getElementById('settingsAccountForm').addEventListener('submit',async function(e){
         e.preventDefault();
