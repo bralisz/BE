@@ -146,7 +146,8 @@
       id: raw.id || raw.uid,
       email: raw.email || '',
       displayName: metadata.display_name || metadata.full_name || raw.displayName || raw.display_name || '',
-      photoURL: metadata.profile_avatar_url || metadata.avatar_url || raw.photoURL || raw.avatar_url || '',
+      photoURL: (metadata.profile_avatar_id && metadata.profile_avatar_url) ? metadata.profile_avatar_url : '',
+      providerPhotoURL: metadata.avatar_url || raw.photoURL || raw.avatar_url || '',
       emailVerified: Boolean(raw.email_confirmed_at || raw.emailVerified || MODE === 'local'),
       role: String(raw.email || '').toLowerCase() === ADMIN_EMAIL ? 'admin' : (raw.role || 'member'),
       raw
@@ -307,6 +308,9 @@
       avatarId: row.avatar_id || '',
       bannerUrl: row.banner_url || '',
       bannerId: row.banner_id || '',
+      banned: row.banned === true,
+      bannedAt: row.banned_at || '',
+      banReason: row.ban_reason || '',
       role: row.role || 'member',
       profileComplete: row.profile_complete !== false,
       createdAt: row.created_at || '',
@@ -319,7 +323,8 @@
     const row = { id };
     const mappings = {
       email: 'email', displayName: 'display_name', username: 'username', bio: 'bio',
-      avatarUrl: 'avatar_url', avatarId: 'avatar_id', bannerUrl: 'banner_url', bannerId: 'banner_id', role: 'role',
+      avatarUrl: 'avatar_url', avatarId: 'avatar_id', bannerUrl: 'banner_url', bannerId: 'banner_id',
+      banned: 'banned', bannedAt: 'banned_at', banReason: 'ban_reason', role: 'role',
       profileComplete: 'profile_complete', createdAt: 'created_at',
       updatedAt: 'updated_at', lastLoginAt: 'last_login_at'
     };
@@ -573,11 +578,11 @@
         try {
           const { data: existingProfile, error: existingProfileError } = await supabaseClient
             .from('profiles')
-            .select('avatar_url')
+            .select('avatar_url, avatar_id')
             .eq('id', user.uid)
             .maybeSingle();
           if (existingProfileError) console.warn('Não foi possível consultar o avatar salvo:', existingProfileError.message);
-          savedAvatar = String(existingProfile?.avatar_url || '').trim();
+          savedAvatar = String(existingProfile?.avatar_id || '').trim() ? String(existingProfile?.avatar_url || '').trim() : '';
         } catch (avatarLookupError) {
           console.warn('Não foi possível consultar o avatar salvo:', avatarLookupError?.message || avatarLookupError);
         }
@@ -585,7 +590,7 @@
         const profileArgs = {
           p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
           p_username: metadataUsername || null,
-          p_avatar_url: String(savedAvatar || metadata.profile_avatar_url || user.photoURL || metadata.avatar_url || '').trim() || null
+          p_avatar_url: String(savedAvatar || '').trim() || null
         };
         let { data: rows, error } = await supabaseClient.rpc('ensure_my_profile', profileArgs);
 
@@ -611,11 +616,11 @@
         const cachedBanner = readProfileBannerCache(user.uid);
         const metadataBannerUrl = String(metadata.profile_banner_url || metadata.banner_url || '').trim();
         const metadataBannerId = String(metadata.profile_banner_id || metadata.banner_id || '').trim();
-        profile.bannerUrl = metadataBannerUrl || profile.bannerUrl || cachedBanner.bannerUrl;
-        profile.bannerId = metadataBannerId || profile.bannerId || cachedBanner.bannerId;
+        profile.bannerUrl = profile.bannerUrl || metadataBannerUrl || cachedBanner.bannerUrl;
+        profile.bannerId = profile.bannerId || metadataBannerId || cachedBanner.bannerId;
         if (profile.bannerUrl) writeProfileBannerCache(user.uid, profile.bannerUrl, profile.bannerId);
         if (currentUser?.uid === user.uid) {
-          currentUser = { ...currentUser, photoURL: profile.avatarUrl || currentUser.photoURL, profile };
+          currentUser = { ...currentUser, photoURL: (profile.avatarId && profile.avatarUrl) ? profile.avatarUrl : '', profile };
         }
         return profile;
       }
@@ -627,7 +632,7 @@
         displayName: existing?.displayName || user.displayName || '',
         username: existing?.username || '',
         bio: existing?.bio || '',
-        avatarUrl: existing?.avatarUrl || user.photoURL || '',
+        avatarUrl: existing?.avatarId ? (existing?.avatarUrl || '') : '',
         avatarId: existing?.avatarId || '',
         bannerUrl: existing?.bannerUrl || '',
         bannerId: existing?.bannerId || '',
@@ -835,7 +840,7 @@
       localCollection(database, 'users')[userId] = {
         id: userId, uid: userId, email: normalizedEmail,
         displayName: account.displayName, username: normalizedHandle, bio: '', avatarUrl: '', avatarId: '', bannerUrl: '', bannerId: '',
-        profileComplete: true, role: account.role, createdAt: now(), updatedAt: now(), lastLoginAt: now()
+        profileComplete: true, banned: false, bannedAt: '', banReason: '', role: account.role, createdAt: now(), updatedAt: now(), lastLoginAt: now()
       };
       saveLocalDatabase(database);
       currentUser = normalizeUser(account);
@@ -878,6 +883,11 @@
     },
     async connectDiscord() {
       throw backendError('backend/not-configured', 'A conexão com Discord requer o Supabase configurado.');
+    },
+    async accountStatus() {
+      if (!currentUser) return { banned: false };
+      const profile = await data.get('users', currentUser.uid).catch(() => null);
+      return { banned: Boolean(profile && profile.banned), reason: profile?.banReason || '' };
     },
     async deleteAccount() {
       if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para continuar.');
@@ -1051,6 +1061,23 @@
       });
       if (error) throw mapAuthError(error);
       return result;
+    },
+    async accountStatus() {
+      if (!currentUser) return { banned: false };
+      const localProfile = await profiles.get(currentUser.uid).catch(() => null);
+      if (localProfile?.banned) return { banned: true, reason: localProfile.banReason || '' };
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+      if (sessionError || !sessionData?.session?.access_token) return { banned: false };
+      try {
+        const response = await fetch('/api/account-status', {
+          headers: { Authorization: `Bearer ${sessionData.session.access_token}` }
+        });
+        if (!response.ok) return { banned: false };
+        const payload = await response.json();
+        return { banned: Boolean(payload?.banned), reason: payload?.reason || '', bannedAt: payload?.bannedAt || '' };
+      } catch (_) {
+        return { banned: false };
+      }
     },
     async deleteAccount() {
       if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para continuar.');

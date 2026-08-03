@@ -13,6 +13,9 @@ create table if not exists public.profiles (
   avatar_id text not null default '',
   banner_url text not null default '',
   banner_id text not null default '',
+  banned boolean not null default false,
+  banned_at timestamptz,
+  ban_reason text not null default '',
   role text not null default 'member' check (role in ('member', 'admin')),
   profile_complete boolean not null default true,
   created_at timestamptz not null default now(),
@@ -22,6 +25,9 @@ create table if not exists public.profiles (
 
 alter table public.profiles add column if not exists banner_url text not null default '';
 alter table public.profiles add column if not exists banner_id text not null default '';
+alter table public.profiles add column if not exists banned boolean not null default false;
+alter table public.profiles add column if not exists banned_at timestamptz;
+alter table public.profiles add column if not exists ban_reason text not null default '';
 
 create table if not exists public.content_items (
   id uuid primary key default gen_random_uuid(),
@@ -129,14 +135,15 @@ begin
   end if;
 
   insert into public.profiles as p (
-    id, email, display_name, username, avatar_url, role,
+    id, email, display_name, username, avatar_url, avatar_id, role,
     profile_complete, created_at, updated_at, last_login_at
   ) values (
     new.id,
     coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'full_name', ''),
     v_username,
-    coalesce(new.raw_user_meta_data ->> 'profile_avatar_url', new.raw_user_meta_data ->> 'avatar_url', ''),
+    case when nullif(new.raw_user_meta_data ->> 'profile_avatar_id', '') is not null then coalesce(new.raw_user_meta_data ->> 'profile_avatar_url', '') else '' end,
+    coalesce(new.raw_user_meta_data ->> 'profile_avatar_id', ''),
     case when lower(coalesce(new.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
     true,
     coalesce(new.created_at, now()),
@@ -151,9 +158,16 @@ begin
     end,
     username = coalesce(excluded.username, p.username),
     avatar_url = case
-      when nullif(new.raw_user_meta_data ->> 'profile_avatar_url', '') is not null then new.raw_user_meta_data ->> 'profile_avatar_url'
-      when nullif(p.avatar_url, '') is not null then p.avatar_url
-      when nullif(excluded.avatar_url, '') is not null then excluded.avatar_url
+      when nullif(new.raw_user_meta_data ->> 'profile_avatar_id', '') is not null
+       and nullif(new.raw_user_meta_data ->> 'profile_avatar_url', '') is not null
+        then new.raw_user_meta_data ->> 'profile_avatar_url'
+      when nullif(p.avatar_id, '') is not null then p.avatar_url
+      else ''
+    end,
+    avatar_id = case
+      when nullif(new.raw_user_meta_data ->> 'profile_avatar_id', '') is not null
+        then new.raw_user_meta_data ->> 'profile_avatar_id'
+      when nullif(p.avatar_id, '') is not null then p.avatar_id
       else ''
     end,
     role = excluded.role,
@@ -224,7 +238,7 @@ begin
     end,
     username = coalesce(v_username, p.username),
     avatar_url = case
-      when nullif(trim(coalesce(p.avatar_url, '')), '') is not null then p.avatar_url
+      when nullif(trim(coalesce(p.avatar_id, '')), '') is not null then p.avatar_url
       when nullif(trim(coalesce(p_avatar_url, '')), '') is not null then trim(p_avatar_url)
       else ''
     end,
@@ -242,14 +256,15 @@ grant execute on function public.ensure_my_profile(text, text, text) to authenti
 
 -- Usuários que já existiam antes do gatilho recebem um perfil agora.
 insert into public.profiles as p (
-  id, email, display_name, avatar_url, role,
+  id, email, display_name, avatar_url, avatar_id, role,
   profile_complete, created_at, updated_at
 )
 select
   u.id,
   coalesce(u.email, ''),
   coalesce(u.raw_user_meta_data ->> 'display_name', u.raw_user_meta_data ->> 'full_name', ''),
-  coalesce(u.raw_user_meta_data ->> 'profile_avatar_url', u.raw_user_meta_data ->> 'avatar_url', ''),
+  case when nullif(u.raw_user_meta_data ->> 'profile_avatar_id', '') is not null then coalesce(u.raw_user_meta_data ->> 'profile_avatar_url', '') else '' end,
+  coalesce(u.raw_user_meta_data ->> 'profile_avatar_id', ''),
   case when lower(coalesce(u.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
   true,
   coalesce(u.created_at, now()),
@@ -262,8 +277,13 @@ on conflict (id) do update set
     else p.display_name
   end,
   avatar_url = case
-    when nullif(p.avatar_url, '') is not null then p.avatar_url
-    when nullif(excluded.avatar_url, '') is not null then excluded.avatar_url
+    when nullif(p.avatar_id, '') is not null then p.avatar_url
+    when nullif(excluded.avatar_id, '') is not null then excluded.avatar_url
+    else ''
+  end,
+  avatar_id = case
+    when nullif(p.avatar_id, '') is not null then p.avatar_id
+    when nullif(excluded.avatar_id, '') is not null then excluded.avatar_id
     else ''
   end,
   role = excluded.role,

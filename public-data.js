@@ -19,6 +19,9 @@
       await openContentDetailFromRoute();
     } catch (error) {
       console.warn('Conteúdo dinâmico indisponível:', error.message);
+    } finally {
+      window.__beContentReady = true;
+      window.dispatchEvent(new Event('be:content-ready'));
     }
   });
 

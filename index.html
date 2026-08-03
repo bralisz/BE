@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<link rel="stylesheet" href="/mobile/mobile.css?v=20260802-8">
+<link rel="stylesheet" href="/mobile/mobile.css?v=20260803-avatar-sync">
 <meta name="theme-color" content="#050816">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -834,7 +834,25 @@
   .auth-form{display:grid;gap:14px}.auth-form[hidden]{display:none}.auth-field{display:grid;gap:7px}.auth-field label{font-size:12px;font-weight:700;color:rgba(255,255,255,.76)}.auth-field input{height:54px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:#edf3ff;color:#101723;padding:0 16px;font:500 15px var(--font-body)}.auth-field input:focus{outline:none;border-color:#6eb4ff;box-shadow:0 0 0 4px rgba(45,127,249,.18)}
   .auth-primary,.auth-google{height:56px;border-radius:999px;font-weight:800;font-size:15px}.auth-primary{border:0;background:#2878ed;color:#fff;margin-top:4px}.auth-primary:hover{background:#3384f7}.auth-google{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;display:flex;align-items:center;justify-content:center;gap:10px}.auth-google:hover{background:rgba(255,255,255,.12)}.auth-google svg{width:20px;height:20px}.auth-sep{display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.38);font-size:12px;margin:4px 0}.auth-sep:before,.auth-sep:after{content:"";height:1px;flex:1;background:rgba(255,255,255,.1)}
   .auth-status{min-height:21px;font-size:13px;line-height:1.4}.auth-status.error{color:#ffaaa5}.auth-status.ok{color:#8ce8b5}.auth-foot{margin-top:16px;font-size:11px;line-height:1.45;color:rgba(255,255,255,.38);text-align:center}.login-dots{position:absolute;z-index:3;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:8px}.login-dot{width:6px;height:6px;border:0;border-radius:99px;background:rgba(255,255,255,.32);padding:0;transition:.3s}.login-dot.active{width:24px;background:#ff9628}
-  .auth-loading{position:fixed;inset:0;z-index:999;background:#050816;display:grid;place-items:center;color:rgba(255,255,255,.72);font-weight:600}.auth-loading[hidden]{display:none}
+  .auth-loading{position:fixed;inset:0;z-index:9999;background:#030405;display:block;overflow:hidden}.auth-loading[hidden]{display:none!important}
+  .site-loading-skeleton{min-height:100vh;padding:18px clamp(18px,4vw,70px) 56px;background:#030405;color:#fff}
+  .skeleton-shimmer{position:relative;overflow:hidden;background:rgba(255,255,255,.065)}
+  .skeleton-shimmer::after{content:'';position:absolute;inset:0;transform:translateX(-105%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent);animation:siteSkeletonSweep 1.35s ease-in-out infinite}
+  @keyframes siteSkeletonSweep{to{transform:translateX(105%)}}
+  .site-skeleton-top{height:72px;display:grid;grid-template-columns:64px minmax(340px,520px) 64px;align-items:center;justify-content:space-between;gap:20px}
+  .site-skeleton-avatar{width:54px;height:54px;border-radius:50%}
+  .site-skeleton-nav{height:58px;border-radius:999px}
+  .site-skeleton-hero{height:min(64vh,650px);min-height:470px;margin-top:8px;border-radius:28px;position:relative}
+  .site-skeleton-copy{position:absolute;left:clamp(24px,4vw,70px);bottom:clamp(54px,10vh,110px);width:min(520px,42vw);display:grid;gap:14px}
+  .site-skeleton-logo{height:76px;width:72%;border-radius:14px}
+  .site-skeleton-meta{height:16px;width:35%;border-radius:999px}
+  .site-skeleton-line{height:16px;border-radius:999px}.site-skeleton-line.short{width:72%}
+  .site-skeleton-actions{display:flex;gap:12px;margin-top:8px}.site-skeleton-button{height:52px;width:170px;border-radius:999px}.site-skeleton-round{height:52px;width:52px;border-radius:50%}
+  .site-skeleton-section{margin-top:32px;padding:26px 0}.site-skeleton-heading{height:26px;width:150px;border-radius:8px;margin-bottom:20px}
+  .site-skeleton-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.site-skeleton-card{aspect-ratio:16/9;border-radius:18px}
+  @media(max-width:760px){
+    .site-loading-skeleton{padding:14px 18px 34px}.site-skeleton-top{height:76px;grid-template-columns:58px 1fr 58px}.site-skeleton-nav{display:none}.site-skeleton-avatar{width:52px;height:52px}.site-skeleton-hero{height:74vh;min-height:590px;margin:0 -18px;border-radius:0}.site-skeleton-copy{left:34px;right:28px;bottom:72px;width:auto}.site-skeleton-logo{height:132px;width:86%}.site-skeleton-meta{width:48%}.site-skeleton-button{flex:1;width:auto}.site-skeleton-section{margin-top:0;padding:28px 16px;border:1px solid rgba(255,255,255,.08);border-radius:28px}.site-skeleton-cards{display:flex;overflow:hidden;gap:14px}.site-skeleton-card{flex:0 0 78vw}.site-skeleton-round{flex:0 0 52px}
+  }
   @media(max-width:850px){.login-shell{grid-template-columns:1fr;width:min(520px,calc(100% - 28px));gap:0}.login-brand{position:absolute;top:22px;left:0;padding:0}.login-brand img{width:70px}.login-copy{display:none}.login-card{justify-self:center;padding:26px;max-height:calc(100vh - 110px);margin-top:64px}.login-dots{bottom:12px}}
   @media(max-width:480px){.login-shell{width:calc(100% - 20px)}.login-card{padding:22px;border-radius:23px}.login-card h2{font-size:27px}.auth-field input{height:50px}.auth-primary,.auth-google{height:52px}}
 
@@ -2494,14 +2512,18 @@
     pointer-events:none;
     transform:translateY(-10px);
   }
+  body.profile-page-active > main,
+  body.settings-page-active > main,
   body.profile-page-active #featuredSection,
   body.profile-page-active #randomFeaturedSection,
   body.profile-page-active #contentDetailSection,
+  body.profile-page-active #detailRecommendations,
   body.profile-page-active .video-catalog,
   body.profile-page-active footer,
   body.settings-page-active #featuredSection,
   body.settings-page-active #randomFeaturedSection,
   body.settings-page-active #contentDetailSection,
+  body.settings-page-active #detailRecommendations,
   body.settings-page-active .video-catalog,
   body.settings-page-active footer{display:none!important}
   .profile-page-shell,
@@ -2826,13 +2848,13 @@
   }
 </style>
 
-<link rel="stylesheet" href="/admin/admin.css?v=20260803-discord-footer">
+<link rel="stylesheet" href="/admin/admin.css?v=20260803-avatar-sync">
 <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script defer src="/supabase-config.js"></script>
-<script defer src="/backend.js"></script>
-<script defer src="/admin/admin.js?v=20260803-discord-footer"></script>
-<script defer src="/public-data.js?v=20260803-discord-footer"></script>
-<script defer src="/mobile/mobile.js?v=20260802-7"></script>
+<script defer src="/backend.js?v=20260803-avatar-sync"></script>
+<script defer src="/admin/admin.js?v=20260803-avatar-sync"></script>
+<script defer src="/public-data.js?v=20260803-avatar-sync"></script>
+<script defer src="/mobile/mobile.js?v=20260803-avatar-sync"></script>
 
 <style id="desktop-search-visibility-fix">
 @media (min-width:761px){
@@ -2860,7 +2882,28 @@
 </head>
 <body>
 
-<div class="auth-loading" id="authLoading">Carregando sua conta…</div>
+<div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
+  <div class="site-loading-skeleton" aria-hidden="true">
+    <div class="site-skeleton-top">
+      <span class="site-skeleton-avatar skeleton-shimmer"></span>
+      <span class="site-skeleton-nav skeleton-shimmer"></span>
+      <span class="site-skeleton-avatar skeleton-shimmer"></span>
+    </div>
+    <div class="site-skeleton-hero skeleton-shimmer">
+      <div class="site-skeleton-copy">
+        <span class="site-skeleton-logo skeleton-shimmer"></span>
+        <span class="site-skeleton-meta skeleton-shimmer"></span>
+        <span class="site-skeleton-line skeleton-shimmer"></span>
+        <span class="site-skeleton-line short skeleton-shimmer"></span>
+        <span class="site-skeleton-actions"><i class="site-skeleton-button skeleton-shimmer"></i><i class="site-skeleton-round skeleton-shimmer"></i></span>
+      </div>
+    </div>
+    <section class="site-skeleton-section">
+      <div class="site-skeleton-heading skeleton-shimmer"></div>
+      <div class="site-skeleton-cards"><i class="site-skeleton-card skeleton-shimmer"></i><i class="site-skeleton-card skeleton-shimmer"></i><i class="site-skeleton-card skeleton-shimmer"></i><i class="site-skeleton-card skeleton-shimmer"></i></div>
+    </section>
+  </div>
+</div>
 <section id="authGate" aria-label="Entrar ou criar conta">
   <div class="login-bg-stack" id="loginBgStack" aria-hidden="true">
     <div class="login-bg-slide active" style="background-image:url('assets/login-admin-banner.jpg')"></div>
@@ -3562,9 +3605,10 @@
 
     function escapePublic(value){return String(value||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     function avatarCacheKey(user){return 'beSelectedAvatar:'+(user&&user.uid?user.uid:'guest');}
-    function setMainAvatar(url,user){var shown=url||(user&&user.photoURL)||'';if(shown){photo.src=shown;photo.hidden=false;fallback.hidden=true;}else{photo.removeAttribute('src');photo.hidden=true;fallback.hidden=false;}updateOnboardingAvatar();}
+    function selectedProfileAvatar(profile){return profile&&profile.avatarId&&profile.avatarUrl?String(profile.avatarUrl):'';}
+    function setMainAvatar(url){var shown=String(url||'').trim();if(shown){photo.src=shown;photo.hidden=false;fallback.hidden=true;}else{photo.removeAttribute('src');photo.hidden=true;fallback.hidden=false;}updateOnboardingAvatar();}
     function fallbackAvatarSvg(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>';}
-    function updateOnboardingAvatar(){if(!onboardingAvatarPreview)return;var user=auth&&auth.currentUser;var shown=selectedAvatar||(currentProfile&&currentProfile.avatarUrl)||(user&&user.photoURL)||'';onboardingAvatarPreview.innerHTML=shown?'<img loading="lazy" decoding="async" src="'+escapePublic(shown)+'" alt="Foto do perfil">':fallbackAvatarSvg();}
+    function updateOnboardingAvatar(){if(!onboardingAvatarPreview)return;var shown=selectedAvatar||selectedProfileAvatar(currentProfile)||'';onboardingAvatarPreview.innerHTML=shown?'<img loading="lazy" decoding="async" src="'+escapePublic(shown)+'" alt="Foto do perfil">':fallbackAvatarSvg();}
     function syncBodyScroll(){var locked=!avatarPicker.hidden||!bannerPicker.hidden||!profileModal.hidden||!profileOnboarding.hidden;document.body.style.overflow=locked?'hidden':'';}
     function closeAvatarPicker(){avatarPicker.hidden=true;syncBodyScroll();}
     function closeBannerPicker(){bannerPicker.hidden=true;syncBodyScroll();}
@@ -3610,7 +3654,7 @@
               if(savedProfile)currentProfile=savedProfile;
             }else{currentProfile.avatarUrl=url;}
             selectedAvatar=(currentProfile&&currentProfile.avatarUrl)||url;
-            setMainAvatar(selectedAvatar,auth.currentUser);
+            setMainAvatar(selectedAvatar);
             localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
             avatarPickerBody.querySelectorAll('.avatar-option').forEach(function(x){x.classList.toggle('selected',x===button);});
             setTimeout(closeAvatarPicker,180);
@@ -3657,8 +3701,8 @@
       if(!user)return {bannerUrl:'',bannerId:''};
       var cached=readCachedProfileBanner(user);
       var metadata=user&&user.raw&&(user.raw.user_metadata||user.raw.raw_user_meta_data)||{};
-      var bannerUrl=String(cached.bannerUrl||(currentProfile&&currentProfile.bannerUrl)||metadata.profile_banner_url||metadata.banner_url||'').trim();
-      var bannerId=String(cached.bannerId||(currentProfile&&currentProfile.bannerId)||metadata.profile_banner_id||metadata.banner_id||'').trim();
+      var bannerUrl=String((currentProfile&&currentProfile.bannerUrl)||metadata.profile_banner_url||metadata.banner_url||cached.bannerUrl||'').trim();
+      var bannerId=String((currentProfile&&currentProfile.bannerId)||metadata.profile_banner_id||metadata.banner_id||cached.bannerId||'').trim();
       if(currentProfile&&bannerUrl){currentProfile.bannerUrl=bannerUrl;currentProfile.bannerId=bannerId;}
       return {bannerUrl:bannerUrl,bannerId:bannerId};
     }
@@ -3696,7 +3740,7 @@
       }
       var displayName=currentProfile.displayName||user.displayName||'Usuário';
       var handle=currentProfile.username?'@'+currentProfile.username:'@perfil';
-      var avatar=currentProfile.avatarUrl||user.photoURL||'';
+      var avatar=selectedProfileAvatar(currentProfile);
       var bannerState=resolvedProfileBanner(user);
       var banner=bannerState.bannerUrl;
       profilePageName.textContent=displayName;
@@ -3714,7 +3758,7 @@
         document.getElementById('settingsLoginAction').onclick=function(){closePublicPages();location.hash='#login';document.body.classList.add('login-mode');};
         return;
       }
-      var avatar=currentProfile.avatarUrl||user.photoURL||'';
+      var avatar=selectedProfileAvatar(currentProfile);
       var bannerState=resolvedProfileBanner(user);
       var banner=bannerState.bannerUrl;
       var identities=user&&user.raw&&Array.isArray(user.raw.identities)?user.raw.identities:[];
@@ -3809,7 +3853,15 @@
         });});
       }catch(error){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Não foi possível carregar os banners.</div>';console.warn(error);}
     }
+    function closeDetailBeforeDedicatedPage(){
+      var detailSection=document.getElementById('contentDetailSection');
+      var detailRecommendations=document.getElementById('detailRecommendations');
+      if(detailSection)detailSection.hidden=true;
+      if(detailRecommendations)detailRecommendations.hidden=true;
+      document.body.classList.remove('detail-page-active');
+    }
     function openPublicProfile(updateRoute){
+      closeDetailBeforeDedicatedPage();
       toggleDropdown(false);settingsPage.hidden=true;profilePage.hidden=false;
       document.body.classList.remove('settings-page-active','login-mode');document.body.classList.add('profile-page-active');
       try{renderProfilePage();}catch(error){console.error('Falha ao renderizar perfil:',error);}
@@ -3817,6 +3869,7 @@
       window.scrollTo({top:0,behavior:'auto'});
     }
     function openSettingsPage(updateRoute){
+      closeDetailBeforeDedicatedPage();
       toggleDropdown(false);profilePage.hidden=true;settingsPage.hidden=false;
       document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');
       try{renderSettingsPage();}catch(error){console.error('Falha ao renderizar configurações:',error);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
@@ -3827,7 +3880,7 @@
     function renderProfile(){
       var user=auth.currentUser;
       if(!user){profileBody.innerHTML='<div class="profile-login-required"><h3>Entre para acessar seu perfil</h3><p>Use seu e-mail e senha para continuar.</p><button class="profile-btn primary" id="profileLogin" type="button">Entrar com e-mail</button></div>';document.getElementById('profileLogin').onclick=function(){closeProfile();location.hash='#login';document.body.classList.add('login-mode');};return;}
-      var avatar=currentProfile.avatarUrl||user.photoURL||'';
+      var avatar=selectedProfileAvatar(currentProfile);
       profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview">'+(avatar?'<img loading="lazy" decoding="async" src="'+escapePublic(avatar)+'" alt="Avatar do perfil">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>')+'</div><div><h3>'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher foto</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
       document.getElementById('profileChooseAvatar').onclick=function(){closeProfile();openAvatarPicker();};document.getElementById('profileCancel').onclick=closeProfile;
       var bio=document.getElementById('profileBio'),count=document.getElementById('profileBioCount');function updateCount(){count.textContent=bio.value.length;}bio.addEventListener('input',updateCount);updateCount();
@@ -3884,9 +3937,10 @@
       var isAdmin=false;
       if(currentUser){
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
+        if(currentProfile&&currentProfile.banned){try{await auth.signOut();}catch(_){ }location.replace('/404.html');return;}
         var restoredBanner=resolvedProfileBanner(currentUser);if(restoredBanner.bannerUrl){currentProfile.bannerUrl=restoredBanner.bannerUrl;currentProfile.bannerId=restoredBanner.bannerId;}
-        username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=currentProfile.avatarUrl||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar,currentUser);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false);},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
-      }else{username.textContent='Visitante';currentProfile={};selectedAvatar=localStorage.getItem(avatarCacheKey(null))||'';setMainAvatar(selectedAvatar,null);authAction.textContent='Entrar';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
+        username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false);},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
+      }else{username.textContent='Visitante';currentProfile={};selectedAvatar='';setMainAvatar('');authAction.textContent='Entrar';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
@@ -3896,10 +3950,10 @@
       var detail=event&&event.detail||{};
       if(!auth.currentUser||detail.userId!==auth.currentUser.uid)return;
       if(detail.profile)currentProfile=detail.profile;
-      else currentProfile.avatarUrl=detail.avatarUrl||'';
+      else currentProfile={...(currentProfile||{}),avatarUrl:detail.avatarUrl||'',avatarId:detail.avatarId||''};
       selectedAvatar=detail.avatarUrl||'';
       localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
-      setMainAvatar(selectedAvatar,auth.currentUser);updateOnboardingAvatar();renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();
+      setMainAvatar(selectedAvatar);updateOnboardingAvatar();renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();
     });
     window.addEventListener('be:profile-banner-changed',function(event){
       var detail=event&&event.detail||{};
@@ -3986,6 +4040,9 @@
   if(location.hash.startsWith('#/admin')||initialCallbackDestination==='admin') return;
 
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
+  function hideSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=true;}
+  function showSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=false;}
+  window.addEventListener('be:content-ready',hideSiteSkeleton);
 
   function q(id){return document.getElementById(id)}
   function setStatus(message,type){var el=q('authStatus');if(!el)return;el.textContent=message||'';el.className='auth-status '+(type||'');}
@@ -4091,12 +4148,25 @@
     return null;
   }
 
+  async function enforceAccountAccess(user){
+    if(!user)return true;
+    var status={banned:Boolean(currentProfile&&currentProfile.banned),reason:currentProfile&&currentProfile.banReason||''};
+    if(typeof auth.accountStatus==='function'){
+      try{var latest=await auth.accountStatus();if(latest)status={...status,...latest,banned:Boolean(status.banned||latest.banned)};}catch(error){console.warn('Não foi possível confirmar o status da conta:',error);}
+    }
+    if(!status.banned)return true;
+    try{await auth.signOut();}catch(_){ }
+    location.replace('/404.html');
+    return false;
+  }
+
   async function finishPublicLogin(user){
     user=await recoverAuthenticatedUser(user);
     if(!user){var sessionError=new Error('Não foi possível concluir a sessão de login. Tente entrar novamente.');sessionError.code='auth/session-missing';throw sessionError;}
     localStorage.setItem('beAuthExpected','1');
     localStorage.setItem('beSessionUid',user.uid);
     try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
+    if(!(await enforceAccountAccess(user)))return null;
     setStatus('');
     if(isConfigRoute())enterConfig();
     else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}
@@ -4177,10 +4247,12 @@
     });
 
     auth.onChange(async function(user){
-      authReady=true;q('authLoading').hidden=true;
+      authReady=true;
       if(authFlowBusy)return;
-      if(isLegalRoute()){showLegalRoute();return;}
+      if(user&&!(await enforceAccountAccess(user)))return;
+      if(isLegalRoute()){hideSiteSkeleton();showLegalRoute();return;}
       if(!user){
+        hideSiteSkeleton();
         var callbackActive=hasAuthCallback(),callbackFailure=authCallbackError();
         var expectedSession=callbackActive||localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'));
         if(expectedSession&&!callbackFailure){
@@ -4197,7 +4269,11 @@
         else if(callbackActive)setStatus('O retorno do Discord chegou, mas a sessão não foi criada. Confira as URLs de redirecionamento do Supabase e do Discord.','error');
         return;
       }
-      try{await finishPublicLogin(user);}catch(error){showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
+      try{
+        showSiteSkeleton();
+        await finishPublicLogin(user);
+        if(window.__beContentReady)hideSiteSkeleton();
+      }catch(error){hideSiteSkeleton();showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
 
     function handlePublicRoute(){
@@ -4211,10 +4287,12 @@
     }
     window.addEventListener('hashchange',handlePublicRoute);
     window.addEventListener('popstate',handlePublicRoute);
+    window.setInterval(function(){if(auth.currentUser)enforceAccountAccess(auth.currentUser);},60000);
+    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&auth.currentUser)enforceAccountAccess(auth.currentUser);});
   }
 
   async function startAuthentication(){
-    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){q('authLoading').hidden=true;if(isLegalRoute())showLegalRoute();else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}console.error('Falha ao iniciar autenticação:',error);}
+    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){hideSiteSkeleton();if(isLegalRoute())showLegalRoute();else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}console.error('Falha ao iniciar autenticação:',error);}
   }
 
   document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode('email');startAuthentication()});
@@ -4252,6 +4330,8 @@
   .legal-avatar-button{width:58px;height:58px;border-radius:50%;overflow:hidden;padding:3px}
   .legal-avatar-button img{width:100%;height:100%;display:block;object-fit:cover;border-radius:50%}
   .legal-avatar-button span{width:100%;height:100%;display:grid;place-items:center;border-radius:50%;background:#4b5fb6;font-size:22px;font-weight:800}
+  .legal-avatar-button.is-login{width:104px;border-radius:999px;padding:0 18px;overflow:visible}
+  .legal-avatar-button.is-login span{border-radius:0;background:transparent;font-size:14px;font-weight:800;letter-spacing:0}
   .legal-home-button{width:92px;height:58px;border-radius:999px}
   .legal-home-button img{width:49px;height:38px;object-fit:contain}
 
@@ -4364,7 +4444,19 @@
   }
 
   function syncLegalAvatar(){
-    if(!legalAvatarImage||!legalAvatarFallback)return;
+    if(!legalAvatarButton||!legalAvatarImage||!legalAvatarFallback)return;
+    var loggedUser=window.beBackend&&beBackend.auth?beBackend.auth.currentUser:null;
+    if(!loggedUser){
+      legalAvatarButton.classList.add('is-login');
+      legalAvatarButton.setAttribute('aria-label','Entrar na plataforma');
+      legalAvatarImage.hidden=true;
+      legalAvatarImage.removeAttribute('src');
+      legalAvatarFallback.textContent='Entrar';
+      legalAvatarFallback.hidden=false;
+      return;
+    }
+    legalAvatarButton.classList.remove('is-login');
+    legalAvatarButton.setAttribute('aria-label','Abrir perfil');
     var source=document.getElementById('publicUserPhoto');
     var name=document.getElementById('ddUsername');
     var src=source&&!source.hidden?String(source.getAttribute('src')||''):'';
@@ -4375,7 +4467,7 @@
     }else{
       legalAvatarImage.hidden=true;
       legalAvatarImage.removeAttribute('src');
-      var label=name?String(name.textContent||'').replace(/^@/,'').trim():'';
+      var label=name?String(name.textContent||'').replace(/^@/,'').trim():(loggedUser.displayName||loggedUser.email||'');
       legalAvatarFallback.textContent=(label.charAt(0)||'M').toUpperCase();
       legalAvatarFallback.hidden=false;
     }
@@ -4414,8 +4506,10 @@
     window.scrollTo(0,0);
   }
   function openProfile(){
+    var loggedUser=window.beBackend&&beBackend.auth?beBackend.auth.currentUser:null;
     goHome();
     window.setTimeout(function(){
+      if(!loggedUser){location.hash='#login';return;}
       var button=document.querySelector('[data-public-action="profile"]');
       if(button)button.click();
       else location.hash='#login';
@@ -4429,12 +4523,13 @@
   window.addEventListener('popstate',renderLegalRoute);
   window.addEventListener('be:open-legal-route',renderLegalRoute);
   window.addEventListener('be:profile-avatar-changed',syncLegalAvatar);
+  if(window.beBackend&&beBackend.ready){beBackend.ready.then(function(){if(beBackend.auth&&beBackend.auth.onChange)beBackend.auth.onChange(syncLegalAvatar);syncLegalAvatar();}).catch(syncLegalAvatar);}
   document.addEventListener('DOMContentLoaded',function(){renderLegalRoute();showCookieNotice();});
   if(document.readyState!=='loading'){renderLegalRoute();showCookieNotice();}
 })();
 </script>
 
-  <script defer src="/lazy-loading.js?v=1"></script>
+  <script defer src="/lazy-loading.js?v=20260803-2"></script>
 </body>
 </html>
 <style id="be-profile-perfect-circle-fix">

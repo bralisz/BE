@@ -2,7 +2,7 @@
   'use strict';
 
   const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','users'];
-  const LABELS = {dashboard:'Visão geral',featured:'Destaques',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
+  const LABELS = {dashboard:'Visão geral',support:'Suporte',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
   const ADMIN_EMAIL = 'bralisofc@gmail.com';
   const CONTENT_CATEGORIES = [
     ['videos','Vídeos','▣'],
@@ -22,7 +22,7 @@
       return {
         ...account,
         displayName: profile.displayName || profile.username || account.displayName || '',
-        photoURL: profile.avatarUrl || account.photoURL || '',
+        photoURL: (profile.avatarId && profile.avatarUrl) ? profile.avatarUrl : '',
         profile
       };
     } catch (error) {
@@ -33,6 +33,7 @@
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+  const selectedProfileAvatar = profile => profile && profile.avatarId && profile.avatarUrl ? String(profile.avatarUrl) : '';
   const adminHashRoute = () => location.hash.startsWith('#/admin');
   const adminCallback = () => {
     const queryDestination = new URLSearchParams(location.search || '').get('auth_callback');
@@ -295,7 +296,8 @@
 
   function navButton(key) {
     const current = route();
-    const active = current === key || (key === 'contents' && current.startsWith('contents/'));
+    if (key === 'support') return `<button type="button" data-admin-support>${LABELS[key]}</button>`;
+    const active = current === key || (key === 'contents' && (current.startsWith('contents/') || current === 'featured'));
     return `<button data-route="${key}" class="${active ? 'active' : ''}">${LABELS[key]}</button>`;
   }
 
@@ -304,12 +306,14 @@
       clearInterval(adminLoginBgTimer);
       adminLoginBgTimer = null;
     }
-    const routes = ['dashboard','featured','sections','contents','gallery','users','settings'];
-    const accountAvatar = user.photoURL
-      ? `<img loading="lazy" decoding="async" src="${esc(user.photoURL)}" alt="Foto de ${esc(user.displayName || 'usuário')}">`
-      : `<span>${esc((user.displayName || 'B').charAt(0).toUpperCase())}</span>`;
+    const routes = ['dashboard','support','sections','contents','gallery','users','settings'];
+    const activeAvatar = selectedProfileAvatar(user.profile) || String(user.photoURL || '');
+    const accountAvatar = activeAvatar
+      ? `<img loading="lazy" decoding="async" src="${esc(activeAvatar)}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`
+      : `<span aria-label="Sem foto de perfil">${esc((user.displayName || 'U').charAt(0).toUpperCase())}</span>`;
     document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/logo.png?v=3" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><button class="admin-avatar-button" id="accountToggle" aria-label="Abrir menu da conta" aria-expanded="false">${accountAvatar}</button><div class="admin-account-menu" id="accountMenu"><div class="admin-account-name">${esc(user.displayName || 'Administrador')}</div><div class="admin-account-divider"></div><button type="button" data-account-action="profile">Perfil</button><button type="button" data-account-action="settings">Configurações</button><button type="button" data-account-action="support">Suporte</button><button type="button" data-account-action="dashboard">Dashboard</button><div class="admin-account-divider"></div><button type="button" class="danger" data-account-action="logout">Sair</button></div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
+    document.querySelector('[data-admin-support]')?.addEventListener('click', () => toast('Suporte em breve.'));
     const accountToggle = $('#accountToggle');
     const accountMenu = $('#accountMenu');
     const accountAvatarImage = accountToggle.querySelector('img');
@@ -348,6 +352,8 @@
     if (current === 'dashboard') return dashboard();
     if (current === 'settings') return settingsPage();
     if (current === 'gallery') return galleryPage();
+    if (current === 'users') return usersPage();
+    if (current === 'featured') return contentsPage('featured');
     if (current === 'contents' || current.startsWith('contents/')) return contentsPage(current.split('/')[1] || 'videos');
     return collectionPage(current);
   }
@@ -437,34 +443,230 @@
   }
 
   async function contentsPage(active = 'videos') {
-    if (!CONTENT_CATEGORIES.some(item => item[0] === active)) active = 'videos';
+    const validCategories = new Set(CONTENT_CATEGORIES.map(item => item[0]));
+    if (!validCategories.has(active) && active !== 'featured') active = 'videos';
     const content = $('#adminContent');
     content.classList.remove('admin-editor-active');
-    content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando conteúdos…</div>';
+    content.innerHTML = '<div class="admin-loader admin-skeleton-loader" style="min-height:420px"><div class="admin-skeleton-shell"><i></i><i></i><i></i><i></i></div></div>';
     const counts = {};
-    await Promise.all(CONTENT_CATEGORIES.map(async ([key]) => { counts[key] = await countCollection(key).catch(() => 0); }));
+    await Promise.all([...CONTENT_CATEGORIES.map(async ([key]) => { counts[key] = await countCollection(key).catch(() => 0); }), (async () => { counts.featured = await countCollection('featured').catch(() => 0); })()]);
     const label = LABELS[active] || active;
-    content.innerHTML = `<div class="admin-title-row content-title-row"><div><span class="dashboard-kicker">Conteúdos</span><h1>${esc(label)}</h1><p>Gerencie os conteúdos separados por categoria.</p></div><button class="a-btn primary" id="newContent" ${active === 'news' ? 'disabled' : ''}>${active === 'news' ? 'Álbuns em breve' : '+ Adicionar conteúdo'}</button></div><section class="content-manager"><aside class="content-category-sidebar"><h2>Categorias</h2>${CONTENT_CATEGORIES.map(([key,categoryLabel,icon]) => `<button class="content-category-link ${key === active ? 'active' : ''}" data-content-category="${key}"><i>${icon}</i><span>${categoryLabel}</span><b>${counts[key] || 0}</b></button>`).join('')}</aside><div class="content-category-panel"><div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por título…"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="empty">Carregando…</div></div></div></section>`;
-    if ($('#newContent') && active !== 'news') $('#newContent').onclick = chooseContentCategory;
-    document.querySelectorAll('[data-content-category]').forEach(button => button.onclick = () => go('contents/' + button.dataset.contentCategory));
+    const isFeatured = active === 'featured';
+    const isAlbums = active === 'news';
+    const buttonText = isAlbums ? 'Álbuns em breve' : (isFeatured ? '+ Adicionar destaque' : '+ Adicionar conteúdo');
+    const sidebarCategories = CONTENT_CATEGORIES.map(([key,categoryLabel,icon]) => `<button class="content-category-link ${key === active ? 'active' : ''}" data-content-category="${key}"><i>${icon}</i><span>${categoryLabel}</span><b>${counts[key] || 0}</b></button>`).join('');
+    const featuredBlock = `<div class="content-featured-block"><small>Vitrine da home</small><button class="content-category-link featured-link ${isFeatured ? 'active' : ''}" data-content-category="featured"><i>★</i><span>Destaque</span><b>${counts.featured || 0}</b></button></div>`;
+    content.innerHTML = `<div class="admin-title-row content-title-row"><div><span class="dashboard-kicker">Conteúdos</span><h1>${esc(label)}</h1><p>${isFeatured ? 'Escolha os conteúdos que aparecem no destaque principal da home.' : 'Gerencie os conteúdos separados por categoria.'}</p></div><button class="a-btn primary" id="newContent" ${isAlbums ? 'disabled' : ''}>${buttonText}</button></div><section class="content-manager"><aside class="content-category-sidebar"><h2>Categorias</h2>${sidebarCategories}${featuredBlock}</aside><div class="content-category-panel"><div class="toolbar"><input class="a-input" id="search" placeholder="${isFeatured ? 'Buscar destaque…' : 'Buscar por título…'}"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="admin-inline-skeleton"><i></i><i></i><i></i></div></div></div></section>`;
+    if ($('#newContent') && !isAlbums) $('#newContent').onclick = () => isFeatured ? openEditor('featured') : chooseContentCategory();
+    document.querySelectorAll('[data-content-category]').forEach(button => button.onclick = () => {
+      const next = button.dataset.contentCategory;
+      go(next === 'featured' ? 'featured' : 'contents/' + next);
+    });
     const items = await db.list(active, { orderBy: 'order', direction: 'asc' });
     const draw = () => {
       const search = $('#search').value.toLowerCase();
       const status = $('#statusFilter').value;
       const rows = items.filter(item => (!search || String(item.title || item.name || '').toLowerCase().includes(search)) && (!status || String(item.active) === status));
-      $('#list').innerHTML = rows.length ? `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}</small></td><td>${esc(item.type || active)}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhum item encontrado nesta categoria.</div>';
+      $('#list').innerHTML = rows.length ? `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || (isFeatured ? 'Conteúdo em destaque' : item.id))}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}</small></td><td>${esc(isFeatured ? 'Destaque' : (item.type || label))}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${isFeatured ? 'Nenhum destaque cadastrado.' : 'Nenhum item encontrado nesta categoria.'}</div>`;
       document.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => openEditor(active, items.find(item => item.id === button.dataset.edit)));
       document.querySelectorAll('[data-del]').forEach(button => button.onclick = () => confirmDelete(active, button.dataset.del));
     };
     $('#search').oninput = draw;
     $('#statusFilter').onchange = draw;
     draw();
-    await maybeResumePendingContentEditor();
+    if (!isFeatured) await maybeResumePendingContentEditor();
+  }
+
+  async function adminUserRequest(action, userId, extra = {}) {
+    if (beBackend.mode === 'local') {
+      const profile = await db.get('users', userId);
+      if (!profile) throw new Error('Usuário não encontrado.');
+      if (action === 'export') return { ok: true, exportedAt: now(), account: null, profile };
+      if (action === 'ban' || action === 'unban') {
+        const banned = action === 'ban';
+        await db.set('users', userId, {
+          banned,
+          bannedAt: banned ? now() : '',
+          banReason: banned ? String(extra.reason || '') : '',
+          updatedAt: now()
+        });
+        return { ok: true, banned };
+      }
+      if (action === 'delete') {
+        await db.remove('users', userId);
+        return { ok: true, deleted: true };
+      }
+    }
+
+    const client = beBackend.client;
+    if (!client?.auth?.getSession) throw new Error('A sessão administrativa não está disponível.');
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    const token = sessionData?.session?.access_token;
+    if (!token) throw new Error('Sua sessão expirou. Entre novamente no painel.');
+
+    const response = await fetch('/api/admin-user', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ action, userId, ...extra })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.error || payload?.message || `Falha no servidor (${response.status}).`);
+    return payload;
+  }
+
+  function closeAdminUserModal() {
+    document.querySelector('.user-admin-modal-backdrop')?.remove();
+  }
+
+  function showUserExportModal(payload, profile) {
+    closeAdminUserModal();
+    const exportData = {
+      exportedAt: payload.exportedAt || now(),
+      account: payload.account || null,
+      profile: payload.profile || profile || null
+    };
+    const pretty = JSON.stringify(exportData, null, 2);
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-backdrop user-admin-modal-backdrop';
+    wrap.innerHTML = `<section class="modal user-data-modal" role="dialog" aria-modal="true" aria-labelledby="userDataTitle"><header class="user-modal-head"><div><span class="dashboard-kicker">Solicitação de dados</span><h2 id="userDataTitle">Exportar dados do usuário</h2><p>Revise as informações antes de enviá-las pelo suporte.</p></div><button type="button" class="user-modal-close" aria-label="Fechar">×</button></header><div class="user-data-summary"><article><span>Nome</span><strong>${esc(profile?.displayName || payload.profile?.display_name || 'Não informado')}</strong></article><article><span>E-mail</span><strong>${esc(profile?.email || payload.account?.email || 'Não informado')}</strong></article><article><span>Usuário</span><strong>${esc(profile?.username ? '@' + profile.username : 'Não informado')}</strong></article><article><span>ID</span><strong>${esc(profile?.id || payload.account?.id || '—')}</strong></article></div><label class="user-json-label">Dados completos<textarea class="user-json-view" readonly>${esc(pretty)}</textarea></label><div class="modal-actions"><button type="button" class="a-btn" data-user-copy>Copiar dados</button><button type="button" class="a-btn primary" data-user-download>Baixar JSON</button><button type="button" class="a-btn" data-user-close>Fechar</button></div></section>`;
+    document.body.append(wrap);
+    const close = () => wrap.remove();
+    wrap.querySelector('.user-modal-close').onclick = close;
+    wrap.querySelector('[data-user-close]').onclick = close;
+    wrap.onclick = event => { if (event.target === wrap) close(); };
+    wrap.querySelector('[data-user-copy]').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(pretty);
+        toast('Dados copiados.');
+      } catch (_) {
+        const field = wrap.querySelector('.user-json-view');
+        field.select();
+        document.execCommand('copy');
+        toast('Dados copiados.');
+      }
+    };
+    wrap.querySelector('[data-user-download]').onclick = () => {
+      const blob = new Blob([pretty], { type: 'application/json;charset=utf-8' });
+      const link = document.createElement('a');
+      const username = String(profile?.username || profile?.displayName || profile?.id || 'usuario').replace(/[^a-z0-9_-]+/gi, '-');
+      link.href = URL.createObjectURL(blob);
+      link.download = `dados-${username}.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    };
+  }
+
+  function askBanReason(profile) {
+    return new Promise(resolve => {
+      closeAdminUserModal();
+      const wrap = document.createElement('div');
+      wrap.className = 'modal-backdrop user-admin-modal-backdrop';
+      wrap.innerHTML = `<section class="modal user-ban-modal" role="dialog" aria-modal="true" aria-labelledby="banUserTitle"><header class="user-modal-head"><div><span class="dashboard-kicker">Controle de acesso</span><h2 id="banUserTitle">Banir ${esc(profile.displayName || profile.username || profile.email || 'usuário')}</h2><p>A conta será impedida de entrar e será direcionada para a página 404.</p></div><button type="button" class="user-modal-close" aria-label="Fechar">×</button></header><label class="field full"><span>Motivo interno</span><textarea class="a-textarea" rows="4" maxlength="500" placeholder="Explique o motivo do bloqueio. Esta informação fica restrita ao painel."></textarea></label><div class="modal-actions"><button type="button" class="a-btn" data-ban-cancel>Cancelar</button><button type="button" class="a-btn danger" data-ban-confirm>Confirmar banimento</button></div></section>`;
+      document.body.append(wrap);
+      const finish = value => { wrap.remove(); resolve(value); };
+      wrap.querySelector('.user-modal-close').onclick = () => finish(null);
+      wrap.querySelector('[data-ban-cancel]').onclick = () => finish(null);
+      wrap.querySelector('[data-ban-confirm]').onclick = () => finish(wrap.querySelector('textarea').value.trim());
+      wrap.onclick = event => { if (event.target === wrap) finish(null); };
+      setTimeout(() => wrap.querySelector('textarea').focus(), 30);
+    });
+  }
+
+  async function usersPage() {
+    const content = $('#adminContent');
+    content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando usuários…</div>';
+    let items = await db.list('users', { orderBy: 'createdAt', direction: 'desc' });
+
+    content.innerHTML = `<div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte dados, controle o acesso e atenda solicitações feitas pelo suporte.</p></div><div class="users-total"><strong>${items.length}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
+
+    const draw = () => {
+      const search = String($('#userSearch').value || '').trim().toLowerCase();
+      const status = $('#userStatus').value;
+      const rows = items.filter(item => {
+        const haystack = [item.displayName, item.username, item.email, item.id].join(' ').toLowerCase();
+        const matchesSearch = !search || haystack.includes(search);
+        const isBanned = item.banned === true;
+        const matchesStatus = !status || (status === 'banned' ? isBanned : !isBanned);
+        return matchesSearch && matchesStatus;
+      });
+
+      $('#usersList').innerHTML = rows.length ? `<div class="table-wrap users-table-wrap"><table class="a-table users-table"><thead><tr><th>Usuário</th><th>Acesso</th><th>Cadastro</th><th>Último acesso</th><th>Ações</th></tr></thead><tbody>${rows.map(item => {
+        const protectedAccount = String(item.email || '').toLowerCase() === ADMIN_EMAIL || String(item.id) === String(user?.uid || '');
+        const chosenAvatar = selectedProfileAvatar(item);
+        const avatar = chosenAvatar ? `<img loading="lazy" decoding="async" src="${esc(chosenAvatar)}" alt="Avatar escolhido pelo usuário">` : `<span aria-label="Usuário sem avatar escolhido">${esc(String(item.displayName || item.username || item.email || 'U').charAt(0).toUpperCase())}</span>`;
+        return `<tr class="${item.banned ? 'user-row-banned' : ''}"><td><div class="user-cell"><div class="user-cell-avatar">${avatar}</div><div><strong>${esc(item.displayName || item.username || 'Usuário')}</strong><small>${item.username ? '@' + esc(item.username) + ' · ' : ''}${esc(item.email || '')}</small><em>${esc(item.id)}</em></div></div></td><td><span class="status ${item.banned ? 'off' : 'on'}">${item.banned ? 'Banido' : 'Ativo'}</span>${item.banned && item.banReason ? `<small class="ban-reason">${esc(item.banReason)}</small>` : ''}</td><td>${formatDate(item.createdAt)}</td><td>${formatDateTime(item.lastLoginAt)}</td><td><div class="row-actions user-actions"><button class="a-btn" data-user-export="${esc(item.id)}">Exportar dados</button>${protectedAccount ? '<span class="protected-account">Conta protegida</span>' : `<button class="a-btn ${item.banned ? '' : 'warning'}" data-user-ban="${esc(item.id)}" data-user-action="${item.banned ? 'unban' : 'ban'}">${item.banned ? 'Desbanir' : 'Banir'}</button><button class="a-btn danger" data-user-delete="${esc(item.id)}">Apagar conta</button>`}</div></td></tr>`;
+      }).join('')}</tbody></table></div>` : '<div class="empty">Nenhum usuário encontrado.</div>';
+
+      document.querySelectorAll('[data-user-export]').forEach(button => button.onclick = async () => {
+        const profile = items.find(item => String(item.id) === String(button.dataset.userExport));
+        button.disabled = true;
+        try {
+          const payload = await adminUserRequest('export', profile.id);
+          showUserExportModal(payload, profile);
+          await logAction('user_data_exported', 'users', profile.id, `Dados exportados: ${profile.email || profile.id}`);
+        } catch (error) {
+          toast(error.message, 'err');
+        } finally { button.disabled = false; }
+      });
+
+      document.querySelectorAll('[data-user-ban]').forEach(button => button.onclick = async () => {
+        const profile = items.find(item => String(item.id) === String(button.dataset.userBan));
+        const action = button.dataset.userAction;
+        let reason = '';
+        if (action === 'ban') {
+          reason = await askBanReason(profile);
+          if (reason === null) return;
+        } else if (!confirm(`Desbanir ${profile.displayName || profile.email || 'este usuário'}?`)) return;
+        button.disabled = true;
+        try {
+          const payload = await adminUserRequest(action, profile.id, { reason });
+          profile.banned = action === 'ban';
+          profile.bannedAt = profile.banned ? now() : '';
+          profile.banReason = profile.banned ? reason : '';
+          draw();
+          toast(profile.banned ? 'Usuário banido.' : 'Acesso restaurado.');
+          await logAction(profile.banned ? 'user_banned' : 'user_unbanned', 'users', profile.id, `${profile.banned ? 'Usuário banido' : 'Usuário desbanido'}: ${profile.email || profile.id}`);
+          if (payload.warning) console.warn(payload.warning);
+        } catch (error) {
+          toast(error.message, 'err');
+        }
+      });
+
+      document.querySelectorAll('[data-user-delete]').forEach(button => button.onclick = async () => {
+        const profile = items.find(item => String(item.id) === String(button.dataset.userDelete));
+        const label = profile.displayName || profile.email || profile.id;
+        if (!confirm(`Apagar permanentemente a conta de ${label}? Esta ação remove o acesso e não pode ser desfeita.`)) return;
+        button.disabled = true;
+        try {
+          await adminUserRequest('delete', profile.id);
+          items = items.filter(item => String(item.id) !== String(profile.id));
+          draw();
+          $('.users-total strong').textContent = String(items.length);
+          toast('Conta apagada permanentemente.');
+          await logAction('user_deleted', 'users', profile.id, `Conta apagada: ${profile.email || profile.id}`);
+        } catch (error) {
+          toast(error.message, 'err');
+          button.disabled = false;
+        }
+      });
+    };
+
+    $('#userSearch').oninput = draw;
+    $('#userStatus').onchange = draw;
+    draw();
   }
 
   async function galleryPage() {
     const content = $('#adminContent');
-    content.innerHTML = `<div class="admin-title-row gallery-title-row"><div><span class="dashboard-kicker">Imagens dos perfis</span><h1>Galeria</h1><p>Avatares e banners ficam organizados em seções separadas.</p></div></div><div class="gallery-admin-toolbar"><input class="a-input" id="gallerySearch" placeholder="Buscar categoria…"><select class="a-select" id="galleryStatus"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="galleryAdminBoard"><div class="empty">Carregando galeria…</div></div>`;
+    content.innerHTML = `<div class="admin-title-row gallery-title-row"><div><span class="dashboard-kicker">Imagens dos perfis</span><h1>Galeria</h1><p>Adicione avatares e banners diretamente pelo painel superior.</p></div></div><section class="gallery-create-panel"><button type="button" class="gallery-create-card" id="newGalleryAvatar"><i>◯</i><span><strong>Adicionar avatar</strong><small>Imagem quadrada para o perfil</small></span><b>＋</b></button><button type="button" class="gallery-create-card is-banner" id="newGalleryBanner"><i>▰</i><span><strong>Adicionar banner</strong><small>Imagem horizontal de fundo</small></span><b>＋</b></button></section><div class="gallery-admin-toolbar"><input class="a-input" id="gallerySearch" placeholder="Buscar categoria…"><select class="a-select" id="galleryStatus"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="galleryAdminBoard"><div class="admin-inline-skeleton"><i></i><i></i><i></i></div></div>`;
+    $('#newGalleryAvatar').onclick = () => openEditor('gallery', null, { itemType: 'avatar' });
+    $('#newGalleryBanner').onclick = () => openEditor('gallery', null, { itemType: 'banner', category: 'Banners de perfil' });
     const items = await db.list('gallery', { orderBy: 'order', direction: 'asc' });
     const itemType = item => String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
     const draw = () => {
@@ -491,9 +693,7 @@
         ? `<section class="gallery-category-panel banner-panel gallery-banner-panel"><header><div><small>Banners de fundo</small><h2>Banners de perfil</h2></div><span>${banners.length} ${banners.length === 1 ? 'banner' : 'banners'}</span></header><div class="gallery-avatar-grid gallery-banner-grid">${banners.map(item => card(item, 'banner', 'Banners de perfil')).join('')}</div></section>`
         : '<div class="empty">Nenhum banner encontrado.</div>';
       const board = $('#galleryAdminBoard');
-      board.innerHTML = `<section class="gallery-type-section"><div class="gallery-type-heading"><div><span class="dashboard-kicker">Avatar</span><h2>Avatares</h2><p>Os nomes aparecem apenas nas categorias.</p></div><button class="a-btn primary" id="newGalleryAvatar">+ Adicionar avatar</button></div>${avatarContent}</section><section class="gallery-type-section"><div class="gallery-type-heading"><div><span class="dashboard-kicker">Banner</span><h2>Banners de perfil</h2><p>Imagens horizontais sem nome individual.</p></div><button class="a-btn primary" id="newGalleryBanner">+ Adicionar banner</button></div>${bannerContent}</section>`;
-      $('#newGalleryAvatar').onclick = () => openEditor('gallery', null, { itemType: 'avatar' });
-      $('#newGalleryBanner').onclick = () => openEditor('gallery', null, { itemType: 'banner', category: 'Banners de perfil' });
+      board.innerHTML = `<section class="gallery-type-section"><div class="gallery-type-heading"><div><span class="dashboard-kicker">Avatar</span><h2>Avatares</h2><p>Os nomes aparecem apenas nas categorias.</p></div></div>${avatarContent}</section><section class="gallery-type-section"><div class="gallery-type-heading"><div><span class="dashboard-kicker">Banner</span><h2>Banners de perfil</h2><p>Imagens horizontais sem nome individual.</p></div></div>${bannerContent}</section>`;
       board.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => openEditor('gallery', items.find(item => item.id === button.dataset.edit)));
       board.querySelectorAll('[data-del]').forEach(button => button.onclick = () => confirmDelete('gallery', button.dataset.del));
     };
