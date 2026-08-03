@@ -678,12 +678,9 @@
       try{
         var exists=typeof auth.accountExists==='function'?await auth.accountExists(email):null;
         selectedAuthEmail=email;
-        if(exists===false){setMode('signup',email);}
-        else if(exists===true){setMode('password',email);}
-        else{
-          setMode('password',email);
-          setStatus('Digite sua senha. Caso ainda não tenha uma conta, escolha “Criar conta”.');
-        }
+        if(exists===true){setMode('password',email);}
+        else if(exists===false){setMode('signup',email);}
+        else{throw new Error('Não foi possível verificar este e-mail agora. Tente novamente.');}
       }catch(err){setStatus(friendly(err),'error');}
       finally{authFlowBusy=false;if(b)b.disabled=false;}
     });

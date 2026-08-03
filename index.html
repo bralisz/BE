@@ -13,17 +13,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-2">
-<script defer src="/api/supabase-client.js?v=2.112.0"></script>
-<script defer src="/assets/app.privacy.js?v=20260803-2"></script>
+<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-4">
+<script defer src="/api/runtime?v=2.112.0"></script>
+<script defer src="/assets/app.privacy.js?v=20260803-4"></script>
 </head>
 <body>
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
   <div class="site-loading-skeleton" aria-hidden="true">
     <div class="site-skeleton-top">
-      <span class="site-skeleton-avatar skeleton-shimmer"></span>
-      <span class="site-skeleton-nav skeleton-shimmer"></span>
-      <span class="site-skeleton-avatar skeleton-shimmer"></span>
+      <span class="site-skeleton-avatar site-skeleton-avatar-left skeleton-shimmer"></span>
+      <span class="site-skeleton-nav skeleton-shimmer"><i></i><i></i><i></i><i></i></span>
+      <span class="site-skeleton-avatar site-skeleton-avatar-right skeleton-shimmer"></span>
     </div>
     <div class="site-skeleton-hero skeleton-shimmer">
       <div class="site-skeleton-copy">
@@ -92,8 +92,7 @@
             <input id="loginEmail" name="email" type="hidden">
             <div class="auth-field">
               <label for="loginPassword">Senha</label>
-              <input id="loginPassword" name="password" type="password" autocomplete="current-password" minlength="6" pattern="(?=.*[0-9!@#$%^&amp;*._-]).{6,}" title="Use pelo menos 6 caracteres e inclua um número ou caractere especial." required placeholder="Digite sua senha">
-              <div class="auth-help">Mínimo de 6 caracteres com pelo menos um número ou caractere especial.</div>
+              <input id="loginPassword" name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="Digite sua senha">
             </div>
             <div class="auth-options">
               <label class="auth-remember"><input id="rememberLogin" type="checkbox" checked> Lembrar de mim</label>
@@ -586,6 +585,6 @@
     </nav>
   </div>
 </footer>
-<script src="/assets/ui.privacy.js?v=20260803-2"></script>
+<script src="/assets/ui.privacy.js?v=20260803-3"></script>
 </body>
 </html>

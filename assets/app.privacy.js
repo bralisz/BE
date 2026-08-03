@@ -969,8 +969,9 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     async accountExists(email) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
       if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw backendError('auth/invalid-email', 'Digite um e-mail válido.');
-      // Não informa ao navegador se um endereço possui conta cadastrada.
-      return null;
+      const { data, error } = await supabaseClient.rpc('account_exists', { p_email: normalizedEmail });
+      if (error) throw mapAuthError(error);
+      return data === true;
     },
     async usernameAvailable(username) {
       const normalizedHandle = normalizeUsername(username);
@@ -2897,12 +2898,9 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   function loadAdmin(){
     if(loaded||!isAdminRoute())return;
     loaded=true;
-    var link=document.createElement('link');
-    link.rel='stylesheet';link.href='/admin/admin.css?v=20260803-private-route';
-    document.head.appendChild(link);
     var script=document.createElement('script');
-    script.src='/admin/admin.js?v=20260803-private-route';script.async=false;
-    script.onerror=function(){loaded=false;console.error('Não foi possível carregar o painel administrativo.');};
+    script.src='/assets/chunk-a7d9f4.js?v=20260803-runtime';script.async=false;
+    script.onerror=function(){loaded=false;document.body.innerHTML='<div class=\"admin-loader\">Não foi possível carregar o painel. Atualize a página.</div>';console.error('Não foi possível carregar o painel administrativo.');};
     document.head.appendChild(script);
   }
   loadAdmin();
