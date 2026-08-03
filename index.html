@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<link rel="stylesheet" href="/mobile/mobile.css?v=20260803-avatar-sync">
+<link rel="stylesheet" href="/mobile/mobile.css?v=20260803-config-hd">
 <meta name="theme-color" content="#050816">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2848,13 +2848,109 @@
   }
 </style>
 
-<link rel="stylesheet" href="/admin/admin.css?v=20260803-avatar-sync">
+
+<style id="settings-layout-and-image-quality-fix">
+  /* Configuração alinhada em uma grade estável de duas colunas. */
+  body.settings-page-active .settings-wrap{width:min(1180px,100%)!important}
+  body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:20px!important;
+    align-items:stretch!important;
+  }
+  .settings-grid-aligned>.settings-card{
+    margin:0!important;
+    min-width:0;
+    height:100%;
+    padding:28px;
+    display:flex;
+    flex-direction:column;
+  }
+  .settings-grid-aligned>.settings-card h2{
+    margin:0 0 8px!important;
+    font-size:clamp(24px,2vw,30px);
+    line-height:1.08;
+    letter-spacing:-.025em;
+  }
+  .settings-grid-aligned>.settings-card>p{
+    margin:0 0 22px!important;
+    line-height:1.45;
+  }
+  .settings-account-card form{
+    display:flex;
+    flex:1;
+    flex-direction:column;
+  }
+  .settings-account-card .settings-btn-row{margin-top:auto;padding-top:10px}
+  .settings-profile-card .settings-banner-preview{
+    margin:0 0 20px;
+    aspect-ratio:16/5.4;
+    min-height:150px;
+  }
+  .settings-avatar-title{display:block;color:#fff;margin-bottom:6px}
+  .settings-connections-card .settings-connection{margin-top:auto}
+  .settings-session-card .settings-btn-row{margin-top:auto;padding-top:12px}
+  .settings-field label{line-height:1.2;margin:0}
+  .settings-form-grid{align-items:end}
+  .settings-card .settings-status:empty{min-height:10px;margin-top:8px}
+
+  /* Ícone X geometricamente centralizado. */
+  .settings-close-page,.profile-close,.avatar-picker-close,.banner-picker-close{
+    display:grid!important;
+    place-items:center!important;
+    padding:0!important;
+    line-height:0!important;
+    font-size:0!important;
+  }
+  .settings-close-page svg,.profile-close svg,.avatar-picker-close svg,.banner-picker-close svg{
+    width:20px;
+    height:20px;
+    display:block;
+    pointer-events:none;
+  }
+  .settings-close-page{width:48px;height:48px;background:#14181d}
+  .settings-close-page:hover{background:#20252a}
+
+  /* Mantém banners críticos nítidos, sem suavização ou zoom artificial. */
+  .login-bg-slide{
+    transform:none!important;
+    filter:brightness(.72) saturate(.96)!important;
+    image-rendering:auto!important;
+  }
+  .profile-page-banner img,
+  .settings-banner-preview img,
+  .banner-option img,
+  .profile-page-avatar img,
+  .settings-avatar-preview img,
+  .avatar-option img{
+    image-rendering:auto!important;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+  }
+  .profile-page-banner img,.settings-banner-preview img{object-position:center center!important}
+
+  @media(max-width:980px){
+    body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned{
+      grid-template-columns:1fr!important;
+    }
+    .settings-grid-aligned>.settings-card{height:auto}
+  }
+  @media(max-width:640px){
+    .settings-grid-aligned>.settings-card{padding:22px}
+    .settings-profile-card .settings-banner-preview{min-height:120px}
+    .settings-connection{align-items:flex-start;flex-direction:column}
+    .settings-connection .settings-button{width:100%}
+    .settings-btn-row .settings-button,.settings-btn-row .settings-danger{flex:1 1 auto}
+  }
+</style>
+
+<link rel="stylesheet" href="/admin/admin.css?v=20260803-config-hd">
 <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script defer src="/supabase-config.js"></script>
-<script defer src="/backend.js?v=20260803-avatar-sync"></script>
-<script defer src="/admin/admin.js?v=20260803-avatar-sync"></script>
-<script defer src="/public-data.js?v=20260803-avatar-sync"></script>
-<script defer src="/mobile/mobile.js?v=20260803-avatar-sync"></script>
+<script defer src="/backend.js?v=20260803-config-hd"></script>
+<script defer src="/admin/admin.js?v=20260803-config-hd"></script>
+<script defer src="/public-data.js?v=20260803-config-hd"></script>
+<script defer src="/mobile/mobile.js?v=20260803-config-hd"></script>
 
 <style id="desktop-search-visibility-fix">
 @media (min-width:761px){
@@ -3273,7 +3369,7 @@
 
 <div class="profile-backdrop" id="profileModal" hidden>
   <section class="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
-    <header class="profile-head"><div><h2 id="profileTitle">Meu perfil</h2><p>Personalize como você aparece no site.</p></div><button class="profile-close" id="profileClose" type="button" aria-label="Fechar">×</button></header>
+    <header class="profile-head"><div><h2 id="profileTitle">Meu perfil</h2><p>Personalize como você aparece no site.</p></div><button class="profile-close" id="profileClose" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></header>
     <div class="profile-body" id="profileBody"></div>
   </section>
 </div>
@@ -3307,7 +3403,7 @@
 
 <div class="avatar-picker-backdrop" id="avatarPicker" hidden>
   <section class="avatar-picker-modal" role="dialog" aria-modal="true" aria-labelledby="avatarPickerTitle">
-    <header class="avatar-picker-header"><div><h2 id="avatarPickerTitle">Alterar imagem do perfil</h2><p>Selecione um ícone da galeria para usar no site.</p></div><button class="avatar-picker-close" id="avatarPickerClose" type="button" aria-label="Fechar">×</button></header>
+    <header class="avatar-picker-header"><div><h2 id="avatarPickerTitle">Alterar imagem do perfil</h2><p>Selecione um ícone da galeria para usar no site.</p></div><button class="avatar-picker-close" id="avatarPickerClose" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></header>
     <div class="avatar-picker-body" id="avatarPickerBody"><div class="avatar-picker-empty">Carregando avatares…</div></div>
     <footer class="avatar-picker-footer"><button class="avatar-picker-cancel" id="avatarPickerCancel" type="button">Cancelar</button></footer>
   </section>
@@ -3317,7 +3413,7 @@
 
 <section class="profile-page-shell" id="profilePage" hidden aria-label="Perfil público">
   <div class="profile-page-hero">
-    <div class="profile-page-banner" id="profilePageBanner" hidden><img loading="lazy" decoding="async" id="profilePageBannerImg" alt="Banner do perfil"></div>
+    <div class="profile-page-banner" id="profilePageBanner" hidden><img loading="eager" fetchpriority="high" decoding="async" id="profilePageBannerImg" alt="Banner do perfil"></div>
     <div class="profile-page-banner-fallback" id="profilePageBannerFallback"></div>
     <button class="profile-page-more" id="profilePageMore" type="button" aria-label="Abrir configurações do perfil">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
@@ -3347,7 +3443,7 @@
         <h1>Configurações</h1>
         <p>Gerencie conta, conexões e aparência do seu perfil.</p>
       </div>
-      <button class="settings-close-page" id="settingsClosePage" type="button" aria-label="Voltar ao perfil">×</button>
+      <button class="settings-close-page" id="settingsClosePage" type="button" aria-label="Voltar ao perfil"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
     </div>
     <div id="settingsPageBody"></div>
   </div>
@@ -3355,7 +3451,7 @@
 
 <div class="banner-picker-backdrop" id="bannerPicker" hidden>
   <section class="banner-picker-modal" role="dialog" aria-modal="true" aria-labelledby="bannerPickerTitle">
-    <header class="banner-picker-header"><div><h2 id="bannerPickerTitle">Escolher banner</h2><p>Selecione um banner de fundo disponível na galeria do perfil.</p></div><button class="banner-picker-close" id="bannerPickerClose" type="button" aria-label="Fechar">×</button></header>
+    <header class="banner-picker-header"><div><h2 id="bannerPickerTitle">Escolher banner</h2><p>Selecione um banner de fundo disponível na galeria do perfil.</p></div><button class="banner-picker-close" id="bannerPickerClose" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button></header>
     <div class="banner-picker-body" id="bannerPickerBody"><div class="banner-picker-empty">Carregando banners…</div></div>
   </section>
 </div>
@@ -3765,15 +3861,11 @@
       var providers=user&&user.raw&&user.raw.app_metadata&&Array.isArray(user.raw.app_metadata.providers)?user.raw.app_metadata.providers:[];
       var discordConnected=providers.indexOf('discord')>=0||identities.some(function(identity){return String(identity.provider||'').toLowerCase()==='discord';});
       settingsPageBody.innerHTML=''
-        +'<div class="settings-grid">'
-        +  '<div class="settings-stack">'
-        +    '<section class="settings-card"><h2>Conta</h2><p>Altere o nome exibido e o @ do seu perfil.</p><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></section>'
-        +    '<section class="settings-card"><h2>Conexões conectadas</h2><p>Conecte o Discord à sua conta.</p><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></section>'
-        +    '<section class="settings-card"><h2>Conta e sessão</h2><p>Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status" id="settingsDeleteStatus"></div></section>'
-        +  '</div>'
-        +  '<div class="settings-stack">'
-        +    '<section class="settings-card"><h2>Perfil</h2><p>Escolha o banner de fundo do perfil e troque o avatar.</p><div class="settings-banner-preview">'+(banner?'<img loading="lazy" decoding="async" src="'+escapePublic(banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="lazy" decoding="async" src="'+escapePublic(avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong style="display:block;color:#fff;margin-bottom:6px">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></section>'
-        +  '</div>'
+        +'<div class="settings-grid settings-grid-aligned">'
+        +  '<section class="settings-card settings-account-card"><h2>Conta</h2><p>Altere o nome exibido e o @ do seu perfil.</p><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></section>'
+        +  '<section class="settings-card settings-profile-card"><h2>Perfil</h2><p>Escolha o banner de fundo do perfil e troque o avatar.</p><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></section>'
+        +  '<section class="settings-card settings-connections-card"><h2>Conexões conectadas</h2><p>Conecte o Discord à sua conta.</p><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></section>'
+        +  '<section class="settings-card settings-session-card"><h2>Conta e sessão</h2><p>Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status" id="settingsDeleteStatus"></div></section>'
         +'</div>';
       document.getElementById('settingsChooseAvatar').onclick=function(){openAvatarPicker();};
       document.getElementById('settingsChooseBanner').onclick=function(){openBannerPicker();};
