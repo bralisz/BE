@@ -7,6 +7,9 @@
   var pageNav=document.getElementById('notificationPageNav');
   var pageContent=document.getElementById('notificationPageContent');
   var pageHome=document.getElementById('notificationPageHome');
+  var pageAvatar=document.getElementById('notificationPageAvatar');
+  var pageAvatarImage=document.getElementById('notificationPageAvatarImage');
+  var pageAvatarFallback=document.getElementById('notificationPageAvatarFallback');
   var pageClose=document.getElementById('notificationPageClose');
   var desktopButton=document.getElementById('notificationButton');
   var desktopDropdown=document.getElementById('notificationDropdown');
@@ -95,6 +98,42 @@
   }
 
   function closeMenus(){closeDesktop();closeMobile();}
+
+  function syncPageAvatar(){
+    if(!pageAvatar||!pageAvatarImage||!pageAvatarFallback)return;
+    var account=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
+    var source=document.getElementById('publicUserPhoto');
+    var src=source&&!source.hidden?String(source.getAttribute('src')||''):'';
+    if(account&&src){
+      pageAvatarImage.src=src;
+      pageAvatarImage.hidden=false;
+      pageAvatarFallback.hidden=true;
+      pageAvatar.setAttribute('aria-label','Abrir perfil');
+      return;
+    }
+    pageAvatarImage.hidden=true;
+    pageAvatarImage.removeAttribute('src');
+    var name=document.getElementById('ddUsername');
+    var label=account?(name?String(name.textContent||'').replace(/^@/,'').trim():'')||account.displayName||account.email||'M':'M';
+    pageAvatarFallback.textContent=(String(label).charAt(0)||'M').toUpperCase();
+    pageAvatarFallback.hidden=false;
+    pageAvatar.setAttribute('aria-label',account?'Abrir perfil':'Entrar na plataforma');
+  }
+
+  function openProfileFromPage(){
+    var account=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
+    closePage(true);
+    window.setTimeout(function(){
+      if(!account){
+        location.hash='#login';
+        document.body.classList.add('login-mode');
+        return;
+      }
+      var profileButton=document.querySelector('[data-public-action="profile"]');
+      if(profileButton)profileButton.click();
+      else window.dispatchEvent(new CustomEvent('be:open-profile-route'));
+    },50);
+  }
 
   function setUnreadState(){
     var currentMobileDot=document.getElementById('mobileNotificationUnreadDot')||mobileDot;
@@ -209,6 +248,7 @@
     page.setAttribute('aria-hidden','false');
     selectedId=String(id||'');
     document.title='Billie Eilish TV';
+    syncPageAvatar();
     if(updateRoute!==false)setNotificationRoute(selectedId,false);
     window.dispatchEvent(new CustomEvent('be:close-support'));
     await loadNotifications(false);
@@ -269,6 +309,7 @@
   if(mobileViewAll)mobileViewAll.addEventListener('click',function(){openPage('',true);});
   if(mobileClose)mobileClose.addEventListener('click',closeMobile);
   if(pageHome)pageHome.addEventListener('click',function(){closePage(true);});
+  if(pageAvatar)pageAvatar.addEventListener('click',openProfileFromPage);
   if(pageClose)pageClose.addEventListener('click',function(){closePage(true);});
 
   document.addEventListener('click',function(event){
@@ -305,7 +346,9 @@
   });
   window.addEventListener('be:close-notifications',function(){closePage(false);});
   window.addEventListener('be:content-ready',function(){loadNotifications(true);});
-  window.addEventListener('be:auth-changed',function(){loadNotifications(true);});
+  window.addEventListener('be:auth-changed',function(){syncPageAvatar();loadNotifications(true);});
+  window.addEventListener('be:profile-avatar-changed',syncPageAvatar);
+  window.addEventListener('be:content-ready',syncPageAvatar);
   window.addEventListener('hashchange',function(){
     var info=routeInfo();
     if(info.active)openPage(info.id,false);
@@ -317,6 +360,7 @@
     else if(document.body.classList.contains('notification-page-active'))closePage(false);
   });
 
+  syncPageAvatar();
   loadNotifications(false);
   var initial=routeInfo();
   if(initial.active)openPage(initial.id,false);

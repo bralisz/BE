@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-support-search-clean-1">
+<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-notification-avatar-header-1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/app.privacy.js?v=20260803-detail-9-1"></script>
 </head>
@@ -565,7 +565,13 @@
 </div>
 <section class="notification-page-shell" id="notificationPage" hidden aria-label="Log de atualizações do BETV">
   <header class="notification-page-header">
-    <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/assets/logo.png?v=3" alt="BETV"></button>
+    <div class="notification-page-leading">
+      <button class="notification-page-avatar" id="notificationPageAvatar" type="button" aria-label="Abrir perfil">
+        <img loading="lazy" decoding="async" id="notificationPageAvatarImage" alt="Avatar do usuário" hidden>
+        <span id="notificationPageAvatarFallback" aria-hidden="true">M</span>
+      </button>
+      <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/assets/logo.png?v=3" alt="BETV"></button>
+    </div>
     <div class="notification-page-heading"><strong>Atualizações</strong></div>
     <button class="notification-page-close" id="notificationPageClose" type="button" aria-label="Fechar atualizações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></button>
   </header>
@@ -714,6 +720,6 @@
 </footer>
 <script src="/assets/ui.privacy.js?v=20260803-notification-exclusive-1"></script>
 <script src="/assets/support.js?v=20260803-support-clean-url-1"></script>
-<script src="/assets/notifications.js?v=20260803-notification-exclusive-1"></script>
+<script src="/assets/notifications.js?v=20260803-notification-avatar-header-1"></script>
 </body>
 </html>
