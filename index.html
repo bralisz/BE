@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="site-loading-active">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,11 +13,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-support-1">
+<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-notifications-1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/app.privacy.js?v=20260803-4"></script>
+<script defer src="/assets/app.privacy.js?v=20260803-notifications-1"></script>
 </head>
-<body>
+<body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
   <div class="site-loading-skeleton" aria-hidden="true">
     <div class="site-skeleton-top">
@@ -157,6 +157,17 @@
       </button>
     </div>
   </nav>
+  <div class="notification-menu-wrap home-notification-menu">
+    <button class="notification-button" id="notificationButton" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Abrir notificações">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+      <span class="notification-unread-dot" id="notificationUnreadDot" hidden></span>
+    </button>
+    <div class="notification-dropdown" id="notificationDropdown" aria-label="Notificações recentes">
+      <div class="notification-dropdown-header"><strong>Notificações</strong><span>Atualizações do BETV</span></div>
+      <div class="notification-preview-list" id="notificationPreviewList"><div class="notification-preview-empty">Carregando…</div></div>
+      <button class="notification-view-all" id="notificationViewAll" type="button">Ver todas as atualizações</button>
+    </div>
+  </div>
   <div class="user-menu-wrap home-user-menu">
     <button class="user-chip" id="userChip" aria-haspopup="true" aria-expanded="false" aria-label="Conta">
       <span class="avatar"><img loading="lazy" decoding="async" id="publicUserPhoto" alt="Foto do usuário" hidden><svg id="publicUserFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg></span>
@@ -452,9 +463,7 @@
 <section class="support-page-shell" id="supportPage" hidden aria-label="Central de suporte do BETV">
   <div class="support-page-inner">
     <header class="support-hero">
-      <p class="support-kicker">Suporte BETV</p>
       <h1>Como podemos te ajudar?</h1>
-      <p>Pesquise uma dúvida ou consulte as perguntas frequentes abaixo.</p>
     </header>
 
     <div class="support-search" role="search">
@@ -476,47 +485,47 @@
       <h2 id="supportFaqTitle">Perguntas frequentes</h2>
       <div class="support-faq-list" id="supportFaqList">
         <details class="support-faq-item">
-          <summary><span>Preciso de uma conta para usar o BETV?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>Preciso de uma conta para usar o BETV?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Sim. A conta permite acessar o catálogo, salvar favoritos e manter suas preferências e seu perfil. As páginas legais e a central de suporte continuam disponíveis mesmo sem login.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>Não consigo entrar na minha conta. O que faço?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>Não consigo entrar na minha conta. O que faço?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Confira se o e-mail e a senha foram digitados corretamente, verifique sua conexão e tente novamente após atualizar a página. Se você conectou o Discord, também pode tentar entrar por ele.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>Como altero meu nome ou meu @?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>Como altero meu nome ou meu @?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Abra seu perfil, toque nos três pontos e entre em Configurações. Na seção Conta, você pode alterar o nome de exibição e o seu @, desde que o novo usuário esteja disponível.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>Como troco meu avatar ou banner?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>Como troco meu avatar ou banner?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Vá até Configurações e abra a seção Perfil. Escolha um avatar ou banner disponível na galeria e aguarde a confirmação de que a alteração foi salva.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>Como conecto minha conta do Discord?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>Como conecto minha conta do Discord?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Em Configurações, acesse Conexões conectadas e selecione Discord. Autorize a conexão na janela aberta e depois retorne ao BETV.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>Um vídeo não está abrindo ou reproduzindo. O que faço?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>Um vídeo não está abrindo ou reproduzindo. O que faço?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Atualize a página, confirme sua conexão e tente abrir o conteúdo novamente. Se o erro continuar, relate o problema informando o título do vídeo e, se possível, envie o link da página.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>Como adiciono ou removo um conteúdo dos favoritos?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>Como adiciono ou removo um conteúdo dos favoritos?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Use o botão de coração no conteúdo. Quando o coração estiver ativo, o item foi adicionado aos favoritos; toque novamente para remover.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>Minhas alterações não foram salvas. Como resolver?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>Minhas alterações não foram salvas. Como resolver?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Verifique sua internet e se a sessão ainda está ativa. Atualize a página, entre novamente se necessário e repita a alteração. Se persistir, relate exatamente qual informação você tentou salvar.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>Como excluo minha conta?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>Como excluo minha conta?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Abra Configurações, acesse Conta e selecione Excluir conta. Leia a confirmação com atenção, pois a exclusão remove seu acesso e não pode ser desfeita pelo site.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>O conteúdo que procuro não aparece na busca.</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>O conteúdo que procuro não aparece na busca.</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Pesquise pelo título e confira também as abas Filmes e Vídeos. O catálogo é atualizado gradualmente, então alguns conteúdos podem ainda não estar disponíveis.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>O BETV é um site oficial da Billie Eilish?</span><span class="support-faq-chevron" aria-hidden="true">&gt;</span></summary>
+          <summary><span>O BETV é um site oficial da Billie Eilish?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Não. O BETV é um projeto independente, não comercial e criado por fãs, sem vínculo oficial com Billie Eilish, sua equipe ou seus parceiros.</p></div>
         </details>
       </div>
@@ -526,8 +535,23 @@
       <h2 id="supportContactTitle">Não encontrou seu problema?</h2>
       <p>Conte o que aconteceu e nossa equipe analisará sua mensagem.</p>
       <a class="support-contact-button" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=billieilishtv@gmail.com&amp;su=Relato%20de%20problema%20-%20BETV" target="_blank" rel="noopener noreferrer">Relate o seu problema</a>
-      <span>billieilishtv@gmail.com</span>
     </section>
+  </div>
+</section>
+<div class="mobile-notification-popover" id="mobileNotificationPopover" hidden aria-label="Notificações recentes">
+  <div class="mobile-notification-head"><div><strong>Notificações</strong><span>Atualizações do BETV</span></div><button id="mobileNotificationClose" type="button" aria-label="Fechar notificações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+  <div class="notification-preview-list" id="mobileNotificationPreviewList"><div class="notification-preview-empty">Carregando…</div></div>
+  <button class="notification-view-all" id="mobileNotificationViewAll" type="button">Ver todas as atualizações</button>
+</div>
+<section class="notification-page-shell" id="notificationPage" hidden aria-label="Log de atualizações do BETV">
+  <header class="notification-page-header">
+    <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/assets/logo.png?v=3" alt="BETV"></button>
+    <div class="notification-page-heading"><span>BETV</span><strong>Atualizações</strong></div>
+    <button class="notification-page-close" id="notificationPageClose" type="button" aria-label="Fechar atualizações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></button>
+  </header>
+  <div class="notification-page-wrap">
+    <aside class="notification-page-nav" id="notificationPageNav" aria-label="Lista de atualizações"><div class="notification-page-empty">Carregando atualizações…</div></aside>
+    <main class="notification-page-content" id="notificationPageContent"><div class="notification-page-empty">Selecione uma atualização.</div></main>
   </div>
 </section>
 <section class="legal-page-shell" id="legalPage" hidden aria-label="Informações legais do BETV">
@@ -668,7 +692,8 @@
     </nav>
   </div>
 </footer>
-<script src="/assets/ui.privacy.js?v=20260803-support-2"></script>
-<script src="/assets/support.js?v=20260803-support-5"></script>
+<script src="/assets/ui.privacy.js?v=20260803-notifications-1"></script>
+<script src="/assets/support.js?v=20260803-notifications-1"></script>
+<script src="/assets/notifications.js?v=20260803-notifications-1"></script>
 </body>
 </html>

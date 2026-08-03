@@ -63,9 +63,10 @@
 
   function openSupport(updateRoute){
     if(updateRoute!==false&&!isSupportRoute()){
-      history.pushState({beRoute:'support'},'','/suporte'+(location.search||''));
+      history.pushState({beRoute:'support'},'','/'+(location.search||'')+'#suporte');
     }
-    document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','detail-page-active');
+    document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','detail-page-active','notification-page-active');
+    window.dispatchEvent(new CustomEvent('be:close-notifications'));
     document.body.classList.add('support-page-active');
     page.hidden=false;
     page.setAttribute('aria-hidden','false');
