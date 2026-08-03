@@ -22,6 +22,29 @@
     }
   });
 
+  function normalizedFooterLink(value, network = 'website') {
+    let raw = String(value || '').trim();
+    if (!raw) return '';
+    if (network === 'instagram' && raw.startsWith('@')) raw = `https://www.instagram.com/${raw.slice(1)}`;
+    if (network === 'x' && raw.startsWith('@')) raw = `https://x.com/${raw.slice(1)}`;
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(raw)) raw = `https://${raw}`;
+    try {
+      const url = new URL(raw);
+      return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function applyFooterLink(id, value, network) {
+    const link = document.getElementById(id);
+    if (!link) return;
+    const href = normalizedFooterLink(value, network);
+    link.hidden = !href;
+    if (href) link.href = href;
+    else link.removeAttribute('href');
+  }
+
   async function applySiteSettings() {
     const data = await beBackend.data.get('settings', 'site');
     if (!data) return;
@@ -36,6 +59,9 @@
       meta.content = data.description;
     }
     if (data.primaryColor) document.documentElement.style.setProperty('--blue', data.primaryColor);
+    applyFooterLink('footerInstagram', data.instagram, 'instagram');
+    applyFooterLink('footerWebsite', data.website || data.siteUrl, 'website');
+    applyFooterLink('footerX', data.xUrl || data.twitter || data.x, 'x');
   }
 
   async function renderFeatured() {

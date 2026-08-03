@@ -746,3 +746,8 @@ body.admin-mode button.a-btn.primary,
   box-shadow:none!important;
   filter:none!important;
 }
+
+/* Configurações — links do rodapé */
+.settings-section-heading{display:flex;flex-direction:column;gap:5px;padding-top:8px}
+.settings-section-heading strong{font-size:15px;color:#fff}
+.settings-section-heading small{color:var(--a-muted);font-size:12px;line-height:1.5}

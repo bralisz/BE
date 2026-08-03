@@ -688,22 +688,53 @@
      FOOTER
      ============================================================ */
   footer{
-    max-width:1240px; margin:0 auto; padding: 40px 24px 60px;
-    text-align:center;
+    max-width:1500px;
+    margin:0 auto;
+    padding:54px clamp(24px,4vw,54px) 30px;
   }
   .footer-card{
-    border-radius: var(--r-lg);
-    padding: 28px 24px;
-    display:flex; flex-direction:column; align-items:center; gap:10px;
+    width:100%;
+    min-height:150px;
+    padding:28px 18px 36px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:32px;
+    border:0!important;
+    border-bottom:1px solid rgba(255,255,255,.12)!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
   }
-  .footer-line{ font-size:12.5px; color: var(--ice-faint); line-height:1.7; max-width:480px; }
-  .footer-brand{ font-family:var(--font-mono); font-size:11.5px; color: var(--ice-dim); letter-spacing:0.03em; }
-  .footer-link{
-    font-size:12px; color: var(--blue-light);
-    border-bottom:1px solid transparent;
-    transition: border-color 0.2s;
+  .footer-copy{display:flex;flex-direction:column;align-items:flex-start;gap:7px;text-align:left}
+  .footer-site-logo{display:block;width:auto;height:34px;max-width:140px;object-fit:contain;object-position:left center;margin-bottom:2px}
+  .footer-line{margin:0;font-size:14px;color:rgba(255,255,255,.78);line-height:1.5;max-width:560px}
+  .footer-brand{margin:0;font-family:var(--font-sans);font-size:13px;color:rgba(255,255,255,.7);letter-spacing:0}
+  .footer-socials{display:flex;align-items:center;justify-content:flex-end;gap:18px;flex-shrink:0}
+  .footer-social-link{
+    width:28px;
+    height:28px;
+    display:grid;
+    place-items:center;
+    border:0;
+    border-radius:50%;
+    color:rgba(255,255,255,.82);
+    background:transparent;
+    transition:color .2s ease,transform .2s ease,background .2s ease;
   }
-  .footer-link:hover{ border-color: var(--blue-light); }
+  .footer-social-link[hidden]{display:none!important}
+  .footer-social-link:hover{color:#fff;transform:translateY(-2px);background:rgba(255,255,255,.06)}
+  .footer-social-link svg{width:23px;height:23px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .footer-social-link.is-x svg{fill:currentColor;stroke:none;width:20px;height:20px}
+  @media(max-width:700px){
+    footer{padding:38px 20px 22px}
+    .footer-card{min-height:0;padding:24px 4px 30px;align-items:flex-start;flex-direction:column;gap:24px}
+    .footer-site-logo{height:31px}
+    .footer-line{font-size:13px}
+    .footer-socials{justify-content:flex-start}
+  }
 
   /* utility */
   .sr-only{
@@ -2794,12 +2825,12 @@
   }
 </style>
 
-<link rel="stylesheet" href="/admin/admin.css?v=20260802-7">
+<link rel="stylesheet" href="/admin/admin.css?v=20260803-footer-social">
 <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script defer src="/supabase-config.js"></script>
 <script defer src="/backend.js"></script>
-<script defer src="/admin/admin.js?v=20260802-7"></script>
-<script defer src="/public-data.js?v=20260803-homefilmsfix"></script>
+<script defer src="/admin/admin.js?v=20260803-footer-social"></script>
+<script defer src="/public-data.js?v=20260803-footer-social"></script>
 <script defer src="/mobile/mobile.js?v=20260802-7"></script>
 
 <style id="desktop-search-visibility-fix">
@@ -3288,9 +3319,22 @@
 
 <footer>
   <div class="footer-card glass">
-    <p class="footer-line">Personal project created for non-commercial purposes.<br>Esse é um projeto de fã, feito de forma independente e sem fins lucrativos sob a marca © BE.</p>
-    <p class="footer-brand">© BE — Criado por Miguel Rodrigues</p>
-    <a href="https://bralis.site/" class="footer-link" target="_blank" rel="noopener">bralis.site</a>
+    <div class="footer-copy">
+      <img class="footer-site-logo" src="/assets/logo.png?v=3" alt="BETV">
+      <p class="footer-line">Personal project created for non-commercial purposes.<br>Made for fans.</p>
+      <p class="footer-brand">© 2026 BETV — Billie Eilish TV</p>
+    </div>
+    <nav class="footer-socials" aria-label="Links do site">
+      <a class="footer-social-link" id="footerInstagram" href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><path d="M17.5 6.5h.01"></path></svg>
+      </a>
+      <a class="footer-social-link" id="footerWebsite" href="#" target="_blank" rel="noopener noreferrer" aria-label="Site" title="Site" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg>
+      </a>
+      <a class="footer-social-link is-x" id="footerX" href="#" target="_blank" rel="noopener noreferrer" aria-label="X" title="X" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.4L6.47 22H3.36l7.26-8.3L2.97 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.84h1.72L8.43 4.05H6.58L17.8 19.84Z"></path></svg>
+      </a>
+    </nav>
   </div>
 </footer>
 
