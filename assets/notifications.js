@@ -230,15 +230,19 @@
     document.title='Billie Eilish TV';
   }
 
+  function closeAccountMenu(){
+    var userDropdown=document.getElementById('userDropdown');
+    var userChip=document.getElementById('userChip');
+    if(userDropdown)userDropdown.classList.remove('open');
+    if(userChip)userChip.setAttribute('aria-expanded','false');
+  }
+
   function toggleDesktop(event){
     if(event)event.stopPropagation();
     if(!desktopDropdown||!desktopButton)return;
     var open=!desktopDropdown.classList.contains('open');
     closeMobile();
-    var userDropdown=document.getElementById('userDropdown');
-    var userChip=document.getElementById('userChip');
-    if(userDropdown)userDropdown.classList.remove('open');
-    if(userChip)userChip.setAttribute('aria-expanded','false');
+    closeAccountMenu();
     desktopDropdown.classList.toggle('open',open);
     desktopButton.setAttribute('aria-expanded',String(open));
     if(open){loadNotifications(false);}
@@ -249,6 +253,7 @@
     if(!mobilePopover)return;
     var open=mobilePopover.hidden;
     closeDesktop();
+    closeAccountMenu();
     mobilePopover.hidden=!open;
     var button=getMobileButton();
     if(button)button.setAttribute('aria-expanded',String(open));
@@ -290,6 +295,9 @@
     var button=event.target&&event.target.closest?event.target.closest('#mobileNotificationButton'):null;
     if(button)toggleMobile(event);
   },true);
+
+  window.addEventListener('be:close-notification-menus',closeMenus);
+  window.addEventListener('be:open-config',closeMenus);
 
   window.addEventListener('be:open-notifications',function(event){
     var detail=event&&event.detail||{};

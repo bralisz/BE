@@ -29,8 +29,20 @@
   var userChip = document.getElementById('userChip');
   var userDropdown = document.getElementById('userDropdown');
 
+  function closeNotificationMenus(){
+    window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
+    var notificationDropdown=document.getElementById('notificationDropdown');
+    var notificationButton=document.getElementById('notificationButton');
+    var mobileNotificationPopover=document.getElementById('mobileNotificationPopover');
+    var mobileNotificationButton=document.getElementById('mobileNotificationButton');
+    if(notificationDropdown)notificationDropdown.classList.remove('open');
+    if(notificationButton)notificationButton.setAttribute('aria-expanded','false');
+    if(mobileNotificationPopover)mobileNotificationPopover.hidden=true;
+    if(mobileNotificationButton)mobileNotificationButton.setAttribute('aria-expanded','false');
+  }
   function toggleDropdown(force){
     var open = typeof force === 'boolean' ? force : !userDropdown.classList.contains('open');
+    if(open)closeNotificationMenus();
     userDropdown.classList.toggle('open', open);
     userChip.setAttribute('aria-expanded', String(open));
   }
@@ -413,6 +425,7 @@
     }
     function openSettingsPage(updateRoute){
       closeDetailBeforeDedicatedPage();
+      closeNotificationMenus();
       toggleDropdown(false);profilePage.hidden=true;settingsPage.hidden=false;
       document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');
       try{renderSettingsPage();}catch(error){console.error('Falha ao renderizar configurações:',error);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}

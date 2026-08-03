@@ -28,10 +28,21 @@
     catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}
   }
 
-  function isSupportRoute(){
+  function hasLegacySupportUrl(){
     var path=cleanPath().toLowerCase();
     var hash=String(location.hash||'').toLowerCase();
     return path==='/suporte'||hash==='#suporte'||hash==='#/suporte'||hash==='#support'||hash==='#/support';
+  }
+
+  function isSupportRoute(){
+    var state=history.state||{};
+    return hasLegacySupportUrl()||(state.beRoute==='support'&&!location.hash);
+  }
+
+  function publicUrlWithoutSupportRoute(){
+    var path=cleanPath();
+    if(path.toLowerCase()==='/suporte')path='/';
+    return path+(location.search||'');
   }
 
   function positionIndicator(button){
@@ -63,16 +74,20 @@
   }
 
   function setSupportRoute(replace){
-    var url=new URL(location.href);
-    url.pathname='/';
-    url.hash='suporte';
-    var target=url.pathname+(url.search||'')+url.hash;
-    if(replace)history.replaceState({beRoute:'support'},'',target);
-    else history.pushState({beRoute:'support'},'',target);
+    var currentState=history.state||{};
+    var nextState=Object.assign({},currentState,{beRoute:'support'});
+    var target=publicUrlWithoutSupportRoute();
+    if(replace)history.replaceState(nextState,'',target);
+    else history.pushState(nextState,'',target);
   }
 
   function openSupport(updateRoute){
-    if(updateRoute!==false&&!isSupportRoute())setSupportRoute(false);
+    if(updateRoute!==false){
+      if(!isSupportRoute())setSupportRoute(false);
+      else if(hasLegacySupportUrl())setSupportRoute(true);
+    }else if(hasLegacySupportUrl()){
+      setSupportRoute(true);
+    }
     document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','detail-page-active','notification-page-active');
     window.dispatchEvent(new CustomEvent('be:close-notifications'));
     document.body.classList.add('support-page-active');
@@ -86,7 +101,9 @@
     document.title='Billie Eilish TV';
     window.scrollTo(0,0);
     if(updateRoute!==false){
-      window.requestAnimationFrame(function(){if(!isSupportRoute())setSupportRoute(true);});
+      window.requestAnimationFrame(function(){
+        if(!isSupportRoute()||hasLegacySupportUrl())setSupportRoute(true);
+      });
     }
   }
 
@@ -95,7 +112,9 @@
     page.hidden=true;
     page.setAttribute('aria-hidden','true');
     if(updateRoute!==false&&isSupportRoute()){
-      history.pushState({beRoute:'home'},'','/'+(location.search||''));
+      var currentState=history.state||{};
+      var nextState=Object.assign({},currentState,{beRoute:'home'});
+      history.pushState(nextState,'',publicUrlWithoutSupportRoute());
     }
     if(resetTab!==false)setSupportTab(false);
     document.title='Billie Eilish TV';
@@ -144,9 +163,9 @@
   });
 
   document.addEventListener('click',function(event){
-    var target=event.target&&event.target.closest?event.target.closest('[data-public-action="support"],[data-mobile-destination="support"],.home-nav-link[data-home-view],#logoBtn,[data-public-action="profile"],[data-public-action="settings"],[data-public-action="auth"]'):null;
+    var target=event.target&&event.target.closest?event.target.closest('[data-public-action="support"],[data-mobile-destination="support"],a[href="#suporte"],a[href="#/suporte"],.home-nav-link[data-home-view],#logoBtn,[data-public-action="profile"],[data-public-action="settings"],[data-public-action="auth"]'):null;
     if(!target)return;
-    if(target.matches('[data-public-action="support"],[data-mobile-destination="support"]')){
+    if(target.matches('[data-public-action="support"],[data-mobile-destination="support"],a[href="#suporte"],a[href="#/suporte"]')){
       event.preventDefault();
       openSupport(true);
       return;

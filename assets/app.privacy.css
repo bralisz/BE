@@ -581,7 +581,7 @@
     width:210px;
     border-radius: var(--r-md);
     padding:8px;
-    background: rgba(5,11,22,0.97);
+    background: #1a1a1a;
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
     border:1px solid var(--glass-border-hi);
@@ -4654,3 +4654,45 @@ body.admin-mode{
 .notification-page-link small,
 .notification-article-date{display:none!important}
 .notification-article h1{margin-bottom:32px}
+
+
+/* Menus de conta e notificações mutuamente exclusivos. */
+body.settings-page-active .home-notification-menu,
+body.settings-page-active .mobile-notification-button,
+body.settings-page-active #mobileNotificationPopover{
+  display:none!important;
+}
+
+
+/* Pesquisa do suporte: borda única e botão de limpeza controlado pelo site. */
+.support-search{
+  box-sizing:border-box;
+  border:1px solid rgba(255,255,255,.18)!important;
+  border-radius:22px!important;
+  box-shadow:none!important;
+  overflow:hidden;
+}
+.support-search:focus-within{
+  border-color:#2997ff!important;
+  box-shadow:0 0 0 2px rgba(41,151,255,.22)!important;
+}
+.support-search input{
+  border-radius:inherit;
+}
+.support-search input::-webkit-search-decoration,
+.support-search input::-webkit-search-cancel-button,
+.support-search input::-webkit-search-results-button,
+.support-search input::-webkit-search-results-decoration{
+  display:none!important;
+  -webkit-appearance:none!important;
+  appearance:none!important;
+}
+.support-search input::-ms-clear,
+.support-search input::-ms-reveal{
+  display:none!important;
+  width:0!important;
+  height:0!important;
+}
+@media(max-width:760px){
+  .support-search{border-radius:19px!important}
+}
