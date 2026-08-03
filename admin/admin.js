@@ -3,7 +3,7 @@
 
   const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','users'];
   const LABELS = {dashboard:'Visão geral',support:'Suporte',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
-  const ADMIN_EMAIL = 'bralisofc@gmail.com';
+  const LOCAL_ADMIN_EMAIL = 'admin@local.invalid';
   const CONTENT_CATEGORIES = [
     ['videos','Vídeos','▣'],
     ['movies','Filmes','▤'],
@@ -226,14 +226,14 @@
     button.disabled = true;
     button.textContent = 'Entrando…';
     try {
-      const exists = await auth.localAdminExists(ADMIN_EMAIL);
-      if (exists) await auth.signInWithEmail({ email: ADMIN_EMAIL, password, remember: true });
-      else await auth.setupLocalAdmin(ADMIN_EMAIL, password);
+      const exists = await auth.localAdminExists(LOCAL_ADMIN_EMAIL);
+      if (exists) await auth.signInWithEmail({ email: LOCAL_ADMIN_EMAIL, password, remember: true });
+      else await auth.setupLocalAdmin(LOCAL_ADMIN_EMAIL, password);
       go('dashboard');
     } catch (error) {
       toast(authErrorMessage(error), 'err');
       button.disabled = false;
-      button.textContent = (await auth.localAdminExists(ADMIN_EMAIL)) ? 'Entrar no painel local' : 'Criar acesso administrativo local';
+      button.textContent = (await auth.localAdminExists(LOCAL_ADMIN_EMAIL)) ? 'Entrar no painel local' : 'Criar acesso administrativo local';
       loginBusy = false;
     }
   }
@@ -311,7 +311,7 @@
     const accountAvatar = activeAvatar
       ? `<img loading="lazy" decoding="async" src="${esc(activeAvatar)}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`
       : `<span aria-label="Sem foto de perfil">${esc((user.displayName || 'U').charAt(0).toUpperCase())}</span>`;
-    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/logo.png?v=3" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><button class="admin-avatar-button" id="accountToggle" aria-label="Abrir menu da conta" aria-expanded="false">${accountAvatar}</button><div class="admin-account-menu" id="accountMenu"><div class="admin-account-name">${esc(user.displayName || 'Administrador')}</div><div class="admin-account-divider"></div><button type="button" data-account-action="profile">Perfil</button><button type="button" data-account-action="settings">Configurações</button><button type="button" data-account-action="support">Suporte</button><button type="button" data-account-action="dashboard">Dashboard</button><div class="admin-account-divider"></div><button type="button" class="danger" data-account-action="logout">Sair</button></div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
+    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/logo.png?v=3" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><button class="admin-avatar-button" id="accountToggle" aria-label="Abrir menu da conta" aria-expanded="false">${accountAvatar}</button><div class="admin-account-menu" id="accountMenu"><button type="button" data-account-action="profile">Perfil</button><button type="button" data-account-action="settings">Configurações</button><div class="admin-account-divider"></div><button type="button" class="danger" data-account-action="logout">Sair</button></div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
     document.querySelector('[data-admin-support]')?.addEventListener('click', () => toast('Suporte em breve.'));
     const accountToggle = $('#accountToggle');
@@ -581,7 +581,7 @@
   async function usersPage() {
     const content = $('#adminContent');
     content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando usuários…</div>';
-    let items = await db.list('users', { orderBy: 'createdAt', direction: 'desc' });
+    let items = (await db.list('users', { orderBy: 'createdAt', direction: 'desc' })).filter(item => !String(item.email || '').toLowerCase().endsWith('@deleted.invalid'));
 
     content.innerHTML = `<div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte dados, controle o acesso e atenda solicitações feitas pelo suporte.</p></div><div class="users-total"><strong>${items.length}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
 
@@ -597,7 +597,7 @@
       });
 
       $('#usersList').innerHTML = rows.length ? `<div class="table-wrap users-table-wrap"><table class="a-table users-table"><thead><tr><th>Usuário</th><th>Acesso</th><th>Cadastro</th><th>Último acesso</th><th>Ações</th></tr></thead><tbody>${rows.map(item => {
-        const protectedAccount = String(item.email || '').toLowerCase() === ADMIN_EMAIL || String(item.id) === String(user?.uid || '');
+        const protectedAccount = item.role === 'admin' || String(item.id) === String(user?.uid || '');
         const chosenAvatar = selectedProfileAvatar(item);
         const avatar = chosenAvatar ? `<img loading="lazy" decoding="async" src="${esc(chosenAvatar)}" alt="Avatar escolhido pelo usuário">` : `<span aria-label="Usuário sem avatar escolhido">${esc(String(item.displayName || item.username || item.email || 'U').charAt(0).toUpperCase())}</span>`;
         return `<tr class="${item.banned ? 'user-row-banned' : ''}"><td><div class="user-cell"><div class="user-cell-avatar">${avatar}</div><div><strong>${esc(item.displayName || item.username || 'Usuário')}</strong><small>${item.username ? '@' + esc(item.username) + ' · ' : ''}${esc(item.email || '')}</small><em>${esc(item.id)}</em></div></div></td><td><span class="status ${item.banned ? 'off' : 'on'}">${item.banned ? 'Banido' : 'Ativo'}</span>${item.banned && item.banReason ? `<small class="ban-reason">${esc(item.banReason)}</small>` : ''}</td><td>${formatDate(item.createdAt)}</td><td>${formatDateTime(item.lastLoginAt)}</td><td><div class="row-actions user-actions"><button class="a-btn" data-user-export="${esc(item.id)}">Exportar dados</button>${protectedAccount ? '<span class="protected-account">Conta protegida</span>' : `<button class="a-btn ${item.banned ? '' : 'warning'}" data-user-ban="${esc(item.id)}" data-user-action="${item.banned ? 'unban' : 'ban'}">${item.banned ? 'Desbanir' : 'Banir'}</button><button class="a-btn danger" data-user-delete="${esc(item.id)}">Apagar conta</button>`}</div></td></tr>`;
@@ -648,7 +648,7 @@
           items = items.filter(item => String(item.id) !== String(profile.id));
           draw();
           $('.users-total strong').textContent = String(items.length);
-          toast('Conta apagada permanentemente.');
+          toast('Conta removida e acesso bloqueado.');
           await logAction('user_deleted', 'users', profile.id, `Conta apagada: ${profile.email || profile.id}`);
         } catch (error) {
           toast(error.message, 'err');

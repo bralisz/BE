@@ -1,7 +1,8 @@
 (() => {
   'use strict';
 
-  const ADMIN_EMAIL = String(window.BE_SUPABASE_CONFIG?.adminEmail || 'bralisofc@gmail.com').trim().toLowerCase();
+  const ADMIN_EMAIL = '';
+  const LOCAL_ADMIN_EMAIL = 'admin@local.invalid';
   const DB_KEY = 'be_local_database_v2';
   const LOCAL_SESSION_KEY = 'be_local_session_v2';
   const MODE = hasSupabaseConfig() ? 'supabase' : 'local';
@@ -141,6 +142,8 @@
   function normalizeUser(raw) {
     if (!raw) return null;
     const metadata = raw.user_metadata || raw.raw_user_meta_data || {};
+    const appMetadata = raw.app_metadata || {};
+    const trustedAdminClaim = appMetadata.role === 'admin' || appMetadata.is_admin === true;
     return {
       uid: raw.id || raw.uid,
       id: raw.id || raw.uid,
@@ -149,16 +152,29 @@
       photoURL: (metadata.profile_avatar_id && metadata.profile_avatar_url) ? metadata.profile_avatar_url : '',
       providerPhotoURL: metadata.avatar_url || raw.photoURL || raw.avatar_url || '',
       emailVerified: Boolean(raw.email_confirmed_at || raw.emailVerified || MODE === 'local'),
-      role: String(raw.email || '').toLowerCase() === ADMIN_EMAIL ? 'admin' : (raw.role || 'member'),
+      role: trustedAdminClaim || raw.role === 'admin' ? 'admin' : 'member',
       raw
     };
+  }
+
+  async function hydratePrivileges(user) {
+    if (!user || MODE !== 'supabase' || !supabaseClient) return user;
+    try {
+      const { data: allowed, error } = await supabaseClient.rpc('is_admin');
+      if (error) throw error;
+      return { ...user, role: allowed === true ? 'admin' : 'member' };
+    } catch (error) {
+      // Falhar fechado: sem confirmação do servidor, a conta nunca recebe acesso admin.
+      console.warn('Não foi possível confirmar as permissões da sessão.');
+      return { ...user, role: 'member' };
+    }
   }
 
   async function resolveSupabaseUser(authResult) {
     if (MODE !== 'supabase' || !supabaseClient) return currentUser;
 
     const immediateUser = authResult?.user || authResult?.session?.user || null;
-    if (immediateUser) return normalizeUser(immediateUser);
+    if (immediateUser) return hydratePrivileges(normalizeUser(immediateUser));
 
     // Em alguns navegadores o Supabase conclui o login alguns milissegundos
     // antes de disponibilizar a sessão persistida. Tentamos novamente por um
@@ -170,13 +186,13 @@
       const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
       if (sessionError) console.warn('Não foi possível recuperar a sessão após o login:', sessionError.message);
       const sessionUser = sessionData?.session?.user || null;
-      if (sessionUser) return normalizeUser(sessionUser);
+      if (sessionUser) return hydratePrivileges(normalizeUser(sessionUser));
 
       const { data: userData, error: userError } = await supabaseClient.auth.getUser();
       if (userError && userError.name !== 'AuthSessionMissingError') {
         console.warn('Não foi possível recuperar o usuário após o login:', userError.message);
       }
-      if (userData?.user) return normalizeUser(userData.user);
+      if (userData?.user) return hydratePrivileges(normalizeUser(userData.user));
     }
 
     return null;
@@ -479,7 +495,7 @@
         const previous = options.merge === false ? {} : (await this.get(name, id) || {});
         const merged = { ...previous, ...data, id, updatedAt: data.updatedAt || now() };
         if (!merged.createdAt) merged.createdAt = previous.createdAt || now();
-        const payload = { id, collection: name, data: merged, updated_by: currentUser?.email || null, updated_at: now() };
+        const payload = { id, collection: name, data: merged, updated_by: currentUser?.uid || null, updated_at: now() };
         const { data: rows, error } = await supabaseClient.from('content_items').upsert(payload, { onConflict: 'id' }).select('id,data,created_at,updated_at');
         if (error) throw error;
         const row = rows && rows[0];
@@ -500,7 +516,7 @@
         }
         if (name === 'settings') return this.set(name, data.id || uid(), data, { merge: false });
         if (name === 'users') return this.set(name, data.id || data.uid, data, { merge: false });
-        const payload = { collection: name, data: { ...data, createdAt: data.createdAt || now(), updatedAt: data.updatedAt || now() }, created_by: currentUser?.email || null, updated_by: currentUser?.email || null };
+        const payload = { collection: name, data: { ...data, createdAt: data.createdAt || now(), updatedAt: data.updatedAt || now() }, created_by: currentUser?.uid || null, updated_by: currentUser?.uid || null };
         const { data: rows, error } = await supabaseClient.from('content_items').insert(payload).select('id,data,created_at,updated_at');
         if (error) throw error;
         const row = rows && rows[0];
@@ -620,7 +636,7 @@
         profile.bannerId = profile.bannerId || metadataBannerId || cachedBanner.bannerId;
         if (profile.bannerUrl) writeProfileBannerCache(user.uid, profile.bannerUrl, profile.bannerId);
         if (currentUser?.uid === user.uid) {
-          currentUser = { ...currentUser, photoURL: (profile.avatarId && profile.avatarUrl) ? profile.avatarUrl : '', profile };
+          currentUser = { ...currentUser, role: profile.role === 'admin' ? 'admin' : currentUser.role, photoURL: (profile.avatarId && profile.avatarUrl) ? profile.avatarUrl : '', profile };
         }
         return profile;
       }
@@ -636,7 +652,7 @@
         avatarId: existing?.avatarId || '',
         bannerUrl: existing?.bannerUrl || '',
         bannerId: existing?.bannerId || '',
-        role: String(user.email || '').toLowerCase() === ADMIN_EMAIL ? 'admin' : (existing?.role || 'member'),
+        role: existing?.role || 'member',
         profileComplete: true,
         lastLoginAt: now(),
         updatedAt: now(),
@@ -831,7 +847,7 @@
         displayName: String(name || '').trim(),
         photoURL: '',
         emailVerified: true,
-        role: normalizedEmail === ADMIN_EMAIL ? 'admin' : 'member',
+        role: normalizedEmail === LOCAL_ADMIN_EMAIL ? 'admin' : 'member',
         salt,
         passwordHash: await hashPassword(password, salt),
         createdAt: now()
@@ -903,13 +919,13 @@
       localStorage.removeItem('beSessionUid');
       notify();
     },
-    async localAdminExists(email = ADMIN_EMAIL) {
+    async localAdminExists(email = LOCAL_ADMIN_EMAIL) {
       const database = loadLocalDatabase();
       return Boolean(database.accounts[String(email).toLowerCase()]);
     },
     async setupLocalAdmin(email, password) {
-      const normalizedEmail = String(email || ADMIN_EMAIL).trim().toLowerCase();
-      if (normalizedEmail !== ADMIN_EMAIL) throw backendError('auth/not-admin', 'Use o e-mail administrativo autorizado.');
+      const normalizedEmail = String(email || LOCAL_ADMIN_EMAIL).trim().toLowerCase();
+      if (normalizedEmail !== LOCAL_ADMIN_EMAIL) throw backendError('auth/not-admin', 'Use o e-mail administrativo autorizado.');
       const database = loadLocalDatabase();
       if (database.accounts[normalizedEmail]) return this.signInWithEmail({ email: normalizedEmail, password, remember: true });
       return this.signUp({ email: normalizedEmail, password, name: 'Administrador', username: 'administrador', remember: true });
@@ -926,12 +942,8 @@
     async accountExists(email) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
       if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw backendError('auth/invalid-email', 'Digite um e-mail válido.');
-      const { data, error } = await supabaseClient.rpc('account_exists', { p_email: normalizedEmail });
-      if (error) {
-        console.warn('Não foi possível verificar se a conta existe:', error.message);
-        return null;
-      }
-      return Boolean(data);
+      // Não informa ao navegador se um endereço possui conta cadastrada.
+      return null;
     },
     async usernameAvailable(username) {
       const normalizedHandle = normalizeUsername(username);
@@ -950,7 +962,7 @@
       });
       if (error) throw mapAuthError(error);
 
-      currentUser = normalizeUser(result?.user || result?.session?.user || null) || await resolveSupabaseUser(result);
+      currentUser = await hydratePrivileges(normalizeUser(result?.user || result?.session?.user || null)) || await resolveSupabaseUser(result);
       if (!currentUser) {
         throw backendError(
           'auth/session-missing',
@@ -983,11 +995,11 @@
         }
       });
       if (error) throw mapAuthError(error);
-      const signedUpUser = normalizeUser(result.user);
+      const signedUpUser = await hydratePrivileges(normalizeUser(result.user));
       currentUser = result.session ? signedUpUser : null;
       if (currentUser) {
         await profiles.ensure(currentUser);
-        await profiles.update(currentUser.uid, { displayName: String(name || '').trim(), username: normalizedHandle, email: currentUser.email });
+        await profiles.update(currentUser.uid, { displayName: String(name || '').trim(), username: normalizedHandle });
       }
       notify();
       return { user: signedUpUser, session: result.session, needsEmailConfirmation: Boolean(result.user && !result.session) };
@@ -1146,8 +1158,22 @@
       const callbackDestination = authCallbackDestination();
       const callbackFailure = authCallbackError();
       const config = window.BE_SUPABASE_CONFIG;
+      try {
+        for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+          const key = localStorage.key(index);
+          if (!key || !/^sb-.*-auth-token$/i.test(key)) continue;
+          const value = localStorage.getItem(key);
+          if (value && !sessionStorage.getItem(key)) sessionStorage.setItem(key, value);
+          localStorage.removeItem(key);
+        }
+      } catch (_) {}
       supabaseClient = window.supabase.createClient(config.url, config.publishableKey, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storage: window.sessionStorage
+        }
       });
 
       // O listener é registrado imediatamente para não perder o evento SIGNED_IN
@@ -1163,7 +1189,7 @@
           }
 
           if (eventUser) {
-            currentUser = eventUser;
+            currentUser = await hydratePrivileges(eventUser);
             notify();
             return;
           }
@@ -1192,7 +1218,7 @@
 
       const { data: sessionData, error } = await supabaseClient.auth.getSession();
       if (error) console.warn('Não foi possível restaurar a sessão:', error.message);
-      currentUser = normalizeUser(sessionData?.session?.user || null);
+      currentUser = await hydratePrivileges(normalizeUser(sessionData?.session?.user || null));
 
       // O processamento do callback pode terminar alguns instantes depois da
       // criação do cliente. Nessas URLs aguardamos a sessão antes de liberar a UI.
@@ -1238,7 +1264,7 @@
     profiles,
     normalizeUsername,
     validUsername,
-    isAdmin(user) { return Boolean(user && String(user.email || '').toLowerCase() === ADMIN_EMAIL); },
+    isAdmin(user) { return Boolean(user && user.role === 'admin'); },
     get client() { return supabaseClient; }
   };
 })();

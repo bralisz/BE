@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<link rel="stylesheet" href="/mobile/mobile.css?v=20260803-config-hd">
+<link rel="stylesheet" href="/mobile/mobile.css?v=20260803-search-admin-users">
 <meta name="theme-color" content="#050816">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2944,13 +2944,13 @@
   }
 </style>
 
-<link rel="stylesheet" href="/admin/admin.css?v=20260803-config-hd">
+<link rel="stylesheet" href="/admin/admin.css?v=20260803-search-admin-users">
 <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script defer src="/supabase-config.js"></script>
-<script defer src="/backend.js?v=20260803-config-hd"></script>
-<script defer src="/admin/admin.js?v=20260803-config-hd"></script>
-<script defer src="/public-data.js?v=20260803-config-hd"></script>
-<script defer src="/mobile/mobile.js?v=20260803-config-hd"></script>
+<script defer src="/backend.js?v=20260803-search-admin-users"></script>
+<script defer src="/admin/admin.js?v=20260803-search-admin-users"></script>
+<script defer src="/public-data.js?v=20260803-search-admin-users"></script>
+<script defer src="/mobile/mobile.js?v=20260803-search-admin-users"></script>
 
 <style id="desktop-search-visibility-fix">
 @media (min-width:761px){
@@ -3709,7 +3709,7 @@
     function closeAvatarPicker(){avatarPicker.hidden=true;syncBodyScroll();}
     function closeBannerPicker(){bannerPicker.hidden=true;syncBodyScroll();}
     function closeProfile(){profileModal.hidden=true;syncBodyScroll();}
-    function closeOnboarding(force){if(!force&&auth.currentUser&&!String(currentProfile.username||'').trim())return;profileOnboarding.hidden=true;syncBodyScroll();}
+    function closeOnboarding(force){if(!force&&auth.currentUser&&!String(currentProfile.username||'').trim())return;profileOnboarding.hidden=true;document.body.classList.remove('profile-onboarding-active');profileOnboarding.setAttribute('aria-hidden','true');syncBodyScroll();}
 
     function setupAvatarRails(){
       avatarPickerBody.querySelectorAll('.avatar-category').forEach(function(section){
@@ -3898,7 +3898,7 @@
         if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='settings-status err';return;}
         submit.disabled=true;msg.textContent='Salvando…';msg.className='settings-status';
         try{
-          currentProfile=await beBackend.profiles.update(user.uid,{displayName:displayName,username:handle,email:user.email||'',updatedAt:beBackend.now()});
+          currentProfile=await beBackend.profiles.update(user.uid,{displayName:displayName,username:handle,updatedAt:beBackend.now()});
           await auth.updateCurrentUser({displayName:displayName});
           username.textContent='@'+handle;
           renderProfilePage();
@@ -3976,14 +3976,16 @@
       profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview">'+(avatar?'<img loading="lazy" decoding="async" src="'+escapePublic(avatar)+'" alt="Avatar do perfil">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>')+'</div><div><h3>'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher foto</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
       document.getElementById('profileChooseAvatar').onclick=function(){closeProfile();openAvatarPicker();};document.getElementById('profileCancel').onclick=closeProfile;
       var bio=document.getElementById('profileBio'),count=document.getElementById('profileBioCount');function updateCount(){count.textContent=bio.value.length;}bio.addEventListener('input',updateCount);updateCount();
-      document.getElementById('profileForm').addEventListener('submit',async function(e){e.preventDefault();var form=e.currentTarget,msg=document.getElementById('profileMessage'),submit=form.querySelector('[type="submit"]');var displayName=form.displayName.value.trim(),handle=beBackend.normalizeUsername(form.username.value),bioText=form.bio.value.trim();form.username.value=handle;if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='profile-message err';return;}submit.disabled=true;msg.textContent='Salvando…';msg.className='profile-message';try{var payload={displayName:displayName,username:handle,bio:bioText,email:user.email||'',updatedAt:beBackend.now()};currentProfile=await beBackend.profiles.update(user.uid,payload);await auth.updateCurrentUser({displayName:displayName});username.textContent=handle?'@'+handle:(displayName||'Usuário');msg.textContent='Perfil salvo com sucesso.';msg.className='profile-message ok';setTimeout(closeProfile,700);}catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso. Escolha outro.':'Não foi possível salvar: '+error.message;msg.className='profile-message err';}finally{submit.disabled=false;}});
+      document.getElementById('profileForm').addEventListener('submit',async function(e){e.preventDefault();var form=e.currentTarget,msg=document.getElementById('profileMessage'),submit=form.querySelector('[type="submit"]');var displayName=form.displayName.value.trim(),handle=beBackend.normalizeUsername(form.username.value),bioText=form.bio.value.trim();form.username.value=handle;if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='profile-message err';return;}submit.disabled=true;msg.textContent='Salvando…';msg.className='profile-message';try{var payload={displayName:displayName,username:handle,bio:bioText,updatedAt:beBackend.now()};currentProfile=await beBackend.profiles.update(user.uid,payload);await auth.updateCurrentUser({displayName:displayName});username.textContent=handle?'@'+handle:(displayName||'Usuário');msg.textContent='Perfil salvo com sucesso.';msg.className='profile-message ok';setTimeout(closeProfile,700);}catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso. Escolha outro.':'Não foi possível salvar: '+error.message;msg.className='profile-message err';}finally{submit.disabled=false;}});
     }
 
 
     function openOnboarding(user){
       if(!user||beBackend.isAdmin(user)||String(currentProfile.username||'').trim())return;
       onboardingShownFor=user.uid;
+      document.body.classList.add('profile-onboarding-active');
       profileOnboarding.hidden=false;
+      profileOnboarding.setAttribute('aria-hidden','false');
       onboardingMessage.textContent='';onboardingMessage.className='onboarding-message';
       onboardingUsername.value='';
       onboardingHandlePreview.textContent='@seunome';
@@ -4012,7 +4014,7 @@
       var submit=onboardingForm.querySelector('[type="submit"]');
       submit.disabled=true;onboardingMessage.textContent='Salvando seu perfil…';onboardingMessage.className='onboarding-message';
       try{
-        currentProfile=await beBackend.profiles.update(user.uid,{username:handle,displayName:currentProfile.displayName||user.displayName||'',email:user.email||'',profileComplete:true,updatedAt:beBackend.now()});
+        currentProfile=await beBackend.profiles.update(user.uid,{username:handle,displayName:currentProfile.displayName||user.displayName||'',profileComplete:true,updatedAt:beBackend.now()});
         username.textContent='@'+handle;
         onboardingMessage.textContent='Perfil configurado com sucesso.';onboardingMessage.className='onboarding-message ok';
         setTimeout(function(){closeOnboarding(true);},420);
@@ -4280,7 +4282,7 @@
       e.preventDefault();
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=form.elements.namedItem('email').value.trim().toLowerCase();
       if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('Verificando sua conta…');
+      authFlowBusy=true;if(b)b.disabled=true;setStatus('Continuando com segurança…');
       try{
         var exists=typeof auth.accountExists==='function'?await auth.accountExists(email):null;
         selectedAuthEmail=email;
@@ -4288,7 +4290,7 @@
         else if(exists===true){setMode('password',email);}
         else{
           setMode('password',email);
-          setStatus('Não foi possível confirmar automaticamente. Digite sua senha ou escolha “Criar conta”.');
+          setStatus('Digite sua senha. Caso ainda não tenha uma conta, escolha “Criar conta”.');
         }
       }catch(err){setStatus(friendly(err),'error');}
       finally{authFlowBusy=false;if(b)b.disabled=false;}
@@ -4324,7 +4326,6 @@
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),name=form.elements.namedItem('name').value.trim(),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
       if(name.length<2){setStatus('Digite seu nome completo.','error');return;}
       if(!validAuthPassword(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
-      if(email===beBackend.ADMIN_EMAIL){setStatus('A conta administrativa deve ser acessada pelo painel.','error');return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
       try{

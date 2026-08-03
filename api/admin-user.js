@@ -1,6 +1,6 @@
 'use strict';
 
-const ADMIN_EMAIL = 'bralisofc@gmail.com';
+const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 
 function envConfig() {
   return {
@@ -9,7 +9,8 @@ function envConfig() {
       process.env.NEXT_PUBLIC_SUPABASE_URL ||
       'https://cxkevnnxibhezvospkce.supabase.co'
     ).replace(/\/$/, ''),
-    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    publishableKey: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_PUBLISHABLE_KEY
   };
 }
 
@@ -19,10 +20,10 @@ async function jsonResponse(response) {
   try { return JSON.parse(text); } catch (_) { return { message: text }; }
 }
 
-async function getUserByToken(url, serviceKey, accessToken) {
+async function getUserByToken(url, apiKey, accessToken) {
   const response = await fetch(`${url}/auth/v1/user`, {
     headers: {
-      apikey: serviceKey,
+      apikey: apiKey,
       Authorization: `Bearer ${accessToken}`
     }
   });
@@ -33,6 +34,21 @@ async function getUserByToken(url, serviceKey, accessToken) {
     throw error;
   }
   return body;
+}
+
+
+async function requesterIsAdmin(url, publishableKey, accessToken) {
+  const response = await fetch(`${url}/rest/v1/rpc/is_admin`, {
+    method: 'POST',
+    headers: {
+      apikey: publishableKey,
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: '{}'
+  });
+  const body = await jsonResponse(response);
+  return response.ok && body === true;
 }
 
 async function getAdminUser(url, serviceKey, userId) {
@@ -51,38 +67,59 @@ async function getAdminUser(url, serviceKey, userId) {
   return body;
 }
 
-async function getProfile(url, serviceKey, userId) {
+async function getProfile(url, apiKey, bearerToken, userId) {
   const response = await fetch(
     `${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=*`,
     {
       headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
+        apikey: apiKey,
+        Authorization: `Bearer ${bearerToken}`,
         Accept: 'application/json'
       }
     }
   );
   const body = await jsonResponse(response);
-  if (!response.ok) return null;
+  if (!response.ok) {
+    const error = new Error(body?.message || body?.error || 'Não foi possível carregar o perfil.');
+    error.status = response.status;
+    throw error;
+  }
   return Array.isArray(body) ? body[0] || null : null;
 }
 
-async function patchProfile(url, serviceKey, userId, patch) {
+async function patchProfile(url, apiKey, bearerToken, userId, patch) {
   const response = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`, {
     method: 'PATCH',
     headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
+      apikey: apiKey,
+      Authorization: `Bearer ${bearerToken}`,
       'Content-Type': 'application/json',
-      Prefer: 'return=minimal'
+      Prefer: 'return=representation'
     },
     body: JSON.stringify(patch)
   });
+  const body = await jsonResponse(response);
   if (!response.ok) {
-    const body = await jsonResponse(response);
-    return body?.message || body?.error || 'Não foi possível atualizar o perfil.';
+    const error = new Error(body?.message || body?.error || 'Não foi possível atualizar o perfil.');
+    error.status = response.status;
+    throw error;
   }
-  return '';
+  return Array.isArray(body) ? body[0] || null : body;
+}
+
+async function callAdminRpc(url, publishableKey, accessToken, action, userId, reason) {
+  const response = await fetch(`${url}/rest/v1/rpc/admin_manage_user`, {
+    method: 'POST',
+    headers: {
+      apikey: publishableKey,
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ p_action: action, p_user_id: userId, p_reason: reason || '' })
+  });
+  const body = await jsonResponse(response);
+  if (!response.ok) return null;
+  return body;
 }
 
 module.exports = async function adminUserHandler(req, res) {
@@ -91,18 +128,13 @@ module.exports = async function adminUserHandler(req, res) {
     return res.status(405).json({ error: 'Método não permitido.' });
   }
 
-  const { url, serviceKey } = envConfig();
+  const { url, serviceKey, publishableKey } = envConfig();
   const authorization = String(req.headers.authorization || '');
   const accessToken = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
   const action = String(req.body?.action || '').trim().toLowerCase();
   const userId = String(req.body?.userId || '').trim();
   const reason = String(req.body?.reason || '').trim().slice(0, 500);
 
-  if (!serviceKey) {
-    return res.status(503).json({
-      error: 'Configure SUPABASE_SERVICE_ROLE_KEY nas variáveis do projeto Vercel para gerenciar usuários.'
-    });
-  }
   if (!accessToken) return res.status(401).json({ error: 'Sessão administrativa não encontrada.' });
   if (!userId) return res.status(400).json({ error: 'Usuário não informado.' });
   if (!['delete', 'ban', 'unban', 'export'].includes(action)) {
@@ -110,18 +142,86 @@ module.exports = async function adminUserHandler(req, res) {
   }
 
   try {
-    const requester = await getUserByToken(url, serviceKey, accessToken);
-    if (String(requester.email || '').toLowerCase() !== ADMIN_EMAIL) {
+    const requester = await getUserByToken(url, serviceKey || publishableKey, accessToken);
+    if (!await requesterIsAdmin(url, publishableKey, accessToken)) {
       return res.status(403).json({ error: 'Apenas o administrador pode realizar esta ação.' });
+    }
+    if (requester.id === userId) {
+      return res.status(403).json({ error: 'A conta administrativa principal não pode ser alterada aqui.' });
+    }
+
+    if (!serviceKey) {
+      const rpcResult = await callAdminRpc(url, publishableKey, accessToken, action, userId, reason);
+      if (rpcResult) {
+        return res.status(200).json({ ok: true, ...rpcResult });
+      }
+
+      const profile = await getProfile(url, publishableKey, accessToken, userId);
+      if (!profile) return res.status(404).json({ error: 'Usuário não encontrado.' });
+      if (profile.role === 'admin') {
+        return res.status(403).json({ error: 'A conta administrativa principal não pode ser alterada aqui.' });
+      }
+
+      if (action === 'export') {
+        return res.status(200).json({
+          ok: true,
+          exportedAt: new Date().toISOString(),
+          account: {
+            id: profile.id,
+            email: profile.email || '',
+            createdAt: profile.created_at || '',
+            updatedAt: profile.updated_at || '',
+            lastSignInAt: profile.last_login_at || '',
+            bannedUntil: profile.banned ? 'indefinido' : '',
+            source: 'perfil'
+          },
+          profile
+        });
+      }
+
+      const now = new Date().toISOString();
+      if (action === 'ban' || action === 'unban') {
+        const banned = action === 'ban';
+        const updatedProfile = await patchProfile(url, publishableKey, accessToken, userId, {
+          banned,
+          banned_at: banned ? now : null,
+          ban_reason: banned ? reason : '',
+          updated_at: now
+        });
+        return res.status(200).json({ ok: true, banned, profile: updatedProfile, mode: 'profile' });
+      }
+
+      const updatedProfile = await patchProfile(url, publishableKey, accessToken, userId, {
+        email: `removed+${userId}@deleted.invalid`,
+        display_name: 'Conta removida',
+        username: null,
+        bio: '',
+        avatar_url: '',
+        avatar_id: '',
+        banner_url: '',
+        banner_id: '',
+        banned: true,
+        banned_at: now,
+        ban_reason: 'Conta removida pelo administrador',
+        profile_complete: false,
+        updated_at: now
+      });
+      return res.status(200).json({
+        ok: true,
+        deleted: true,
+        softDeleted: true,
+        profile: updatedProfile,
+        mode: 'profile'
+      });
     }
 
     const target = await getAdminUser(url, serviceKey, userId);
-    if (String(target.email || '').toLowerCase() === ADMIN_EMAIL || target.id === requester.id) {
+    if (target.app_metadata?.role === 'admin' || target.app_metadata?.is_admin === true) {
       return res.status(403).json({ error: 'A conta administrativa principal não pode ser alterada aqui.' });
     }
 
     if (action === 'export') {
-      const profile = await getProfile(url, serviceKey, userId);
+      const profile = await getProfile(url, serviceKey, serviceKey, userId).catch(() => null);
       const identities = Array.isArray(target.identities)
         ? target.identities.map(identity => ({
             id: identity.id,
@@ -195,12 +295,17 @@ module.exports = async function adminUserHandler(req, res) {
       });
     }
 
-    const profileWarning = await patchProfile(url, serviceKey, userId, {
-      banned,
-      banned_at: banned ? now : null,
-      ban_reason: banned ? reason : '',
-      updated_at: now
-    });
+    let profileWarning = '';
+    try {
+      await patchProfile(url, serviceKey, serviceKey, userId, {
+        banned,
+        banned_at: banned ? now : null,
+        ban_reason: banned ? reason : '',
+        updated_at: now
+      });
+    } catch (error) {
+      profileWarning = error.message;
+    }
 
     return res.status(200).json({
       ok: true,

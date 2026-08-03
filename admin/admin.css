@@ -832,3 +832,41 @@ body.admin-mode button.a-btn.primary,
   .content-featured-block>small{display:none}.content-category-link.featured-link{height:100%}
   .gallery-create-panel{grid-template-columns:1fr}.gallery-create-card{min-height:92px}
 }
+
+
+/* Menu da conta administrativo — compacto, escuro e alinhado ao visual público. */
+body.admin-mode .admin-account-menu{
+  width:264px;
+  padding:14px;
+  border:1px solid rgba(116,139,174,.42);
+  border-radius:28px;
+  background:#05080d;
+  -webkit-backdrop-filter:blur(26px) saturate(120%);
+  backdrop-filter:blur(26px) saturate(120%);
+  box-shadow:0 22px 54px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.035);
+}
+body.admin-mode .admin-account-menu button{
+  min-height:52px;
+  padding:0 14px;
+  border-radius:14px;
+  color:#aeb7c6;
+  font-size:16px;
+  font-weight:700;
+}
+body.admin-mode .admin-account-menu button:hover,
+body.admin-mode .admin-account-menu button:focus-visible{
+  background:rgba(255,255,255,.055);
+  color:#fff;
+}
+body.admin-mode .admin-account-menu .admin-account-divider{
+  margin:8px 2px;
+  background:rgba(129,153,190,.2);
+}
+body.admin-mode .admin-account-menu button.danger{color:#ff7a45}
+@media(max-width:760px){
+  body.admin-mode .admin-account-menu{
+    right:-4px;
+    top:calc(100% + 10px);
+    width:min(264px,calc(100vw - 28px));
+  }
+}

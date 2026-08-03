@@ -395,3 +395,40 @@
     contain-intrinsic-size: 420px;
   }
 }
+
+/* Mantém somente o X animado do site; remove o X nativo do navegador. */
+.mobile-search-control input[type="search"]{
+  -webkit-appearance:none;
+  appearance:none;
+}
+.mobile-search-control input[type="search"]::-webkit-search-decoration,
+.mobile-search-control input[type="search"]::-webkit-search-cancel-button,
+.mobile-search-control input[type="search"]::-webkit-search-results-button,
+.mobile-search-control input[type="search"]::-webkit-search-results-decoration{
+  display:none!important;
+  -webkit-appearance:none!important;
+  appearance:none!important;
+}
+.mobile-search-control input[type="search"]::-ms-clear,
+.mobile-search-control input[type="search"]::-ms-reveal{
+  display:none!important;
+  width:0!important;
+  height:0!important;
+}
+
+
+/* Durante a configuração obrigatória do @ e avatar, a tela é dedicada. */
+@media (max-width:760px){
+  body.profile-onboarding-active #mobileAppBar,
+  body.profile-onboarding-active .mobile-app-bar,
+  body.profile-onboarding-active .mobile-drawer,
+  body.profile-onboarding-active .mobile-drawer-backdrop,
+  body.profile-onboarding-active .topbar-wrap{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  body.profile-onboarding-active{overflow:hidden!important}
+  body.profile-onboarding-active .onboarding-backdrop{z-index:20050!important}
+  body.profile-onboarding-active .avatar-picker-backdrop{z-index:20060!important}
+}
