@@ -171,15 +171,30 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
   async function hydratePrivileges(user) {
     if (!user || MODE !== 'supabase' || !supabaseClient) return user;
+
+    // A função RPC é a confirmação principal. A leitura do próprio perfil é um
+    // fallback seguro para navegadores que ainda estejam usando o cache antigo
+    // do schema do Supabase logo após uma migração.
     try {
       const { data: allowed, error } = await supabaseClient.rpc('is_admin');
-      if (error) throw error;
-      return { ...user, role: allowed === true ? 'admin' : 'member' };
-    } catch (error) {
-      // Falhar fechado: sem confirmação do servidor, a conta nunca recebe acesso admin.
-      console.warn('Não foi possível confirmar as permissões da sessão.');
-      return { ...user, role: 'member' };
-    }
+      if (!error && allowed === true) return { ...user, role: 'admin' };
+    } catch (_) {}
+
+    try {
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('role')
+        .eq('id', user.uid)
+        .maybeSingle();
+      if (!error && profile?.role === 'admin') return { ...user, role: 'admin' };
+    } catch (_) {}
+
+    // Claims emitidas pelo servidor continuam válidas, mas nunca usamos o
+    // endereço de e-mail no JavaScript público para conceder acesso.
+    if (user.role === 'admin') return user;
+
+    console.warn('Não foi possível confirmar as permissões administrativas da sessão.');
+    return { ...user, role: 'member' };
   }
 
   async function resolveSupabaseUser(authResult) {
