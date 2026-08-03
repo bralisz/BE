@@ -3389,3 +3389,120 @@
     box-shadow:none!important;
     filter:none!important;
   }
+
+
+/* Skeleton final: mantém o carregamento acima de toda a interface e segue o layout real. */
+.auth-loading{
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147483647!important;
+  display:block!important;
+  overflow:hidden!important;
+  isolation:isolate!important;
+  background:#030405!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+.auth-loading[hidden]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+.site-loading-skeleton{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:100%!important;
+  overflow:auto!important;
+  overscroll-behavior:none!important;
+  background:#030405!important;
+}
+.site-skeleton-title{display:grid;gap:10px;width:min(470px,100%)}
+.site-skeleton-title>i{display:block;height:38px;border-radius:9px}
+.site-skeleton-title>i:nth-child(1){width:88%}
+.site-skeleton-title>i:nth-child(2){width:72%}
+.site-skeleton-title>i:nth-child(3){display:none;width:54%}
+
+@media(min-width:761px){
+  .site-loading-skeleton{padding:14px clamp(22px,4vw,72px) 48px!important}
+  .site-skeleton-top{height:82px!important;grid-template-columns:1fr minmax(430px,520px) 1fr!important}
+  .site-skeleton-hero{height:min(68vh,680px)!important;min-height:520px!important;margin-top:2px!important}
+  .site-skeleton-copy{left:clamp(30px,4vw,68px)!important;right:auto!important;bottom:clamp(72px,11vh,128px)!important;width:min(490px,40vw)!important}
+  .site-skeleton-title>i{height:42px}
+  .site-skeleton-title>i:nth-child(1){width:94%}
+  .site-skeleton-title>i:nth-child(2){width:68%}
+}
+
+@media(max-width:760px){
+  .site-loading-skeleton{padding:0!important;background:#030405!important}
+  .site-skeleton-top{
+    position:absolute!important;
+    top:0!important;left:0!important;right:0!important;
+    height:96px!important;
+    padding:18px 24px 14px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:0!important;
+    background:linear-gradient(180deg,rgba(3,4,5,.98) 0%,rgba(3,4,5,.84) 72%,transparent 100%)!important;
+    z-index:5!important;
+  }
+  .site-skeleton-nav{display:none!important}
+  .site-skeleton-avatar-left,.site-skeleton-avatar-right{
+    visibility:visible!important;
+    display:block!important;
+    width:54px!important;
+    height:54px!important;
+    min-width:54px!important;
+    border-radius:50%!important;
+    justify-self:auto!important;
+  }
+  .site-skeleton-hero{
+    height:calc(100svh - 74px)!important;
+    max-height:920px!important;
+    min-height:660px!important;
+    margin:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:
+      linear-gradient(180deg,rgba(3,4,5,.08) 0%,rgba(3,4,5,.12) 38%,rgba(3,4,5,.92) 100%),
+      #0b0d0f!important;
+  }
+  .site-skeleton-copy{
+    left:34px!important;
+    right:34px!important;
+    bottom:62px!important;
+    width:auto!important;
+    gap:13px!important;
+  }
+  .site-skeleton-title{gap:8px;width:100%}
+  .site-skeleton-title>i{height:44px;border-radius:8px}
+  .site-skeleton-title>i:nth-child(1){width:92%}
+  .site-skeleton-title>i:nth-child(2){width:76%}
+  .site-skeleton-title>i:nth-child(3){display:block;width:56%}
+  .site-skeleton-meta{width:44%!important;height:13px!important}
+  .site-skeleton-line{height:13px!important;width:100%!important}
+  .site-skeleton-line.short{width:72%!important}
+  .site-skeleton-actions{display:flex!important;gap:12px!important;margin-top:10px!important}
+  .site-skeleton-button{flex:1 1 auto!important;width:auto!important;height:56px!important;border-radius:999px!important}
+  .site-skeleton-round{flex:0 0 56px!important;width:56px!important;height:56px!important;border-radius:50%!important}
+  .site-skeleton-section{
+    position:relative!important;
+    z-index:2!important;
+    margin:-1px 0 0!important;
+    padding:32px 34px 44px!important;
+    border:1px solid rgba(255,255,255,.055)!important;
+    border-bottom:0!important;
+    border-radius:30px 30px 0 0!important;
+    background:#050607!important;
+  }
+  .site-skeleton-heading{width:142px!important;height:27px!important;margin-bottom:22px!important;border-radius:7px!important}
+  .site-skeleton-cards{display:flex!important;gap:14px!important;overflow:hidden!important}
+  .site-skeleton-card{flex:0 0 min(78vw,340px)!important;aspect-ratio:16/9!important;border-radius:16px!important}
+}
+
+/* O botão de três pontos sempre fica acima do banner e recebe clique. */
+.profile-page-more{
+  z-index:30!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  cursor:pointer!important;
+}

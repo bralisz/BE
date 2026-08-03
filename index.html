@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-4">
+<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803b-4">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/app.privacy.js?v=20260803-4"></script>
 </head>
@@ -27,7 +27,9 @@
     </div>
     <div class="site-skeleton-hero skeleton-shimmer">
       <div class="site-skeleton-copy">
-        <span class="site-skeleton-logo skeleton-shimmer"></span>
+        <span class="site-skeleton-title" aria-hidden="true">
+          <i class="skeleton-shimmer"></i><i class="skeleton-shimmer"></i><i class="skeleton-shimmer"></i>
+        </span>
         <span class="site-skeleton-meta skeleton-shimmer"></span>
         <span class="site-skeleton-line skeleton-shimmer"></span>
         <span class="site-skeleton-line short skeleton-shimmer"></span>
@@ -409,7 +411,7 @@
   <div class="profile-page-hero">
     <div class="profile-page-banner" id="profilePageBanner" hidden><img loading="eager" fetchpriority="high" decoding="async" id="profilePageBannerImg" alt="Banner do perfil"></div>
     <div class="profile-page-banner-fallback" id="profilePageBannerFallback"></div>
-    <button class="profile-page-more" id="profilePageMore" type="button" aria-label="Abrir configurações do perfil">
+    <button class="profile-page-more" id="profilePageMore" type="button" data-public-action="settings" aria-label="Abrir configurações do perfil">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
     </button>
     <div class="profile-page-info">
@@ -585,6 +587,6 @@
     </nav>
   </div>
 </footer>
-<script src="/assets/ui.privacy.js?v=20260803-3"></script>
+<script src="/assets/ui.privacy.js?v=20260803b-3"></script>
 </body>
 </html>

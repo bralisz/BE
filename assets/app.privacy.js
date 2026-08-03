@@ -2920,16 +2920,24 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       await window.beBackend.ready;
       var account=window.beBackend.auth.currentUser||null;
       if(!account){showLogin();return;}
-      if(!window.beBackend.isAdmin(account)){showDenied();return;}
       var client=window.beBackend.client;
       var sessionResult=client&&client.auth?await client.auth.getSession():null;
       var token=sessionResult&&sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.access_token;
       if(!token){showLogin('Sua sessão expirou. Entre novamente.');return;}
       adminFrame('<div style="color:#9fb9df;font-size:16px">Carregando painel seguro…</div>');
       var response=await fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'same-origin'});
-      if(!response.ok)throw new Error('O painel não pôde ser autorizado.');
+      if(!response.ok){location.replace('/404.html');return;}
       var source=await response.text();
-      (new Function(source))();
+      await new Promise(function(resolve,reject){
+        var blob=new Blob([source],{type:'application/javascript'});
+        var blobUrl=URL.createObjectURL(blob);
+        var script=document.createElement('script');
+        script.src=blobUrl;
+        script.async=false;
+        script.onload=function(){URL.revokeObjectURL(blobUrl);script.remove();resolve();};
+        script.onerror=function(){URL.revokeObjectURL(blobUrl);script.remove();reject(new Error('Não foi possível iniciar o painel.'));};
+        document.head.appendChild(script);
+      });
       loaded=true;
     }catch(error){
       adminFrame('<section style="width:min(480px,100%);padding:30px;border:1px solid rgba(255,255,255,.13);border-radius:24px;background:#0a0d12;text-align:center"><h1 style="margin:0 0 10px;font-size:25px">Não foi possível carregar o painel</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">'+String(error&&error.message||'Atualize a página e tente novamente.').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})+'</p></section>');

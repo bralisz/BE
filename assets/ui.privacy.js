@@ -922,3 +922,33 @@
   document.addEventListener('DOMContentLoaded',function(){renderLegalRoute();showCookieNotice();});
   if(document.readyState!=='loading'){renderLegalRoute();showCookieNotice();}
 })();
+
+
+/* Navegação de segurança dos três pontos do perfil, válida no mobile e desktop. */
+;(function(){
+  'use strict';
+  function openProfileSettings(event){
+    var button=event.target&&event.target.closest?event.target.closest('#profilePageMore'):null;
+    if(!button)return;
+    event.preventDefault();
+    event.stopPropagation();
+    var account=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
+    if(!account){
+      location.hash='#login';
+      document.body.classList.add('login-mode');
+      return;
+    }
+    var target='/config'+(location.search||'');
+    try{history.pushState({beRoute:'config'},'',target);}catch(_){location.hash='#/config';}
+    window.dispatchEvent(new CustomEvent('be:open-config'));
+    window.setTimeout(function(){
+      if(!document.body.classList.contains('settings-page-active'))location.assign(target);
+    },220);
+  }
+  document.addEventListener('click',openProfileSettings,true);
+  document.addEventListener('touchend',function(event){
+    var button=event.target&&event.target.closest?event.target.closest('#profilePageMore'):null;
+    if(!button)return;
+    openProfileSettings(event);
+  },{capture:true,passive:false});
+})();
