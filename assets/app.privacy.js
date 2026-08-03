@@ -1987,10 +1987,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   function renderDetailRecommendations(current) {
     const panel = document.getElementById('detailRecommendations');
     const moreRail = document.getElementById('detailMoreRail');
-    const recommendationRail = document.getElementById('detailRecommendationRail');
-    const sameSectionRail = document.getElementById('detailSameSectionRail');
     const catalog = document.getElementById('dynamicSections');
-    if (!panel || !moreRail || !recommendationRail || !sameSectionRail || !catalog) return;
+    if (!panel || !moreRail || !catalog) return;
 
     const currentId = String(current.itemId || current.title || '');
     const sourceKey = String(current.sourceSectionKey || '');
@@ -2014,32 +2012,15 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       return categoryMatch || collectionMatch;
     });
 
-    // 1ª seção: 7 conteúdos relacionados por categoria, coleção ou seção.
     const moreItems = uniqueById([
       ...shuffleItems(similarCategory),
       ...shuffleItems(sameSection),
       ...shuffleItems(all)
-    ]).slice(0, 7);
-
-    // 2ª seção: volta a exibir 10 recomendações aleatórias.
-    const randomItems = shuffleItems(all).slice(0, 10);
-
-    // 3ª seção: 5 vídeos da mesma seção; usa conteúdos semelhantes como reserva.
-    const sameSectionItems = uniqueById([
-      ...shuffleItems(sameSection),
-      ...shuffleItems(similarCategory),
-      ...shuffleItems(all)
-    ]).slice(0, 5);
+    ]).slice(0, 9);
 
     moreRail.innerHTML = moreItems.length
       ? moreItems.map(recommendationCard).join('')
       : '<p class="detail-reco-empty">Nenhum vídeo semelhante disponível.</p>';
-    recommendationRail.innerHTML = randomItems.length
-      ? randomItems.map(recommendationCard).join('')
-      : '<p class="detail-reco-empty">Nenhum outro vídeo disponível.</p>';
-    sameSectionRail.innerHTML = sameSectionItems.length
-      ? sameSectionItems.map(recommendationCard).join('')
-      : '<p class="detail-reco-empty">Nenhum vídeo disponível nesta seção.</p>';
 
     setupContentDetailInteractions(panel);
     panel.hidden = false;
@@ -2908,18 +2889,19 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     try{remembered=sessionStorage.getItem('beOAuthDestination')||'';}catch(_){ }
     return String(location.hash||'').startsWith('#/admin')||callback==='admin'||remembered==='admin';
   }
-  function adminFrame(content){
+  function adminFrame(content,mode){
     document.documentElement.classList.add('admin-mode');
     document.body.classList.add('admin-mode');
-    document.body.innerHTML='<div style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#05070b;color:#fff;font-family:Inter,system-ui,sans-serif">'+content+'</div>';
+    document.body.innerHTML='<div class="'+(mode==='login'?'protected-admin-login-page':'protected-admin-system-page')+'">'+content+'</div>';
   }
   function showLogin(message){
-    adminFrame('<section style="width:min(430px,100%);padding:32px;border:1px solid rgba(255,255,255,.13);border-radius:28px;background:#0a0d12;text-align:center"><a href="/" aria-label="Voltar ao site"><img src="/assets/logo.png?v=3" alt="BE" style="width:68px;height:68px;object-fit:contain"></a><h1 style="margin:20px 0 8px;font-size:28px">Dashboard Admin</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">'+(message||'Entre com a conta administrativa autorizada.')+'</p><button id="protectedAdminGoogle" type="button" style="width:100%;min-height:54px;margin-top:24px;border:0;border-radius:16px;background:#347ff1;color:#fff;font-weight:800;font-size:16px;cursor:pointer">Conectar via Google</button></section>');
+    adminFrame('<section class="protected-admin-login-shell" aria-label="Entrar no Dashboard Admin"><a class="protected-admin-login-logo" href="/" aria-label="Voltar ao site"><img src="/assets/logo.png?v=3" alt="BE"></a><div class="protected-admin-login-card"><button id="protectedAdminGoogle" class="protected-admin-google-button" type="button"><span class="protected-admin-google-icon" aria-hidden="true">G</span><span class="protected-admin-google-label">Conectar via Google</span></button></div></section>','login');
     var button=document.getElementById('protectedAdminGoogle');
     if(button)button.onclick=async function(){
-      button.disabled=true;button.textContent='Conectando…';
+      var label=button.querySelector('.protected-admin-google-label');
+      button.disabled=true;if(label)label.textContent='Conectando…';
       try{await window.beBackend.ready;await window.beBackend.auth.signInWithGoogle();}
-      catch(error){button.disabled=false;button.textContent='Conectar via Google';alert(error&&error.message||'Não foi possível entrar.');}
+      catch(error){button.disabled=false;if(label)label.textContent='Conectar via Google';alert(error&&error.message||message||'Não foi possível entrar.');}
     };
   }
   function showDenied(){

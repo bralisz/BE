@@ -4436,3 +4436,221 @@ body.support-page-active .home-nav-link[data-home-view]{
 body.support-page-active .home-nav-links{
   max-width:94px;
 }
+
+:root{
+  --header-action-size:54px;
+  --header-action-top:21px;
+  --header-action-edge:22px;
+  --header-action-gap:12px;
+}
+.home-user-menu,
+.home-notification-menu{
+  top:var(--header-action-top)!important;
+}
+.home-user-menu{
+  right:var(--header-action-edge)!important;
+}
+.home-notification-menu{
+  right:calc(var(--header-action-edge) + var(--header-action-size) + var(--header-action-gap))!important;
+}
+.home-user-menu .user-chip,
+.notification-button{
+  width:var(--header-action-size)!important;
+  height:var(--header-action-size)!important;
+  min-width:var(--header-action-size)!important;
+  min-height:var(--header-action-size)!important;
+  flex-basis:var(--header-action-size)!important;
+}
+body.profile-page-active .home-notification-menu{
+  top:24px!important;
+  right:24px!important;
+}
+body.profile-page-active .profile-page-more{
+  top:104px!important;
+  right:24px!important;
+}
+.ios-save-toast{
+  top:auto!important;
+  bottom:max(24px,env(safe-area-inset-bottom))!important;
+  transform:translateX(-50%)!important;
+}
+@media(max-width:760px){
+  body.profile-page-active .mobile-app-bar{
+    height:0!important;
+    padding:0!important;
+    background:transparent!important;
+    pointer-events:none!important;
+  }
+  body.profile-page-active .mobile-profile-button,
+  body.profile-page-active .mobile-search-control{
+    display:none!important;
+  }
+  body.profile-page-active .mobile-header-actions{
+    position:fixed!important;
+    top:calc(22px + env(safe-area-inset-top))!important;
+    right:16px!important;
+    width:46px!important;
+    height:46px!important;
+    margin:0!important;
+    display:block!important;
+    pointer-events:auto!important;
+    z-index:10021!important;
+  }
+  body.profile-page-active .mobile-notification-button{
+    display:grid!important;
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    margin:0!important;
+  }
+  body.profile-page-active .profile-page-more{
+    top:calc(82px + env(safe-area-inset-top))!important;
+    right:16px!important;
+    width:46px!important;
+    height:46px!important;
+  }
+  .ios-save-toast{
+    bottom:max(18px,env(safe-area-inset-bottom))!important;
+  }
+}
+
+
+/* Login administrativo alinhado ao visual do acesso principal. */
+html.admin-mode,
+body.admin-mode{
+  min-height:100%;
+  margin:0;
+  overflow:hidden!important;
+  background:#05070b;
+}
+.protected-admin-system-page{
+  min-height:100vh;
+  min-height:100svh;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:#05070b;
+  color:#fff;
+  font-family:Inter,system-ui,sans-serif;
+}
+.protected-admin-login-page{
+  position:relative;
+  isolation:isolate;
+  min-height:100vh;
+  min-height:100svh;
+  display:grid;
+  place-items:center;
+  padding:32px 24px;
+  overflow:hidden;
+  color:#fff;
+  font-family:Inter,system-ui,sans-serif;
+  background:#05070b url('/assets/login-bg-3.png') center center/cover no-repeat;
+}
+.protected-admin-login-page::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  background:
+    radial-gradient(circle at 50% 48%,rgba(0,0,0,.12),rgba(0,0,0,.38) 48%,rgba(0,0,0,.62) 100%),
+    rgba(0,0,0,.48);
+}
+.protected-admin-login-shell{
+  width:min(670px,calc(100vw - 40px));
+  display:flex;
+  flex-direction:column;
+  transform:translateY(10px);
+}
+.protected-admin-login-logo{
+  width:72px;
+  height:72px;
+  display:grid;
+  place-items:center;
+  margin:0 0 72px 24px;
+  border-radius:20px;
+  text-decoration:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.protected-admin-login-logo img{
+  width:68px;
+  height:68px;
+  display:block;
+  object-fit:contain;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.3));
+}
+.protected-admin-login-card{
+  width:100%;
+  padding:36px 38px;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:34px;
+  background:linear-gradient(145deg,rgba(40,40,44,.88),rgba(13,15,19,.9));
+  box-shadow:0 28px 70px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.07);
+  -webkit-backdrop-filter:blur(22px) saturate(125%);
+  backdrop-filter:blur(22px) saturate(125%);
+}
+.protected-admin-google-button{
+  width:100%;
+  min-height:78px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  padding:0 28px;
+  border:0;
+  border-radius:999px;
+  background:#3b82ee;
+  color:#fff;
+  font:800 20px/1 Inter,system-ui,sans-serif;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 12px 28px rgba(18,91,218,.25);
+  transition:transform .18s ease,filter .18s ease,opacity .18s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.protected-admin-google-button:hover{filter:brightness(1.06)}
+.protected-admin-google-button:active{transform:scale(.985)}
+.protected-admin-google-button:focus-visible{outline:3px solid rgba(255,255,255,.92);outline-offset:4px}
+.protected-admin-google-button:disabled{cursor:wait;opacity:.72}
+.protected-admin-google-icon{
+  width:26px;
+  height:26px;
+  display:grid;
+  place-items:center;
+  flex:0 0 26px;
+  border-radius:50%;
+  background:#fff;
+  color:#4285f4;
+  font:800 16px/1 Arial,sans-serif;
+}
+@media(max-width:700px){
+  .protected-admin-login-page{padding:24px 18px;background-position:58% center}
+  .protected-admin-login-shell{width:min(100%,540px);transform:none}
+  .protected-admin-login-logo{width:62px;height:62px;margin:0 auto 48px}
+  .protected-admin-login-logo img{width:60px;height:60px}
+  .protected-admin-login-card{padding:24px;border-radius:27px}
+  .protected-admin-google-button{min-height:62px;padding:0 18px;font-size:17px}
+  .protected-admin-google-icon{width:23px;height:23px;flex-basis:23px;font-size:14px}
+}
+@media(max-height:620px) and (min-width:701px){
+  .protected-admin-login-shell{transform:none}
+  .protected-admin-login-logo{margin-bottom:38px}
+  .protected-admin-login-card{padding:28px 32px}
+  .protected-admin-google-button{min-height:66px}
+}
+
+
+/* Ajustes do painel e das notificações. */
+.home-notification-menu{
+  z-index:10025!important;
+  pointer-events:auto!important;
+  isolation:isolate;
+}
+.notification-button{
+  pointer-events:auto!important;
+  touch-action:manipulation;
+}
+.notification-dropdown{z-index:2}
+.notification-preview-copy small,
+.notification-page-link small,
+.notification-article-date{display:none!important}
+.notification-article h1{margin-bottom:32px}

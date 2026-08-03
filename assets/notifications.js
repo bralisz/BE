@@ -123,7 +123,7 @@
     return items.slice(0,4).map(function(item){
       return '<button class="notification-preview-item" type="button" data-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
-        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(item.description,100)||'Confira esta atualização.')+'</span><small>'+esc(formatShortDate(item))+'</small></span>'+
+        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(item.description,100)||'Confira esta atualização.')+'</span></span>'+
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
       '</button>';
     }).join('');
@@ -156,7 +156,6 @@
       return '<button class="notification-page-link '+(selected?'active':'')+'" type="button" data-notification-page-id="'+esc(item.id)+'" aria-current="'+(selected?'page':'false')+'">'+
         '<strong>'+esc(item.title||'Atualização')+'</strong>'+
         '<span>'+esc(trimText(item.description,92)||'Confira esta atualização.')+'</span>'+
-        '<small>'+esc(formatDate(item))+'</small>'+
       '</button>';
     }).join('');
     pageNav.querySelectorAll('[data-notification-page-id]').forEach(function(button){
@@ -164,7 +163,6 @@
     });
     pageContent.innerHTML='<article class="notification-article">'+
       '<h1>'+esc(active.title||'Atualização')+'</h1>'+
-      '<p class="notification-article-date">'+esc(formatDate(active))+'</p>'+
       '<div class="notification-article-body">'+esc(active.description||'').replace(/\r?\n/g,'<br>')+'</div>'+
     '</article>';
   }
@@ -257,7 +255,6 @@
     if(open){loadNotifications(false);}
   }
 
-  if(desktopButton)desktopButton.addEventListener('click',toggleDesktop);
   if(desktopDropdown)desktopDropdown.addEventListener('click',function(event){event.stopPropagation();});
   if(desktopMarkAll)desktopMarkAll.addEventListener('click',function(event){event.stopPropagation();markAllRead();});
   if(desktopClose)desktopClose.addEventListener('click',function(event){event.stopPropagation();closeDesktop();});
@@ -268,6 +265,14 @@
   if(mobileClose)mobileClose.addEventListener('click',closeMobile);
   if(pageHome)pageHome.addEventListener('click',function(){closePage(true);});
   if(pageClose)pageClose.addEventListener('click',function(){closePage(true);});
+
+  document.addEventListener('click',function(event){
+    var desktopTrigger=event.target&&event.target.closest?event.target.closest('#notificationButton'):null;
+    if(!desktopTrigger)return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleDesktop(event);
+  },true);
 
   document.addEventListener('click',function(event){
     var mobileButton=getMobileButton();
