@@ -1054,8 +1054,49 @@
     },
     async deleteAccount() {
       if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para continuar.');
-      const { error } = await supabaseClient.rpc('delete_my_account');
-      if (error) throw mapAuthError(error);
+
+      let deleted = false;
+      let rpcError = null;
+      const rpcResult = await supabaseClient.rpc('delete_my_account');
+      if (!rpcResult.error) {
+        deleted = true;
+      } else {
+        rpcError = rpcResult.error;
+        const message = String(rpcError.message || '');
+        const missingRpc = rpcError.code === 'PGRST202' || /Could not find the function|schema cache|delete_my_account/i.test(message);
+        if (!missingRpc) throw mapAuthError(rpcError);
+      }
+
+      if (!deleted) {
+        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError) throw mapAuthError(sessionError);
+        const accessToken = sessionData?.session?.access_token;
+        if (!accessToken) throw backendError('auth/not-authenticated', 'Sua sessão expirou. Entre novamente para excluir a conta.');
+
+        let response;
+        try {
+          response = await fetch('/api/delete-account', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: '{}'
+          });
+        } catch (_) {
+          throw mapAuthError(rpcError);
+        }
+
+        if (!response.ok) {
+          let payload = null;
+          try { payload = await response.json(); } catch (_) {}
+          const detail = payload?.error || payload?.message || `Falha no servidor (${response.status}).`;
+          throw backendError('auth/delete-account-failed', detail);
+        }
+        deleted = true;
+      }
+
+      if (!deleted) throw mapAuthError(rpcError);
       try { await supabaseClient.auth.signOut(); } catch (_) {}
       currentUser = null;
       localStorage.removeItem('beAuthExpected');

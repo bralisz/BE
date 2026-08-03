@@ -931,16 +931,36 @@
     let currentView = 'home';
     document.body.dataset.homeView = currentView;
 
+    const leading = document.getElementById('homeNavLeading');
+    let activeTabButton = logo;
+
+    const positionSharedTabIndicator = activeButton => {
+      if (!leading || !activeButton) return;
+      window.requestAnimationFrame(() => {
+        const leadingRect = leading.getBoundingClientRect();
+        const buttonRect = activeButton.getBoundingClientRect();
+        if (!buttonRect.width || !buttonRect.height) return;
+        leading.style.setProperty('--home-tab-x', `${Math.max(0, buttonRect.left - leadingRect.left)}px`);
+        leading.style.setProperty('--home-tab-width', `${buttonRect.width}px`);
+        leading.style.setProperty('--home-tab-height', `${buttonRect.height}px`);
+        leading.style.setProperty('--home-tab-y', `${Math.max(0, buttonRect.top - leadingRect.top)}px`);
+      });
+    };
+
     const setActiveTab = activeButton => {
+      activeTabButton = activeButton || logo;
       tabButtons.forEach(button => {
-        const active = button === activeButton;
+        const active = button === activeTabButton;
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', String(active));
         if (button === logo) button.setAttribute('aria-current', active ? 'page' : 'false');
       });
+      positionSharedTabIndicator(activeTabButton);
     };
 
     setActiveTab(logo);
+    window.addEventListener('resize', () => positionSharedTabIndicator(activeTabButton), { passive: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => positionSharedTabIndicator(activeTabButton));
 
     const setSearchOpen = open => {
       topbar.classList.toggle('search-open', open);

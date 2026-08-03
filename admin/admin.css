@@ -730,3 +730,19 @@ body.admin-mode .admin-topbar{
     border-radius:20px;
   }
 }
+
+
+/* Correção visual: botões do painel e do login administrativo sem sombra inferior. */
+body.admin-mode .a-btn,
+body.admin-mode .google-btn,
+body.admin-mode .admin-nav button,
+body.admin-mode .side-link,
+body.admin-mode .content-summary button,
+body.admin-mode .category-picker button,
+body.admin-mode .admin-account-menu button,
+body.admin-mode button.a-btn.primary,
+.admin-login .a-btn,
+.admin-login .google-btn{
+  box-shadow:none!important;
+  filter:none!important;
+}

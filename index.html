@@ -3554,7 +3554,7 @@
         +  '<div class="settings-stack">'
         +    '<section class="settings-card"><h2>Conta</h2><p>Altere o nome exibido e o @ do seu perfil.</p><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></section>'
         +    '<section class="settings-card"><h2>Conexões conectadas</h2><p>Conecte o Discord à sua conta.</p><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></section>'
-        +    '<section class="settings-card"><h2>Excluir conta</h2><p>Essa ação remove sua conta e seu perfil desta plataforma.</p><div class="settings-btn-row"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button></div><div class="settings-status" id="settingsDeleteStatus"></div></section>'
+        +    '<section class="settings-card"><h2>Conta e sessão</h2><p>Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status" id="settingsDeleteStatus"></div></section>'
         +  '</div>'
         +  '<div class="settings-stack">'
         +    '<section class="settings-card"><h2>Perfil</h2><p>Escolha o banner de fundo do perfil e troque o avatar.</p><div class="settings-banner-preview">'+(banner?'<img src="'+escapePublic(banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img src="'+escapePublic(avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong style="display:block;color:#fff;margin-bottom:6px">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></section>'
@@ -3569,11 +3569,17 @@
         try{sessionStorage.setItem('beOpenSettingsAfterDiscord','1');await auth.connectDiscord();msg.textContent='Redirecionando para o Discord…';msg.className='settings-status ok';}
         catch(error){msg.textContent='Não foi possível conectar: '+(error&&error.message?error.message:'Tente novamente.');msg.className='settings-status err';this.disabled=false;}
       };
+      document.getElementById('settingsLogoutAccount').onclick=async function(){
+        var msg=document.getElementById('settingsDeleteStatus');
+        this.disabled=true;msg.textContent='Saindo da conta…';msg.className='settings-status';
+        try{await auth.signOut();closePublicPages(false);showLogin();}
+        catch(error){msg.textContent='Não foi possível sair: '+(error&&error.message?error.message:'Tente novamente.');msg.className='settings-status err';this.disabled=false;}
+      };
       document.getElementById('settingsDeleteAccount').onclick=async function(){
         var msg=document.getElementById('settingsDeleteStatus');
         if(!confirm('Tem certeza que deseja excluir sua conta? Esta ação não poderá ser desfeita.'))return;
         this.disabled=true;msg.textContent='Excluindo conta…';msg.className='settings-status';
-        try{await auth.deleteAccount();closePublicPages();msg.textContent='Conta excluída com sucesso.';msg.className='settings-status ok';showLogin();}
+        try{await auth.deleteAccount();closePublicPages(false);showLogin();}
         catch(error){msg.textContent='Não foi possível excluir: '+(error&&error.message?error.message:'Tente novamente.');msg.className='settings-status err';this.disabled=false;}
       };
       document.getElementById('settingsAccountForm').addEventListener('submit',async function(e){
@@ -4113,5 +4119,63 @@
   .discord-icon-button:hover,
   .discord-connect-button:hover {
     box-shadow:0 15px 32px rgba(0,0,0,.32)!important;
+  }
+
+
+  /* Uma única seleção branca percorre Home, Filmes, Vídeos e Suporte. */
+  .home-nav-leading{
+    position:relative!important;
+    isolation:isolate;
+    --home-tab-x:0px;
+    --home-tab-y:0px;
+    --home-tab-width:92px;
+    --home-tab-height:48px;
+  }
+  .home-nav-leading::before{
+    content:"";
+    position:absolute;
+    z-index:0;
+    left:0;
+    top:0;
+    width:var(--home-tab-width);
+    height:var(--home-tab-height);
+    border-radius:999px;
+    background:#fff;
+    transform:translate(var(--home-tab-x),var(--home-tab-y));
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.05);
+    transition:transform .42s var(--ease),width .42s var(--ease),height .42s var(--ease);
+    pointer-events:none;
+  }
+  .home-nav-links{position:relative;z-index:1}
+  .home-logo-pill,
+  .home-logo-pill:hover,
+  .home-logo-pill.active,
+  .home-nav-link,
+  .home-nav-link:hover,
+  .home-nav-link.active{
+    position:relative;
+    z-index:2;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  .home-logo-pill:not(.active) .logo-mark{opacity:.78}
+  .home-logo-pill.active .logo-mark{opacity:1}
+  .home-nav-link.active{color:#151616!important}
+  .home-nav-link:not(.active){color:rgba(255,255,255,.72)!important}
+  .home-nav-link:not(.active):hover{color:#fff!important;background:rgba(255,255,255,.08)!important}
+
+  #settingsLogoutAccount svg{width:19px;height:19px;flex:0 0 auto}
+
+  /* Botões de login sem sombra inferior. */
+  body.login-mode .auth-primary,
+  body.login-mode .auth-primary:hover,
+  body.login-mode .auth-google,
+  body.login-mode .auth-google:hover,
+  body.login-mode .auth-discord,
+  body.login-mode .auth-discord:hover,
+  body.login-mode .discord-icon-button,
+  body.login-mode .discord-icon-button:hover{
+    box-shadow:none!important;
+    filter:none!important;
   }
 </style>
