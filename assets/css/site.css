@@ -7800,3 +7800,16 @@ body.section-catalog-active.detail-page-active #dynamicSections.section-view-mod
     left:18px!important;
   }
 }
+
+/* Correção: os seletores de avatar e banner devem ficar acima da página de configurações. */
+.avatar-picker-backdrop,
+.banner-picker-backdrop.avatar-picker-backdrop{
+  z-index:20080!important;
+}
+
+body.settings-page-active.avatar-picker-active #avatarPicker,
+body.settings-page-active.banner-picker-active #bannerPicker{
+  display:grid!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
