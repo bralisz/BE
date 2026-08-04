@@ -13,6 +13,14 @@
       "destination": "/api/site-page"
     },
     {
+      "source": "/auth/callback",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/auth/callback/",
+      "destination": "/api/site-page"
+    },
+    {
       "source": "/terms",
       "destination": "/api/site-page"
     },
@@ -98,6 +106,40 @@
     }
   ],
   "headers": [
+    {
+      "source": "/auth/callback",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/auth/callback/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [
