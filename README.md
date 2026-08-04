@@ -1,79 +1,74 @@
+<p align="center">
+  <img src="https://i.imgur.com/tnBMpHr.png" alt="Banner do Billie Eilish TV" width="100%">
+</p>
+
 # Billie Eilish TV
 
-Projeto estático/serverless para a Vercel, integrado ao Supabase e publicado em `https://billieilishtv.site`.
+**Um espaço feito por fãs, para fãs da Billie Eilish.**
 
-## Estrutura do projeto
+O Billie Eilish TV é um projeto independente que reúne, organiza e apresenta conteúdos relacionados à carreira da Billie Eilish em uma experiência visual inspirada em plataformas de streaming. A proposta é facilitar a descoberta de filmes, documentários, apresentações, entrevistas, vídeos, notícias e outros momentos importantes em um só lugar.
 
-```text
-.
-├── index.html                  # Aplicação principal
-├── 404.html                    # Página de erro
-├── api/                        # Funções serverless da Vercel
-├── assets/
-│   ├── css/site.css            # CSS usado em produção
-│   ├── js/site.js              # JavaScript usado em produção
-│   ├── js/lazy-loading.js      # Otimização de imagens
-│   ├── icons/                  # Favicons e ícones do PWA
-│   └── images/
-│       ├── avatars/            # Avatares predefinidos
-│       ├── auth/               # Fundos e imagens de login
-│       ├── brand/              # Logos do projeto
-│       └── pages/              # Imagens específicas de páginas
-├── config/site.js              # Configuração pública central
-├── oauth/consent/              # Tela de consentimento OAuth
-├── supabase/                   # Schema e migrações do banco
-├── development/source/         # Fragmentos antigos/editáveis, fora do deploy
-├── docs/                       # Capturas e arquivos arquivados
-├── scripts/validate-project.js # Validação básica da estrutura
-├── site.webmanifest            # Manifesto PWA
-└── vercel.json                 # Rotas, headers e deploy
-```
+> Este é um projeto de fãs, sem vínculo oficial com Billie Eilish, sua equipe, gravadoras, produtoras ou plataformas citadas.
 
-## Configuração principal
+## Acesse o site
 
-Edite `config/site.js` para alterar o domínio público ou a conexão pública com o Supabase. Esse arquivo pode conter somente a **publishable key**. Nunca coloque `service_role`, `sb_secret` ou outras chaves privadas no navegador.
+**https://billieilishtv.site**
 
-Na Vercel, configure:
+## O que o projeto oferece
 
-```text
-SITE_URL=https://billieilishtv.site
-SUPABASE_URL=https://cxkevnnxibhezvospkce.supabase.co
-SUPABASE_ANON_KEY=<publishable key>
-```
+- catálogo organizado por categorias;
+- destaques e recomendações de conteúdo;
+- páginas individuais para vídeos e produções;
+- busca integrada;
+- perfis personalizados para membros;
+- lista de favoritos;
+- área de configurações da conta;
+- suporte a dispositivos móveis e instalação como PWA;
+- painel administrativo para gerenciamento do catálogo.
 
-## Supabase Auth
+## Proposta
 
-Em **Authentication → URL Configuration**:
+O objetivo do Billie Eilish TV é criar um ponto de encontro digital para fãs explorarem a trajetória artística da Billie Eilish de forma organizada, bonita e acessível. O projeto valoriza a comunidade, a descoberta de conteúdos e a preservação de momentos marcantes da carreira da artista.
 
-```text
-Site URL: https://billieilishtv.site
-Redirect URLs:
-https://billieilishtv.site/**
-http://localhost:3000/**
-http://localhost:5173/**
-```
+## Tecnologias
 
-Callback usado no Google e no Discord:
+O site utiliza HTML, CSS e JavaScript no front-end, funções serverless na Vercel e Supabase para autenticação, banco de dados e recursos de conta.
+
+## Organização do projeto
+
+Cada área principal possui um README próprio explicando sua função:
+
+- [`api/`](api/README.md) — funções serverless e integração segura com serviços;
+- [`assets/`](assets/README.md) — estilos, scripts, imagens, ícones e recursos visuais;
+- [`config/`](config/README.md) — configurações públicas do site;
+- [`development/`](development/README.md) — fontes auxiliares para desenvolvimento;
+- [`docs/`](docs/README.md) — capturas, referências e arquivos históricos;
+- [`oauth/`](oauth/README.md) — tela de consentimento OAuth;
+- [`scripts/`](scripts/README.md) — ferramentas de validação e manutenção;
+- [`supabase/`](supabase/README.md) — banco, schema, segurança e migrations;
+- [`atualizacoes/`](atualizacoes/README.md) — histórico editorial de cada versão.
+
+## Primeira versão pública
+
+A primeira GitHub Release do projeto é a **v1.0.0**. As notas completas estão em [`atualizacoes/v1.0.0/artigo.txt`](atualizacoes/v1.0.0/artigo.txt).
+
+## Desenvolvimento e deploy
+
+O projeto foi preparado para publicação na Vercel e utiliza o domínio oficial do projeto:
 
 ```text
-https://cxkevnnxibhezvospkce.supabase.co/auth/v1/callback
+https://billieilishtv.site
 ```
 
-## Rotas
-
-As rotas públicas não usam hash: `/login`, `/config`, `/suporte`, `/atualizacoes`, `/terms`, `/privacy`, `/cookies`, `/dmca`, `/@usuario` e `/:id`.
-
-Somente o painel administrativo usa `#/admin/...`.
-
-## Validação
-
-Com Node.js instalado, execute:
+Antes de publicar uma alteração, execute:
 
 ```bash
 node scripts/validate-project.js
 node --check assets/js/site.js
 ```
 
-## Deploy
+Consulte os READMEs internos para detalhes técnicos de cada funcionalidade.
 
-Envie o conteúdo desta pasta como raiz do projeto na Vercel. Não envie somente a pasta `assets`; `index.html`, `api/` e `vercel.json` precisam permanecer na raiz.
+## Créditos
+
+Projeto pessoal criado por **Miguel Rodrigues** para a comunidade de fãs da Billie Eilish.

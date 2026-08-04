@@ -1,11 +1,19 @@
-# Migrações do Supabase
+# Arquivos de migration
 
-Este diretório contém somente migrations com timestamps únicos de 14 dígitos.
-As versões publicadas correspondem ao histórico remoto do projeto `be-tv`, evitando
-divergências durante `supabase db push` e Supabase Preview/Branching.
+Cada arquivo SQL desta pasta representa uma mudança específica no banco e é executado em ordem crescente pela versão presente no início do nome.
 
-A baseline `20260802000000_account_exists.sql` recria o schema necessário em branches
-novas. As migrations posteriores aplicam apenas alterações incrementais.
+## Padrão obrigatório
 
-Não reutilize timestamps, não crie arquivos com versões de 8 dígitos e não renomeie
-migrations que já tenham sido publicadas.
+```text
+AAAAMMDDhhmmss_descricao_da_mudanca.sql
+```
+
+Exemplo:
+
+```text
+20260804053000_profile_banner_settings.sql
+```
+
+Todas as versões atuais possuem 14 dígitos e são únicas. Os antigos arquivos `20260802_*` e `20260803_*` foram removidos porque o Supabase interpretava arquivos diferentes como a mesma versão, provocando erro de chave duplicada no Preview.
+
+Não copie migrations antigas de volta para esta pasta e não altere versões que já estejam registradas remotamente.

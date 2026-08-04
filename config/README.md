@@ -1,7 +1,23 @@
-# Configuração pública
+# Configuração pública do site
 
-`site.js` concentra o domínio e as credenciais públicas do Supabase usadas pelo navegador.
+Esta pasta centraliza valores públicos usados pelo navegador, como domínio principal, URL do projeto Supabase e chave pública de acesso.
 
-Permitido: URL do projeto e publishable key.
+## Função do `site.js`
 
-Proibido: `service_role`, `sb_secret`, senha do banco ou qualquer segredo administrativo.
+O arquivo `site.js` permite que o front-end encontre os serviços corretos sem espalhar a mesma configuração por vários arquivos.
+
+## Pode conter
+
+- domínio público do site;
+- URL pública do projeto Supabase;
+- publishable key ou chave `anon` destinada ao navegador.
+
+## Nunca pode conter
+
+- `service_role`;
+- `sb_secret`;
+- senha do banco;
+- tokens administrativos;
+- segredos de OAuth.
+
+Credenciais privadas devem ficar somente nas variáveis de ambiente da Vercel ou nos serviços responsáveis.
