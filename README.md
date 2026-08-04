@@ -48,9 +48,11 @@ Cada área principal possui um README próprio explicando sua função:
 - [`supabase/`](supabase/README.md) — banco, schema, segurança e migrations;
 - [`atualizacoes/`](atualizacoes/README.md) — histórico editorial de cada versão.
 
-## Primeira versão pública
+## Versões públicas
 
-A primeira GitHub Release do projeto é a **v1.0.0**. As notas completas estão em [`atualizacoes/v1.0.0/artigo.txt`](atualizacoes/v1.0.0/artigo.txt).
+A primeira GitHub Release do projeto foi a **v1.0.0**. A versão atual é a **v1.1.0**, com notas em [`atualizacoes/v1.1.0/`](atualizacoes/v1.1.0/).
+
+As Releases são reservadas para novidades visuais, funcionalidades percebidas pelos fãs e correções de bugs no site público. Mudanças exclusivas do painel administrativo não geram uma nova Release.
 
 ## Desenvolvimento e deploy
 

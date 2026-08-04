@@ -1,0 +1,15 @@
+Billie Eilish TV v1.1.0 — Novo layout das configurações
+
+Esta versão melhora a organização visual da página pública de configurações.
+
+Novidades
+
+- menu lateral das abas ampliado e alinhado ao layout de referência no desktop;
+- botões “Escolher banner” e “Trocar avatar” movidos para a direita do cabeçalho Perfil em telas de computador;
+- posição tradicional dos botões mantida em telas menores;
+- ações “Excluir conta” e “Sair da conta” exibidas sem o cartão com contorno externo;
+- cache do CSS e do JavaScript renovado para carregar o novo visual.
+
+Esta atualização não modifica o painel administrativo.
+
+Projeto independente feito por fãs, para fãs da Billie Eilish.

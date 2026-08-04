@@ -1,0 +1,26 @@
+Billie Eilish TV atualiza a página de configurações com um layout mais organizado
+
+A versão v1.1.0 do Billie Eilish TV apresenta uma atualização visual na página de configurações do perfil. O objetivo desta mudança é deixar a navegação mais clara no computador e posicionar as principais ações de personalização onde elas ficam mais fáceis de encontrar.
+
+No desktop, as abas de Perfil, Conta, Conexões, Seus dados e Conta e sessão agora seguem um layout lateral mais amplo. O menu permanece à esquerda enquanto o conteúdo da seção escolhida ocupa a área principal à direita, criando uma divisão mais equilibrada e próxima do visual usado nas demais páginas informativas do site.
+
+Dentro da aba Perfil, os botões “Escolher banner” e “Trocar avatar” foram movidos para o lado direito do cabeçalho. Dessa forma, as ações de personalização ficam alinhadas ao título Perfil, enquanto as imagens atuais de banner e avatar continuam apresentadas dentro do cartão logo abaixo. Essa posição é aplicada somente em telas de computador; em telas menores, os botões continuam abaixo das prévias para preservar a navegação confortável no celular.
+
+A aba Conta e sessão também recebeu um ajuste. Os botões “Excluir conta” e “Sair da conta” deixaram de ficar dentro de um grande cartão com contorno. Agora, as duas ações aparecem diretamente na página, mantendo seus estilos individuais e deixando a seção mais limpa.
+
+Principais mudanças da v1.1.0:
+
+- navegação lateral das configurações ampliada no desktop;
+- conteúdo das abas alinhado ao layout de referência;
+- “Escolher banner” e “Trocar avatar” posicionados ao lado do cabeçalho Perfil no computador;
+- comportamento original dos botões preservado em telas menores;
+- “Excluir conta” e “Sair da conta” removidos do contorno externo;
+- atualização do cache dos arquivos visuais para exibir o novo layout imediatamente.
+
+Esta atualização afeta somente a experiência pública das configurações e não altera o painel administrativo. O Billie Eilish TV continua evoluindo como um projeto independente feito por fãs, para fãs da Billie Eilish.
+
+Acesse: https://billieilishtv.site
+
+Versão: v1.1.0
+Data: 4 de agosto de 2026
+Criado por Miguel Rodrigues.

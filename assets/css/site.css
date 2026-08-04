@@ -6781,3 +6781,48 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
   body.profile-page-active .profile-page-avatar{width:134px!important;height:134px!important;min-width:134px!important;min-height:134px!important}
   body.profile-page-active .profile-page-hero{min-height:485px!important}
 }
+
+/* v1.1.0 — refinamento visual das configurações públicas. */
+@media (min-width: 1024px){
+  /* Mantém o menu de abas à esquerda e o conteúdo amplo como no layout de referência. */
+  body.settings-page-active #settingsPageBody{
+    width:min(1504px,calc(100% - 80px))!important;
+  }
+  .settings-legal-layout{
+    grid-template-columns:312px minmax(0,1fr)!important;
+    gap:90px!important;
+    justify-content:stretch!important;
+  }
+
+  /* No Perfil, as ações ficam alinhadas ao cabeçalho somente no desktop. */
+  .settings-profile-panel{
+    position:relative;
+  }
+  .settings-profile-panel > .settings-panel-lead{
+    max-width:620px;
+  }
+  .settings-profile-panel .settings-profile-actions{
+    position:absolute;
+    top:27px;
+    right:0;
+    z-index:2;
+    margin:0!important;
+    padding:0!important;
+    flex-wrap:nowrap;
+  }
+}
+
+/* Conta e sessão: ações sem cartão/contorno externo. */
+.settings-session-panel .settings-session-actions{
+  margin-top:0;
+}
+.settings-session-panel .settings-session-status{
+  margin-top:14px;
+}
+
+@media (max-width: 1023px){
+  /* Fora do desktop amplo, os botões continuam abaixo das prévias. */
+  .settings-profile-panel .settings-profile-actions{
+    position:static;
+  }
+}

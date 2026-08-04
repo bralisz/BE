@@ -3,7 +3,12 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
+const version = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim();
+const releaseFolder = `atualizacoes/v${version}`;
 const required = [
+  'README.md',
+  'VERSION',
+  'CHANGELOG.md',
   'index.html',
   '404.html',
   'vercel.json',
@@ -13,7 +18,11 @@ const required = [
   'assets/js/site.js',
   'assets/js/lazy-loading.js',
   'assets/images/brand/logo.png',
-  'api/site-page.js'
+  'api/site-page.js',
+  'atualizacoes/README.md',
+  `${releaseFolder}/atualizacao.txt`,
+  `${releaseFolder}/release.txt`,
+  `${releaseFolder}/lista-de-arquivos.txt`
 ];
 
 let failed = false;
@@ -35,4 +44,4 @@ for (const relative of ['vercel.json', 'site.webmanifest']) {
 }
 
 if (failed) process.exit(1);
-console.log('Estrutura essencial validada com sucesso.');
+console.log(`Estrutura essencial da v${version} validada com sucesso.`);
