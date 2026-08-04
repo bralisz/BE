@@ -106,6 +106,7 @@ async function loadSettings() {
 function injectSocialMetadata(html, settings, origin) {
   const title = 'Billie Eilish TV';
   const description = String(settings.description || 'Filmes, vídeos, entrevistas e atualizações em um só lugar.').trim();
+  const invisibleSocialText = '\u2063';
   // O preview social do site é fixo e não pode ser substituído pelas configurações do painel.
   const image = FIXED_SHARE_IMAGE_URL;
   const canonical = `${origin}/`;
@@ -119,15 +120,15 @@ function injectSocialMetadata(html, settings, origin) {
 <meta name="description" content="${attr(description)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="${attr(title)}">
-<meta property="og:title" content="${attr(title)}">
-<meta property="og:description" content="${attr(description)}">
+<meta property="og:title" content="${attr(invisibleSocialText)}">
+<meta property="og:description" content="${attr(invisibleSocialText)}">
 <meta property="og:url" content="${attr(canonical)}">
 <meta property="og:image" content="${attr(image)}">
 <meta property="og:image:secure_url" content="${attr(image)}">
 <meta property="og:image:alt" content="Banner do ${attr(title)}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${attr(title)}">
-<meta name="twitter:description" content="${attr(description)}">
+<meta name="twitter:title" content="${attr(invisibleSocialText)}">
+<meta name="twitter:description" content="${attr(invisibleSocialText)}">
 <meta name="twitter:image" content="${attr(image)}">
 <meta name="twitter:image:alt" content="Banner do ${attr(title)}">
 <link rel="canonical" href="${attr(canonical)}">`;

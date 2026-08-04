@@ -7370,3 +7370,22 @@ body.profile-favorites-picker-active{overflow:hidden!important}
     display:none!important;
   }
 }
+
+
+/* Seus dados: informação fora do contorno e ações dentro do cartão. */
+.settings-data-copy-outside{
+  margin:-18px 0 22px!important;
+  color:rgba(255,255,255,.66)!important;
+  font-size:15px!important;
+  line-height:1.7!important;
+}
+.settings-data-action-card{
+  padding:24px 28px!important;
+}
+.settings-data-action-card .settings-data-actions{
+  margin-top:0!important;
+}
+@media(max-width:720px){
+  .settings-data-copy-outside{margin:-10px 0 18px!important}
+  .settings-data-action-card{padding:20px!important}
+}

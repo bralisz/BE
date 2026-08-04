@@ -6,6 +6,10 @@ const ALLOWED_COLLECTIONS = new Set([
   'contents', 'featured', 'gallery', 'movies', 'notifications', 'sections', 'series', 'videos'
 ]);
 const MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl']);
+const PUBLIC_SETTINGS_FIELDS = new Set([
+  'description', 'discordUrl', 'footerText', 'instagram', 'primaryColor',
+  'shareImage', 'siteName', 'website', 'xUrl', 'youtube'
+]);
 
 function config() {
   return {
@@ -44,11 +48,13 @@ function sanitizeItem(collection, row) {
 
 function sanitizeSettings(row) {
   if (!row) return null;
-  const source = { ...(row.data || {}) };
-  for (const field of ['shareImage', 'imageUrl', 'bannerUrl', 'logoUrl']) {
-    if (Object.prototype.hasOwnProperty.call(source, field)) {
-      source[field] = mediaReference('settings', row.id, field, source[field]);
-    }
+  const raw = row.data && typeof row.data === 'object' ? row.data : {};
+  const source = {};
+  for (const field of PUBLIC_SETTINGS_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(raw, field)) source[field] = raw[field];
+  }
+  if (Object.prototype.hasOwnProperty.call(source, 'shareImage')) {
+    source.shareImage = mediaReference('settings', row.id, 'shareImage', source.shareImage);
   }
   return { id: row.id, ...source, createdAt: row.created_at || '', updatedAt: row.updated_at || '' };
 }
