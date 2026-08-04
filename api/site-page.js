@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
+const FIXED_SHARE_IMAGE_PATH = '/assets/images/social/share-preview.jpg?v=20260804';
 const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
 const SETTINGS_CACHE_TTL_MS = 60000;
 let cachedTemplate = '';
@@ -82,7 +82,7 @@ function absoluteHttpUrl(value, origin) {
 
 function proxiedMediaUrl(value, origin) {
   const absolute = absoluteHttpUrl(value, origin);
-  if (!absolute) return FIXED_SHARE_IMAGE_URL;
+  if (!absolute) return absoluteHttpUrl(FIXED_SHARE_IMAGE_PATH, origin);
   try {
     const parsed = new URL(absolute);
     if (parsed.origin === origin) return parsed.href;
@@ -125,11 +125,15 @@ async function loadSettings() {
 
 function injectSocialMetadata(html, settings, origin) {
   const title = 'Billie Eilish TV';
-  const description = String(settings.description || 'Filmes, vídeos, entrevistas e atualizações em um só lugar.').trim();
-  const invisibleSocialText = '\u2063';
+  const description = String(
+    settings.description ||
+    'Filmes, entrevistas, shows e vídeos da Billie Eilish em um só lugar — uma plataforma feita por fãs, para fãs.'
+  ).trim();
+  const socialDescription = 'Filmes, entrevistas, shows e vídeos em um só lugar. Feito por fãs, para fãs.';
   // O preview social do site é fixo e não pode ser substituído pelas configurações do painel.
-  const image = FIXED_SHARE_IMAGE_URL;
+  const image = absoluteHttpUrl(FIXED_SHARE_IMAGE_PATH, origin);
   const canonical = `${origin}/`;
+  const imageAlt = 'Billie Eilish TV — filmes, entrevistas, shows e vídeos em um só lugar';
 
   html = html
     .replace(/\s*<meta\s+(?:property=["']og:[^>]+|name=["']twitter:[^>]+)[^>]*>/gi, '')
@@ -139,18 +143,22 @@ function injectSocialMetadata(html, settings, origin) {
   const metadata = `
 <meta name="description" content="${attr(description)}">
 <meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
 <meta property="og:site_name" content="${attr(title)}">
-<meta property="og:title" content="${attr(invisibleSocialText)}">
-<meta property="og:description" content="${attr(invisibleSocialText)}">
+<meta property="og:title" content="${attr(title)}">
+<meta property="og:description" content="${attr(socialDescription)}">
 <meta property="og:url" content="${attr(canonical)}">
 <meta property="og:image" content="${attr(image)}">
 <meta property="og:image:secure_url" content="${attr(image)}">
-<meta property="og:image:alt" content="Banner do ${attr(title)}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${attr(imageAlt)}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${attr(invisibleSocialText)}">
-<meta name="twitter:description" content="${attr(invisibleSocialText)}">
+<meta name="twitter:title" content="${attr(title)}">
+<meta name="twitter:description" content="${attr(socialDescription)}">
 <meta name="twitter:image" content="${attr(image)}">
-<meta name="twitter:image:alt" content="Banner do ${attr(title)}">
+<meta name="twitter:image:alt" content="${attr(imageAlt)}">
 <link rel="canonical" href="${attr(canonical)}">`;
 
   return html.replace('</title>', `</title>${metadata}`);
