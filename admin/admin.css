@@ -870,3 +870,16 @@ body.admin-mode .admin-account-menu button.danger{color:#ff7a45}
     width:min(264px,calc(100vw - 28px));
   }
 }
+
+
+/* Correção final — categorias de Conteúdos sem sobreposição. */
+.content-category-list{display:grid;gap:7px;min-width:0}
+.content-category-list>.content-category-link{margin:0!important;position:relative;isolation:isolate}
+.content-category-sidebar{overflow:hidden}
+.content-category-sidebar .content-featured-block{position:relative;z-index:0}
+@media(max-width:800px){
+  .content-category-sidebar{overflow-x:auto;overflow-y:hidden;align-items:stretch}
+  .content-category-list{display:flex;flex:0 0 auto;gap:7px}
+  .content-category-list>.content-category-link{flex:0 0 145px}
+  .content-featured-block{align-self:stretch}
+}
