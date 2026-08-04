@@ -2676,6 +2676,17 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     }
 
     list.dataset.favoriteId = itemId;
+    list.dataset.itemId = itemId;
+    list.dataset.recordId = String(data.recordId || data.id || '');
+    list.dataset.title = title;
+    list.dataset.description = description;
+    list.dataset.year = year;
+    list.dataset.duration = duration;
+    list.dataset.contentUrl = contentUrl;
+    list.dataset.imageUrl = thumbnailUrl;
+    list.dataset.bannerUrl = bannerUrl;
+    list.dataset.logoUrl = logoUrl;
+    list.dataset.collection = collection || 'videos';
     syncDetailListButton(list, itemId);
     if (list.dataset.clickBound !== 'true') {
       list.dataset.clickBound = 'true';
@@ -2748,9 +2759,12 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   function toggleDetailFavorite(button) {
     const itemId = String(button.dataset.favoriteId || '');
     const favorites = detailFavoriteSet();
-    if (favorites.has(itemId)) favorites.delete(itemId); else favorites.add(itemId);
+    const active = !favorites.has(itemId);
+    if (active) favorites.add(itemId); else favorites.delete(itemId);
     saveDetailFavoriteSet(favorites);
+    persistSavedContent(contentDataFromElement(button), active);
     syncDetailListButton(button, itemId);
+    window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId, active } }));
   }
 
   function setupRail(section) {
@@ -2790,16 +2804,118 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       .toLowerCase();
   }
 
+  const SAVED_CONTENTS_KEY = 'beSavedContents';
+
+  function readJsonArray(key) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(value) ? value : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function normalizeSavedContent(data) {
+    const itemId = String(data?.itemId || data?.favoriteId || data?.title || '').trim();
+    const recordId = String(data?.recordId || data?.id || '').trim();
+    const collection = String(data?.collection || 'videos').trim().toLowerCase() || 'videos';
+    const favoriteId = String(data?.favoriteId || (recordId ? `${collection}:${recordId}` : '')).trim();
+    return {
+      itemId,
+      recordId,
+      favoriteId,
+      title:String(data?.title || 'Conteúdo salvo'),
+      description:String(data?.description || ''),
+      year:String(data?.year || ''),
+      duration:String(data?.duration || ''),
+      contentUrl:String(data?.contentUrl || '#'),
+      imageUrl:String(data?.imageUrl || data?.thumbnailUrl || data?.bannerUrl || ''),
+      bannerUrl:String(data?.bannerUrl || data?.imageUrl || data?.thumbnailUrl || ''),
+      logoUrl:String(data?.logoUrl || ''),
+      collection,
+      savedAt:String(data?.savedAt || new Date().toISOString())
+    };
+  }
+
+  function contentDataFromElement(element) {
+    if (!element) return normalizeSavedContent({});
+    const detail = element.matches?.('[data-open-detail="true"]')
+      ? element
+      : element.closest?.('.f-slide, .video-card, #contentDetailSection')?.querySelector?.('[data-open-detail="true"]') || element;
+    const dataset = detail?.dataset || element.dataset || {};
+    const favoriteId = String(element.dataset?.favoriteId || dataset.favoriteId || '');
+    return normalizeSavedContent({
+      itemId:dataset.itemId || element.dataset?.itemId || '',
+      recordId:dataset.recordId || element.dataset?.recordId || '',
+      favoriteId,
+      title:dataset.title || element.dataset?.title || '',
+      description:dataset.description || element.dataset?.description || '',
+      year:dataset.year || element.dataset?.year || '',
+      duration:dataset.duration || element.dataset?.duration || '',
+      contentUrl:dataset.contentUrl || element.dataset?.contentUrl || '#',
+      imageUrl:dataset.imageUrl || element.dataset?.imageUrl || '',
+      bannerUrl:dataset.bannerUrl || element.dataset?.bannerUrl || '',
+      logoUrl:dataset.logoUrl || element.dataset?.logoUrl || '',
+      collection:dataset.collection || element.dataset?.collection || 'videos'
+    });
+  }
+
+  function savedContentMatches(a, b) {
+    if (a.itemId && b.itemId && a.itemId === b.itemId) return true;
+    if (a.favoriteId && b.favoriteId && a.favoriteId === b.favoriteId) return true;
+    return Boolean(a.collection && a.recordId && b.collection && b.recordId && a.collection === b.collection && a.recordId === b.recordId);
+  }
+
+  function persistSavedContent(data, active) {
+    const normalized = normalizeSavedContent(data);
+    let records = readJsonArray(SAVED_CONTENTS_KEY).map(normalizeSavedContent);
+    records = records.filter(record => !savedContentMatches(record, normalized));
+    if (active && (normalized.itemId || normalized.favoriteId || normalized.recordId)) records.unshift({ ...normalized, savedAt:new Date().toISOString() });
+    localStorage.setItem(SAVED_CONTENTS_KEY, JSON.stringify(records.slice(0, 200)));
+  }
+
+  function domCatalogCandidates() {
+    return Array.from(document.querySelectorAll('[data-open-detail="true"]')).map(contentDataFromElement).filter(item => item.itemId || item.recordId);
+  }
+
+  function collectSavedContents() {
+    const stored = readJsonArray(SAVED_CONTENTS_KEY).map(normalizeSavedContent);
+    const detailIds = new Set(readJsonArray('beDetailFavorites').map(String));
+    const featuredIds = new Set(readJsonArray('beFeaturedFavorites').map(String));
+    const candidates = domCatalogCandidates();
+    const result = [];
+    const add = item => {
+      const normalized = normalizeSavedContent(item);
+      if (!normalized.itemId && !normalized.favoriteId && !normalized.recordId) return;
+      if (result.some(current => savedContentMatches(current, normalized))) return;
+      result.push(normalized);
+    };
+    stored.forEach(add);
+    candidates.forEach(item => {
+      if (detailIds.has(item.itemId) || featuredIds.has(item.favoriteId) || featuredIds.has(`${item.collection}:${item.recordId}`)) add(item);
+    });
+    return result.sort((a, b) => String(b.savedAt || '').localeCompare(String(a.savedAt || '')));
+  }
+
+  window.beGetSavedContents = collectSavedContents;
+  window.beOpenSavedContent = function(data) {
+    const item = normalizeSavedContent(data);
+    if (!item.itemId) return;
+    openContentDetail(item, { updateRoute:true, instant:false });
+  };
+
+  function featuredFavoriteSet() {
+    return new Set(readJsonArray('beFeaturedFavorites').map(String));
+  }
+
   function setupFavoriteButtons(host) {
     const storageKey = 'beFeaturedFavorites';
-    let saved = [];
-    try { saved = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch (_) { saved = []; }
-    const favorites = new Set(Array.isArray(saved) ? saved.map(String) : []);
-
     host.querySelectorAll('[data-favorite-id]').forEach(button => {
+      if (button.dataset.favoriteBound === 'true') return;
+      button.dataset.favoriteBound = 'true';
       const id = String(button.dataset.favoriteId || '');
       const sync = () => {
-        const active = favorites.has(id);
+        const active = featuredFavoriteSet().has(id);
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', String(active));
         button.setAttribute('aria-label', active ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
@@ -2808,10 +2924,15 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       button.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
-        if (favorites.has(id)) favorites.delete(id); else favorites.add(id);
+        const favorites = featuredFavoriteSet();
+        const active = !favorites.has(id);
+        if (active) favorites.add(id); else favorites.delete(id);
         localStorage.setItem(storageKey, JSON.stringify(Array.from(favorites)));
+        persistSavedContent(contentDataFromElement(button), active);
         sync();
+        window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ favoriteId:id, active } }));
       });
+      window.addEventListener('be:favorites-changed', sync);
     });
   }
 
@@ -3800,6 +3921,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     var profilePageMemberSince=document.getElementById('profilePageMemberSince');
     var profilePageMore=document.getElementById('profilePageMore');
     var profilePageLogout=document.getElementById('profilePageLogout');
+    var profilePageHome=document.getElementById('profilePageHome');
+    var profileSavedSection=document.getElementById('profileSavedSection');
+    var profileSavedGrid=document.getElementById('profileSavedGrid');
+    var profileSavedCount=document.getElementById('profileSavedCount');
+    var profileSavedItems=[];
     var settingsPage=document.getElementById('settingsPage');
     var settingsPageBody=document.getElementById('settingsPageBody');
     var bannerPicker=document.getElementById('bannerPicker');
@@ -4050,6 +4176,60 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       profilePageBanner.hidden=false;profilePageBanner.removeAttribute('hidden');profilePageBanner.style.display='block';
       profilePageBannerFallback.hidden=true;profilePageBannerFallback.setAttribute('hidden','');profilePageBannerFallback.style.display='none';
     }
+    function isOwnProfileView(){
+      if(!auth.currentUser)return false;
+      var match=cleanPathname().match(/^\/@([^/?#]+)$/i);
+      if(!match)return true;
+      var routeHandle='';
+      try{routeHandle=decodeURIComponent(match[1]||'');}catch(_){routeHandle=match[1]||'';}
+      return beBackend.normalizeUsername(routeHandle)===beBackend.normalizeUsername((currentProfile&&currentProfile.username)||'');
+    }
+
+    function renderProfileSaved(){
+      if(!profileSavedSection||!profileSavedGrid)return;
+      var user=auth.currentUser;
+      var ownProfile=Boolean(user&&isOwnProfileView());
+      profileSavedSection.hidden=!ownProfile;
+      if(!ownProfile){
+        profileSavedItems=[];
+        profileSavedGrid.innerHTML='';
+        if(profileSavedCount)profileSavedCount.textContent='';
+        return;
+      }
+      try{
+        profileSavedItems=typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[];
+      }catch(error){
+        console.warn('Não foi possível carregar os conteúdos salvos:',error);
+        profileSavedItems=[];
+      }
+      if(profileSavedCount)profileSavedCount.textContent=profileSavedItems.length?(profileSavedItems.length+' '+(profileSavedItems.length===1?'salvo':'salvos')):'';
+      if(!profileSavedItems.length){
+        profileSavedGrid.innerHTML='<div class="profile-saved-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg><strong>Nenhum vídeo salvo ainda</strong><span>Os conteúdos em que você tocar no coração aparecerão aqui.</span></div>';
+        return;
+      }
+      profileSavedGrid.innerHTML=profileSavedItems.map(function(item,index){
+        var image=item.imageUrl||item.bannerUrl||'';
+        var meta=[item.year,item.duration].filter(Boolean).join(' • ');
+        return '<button class="profile-saved-card" type="button" data-saved-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'conteúdo salvo')+'">'
+          +'<span class="profile-saved-thumb">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-saved-placeholder" aria-hidden="true"></span>')+'<span class="profile-saved-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7Z"></path></svg></span></span>'
+          +'<span class="profile-saved-copy"><strong>'+escapePublic(item.title||'Conteúdo salvo')+'</strong>'+(meta?'<small>'+escapePublic(meta)+'</small>':'')+'</span>'
+          +'</button>';
+      }).join('');
+    }
+
+    function bindProfileSavedGrid(){
+      if(!profileSavedGrid||profileSavedGrid.dataset.savedBound==='true')return;
+      profileSavedGrid.dataset.savedBound='true';
+      profileSavedGrid.addEventListener('click',function(event){
+        var button=event.target.closest('[data-saved-index]');
+        if(!button||!profileSavedGrid.contains(button))return;
+        var item=profileSavedItems[Number(button.dataset.savedIndex)];
+        if(!item)return;
+        closePublicPages(false);
+        if(typeof window.beOpenSavedContent==='function')window.beOpenSavedContent(item);
+      });
+    }
+
     function renderProfilePage(){
       var user=auth.currentUser;
       if(!user){
@@ -4060,6 +4240,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         profilePageMemberSince.textContent='';
         profilePageAvatar.innerHTML=profileFallbackAvatar();
         profilePageBanner.hidden=true;profilePageBannerImg.removeAttribute('src');profilePageBannerFallback.hidden=false;
+        renderProfileSaved();
         return;
       }
       var displayName=currentProfile.displayName||user.displayName||'Usuário';
@@ -4074,6 +4255,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       profilePageMemberSince.textContent='Membro desde '+publicProfileYear();
       profilePageAvatar.innerHTML=avatar?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar do perfil">':profileFallbackAvatar();
       applyProfileBanner(banner);
+      renderProfileSaved();
+      bindProfileSavedGrid();
     }
     function renderSettingsPage(){
       var user=auth.currentUser;
@@ -4385,7 +4568,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     }
 
     function openProfile(){openPublicProfile(true);}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(){closePublicPages(true);var home=document.getElementById('logoBtn');if(home)home.click();else location.assign('/');});bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();});document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){
       if(!avatarPicker.hidden)closeAvatarPicker(false);
       if(!bannerPicker.hidden)closeBannerPicker(false);
       if(!auth.currentUser)return;
