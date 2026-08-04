@@ -6826,3 +6826,98 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
     position:static;
   }
 }
+
+/* Atalho de privacidade ao lado da exportação de dados. */
+.settings-data-actions{
+  display:flex;
+  align-items:center;
+  gap:20px;
+  flex-wrap:wrap;
+  margin-top:22px;
+}
+.settings-data-actions .settings-export-button{
+  flex:0 0 auto;
+}
+.settings-data-privacy-note{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  color:rgba(255,255,255,.62);
+  font-size:13px;
+  line-height:1.45;
+}
+.settings-data-privacy-button{
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  padding:10px 15px;
+  border:1px solid #0a84ff;
+  border-radius:999px;
+  background:#0a84ff;
+  color:#fff!important;
+  font:700 13px/1 var(--font-body);
+  text-decoration:none!important;
+  box-shadow:none;
+  transition:background .18s ease,border-color .18s ease,transform .18s ease;
+}
+.settings-data-privacy-button:hover{
+  background:#0077ed;
+  border-color:#0077ed;
+  transform:translateY(-1px);
+}
+.settings-data-privacy-button:focus-visible{
+  outline:2px solid #fff;
+  outline-offset:3px;
+}
+
+@media(max-width:720px){
+  .settings-data-actions{
+    align-items:stretch;
+    flex-direction:column;
+    gap:16px;
+  }
+  .settings-data-actions .settings-export-button{
+    width:100%;
+  }
+  .settings-data-privacy-note{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:10px;
+  }
+  .settings-data-privacy-button{
+    width:100%;
+  }
+}
+
+/* Perfil mobile: mantém o sino na mesma linha dos demais controles do cabeçalho. */
+@media(max-width:760px){
+  body.profile-page-active .mobile-header-actions > .mobile-notification-button{
+    position:relative!important;
+    inset:auto!important;
+    top:0!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    transform:none!important;
+    vertical-align:top!important;
+  }
+}
+
+
+/* Transparência da autenticação para evitar confusão com páginas oficiais. */
+.login-trust-note{
+  width:min(520px,100%);
+  margin:0 auto;
+  color:rgba(238,243,251,.62);
+  font-size:11.5px;
+  line-height:1.55;
+  text-align:center;
+}
+.login-trust-note a{color:#8ebcff;text-decoration:none;font-weight:700}
+.login-trust-note a:hover{text-decoration:underline}
+@media(max-width:520px){
+  .login-trust-note{padding:0 10px;font-size:10.5px}
+}

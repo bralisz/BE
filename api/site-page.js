@@ -148,6 +148,10 @@ module.exports = async function sitePage(req, res) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=0, must-revalidate');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    const requestPath = String(req.url || '').split('?')[0];
+    if (requestPath === '/login' || requestPath === '/login/' || requestPath.startsWith('/oauth/consent')) {
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    }
     if (req.method === 'HEAD') return res.status(200).end();
     return res.status(200).send(html);
   } catch (error) {
