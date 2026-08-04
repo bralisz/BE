@@ -5081,7 +5081,24 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     else history.pushState(nextState,'',target);
   }
 
+  function closeSearchBeforeSupport(){
+    var topbar=document.getElementById('topbar');
+    var desktopToggle=document.getElementById('homeSearchToggle');
+    var mobileToggle=document.getElementById('mobileSearchButton');
+    if(topbar)topbar.classList.remove('search-open');
+    document.body.classList.remove('mobile-search-open');
+    if(desktopToggle){
+      desktopToggle.setAttribute('aria-expanded','false');
+      desktopToggle.setAttribute('aria-label','Abrir pesquisa');
+    }
+    if(mobileToggle){
+      mobileToggle.setAttribute('aria-expanded','false');
+      mobileToggle.setAttribute('aria-label','Abrir pesquisa');
+    }
+  }
+
   function openSupport(updateRoute){
+    closeSearchBeforeSupport();
     if(updateRoute!==false){
       if(!isSupportRoute())setSupportRoute(false);
       else if(hasLegacySupportUrl())setSupportRoute(true);
@@ -5171,8 +5188,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       openSupport(true);
       if(shouldFocusContact){
         window.requestAnimationFrame(function(){
-          var contact=page.querySelector('.support-contact');
-          if(contact)contact.scrollIntoView({behavior:'smooth',block:'start'});
+          window.requestAnimationFrame(function(){
+            positionIndicator(supportButton);
+            var contact=page.querySelector('.support-contact');
+            if(contact)contact.scrollIntoView({behavior:'smooth',block:'center'});
+          });
         });
       }
       return;

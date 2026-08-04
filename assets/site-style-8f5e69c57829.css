@@ -6476,3 +6476,20 @@ body.settings-page-active #settingsPageBody{width:min(1260px,calc(100% - 40px))!
     place-items:center!important;
   }
 }
+
+
+/* Suporte aberto a partir da busca: restaura a barra compacta antes de exibir a página. */
+body.support-page-active .home-topbar{
+  width:max-content!important;
+}
+body.support-page-active .home-nav-leading{
+  max-width:none!important;
+  opacity:1!important;
+  transform:none!important;
+  pointer-events:auto!important;
+}
+body.support-page-active .home-topbar.search-open .home-nav-leading{
+  max-width:none!important;
+  opacity:1!important;
+  transform:none!important;
+}
