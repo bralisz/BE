@@ -4,11 +4,15 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
+const DEFAULT_SHARE_IMAGE = 'https://i.imgur.com/tnBMpHr.png';
 
 function supabaseConfig() {
+  const publishableKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_PUBLISHABLE_KEY;
+  const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || publishableKey;
   return {
     url: String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://cxkevnnxibhezvospkce.supabase.co').replace(/\/$/, ''),
-    publishableKey: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_PUBLISHABLE_KEY
+    publishableKey,
+    serverKey
   };
 }
 
@@ -54,12 +58,12 @@ function absoluteHttpUrl(value, origin) {
 }
 
 async function loadSettings() {
-  const { url, publishableKey } = supabaseConfig();
+  const { url, publishableKey, serverKey } = supabaseConfig();
   try {
     const response = await fetch(`${url}/rest/v1/site_settings?id=eq.site&select=data,updated_at&limit=1`, {
       headers: {
-        apikey: publishableKey,
-        Authorization: `Bearer ${publishableKey}`,
+        apikey: serverKey || publishableKey,
+        Authorization: `Bearer ${serverKey || publishableKey}`,
         Accept: 'application/json'
       }
     });
@@ -76,7 +80,7 @@ function injectSocialMetadata(html, settings, origin) {
   const title = 'Billie Eilish TV';
   const description = String(settings.description || 'Filmes, vídeos, entrevistas e atualizações em um só lugar.').trim();
   const selectedImage = absoluteHttpUrl(settings.shareImage, origin);
-  const image = selectedImage || `${origin}/assets/login-admin-banner.jpg`;
+  const image = selectedImage || DEFAULT_SHARE_IMAGE;
   const canonical = `${origin}/`;
 
   html = html
@@ -93,11 +97,13 @@ function injectSocialMetadata(html, settings, origin) {
 <meta property="og:url" content="${attr(canonical)}">
 <meta property="og:image" content="${attr(image)}">
 <meta property="og:image:secure_url" content="${attr(image)}">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:alt" content="${attr(title)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${attr(title)}">
 <meta name="twitter:description" content="${attr(description)}">
 <meta name="twitter:image" content="${attr(image)}">
+<meta name="twitter:image:alt" content="${attr(title)}">
 <link rel="canonical" href="${attr(canonical)}">`;
 
   return html.replace('</title>', `</title>${metadata}`);
@@ -114,7 +120,7 @@ module.exports = async function sitePage(req, res) {
     const settings = await loadSettings();
     const html = injectSocialMetadata(readTemplate(), settings, origin);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=0, must-revalidate');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     if (req.method === 'HEAD') return res.status(200).end();
     return res.status(200).send(html);
