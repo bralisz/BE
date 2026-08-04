@@ -5598,3 +5598,37 @@ body.legal-page-active #dynamicSections{
     gap:0!important;
   }
 }
+
+/* Correção da animação dos cards: evita corte ao passar o mouse. */
+#dynamicSections:not(.section-view-mode) .video-rail{
+  padding-top:12px!important;
+  padding-bottom:22px!important;
+}
+#dynamicSections:not(.section-view-mode) .video-card{
+  transform:translateY(0)!important;
+  transform-origin:center center!important;
+  z-index:1;
+}
+@media (hover:hover) and (pointer:fine){
+  #dynamicSections:not(.section-view-mode) .video-card:hover{
+    transform:translateY(-4px)!important;
+    z-index:10!important;
+  }
+  #dynamicSections:not(.section-view-mode) .video-card:hover img{
+    transform:scale(1.025)!important;
+  }
+}
+
+/* Botão "Ler todos": no mobile usa o mesmo tamanho e espaçamento do desktop. */
+#notificationMarkAll,
+#mobileNotificationMarkAll{
+  width:auto!important;
+  min-width:max-content!important;
+  height:40px!important;
+  min-height:40px!important;
+  padding:0 14px!important;
+  border-radius:999px!important;
+  font-size:12px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
