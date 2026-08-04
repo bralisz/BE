@@ -1,12 +1,14 @@
 # Migrações do Supabase
 
-Os nomes dos arquivos usam versões únicas e ordenadas. As seis primeiras versões usam timestamps de 14 dígitos e
-correspondem exatamente ao histórico já registrado no projeto `be-tv`; isso evita
-o erro **Remote migration versions not found in local migrations directory** no
-Supabase Preview.
+Todas as migrations deste projeto usam versões únicas de 14 dígitos, em ordem cronológica.
+Esse formato mantém o diretório local compatível com o histórico remoto do projeto `be-tv`
+e evita o erro **Remote migration versions not found in local migrations directory**.
 
-A versão `20260802000000_account_exists.sql` também funciona como baseline idempotente
-para que branches novas consigam recriar o schema sem copiar dados de produção.
-Não renomeie nem remova migrações que já foram publicadas.
+A migration `20260802000000_account_exists.sql` funciona como baseline idempotente para
+branches novas: ela recria o schema necessário sem copiar dados de produção.
 
-O histórico remoto legado `20260802` foi normalizado para `20260802000000`, sem reaplicar SQL nem alterar dados.
+O registro remoto legado `20260802_profile_banner_settings` foi normalizado para
+`20260804053000_profile_banner_settings` apenas no histórico de migrations. O SQL não foi
+reaplicado e nenhum dado foi removido.
+
+Não renomeie nem exclua migrations que já aparecem no histórico remoto.
