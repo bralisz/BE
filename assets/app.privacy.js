@@ -2039,16 +2039,19 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
   function setupSectionTitleInteractions(host) {
     if (!host) return;
-    host.querySelectorAll('.video-rail-title').forEach(title => {
-      if (title.dataset.sectionBound === 'true') return;
-      title.dataset.sectionBound = 'true';
-      title.addEventListener('click', event => {
+
+    if (host.dataset.sectionDelegated !== 'true') {
+      host.dataset.sectionDelegated = 'true';
+      host.addEventListener('click', event => {
+        const title = event.target.closest('.video-rail-title');
+        if (!title || !host.contains(title)) return;
         const section = title.closest('.video-rail-section');
         if (!section) return;
         event.preventDefault();
+        event.stopPropagation();
         openSectionView(section);
-      });
-    });
+      }, true);
+    }
 
     if (document.body.dataset.sectionExitBound !== 'true') {
       document.body.dataset.sectionExitBound = 'true';
@@ -2254,9 +2257,16 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       if (randomFeaturedSection) randomFeaturedSection.hidden = true;
     } else if (['films', 'movies', 'series', 'videos'].includes(activeView)) {
       if (featuredSection) featuredSection.hidden = true;
-      renderRandomTabFeatured(activeView, false);
-      if (scrollHome && randomFeaturedSection && !randomFeaturedSection.hidden) {
-        randomFeaturedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (activeView === 'videos') {
+        if (randomFeaturedSection) randomFeaturedSection.hidden = true;
+      } else {
+        renderRandomTabFeatured(activeView, false);
+      }
+      if (scrollHome) {
+        const destination = randomFeaturedSection && !randomFeaturedSection.hidden
+          ? randomFeaturedSection
+          : document.getElementById('dynamicSections');
+        destination?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
   }
@@ -2442,10 +2452,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         const cards = Array.from(section.querySelectorAll('.video-card'));
         let visibleInSection = 0;
         const libraryView = ['films','movies','series'].includes(currentView);
+        const isFeaturedRail = normalizeText(sectionCategory) === 'destaque' || section.classList.contains('featured-video-rail');
         const sectionMatchesView = libraryView
           ? sectionView === 'films'
           : currentView === 'videos'
-            ? sectionView !== 'films'
+            ? sectionView !== 'films' && !isFeaturedRail
             : currentView === 'home'
               ? sectionView !== 'films'
               : true;
@@ -2485,7 +2496,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
           if (randomFeaturedSection) randomFeaturedSection.hidden = true;
         } else if (['films', 'movies', 'series', 'videos'].includes(currentView)) {
           if (featuredSection) featuredSection.hidden = true;
-          renderRandomTabFeatured(currentView, refreshFeatured);
+          if (currentView === 'videos') {
+            if (randomFeaturedSection) randomFeaturedSection.hidden = true;
+          } else {
+            renderRandomTabFeatured(currentView, refreshFeatured);
+          }
         }
       }
 
@@ -2509,7 +2524,10 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         setActiveTab(button);
         window.dispatchEvent(new Event('be:detail-close'));
         applyCatalogFilter(true);
-        const destination = document.getElementById('randomFeaturedSection') || document.getElementById('dynamicSections');
+        const randomDestination = document.getElementById('randomFeaturedSection');
+        const destination = randomDestination && !randomDestination.hidden
+          ? randomDestination
+          : document.getElementById('dynamicSections');
         if (destination && !destination.hidden) destination.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });

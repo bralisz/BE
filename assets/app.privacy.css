@@ -4858,12 +4858,12 @@ body.settings-page-active #mobileNotificationPopover{
   padding:26px 46px 32px!important;
 }
 .banner-group{
-  margin:0 0 24px!important;
-  padding:22px 26px 24px!important;
-  border:1px solid rgba(255,255,255,.095)!important;
-  border-radius:27px!important;
-  background:linear-gradient(135deg,rgba(35,41,51,.68),rgba(17,22,30,.44))!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 20px 55px rgba(0,0,0,.22)!important;
+  margin:0 0 30px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
 }
 .banner-group h3{
   margin:0 0 18px!important;
@@ -4955,7 +4955,7 @@ body.section-catalog-active main>section:not(#contentDetailSection){display:none
   .banner-picker-header.avatar-picker-header{min-height:88px!important;padding:20px 62px 13px!important}
   .banner-picker-header.avatar-picker-header h2{font-size:29px!important}
   .banner-picker-body.avatar-picker-body{padding:18px 14px 22px!important}
-  .banner-group{padding:18px 16px 20px!important;border-radius:22px!important}
+  .banner-group{padding:0!important;border-radius:0!important}
   .banner-group h3{font-size:20px!important;margin-bottom:13px!important}
   .banner-grid{grid-template-columns:1fr!important;gap:14px!important}
   .banner-picker-footer.avatar-picker-footer{padding-bottom:max(17px,env(safe-area-inset-bottom))!important}
