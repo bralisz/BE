@@ -3,38 +3,79 @@
 const MAX_BYTES = 12 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
 const REQUEST_TIMEOUT_MS = 12000;
+const DEFAULT_SUPABASE_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
+const ALLOWED_COLLECTIONS = new Set(['contents', 'featured', 'gallery', 'movies', 'notifications', 'sections', 'series', 'videos']);
+const ALLOWED_MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl', 'shareImage']);
 
 const ALLOWED_HOSTS = new Set([
+  'cdn.discordapp.com',
+  'cdn.theplaylist.net',
   'disney.images.edge.bamgrid.com',
+  'dwgyu36up6iuz.cloudfront.net',
+  'dx35vtwkllhj9.cloudfront.net',
   'encrypted-tbn0.gstatic.com',
+  'fycextras.com',
   'i.imgur.com',
-  'imgur.com',
   'i.pinimg.com',
   'i.ytimg.com',
-  'image.tmdb.org',
-  'media.themoviedb.org',
-  'images.ctfassets.net',
-  'upload.wikimedia.org',
-  'www.billboard.com',
-  'www.hollywoodreporter.com',
-  'variety.com',
   'i0.wp.com',
+  'image.tmdb.org',
+  'images.ctfassets.net',
+  'img10.hotstar.com',
+  'lh3.googleusercontent.com',
   'm.media-amazon.com',
-  'img10.hotstar.com'
+  'media.themoviedb.org',
+  'occ-0-3934-3933.1.nflxso.net',
+  'upload.wikimedia.org',
+  'variety.com',
+  'www.billboard.com',
+  'www.hollywoodreporter.com'
 ]);
 
 const ALLOWED_SUFFIXES = [
-  '.cloudfront.net', '.gstatic.com', '.googleusercontent.com', '.imgur.com',
-  '.pinimg.com', '.ytimg.com', '.tmdb.org', '.themoviedb.org',
-  '.ctfassets.net', '.nflxso.net', '.wikimedia.org', '.billboard.com',
-  '.hollywoodreporter.com', '.bamgrid.com', '.hotstar.com',
-  '.theplaylist.net', '.mzstatic.com', '.amazon.com', '.media-amazon.com'
+  '.bamgrid.com', '.billboard.com', '.cloudfront.net', '.ctfassets.net',
+  '.discordapp.com', '.googleusercontent.com', '.gstatic.com', '.hollywoodreporter.com',
+  '.hotstar.com', '.imgur.com', '.media-amazon.com', '.nflxso.net',
+  '.pinimg.com', '.themoviedb.org', '.theplaylist.net', '.tmdb.org',
+  '.wikimedia.org', '.wp.com', '.ytimg.com'
 ];
 
 function decodeBase64Url(value) {
   const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
   const padding = normalized.length % 4 ? '='.repeat(4 - (normalized.length % 4)) : '';
   return Buffer.from(normalized + padding, 'base64').toString('utf8');
+}
+
+function supabaseConfig() {
+  return {
+    url: String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/$/, ''),
+    key: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY
+  };
+}
+
+async function storedMediaSource(collection, id, field) {
+  const name = String(collection || '').trim().toLowerCase();
+  const itemId = String(id || '').trim();
+  const mediaField = String(field || '').trim();
+  if (!itemId || itemId.length > 100 || !ALLOWED_MEDIA_FIELDS.has(mediaField)) throw new Error('invalid_reference');
+  const { url, key } = supabaseConfig();
+  const headers = { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json' };
+  let endpoint;
+  if (name === 'settings') {
+    const params = new URLSearchParams({ select: 'data', id: `eq.${itemId}`, limit: '1' });
+    endpoint = `${url}/rest/v1/site_settings?${params.toString()}`;
+  } else {
+    if (!ALLOWED_COLLECTIONS.has(name)) throw new Error('invalid_reference');
+    const params = new URLSearchParams({ select: 'data', collection: `eq.${name}`, id: `eq.${itemId}`, limit: '1' });
+    endpoint = `${url}/rest/v1/content_items?${params.toString()}`;
+  }
+  const response = await fetch(endpoint, { headers, cache: 'no-store' });
+  if (!response.ok) throw new Error('source_unavailable');
+  const rows = await response.json();
+  const source = Array.isArray(rows) ? rows[0]?.data?.[mediaField] : '';
+  if (!source) throw new Error('source_unavailable');
+  return String(source);
 }
 
 function isIpLiteral(hostname) {
@@ -58,6 +99,22 @@ function validateTarget(raw) {
   return url;
 }
 
+function upstreamHeaders(url) {
+  const host = String(url.hostname || '').toLowerCase();
+  const headers = {
+    Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+    'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36'
+  };
+  if (host.endsWith('.pinimg.com')) headers.Referer = 'https://www.pinterest.com/';
+  else if (host.endsWith('.ytimg.com')) headers.Referer = 'https://www.youtube.com/';
+  else if (host.endsWith('.nflxso.net')) headers.Referer = 'https://www.netflix.com/';
+  else if (host.endsWith('.bamgrid.com') || host.endsWith('.hotstar.com')) headers.Referer = 'https://www.disneyplus.com/';
+  else if (host.endsWith('.billboard.com')) headers.Referer = 'https://www.billboard.com/';
+  else if (host.endsWith('.hollywoodreporter.com')) headers.Referer = 'https://www.hollywoodreporter.com/';
+  return headers;
+}
+
 async function fetchImage(initialUrl) {
   let current = validateTarget(initialUrl);
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
@@ -67,10 +124,7 @@ async function fetchImage(initialUrl) {
     try {
       response = await fetch(current, {
         method: 'GET', redirect: 'manual', signal: controller.signal,
-        headers: {
-          Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-          'User-Agent': 'Mozilla/5.0 (compatible; BETV-Media-Proxy/1.0)'
-        }
+        headers: upstreamHeaders(current)
       });
     } finally { clearTimeout(timer); }
 
@@ -100,8 +154,19 @@ module.exports = async function mediaProxy(req, res) {
   }
   try {
     const token = Array.isArray(req.query?.u) ? req.query.u[0] : req.query?.u;
-    if (!token || String(token).length > 6000) return res.status(400).end();
-    const { bytes, contentType } = await fetchImage(decodeBase64Url(token));
+    const collection = Array.isArray(req.query?.c) ? req.query.c[0] : req.query?.c;
+    const id = Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id;
+    const field = Array.isArray(req.query?.f) ? req.query.f[0] : req.query?.f;
+    let source = '';
+    if (token) {
+      if (String(token).length > 6000) return res.status(400).end();
+      source = decodeBase64Url(token);
+    } else if (collection && id && field) {
+      source = await storedMediaSource(collection, id, field);
+    } else {
+      return res.status(400).end();
+    }
+    const { bytes, contentType } = await fetchImage(source);
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -110,7 +175,11 @@ module.exports = async function mediaProxy(req, res) {
     if (req.method === 'HEAD') return res.status(200).end();
     return res.status(200).send(bytes);
   } catch (_) {
+    const placeholder = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="9" viewBox="0 0 16 9"><rect width="16" height="9" fill="#142238"/><path d="M2 7l3-3 2 2 2-2 5 3" fill="none" stroke="#31527d" stroke-width=".6"/></svg>');
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
-    return res.status(404).end();
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (req.method === 'HEAD') return res.status(200).end();
+    return res.status(200).send(placeholder);
   }
 };

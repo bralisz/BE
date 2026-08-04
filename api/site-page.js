@@ -105,7 +105,9 @@ async function loadSettings() {
 function injectSocialMetadata(html, settings, origin) {
   const title = 'Billie Eilish TV';
   const description = String(settings.description || 'Filmes, vídeos, entrevistas e atualizações em um só lugar.').trim();
-  const image = proxiedMediaUrl(settings.shareImage || DEFAULT_SHARE_IMAGE_PATH, origin);
+  const image = settings.shareImage
+    ? `${origin}/api/media?c=settings&id=site&f=shareImage`
+    : `${origin}${DEFAULT_SHARE_IMAGE_PATH}`;
   const canonical = `${origin}/`;
 
   html = html
