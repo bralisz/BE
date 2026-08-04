@@ -7813,3 +7813,19 @@ body.settings-page-active.banner-picker-active #bannerPicker{
   visibility:visible!important;
   pointer-events:auto!important;
 }
+
+
+/* Correção: posição do ranking, recomendações e troca de abas após detalhes. */
+body.detail-page-active #detailRecommendations:not([hidden]){
+  display:block!important;
+  visibility:visible!important;
+}
+@media(min-width:761px){
+  /* O número fica imediatamente antes do card e o card cobre apenas a sua ponta. */
+  body.profile-page-active .profile-favorite-ranked-item{
+    padding-left:clamp(42px,3.4vw,56px)!important;
+  }
+  body.profile-page-active .profile-favorite-rank{
+    left:-8px!important;
+  }
+}

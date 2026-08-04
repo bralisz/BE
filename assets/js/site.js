@@ -2655,39 +2655,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!panel || !moreRail || !catalog) return;
 
     const currentId = String(current.itemId || current.title || '');
-    const sourceKey = String(current.sourceSectionKey || '');
-    const category = String(current.category || '');
-    const collection = String(current.collection || '');
     const uniqueById = items => items.filter((item, index, array) => {
       const id = String(item.itemId || item.title || '');
       return array.findIndex(other => String(other.itemId || other.title || '') === id) === index;
     });
 
+    // A seção de recomendações sempre usa nove conteúdos aleatórios do catálogo,
+    // excluindo o conteúdo que está aberto. Os cards continuam disponíveis no DOM
+    // mesmo quando uma aba ou seção dedicada está visualmente oculta.
     const all = uniqueById(Array.from(catalog.querySelectorAll('.video-card'))
       .map(cardDataWithSection)
       .filter(item => String(item.itemId || item.title || '') !== currentId));
+    const recommendations = shuffleItems(all).slice(0, 9);
 
-    const sameSection = sourceKey
-      ? all.filter(item => String(item.sourceSectionKey || '') === sourceKey)
-      : [];
-    const similarCategory = all.filter(item => {
-      const categoryMatch = category && String(item.category || '') === category;
-      const collectionMatch = collection && String(item.collection || '') === collection;
-      return categoryMatch || collectionMatch;
-    });
-
-    const moreItems = uniqueById([
-      ...shuffleItems(similarCategory),
-      ...shuffleItems(sameSection),
-      ...shuffleItems(all)
-    ]).slice(0, 9);
-
-    moreRail.innerHTML = moreItems.length
-      ? moreItems.map(recommendationCard).join('')
-      : '<p class="detail-reco-empty">Nenhum vídeo semelhante disponível.</p>';
+    moreRail.innerHTML = recommendations.length
+      ? recommendations.map(recommendationCard).join('')
+      : '<p class="detail-reco-empty">Nenhuma recomendação disponível no momento.</p>';
 
     setupContentDetailInteractions(panel);
     panel.hidden = false;
+    panel.removeAttribute('hidden');
+    panel.setAttribute('aria-hidden', 'false');
   }
 
   function setupDetailControls() {
@@ -3259,14 +3247,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const historyMode = button.dataset.beHistoryMode || (event.isTrusted ? 'push' : 'none');
         delete button.dataset.beHistoryMode;
         if (historyMode === 'push') pushCatalogHistory(currentView, nextView, window.scrollY);
+
+        // Ao sair dos detalhes, encerra primeiro qualquer seção dedicada. Sem isso,
+        // o catálogo continuava em section-view-mode e Filmes/Vídeos herdavam apenas
+        // o trilho que estava aberto antes do detalhe.
+        if (document.body.classList.contains('section-catalog-active')) {
+          closeSectionView(false);
+          document.body.classList.remove('section-catalog-active');
+        }
+        if (document.body.classList.contains('detail-page-active')) {
+          closeContentDetail(false, false);
+          try { history.replaceState({ beRoute:'catalog', homeView:nextView, scrollY:0 }, '', '/' + (location.search || '')); } catch (_) {}
+        }
+
         currentView = nextView;
         document.body.dataset.homeView = currentView;
         setActiveTab(button);
-        window.dispatchEvent(new Event('be:detail-close'));
         applyCatalogFilter(true);
         // Ao alternar entre Filmes e Vídeos, sempre reposiciona a página no topo.
-        // Isso evita que o destaque, os títulos ou os cards fiquem recortados atrás
-        // da barra fixa quando a troca acontece após o usuário já ter rolado a página.
         window.requestAnimationFrame(() => {
           window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
         });
@@ -3281,11 +3279,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const historyMode = logo.dataset.beHistoryMode || (event.isTrusted ? 'push' : 'none');
       delete logo.dataset.beHistoryMode;
       if (historyMode === 'push') pushCatalogHistory(currentView, 'home', window.scrollY);
+      if (document.body.classList.contains('section-catalog-active')) {
+        closeSectionView(false);
+        document.body.classList.remove('section-catalog-active');
+      }
+      if (document.body.classList.contains('detail-page-active')) {
+        closeContentDetail(false, false);
+        try { history.replaceState({ beRoute:'catalog', homeView:'home', scrollY:0 }, '', '/' + (location.search || '')); } catch (_) {}
+      }
       currentView = 'home';
       document.body.dataset.homeView = currentView;
       setActiveTab(logo);
       input.value = '';
-      window.dispatchEvent(new Event('be:detail-close'));
       setSearchOpen(false);
       applyCatalogFilter();
     });
