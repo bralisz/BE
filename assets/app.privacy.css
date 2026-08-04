@@ -5619,16 +5619,18 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-/* Botão "Ler todos": no mobile usa o mesmo tamanho e espaçamento do desktop. */
+/* Botão "Ler todos": o mobile replica exatamente o tamanho usado no PC. */
 #notificationMarkAll,
 #mobileNotificationMarkAll{
+  box-sizing:border-box!important;
   width:auto!important;
   min-width:max-content!important;
-  height:40px!important;
-  min-height:40px!important;
-  padding:0 14px!important;
+  height:36px!important;
+  min-height:36px!important;
+  padding:0 13px!important;
   border-radius:999px!important;
   font-size:12px!important;
   line-height:1!important;
   white-space:nowrap!important;
+  flex:0 0 auto!important;
 }
