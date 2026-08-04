@@ -9,6 +9,13 @@
   const listeners = new Set();
   let currentUser = null;
   let supabaseClient = null;
+  const PROFILE_CACHE_TTL_MS = 15000;
+  const PREFERENCE_CACHE_TTL_MS = 10000;
+  const profileCache = new Map();
+  const profileEnsurePromises = new Map();
+  const preferenceCache = new Map();
+  const userSyncChannels = new Map();
+  let realtimeAuthPromise = null;
 
   function hasSupabaseConfig() {
     const config = window.BE_SUPABASE_CONFIG || {};
@@ -336,6 +343,22 @@
     };
   }
 
+  function cacheProfile(profile) {
+    if (!profile || !profile.uid) return profile;
+    profileCache.set(String(profile.uid), { value: clone(profile), cachedAt: Date.now() });
+    return profile;
+  }
+
+  function readCachedProfile(userId, maxAge = PROFILE_CACHE_TTL_MS) {
+    const cached = profileCache.get(String(userId || ''));
+    if (!cached || Date.now() - cached.cachedAt > maxAge) return null;
+    return clone(cached.value);
+  }
+
+  function invalidateProfileCache(userId) {
+    profileCache.delete(String(userId || ''));
+  }
+
   function profileToRow(id, data) {
     const row = { id };
     const mappings = {
@@ -575,71 +598,84 @@
   }
 
   const profiles = {
-    async get(userId) {
-      return data.get('users', userId);
+    async get(userId, options = {}) {
+      const force = options && options.force === true;
+      if (MODE === 'supabase' && !force) {
+        const cached = readCachedProfile(userId);
+        if (cached) return cached;
+      }
+      const profile = await data.get('users', userId);
+      if (profile && MODE === 'supabase') cacheProfile(profile);
+      return profile;
     },
     async ensure(user) {
       if (!user) throw backendError('auth/not-authenticated', 'Faça login para acessar o perfil.');
 
-      // No Supabase, a criação/garantia do perfil passa por uma função SQL
-      // SECURITY DEFINER. Ela usa auth.uid() e evita que um INSERT feito no
-      // navegador seja bloqueado pelas políticas RLS durante o login/OAuth.
       if (MODE === 'supabase') {
-        const metadata = user.raw?.user_metadata || user.raw?.raw_user_meta_data || {};
-        const metadataUsername = normalizeUsername(metadata.username || '');
-
-        // O avatar salvo no perfil é a fonte principal. Isso impede que a foto
-        // do Google/Discord substitua o avatar escolhido sempre que o usuário
-        // entra novamente.
-        let savedAvatar = '';
-        try {
-          const { data: existingProfile, error: existingProfileError } = await supabaseClient
-            .from('profiles')
-            .select('avatar_url, avatar_id')
-            .eq('id', user.uid)
-            .maybeSingle();
-          if (existingProfileError) console.warn('Não foi possível consultar o avatar salvo:', existingProfileError.message);
-          savedAvatar = String(existingProfile?.avatar_id || '').trim() ? String(existingProfile?.avatar_url || '').trim() : '';
-        } catch (avatarLookupError) {
-          console.warn('Não foi possível consultar o avatar salvo:', avatarLookupError?.message || avatarLookupError);
-        }
-
-        const profileArgs = {
-          p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
-          p_username: metadataUsername || null,
-          p_avatar_url: String(savedAvatar || '').trim() || null
-        };
-        let { data: rows, error } = await supabaseClient.rpc('ensure_my_profile', profileArgs);
-
-        // Contas antigas podem ter guardado nos metadados um @ que outra pessoa
-        // já usa. Isso não deve impedir o login: carregamos o perfil sem reaplicar
-        // o @ antigo e o usuário poderá escolher outro depois.
-        if (error && metadataUsername) {
-          const mappedError = mapAuthError(error);
-          if (mappedError.code === 'username-in-use') {
-            console.warn('O nome de usuário salvo nos metadados já está em uso; carregando o perfil sem ele.');
-            ({ data: rows, error } = await supabaseClient.rpc('ensure_my_profile', {
-              ...profileArgs,
-              p_username: null
-            }));
-          } else {
-            throw mappedError;
+        const userId = String(user.uid || '');
+        const cached = readCachedProfile(userId);
+        if (cached) {
+          if (currentUser?.uid === user.uid) {
+            currentUser = { ...currentUser, role: cached.role === 'admin' ? 'admin' : currentUser.role, photoURL: cached.avatarUrl || '', profile: cached };
           }
+          return cached;
         }
-        if (error) throw mapAuthError(error);
-        const row = Array.isArray(rows) ? rows[0] : rows;
-        if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
-        const profile = profileFromRow(row);
-        const cachedBanner = readProfileBannerCache(user.uid);
-        const metadataBannerUrl = String(metadata.profile_banner_url || metadata.banner_url || '').trim();
-        const metadataBannerId = String(metadata.profile_banner_id || metadata.banner_id || '').trim();
-        profile.bannerUrl = profile.bannerUrl || metadataBannerUrl || cachedBanner.bannerUrl;
-        profile.bannerId = profile.bannerId || metadataBannerId || cachedBanner.bannerId;
-        if (profile.bannerUrl) writeProfileBannerCache(user.uid, profile.bannerUrl, profile.bannerId);
-        if (currentUser?.uid === user.uid) {
-          currentUser = { ...currentUser, role: profile.role === 'admin' ? 'admin' : currentUser.role, photoURL: (profile.avatarId && profile.avatarUrl) ? profile.avatarUrl : '', profile };
-        }
-        return profile;
+        if (profileEnsurePromises.has(userId)) return profileEnsurePromises.get(userId);
+
+        const ensurePromise = (async () => {
+          const metadata = user.raw?.user_metadata || user.raw?.raw_user_meta_data || {};
+          const metadataUsername = normalizeUsername(metadata.username || '');
+          const metadataAvatarUrl = String(metadata.profile_avatar_id || '').trim()
+            ? String(metadata.profile_avatar_url || '').trim()
+            : '';
+          const profileArgs = {
+            p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
+            p_username: metadataUsername || null,
+            p_avatar_url: metadataAvatarUrl || null
+          };
+          let { data: rows, error } = await supabaseClient.rpc('ensure_my_profile', profileArgs);
+
+          if (error && metadataUsername) {
+            const mappedError = mapAuthError(error);
+            if (mappedError.code === 'username-in-use') {
+              console.warn('O nome de usuário salvo nos metadados já está em uso; carregando o perfil sem ele.');
+              ({ data: rows, error } = await supabaseClient.rpc('ensure_my_profile', {
+                ...profileArgs,
+                p_username: null
+              }));
+            } else {
+              throw mappedError;
+            }
+          }
+          if (error) throw mapAuthError(error);
+          const row = Array.isArray(rows) ? rows[0] : rows;
+          if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
+          const profile = profileFromRow(row);
+          const cachedAvatarUrl = readProfileAvatarCache(user.uid);
+          const fallbackMetadataAvatarUrl = String(metadata.profile_avatar_url || '').trim();
+          const metadataAvatarId = String(metadata.profile_avatar_id || '').trim();
+          if (!(profile.avatarId && profile.avatarUrl)) {
+            profile.avatarUrl = fallbackMetadataAvatarUrl || cachedAvatarUrl || '';
+            profile.avatarId = metadataAvatarId || (profile.avatarUrl ? 'saved-selection' : '');
+          }
+          if (profile.avatarUrl) writeProfileAvatarCache(user.uid, profile.avatarUrl);
+          const cachedBanner = readProfileBannerCache(user.uid);
+          const metadataBannerUrl = String(metadata.profile_banner_url || metadata.banner_url || '').trim();
+          const metadataBannerId = String(metadata.profile_banner_id || metadata.banner_id || '').trim();
+          profile.bannerUrl = profile.bannerUrl || metadataBannerUrl || cachedBanner.bannerUrl;
+          profile.bannerId = profile.bannerId || metadataBannerId || cachedBanner.bannerId;
+          if (profile.bannerUrl) writeProfileBannerCache(user.uid, profile.bannerUrl, profile.bannerId);
+          cacheProfile(profile);
+          if (currentUser?.uid === user.uid) {
+            currentUser = { ...currentUser, role: profile.role === 'admin' ? 'admin' : currentUser.role, photoURL: profile.avatarUrl || '', profile };
+          }
+          return clone(profile);
+        })().finally(() => {
+          profileEnsurePromises.delete(userId);
+        });
+
+        profileEnsurePromises.set(userId, ensurePromise);
+        return ensurePromise;
       }
 
       const existing = await data.get('users', user.uid);
@@ -684,7 +720,10 @@
         if (error) throw mapAuthError(error);
         const row = rows && rows[0];
         if (!row) throw backendError('profile/not-found', 'Perfil não encontrado para atualização.');
-        return profileFromRow(row);
+        const profile = profileFromRow(row);
+        cacheProfile(profile);
+        if (currentUser?.uid === userId) currentUser = { ...currentUser, photoURL: profile.avatarUrl || '', profile };
+        return clone(profile);
       }
 
       if (username) {
@@ -793,6 +832,237 @@
         }));
       } catch (_) {}
       return savedProfile;
+    },
+    subscribe(userId, callback) {
+      if (!userId || typeof callback !== 'function' || MODE !== 'supabase' || !supabaseClient) return () => {};
+      return subscribeSupabaseUserSync(userId, 'profile', callback);
+    }
+  };
+
+  function normalizePreferencePayload(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    return { ...value };
+  }
+
+  function preferenceFromRow(row) {
+    if (!row) return null;
+    return {
+      userId: row.user_id,
+      data: normalizePreferencePayload(row.data),
+      createdAt: row.created_at || '',
+      updatedAt: row.updated_at || ''
+    };
+  }
+
+  function cachePreference(preference) {
+    if (!preference || !preference.userId) return preference;
+    preferenceCache.set(String(preference.userId), { value: clone(preference), cachedAt: Date.now() });
+    return preference;
+  }
+
+  function readCachedPreference(userId, maxAge = PREFERENCE_CACHE_TTL_MS) {
+    const cached = preferenceCache.get(String(userId || ''));
+    if (!cached || Date.now() - cached.cachedAt > maxAge) return null;
+    return clone(cached.value);
+  }
+
+  function normalizeBroadcastChange(payload, fallbackEvent) {
+    const data = payload?.payload && typeof payload.payload === 'object' ? payload.payload : (payload || {});
+    return {
+      eventType: String(data.type || data.eventType || data.event || fallbackEvent || '').toUpperCase(),
+      table: String(data.table || ''),
+      schema: String(data.schema || ''),
+      new: data.record || data.new || null,
+      old: data.old_record || data.old || null,
+      raw: payload
+    };
+  }
+
+  function ensureRealtimeAuth() {
+    if (!supabaseClient?.realtime?.setAuth) return Promise.resolve();
+    if (!realtimeAuthPromise) {
+      realtimeAuthPromise = Promise.resolve(supabaseClient.realtime.setAuth()).catch(error => {
+        realtimeAuthPromise = null;
+        throw error;
+      });
+    }
+    return realtimeAuthPromise;
+  }
+
+  function dispatchUserSync(entry, payload, fallbackEvent) {
+    const change = normalizeBroadcastChange(payload, fallbackEvent);
+    const compatibilityPayload = {
+      eventType: change.eventType,
+      new: change.new,
+      old: change.old,
+      table: change.table,
+      schema: change.schema,
+      raw: change.raw
+    };
+
+    if (change.table === 'profiles') {
+      if (change.eventType === 'DELETE') {
+        invalidateProfileCache(entry.userId);
+        entry.listeners.profile.forEach(listener => {
+          try { listener(null, compatibilityPayload); } catch (error) { console.error('Falha ao remover perfil sincronizado:', error); }
+        });
+        return;
+      }
+      if (!change.new || String(change.new.id || '') !== entry.userId) return;
+      const profile = profileFromRow(change.new);
+      if (!profile) return;
+      cacheProfile(profile);
+      if (currentUser?.uid === entry.userId) currentUser = { ...currentUser, photoURL: profile.avatarUrl || '', profile };
+      entry.listeners.profile.forEach(listener => {
+        try { listener(clone(profile), compatibilityPayload); } catch (error) { console.error('Falha ao aplicar perfil sincronizado:', error); }
+      });
+      return;
+    }
+
+    if (change.table === 'user_preferences') {
+      if (change.eventType === 'DELETE') {
+        preferenceCache.delete(entry.userId);
+        entry.listeners.preferences.forEach(listener => {
+          try { listener(null, compatibilityPayload); } catch (error) { console.error('Falha ao remover preferências sincronizadas:', error); }
+        });
+        return;
+      }
+      if (!change.new || String(change.new.user_id || '') !== entry.userId) return;
+      const preference = preferenceFromRow(change.new);
+      cachePreference(preference);
+      entry.listeners.preferences.forEach(listener => {
+        try { listener(clone(preference), compatibilityPayload); } catch (error) { console.error('Falha ao aplicar preferências sincronizadas:', error); }
+      });
+    }
+  }
+
+  function startUserSyncChannel(entry) {
+    if (entry.channel || entry.starting || entry.disposed) return;
+    entry.starting = ensureRealtimeAuth().then(() => {
+      if (entry.disposed || entry.channel) return;
+      const handler = event => payload => dispatchUserSync(entry, payload, event);
+      const channel = supabaseClient
+        .channel(`user-sync:${entry.userId}`, { config: { private: true } })
+        .on('broadcast', { event: 'INSERT' }, handler('INSERT'))
+        .on('broadcast', { event: 'UPDATE' }, handler('UPDATE'))
+        .on('broadcast', { event: 'DELETE' }, handler('DELETE'));
+      entry.channel = channel;
+      channel.subscribe(status => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('A sincronização entre dispositivos foi interrompida:', status);
+        }
+      });
+    }).catch(error => {
+      console.warn('Não foi possível iniciar a sincronização entre dispositivos:', error?.message || error);
+    }).finally(() => {
+      entry.starting = null;
+    });
+  }
+
+  function subscribeSupabaseUserSync(userId, kind, callback) {
+    const key = String(userId || '');
+    let entry = userSyncChannels.get(key);
+    if (!entry) {
+      entry = {
+        userId: key,
+        listeners: { profile: new Set(), preferences: new Set() },
+        channel: null,
+        starting: null,
+        disposed: false
+      };
+      userSyncChannels.set(key, entry);
+    }
+    entry.disposed = false;
+    entry.listeners[kind].add(callback);
+    startUserSyncChannel(entry);
+
+    return () => {
+      entry.listeners[kind].delete(callback);
+      if (entry.listeners.profile.size || entry.listeners.preferences.size) return;
+      entry.disposed = true;
+      userSyncChannels.delete(key);
+      if (entry.channel) {
+        try {
+          const removal = supabaseClient.removeChannel(entry.channel);
+          if (removal && typeof removal.catch === 'function') removal.catch(() => {});
+        } catch (_) {}
+        entry.channel = null;
+      }
+    };
+  }
+
+  function localPreferenceKey(userId) {
+    return `beSyncedUserData:${String(userId || 'guest')}`;
+  }
+
+  const preferences = {
+    async get(userId, options = {}) {
+      if (!userId) return null;
+      if (MODE === 'supabase') {
+        const force = options && options.force === true;
+        if (!force) {
+          const cached = readCachedPreference(userId);
+          if (cached) return cached;
+        }
+        try {
+          const { data: row, error } = await supabaseClient
+            .from('user_preferences')
+            .select('user_id,data,created_at,updated_at')
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (error) throw error;
+          const preference = preferenceFromRow(row);
+          if (preference) cachePreference(preference);
+          return preference ? clone(preference) : null;
+        } catch (error) {
+          throw mapAuthError(error);
+        }
+      }
+      try {
+        const parsed = JSON.parse(localStorage.getItem(localPreferenceKey(userId)) || 'null');
+        return parsed && typeof parsed === 'object'
+          ? { userId, data: normalizePreferencePayload(parsed.data || parsed), createdAt: parsed.createdAt || '', updatedAt: parsed.updatedAt || '' }
+          : null;
+      } catch (_) {
+        return null;
+      }
+    },
+    async save(userId, payload) {
+      if (!currentUser || currentUser.uid !== userId) throw backendError('auth/not-authenticated', 'Faça login para sincronizar suas preferências.');
+      const normalized = normalizePreferencePayload(payload);
+      if (MODE === 'supabase') {
+        try {
+          const { data: rows, error } = await supabaseClient
+            .from('user_preferences')
+            .upsert({ user_id: userId, data: normalized, updated_at: now() }, { onConflict: 'user_id' })
+            .select('user_id,data,created_at,updated_at');
+          if (error) throw error;
+          const preference = preferenceFromRow(rows && rows[0]);
+          if (preference) cachePreference(preference);
+          return preference ? clone(preference) : null;
+        } catch (error) {
+          throw mapAuthError(error);
+        }
+      }
+      const stored = { userId, data: normalized, createdAt: now(), updatedAt: now() };
+      localStorage.setItem(localPreferenceKey(userId), JSON.stringify(stored));
+      return stored;
+    },
+    subscribe(userId, callback) {
+      if (!userId || typeof callback !== 'function') return () => {};
+      if (MODE !== 'supabase' || !supabaseClient) {
+        const listener = event => {
+          if (event.key !== localPreferenceKey(userId) || !event.newValue) return;
+          try {
+            const parsed = JSON.parse(event.newValue);
+            callback({ userId, data: normalizePreferencePayload(parsed.data || parsed), createdAt: parsed.createdAt || '', updatedAt: parsed.updatedAt || '' });
+          } catch (_) {}
+        };
+        window.addEventListener('storage', listener);
+        return () => window.removeEventListener('storage', listener);
+      }
+
+      return subscribeSupabaseUserSync(userId, 'preferences', callback);
     }
   };
 
@@ -1009,6 +1279,12 @@
       const { error } = await supabaseClient.auth.signOut();
       if (error) throw mapAuthError(error);
       currentUser = null;
+      profileCache.clear();
+      preferenceCache.clear();
+      userSyncChannels.forEach(entry => {
+        if (entry.channel) { try { supabaseClient.removeChannel(entry.channel); } catch (_) {} }
+      });
+      userSyncChannels.clear();
       localStorage.removeItem('beAuthExpected');
       localStorage.removeItem('beSessionUid');
       notify();
@@ -1078,7 +1354,13 @@
     async accountStatus() {
       if (!currentUser) return { banned: false };
       const localProfile = await profiles.get(currentUser.uid).catch(() => null);
-      if (localProfile?.banned) return { banned: true, reason: localProfile.banReason || '' };
+      if (localProfile) {
+        return {
+          banned: Boolean(localProfile.banned),
+          reason: localProfile.banReason || '',
+          bannedAt: localProfile.bannedAt || ''
+        };
+      }
       const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
       if (sessionError || !sessionData?.session?.access_token) return { banned: false };
       try {
@@ -1186,6 +1468,9 @@
       // uma sessão já confirmada; apenas SIGNED_OUT encerra a conta.
       supabaseClient.auth.onAuthStateChange((event, session) => {
         const eventUser = normalizeUser(session?.user || null);
+        if (session?.access_token && supabaseClient?.realtime?.setAuth) {
+          Promise.resolve(supabaseClient.realtime.setAuth(session.access_token)).catch(() => {});
+        }
         window.setTimeout(async () => {
           if (event === 'SIGNED_OUT') {
             currentUser = null;
@@ -1267,6 +1552,7 @@
     auth,
     data,
     profiles,
+    preferences,
     normalizeUsername,
     validUsername,
     isAdmin(user) { return Boolean(user && user.role === 'admin'); },

@@ -7,6 +7,9 @@ const crypto = require('crypto');
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
 const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
+const SETTINGS_CACHE_TTL_MS = 60000;
+let cachedTemplate = '';
+let settingsCache = { value: {}, expiresAt: 0, promise: null };
 
 function supabaseConfig() {
   return {
@@ -16,13 +19,17 @@ function supabaseConfig() {
 }
 
 function readTemplate() {
+  if (cachedTemplate) return cachedTemplate;
   const candidates = [
     path.join(process.cwd(), 'index.html'),
     path.join(__dirname, '..', 'index.html')
   ];
   for (const file of candidates) {
     try {
-      if (fs.existsSync(file)) return fs.readFileSync(file, 'utf8');
+      if (fs.existsSync(file)) {
+        cachedTemplate = fs.readFileSync(file, 'utf8');
+        return cachedTemplate;
+      }
     } catch (_) {}
   }
   throw new Error('index.html não encontrado');
@@ -85,22 +92,35 @@ function proxiedMediaUrl(value, origin) {
 }
 
 async function loadSettings() {
+  const currentTime = Date.now();
+  if (settingsCache.expiresAt > currentTime) return settingsCache.value;
+  if (settingsCache.promise) return settingsCache.promise;
+
   const { url, publishableKey } = supabaseConfig();
-  try {
-    const response = await fetch(`${url}/rest/v1/site_settings?id=eq.site&select=data,updated_at&limit=1`, {
-      headers: {
-        apikey: publishableKey,
-        Authorization: `Bearer ${publishableKey}`,
-        Accept: 'application/json'
-      }
-    });
-    if (!response.ok) return {};
-    const rows = await response.json();
-    const row = Array.isArray(rows) ? rows[0] : null;
-    return row ? { ...(row.data || {}), _updatedAt: row.updated_at || '' } : {};
-  } catch (_) {
-    return {};
-  }
+  settingsCache.promise = (async () => {
+    try {
+      const response = await fetch(`${url}/rest/v1/site_settings?id=eq.site&select=data,updated_at&limit=1`, {
+        headers: {
+          apikey: publishableKey,
+          Authorization: `Bearer ${publishableKey}`,
+          Accept: 'application/json'
+        }
+      });
+      if (!response.ok) return settingsCache.value || {};
+      const rows = await response.json();
+      const row = Array.isArray(rows) ? rows[0] : null;
+      settingsCache.value = row ? { ...(row.data || {}), _updatedAt: row.updated_at || '' } : {};
+      settingsCache.expiresAt = Date.now() + SETTINGS_CACHE_TTL_MS;
+      return settingsCache.value;
+    } catch (_) {
+      settingsCache.expiresAt = Date.now() + 10000;
+      return settingsCache.value || {};
+    } finally {
+      settingsCache.promise = null;
+    }
+  })();
+
+  return settingsCache.promise;
 }
 
 function injectSocialMetadata(html, settings, origin) {
@@ -147,7 +167,7 @@ module.exports = async function sitePage(req, res) {
     const settings = await loadSettings();
     const html = injectDeploymentVersion(injectSocialMetadata(readTemplate(), settings, origin));
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=0, must-revalidate');
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=600');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const requestPath = String(req.url || '').split('?')[0];
     if (requestPath === '/login' || requestPath === '/login/' || requestPath.startsWith('/oauth/consent')) {

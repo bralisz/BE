@@ -87,6 +87,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   let accountStatusUserId = '';
   let accountStatusCache = { banned: false, reason: '', bannedAt: '' };
   let supabaseClient = null;
+  const PROFILE_CACHE_TTL_MS = 15000;
+  const PREFERENCE_CACHE_TTL_MS = 10000;
+  const profileCache = new Map();
+  const profileEnsurePromises = new Map();
+  const preferenceCache = new Map();
+  const userSyncChannels = new Map();
+  let realtimeAuthPromise = null;
 
   function hasSupabaseConfig() {
     const config = window.BE_SUPABASE_CONFIG || {};
@@ -244,19 +251,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     // A função RPC é a confirmação principal. A leitura do próprio perfil é um
     // fallback seguro para navegadores que ainda estejam usando o cache antigo
     // do schema do Supabase logo após uma migração.
+    let adminCheckFailed = false;
     try {
       const { data: allowed, error } = await supabaseClient.rpc('is_admin');
-      if (!error && allowed === true) return { ...user, role: 'admin' };
-    } catch (_) {}
+      if (!error) return { ...user, role: allowed === true ? 'admin' : 'member' };
+      adminCheckFailed = true;
+    } catch (_) {
+      adminCheckFailed = true;
+    }
 
-    try {
-      const { data: profile, error } = await supabaseClient
-        .from('profiles')
-        .select('role')
-        .eq('id', user.uid)
-        .maybeSingle();
-      if (!error && profile?.role === 'admin') return { ...user, role: 'admin' };
-    } catch (_) {}
+    // Só faz a leitura adicional quando a verificação principal realmente
+    // falhar. Usuários comuns não geram duas consultas a cada login.
+    if (adminCheckFailed) {
+      try {
+        const { data: profile, error } = await supabaseClient
+          .from('profiles')
+          .select('role')
+          .eq('id', user.uid)
+          .maybeSingle();
+        if (!error) return { ...user, role: profile?.role === 'admin' ? 'admin' : 'member' };
+      } catch (_) {}
+    }
 
     // Claims emitidas pelo servidor continuam válidas, mas nunca usamos o
     // endereço de e-mail no JavaScript público para conceder acesso.
@@ -430,6 +445,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       updatedAt: row.updated_at || '',
       lastLoginAt: row.last_login_at || ''
     };
+  }
+
+  function cacheProfile(profile) {
+    if (!profile || !profile.uid) return profile;
+    profileCache.set(String(profile.uid), { value: clone(profile), cachedAt: Date.now() });
+    return profile;
+  }
+
+  function readCachedProfile(userId, maxAge = PROFILE_CACHE_TTL_MS) {
+    const cached = profileCache.get(String(userId || ''));
+    if (!cached || Date.now() - cached.cachedAt > maxAge) return null;
+    return clone(cached.value);
+  }
+
+  function invalidateProfileCache(userId) {
+    profileCache.delete(String(userId || ''));
   }
 
   function profileToRow(id, data) {
@@ -712,79 +743,84 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   const profiles = {
-    async get(userId) {
-      return data.get('users', userId);
+    async get(userId, options = {}) {
+      const force = options && options.force === true;
+      if (MODE === 'supabase' && !force) {
+        const cached = readCachedProfile(userId);
+        if (cached) return cached;
+      }
+      const profile = await data.get('users', userId);
+      if (profile && MODE === 'supabase') cacheProfile(profile);
+      return profile;
     },
     async ensure(user) {
       if (!user) throw backendError('auth/not-authenticated', 'Faça login para acessar o perfil.');
 
-      // No Supabase, a criação/garantia do perfil passa por uma função SQL
-      // SECURITY DEFINER. Ela usa auth.uid() e evita que um INSERT feito no
-      // navegador seja bloqueado pelas políticas RLS durante o login/OAuth.
       if (MODE === 'supabase') {
-        const metadata = user.raw?.user_metadata || user.raw?.raw_user_meta_data || {};
-        const metadataUsername = normalizeUsername(metadata.username || '');
-
-        // O avatar salvo no perfil é a fonte principal. Isso impede que a foto
-        // do Google/Discord substitua o avatar escolhido sempre que o usuário
-        // entra novamente.
-        let savedAvatar = '';
-        try {
-          const { data: existingProfile, error: existingProfileError } = await supabaseClient
-            .from('profiles')
-            .select('avatar_url, avatar_id')
-            .eq('id', user.uid)
-            .maybeSingle();
-          if (existingProfileError) console.warn('Não foi possível consultar o avatar salvo:', existingProfileError.message);
-          savedAvatar = String(existingProfile?.avatar_id || '').trim() ? String(existingProfile?.avatar_url || '').trim() : '';
-        } catch (avatarLookupError) {
-          console.warn('Não foi possível consultar o avatar salvo:', avatarLookupError?.message || avatarLookupError);
-        }
-
-        const profileArgs = {
-          p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
-          p_username: metadataUsername || null,
-          p_avatar_url: String(savedAvatar || '').trim() || null
-        };
-        let { data: rows, error } = await supabaseClient.rpc('ensure_my_profile', profileArgs);
-
-        // Contas antigas podem ter guardado nos metadados um @ que outra pessoa
-        // já usa. Isso não deve impedir o login: carregamos o perfil sem reaplicar
-        // o @ antigo e o usuário poderá escolher outro depois.
-        if (error && metadataUsername) {
-          const mappedError = mapAuthError(error);
-          if (mappedError.code === 'username-in-use') {
-            console.warn('O nome de usuário salvo nos metadados já está em uso; carregando o perfil sem ele.');
-            ({ data: rows, error } = await supabaseClient.rpc('ensure_my_profile', {
-              ...profileArgs,
-              p_username: null
-            }));
-          } else {
-            throw mappedError;
+        const userId = String(user.uid || '');
+        const cached = readCachedProfile(userId);
+        if (cached) {
+          if (currentUser?.uid === user.uid) {
+            currentUser = { ...currentUser, role: cached.role === 'admin' ? 'admin' : currentUser.role, photoURL: cached.avatarUrl || '', profile: cached };
           }
+          return cached;
         }
-        if (error) throw mapAuthError(error);
-        const row = Array.isArray(rows) ? rows[0] : rows;
-        if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
-        const profile = profileFromRow(row);
-        const cachedAvatarUrl = readProfileAvatarCache(user.uid);
-        const metadataAvatarUrl = String(metadata.profile_avatar_url || '').trim();
-        const metadataAvatarId = String(metadata.profile_avatar_id || '').trim();
-        if (!(profile.avatarId && profile.avatarUrl)) {
-          profile.avatarUrl = metadataAvatarUrl || cachedAvatarUrl || '';
-          profile.avatarId = metadataAvatarId || (profile.avatarUrl ? 'saved-selection' : '');
-        }
-        if (profile.avatarUrl) writeProfileAvatarCache(user.uid, profile.avatarUrl);
-        const cachedBanner = readProfileBannerCache(user.uid);
-        const metadataBannerUrl = String(metadata.profile_banner_url || metadata.banner_url || '').trim();
-        const metadataBannerId = String(metadata.profile_banner_id || metadata.banner_id || '').trim();
-        profile.bannerUrl = profile.bannerUrl || metadataBannerUrl || cachedBanner.bannerUrl;
-        profile.bannerId = profile.bannerId || metadataBannerId || cachedBanner.bannerId;
-        if (profile.bannerUrl) writeProfileBannerCache(user.uid, profile.bannerUrl, profile.bannerId);
-        if (currentUser?.uid === user.uid) {
-          currentUser = { ...currentUser, role: profile.role === 'admin' ? 'admin' : currentUser.role, photoURL: profile.avatarUrl || '', profile };
-        }
-        return profile;
+        if (profileEnsurePromises.has(userId)) return profileEnsurePromises.get(userId);
+
+        const ensurePromise = (async () => {
+          const metadata = user.raw?.user_metadata || user.raw?.raw_user_meta_data || {};
+          const metadataUsername = normalizeUsername(metadata.username || '');
+          const metadataAvatarUrl = String(metadata.profile_avatar_id || '').trim()
+            ? String(metadata.profile_avatar_url || '').trim()
+            : '';
+          const profileArgs = {
+            p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
+            p_username: metadataUsername || null,
+            p_avatar_url: metadataAvatarUrl || null
+          };
+          let { data: rows, error } = await supabaseClient.rpc('ensure_my_profile', profileArgs);
+
+          if (error && metadataUsername) {
+            const mappedError = mapAuthError(error);
+            if (mappedError.code === 'username-in-use') {
+              console.warn('O nome de usuário salvo nos metadados já está em uso; carregando o perfil sem ele.');
+              ({ data: rows, error } = await supabaseClient.rpc('ensure_my_profile', {
+                ...profileArgs,
+                p_username: null
+              }));
+            } else {
+              throw mappedError;
+            }
+          }
+          if (error) throw mapAuthError(error);
+          const row = Array.isArray(rows) ? rows[0] : rows;
+          if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
+          const profile = profileFromRow(row);
+          const cachedAvatarUrl = readProfileAvatarCache(user.uid);
+          const fallbackMetadataAvatarUrl = String(metadata.profile_avatar_url || '').trim();
+          const metadataAvatarId = String(metadata.profile_avatar_id || '').trim();
+          if (!(profile.avatarId && profile.avatarUrl)) {
+            profile.avatarUrl = fallbackMetadataAvatarUrl || cachedAvatarUrl || '';
+            profile.avatarId = metadataAvatarId || (profile.avatarUrl ? 'saved-selection' : '');
+          }
+          if (profile.avatarUrl) writeProfileAvatarCache(user.uid, profile.avatarUrl);
+          const cachedBanner = readProfileBannerCache(user.uid);
+          const metadataBannerUrl = String(metadata.profile_banner_url || metadata.banner_url || '').trim();
+          const metadataBannerId = String(metadata.profile_banner_id || metadata.banner_id || '').trim();
+          profile.bannerUrl = profile.bannerUrl || metadataBannerUrl || cachedBanner.bannerUrl;
+          profile.bannerId = profile.bannerId || metadataBannerId || cachedBanner.bannerId;
+          if (profile.bannerUrl) writeProfileBannerCache(user.uid, profile.bannerUrl, profile.bannerId);
+          cacheProfile(profile);
+          if (currentUser?.uid === user.uid) {
+            currentUser = { ...currentUser, role: profile.role === 'admin' ? 'admin' : currentUser.role, photoURL: profile.avatarUrl || '', profile };
+          }
+          return clone(profile);
+        })().finally(() => {
+          profileEnsurePromises.delete(userId);
+        });
+
+        profileEnsurePromises.set(userId, ensurePromise);
+        return ensurePromise;
       }
 
       const existing = await data.get('users', user.uid);
@@ -829,7 +865,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (error) throw mapAuthError(error);
         const row = rows && rows[0];
         if (!row) throw backendError('profile/not-found', 'Perfil não encontrado para atualização.');
-        return profileFromRow(row);
+        const profile = profileFromRow(row);
+        cacheProfile(profile);
+        if (currentUser?.uid === userId) currentUser = { ...currentUser, photoURL: profile.avatarUrl || '', profile };
+        return clone(profile);
       }
 
       if (username) {
@@ -965,6 +1004,237 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }));
       } catch (_) {}
       return savedProfile;
+    },
+    subscribe(userId, callback) {
+      if (!userId || typeof callback !== 'function' || MODE !== 'supabase' || !supabaseClient) return () => {};
+      return subscribeSupabaseUserSync(userId, 'profile', callback);
+    }
+  };
+
+  function normalizePreferencePayload(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    return { ...value };
+  }
+
+  function preferenceFromRow(row) {
+    if (!row) return null;
+    return {
+      userId: row.user_id,
+      data: normalizePreferencePayload(row.data),
+      createdAt: row.created_at || '',
+      updatedAt: row.updated_at || ''
+    };
+  }
+
+  function cachePreference(preference) {
+    if (!preference || !preference.userId) return preference;
+    preferenceCache.set(String(preference.userId), { value: clone(preference), cachedAt: Date.now() });
+    return preference;
+  }
+
+  function readCachedPreference(userId, maxAge = PREFERENCE_CACHE_TTL_MS) {
+    const cached = preferenceCache.get(String(userId || ''));
+    if (!cached || Date.now() - cached.cachedAt > maxAge) return null;
+    return clone(cached.value);
+  }
+
+  function normalizeBroadcastChange(payload, fallbackEvent) {
+    const data = payload?.payload && typeof payload.payload === 'object' ? payload.payload : (payload || {});
+    return {
+      eventType: String(data.type || data.eventType || data.event || fallbackEvent || '').toUpperCase(),
+      table: String(data.table || ''),
+      schema: String(data.schema || ''),
+      new: data.record || data.new || null,
+      old: data.old_record || data.old || null,
+      raw: payload
+    };
+  }
+
+  function ensureRealtimeAuth() {
+    if (!supabaseClient?.realtime?.setAuth) return Promise.resolve();
+    if (!realtimeAuthPromise) {
+      realtimeAuthPromise = Promise.resolve(supabaseClient.realtime.setAuth()).catch(error => {
+        realtimeAuthPromise = null;
+        throw error;
+      });
+    }
+    return realtimeAuthPromise;
+  }
+
+  function dispatchUserSync(entry, payload, fallbackEvent) {
+    const change = normalizeBroadcastChange(payload, fallbackEvent);
+    const compatibilityPayload = {
+      eventType: change.eventType,
+      new: change.new,
+      old: change.old,
+      table: change.table,
+      schema: change.schema,
+      raw: change.raw
+    };
+
+    if (change.table === 'profiles') {
+      if (change.eventType === 'DELETE') {
+        invalidateProfileCache(entry.userId);
+        entry.listeners.profile.forEach(listener => {
+          try { listener(null, compatibilityPayload); } catch (error) { console.error('Falha ao remover perfil sincronizado:', error); }
+        });
+        return;
+      }
+      if (!change.new || String(change.new.id || '') !== entry.userId) return;
+      const profile = profileFromRow(change.new);
+      if (!profile) return;
+      cacheProfile(profile);
+      if (currentUser?.uid === entry.userId) currentUser = { ...currentUser, photoURL: profile.avatarUrl || '', profile };
+      entry.listeners.profile.forEach(listener => {
+        try { listener(clone(profile), compatibilityPayload); } catch (error) { console.error('Falha ao aplicar perfil sincronizado:', error); }
+      });
+      return;
+    }
+
+    if (change.table === 'user_preferences') {
+      if (change.eventType === 'DELETE') {
+        preferenceCache.delete(entry.userId);
+        entry.listeners.preferences.forEach(listener => {
+          try { listener(null, compatibilityPayload); } catch (error) { console.error('Falha ao remover preferências sincronizadas:', error); }
+        });
+        return;
+      }
+      if (!change.new || String(change.new.user_id || '') !== entry.userId) return;
+      const preference = preferenceFromRow(change.new);
+      cachePreference(preference);
+      entry.listeners.preferences.forEach(listener => {
+        try { listener(clone(preference), compatibilityPayload); } catch (error) { console.error('Falha ao aplicar preferências sincronizadas:', error); }
+      });
+    }
+  }
+
+  function startUserSyncChannel(entry) {
+    if (entry.channel || entry.starting || entry.disposed) return;
+    entry.starting = ensureRealtimeAuth().then(() => {
+      if (entry.disposed || entry.channel) return;
+      const handler = event => payload => dispatchUserSync(entry, payload, event);
+      const channel = supabaseClient
+        .channel(`user-sync:${entry.userId}`, { config: { private: true } })
+        .on('broadcast', { event: 'INSERT' }, handler('INSERT'))
+        .on('broadcast', { event: 'UPDATE' }, handler('UPDATE'))
+        .on('broadcast', { event: 'DELETE' }, handler('DELETE'));
+      entry.channel = channel;
+      channel.subscribe(status => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('A sincronização entre dispositivos foi interrompida:', status);
+        }
+      });
+    }).catch(error => {
+      console.warn('Não foi possível iniciar a sincronização entre dispositivos:', error?.message || error);
+    }).finally(() => {
+      entry.starting = null;
+    });
+  }
+
+  function subscribeSupabaseUserSync(userId, kind, callback) {
+    const key = String(userId || '');
+    let entry = userSyncChannels.get(key);
+    if (!entry) {
+      entry = {
+        userId: key,
+        listeners: { profile: new Set(), preferences: new Set() },
+        channel: null,
+        starting: null,
+        disposed: false
+      };
+      userSyncChannels.set(key, entry);
+    }
+    entry.disposed = false;
+    entry.listeners[kind].add(callback);
+    startUserSyncChannel(entry);
+
+    return () => {
+      entry.listeners[kind].delete(callback);
+      if (entry.listeners.profile.size || entry.listeners.preferences.size) return;
+      entry.disposed = true;
+      userSyncChannels.delete(key);
+      if (entry.channel) {
+        try {
+          const removal = supabaseClient.removeChannel(entry.channel);
+          if (removal && typeof removal.catch === 'function') removal.catch(() => {});
+        } catch (_) {}
+        entry.channel = null;
+      }
+    };
+  }
+
+  function localPreferenceKey(userId) {
+    return `beSyncedUserData:${String(userId || 'guest')}`;
+  }
+
+  const preferences = {
+    async get(userId, options = {}) {
+      if (!userId) return null;
+      if (MODE === 'supabase') {
+        const force = options && options.force === true;
+        if (!force) {
+          const cached = readCachedPreference(userId);
+          if (cached) return cached;
+        }
+        try {
+          const { data: row, error } = await supabaseClient
+            .from('user_preferences')
+            .select('user_id,data,created_at,updated_at')
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (error) throw error;
+          const preference = preferenceFromRow(row);
+          if (preference) cachePreference(preference);
+          return preference ? clone(preference) : null;
+        } catch (error) {
+          throw mapAuthError(error);
+        }
+      }
+      try {
+        const parsed = JSON.parse(localStorage.getItem(localPreferenceKey(userId)) || 'null');
+        return parsed && typeof parsed === 'object'
+          ? { userId, data: normalizePreferencePayload(parsed.data || parsed), createdAt: parsed.createdAt || '', updatedAt: parsed.updatedAt || '' }
+          : null;
+      } catch (_) {
+        return null;
+      }
+    },
+    async save(userId, payload) {
+      if (!currentUser || currentUser.uid !== userId) throw backendError('auth/not-authenticated', 'Faça login para sincronizar suas preferências.');
+      const normalized = normalizePreferencePayload(payload);
+      if (MODE === 'supabase') {
+        try {
+          const { data: rows, error } = await supabaseClient
+            .from('user_preferences')
+            .upsert({ user_id: userId, data: normalized, updated_at: now() }, { onConflict: 'user_id' })
+            .select('user_id,data,created_at,updated_at');
+          if (error) throw error;
+          const preference = preferenceFromRow(rows && rows[0]);
+          if (preference) cachePreference(preference);
+          return preference ? clone(preference) : null;
+        } catch (error) {
+          throw mapAuthError(error);
+        }
+      }
+      const stored = { userId, data: normalized, createdAt: now(), updatedAt: now() };
+      localStorage.setItem(localPreferenceKey(userId), JSON.stringify(stored));
+      return stored;
+    },
+    subscribe(userId, callback) {
+      if (!userId || typeof callback !== 'function') return () => {};
+      if (MODE !== 'supabase' || !supabaseClient) {
+        const listener = event => {
+          if (event.key !== localPreferenceKey(userId) || !event.newValue) return;
+          try {
+            const parsed = JSON.parse(event.newValue);
+            callback({ userId, data: normalizePreferencePayload(parsed.data || parsed), createdAt: parsed.createdAt || '', updatedAt: parsed.updatedAt || '' });
+          } catch (_) {}
+        };
+        window.addEventListener('storage', listener);
+        return () => window.removeEventListener('storage', listener);
+      }
+
+      return subscribeSupabaseUserSync(userId, 'preferences', callback);
     }
   };
 
@@ -1197,6 +1467,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const { error } = await supabaseClient.auth.signOut();
       if (error) throw mapAuthError(error);
       currentUser = null;
+      profileCache.clear();
+      preferenceCache.clear();
+      userSyncChannels.forEach(entry => {
+        if (entry.channel) { try { supabaseClient.removeChannel(entry.channel); } catch (_) {} }
+      });
+      userSyncChannels.clear();
       localStorage.removeItem('beAuthExpected');
       localStorage.removeItem('beSessionUid');
       notify();
@@ -1276,10 +1552,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         accountStatusCache = { banned: false, reason: '', bannedAt: '' };
       }
       const localProfile = await profiles.get(currentUser.uid).catch(() => null);
-      if (localProfile?.banned) {
-        accountStatusCache = { banned: true, reason: localProfile.banReason || '', bannedAt: localProfile.bannedAt || '' };
+      if (localProfile) {
+        accountStatusCache = {
+          banned: Boolean(localProfile.banned),
+          reason: localProfile.banReason || '',
+          bannedAt: localProfile.bannedAt || ''
+        };
         accountStatusCheckedAt = Date.now();
-        return accountStatusCache;
+        return { ...accountStatusCache };
       }
       if (accountStatusPromise) return accountStatusPromise;
       if (Date.now() - accountStatusCheckedAt < 30000) return { ...accountStatusCache };
@@ -1443,6 +1723,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       // uma sessão já confirmada; apenas SIGNED_OUT encerra a conta.
       supabaseClient.auth.onAuthStateChange((event, session) => {
         const eventUser = normalizeUser(session?.user || null);
+        if (session?.access_token && supabaseClient?.realtime?.setAuth) {
+          Promise.resolve(supabaseClient.realtime.setAuth(session.access_token)).catch(() => {});
+        }
         window.setTimeout(async () => {
           if (event === 'SIGNED_OUT') {
             currentUser = null;
@@ -1535,6 +1818,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     auth,
     data,
     profiles,
+    preferences,
     normalizeUsername,
     validUsername,
     isAdmin(user) { return Boolean(user && user.role === 'admin'); },
@@ -2941,6 +3225,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     saveDetailFavoriteSet(detailFavorites);
     localStorage.setItem('beFeaturedFavorites', JSON.stringify(Array.from(featuredFavorites)));
     persistSavedContent(normalized, active);
+    if (typeof window.beScheduleUserDataSync === 'function') window.beScheduleUserDataSync('favorites');
     return true;
   }
 
@@ -4270,6 +4555,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var bannerGalleryRendered=false;
     var avatarImageObserver=null;
     var bannerImageObserver=null;
+    var profileDeviceSyncStop=null;
+    var preferenceDeviceSyncStop=null;
+    var preferenceSyncTimer=0;
+    var preferenceSyncUserId='';
+    var preferenceSyncStarting=false;
+    var applyingRemotePreferences=false;
+    var settingsSyncState='idle';
+    var settingsSyncMessage='Aguardando login para sincronizar.';
 
     function escapePublic(value){return String(value||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     function avatarCacheKey(user){return 'beSelectedAvatar:'+(user&&user.uid?user.uid:'guest');}
@@ -4320,6 +4613,164 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!settingsSaveToast)return;
       clearTimeout(settingsToastTimer);settingsSaveToast.hidden=false;
       settingsToastTimer=setTimeout(function(){settingsSaveToast.hidden=true;},2200);
+    }
+    function syncedUserCacheKey(userId){return 'beSyncedUserData:'+String(userId||'guest');}
+    function readStorageJson(key,fallback){try{var parsed=JSON.parse(localStorage.getItem(key)||'null');return parsed===null?fallback:parsed;}catch(_){return fallback;}}
+    function uniqueSyncStrings(values,limit){var result=[];(Array.isArray(values)?values:[]).forEach(function(value){var normalized=String(value||'').trim();if(normalized&&result.indexOf(normalized)<0)result.push(normalized);});return typeof limit==='number'?result.slice(0,limit):result;}
+    function syncRecordIdentity(item){return String((item&&item.favoriteId)||(item&&item.itemId)||((item&&item.collection&&item.recordId)?item.collection+':'+item.recordId:'')||(item&&item.title)||'').trim();}
+    function uniqueSyncRecords(values,limit){var result=[];(Array.isArray(values)?values:[]).forEach(function(item){if(!item||typeof item!=='object')return;var identity=syncRecordIdentity(item);if(!identity||result.some(function(current){return syncRecordIdentity(current)===identity;}))return;result.push({...item});});return typeof limit==='number'?result.slice(0,limit):result;}
+    function normalizeCrossDeviceData(value){
+      var source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+      return {
+        version:1,
+        detailFavorites:uniqueSyncStrings(source.detailFavorites),
+        featuredFavorites:uniqueSyncStrings(source.featuredFavorites),
+        savedContents:uniqueSyncRecords(source.savedContents,20),
+        profileTopFavorites:uniqueSyncRecords(source.profileTopFavorites,4),
+        updatedAt:String(source.updatedAt||'')
+      };
+    }
+    function captureCrossDeviceData(userId){
+      return normalizeCrossDeviceData({
+        detailFavorites:readStorageJson('beDetailFavorites',[]),
+        featuredFavorites:readStorageJson('beFeaturedFavorites',[]),
+        savedContents:readStorageJson('beSavedContents',[]),
+        profileTopFavorites:readStorageJson('beProfileTopFavorites:'+String(userId||'guest'),[]),
+        updatedAt:beBackend.now()
+      });
+    }
+    function mergeInitialCrossDeviceData(remoteData,localData){
+      var remote=normalizeCrossDeviceData(remoteData),local=normalizeCrossDeviceData(localData);
+      return normalizeCrossDeviceData({
+        detailFavorites:remote.detailFavorites.concat(local.detailFavorites),
+        featuredFavorites:remote.featuredFavorites.concat(local.featuredFavorites),
+        savedContents:remote.savedContents.concat(local.savedContents),
+        profileTopFavorites:remote.profileTopFavorites.concat(local.profileTopFavorites),
+        updatedAt:beBackend.now()
+      });
+    }
+    function localCrossDeviceSeed(userId){
+      var cached=readStorageJson(syncedUserCacheKey(userId),null);
+      if(cached&&typeof cached==='object')return normalizeCrossDeviceData(cached.data||cached);
+      var owner='';try{owner=String(localStorage.getItem('beSyncedDataOwner')||'');}catch(_){ }
+      if(!owner||owner===String(userId||''))return captureCrossDeviceData(userId);
+      return normalizeCrossDeviceData({});
+    }
+    function updateSettingsSyncStatus(){
+      var box=document.getElementById('settingsDeviceSync');
+      var message=document.getElementById('settingsDeviceSyncMessage');
+      if(!box||!message)return;
+      box.classList.remove('is-idle','is-syncing','is-active','is-error');
+      box.classList.add('is-'+settingsSyncState);
+      message.textContent=settingsSyncMessage;
+    }
+    function setSettingsSyncStatus(state,message){settingsSyncState=state||'idle';settingsSyncMessage=String(message||'');updateSettingsSyncStatus();}
+    function settingsSyncMarkup(){
+      var state=['idle','syncing','active','error'].indexOf(settingsSyncState)>=0?settingsSyncState:'idle';
+      return '<div class="settings-device-sync is-'+state+'" id="settingsDeviceSync" role="status"><span class="settings-device-sync-dot" aria-hidden="true"></span><span><strong>Sincronização entre dispositivos</strong><small id="settingsDeviceSyncMessage">'+escapePublic(settingsSyncMessage)+'</small></span></div>';
+    }
+    function applyCrossDeviceData(value,userId,source){
+      if(!userId)return;
+      var data=normalizeCrossDeviceData(value);
+      applyingRemotePreferences=true;
+      try{
+        localStorage.setItem('beDetailFavorites',JSON.stringify(data.detailFavorites));
+        localStorage.setItem('beFeaturedFavorites',JSON.stringify(data.featuredFavorites));
+        localStorage.setItem('beSavedContents',JSON.stringify(data.savedContents));
+        localStorage.setItem('beProfileTopFavorites:'+userId,JSON.stringify(data.profileTopFavorites));
+        localStorage.setItem(syncedUserCacheKey(userId),JSON.stringify({data:data,updatedAt:data.updatedAt||beBackend.now()}));
+        localStorage.setItem('beSyncedDataOwner',String(userId));
+      }catch(error){console.warn('Não foi possível atualizar o cache sincronizado:',error);}
+      applyingRemotePreferences=false;
+      profileFavoritesItems=data.profileTopFavorites.slice(0,4);
+      try{window.dispatchEvent(new CustomEvent('be:user-data-synced',{detail:{userId:userId,source:source||'remote',data:data}}));}catch(_){ }
+      try{window.dispatchEvent(new CustomEvent('be:favorites-changed',{detail:{synced:true}}));}catch(_){ }
+      try{window.dispatchEvent(new CustomEvent('be:profile-favorites-changed',{detail:{items:profileFavoritesItems,synced:true}}));}catch(_){ }
+      if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileSaved();}
+    }
+    async function persistCrossDeviceData(reason){
+      var user=auth.currentUser;
+      if(!user||!user.uid||applyingRemotePreferences||!beBackend.preferences)return;
+      var userId=user.uid;
+      var payload=captureCrossDeviceData(userId);
+      try{localStorage.setItem(syncedUserCacheKey(userId),JSON.stringify({data:payload,updatedAt:payload.updatedAt}));localStorage.setItem('beSyncedDataOwner',String(userId));}catch(_){ }
+      setSettingsSyncStatus('syncing','Salvando alterações do '+(reason==='profile-favorites'?'perfil':'aparelho')+'…');
+      try{
+        var saved=await beBackend.preferences.save(userId,payload);
+        if(auth.currentUser&&auth.currentUser.uid===userId){
+          var when=saved&&saved.updatedAt?new Date(saved.updatedAt):new Date();
+          setSettingsSyncStatus('active','Sincronizado entre celular e computador às '+when.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.');
+        }
+      }catch(error){
+        console.warn('Não foi possível sincronizar as preferências:',error&&error.message?error.message:error);
+        setSettingsSyncStatus('error','Alterações mantidas neste aparelho. A sincronização será tentada novamente.');
+      }
+    }
+    function scheduleCrossDeviceSync(reason){
+      if(applyingRemotePreferences||!auth.currentUser||!auth.currentUser.uid)return;
+      clearTimeout(preferenceSyncTimer);
+      preferenceSyncTimer=setTimeout(function(){persistCrossDeviceData(reason||'configuração');},350);
+    }
+    window.beScheduleUserDataSync=scheduleCrossDeviceSync;
+    function stopCrossDeviceSync(){
+      clearTimeout(preferenceSyncTimer);preferenceSyncTimer=0;
+      if(profileDeviceSyncStop){try{profileDeviceSyncStop();}catch(_){ }profileDeviceSyncStop=null;}
+      if(preferenceDeviceSyncStop){try{preferenceDeviceSyncStop();}catch(_){ }preferenceDeviceSyncStop=null;}
+      preferenceSyncUserId='';preferenceSyncStarting=false;
+    }
+    function applyRemoteProfile(profile,userId){
+      if(!profile||!auth.currentUser||auth.currentUser.uid!==userId)return;
+      currentProfile={...(currentProfile||{}),...profile};
+      selectedAvatar=selectedProfileAvatar(currentProfile);
+      try{
+        localStorage.setItem('beSelectedAvatar:'+userId,selectedAvatar||'');
+        localStorage.setItem('beProfileBanner:'+userId,JSON.stringify({bannerUrl:String(currentProfile.bannerUrl||''),bannerId:String(currentProfile.bannerId||''),updatedAt:currentProfile.updatedAt||beBackend.now()}));
+      }catch(_){ }
+      username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||auth.currentUser.displayName||'Usuário');
+      setMainAvatar(selectedAvatar);renderProfilePage();
+      if(document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();}
+      try{window.dispatchEvent(new CustomEvent('be:profile-device-synced',{detail:{userId:userId,profile:currentProfile}}));}catch(_){ }
+    }
+    async function startCrossDeviceSync(user){
+      if(!user||!user.uid||!beBackend.preferences)return;
+      if(preferenceSyncUserId===user.uid&&(preferenceSyncStarting||preferenceDeviceSyncStop))return;
+      stopCrossDeviceSync();
+      var userId=user.uid;preferenceSyncUserId=userId;preferenceSyncStarting=true;
+      setSettingsSyncStatus('syncing','Carregando as configurações da sua conta…');
+      try{
+        var cachedSeed=readStorageJson(syncedUserCacheKey(userId),null);
+        var localSeed=cachedSeed&&typeof cachedSeed==='object'?normalizeCrossDeviceData(cachedSeed.data||cachedSeed):localCrossDeviceSeed(userId);
+        var remote=await beBackend.preferences.get(userId);
+        if(!auth.currentUser||auth.currentUser.uid!==userId)return;
+        var merged=localSeed;
+        if(remote){
+          var remoteData=normalizeCrossDeviceData(remote.data);
+          if(cachedSeed&&typeof cachedSeed==='object'){
+            var remoteTime=Date.parse(remoteData.updatedAt||remote.updatedAt||'')||0;
+            var localTime=Date.parse(localSeed.updatedAt||cachedSeed.updatedAt||'')||0;
+            if(remoteTime&&localTime)merged=remoteTime>=localTime?remoteData:localSeed;
+            else if(remoteTime)merged=remoteData;
+            else if(!localTime)merged=mergeInitialCrossDeviceData(remoteData,localSeed);
+          }else{
+            merged=remoteData;
+          }
+        }
+        applyCrossDeviceData(merged,userId,remote?'remote':'local');
+        var saved=await beBackend.preferences.save(userId,{...merged,updatedAt:beBackend.now()});
+        if(!auth.currentUser||auth.currentUser.uid!==userId)return;
+        preferenceDeviceSyncStop=beBackend.preferences.subscribe(userId,function(record){
+          if(!record||!auth.currentUser||auth.currentUser.uid!==userId)return;
+          applyCrossDeviceData(record.data,userId,'remote');
+          var when=record.updatedAt?new Date(record.updatedAt):new Date();
+          setSettingsSyncStatus('active','Atualizado em todos os dispositivos às '+when.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.');
+        });
+        if(beBackend.profiles&&typeof beBackend.profiles.subscribe==='function')profileDeviceSyncStop=beBackend.profiles.subscribe(userId,function(profile){applyRemoteProfile(profile,userId);});
+        var syncedAt=saved&&saved.updatedAt?new Date(saved.updatedAt):new Date();
+        setSettingsSyncStatus('active','Sincronizado entre celular e computador às '+syncedAt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.');
+      }catch(error){
+        console.warn('Sincronização entre dispositivos indisponível:',error&&error.message?error.message:error);
+        setSettingsSyncStatus('error','Os dados continuam salvos neste aparelho; verifique a conexão para sincronizar.');
+      }finally{preferenceSyncStarting=false;}
     }
     function closeOnboarding(force){if(!force&&auth.currentUser&&!String(currentProfile.username||'').trim())return;profileOnboarding.hidden=true;document.body.classList.remove('profile-onboarding-active');profileOnboarding.setAttribute('aria-hidden','true');syncBodyScroll();}
 
@@ -4535,6 +4986,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function writeProfileFavorites(items){
       var normalized=(Array.isArray(items)?items:[]).map(normalizeProfileFavorite).slice(0,4);
       localStorage.setItem(profileFavoritesStorageKey(),JSON.stringify(normalized));
+      try{localStorage.setItem('beSyncedUserData:'+(auth.currentUser&&auth.currentUser.uid?auth.currentUser.uid:'guest'),JSON.stringify({data:captureCrossDeviceData(auth.currentUser&&auth.currentUser.uid)}));}catch(_){ }
+      if(typeof window.beScheduleUserDataSync==='function')window.beScheduleUserDataSync('profile-favorites');
       profileFavoritesItems=normalized;
       window.dispatchEvent(new CustomEvent('be:profile-favorites-changed',{detail:{items:normalized}}));
     }
@@ -4856,7 +5309,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         +    '<button type="button" data-settings-tab="session"'+(settingsActiveTab==='session'?' class="active" aria-current="page"':'')+'>Conta e Sessão</button>'
         +  '</nav>'
         +  '<main class="settings-page-content">'
-        +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner de fundo do perfil e troque o avatar.</p><div class="settings-panel-card"><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></div></section>'
+        +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner e o avatar. As alterações são compartilhadas automaticamente entre celular e computador.</p><div class="settings-panel-card">'+settingsSyncMarkup()+'<div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></div></section>'
         +    '<section class="settings-section-panel" data-settings-panel="account"'+(settingsActiveTab==='account'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div></section>'
         +    '<section class="settings-section-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões</h1><p class="settings-panel-lead">Gerencie serviços conectados à sua conta.</p><div class="settings-panel-card"><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div></section>'
         +    '<section class="settings-section-panel settings-data-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Meus Dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-data-actions settings-data-actions-outside"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><a class="settings-data-privacy-button" href="/privacy">Ver Termos de Privacidade</a></div><div class="settings-status settings-data-status" id="settingsExportStatus"></div></section>'
@@ -4917,6 +5370,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           try{localData.featuredFavorites=JSON.parse(localStorage.getItem('beFeaturedFavorites')||'[]');}catch(_){localData.featuredFavorites=[];}
           try{localData.detailFavorites=JSON.parse(localStorage.getItem('beDetailFavorites')||'[]');}catch(_){localData.detailFavorites=[];}
           try{localData.preferences=JSON.parse(localStorage.getItem('beCookiePreferences')||'{}');}catch(_){localData.preferences={};}
+          try{localData.savedContents=JSON.parse(localStorage.getItem('beSavedContents')||'[]');}catch(_){localData.savedContents=[];}
+          try{localData.profileTopFavorites=JSON.parse(localStorage.getItem('beProfileTopFavorites:'+user.uid)||'[]');}catch(_){localData.profileTopFavorites=[];}
+          localData.crossDeviceSync={enabled:beBackend.mode==='supabase',state:settingsSyncState,lastMessage:settingsSyncMessage};
           var exportData={
             exportedAt:payload.exportedAt||beBackend.now(),
             account:payload.account||null,
@@ -5166,8 +5622,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
         if(currentProfile&&currentProfile.banned){window.dispatchEvent(new CustomEvent('be:user-banned',{detail:{email:currentUser.email||'',reason:currentProfile.banReason||'',bannedAt:currentProfile.bannedAt||''}}));try{await auth.signOut();}catch(_){ }return;}
         var restoredBanner=resolvedProfileBanner(currentUser);if(restoredBanner.bannerUrl){currentProfile.bannerUrl=restoredBanner.bannerUrl;currentProfile.bannerId=restoredBanner.bannerId;}
-        username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false);},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
-      }else{username.textContent='Visitante';currentProfile={};selectedAvatar='';setMainAvatar('');authAction.textContent='Entrar';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
+        username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();startCrossDeviceSync(currentUser).catch(function(error){console.warn('Falha ao iniciar sincronização:',error);});if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false);},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
+      }else{stopCrossDeviceSync();username.textContent='Visitante';currentProfile={};selectedAvatar='';setMainAvatar('');authAction.textContent='Entrar';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){

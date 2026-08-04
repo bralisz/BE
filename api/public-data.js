@@ -91,7 +91,7 @@ module.exports = async function publicData(req, res) {
     const rows = await fetchRows(name, id);
     const payload = id ? (rows[0] || null) : rows;
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=120');
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=600');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     if (req.method === 'HEAD') return res.status(200).end();
     return res.status(200).send(JSON.stringify(payload));

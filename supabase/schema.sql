@@ -29,6 +29,13 @@ alter table public.profiles add column if not exists banned boolean not null def
 alter table public.profiles add column if not exists banned_at timestamptz;
 alter table public.profiles add column if not exists ban_reason text not null default '';
 
+create table if not exists public.user_preferences (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  data jsonb not null default '{}'::jsonb check (jsonb_typeof(data) = 'object'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.content_items (
   id uuid primary key default gen_random_uuid(),
   collection text not null,
@@ -290,6 +297,7 @@ on conflict (id) do update set
   updated_at = now();
 
 alter table public.profiles enable row level security;
+alter table public.user_preferences enable row level security;
 alter table public.content_items enable row level security;
 alter table public.site_settings enable row level security;
 alter table public.admin_logs enable row level security;
@@ -346,6 +354,32 @@ with check (
     end
   )
 );
+
+-- Cada usuário acessa somente suas próprias preferências sincronizadas.
+drop policy if exists "user preferences read own" on public.user_preferences;
+create policy "user preferences read own"
+on public.user_preferences for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+drop policy if exists "user preferences insert own" on public.user_preferences;
+create policy "user preferences insert own"
+on public.user_preferences for insert
+to authenticated
+with check ((select auth.uid()) = user_id);
+
+drop policy if exists "user preferences update own" on public.user_preferences;
+create policy "user preferences update own"
+on public.user_preferences for update
+to authenticated
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
+
+drop policy if exists "user preferences delete own" on public.user_preferences;
+create policy "user preferences delete own"
+on public.user_preferences for delete
+to authenticated
+using ((select auth.uid()) = user_id);
 
 -- Recria as políticas das outras tabelas sem alterar seus dados.
 drop policy if exists "content read published" on public.content_items;
@@ -437,7 +471,18 @@ revoke all on function public.delete_my_account() from public;
 grant execute on function public.delete_my_account() to authenticated;
 
 grant select, insert, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.user_preferences to authenticated;
 grant select, insert on public.admin_logs to authenticated;
+
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'profiles') then
+    alter publication supabase_realtime add table public.profiles;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'user_preferences') then
+    alter publication supabase_realtime add table public.user_preferences;
+  end if;
+end $$;
 
 insert into public.site_settings (id, data)
 values ('site', '{"siteName":"BE","primaryColor":"#2D7FF9"}'::jsonb)
@@ -456,3 +501,40 @@ on conflict (id) do nothing;
 
 notify pgrst, 'reload schema';
 commit;
+
+-- Scale concurrent users: private Broadcast per account instead of Postgres Changes.
+drop policy if exists "users receive own sync broadcasts" on realtime.messages;
+create policy "users receive own sync broadcasts"
+on realtime.messages for select to authenticated
+using (
+  realtime.messages.extension = 'broadcast'
+  and (select realtime.topic()) = ('user-sync:' || (select auth.uid())::text)
+);
+
+create or replace function private.broadcast_profile_sync()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare v_user_id uuid := coalesce(new.id, old.id);
+begin
+  perform realtime.broadcast_changes('user-sync:' || v_user_id::text, tg_op, tg_op, tg_table_name, tg_table_schema, new, old);
+  return null;
+end;
+$$;
+revoke all on function private.broadcast_profile_sync() from public, anon, authenticated;
+
+create or replace function private.broadcast_user_preferences_sync()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare v_user_id uuid := coalesce(new.user_id, old.user_id);
+begin
+  perform realtime.broadcast_changes('user-sync:' || v_user_id::text, tg_op, tg_op, tg_table_name, tg_table_schema, new, old);
+  return null;
+end;
+$$;
+revoke all on function private.broadcast_user_preferences_sync() from public, anon, authenticated;
+
+drop trigger if exists broadcast_profile_sync_trigger on public.profiles;
+create trigger broadcast_profile_sync_trigger after insert or update or delete on public.profiles
+for each row execute function private.broadcast_profile_sync();
+
+drop trigger if exists broadcast_user_preferences_sync_trigger on public.user_preferences;
+create trigger broadcast_user_preferences_sync_trigger after insert or update or delete on public.user_preferences
+for each row execute function private.broadcast_user_preferences_sync();
