@@ -5131,3 +5131,96 @@ body.section-catalog-active .topbar-wrap{
     opacity:1!important;
   }
 }
+
+/* Layout geral das abas e páginas de seção. */
+:root{
+  --be-page-background:#070809;
+  --be-content-gutter:clamp(42px,5vw,92px);
+  --be-content-max:1680px;
+}
+body:not(.login-mode):not(.admin-mode):not(.support-page-active):not(.notification-page-active):not(.legal-page-active){
+  background:var(--be-page-background)!important;
+}
+body:not(.login-mode):not(.admin-mode):not(.support-page-active):not(.notification-page-active):not(.legal-page-active)>.bg{
+  background:var(--be-page-background)!important;
+}
+body:not(.login-mode):not(.admin-mode):not(.support-page-active):not(.notification-page-active):not(.legal-page-active)>.bg-grain,
+body:not(.login-mode):not(.admin-mode):not(.support-page-active):not(.notification-page-active):not(.legal-page-active)>.particles{
+  display:none!important;
+}
+
+/* Mantém títulos e cards afastados das bordas em Home, Filmes e Vídeos. */
+#dynamicSections.video-catalog{
+  background:var(--be-page-background)!important;
+}
+#dynamicSections:not(.section-view-mode) .video-rail-title{
+  margin-left:var(--be-content-gutter)!important;
+  margin-right:var(--be-content-gutter)!important;
+}
+#dynamicSections:not(.section-view-mode) .video-rail{
+  padding-left:var(--be-content-gutter)!important;
+  padding-right:var(--be-content-gutter)!important;
+  scroll-padding-left:var(--be-content-gutter)!important;
+}
+#dynamicSections:not(.section-view-mode) .home-filter-empty{
+  margin-left:var(--be-content-gutter)!important;
+  margin-right:var(--be-content-gutter)!important;
+}
+
+/* Página com todos os vídeos vinculados a uma seção. */
+body.section-catalog-active{
+  background:var(--be-page-background)!important;
+}
+body.section-catalog-active .topbar-wrap{
+  background:linear-gradient(180deg,rgba(7,8,9,.99),rgba(7,8,9,.9))!important;
+}
+#dynamicSections.section-view-mode{
+  width:100%!important;
+  max-width:none!important;
+  min-height:calc(100svh - 110px)!important;
+  padding:126px var(--be-content-gutter) 82px!important;
+  background:var(--be-page-background)!important;
+}
+#dynamicSections.section-view-mode>.section-view-active{
+  width:min(100%,var(--be-content-max))!important;
+  max-width:var(--be-content-max)!important;
+  margin:0 auto!important;
+  padding:0!important;
+}
+
+/* O rodapé também faz parte das abas e das páginas completas de seção. */
+body.section-catalog-active>footer{
+  display:block!important;
+}
+body[data-home-view="home"]>footer,
+body[data-home-view="films"]>footer,
+body[data-home-view="videos"]>footer,
+body[data-home-view="movies"]>footer,
+body[data-home-view="series"]>footer,
+body.section-catalog-active>footer{
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:28px var(--be-content-gutter) 34px!important;
+  background:var(--be-page-background)!important;
+}
+body[data-home-view]>footer>.footer-card,
+body.section-catalog-active>footer>.footer-card{
+  width:min(100%,var(--be-content-max))!important;
+  margin:0 auto!important;
+}
+
+@media(max-width:760px){
+  :root{--be-content-gutter:18px}
+  #dynamicSections.section-view-mode{
+    padding:104px var(--be-content-gutter) 58px!important;
+  }
+  body[data-home-view]>footer,
+  body.section-catalog-active>footer{
+    padding:24px var(--be-content-gutter) 28px!important;
+  }
+}
+.featured,
+.f-slide{
+  background:var(--be-page-background)!important;
+}

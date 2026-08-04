@@ -2257,11 +2257,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       if (randomFeaturedSection) randomFeaturedSection.hidden = true;
     } else if (['films', 'movies', 'series', 'videos'].includes(activeView)) {
       if (featuredSection) featuredSection.hidden = true;
-      if (activeView === 'videos') {
-        if (randomFeaturedSection) randomFeaturedSection.hidden = true;
-      } else {
-        renderRandomTabFeatured(activeView, false);
-      }
+      renderRandomTabFeatured(activeView, false);
       if (scrollHome) {
         const destination = randomFeaturedSection && !randomFeaturedSection.hidden
           ? randomFeaturedSection
@@ -2496,11 +2492,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
           if (randomFeaturedSection) randomFeaturedSection.hidden = true;
         } else if (['films', 'movies', 'series', 'videos'].includes(currentView)) {
           if (featuredSection) featuredSection.hidden = true;
-          if (currentView === 'videos') {
-            if (randomFeaturedSection) randomFeaturedSection.hidden = true;
-          } else {
-            renderRandomTabFeatured(currentView, refreshFeatured);
-          }
+          renderRandomTabFeatured(currentView, refreshFeatured);
         }
       }
 
