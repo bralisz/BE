@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/api/site-page"
+    },
+    {
       "source": "/oauth/consent",
       "destination": "/oauth/consent/index.html"
     },
@@ -10,39 +14,39 @@
     },
     {
       "source": "/config",
-      "destination": "/index.html"
+      "destination": "/api/site-page"
     },
     {
       "source": "/suporte",
-      "destination": "/index.html"
+      "destination": "/api/site-page"
     },
     {
       "source": "/suporte/",
-      "destination": "/index.html"
+      "destination": "/api/site-page"
     },
     {
       "source": "/atualizacoes",
-      "destination": "/index.html"
+      "destination": "/api/site-page"
     },
     {
       "source": "/atualizacoes/",
-      "destination": "/index.html"
+      "destination": "/api/site-page"
     },
     {
       "source": "/notificacoes",
-      "destination": "/index.html"
+      "destination": "/api/site-page"
     },
     {
       "source": "/notificacoes/",
-      "destination": "/index.html"
+      "destination": "/api/site-page"
     },
     {
       "source": "/@:username",
-      "destination": "/index.html"
+      "destination": "/api/site-page"
     },
     {
       "source": "/:videoId",
-      "destination": "/index.html"
+      "destination": "/api/site-page"
     }
   ],
   "headers": [
@@ -152,5 +156,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/site-page.js": {
+      "includeFiles": "index.html"
+    }
+  }
 }
