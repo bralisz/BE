@@ -1614,12 +1614,6 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       return;
     }
 
-    // Nas abas Filmes e Vídeos o catálogo começa diretamente pelas seções,
-    // sem reservar espaço para um banner/fundo sombreado de destaque.
-    host.innerHTML = '';
-    section.hidden = true;
-    return;
-
     const item = chooseRandomFeatured(view, force);
     if (!item) {
       host.innerHTML = '';
@@ -2057,7 +2051,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
     const title = section.querySelector('.video-rail-title span')?.textContent?.trim() || 'Seção';
     section.setAttribute('aria-label', title);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
   function setupSectionTitleInteractions(host) {
