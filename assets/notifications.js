@@ -159,7 +159,7 @@
 
   function previewMarkup(items){
     if(!items.length)return '<div class="notification-preview-empty"><strong>Nenhuma atualização</strong></div>';
-    return items.slice(0,4).map(function(item){
+    return items.slice(0,3).map(function(item){
       return '<button class="notification-preview-item" type="button" data-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
         '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(item.description,100)||'Confira esta atualização.')+'</span></span>'+
@@ -202,6 +202,7 @@
     });
     pageContent.innerHTML='<article class="notification-article">'+
       '<h1>'+esc(active.title||'Atualização')+'</h1>'+
+      '<p class="notification-article-date">'+esc(formatDate(active))+'</p>'+
       '<div class="notification-article-body">'+esc(active.description||'').replace(/\r?\n/g,'<br>')+'</div>'+
     '</article>';
   }

@@ -572,6 +572,24 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
   const data = MODE === 'supabase' ? supabaseData : localData;
 
+  function profileAvatarCacheKey(userId) {
+    return 'beSelectedAvatar:' + String(userId || 'guest');
+  }
+
+  function readProfileAvatarCache(userId) {
+    try {
+      return String(localStorage.getItem(profileAvatarCacheKey(userId)) || '').trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function writeProfileAvatarCache(userId, avatarUrl) {
+    try {
+      localStorage.setItem(profileAvatarCacheKey(userId), String(avatarUrl || ''));
+    } catch (_) {}
+  }
+
   function profileBannerCacheKey(userId) {
     return 'beProfileBanner:' + String(userId || 'guest');
   }
@@ -656,6 +674,14 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         const row = Array.isArray(rows) ? rows[0] : rows;
         if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
         const profile = profileFromRow(row);
+        const cachedAvatarUrl = readProfileAvatarCache(user.uid);
+        const metadataAvatarUrl = String(metadata.profile_avatar_url || '').trim();
+        const metadataAvatarId = String(metadata.profile_avatar_id || '').trim();
+        if (!(profile.avatarId && profile.avatarUrl)) {
+          profile.avatarUrl = metadataAvatarUrl || cachedAvatarUrl || '';
+          profile.avatarId = metadataAvatarId || (profile.avatarUrl ? 'saved-selection' : '');
+        }
+        if (profile.avatarUrl) writeProfileAvatarCache(user.uid, profile.avatarUrl);
         const cachedBanner = readProfileBannerCache(user.uid);
         const metadataBannerUrl = String(metadata.profile_banner_url || metadata.banner_url || '').trim();
         const metadataBannerId = String(metadata.profile_banner_id || metadata.banner_id || '').trim();
@@ -663,7 +689,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         profile.bannerId = profile.bannerId || metadataBannerId || cachedBanner.bannerId;
         if (profile.bannerUrl) writeProfileBannerCache(user.uid, profile.bannerUrl, profile.bannerId);
         if (currentUser?.uid === user.uid) {
-          currentUser = { ...currentUser, role: profile.role === 'admin' ? 'admin' : currentUser.role, photoURL: (profile.avatarId && profile.avatarUrl) ? profile.avatarUrl : '', profile };
+          currentUser = { ...currentUser, role: profile.role === 'admin' ? 'admin' : currentUser.role, photoURL: profile.avatarUrl || '', profile };
         }
         return profile;
       }
@@ -723,25 +749,48 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     async setAvatar(userId, avatarUrl, avatarId) {
       const normalizedUrl = String(avatarUrl || '').trim();
       const normalizedId = String(avatarId || '').trim();
-      const savedProfile = await this.update(userId, { avatarUrl: normalizedUrl, avatarId: normalizedId });
+      const previousProfile = currentUser?.profile || {};
+      let savedProfile = null;
+      let databaseError = null;
 
-      // Mantém o avatar escolhido sincronizado com a conta autenticada. O campo
-      // profile_avatar_url identifica que esta é uma escolha do usuário, e não
-      // apenas a foto recebida do provedor social.
+      writeProfileAvatarCache(userId, normalizedUrl);
+
+      try {
+        savedProfile = await this.update(userId, { avatarUrl: normalizedUrl, avatarId: normalizedId });
+      } catch (error) {
+        databaseError = error;
+        console.warn('Avatar salvo por compatibilidade; o perfil remoto não aceitou a atualização:', error?.message || error);
+      }
+
+      // Mantém a escolha também nos metadados da autenticação. Assim o avatar
+      // continua salvo após atualizar a página, trocar de aba ou entrar novamente.
       if (MODE === 'supabase' && currentUser?.uid === userId) {
         try {
+          const existingMetadata = currentUser.raw?.user_metadata || {};
           const { data: authResult, error } = await supabaseClient.auth.updateUser({
             data: {
+              ...existingMetadata,
               avatar_url: normalizedUrl,
               profile_avatar_url: normalizedUrl,
               profile_avatar_id: normalizedId
             }
           });
           if (error) throw error;
-          currentUser = normalizeUser(authResult?.user || currentUser);
+          currentUser = { ...normalizeUser(authResult?.user || currentUser.raw || currentUser), profile: savedProfile || previousProfile };
         } catch (metadataError) {
-          console.warn('O avatar foi salvo no perfil, mas não nos metadados da conta:', metadataError?.message || metadataError);
+          console.warn('O avatar ficou salvo neste navegador, mas não nos metadados da conta:', metadataError?.message || metadataError);
         }
+      }
+
+      if (!savedProfile) {
+        savedProfile = {
+          ...previousProfile,
+          uid: userId,
+          id: userId,
+          avatarUrl: normalizedUrl,
+          avatarId: normalizedId || (normalizedUrl ? 'saved-selection' : ''),
+          updatedAt: now()
+        };
       }
 
       if (currentUser?.uid === userId) {
@@ -750,7 +799,13 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
       try {
         window.dispatchEvent(new CustomEvent('be:profile-avatar-changed', {
-          detail: { userId, avatarUrl: normalizedUrl, avatarId: normalizedId, profile: savedProfile }
+          detail: {
+            userId,
+            avatarUrl: normalizedUrl,
+            avatarId: normalizedId,
+            profile: savedProfile,
+            compatibilityFallback: Boolean(databaseError)
+          }
         }));
       } catch (_) {}
 
@@ -1120,53 +1175,56 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     async deleteAccount() {
       if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para continuar.');
 
-      let deleted = false;
-      let rpcError = null;
-      const rpcResult = await supabaseClient.rpc('delete_my_account');
-      if (!rpcResult.error) {
-        deleted = true;
-      } else {
-        rpcError = rpcResult.error;
-        const message = String(rpcError.message || '');
-        const missingRpc = rpcError.code === 'PGRST202' || /Could not find the function|schema cache|delete_my_account/i.test(message);
-        if (!missingRpc) throw mapAuthError(rpcError);
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+      if (sessionError) throw mapAuthError(sessionError);
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) throw backendError('auth/not-authenticated', 'Sua sessão expirou. Entre novamente para excluir a conta.');
+
+      let response;
+      try {
+        response = await fetch('/api/delete-account', {
+          method: 'POST',
+          credentials: 'same-origin',
+          cache: 'no-store',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ confirm: true })
+        });
+      } catch (_) {
+        throw backendError('auth/delete-account-failed', 'Não foi possível acessar o servidor para excluir a conta. Tente novamente.');
       }
 
-      if (!deleted) {
-        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-        if (sessionError) throw mapAuthError(sessionError);
-        const accessToken = sessionData?.session?.access_token;
-        if (!accessToken) throw backendError('auth/not-authenticated', 'Sua sessão expirou. Entre novamente para excluir a conta.');
-
-        let response;
-        try {
-          response = await fetch('/api/delete-account', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: '{}'
-          });
-        } catch (_) {
-          throw mapAuthError(rpcError);
-        }
-
-        if (!response.ok) {
-          let payload = null;
-          try { payload = await response.json(); } catch (_) {}
-          const detail = payload?.error || payload?.message || `Falha no servidor (${response.status}).`;
-          throw backendError('auth/delete-account-failed', detail);
-        }
-        deleted = true;
+      let payload = null;
+      try { payload = await response.json(); } catch (_) {}
+      if (!response.ok || payload?.ok !== true) {
+        const detail = payload?.error || payload?.message || `Falha no servidor (${response.status}).`;
+        throw backendError('auth/delete-account-failed', detail);
       }
 
-      if (!deleted) throw mapAuthError(rpcError);
-      try { await supabaseClient.auth.signOut(); } catch (_) {}
+      // A conta já foi removida no servidor. Encerra apenas a sessão local para
+      // que nenhum token antigo permaneça no navegador após a exclusão.
+      try { await supabaseClient.auth.signOut({ scope: 'local' }); } catch (_) {}
+      try {
+        const storageKeys = [];
+        for (let index = 0; index < localStorage.length; index += 1) {
+          const key = localStorage.key(index);
+          if (key && (/^sb-.*-auth-token$/.test(key) || key === 'beAuthExpected' || key === 'beSessionUid')) storageKeys.push(key);
+        }
+        storageKeys.forEach(key => localStorage.removeItem(key));
+        const sessionKeys = [];
+        for (let index = 0; index < sessionStorage.length; index += 1) {
+          const key = sessionStorage.key(index);
+          if (key && (/^sb-.*-auth-token$/.test(key) || /^beOAuth/.test(key) || key === 'beOpenSettingsAfterDiscord')) sessionKeys.push(key);
+        }
+        sessionKeys.forEach(key => sessionStorage.removeItem(key));
+      } catch (_) {}
+
       currentUser = null;
-      localStorage.removeItem('beAuthExpected');
-      localStorage.removeItem('beSessionUid');
       notify();
+      return payload;
     },
     async localAdminExists() { return false; },
     async setupLocalAdmin() { throw backendError('backend/wrong-mode', 'O acesso local não é usado quando o Supabase está conectado.'); }
@@ -2890,8 +2948,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     return String(location.hash||'').startsWith('#/admin')||callback==='admin'||remembered==='admin';
   }
   function adminFrame(content,mode){
+    document.documentElement.classList.remove('admin-route-boot');
     document.documentElement.classList.add('admin-mode');
     document.body.classList.add('admin-mode');
+    document.documentElement.style.setProperty('overflow','hidden','important');
+    document.body.style.setProperty('overflow','hidden','important');
     document.body.innerHTML='<div class="'+(mode==='login'?'protected-admin-login-page':'protected-admin-system-page')+'">'+content+'</div>';
   }
   function showLogin(message){
@@ -2911,15 +2972,18 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     if(loaded||loading||!isAdminRoute())return;
     loading=true;
     try{
+      adminFrame('<div style="color:#9fb9df;font-size:16px">Carregando painel seguro…</div>');
       if(!window.beBackend)throw new Error('O sistema de autenticação não foi carregado.');
       await window.beBackend.ready;
-      var account=window.beBackend.auth.currentUser||null;
-      if(!account){showLogin();return;}
       var client=window.beBackend.client;
-      var sessionResult=client&&client.auth?await client.auth.getSession():null;
-      var token=sessionResult&&sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.access_token;
+      var token='';
+      var retryDelays=[0,90,190,360,650];
+      for(var retryIndex=0;retryIndex<retryDelays.length&&!token;retryIndex+=1){
+        if(retryDelays[retryIndex])await new Promise(function(resolve){setTimeout(resolve,retryDelays[retryIndex]);});
+        var sessionResult=client&&client.auth?await client.auth.getSession():null;
+        token=sessionResult&&sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.access_token||'';
+      }
       if(!token){showLogin('Sua sessão expirou. Entre novamente.');return;}
-      adminFrame('<div style="color:#9fb9df;font-size:16px">Carregando painel seguro…</div>');
       var response=await fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'same-origin'});
       if(!response.ok){location.replace('/404.html');return;}
       var source=await response.text();

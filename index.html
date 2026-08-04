@@ -10,12 +10,25 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#050816">
+<script>
+(function(){
+  try{
+    var callback=new URLSearchParams(location.search||'').get('auth_callback');
+    var remembered=sessionStorage.getItem('beOAuthDestination')||'';
+    if(String(location.hash||'').startsWith('#/admin')||callback==='admin'||remembered==='admin')document.documentElement.classList.add('admin-route-boot');
+  }catch(_){ }
+})();
+</script>
+<style>
+html.admin-route-boot{background:#05070b!important}
+html.admin-route-boot body{visibility:hidden!important;background:#05070b!important}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-notification-avatar-header-1">
+<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-admin-profile-scroll-1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/app.privacy.js?v=20260803-detail-9-1"></script>
+<script defer src="/assets/app.privacy.js?v=20260803-admin-profile-scroll-1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -718,8 +731,8 @@
     </nav>
   </div>
 </footer>
-<script src="/assets/ui.privacy.js?v=20260803-notification-exclusive-1"></script>
+<script src="/assets/ui.privacy.js?v=20260803-account-delete-2"></script>
 <script src="/assets/support.js?v=20260803-support-clean-url-1"></script>
-<script src="/assets/notifications.js?v=20260803-notification-avatar-header-1"></script>
+<script src="/assets/notifications.js?v=20260803-admin-profile-scroll-1"></script>
 </body>
 </html>

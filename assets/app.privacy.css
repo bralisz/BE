@@ -4068,7 +4068,7 @@ body.notification-page-active > #notificationPage{
   line-height:1.03;
   letter-spacing:-.047em;
 }
-.notification-article-date{margin:0 0 38px;color:#6e6e73;font-size:13px}
+.notification-article-date{display:block;margin:0 0 38px;color:#2997ff;font-size:13px;font-weight:600}
 .notification-article-body{
   color:#c7c7cc;
   font-size:17px;
@@ -4582,14 +4582,17 @@ body.admin-mode{
   width:min(670px,calc(100vw - 40px));
   display:flex;
   flex-direction:column;
-  transform:translateY(10px);
+  align-items:center;
+  justify-content:center;
+  gap:28px;
+  transform:none;
 }
 .protected-admin-login-logo{
   width:72px;
   height:72px;
   display:grid;
   place-items:center;
-  margin:0 0 72px 24px;
+  margin:0 auto;
   border-radius:20px;
   text-decoration:none;
   -webkit-tap-highlight-color:transparent;
@@ -4646,16 +4649,16 @@ body.admin-mode{
 }
 @media(max-width:700px){
   .protected-admin-login-page{padding:24px 18px;background-position:58% center}
-  .protected-admin-login-shell{width:min(100%,540px);transform:none}
-  .protected-admin-login-logo{width:62px;height:62px;margin:0 auto 48px}
+  .protected-admin-login-shell{width:min(100%,540px);gap:22px;transform:none}
+  .protected-admin-login-logo{width:62px;height:62px;margin:0 auto}
   .protected-admin-login-logo img{width:60px;height:60px}
   .protected-admin-login-card{padding:24px;border-radius:27px}
   .protected-admin-google-button{min-height:62px;padding:0 18px;font-size:17px}
   .protected-admin-google-icon{width:23px;height:23px;flex-basis:23px;font-size:14px}
 }
 @media(max-height:620px) and (min-width:701px){
-  .protected-admin-login-shell{transform:none}
-  .protected-admin-login-logo{margin-bottom:38px}
+  .protected-admin-login-shell{gap:20px;transform:none}
+  .protected-admin-login-logo{margin:0 auto}
   .protected-admin-login-card{padding:28px 32px}
   .protected-admin-google-button{min-height:66px}
 }
@@ -4673,9 +4676,9 @@ body.admin-mode{
 }
 .notification-dropdown{z-index:2}
 .notification-preview-copy small,
-.notification-page-link small,
-.notification-article-date{display:none!important}
-.notification-article h1{margin-bottom:32px}
+.notification-page-link small{display:none!important}
+.notification-article-date{display:block!important;color:#2997ff!important}
+.notification-article h1{margin-bottom:10px}
 
 
 /* Menus de conta e notificações mutuamente exclusivos. */

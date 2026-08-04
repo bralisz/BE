@@ -326,11 +326,10 @@
         var button=this;
         var msg=document.getElementById('settingsDeleteStatus');
         var deletingUser=auth.currentUser;
-        if(!confirm('Excluir esta conta permanentemente? Todos os dados do perfil serão removidos e você será desconectado do site.'))return;
+        if(!confirm('Excluir esta conta permanentemente? Esta ação não pode ser desfeita. A conta, o perfil e a sessão serão removidos.'))return;
         button.disabled=true;msg.textContent='Excluindo conta…';msg.className='settings-status';
         try{
           await auth.deleteAccount();
-          try{await auth.signOut();}catch(_){ }
           try{
             if(deletingUser&&deletingUser.uid){
               localStorage.removeItem('beSelectedAvatar:'+deletingUser.uid);
@@ -342,8 +341,8 @@
             sessionStorage.removeItem('beOAuthDestination');
           }catch(_){ }
           closePublicPages(false);
-          showLogin();
           window.alert('Conta excluída com sucesso. Você foi desconectado do site.');
+          window.location.replace('/');
         }catch(error){
           msg.textContent='Não foi possível excluir: '+(error&&error.message?error.message:'Tente novamente.');
           msg.className='settings-status err';
