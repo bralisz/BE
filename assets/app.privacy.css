@@ -5559,7 +5559,7 @@ body.legal-page-active #dynamicSections{
 }
 
 @media(max-width:760px){
-  /* Na página de Atualizações, o mobile mostra somente título e fechar. */
+  /* Na página de Notificações, o mobile mostra somente título e fechar. */
   .notification-page-header{
     grid-template-columns:1fr auto 1fr!important;
   }
@@ -5585,5 +5585,16 @@ body.legal-page-active #dynamicSections{
     min-height:36px!important;
     padding:0 12px!important;
     font-size:12px!important;
+  }
+}
+
+
+/* Página de Notificações: no desktop mantém apenas o avatar à esquerda. */
+@media(min-width:761px){
+  .notification-page-home{
+    display:none!important;
+  }
+  .notification-page-leading{
+    gap:0!important;
   }
 }
