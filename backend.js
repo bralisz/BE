@@ -1158,13 +1158,16 @@
       const callbackDestination = authCallbackDestination();
       const callbackFailure = authCallbackError();
       const config = window.BE_SUPABASE_CONFIG;
+      // Versões anteriores guardavam o token apenas em sessionStorage. Isso
+      // fazia uma conta parecer desconectada ao abrir o site por outro link ou
+      // em uma nova aba. Migra a sessão existente uma única vez e passa a usar
+      // localStorage, que é compartilhado entre abas e restaurado ao reabrir o site.
       try {
-        for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-          const key = localStorage.key(index);
+        for (let index = 0; index < sessionStorage.length; index += 1) {
+          const key = sessionStorage.key(index);
           if (!key || !/^sb-.*-auth-token$/i.test(key)) continue;
-          const value = localStorage.getItem(key);
-          if (value && !sessionStorage.getItem(key)) sessionStorage.setItem(key, value);
-          localStorage.removeItem(key);
+          const value = sessionStorage.getItem(key);
+          if (value && !localStorage.getItem(key)) localStorage.setItem(key, value);
         }
       } catch (_) {}
       supabaseClient = window.supabase.createClient(config.url, config.publishableKey, {
@@ -1172,7 +1175,7 @@
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          storage: window.sessionStorage
+          storage: window.localStorage
         }
       });
 

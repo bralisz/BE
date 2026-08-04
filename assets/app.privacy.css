@@ -5841,3 +5841,35 @@ body.legal-page-active #dynamicSections{
     height:66%!important;
   }
 }
+
+/* Sessão persistente + espaçamento consistente da área Conta. */
+.settings-side-stack>.settings-account-card>p{
+  margin:0 0 24px!important;
+  line-height:1.45;
+}
+.settings-side-stack .settings-account-card .settings-form-grid{
+  margin:0;
+  column-gap:18px;
+  row-gap:16px;
+}
+.settings-side-stack .settings-account-card .settings-field{
+  gap:9px;
+}
+.settings-side-stack .settings-account-card .settings-status:empty{
+  min-height:0;
+  margin:0;
+}
+.settings-side-stack .settings-account-card .settings-status:not(:empty){
+  min-height:0;
+  margin:13px 0 0;
+}
+.settings-side-stack .settings-account-card .settings-btn-row{
+  margin-top:24px;
+  padding-top:0;
+}
+@media(max-width:760px){
+  .settings-side-stack>.settings-account-card>p{margin-bottom:20px!important}
+  .settings-side-stack .settings-account-card .settings-form-grid{row-gap:14px}
+  .settings-side-stack .settings-account-card .settings-btn-row{margin-top:20px}
+}
+
