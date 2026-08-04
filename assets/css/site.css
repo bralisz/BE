@@ -7722,3 +7722,81 @@ body.profile-page-active > footer{
   z-index:3!important;
   background:#090a0c!important;
 }
+
+
+/* Correção: ações do perfil na base do banner, detalhes nas seções e ranking. */
+.profile-page-notifications{display:none}
+
+/* O detalhe precisa ficar visível mesmo quando foi aberto a partir de uma seção dedicada. */
+body.section-catalog-active.detail-page-active > main{
+  display:block!important;
+  min-height:0!important;
+  height:auto!important;
+  flex:initial!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+body.section-catalog-active.detail-page-active #dynamicSections.section-view-mode{
+  display:none!important;
+}
+
+@media(min-width:761px){
+  body.profile-page-active .home-notification-menu{
+    display:none!important;
+  }
+
+  body.profile-page-active .profile-page-home,
+  body.profile-page-active .profile-page-notifications,
+  body.profile-page-active .profile-page-more{
+    display:grid!important;
+    position:absolute!important;
+    top:auto!important;
+    bottom:22px!important;
+    left:auto!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    margin:0!important;
+    padding:0!important;
+    border:1px solid rgba(255,255,255,.14)!important;
+    border-radius:50%!important;
+    background:rgba(21,22,24,.82)!important;
+    color:#fff!important;
+    box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.055)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(120%)!important;
+    backdrop-filter:blur(14px) saturate(120%)!important;
+    place-items:center!important;
+    pointer-events:auto!important;
+    z-index:8!important;
+  }
+  body.profile-page-active .profile-page-home{
+    right:calc(clamp(24px,3vw,46px) + 116px)!important;
+  }
+  body.profile-page-active .profile-page-notifications{
+    right:calc(clamp(24px,3vw,46px) + 58px)!important;
+  }
+  body.profile-page-active .profile-page-more{
+    right:clamp(24px,3vw,46px)!important;
+  }
+  body.profile-page-active .profile-page-home:hover,
+  body.profile-page-active .profile-page-notifications:hover,
+  body.profile-page-active .profile-page-more:hover{
+    background:rgba(42,43,46,.92)!important;
+    border-color:rgba(255,255,255,.26)!important;
+  }
+  body.profile-page-active .profile-page-home svg,
+  body.profile-page-active .profile-page-notifications svg,
+  body.profile-page-active .profile-page-more svg{
+    display:block!important;
+    width:21px!important;
+    height:21px!important;
+    margin:auto!important;
+  }
+
+  /* Avança os números um pouco mais sob os cards, conforme a referência. */
+  body.profile-page-active .profile-favorite-rank{
+    left:18px!important;
+  }
+}
