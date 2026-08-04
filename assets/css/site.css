@@ -7863,3 +7863,24 @@ body.detail-page-active #detailRecommendations:not([hidden]){
   transition:opacity .2s ease,transform .2s ease;
 }
 .saved-content-limit-toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* Correção visual: alinha o botão de fechar ao centro do cabeçalho dos seletores. */
+.avatar-picker-header .avatar-picker-close,
+.banner-picker-header.avatar-picker-header .banner-picker-close{
+  display:grid!important;
+  place-items:center!important;
+  position:absolute!important;
+  top:50%!important;
+  right:clamp(14px,2vw,24px)!important;
+  transform:translateY(-50%)!important;
+  margin:0!important;
+}
+
+@media(max-width:760px){
+  .avatar-picker-header .avatar-picker-close,
+  .banner-picker-header.avatar-picker-header .banner-picker-close{
+    top:50%!important;
+    right:14px!important;
+    transform:translateY(-50%)!important;
+  }
+}
