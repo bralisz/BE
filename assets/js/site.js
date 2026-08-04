@@ -6679,6 +6679,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return text.length>max?text.slice(0,max-1).trim()+'…':text;
   }
 
+  function safeNotificationImageUrl(value){
+    var raw=String(value||'').trim().replace(/^<|>$/g,'');
+    if(!raw||/[\u0000-\u001f\u007f]/.test(raw))return '';
+    try{
+      var parsed=new URL(raw,location.origin);
+      if(parsed.protocol!=='https:'&&parsed.protocol!=='http:')return '';
+      if(parsed.username||parsed.password)return '';
+      return parsed.href;
+    }catch(_){return '';}
+  }
+
+  function renderNotificationMarkdown(value){
+    var images=[];
+    var source=String(value||'').replace(/!?\[\s*\]\(\s*([^)]+?)\s*\)/g,function(match,url){
+      var safeUrl=safeNotificationImageUrl(url);
+      if(!safeUrl)return match;
+      var token='BETVNOTIFICATIONIMAGE'+images.length+'TOKEN';
+      images.push('<a class="notification-markdown-image" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagem em tamanho completo">'+
+        '<img loading="lazy" decoding="async" src="'+esc(safeUrl)+'" alt="Imagem da notificação">'+
+      '</a>');
+      return token;
+    });
+    var html=window.beRenderMarkdown?window.beRenderMarkdown(source):esc(source).replace(/\r?\n/g,'<br>');
+    return html.replace(/BETVNOTIFICATIONIMAGE(\d+)TOKEN/g,function(_,index){return images[Number(index)]||'';});
+  }
+
+  function notificationPlainText(value){
+    var source=String(value||'').replace(/!?\[\s*\]\(\s*[^)]+?\s*\)/g,' ');
+    return window.beMarkdownPlainText?window.beMarkdownPlainText(source):source.replace(/\s+/g,' ').trim();
+  }
+
   function getMobileButton(){return document.getElementById('mobileNotificationButton');}
 
   function closeDesktop(){
@@ -6757,7 +6788,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return items.slice(0,3).map(function(item){
       return '<button class="notification-preview-item" type="button" data-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
-        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(window.beMarkdownPlainText?window.beMarkdownPlainText(item.description):item.description,100)||'Confira esta atualização.')+'</span></span>'+
+        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(notificationPlainText(item.description),100)||'Confira esta atualização.')+'</span></span>'+
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
       '</button>';
     }).join('');
@@ -6789,7 +6820,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var selected=String(item.id)===selectedId;
       return '<button class="notification-page-link '+(selected?'active':'')+'" type="button" data-notification-page-id="'+esc(item.id)+'" aria-current="'+(selected?'page':'false')+'">'+
         '<strong>'+esc(item.title||'Atualização')+'</strong>'+
-        '<span>'+esc(trimText(window.beMarkdownPlainText?window.beMarkdownPlainText(item.description):item.description,92)||'Confira esta atualização.')+'</span>'+
+        '<span>'+esc(trimText(notificationPlainText(item.description),92)||'Confira esta atualização.')+'</span>'+
       '</button>';
     }).join('');
     pageNav.querySelectorAll('[data-notification-page-id]').forEach(function(button){
@@ -6798,7 +6829,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     pageContent.innerHTML='<article class="notification-article">'+
       '<h1>'+esc(active.title||'Atualização')+'</h1>'+
       '<p class="notification-article-date">'+esc(formatDate(active))+'</p>'+
-      '<div class="notification-article-body be-markdown">'+(window.beRenderMarkdown?window.beRenderMarkdown(active.description||''):esc(active.description||'').replace(/\r?\n/g,'<br>'))+'</div>'+
+      '<div class="notification-article-body be-markdown">'+renderNotificationMarkdown(active.description||'')+'</div>'+
     '</article>';
   }
 
