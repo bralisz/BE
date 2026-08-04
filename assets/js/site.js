@@ -3917,12 +3917,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isAdminRoute(){
     var callback=new URLSearchParams(location.search||'').get('auth_callback');
     var remembered='';
+    var path=String(location.pathname||'').replace(/\/+$/,'')||'/';
     try{remembered=sessionStorage.getItem('beOAuthDestination')||'';}catch(_){ }
-    return String(location.hash||'').startsWith('#/admin')||callback==='admin'||remembered==='admin';
+    return String(location.hash||'').startsWith('#/admin')||path==='/admin'||callback==='admin'||remembered==='admin';
+  }
+  function clearAdminBootGuard(){
+    document.documentElement.classList.remove('admin-route-boot');
+    if(window.__beAdminBootTimer){window.clearTimeout(window.__beAdminBootTimer);window.__beAdminBootTimer=0;}
   }
   function adminFrame(content,mode){
-    document.documentElement.classList.remove('admin-route-boot');
+    clearAdminBootGuard();
+    document.documentElement.classList.remove('site-loading-active');
     document.documentElement.classList.add('admin-mode');
+    document.body.classList.remove('site-loading-active');
     document.body.classList.add('admin-mode');
     document.documentElement.style.setProperty('overflow','hidden','important');
     document.body.style.setProperty('overflow','hidden','important');
@@ -3941,9 +3948,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function showDenied(){
     adminFrame('<section style="width:min(460px,100%);padding:32px;border:1px solid rgba(255,255,255,.13);border-radius:28px;background:#0a0d12;text-align:center"><h1 style="margin:0 0 10px;font-size:27px">Acesso não autorizado</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">Esta conta não possui permissão administrativa.</p><a href="/" style="display:inline-grid;place-items:center;min-height:48px;margin-top:22px;padding:0 22px;border-radius:15px;background:#347ff1;color:#fff;text-decoration:none;font-weight:800">Voltar ao site</a></section>');
   }
+  function showAdminLoadError(message){
+    var safe=String(message||'Não foi possível iniciar o painel.').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]});
+    adminFrame('<section style="width:min(500px,100%);padding:30px;border:1px solid rgba(255,255,255,.13);border-radius:24px;background:#0a0d12;text-align:center"><h1 style="margin:0 0 10px;font-size:25px">Não foi possível carregar o painel</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">'+safe+'</p><div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:22px"><button id="protectedAdminRetry" type="button" style="min-height:46px;padding:0 18px;border:0;border-radius:13px;background:#347ff1;color:#fff;font-weight:800;cursor:pointer">Tentar novamente</button><a href="/" style="display:grid;place-items:center;min-height:46px;padding:0 18px;border:1px solid rgba(255,255,255,.14);border-radius:13px;color:#fff;text-decoration:none;font-weight:800">Voltar ao site</a></div></section>');
+    var retry=document.getElementById('protectedAdminRetry');
+    if(retry)retry.onclick=function(){loaded=false;loading=false;location.reload();};
+  }
   async function loadAdmin(){
     if(loaded||loading||!isAdminRoute())return;
     loading=true;
+    clearAdminBootGuard();
     try{
       adminFrame('<div style="color:#9fb9df;font-size:16px">Carregando painel seguro…</div>');
       if(!window.beBackend)throw new Error('O sistema de autenticação não foi carregado.');
@@ -3957,22 +3971,55 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         token=sessionResult&&sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.access_token||'';
       }
       if(!token){showLogin('Sua sessão expirou. Entre novamente.');return;}
+      var currentAccount=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
+      if(currentAccount&&window.beBackend&&typeof window.beBackend.isAdmin==='function'&&!window.beBackend.isAdmin(currentAccount)){showDenied();return;}
       var response=await fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'same-origin'});
-      if(!response.ok){location.replace('/404.html');return;}
+      if(!response.ok){
+        if(response.status===401||response.status===403){showDenied();return;}
+        throw new Error('O runtime protegido não respondeu corretamente (código '+response.status+').');
+      }
       var source=await response.text();
+      if(!String(source||'').trim())throw new Error('O runtime protegido retornou vazio.');
       await new Promise(function(resolve,reject){
+        var runtimeError=null;
+        var runtimeRejection=null;
+        var settled=false;
         var blob=new Blob([source],{type:'application/javascript'});
         var blobUrl=URL.createObjectURL(blob);
         var script=document.createElement('script');
+        function cleanup(){
+          window.removeEventListener('error',onError,true);
+          window.removeEventListener('unhandledrejection',onRejection,true);
+          URL.revokeObjectURL(blobUrl);
+          script.remove();
+        }
+        function finish(error){
+          if(settled)return;
+          settled=true;
+          cleanup();
+          if(error)reject(error);else resolve();
+        }
+        function onError(event){runtimeError=event&&event.error||new Error(event&&event.message||'Falha ao executar o painel.');}
+        function onRejection(event){runtimeRejection=event&&event.reason instanceof Error?event.reason:new Error(String(event&&event.reason||'Falha ao iniciar o painel.'));}
+        window.addEventListener('error',onError,true);
+        window.addEventListener('unhandledrejection',onRejection,true);
         script.src=blobUrl;
         script.async=false;
-        script.onload=function(){URL.revokeObjectURL(blobUrl);script.remove();resolve();};
-        script.onerror=function(){URL.revokeObjectURL(blobUrl);script.remove();reject(new Error('Não foi possível iniciar o painel.'));};
+        script.onload=function(){window.setTimeout(function(){finish(runtimeError||runtimeRejection);},0);};
+        script.onerror=function(){finish(new Error('Não foi possível executar o runtime protegido.'));};
         document.head.appendChild(script);
+        window.setTimeout(function(){
+          if(settled)return;
+          var visible=document.querySelector('.admin-shell,.admin-login,.admin-loader');
+          if(visible)finish(runtimeError||runtimeRejection);else finish(new Error('O painel não concluiu a inicialização.'));
+        },10000);
       });
       loaded=true;
+      window.setTimeout(function(){
+        if(!document.querySelector('.admin-shell,.admin-login,.admin-loader'))showAdminLoadError('O painel foi carregado, mas não exibiu conteúdo. Tente novamente.');
+      },3500);
     }catch(error){
-      adminFrame('<section style="width:min(480px,100%);padding:30px;border:1px solid rgba(255,255,255,.13);border-radius:24px;background:#0a0d12;text-align:center"><h1 style="margin:0 0 10px;font-size:25px">Não foi possível carregar o painel</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">'+String(error&&error.message||'Atualize a página e tente novamente.').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})+'</p></section>');
+      showAdminLoadError(error&&error.message||'Atualize a página e tente novamente.');
     }finally{loading=false;}
   }
   loadAdmin();

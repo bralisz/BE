@@ -31,7 +31,17 @@
   try{
     var callback=new URLSearchParams(location.search||'').get('auth_callback');
     var remembered=sessionStorage.getItem('beOAuthDestination')||'';
-    if(String(location.hash||'').startsWith('#/admin')||callback==='admin'||remembered==='admin')document.documentElement.classList.add('admin-route-boot');
+    var path=String(location.pathname||'').replace(/\/+$/,'')||'/';
+    var requested=String(location.hash||'').startsWith('#/admin')||path==='/admin'||callback==='admin'||remembered==='admin';
+    if(!requested)return;
+    document.documentElement.classList.add('admin-route-boot');
+    window.__beAdminBootTimer=window.setTimeout(function(){
+      if(!document.documentElement.classList.contains('admin-route-boot'))return;
+      document.documentElement.classList.remove('admin-route-boot');
+      if(!document.body)return;
+      document.body.className='admin-mode';
+      document.body.innerHTML='<main style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#05070b;color:#fff;font-family:Inter,system-ui,sans-serif"><section style="width:min(480px,100%);padding:30px;border:1px solid rgba(255,255,255,.13);border-radius:24px;background:#0a0d12;text-align:center"><h1 style="margin:0 0 10px;font-size:25px">O painel demorou para carregar</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">Atualize a página para tentar novamente. Se continuar, entre novamente na conta administrativa.</p><div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:22px"><button type="button" onclick="location.reload()" style="min-height:46px;padding:0 18px;border:0;border-radius:13px;background:#347ff1;color:#fff;font-weight:800;cursor:pointer">Tentar novamente</button><a href="/" style="display:grid;place-items:center;min-height:46px;padding:0 18px;border:1px solid rgba(255,255,255,.14);border-radius:13px;color:#fff;text-decoration:none;font-weight:800">Voltar ao site</a></div></section></main>';
+    },8000);
   }catch(_){ }
 })();
 </script>
@@ -54,7 +64,7 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260804-picker-close-alignment">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/site.js?rev=20260804-favorites-spacing-saved-limit"></script>
+<script defer src="/assets/js/site.js?rev=20260804-admin-black-screen-fix"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
