@@ -5079,7 +5079,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!filtered.length){
         profileFavoritesPickerBody.innerHTML='<div class="profile-favorites-picker-empty"><strong>Nenhum conteúdo encontrado</strong><span>Pesquise usando outro nome ou uma parte do título.</span></div>';
       }else{
-        var visibleItems=filtered.slice(0,10);
+        var visibleItems=filtered.slice(0,11);
         profileFavoritesPickerBody.innerHTML='<div class="profile-favorites-picker-grid">'+visibleItems.map(function(item){
           var catalogIndex=profileFavoritesCatalog.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(item);});
           var selectedIndex=profileFavoritesDraft.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(item);});
