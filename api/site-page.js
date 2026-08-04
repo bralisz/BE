@@ -29,6 +29,22 @@ function readTemplate() {
   throw new Error('index.html não encontrado');
 }
 
+
+function deploymentVersion() {
+  const commit = String(process.env.VERCEL_GIT_COMMIT_SHA || '').trim();
+  const deploymentUrl = String(process.env.VERCEL_URL || '').trim();
+  const environment = String(process.env.VERCEL_ENV || process.env.NODE_ENV || 'development').trim();
+  if (commit || deploymentUrl) return [commit || 'no-commit', deploymentUrl || 'no-deployment-url'].join(':');
+  return `local:${environment}`;
+}
+
+function injectDeploymentVersion(html) {
+  const serialized = JSON.stringify(deploymentVersion()).replace(/</g, '\\u003c');
+  const script = `<script>window.__BETV_DEPLOYMENT_VERSION__=${serialized};<\/script>`;
+  return html.replace('</head>', `${script}
+</head>`);
+}
+
 function attr(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -118,7 +134,7 @@ module.exports = async function sitePage(req, res) {
   try {
     const origin = publicOrigin(req);
     const settings = await loadSettings();
-    const html = injectSocialMetadata(readTemplate(), settings, origin);
+    const html = injectDeploymentVersion(injectSocialMetadata(readTemplate(), settings, origin));
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=0, must-revalidate');
     res.setHeader('X-Content-Type-Options', 'nosniff');
