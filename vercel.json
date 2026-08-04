@@ -101,6 +101,14 @@
       "destination": "/api/site-page"
     },
     {
+      "source": "/404",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/404/",
+      "destination": "/404.html"
+    },
+    {
       "source": "/:videoId",
       "destination": "/api/site-page"
     }

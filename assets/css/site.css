@@ -7884,3 +7884,155 @@ body.detail-page-active #detailRecommendations:not([hidden]){
     transform:translateY(-50%)!important;
   }
 }
+
+/* Acesso protegido e Favoritos no perfil mobile — 04/08/2026. */
+@media(max-width:760px){
+  /* No mobile, Favoritos usa o mesmo conceito de ranking numerado do desktop. */
+  body.profile-page-active .profile-favorites-section{
+    display:block!important;
+    width:100%!important;
+    padding:34px 20px 44px!important;
+    border-top:1px solid rgba(255,255,255,.08)!important;
+    background:#050607!important;
+  }
+  body.profile-page-active .profile-favorites-section[hidden]{display:none!important}
+  body.profile-page-active .profile-favorites-heading{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:14px!important;
+    width:100%!important;
+    margin:0 0 22px!important;
+  }
+  body.profile-page-active .profile-favorites-heading h2{
+    margin:0!important;
+    font-size:clamp(32px,10vw,42px)!important;
+    line-height:1!important;
+  }
+  body.profile-page-active .profile-favorites-edit{
+    min-height:40px!important;
+    padding:0 15px!important;
+    flex:0 0 auto!important;
+    font-size:12px!important;
+  }
+  body.profile-page-active .profile-favorites-content{
+    width:calc(100% + 20px)!important;
+    max-width:none!important;
+    margin-right:-20px!important;
+    overflow:visible!important;
+  }
+  body.profile-page-active .profile-favorites-ranking{
+    display:flex!important;
+    align-items:center!important;
+    gap:14px!important;
+    width:100%!important;
+    padding:2px 20px 14px 0!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-snap-type:x mandatory!important;
+    scroll-padding-left:0!important;
+    scrollbar-width:none!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  body.profile-page-active .profile-favorites-ranking::-webkit-scrollbar{display:none!important}
+  body.profile-page-active .profile-favorite-ranked-item{
+    flex:0 0 min(82vw,330px)!important;
+    width:min(82vw,330px)!important;
+    min-width:min(82vw,330px)!important;
+    min-height:160px!important;
+    padding:8px 0 0 54px!important;
+    scroll-snap-align:start!important;
+  }
+  body.profile-page-active .profile-favorite-rank{
+    left:-5px!important;
+    top:50%!important;
+    width:92px!important;
+    height:174px!important;
+    transform:translateY(-50%)!important;
+    opacity:.84!important;
+  }
+  body.profile-page-active .profile-favorite-rank-svg{
+    width:92px!important;
+    height:174px!important;
+  }
+  body.profile-page-active .profile-favorite-poster{
+    width:100%!important;
+    aspect-ratio:16/9!important;
+    border-radius:15px!important;
+  }
+  body.profile-page-active .profile-favorites-empty{
+    width:calc(100% - 20px)!important;
+    min-height:156px!important;
+    padding:26px 20px!important;
+    border-radius:22px!important;
+  }
+
+  /* Seletor de quatro conteúdos em tela cheia, mantendo o perfil ao fundo. */
+  .profile-favorites-picker-backdrop{
+    display:grid!important;
+    place-items:stretch!important;
+    padding:0!important;
+    background:rgba(0,0,0,.72)!important;
+    z-index:20120!important;
+  }
+  .profile-favorites-picker-backdrop[hidden]{display:none!important}
+  .profile-favorites-picker{
+    width:100%!important;
+    height:100dvh!important;
+    max-height:none!important;
+    border:0!important;
+    border-radius:0!important;
+    background:#111113!important;
+  }
+  .profile-favorites-picker-header{
+    min-height:104px!important;
+    padding:20px 18px 15px!important;
+    gap:12px!important;
+  }
+  .profile-favorites-picker-header h2{font-size:25px!important}
+  .profile-favorites-picker-header p{font-size:12px!important}
+  .profile-favorites-picker-header-actions{gap:8px!important}
+  .profile-favorites-header-save{
+    min-width:76px!important;
+    height:42px!important;
+    padding:0 14px!important;
+  }
+  .profile-favorites-picker-close{
+    width:42px!important;
+    height:42px!important;
+    flex:0 0 42px!important;
+  }
+  .profile-favorites-picker-search{
+    margin:12px 16px 8px!important;
+  }
+  .profile-favorites-picker-body{
+    padding:10px 16px 104px!important;
+  }
+  .profile-favorites-picker-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:17px 10px!important;
+  }
+  .profile-favorites-option-media{border-radius:13px!important}
+  .profile-favorites-picker-footer{
+    position:fixed!important;
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
+    z-index:4!important;
+    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important;
+    gap:8px!important;
+    padding:12px 16px max(12px,env(safe-area-inset-bottom))!important;
+    background:rgba(28,28,30,.96)!important;
+    -webkit-backdrop-filter:blur(22px)!important;
+    backdrop-filter:blur(22px)!important;
+  }
+  .profile-favorites-cancel,
+  .profile-favorites-save{
+    min-width:0!important;
+    width:100%!important;
+    height:46px!important;
+    padding:0 12px!important;
+    font-size:12px!important;
+  }
+  .profile-favorites-selection-count{min-width:54px!important}
+}

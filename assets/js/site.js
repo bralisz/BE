@@ -3946,7 +3946,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
   }
   function showDenied(){
-    adminFrame('<section style="width:min(460px,100%);padding:32px;border:1px solid rgba(255,255,255,.13);border-radius:28px;background:#0a0d12;text-align:center"><h1 style="margin:0 0 10px;font-size:27px">Acesso não autorizado</h1><p style="margin:0;color:#9ca7b7;line-height:1.55">Esta conta não possui permissão administrativa.</p><a href="/" style="display:inline-grid;place-items:center;min-height:48px;margin-top:22px;padding:0 22px;border-radius:15px;background:#347ff1;color:#fff;text-decoration:none;font-weight:800">Voltar ao site</a></section>');
+    clearAdminBootGuard();
+    try{sessionStorage.removeItem('beOAuthDestination');}catch(_){ }
+    location.replace('/404');
   }
   function showAdminLoadError(message){
     var safe=String(message||'Não foi possível iniciar o painel.').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]});
@@ -5267,7 +5269,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
   function hideSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=true;setSiteLoading(false);}
   function showSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
-  window.addEventListener('be:content-ready',hideSiteSkeleton);
+  window.addEventListener('be:content-ready',function(){
+    // O catálogo pode terminar de carregar antes da autenticação. Só remove o
+    // bloqueio visual quando uma sessão válida já foi confirmada; visitantes
+    // sem conta permanecem protegidos até a tela de login ser exibida.
+    if(authReady&&auth&&auth.currentUser)hideSiteSkeleton();
+  });
 
   function q(id){return document.getElementById(id)}
   var banToastTimer=0;
