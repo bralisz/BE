@@ -6520,6 +6520,9 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
 .profile-page-home:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.24)}
 .profile-page-home:active{transform:scale(.96)}
 .profile-page-home svg{display:block;width:23px;height:23px;margin:auto}
+@media(min-width:761px){
+  body.profile-page-active .profile-page-home{display:none!important}
+}
 .profile-saved-section{
   position:relative;
   z-index:3;
@@ -6707,6 +6710,7 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
     backdrop-filter:blur(4px)!important;
   }
   body.profile-page-active .profile-page-home{
+    display:grid!important;
     position:absolute!important;
     left:var(--profile-mobile-action-edge)!important;
     right:auto!important;

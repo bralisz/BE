@@ -2644,6 +2644,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       : (data.bannerUrl || thumbnailUrl);
     const logoUrl = data.logoUrl || '';
     const itemId = String(data.itemId || title);
+    const recordId = String(data.recordId || data.id || '');
+    const canonicalFavoriteId = String(data.favoriteId || (recordId ? `${collection || 'videos'}:${recordId}` : itemId));
     if (options.updateRoute !== false) setDetailRoute(itemId, Boolean(options.replaceRoute));
 
     bg.innerHTML = bannerUrl && bannerUrl !== '#'
@@ -2675,9 +2677,9 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       play.removeAttribute('rel');
     }
 
-    list.dataset.favoriteId = itemId;
+    list.dataset.favoriteId = canonicalFavoriteId;
     list.dataset.itemId = itemId;
-    list.dataset.recordId = String(data.recordId || data.id || '');
+    list.dataset.recordId = recordId;
     list.dataset.title = title;
     list.dataset.description = description;
     list.dataset.year = year;
@@ -2745,9 +2747,54 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     localStorage.setItem('beDetailFavorites', JSON.stringify(Array.from(set)));
   }
 
+  function favoriteKeysForContent(data) {
+    const normalized = normalizeSavedContent(data || {});
+    const canonical = normalized.recordId
+      ? `${normalized.collection || 'videos'}:${normalized.recordId}`
+      : '';
+    return Array.from(new Set([
+      normalized.itemId,
+      normalized.favoriteId,
+      canonical
+    ].map(value => String(value || '').trim()).filter(Boolean)));
+  }
+
+  function isContentFavorited(data) {
+    const keys = favoriteKeysForContent(data);
+    if (!keys.length) return false;
+    const detailFavorites = detailFavoriteSet();
+    const featuredFavorites = featuredFavoriteSet();
+    return keys.some(key => detailFavorites.has(key) || featuredFavorites.has(key));
+  }
+
+  function setContentFavoriteState(data, active) {
+    const normalized = normalizeSavedContent(data || {});
+    const keys = favoriteKeysForContent(normalized);
+    const detailFavorites = detailFavoriteSet();
+    const featuredFavorites = featuredFavoriteSet();
+    const canonical = normalized.recordId
+      ? `${normalized.collection || 'videos'}:${normalized.recordId}`
+      : (normalized.favoriteId || normalized.itemId);
+
+    if (active) {
+      if (normalized.itemId) detailFavorites.add(normalized.itemId);
+      if (canonical) featuredFavorites.add(canonical);
+    } else {
+      keys.forEach(key => {
+        detailFavorites.delete(key);
+        featuredFavorites.delete(key);
+      });
+    }
+
+    saveDetailFavoriteSet(detailFavorites);
+    localStorage.setItem('beFeaturedFavorites', JSON.stringify(Array.from(featuredFavorites)));
+    persistSavedContent(normalized, active);
+  }
+
   function syncDetailListButton(button, itemId) {
-    const favorites = detailFavoriteSet();
-    const active = favorites.has(String(itemId || ''));
+    const data = contentDataFromElement(button);
+    if (!data.itemId && itemId) data.itemId = String(itemId);
+    const active = isContentFavorited(data);
     const label = active ? 'Remover dos favoritos' : 'Adicionar aos favoritos';
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
@@ -2757,14 +2804,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   }
 
   function toggleDetailFavorite(button) {
-    const itemId = String(button.dataset.favoriteId || '');
-    const favorites = detailFavoriteSet();
-    const active = !favorites.has(itemId);
-    if (active) favorites.add(itemId); else favorites.delete(itemId);
-    saveDetailFavoriteSet(favorites);
-    persistSavedContent(contentDataFromElement(button), active);
-    syncDetailListButton(button, itemId);
-    window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId, active } }));
+    const data = contentDataFromElement(button);
+    const active = !isContentFavorited(data);
+    setContentFavoriteState(data, active);
+    syncDetailListButton(button, data.itemId);
+    window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
   }
 
   function setupRail(section) {
@@ -2839,7 +2883,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
   function contentDataFromElement(element) {
     if (!element) return normalizeSavedContent({});
-    const detail = element.matches?.('[data-open-detail="true"]')
+    const hasOwnContentData = Boolean(element.dataset?.itemId || element.dataset?.recordId);
+    const detail = element.matches?.('[data-open-detail="true"]') || hasOwnContentData
       ? element
       : element.closest?.('.f-slide, .video-card, #contentDetailSection')?.querySelector?.('[data-open-detail="true"]') || element;
     const dataset = detail?.dataset || element.dataset || {};
@@ -2909,13 +2954,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   }
 
   function setupFavoriteButtons(host) {
-    const storageKey = 'beFeaturedFavorites';
     host.querySelectorAll('[data-favorite-id]').forEach(button => {
       if (button.dataset.favoriteBound === 'true') return;
       button.dataset.favoriteBound = 'true';
-      const id = String(button.dataset.favoriteId || '');
       const sync = () => {
-        const active = featuredFavoriteSet().has(id);
+        const active = isContentFavorited(contentDataFromElement(button));
         button.classList.toggle('active', active);
         button.setAttribute('aria-pressed', String(active));
         button.setAttribute('aria-label', active ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
@@ -2924,13 +2967,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       button.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
-        const favorites = featuredFavoriteSet();
-        const active = !favorites.has(id);
-        if (active) favorites.add(id); else favorites.delete(id);
-        localStorage.setItem(storageKey, JSON.stringify(Array.from(favorites)));
-        persistSavedContent(contentDataFromElement(button), active);
+        const data = contentDataFromElement(button);
+        const active = !isContentFavorited(data);
+        setContentFavoriteState(data, active);
         sync();
-        window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ favoriteId:id, active } }));
+        window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
       });
       window.addEventListener('be:favorites-changed', sync);
     });
