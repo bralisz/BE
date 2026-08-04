@@ -1614,6 +1614,12 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       return;
     }
 
+    // Nas abas Filmes e Vídeos o catálogo começa diretamente pelas seções,
+    // sem reservar espaço para um banner/fundo sombreado de destaque.
+    host.innerHTML = '';
+    section.hidden = true;
+    return;
+
     const item = chooseRandomFeatured(view, force);
     if (!item) {
       host.innerHTML = '';
@@ -2561,11 +2567,12 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         setActiveTab(button);
         window.dispatchEvent(new Event('be:detail-close'));
         applyCatalogFilter(true);
-        const randomDestination = document.getElementById('randomFeaturedSection');
-        const destination = randomDestination && !randomDestination.hidden
-          ? randomDestination
-          : document.getElementById('dynamicSections');
-        if (destination && !destination.hidden) destination.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Ao alternar entre Filmes e Vídeos, sempre reposiciona a página no topo.
+        // Isso evita que o destaque, os títulos ou os cards fiquem recortados atrás
+        // da barra fixa quando a troca acontece após o usuário já ter rolado a página.
+        window.requestAnimationFrame(() => {
+          window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        });
       });
     });
 

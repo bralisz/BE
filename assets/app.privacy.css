@@ -5253,3 +5253,172 @@ body.section-catalog-active>footer>.footer-card{
 .f-slide{
   background:var(--be-page-background)!important;
 }
+
+/* Correção definitiva de rolagem das abas Filmes e Vídeos. */
+html{
+  scroll-padding-top:112px;
+}
+body[data-home-view="films"],
+body[data-home-view="videos"],
+body[data-home-view="movies"],
+body[data-home-view="series"]{
+  min-height:100vh;
+  min-height:100svh;
+  display:flex;
+  flex-direction:column;
+  background:var(--be-page-background,#070809)!important;
+}
+body[data-home-view="films"]>main,
+body[data-home-view="videos"]>main,
+body[data-home-view="movies"]>main,
+body[data-home-view="series"]>main{
+  width:100%;
+  min-height:calc(100svh - 210px);
+  flex:1 0 auto;
+}
+body[data-home-view="films"]>footer,
+body[data-home-view="videos"]>footer,
+body[data-home-view="movies"]>footer,
+body[data-home-view="series"]>footer{
+  flex:0 0 auto;
+}
+body[data-home-view="films"] .topbar-wrap,
+body[data-home-view="videos"] .topbar-wrap,
+body[data-home-view="movies"] .topbar-wrap,
+body[data-home-view="series"] .topbar-wrap{
+  top:0!important;
+  min-height:108px;
+  padding-top:18px!important;
+  background:linear-gradient(180deg,rgba(7,8,9,1) 0%,rgba(7,8,9,.97) 58%,rgba(7,8,9,0) 100%)!important;
+}
+body[data-home-view="films"] .home-topbar,
+body[data-home-view="videos"] .home-topbar,
+body[data-home-view="movies"] .home-topbar,
+body[data-home-view="series"] .home-topbar{
+  pointer-events:auto;
+}
+#featuredSection,
+#randomFeaturedSection,
+#dynamicSections,
+#dynamicSections .video-rail-section{
+  scroll-margin-top:112px!important;
+}
+body[data-home-view="films"] #dynamicSections.video-catalog,
+body[data-home-view="videos"] #dynamicSections.video-catalog,
+body[data-home-view="movies"] #dynamicSections.video-catalog,
+body[data-home-view="series"] #dynamicSections.video-catalog,
+body.section-catalog-active #dynamicSections.video-catalog{
+  margin-top:0!important;
+  border-top:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+body[data-home-view="films"] #dynamicSections:not(.section-view-mode),
+body[data-home-view="videos"] #dynamicSections:not(.section-view-mode),
+body[data-home-view="movies"] #dynamicSections:not(.section-view-mode),
+body[data-home-view="series"] #dynamicSections:not(.section-view-mode){
+  min-height:clamp(360px,48svh,620px);
+  padding-bottom:72px!important;
+}
+@media(max-width:760px){
+  html{scroll-padding-top:92px}
+  body[data-home-view="films"] .topbar-wrap,
+  body[data-home-view="videos"] .topbar-wrap,
+  body[data-home-view="movies"] .topbar-wrap,
+  body[data-home-view="series"] .topbar-wrap{
+    min-height:92px;
+    padding-top:10px!important;
+  }
+  #featuredSection,
+  #randomFeaturedSection,
+  #dynamicSections,
+  #dynamicSections .video-rail-section{
+    scroll-margin-top:92px!important;
+  }
+  body[data-home-view="films"] #dynamicSections:not(.section-view-mode),
+  body[data-home-view="videos"] #dynamicSections:not(.section-view-mode),
+  body[data-home-view="movies"] #dynamicSections:not(.section-view-mode),
+  body[data-home-view="series"] #dynamicSections:not(.section-view-mode){
+    min-height:360px;
+    padding-bottom:48px!important;
+  }
+}
+
+
+
+/* Abas Filmes e Vídeos com o mesmo acabamento visual da Home. */
+body[data-home-view="films"] .topbar-wrap,
+body[data-home-view="movies"] .topbar-wrap,
+body[data-home-view="series"] .topbar-wrap,
+body[data-home-view="videos"] .topbar-wrap,
+body.section-catalog-active .topbar-wrap{
+  background:transparent!important;
+  box-shadow:none!important;
+}
+
+/* O destaque aleatório volta a aparecer nas abas, sem bloco sombreado extra. */
+body[data-home-view="films"] #randomFeaturedSection,
+body[data-home-view="movies"] #randomFeaturedSection,
+body[data-home-view="series"] #randomFeaturedSection,
+body[data-home-view="videos"] #randomFeaturedSection{
+  width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+body[data-home-view="films"] #randomFeaturedSection .featured,
+body[data-home-view="movies"] #randomFeaturedSection .featured,
+body[data-home-view="series"] #randomFeaturedSection .featured,
+body[data-home-view="videos"] #randomFeaturedSection .featured{
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+/* Borda arredondada no encontro do destaque com o catálogo, igual à Home. */
+body[data-home-view="films"] #dynamicSections.video-catalog:not(.section-view-mode),
+body[data-home-view="movies"] #dynamicSections.video-catalog:not(.section-view-mode),
+body[data-home-view="series"] #dynamicSections.video-catalog:not(.section-view-mode),
+body[data-home-view="videos"] #dynamicSections.video-catalog:not(.section-view-mode){
+  position:relative!important;
+  z-index:8!important;
+  margin-top:-38px!important;
+  padding-top:clamp(44px,4.2vw,58px)!important;
+  border:1px solid rgba(255,255,255,.09)!important;
+  border-bottom:0!important;
+  border-radius:34px 34px 0 0!important;
+  background:var(--be-page-background,#070809)!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+
+/* Ao abrir uma seção completa, mantém o fundo liso e sem sombreado. */
+body.section-catalog-active,
+body.section-catalog-active main,
+body.section-catalog-active #dynamicSections.section-view-mode,
+body.section-catalog-active #dynamicSections .section-view-active{
+  background:var(--be-page-background,#070809)!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+body.section-catalog-active #dynamicSections.section-view-mode{
+  border:0!important;
+  border-radius:0!important;
+  margin-top:0!important;
+}
+
+@media(max-width:760px){
+  body[data-home-view="films"] #dynamicSections.video-catalog:not(.section-view-mode),
+  body[data-home-view="movies"] #dynamicSections.video-catalog:not(.section-view-mode),
+  body[data-home-view="series"] #dynamicSections.video-catalog:not(.section-view-mode),
+  body[data-home-view="videos"] #dynamicSections.video-catalog:not(.section-view-mode){
+    margin-top:-18px!important;
+    padding-top:30px!important;
+    border-radius:25px 25px 0 0!important;
+  }
+}
