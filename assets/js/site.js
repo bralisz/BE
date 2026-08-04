@@ -2754,6 +2754,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       play.removeAttribute('rel');
     }
 
+    play.dataset.itemId = itemId;
+    play.dataset.recordId = recordId;
+    play.dataset.title = title;
+    play.dataset.description = description;
+    play.dataset.year = year;
+    play.dataset.duration = duration;
+    play.dataset.contentUrl = contentUrl;
+    play.dataset.imageUrl = thumbnailUrl;
+    play.dataset.bannerUrl = bannerUrl;
+    play.dataset.logoUrl = logoUrl;
+    play.dataset.collection = collection || 'videos';
+    if (play.dataset.analyticsBound !== 'true') {
+      play.dataset.analyticsBound = 'true';
+      play.addEventListener('click', () => {
+        const current = contentDataFromElement(play);
+        if (current.contentUrl && current.contentUrl !== '#') trackContentInteraction(current, 'click');
+      });
+    }
+
     list.dataset.favoriteId = canonicalFavoriteId;
     list.dataset.itemId = itemId;
     list.dataset.recordId = recordId;
@@ -2778,6 +2797,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.classList.add('detail-page-active');
     section.hidden = false;
     section.scrollIntoView({ behavior: options.instant ? 'auto' : 'smooth', block: 'start' });
+    trackContentInteraction({ ...data, recordId, collection: collection || 'videos' }, 'view');
   }
 
   function closeContentDetail(scrollHome = false, updateRoute = true) {
@@ -2808,6 +2828,55 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         destination?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
+  }
+
+  const CONTENT_ANALYTICS_SESSION_KEY = 'beContentAnalyticsSession';
+
+  function createContentAnalyticsSessionId() {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+      const bytes = new Uint8Array(16);
+      if (window.crypto && typeof window.crypto.getRandomValues === 'function') window.crypto.getRandomValues(bytes);
+      else for (let index = 0; index < bytes.length; index += 1) bytes[index] = Math.floor(Math.random() * 256);
+      bytes[6] = (bytes[6] & 15) | 64;
+      bytes[8] = (bytes[8] & 63) | 128;
+      const hex = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
+      return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+    } catch (_) {
+      return '00000000-0000-4000-8000-000000000001';
+    }
+  }
+
+  function contentAnalyticsSessionId() {
+    try {
+      const stored = String(localStorage.getItem(CONTENT_ANALYTICS_SESSION_KEY) || '').trim();
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stored)) return stored;
+      const created = createContentAnalyticsSessionId();
+      localStorage.setItem(CONTENT_ANALYTICS_SESSION_KEY, created);
+      return created;
+    } catch (_) {
+      return createContentAnalyticsSessionId();
+    }
+  }
+
+  function trackContentInteraction(data, eventType, active = null) {
+    const normalized = normalizeSavedContent(data || {});
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized.recordId)) return;
+    const type = String(eventType || '').trim().toLowerCase();
+    if (!['click', 'view', 'save'].includes(type)) return;
+
+    Promise.resolve(window.beBackend?.ready)
+      .then(() => {
+        const client = window.beBackend?.client;
+        if (!client || typeof client.rpc !== 'function') return null;
+        return client.rpc('track_content_interaction', {
+          p_content_id: normalized.recordId,
+          p_event_type: type,
+          p_session_id: contentAnalyticsSessionId(),
+          p_active: type === 'save' ? Boolean(active) : null
+        });
+      })
+      .catch(() => null);
   }
 
   function detailFavoriteSet() {
@@ -2893,7 +2962,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const changed = setContentFavoriteState(data, requestedActive);
     const active = isContentFavorited(data);
     syncDetailListButton(button, data.itemId);
-    if (changed) window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
+    if (changed) {
+      trackContentInteraction(data, 'save', active);
+      window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
+    }
   }
 
   function setupRail(section) {
@@ -3085,7 +3157,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const changed = setContentFavoriteState(data, requestedActive);
         const active = isContentFavorited(data);
         sync();
-        if (changed) window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
+        if (changed) {
+          trackContentInteraction(data, 'save', active);
+          window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
+        }
       });
       window.addEventListener('be:favorites-changed', sync);
     });
