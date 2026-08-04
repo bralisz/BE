@@ -7581,3 +7581,144 @@ html:not(.admin-route-boot).site-loading-active body > #authLoading{
     justify-content:center;
   }
 }
+
+
+/* Perfil desktop: navegação própria, ações fixas e quatro favoritos visíveis. */
+@media (min-width:761px){
+  body.profile-page-active .home-topbar,
+  body.profile-page-active .home-user-menu{
+    display:none!important;
+  }
+  body.profile-page-active .topbar-wrap{
+    position:static!important;
+    inset:auto!important;
+    width:0!important;
+    height:0!important;
+    padding:0!important;
+    margin:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    pointer-events:none!important;
+  }
+  body.profile-page-active{
+    --profile-desktop-action-size:48px;
+    --profile-desktop-action-gap:10px;
+    --profile-desktop-action-edge:clamp(22px,3vw,42px);
+    --profile-desktop-action-top:28px;
+  }
+  body.profile-page-active .profile-page-home,
+  body.profile-page-active .home-notification-menu,
+  body.profile-page-active .profile-page-more{
+    display:grid!important;
+    position:fixed!important;
+    top:var(--profile-desktop-action-top)!important;
+    width:var(--profile-desktop-action-size)!important;
+    height:var(--profile-desktop-action-size)!important;
+    min-width:var(--profile-desktop-action-size)!important;
+    min-height:var(--profile-desktop-action-size)!important;
+    margin:0!important;
+    border:1px solid rgba(255,255,255,.14)!important;
+    border-radius:50%!important;
+    background:rgba(21,22,24,.78)!important;
+    color:#fff!important;
+    box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.055)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(120%)!important;
+    backdrop-filter:blur(14px) saturate(120%)!important;
+    pointer-events:auto!important;
+    z-index:10040!important;
+  }
+  body.profile-page-active .profile-page-home{
+    left:auto!important;
+    right:calc(var(--profile-desktop-action-edge) + (var(--profile-desktop-action-size) + var(--profile-desktop-action-gap)) * 2)!important;
+  }
+  body.profile-page-active .home-notification-menu{
+    right:calc(var(--profile-desktop-action-edge) + var(--profile-desktop-action-size) + var(--profile-desktop-action-gap))!important;
+  }
+  body.profile-page-active .home-notification-menu .notification-button{
+    width:100%!important;
+    height:100%!important;
+    min-width:100%!important;
+    min-height:100%!important;
+    border:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  body.profile-page-active .home-notification-menu .notification-dropdown{
+    position:absolute!important;
+    top:calc(100% + 10px)!important;
+    right:0!important;
+  }
+  body.profile-page-active .profile-page-more{
+    right:var(--profile-desktop-action-edge)!important;
+    left:auto!important;
+    padding:0!important;
+  }
+  body.profile-page-active .profile-page-home:hover,
+  body.profile-page-active .home-notification-menu:hover,
+  body.profile-page-active .profile-page-more:hover{
+    background:rgba(42,43,46,.9)!important;
+    border-color:rgba(255,255,255,.25)!important;
+  }
+  body.profile-page-active .profile-page-home svg,
+  body.profile-page-active .notification-button svg,
+  body.profile-page-active .profile-page-more svg{
+    width:21px!important;
+    height:21px!important;
+    margin:auto!important;
+  }
+
+  body.profile-page-active .profile-favorites-content{
+    max-width:1540px!important;
+    overflow:visible!important;
+  }
+  body.profile-page-active .profile-favorites-ranking{
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:clamp(10px,1.15vw,18px)!important;
+    width:100%!important;
+    padding:4px 0 14px!important;
+    overflow:visible!important;
+    scroll-snap-type:none!important;
+  }
+  body.profile-page-active .profile-favorite-ranked-item{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    min-height:0!important;
+    padding:10px 0 0 clamp(48px,4.1vw,72px)!important;
+    scroll-snap-align:none!important;
+  }
+  body.profile-page-active .profile-favorite-rank{
+    left:0!important;
+    font-size:clamp(88px,7vw,126px)!important;
+  }
+  body.profile-page-active .profile-favorite-poster{
+    width:100%!important;
+    aspect-ratio:16/9!important;
+  }
+
+  body.profile-page-active > footer{
+    display:block!important;
+    position:relative!important;
+    z-index:3!important;
+    margin-top:0!important;
+    background:#090a0c!important;
+  }
+}
+
+@media (min-width:761px) and (max-width:1050px){
+  body.profile-page-active .profile-favorite-ranked-item{
+    padding-left:42px!important;
+  }
+  body.profile-page-active .profile-favorite-rank{
+    font-size:82px!important;
+  }
+}
+
+/* O rodapé também encerra o perfil no mobile. */
+body.profile-page-active > footer{
+  display:block!important;
+  position:relative!important;
+  z-index:3!important;
+  background:#090a0c!important;
+}
