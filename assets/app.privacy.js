@@ -2018,9 +2018,10 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     if (scrollHome && active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function openSectionView(section) {
+  function openSectionView(section, options = {}) {
     const host = section?.closest?.('#dynamicSections');
     if (!host || !section) return;
+    const requestedCollection = normalizeText(options.collection || '');
     if (host.classList.contains('section-view-mode') && activeSectionView === section) return;
     closeSectionView(false);
     activeSectionView = section;
@@ -2031,7 +2032,20 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     const allItems = section.querySelector('.section-view-all-items');
     if (rail && allItems) {
       rail._beHomeMarkup = rail.innerHTML;
-      rail.innerHTML = allItems.innerHTML;
+      if (requestedCollection) {
+        const filteredItems = document.createElement('div');
+        filteredItems.innerHTML = allItems.innerHTML;
+        filteredItems.querySelectorAll('.video-card').forEach(card => {
+          const collection = normalizeText(card.dataset.collection || 'videos');
+          if (collection !== requestedCollection) card.remove();
+        });
+        const hasMatchingItems = Boolean(filteredItems.querySelector('.video-card'));
+        rail.innerHTML = hasMatchingItems
+          ? filteredItems.innerHTML
+          : '<p class="video-rail-empty">Nenhum vídeo publicado nesta seção.</p>';
+      } else {
+        rail.innerHTML = allItems.innerHTML;
+      }
       setupContentDetailInteractions(rail);
     }
 
@@ -2068,16 +2082,14 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         }
 
         // Se a seção foi vinculada a conteúdos de Vídeos no dashboard,
-        // ela funciona como atalho para a aba Vídeos e mantém a mesma
-        // seção em foco, em vez de abrir uma página isolada.
+        // ativa a aba Vídeos e abre a seção clicada mostrando todos os
+        // vídeos vinculados a ela, sem misturar filmes ou séries.
         if (section.dataset.hasVideos === 'true') {
           closeSectionView(false);
           const videosTab = document.querySelector('[data-home-view="videos"]');
           videosTab?.click();
           window.requestAnimationFrame(() => {
-            window.setTimeout(() => {
-              if (!section.hidden) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 80);
+            window.setTimeout(() => openSectionView(section, { collection: 'videos' }), 80);
           });
           return;
         }
