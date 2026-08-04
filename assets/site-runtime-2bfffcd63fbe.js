@@ -4123,7 +4123,23 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         if(moveToTop&&settingsPage){settingsPage.scrollTop=0;}
       }
       settingsPageBody.querySelectorAll('[data-settings-tab]').forEach(function(button){
-        button.onclick=function(){activateSettingsTab(button.getAttribute('data-settings-tab'),true);};
+        button.onclick=function(event){
+          if(event){
+            event.preventDefault();
+            event.stopPropagation();
+            if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
+          }
+          var tab=button.getAttribute('data-settings-tab');
+          activateSettingsTab(tab,true);
+          // Mantém a rota e a tela de Configurações ativas ao trocar de aba.
+          // Isso impede que listeners globais de navegação tratem o clique como retorno à Home.
+          keepSettingsOpen();
+          try{
+            var configUrl='/config'+(location.search||'');
+            var state={...(history.state||{}),beRoute:'config',settingsTab:tab};
+            history.replaceState(state,'',configUrl);
+          }catch(_){ }
+        };
       });
       activateSettingsTab(settingsActiveTab,false);
       document.getElementById('settingsChooseAvatar').onclick=function(){openAvatarPicker();};
@@ -4519,7 +4535,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
       'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
       'auth/session-missing':'Não foi possível concluir a sessão de login. Tente entrar novamente.',
-      'auth/user-banned':'Esta conta foi banida.',
+      'auth/user-banned':'',
       'auth/email-rate-limit':'O limite temporário de e-mails do Supabase foi atingido. Aguarde e tente novamente mais tarde ou continue com o Discord.',
       'auth/provider-not-enabled':'O login com Discord ainda não foi ativado no Supabase.',
       'backend/not-configured':'Este recurso será ativado quando o Supabase estiver conectado.',
@@ -4638,7 +4654,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     if(!status.banned)return true;
     var detail={email:user.email||'',reason:status.reason||'',bannedAt:status.bannedAt||''};
     try{await auth.signOut();}catch(_){ }
-    showLogin();setMode('email',detail.email);setStatus('Esta conta foi banida.','error');showBannedToast(detail);
+    showLogin();setMode('email',detail.email);setStatus('');showBannedToast(detail);
     return false;
   }
 
@@ -4706,7 +4722,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       if(!validAuthPassword(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando…');
-      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setMode('password',email);if(isBannedError(err)){setStatus('Esta conta foi banida.','error');showBannedToast({email:email});}else setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
+      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setMode('password',email);if(isBannedError(err)){setStatus('');showBannedToast({email:email});}else setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
 
     q('signupForm').addEventListener('submit',async function(e){

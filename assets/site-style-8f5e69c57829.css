@@ -6282,7 +6282,8 @@ body.section-catalog-active #dynamicSections.section-view-mode > .film-library-s
   position:fixed;
   z-index:10120;
   left:50%;
-  bottom:max(22px,env(safe-area-inset-bottom));
+  top:max(22px,env(safe-area-inset-top));
+  bottom:auto;
   width:min(440px,calc(100% - 28px));
   min-height:72px;
   padding:13px 48px 13px 14px;
@@ -6297,7 +6298,7 @@ body.section-catalog-active #dynamicSections.section-view-mode > .film-library-s
   -webkit-backdrop-filter:blur(24px) saturate(135%);
   backdrop-filter:blur(24px) saturate(135%);
   opacity:0;
-  transform:translate(-50%,22px) scale(.98);
+  transform:translate(-50%,-22px) scale(.98);
   transition:opacity .24s ease,transform .24s ease;
   pointer-events:none;
 }
@@ -6320,7 +6321,7 @@ body.section-catalog-active #dynamicSections.section-view-mode > .film-library-s
 @media(max-width:640px){
   .settings-data-card .settings-export-button{width:100%}
   .home-filter-empty span{font-size:13px;line-height:1.45}
-  .ios-ban-toast{bottom:max(16px,env(safe-area-inset-bottom));border-radius:22px}
+  .ios-ban-toast{top:max(16px,env(safe-area-inset-top));bottom:auto;border-radius:22px}
 }
 
 
