@@ -2049,6 +2049,21 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         if (!section) return;
         event.preventDefault();
         event.stopPropagation();
+
+        const sectionTitle = normalizeText(title.querySelector('span')?.textContent || '');
+        const sectionCategory = normalizeText(section.dataset.category || '');
+        const isFilmsAndSeriesSection = [sectionTitle, sectionCategory].some(value =>
+          value.includes('filmes') && value.includes('series')
+        );
+
+        // A seção combinada da Home funciona como atalho para a aba Filmes,
+        // onde Filmes e Séries permanecem organizados em trilhos separados.
+        if (isFilmsAndSeriesSection) {
+          closeSectionView(false);
+          document.querySelector('[data-home-view="films"]')?.click();
+          return;
+        }
+
         openSectionView(section);
       }, true);
     }

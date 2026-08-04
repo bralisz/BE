@@ -3695,6 +3695,17 @@ body.support-page-active .home-nav-link[data-public-action="support"]{display:in
   font-size:15px;
   line-height:1.68;
 }
+.support-inline-link{
+  color:#2997ff;
+  font-weight:600;
+  text-decoration:none;
+}
+.support-inline-link:hover{text-decoration:underline}
+.support-inline-link:focus-visible{
+  outline:2px solid #2997ff;
+  outline-offset:3px;
+  border-radius:3px;
+}
 .support-contact{
   padding:78px 0 8px;
   text-align:center;
