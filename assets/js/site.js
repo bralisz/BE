@@ -142,7 +142,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function oauthRedirectUrl(destination = 'home') {
-    const url = new URL(location.pathname || '/', location.origin);
+    // OAuth sempre retorna por uma rota neutra e exclusiva. Não reutilize
+    // /login, /config ou a página atual como callback do provedor.
+    const url = new URL('/auth/callback', location.origin);
     url.searchParams.set('auth_callback', String(destination || 'home'));
     return url.href;
   }
