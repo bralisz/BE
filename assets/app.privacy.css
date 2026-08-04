@@ -4721,3 +4721,88 @@ body.settings-page-active #mobileNotificationPopover{
 @media(max-width:760px){
   .support-search{border-radius:19px!important}
 }
+
+
+/* Menu do perfil com a mesma borda e acabamento do painel de notificações. */
+.user-dropdown{
+  border:1px solid rgba(255,255,255,.13)!important;
+  border-radius:27px!important;
+  background:rgba(8,10,12,.96)!important;
+  box-shadow:0 28px 72px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.05)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(130%)!important;
+  backdrop-filter:blur(34px) saturate(130%)!important;
+}
+
+/* Botão de suporte exibido somente após o rodapé no mobile. */
+.mobile-footer-support-cta{display:none}
+@media(max-width:760px){
+  body:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.settings-page-active):not(.detail-page-active):not(.support-page-active):not(.legal-page-active):not(.notification-page-active) .mobile-footer-support-cta{
+    width:calc(100% - 40px);
+    min-height:52px;
+    margin:0 20px max(30px,env(safe-area-inset-bottom));
+    padding:0 24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:0;
+    border-radius:18px;
+    background:#0a84ff;
+    color:#fff;
+    font:750 16px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;
+    box-shadow:0 12px 30px rgba(10,132,255,.24);
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  .mobile-footer-support-cta:active{transform:scale(.985);background:#0077ed}
+}
+
+/* Otimizações gerais para celulares e aparelhos com pouca memória/CPU. */
+@media(max-width:760px){
+  html.mobile-optimized{scroll-behavior:auto}
+  html.mobile-optimized body{overscroll-behavior-y:none}
+  html.mobile-optimized .f-media img,
+  html.mobile-optimized .f-media .ph{transition:opacity .25s ease!important;transform:none!important}
+  html.mobile-optimized .featured-wrap,
+  html.mobile-optimized .video-rail-section,
+  html.mobile-optimized .gallery-page-shell,
+  html.mobile-optimized .footer-card{animation:none!important}
+  html.mobile-optimized .video-card,
+  html.mobile-optimized .video-card img,
+  html.mobile-optimized .home-nav-link,
+  html.mobile-optimized .mobile-drawer-link{transition-duration:.12s!important}
+  html.mobile-optimized .video-rail{scroll-behavior:auto!important;overscroll-behavior-inline:contain}
+  html.mobile-optimized .home-sections>section,
+  html.mobile-optimized #dynamicSections>section,
+  html.mobile-optimized footer,
+  html.mobile-optimized .support-faq-item{
+    content-visibility:auto;
+    contain-intrinsic-size:360px;
+  }
+  html.mobile-optimized img{image-rendering:auto}
+}
+@media(max-width:760px){
+  html.mobile-lite .home-topbar,
+  html.mobile-lite .mobile-app-bar,
+  html.mobile-lite .mobile-search-control,
+  html.mobile-lite .mobile-menu-toggle,
+  html.mobile-lite .mobile-search-button,
+  html.mobile-lite .mobile-profile-button,
+  html.mobile-lite .mobile-notification-button,
+  html.mobile-lite .user-dropdown,
+  html.mobile-lite .notification-dropdown,
+  html.mobile-lite .mobile-notification-popover,
+  html.mobile-lite .footer-card{
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  html.mobile-lite .home-topbar,
+  html.mobile-lite .mobile-app-bar{background:rgba(12,14,15,.96)!important}
+  html.mobile-lite .user-dropdown,
+  html.mobile-lite .notification-dropdown,
+  html.mobile-lite .mobile-notification-popover{background:#080a0c!important}
+  html.mobile-lite *,
+  html.mobile-lite *::before,
+  html.mobile-lite *::after{animation-duration:.01ms!important;animation-iteration-count:1!important}
+  html.mobile-lite .video-card:hover img{transform:none!important;filter:none!important}
+}

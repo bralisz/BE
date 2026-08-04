@@ -662,9 +662,19 @@
     });
   }
   function initBackgrounds(){
-    var slides=[].slice.call(document.querySelectorAll('.login-bg-slide'));
+    var allSlides=[].slice.call(document.querySelectorAll('.login-bg-slide'));
+    var isMobile=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
+    var slides=isMobile&&allSlides.length>4?allSlides.slice(0,4):allSlides;
     var dots=q('loginDots');
     if(!slides.length)return;
+    allSlides.slice(slides.length).forEach(function(slide){slide.hidden=true;});
+    function ensureLoaded(slide){
+      if(!slide)return;
+      var source=slide.getAttribute('data-login-bg');
+      if(!source)return;
+      slide.style.backgroundImage='url("'+String(source).replace(/"/g,'\\"')+'")';
+      slide.removeAttribute('data-login-bg');
+    }
     function randomIndex(except){
       if(slides.length<2)return 0;
       var next=except;
@@ -685,16 +695,21 @@
     }
     function show(i){
       bgIndex=(i+slides.length)%slides.length;
+      ensureLoaded(slides[bgIndex]);
       slides.forEach(function(slide,j){slide.classList.toggle('active',j===bgIndex)});
       if(dots)dots.querySelectorAll('.login-dot').forEach(function(dot,j){dot.classList.toggle('active',j===bgIndex)});
     }
     function restart(){
       clearInterval(bgTimer);
-      bgTimer=setInterval(function(){show(randomIndex(bgIndex))},10000);
+      if(document.hidden)return;
+      bgTimer=setInterval(function(){show(randomIndex(bgIndex))},isMobile?16000:10000);
     }
     if(dots)dots.addEventListener('click',function(e){var button=e.target.closest('[data-bg]');if(!button)return;show(Number(button.dataset.bg));restart()});
+    document.addEventListener('visibilitychange',function(){if(document.hidden)clearInterval(bgTimer);else restart();},{passive:true});
     show(bgIndex);
     restart();
+    var idle=window.requestIdleCallback||function(callback){return setTimeout(callback,900)};
+    idle(function(){var next=randomIndex(bgIndex);ensureLoaded(slides[next]);});
   }
 
   async function recoverAuthenticatedUser(user){

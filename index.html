@@ -23,12 +23,25 @@
 html.admin-route-boot{background:#05070b!important}
 html.admin-route-boot body{visibility:hidden!important;background:#05070b!important}
 </style>
+<script>
+(function(){
+  try{
+    var mobile=window.matchMedia&&window.matchMedia('(max-width: 760px)').matches;
+    if(!mobile)return;
+    var memory=Number(navigator.deviceMemory||0);
+    var cores=Number(navigator.hardwareConcurrency||0);
+    var saveData=Boolean(navigator.connection&&navigator.connection.saveData);
+    document.documentElement.classList.add('mobile-optimized');
+    if(saveData||(memory&&memory<=4)||(cores&&cores<=4))document.documentElement.classList.add('mobile-lite');
+  }catch(_){ }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/app.privacy.css?v=20260803-admin-profile-scroll-1">
+<link rel="stylesheet" href="/assets/app.privacy.css?v=20260804-mobile-performance-1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/app.privacy.js?v=20260803-admin-profile-scroll-1"></script>
+<script defer src="/assets/app.privacy.js?v=20260804-mobile-performance-1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -58,13 +71,13 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
 <section id="authGate" aria-label="Entrar ou criar conta">
   <div class="login-bg-stack" id="loginBgStack" aria-hidden="true">
     <div class="login-bg-slide active" style="background-image:url('assets/login-admin-banner.jpg')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-1.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-2.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-3.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-4.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-5.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-6.png')"></div>
-    <div class="login-bg-slide" style="background-image:url('assets/login-bg-7.png')"></div>
+    <div class="login-bg-slide" data-login-bg="assets/login-bg-1.webp"></div>
+    <div class="login-bg-slide" data-login-bg="assets/login-bg-2.webp"></div>
+    <div class="login-bg-slide" data-login-bg="assets/login-bg-3.webp"></div>
+    <div class="login-bg-slide" data-login-bg="assets/login-bg-4.webp"></div>
+    <div class="login-bg-slide" data-login-bg="assets/login-bg-5.webp"></div>
+    <div class="login-bg-slide" data-login-bg="assets/login-bg-6.webp"></div>
+    <div class="login-bg-slide" data-login-bg="assets/login-bg-7.webp"></div>
   </div>
   <div class="login-shell">
     <div class="login-topbar" aria-label="Ações de acesso">
@@ -731,8 +744,9 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
     </nav>
   </div>
 </footer>
-<script src="/assets/ui.privacy.js?v=20260803-account-delete-2"></script>
+<button class="mobile-footer-support-cta" type="button" data-public-action="support">Suporte</button>
+<script src="/assets/ui.privacy.js?v=20260804-mobile-performance-1"></script>
 <script src="/assets/support.js?v=20260803-support-clean-url-1"></script>
-<script src="/assets/notifications.js?v=20260803-admin-profile-scroll-1"></script>
+<script src="/assets/notifications.js?v=20260804-mobile-performance-1"></script>
 </body>
 </html>
