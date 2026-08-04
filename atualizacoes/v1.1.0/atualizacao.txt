@@ -1,26 +1,11 @@
-Billie Eilish TV atualiza a página de configurações com um layout mais organizado
+Favoritos no perfil: uma nova forma de mostrar o que você mais gosta
 
-A versão v1.1.0 do Billie Eilish TV apresenta uma atualização visual na página de configurações do perfil. O objetivo desta mudança é deixar a navegação mais clara no computador e posicionar as principais ações de personalização onde elas ficam mais fáceis de encontrar.
+O perfil do Billie Eilish TV ganhou uma área de Favoritos criada para que cada fã possa destacar quatro conteúdos especiais do catálogo.
 
-No desktop, as abas de Perfil, Conta, Conexões, Seus dados e Conta e sessão agora seguem um layout lateral mais amplo. O menu permanece à esquerda enquanto o conteúdo da seção escolhida ocupa a área principal à direita, criando uma divisão mais equilibrada e próxima do visual usado nas demais páginas informativas do site.
+No computador, a nova seção aparece entre as informações do perfil e os conteúdos salvos. Enquanto nenhuma seleção estiver completa, o perfil mostra a mensagem “Adicionar favoritos”, convidando o usuário a escolher os vídeos, filmes ou séries que melhor representam seu gosto.
 
-Dentro da aba Perfil, os botões “Escolher banner” e “Trocar avatar” foram movidos para o lado direito do cabeçalho. Dessa forma, as ações de personalização ficam alinhadas ao título Perfil, enquanto as imagens atuais de banner e avatar continuam apresentadas dentro do cartão logo abaixo. Essa posição é aplicada somente em telas de computador; em telas menores, os botões continuam abaixo das prévias para preservar a navegação confortável no celular.
+Ao abrir o seletor, o usuário continua dentro do próprio perfil. A interface usa um painel leve e intuitivo, inspirado no visual do iOS, com pesquisa, miniaturas, indicação da ordem escolhida e limite claro de quatro conteúdos. O botão de salvar só é liberado quando os quatro favoritos forem selecionados.
 
-A aba Conta e sessão também recebeu um ajuste. Os botões “Excluir conta” e “Sair da conta” deixaram de ficar dentro de um grande cartão com contorno. Agora, as duas ações aparecem diretamente na página, mantendo seus estilos individuais e deixando a seção mais limpa.
+Depois de salvar, os conteúdos aparecem em uma composição horizontal numerada de 1 a 4, inspirada em rankings de streaming. Cada item exibe sua imagem, título e tipo de conteúdo. Também é possível editar a seleção ou abrir diretamente um dos favoritos.
 
-Principais mudanças da v1.1.0:
-
-- navegação lateral das configurações ampliada no desktop;
-- conteúdo das abas alinhado ao layout de referência;
-- “Escolher banner” e “Trocar avatar” posicionados ao lado do cabeçalho Perfil no computador;
-- comportamento original dos botões preservado em telas menores;
-- “Excluir conta” e “Sair da conta” removidos do contorno externo;
-- atualização do cache dos arquivos visuais para exibir o novo layout imediatamente.
-
-Esta atualização afeta somente a experiência pública das configurações e não altera o painel administrativo. O Billie Eilish TV continua evoluindo como um projeto independente feito por fãs, para fãs da Billie Eilish.
-
-Acesse: https://billieilishtv.site
-
-Versão: v1.1.0
-Data: 4 de agosto de 2026
-Criado por Miguel Rodrigues.
+Fechar pelo “X”, pressionar Escape ou usar “Cancelar” apenas encerra o seletor e mantém o usuário na página de perfil. Nenhuma alteração foi feita no painel administrativo.
