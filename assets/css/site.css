@@ -6916,8 +6916,6 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
   line-height:1.55;
   text-align:center;
 }
-.login-trust-note > span:first-child{display:block}
-.login-trust-links{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:5px}
 .login-trust-note a{color:#8ebcff;text-decoration:none;font-weight:700}
 .login-trust-note a:hover{text-decoration:underline}
 @media(max-width:520px){
