@@ -7324,3 +7324,49 @@ body.profile-favorites-picker-active{overflow:hidden!important}
 *::-webkit-scrollbar-corner{
   background:transparent;
 }
+
+
+/* Favoritos: números em SVG com preenchimento horizontal e sobreposição do card. */
+.profile-favorite-rank{
+  width:126px;
+  height:240px;
+  top:50%;
+  display:block;
+  color:transparent;
+  font-size:0;
+  line-height:0;
+  opacity:.62;
+  text-shadow:none;
+}
+.profile-favorite-rank-svg{
+  display:block;
+  width:126px;
+  height:240px;
+  overflow:visible;
+}
+@media(min-width:761px){
+  .profile-favorite-ranked-item{
+    padding-left:58px;
+  }
+
+  /* Remove qualquer marcador/artefato branco junto aos cards das seções. */
+  .video-rail,
+  .video-card{
+    list-style:none!important;
+  }
+  .video-card{
+    display:block;
+    font-size:0;
+    line-height:0;
+  }
+  .video-card::before,
+  .video-card::marker{
+    content:none!important;
+    display:none!important;
+  }
+  .video-card > .video-card-logo-slot:empty,
+  .video-card > .video-card-logo:not([src]),
+  .video-card > .video-card-logo[src=""]{
+    display:none!important;
+  }
+}
