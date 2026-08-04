@@ -1982,8 +1982,26 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     const path = detailRoutePath(itemId);
     if (cleanPathname() === path && !location.hash) return;
     const url = path + (location.search || '');
-    if (replace) history.replaceState({ beRoute: 'video', itemId: String(itemId) }, '', url);
-    else history.pushState({ beRoute: 'video', itemId: String(itemId) }, '', url);
+    const returnView = currentCatalogView();
+    const returnScrollY = Math.max(0, window.scrollY || 0);
+    if (!replace && isMobileCatalogViewport() && history.state?.beRoute !== 'section' && !document.body.classList.contains('section-catalog-active')) {
+      try {
+        history.replaceState({
+          ...(history.state || {}),
+          beRoute: 'catalog',
+          homeView: returnView,
+          scrollY: returnScrollY
+        }, '', location.pathname + (location.search || '') + (location.hash || ''));
+      } catch (_) {}
+    }
+    const detailState = {
+      beRoute: 'video',
+      itemId: String(itemId),
+      returnView,
+      returnScrollY
+    };
+    if (replace) history.replaceState(detailState, '', url);
+    else history.pushState(detailState, '', url);
   }
 
   async function openContentDetailFromRoute() {
@@ -2044,6 +2062,38 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   }
 
   let activeSectionView = null;
+  let activeSectionReturnState = null;
+
+  function isMobileCatalogViewport() {
+    return window.matchMedia('(max-width:760px)').matches;
+  }
+
+  function currentCatalogView() {
+    const view = normalizeText(document.body.dataset.homeView || 'home');
+    return ['home', 'films', 'movies', 'series', 'videos'].includes(view) ? view : 'home';
+  }
+
+  function catalogViewButton(view) {
+    const normalized = ['films', 'movies', 'series', 'videos'].includes(view) ? view : 'home';
+    return normalized === 'home'
+      ? document.getElementById('logoBtn')
+      : document.querySelector(`[data-home-view="${normalized}"]`);
+  }
+
+  function restoreCatalogView(view, scrollY = 0) {
+    const normalized = ['films', 'movies', 'series', 'videos'].includes(normalizeText(view))
+      ? normalizeText(view)
+      : 'home';
+    const button = catalogViewButton(normalized);
+    if (button && currentCatalogView() !== normalized) {
+      button.dataset.beHistoryMode = 'none';
+      button.click();
+      delete button.dataset.beHistoryMode;
+    }
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: Math.max(0, Number(scrollY) || 0), left: 0, behavior: 'auto' });
+    });
+  }
 
   function sectionHomeUrl() {
     const url = new URL(location.href);
@@ -2053,17 +2103,16 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     return url.pathname + (url.search || '');
   }
 
-  function returnSectionToHome(options = {}) {
-    const replaceRoute = options.replaceRoute !== false;
-    closeSectionView(false);
-    document.getElementById('logoBtn')?.click();
-    document.body.dataset.homeView = 'home';
+  function returnSectionToPrevious() {
+    const fallback = activeSectionReturnState || { homeView: 'home', scrollY: 0, historyPushed: false };
     window.dispatchEvent(new CustomEvent('be:close-public-search'));
     window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
-    if (replaceRoute) {
-      try { history.replaceState({ beRoute: 'home' }, '', sectionHomeUrl()); } catch (_) {}
+    if (fallback.historyPushed && history.length > 1) {
+      history.back();
+      return;
     }
-    window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' }));
+    closeSectionView(false);
+    restoreCatalogView(fallback.homeView, fallback.scrollY);
   }
 
   function closeSectionView(scrollHome = false) {
@@ -2087,6 +2136,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     });
     host.querySelectorAll('.section-view-back,.section-view-mobile-home').forEach(button => button.remove());
     activeSectionView = null;
+    activeSectionReturnState = null;
     if (scrollHome && active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -2097,8 +2147,17 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     if (!host || !section) return;
     const requestedCollection = normalizeText(options.collection || '');
     if (host.classList.contains('section-view-mode') && activeSectionView === section) return;
+    const returnView = normalizeText(options.returnView || currentCatalogView());
+    const returnScrollY = Number.isFinite(Number(options.returnScrollY))
+      ? Math.max(0, Number(options.returnScrollY))
+      : Math.max(0, window.scrollY || 0);
     closeSectionView(false);
     activeSectionView = section;
+    activeSectionReturnState = {
+      homeView: ['films', 'movies', 'series', 'videos'].includes(returnView) ? returnView : 'home',
+      scrollY: returnScrollY,
+      historyPushed: false
+    };
     host.querySelectorAll('.video-rail-section').forEach(item => {
       item.dataset.sectionViewPreviousHidden = String(Boolean(item.hidden));
       item.hidden = item !== section;
@@ -2136,12 +2195,12 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     const mobileHomeButton = document.createElement('button');
     mobileHomeButton.className = 'section-view-mobile-home';
     mobileHomeButton.type = 'button';
-    mobileHomeButton.setAttribute('aria-label', 'Voltar para a Home');
+    mobileHomeButton.setAttribute('aria-label', 'Voltar para a página anterior');
     mobileHomeButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
     mobileHomeButton.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
-      returnSectionToHome({ replaceRoute: true });
+      returnSectionToPrevious();
     });
     const titleNode = section.querySelector('.video-rail-title');
     if (titleNode && titleNode.parentNode === section) {
@@ -2152,7 +2211,22 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
     if (options.updateHistory !== false) {
       try {
-        history.pushState({ beRoute: 'section', sectionTitle: title }, '', sectionHomeUrl());
+        const previousState = {
+          ...(history.state || {}),
+          beRoute: 'catalog',
+          homeView: activeSectionReturnState.homeView,
+          scrollY: activeSectionReturnState.scrollY
+        };
+        const currentUrl = location.pathname + (location.search || '') + (location.hash || '');
+        history.replaceState(previousState, '', currentUrl);
+        history.pushState({
+          beRoute: 'section',
+          sectionTitle: title,
+          collection: requestedCollection || '',
+          returnView: activeSectionReturnState.homeView,
+          returnScrollY: activeSectionReturnState.scrollY
+        }, '', currentUrl);
+        activeSectionReturnState.historyPushed = true;
       } catch (_) {}
     }
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -2171,6 +2245,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         event.preventDefault();
         event.stopPropagation();
 
+        const originView = currentCatalogView();
+        const originScrollY = Math.max(0, window.scrollY || 0);
         const sectionTitle = normalizeText(title.querySelector('span')?.textContent || '');
         const sectionCategory = normalizeText(section.dataset.category || '');
         const isFilmsAndSeriesSection = [sectionTitle, sectionCategory].some(value =>
@@ -2181,7 +2257,12 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         // onde Filmes e Séries permanecem organizados em trilhos separados.
         if (isFilmsAndSeriesSection) {
           closeSectionView(false);
-          document.querySelector('[data-home-view="films"]')?.click();
+          const filmsButton = document.querySelector('[data-home-view="films"]');
+          if (filmsButton) {
+            filmsButton.dataset.beHistoryMode = 'push';
+            filmsButton.click();
+            delete filmsButton.dataset.beHistoryMode;
+          }
           return;
         }
 
@@ -2196,9 +2277,18 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
               : ([sectionTitle, sectionCategory].some(value => ['serie','series'].includes(value)) ? 'series' : ''));
         if (dedicatedCollection) {
           closeSectionView(false);
-          document.querySelector('[data-home-view="films"]')?.click();
+          const filmsButton = document.querySelector('[data-home-view="films"]');
+          if (filmsButton) {
+            filmsButton.dataset.beHistoryMode = 'none';
+            filmsButton.click();
+            delete filmsButton.dataset.beHistoryMode;
+          }
           window.requestAnimationFrame(() => {
-            window.setTimeout(() => openSectionView(section, { collection: dedicatedCollection }), 80);
+            window.setTimeout(() => openSectionView(section, {
+              collection: dedicatedCollection,
+              returnView: originView,
+              returnScrollY: originScrollY
+            }), 80);
           });
           return;
         }
@@ -2209,14 +2299,22 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         if (section.dataset.hasVideos === 'true') {
           closeSectionView(false);
           const videosTab = document.querySelector('[data-home-view="videos"]');
-          videosTab?.click();
+          if (videosTab) {
+            videosTab.dataset.beHistoryMode = 'none';
+            videosTab.click();
+            delete videosTab.dataset.beHistoryMode;
+          }
           window.requestAnimationFrame(() => {
-            window.setTimeout(() => openSectionView(section, { collection: 'videos' }), 80);
+            window.setTimeout(() => openSectionView(section, {
+              collection: 'videos',
+              returnView: originView,
+              returnScrollY: originScrollY
+            }), 80);
           });
           return;
         }
 
-        openSectionView(section);
+        openSectionView(section, { returnView: originView, returnScrollY: originScrollY });
       }, true);
     }
 
@@ -2225,10 +2323,18 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       document.addEventListener('click', event => {
         if (event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"]')) closeSectionView(false);
       });
-      window.addEventListener('popstate', () => {
+      window.addEventListener('popstate', event => {
         const host = document.getElementById('dynamicSections');
         if (!host?.classList.contains('section-view-mode')) return;
-        returnSectionToHome({ replaceRoute: true });
+        // Ao voltar de um conteúdo aberto dentro da seção, mantém a seção visível.
+        if (event.state?.beRoute === 'section') return;
+        const fallback = activeSectionReturnState || {};
+        const destination = event.state && event.state.beRoute === 'catalog'
+          ? event.state
+          : fallback;
+        closeSectionView(false);
+        restoreCatalogView(destination.homeView || fallback.homeView || 'home',
+          destination.scrollY ?? fallback.scrollY ?? 0);
       });
     }
   }
@@ -2331,7 +2437,13 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     const back = document.getElementById('detailBackButton');
     if (back && back.dataset.bound !== 'true') {
       back.dataset.bound = 'true';
-      back.addEventListener('click', () => closeContentDetail(true));
+      back.addEventListener('click', () => {
+        if (detailRouteId() && history.state?.beRoute === 'video' && history.length > 1) {
+          history.back();
+          return;
+        }
+        closeContentDetail(true);
+      });
     }
     if (section && section.dataset.bound !== 'true') {
       section.dataset.bound = 'true';
@@ -2555,7 +2667,30 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     topbar.dataset.homeReady = 'true';
 
     let currentView = 'home';
+    let restoringCatalogHistory = false;
     document.body.dataset.homeView = currentView;
+
+    const catalogHistoryUrl = () => location.pathname + (location.search || '') + (location.hash || '');
+    const pushCatalogHistory = (previousView, nextView, previousScrollY) => {
+      if (!isMobileCatalogViewport() || restoringCatalogHistory || previousView === nextView) return;
+      if (document.body.classList.contains('section-catalog-active') || document.body.classList.contains('detail-page-active')) return;
+      if (document.body.classList.contains('profile-page-active') || document.body.classList.contains('settings-page-active') ||
+          document.body.classList.contains('support-page-active') || document.body.classList.contains('notification-page-active') ||
+          document.body.classList.contains('legal-page-active') || document.body.classList.contains('login-mode')) return;
+      try {
+        history.replaceState({
+          ...(history.state || {}),
+          beRoute: 'catalog',
+          homeView: previousView,
+          scrollY: Math.max(0, Number(previousScrollY) || 0)
+        }, '', catalogHistoryUrl());
+        history.pushState({
+          beRoute: 'catalog',
+          homeView: nextView,
+          scrollY: 0
+        }, '', catalogHistoryUrl());
+      } catch (_) {}
+    };
 
     const leading = document.getElementById('homeNavLeading');
     let activeTabButton = logo;
@@ -2686,8 +2821,12 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     };
 
     viewButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        currentView = button.dataset.homeView || 'videos';
+      button.addEventListener('click', event => {
+        const nextView = button.dataset.homeView || 'videos';
+        const historyMode = button.dataset.beHistoryMode || (event.isTrusted ? 'push' : 'none');
+        delete button.dataset.beHistoryMode;
+        if (historyMode === 'push') pushCatalogHistory(currentView, nextView, window.scrollY);
+        currentView = nextView;
         document.body.dataset.homeView = currentView;
         setActiveTab(button);
         window.dispatchEvent(new Event('be:detail-close'));
@@ -2705,7 +2844,10 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       setActiveTab(supportButton);
     });
 
-    logo?.addEventListener('click', () => {
+    logo?.addEventListener('click', event => {
+      const historyMode = logo.dataset.beHistoryMode || (event.isTrusted ? 'push' : 'none');
+      delete logo.dataset.beHistoryMode;
+      if (historyMode === 'push') pushCatalogHistory(currentView, 'home', window.scrollY);
       currentView = 'home';
       document.body.dataset.homeView = currentView;
       setActiveTab(logo);
@@ -2728,6 +2870,26 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       if (event.key === 'Escape' && !topbar.classList.contains('search-open')) closeContentDetail();
     });
     window.addEventListener('be:catalog-ready', applyCatalogFilter);
+    window.addEventListener('popstate', event => {
+      if (!isMobileCatalogViewport()) return;
+      if (document.body.classList.contains('section-catalog-active') || document.body.classList.contains('detail-page-active')) return;
+      const state = event.state || {};
+      if (state.beRoute !== 'catalog' || !state.homeView) return;
+      restoringCatalogHistory = true;
+      const destination = ['films', 'movies', 'series', 'videos'].includes(normalizeText(state.homeView))
+        ? normalizeText(state.homeView)
+        : 'home';
+      const destinationButton = catalogViewButton(destination);
+      if (destinationButton && currentView !== destination) {
+        destinationButton.dataset.beHistoryMode = 'none';
+        destinationButton.click();
+        delete destinationButton.dataset.beHistoryMode;
+      }
+      restoringCatalogHistory = false;
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: Math.max(0, Number(state.scrollY) || 0), left: 0, behavior: 'auto' });
+      });
+    });
 
     applyCatalogFilter();
   }
@@ -2839,11 +3001,13 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     });
   }
 
-  function clickHomeView(view) {
+  function clickHomeView(view, historyMode = 'push') {
     const selector = view === 'home' ? '#logoBtn' : `[data-home-view="${view}"]`;
     const button = document.querySelector(selector);
     if (!button) return false;
+    button.dataset.beHistoryMode = historyMode;
     button.click();
+    delete button.dataset.beHistoryMode;
     return true;
   }
 
@@ -3509,8 +3673,25 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       document.body.classList.add('settings-page-active');
       if(!isConfigRoute())replacePublicRoute('/config');
     }
-    function closeAvatarPicker(){var returnView=avatarPickerReturnView;avatarPicker.hidden=true;avatarPickerReturnView='';document.body.classList.remove('avatar-picker-active');if(avatarImageObserver){avatarImageObserver.disconnect();avatarImageObserver=null;}syncBodyScroll();if(returnView==='settings')keepSettingsOpen();}
-    function closeBannerPicker(){var returnView=bannerPickerReturnView;bannerPicker.hidden=true;bannerPickerReturnView='';document.body.classList.remove('banner-picker-active');if(bannerImageObserver){bannerImageObserver.disconnect();bannerImageObserver=null;}syncBodyScroll();if(returnView==='settings')keepSettingsOpen();}
+    function pushPickerHistory(kind){
+      if(!window.matchMedia('(max-width:760px)').matches)return;
+      if(history.state&&history.state.beOverlay===kind)return;
+      try{history.pushState({...history.state,beOverlay:kind},'',location.pathname+(location.search||'')+(location.hash||''));}catch(_){}
+    }
+    function closeAvatarPicker(unwindHistory){
+      var returnView=avatarPickerReturnView;
+      var shouldUnwind=unwindHistory!==false&&window.matchMedia('(max-width:760px)').matches&&history.state&&history.state.beOverlay==='avatar-picker';
+      avatarPicker.hidden=true;avatarPickerReturnView='';document.body.classList.remove('avatar-picker-active');
+      if(avatarImageObserver){avatarImageObserver.disconnect();avatarImageObserver=null;}syncBodyScroll();if(returnView==='settings')keepSettingsOpen();
+      if(shouldUnwind){try{history.back();}catch(_){}}
+    }
+    function closeBannerPicker(unwindHistory){
+      var returnView=bannerPickerReturnView;
+      var shouldUnwind=unwindHistory!==false&&window.matchMedia('(max-width:760px)').matches&&history.state&&history.state.beOverlay==='banner-picker';
+      bannerPicker.hidden=true;bannerPickerReturnView='';document.body.classList.remove('banner-picker-active');
+      if(bannerImageObserver){bannerImageObserver.disconnect();bannerImageObserver=null;}syncBodyScroll();if(returnView==='settings')keepSettingsOpen();
+      if(shouldUnwind){try{history.back();}catch(_){}}
+    }
     function closeProfile(){profileModal.hidden=true;syncBodyScroll();}
     function resolveSettingsConfirm(value){
       if(!settingsSaveConfirm||settingsSaveConfirm.hidden)return;
@@ -3615,7 +3796,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
     async function openAvatarPicker(){
       avatarPickerReturnView=document.body.classList.contains('settings-page-active')||isConfigRoute()?'settings':(document.body.classList.contains('profile-page-active')?'profile':'');
-      toggleDropdown(false);document.body.classList.add('avatar-picker-active');avatarPicker.hidden=false;syncBodyScroll();
+      toggleDropdown(false);document.body.classList.add('avatar-picker-active');avatarPicker.hidden=false;syncBodyScroll();pushPickerHistory('avatar-picker');
       bindAvatarPickerSelection();
       if(avatarGalleryRendered){
         syncAvatarPickerSelection();
@@ -3836,7 +4017,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     }
     async function openBannerPicker(){
       bannerPickerReturnView=document.body.classList.contains('settings-page-active')||isConfigRoute()?'settings':'';
-      document.body.classList.add('banner-picker-active');bannerPicker.hidden=false;syncBodyScroll();
+      document.body.classList.add('banner-picker-active');bannerPicker.hidden=false;syncBodyScroll();pushPickerHistory('banner-picker');
       bindBannerPickerSelection();
       if(bannerGalleryRendered){
         syncBannerPickerSelection();
@@ -3960,7 +4141,14 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     }
 
     function openProfile(){openPublicProfile(true);}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){if(!auth.currentUser)return;if(isConfigRoute())openSettingsPage(false);else if(isProfileRoute())openPublicProfile(false);else closePublicPages(false);});
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){
+      if(!avatarPicker.hidden)closeAvatarPicker(false);
+      if(!bannerPicker.hidden)closeBannerPicker(false);
+      if(!auth.currentUser)return;
+      if(isConfigRoute())openSettingsPage(false);
+      else if(isProfileRoute())openPublicProfile(false);
+      else closePublicPages(false);
+    });
     auth.onChange(async function(currentUser){
       dashboard.hidden=true;
       var isAdmin=false;
