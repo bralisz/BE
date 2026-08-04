@@ -5769,3 +5769,75 @@ body.legal-page-active #dynamicSections{
     max-height:calc(100% - 20px)!important;
   }
 }
+
+
+/* Normalização final das logos nos cards.
+   Cada logo usa uma área segura e centralizada, sem corte ou deslocamento no hover. */
+.video-card > .video-card-logo-slot{
+  position:absolute!important;
+  top:50%!important;
+  left:clamp(14px,1.45vw,23px)!important;
+  z-index:3!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  width:58%!important;
+  height:58%!important;
+  padding:4px 0!important;
+  box-sizing:border-box!important;
+  overflow:visible!important;
+  transform:translateY(-50%)!important;
+  transform-origin:left center!important;
+  pointer-events:none!important;
+  user-select:none!important;
+}
+.video-card > .video-card-logo-slot > .video-card-logo{
+  position:static!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+  transform:none!important;
+  transform-origin:center!important;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.76))!important;
+  transition:none!important;
+}
+.video-card > .video-card-logo-slot[data-logo-shape="wide"]{
+  width:69%!important;
+  height:50%!important;
+}
+.video-card > .video-card-logo-slot[data-logo-shape="tall"]{
+  width:48%!important;
+  height:68%!important;
+}
+@media (hover:hover) and (pointer:fine){
+  .video-card:hover > .video-card-thumbnail{
+    transform:scale(1.025)!important;
+    filter:contrast(1.06) brightness(1.04)!important;
+  }
+  .video-card:hover > .video-card-logo-slot{
+    transform:translateY(-50%)!important;
+  }
+  .video-card:hover > .video-card-logo-slot > .video-card-logo{
+    transform:none!important;
+    filter:drop-shadow(0 4px 12px rgba(0,0,0,.76))!important;
+  }
+}
+@media(max-width:760px){
+  .video-card > .video-card-logo-slot{
+    left:12px!important;
+    width:60%!important;
+    height:58%!important;
+  }
+  .video-card > .video-card-logo-slot[data-logo-shape="wide"]{
+    width:72%!important;
+    height:50%!important;
+  }
+  .video-card > .video-card-logo-slot[data-logo-shape="tall"]{
+    width:50%!important;
+    height:66%!important;
+  }
+}

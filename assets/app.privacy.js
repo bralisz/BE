@@ -1912,7 +1912,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       data-category="${escapeHtml(normalizeText(category))}"
       data-collection="${escapeHtml(normalizeText(collection))}">
       <img class="video-card-thumbnail" src="${safeUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
-      ${logo && logo !== '#' ? `<img class="video-card-logo" src="${safeUrl(logo)}" alt="" aria-hidden="true" loading="lazy" decoding="async" onerror="this.hidden=true">` : ''}
+      ${logo && logo !== '#' ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
     </a>`;
   }
 
@@ -3245,4 +3245,44 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     else activateProfile(account);
   },true);
   window.BETVNavigation={openSettings:activateSettings,openProfile:function(){var account=currentAccount();if(account)return activateProfile(account);location.hash='#login';}};
+})();
+
+
+;(() => {
+  'use strict';
+
+  const classifyLogo = image => {
+    if (!(image instanceof HTMLImageElement) || !image.classList.contains('video-card-logo')) return;
+    const slot = image.closest('.video-card-logo-slot');
+    if (!slot || !image.naturalWidth || !image.naturalHeight) return;
+    const ratio = image.naturalWidth / image.naturalHeight;
+    slot.dataset.logoShape = ratio >= 3.15 ? 'wide' : ratio <= 1.25 ? 'tall' : 'standard';
+  };
+
+  const prepareLogo = image => {
+    if (!(image instanceof HTMLImageElement) || !image.classList.contains('video-card-logo')) return;
+    if (image.dataset.logoSizingBound !== 'true') {
+      image.dataset.logoSizingBound = 'true';
+      image.addEventListener('load', () => classifyLogo(image), { passive:true });
+    }
+    if (image.complete) classifyLogo(image);
+  };
+
+  const scan = root => {
+    if (!(root instanceof Element) && root !== document) return;
+    if (root instanceof HTMLImageElement) prepareLogo(root);
+    root.querySelectorAll?.('.video-card-logo').forEach(prepareLogo);
+  };
+
+  const start = () => {
+    scan(document);
+    new MutationObserver(records => {
+      records.forEach(record => record.addedNodes.forEach(node => {
+        if (node instanceof Element) scan(node);
+      }));
+    }).observe(document.documentElement, { childList:true, subtree:true });
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });
+  else start();
 })();
