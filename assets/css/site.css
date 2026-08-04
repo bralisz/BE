@@ -7829,3 +7829,37 @@ body.detail-page-active #detailRecommendations:not([hidden]){
     left:-8px!important;
   }
 }
+
+/* Ajuste: mais espaço entre o número do ranking e o card no perfil desktop. */
+@media(min-width:761px){
+  body.profile-page-active .profile-favorite-ranked-item{
+    padding-left:clamp(64px,5vw,82px)!important;
+  }
+  body.profile-page-active .profile-favorite-rank{
+    left:-10px!important;
+  }
+}
+
+/* Aviso discreto ao atingir o limite de conteúdos salvos. */
+.saved-content-limit-toast{
+  position:fixed;
+  left:50%;
+  bottom:max(28px,env(safe-area-inset-bottom));
+  z-index:20150;
+  max-width:min(420px,calc(100% - 32px));
+  padding:13px 18px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;
+  background:rgba(28,28,30,.94);
+  color:#fff;
+  box-shadow:0 18px 48px rgba(0,0,0,.42);
+  -webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(18px);
+  font:700 13px/1.35 var(--font-body);
+  text-align:center;
+  opacity:0;
+  transform:translate(-50%,18px);
+  pointer-events:none;
+  transition:opacity .2s ease,transform .2s ease;
+}
+.saved-content-limit-toast.show{opacity:1;transform:translate(-50%,0)}

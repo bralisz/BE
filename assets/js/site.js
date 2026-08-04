@@ -2846,6 +2846,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function setContentFavoriteState(data, active) {
     const normalized = normalizeSavedContent(data || {});
+    const alreadyActive = isContentFavorited(normalized);
+    if (active && !alreadyActive && collectSavedContents().length >= SAVED_CONTENTS_LIMIT) {
+      showSavedContentLimitNotice();
+      return false;
+    }
+
     const keys = favoriteKeysForContent(normalized);
     const detailFavorites = detailFavoriteSet();
     const featuredFavorites = featuredFavoriteSet();
@@ -2866,6 +2872,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     saveDetailFavoriteSet(detailFavorites);
     localStorage.setItem('beFeaturedFavorites', JSON.stringify(Array.from(featuredFavorites)));
     persistSavedContent(normalized, active);
+    return true;
   }
 
   function syncDetailListButton(button, itemId) {
@@ -2882,10 +2889,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function toggleDetailFavorite(button) {
     const data = contentDataFromElement(button);
-    const active = !isContentFavorited(data);
-    setContentFavoriteState(data, active);
+    const requestedActive = !isContentFavorited(data);
+    const changed = setContentFavoriteState(data, requestedActive);
+    const active = isContentFavorited(data);
     syncDetailListButton(button, data.itemId);
-    window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
+    if (changed) window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
   }
 
   function setupRail(section) {
@@ -2926,6 +2934,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   const SAVED_CONTENTS_KEY = 'beSavedContents';
+  const SAVED_CONTENTS_LIMIT = 20;
+  let savedContentLimitToastTimer = 0;
+
+  function showSavedContentLimitNotice() {
+    let toast = document.getElementById('savedContentLimitToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'savedContentLimitToast';
+      toast.className = 'saved-content-limit-toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.textContent = 'Você pode salvar até 20 conteúdos.';
+      document.body.appendChild(toast);
+    }
+    clearTimeout(savedContentLimitToastTimer);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    savedContentLimitToastTimer = window.setTimeout(() => toast.classList.remove('show'), 2600);
+  }
 
   function readJsonArray(key) {
     try {
@@ -2993,7 +3019,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let records = readJsonArray(SAVED_CONTENTS_KEY).map(normalizeSavedContent);
     records = records.filter(record => !savedContentMatches(record, normalized));
     if (active && (normalized.itemId || normalized.favoriteId || normalized.recordId)) records.unshift({ ...normalized, savedAt:new Date().toISOString() });
-    localStorage.setItem(SAVED_CONTENTS_KEY, JSON.stringify(records.slice(0, 200)));
+    localStorage.setItem(SAVED_CONTENTS_KEY, JSON.stringify(records.slice(0, SAVED_CONTENTS_LIMIT)));
   }
 
   function domCatalogCandidates() {
@@ -3055,10 +3081,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         event.preventDefault();
         event.stopPropagation();
         const data = contentDataFromElement(button);
-        const active = !isContentFavorited(data);
-        setContentFavoriteState(data, active);
+        const requestedActive = !isContentFavorited(data);
+        const changed = setContentFavoriteState(data, requestedActive);
+        const active = isContentFavorited(data);
         sync();
-        window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
+        if (changed) window.dispatchEvent(new CustomEvent('be:favorites-changed', { detail:{ itemId:data.itemId, favoriteId:data.favoriteId, active } }));
       });
       window.addEventListener('be:favorites-changed', sync);
     });
