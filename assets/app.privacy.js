@@ -1911,7 +1911,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       data-title-search="${escapeHtml(normalizeText(title))}"
       data-category="${escapeHtml(normalizeText(category))}"
       data-collection="${escapeHtml(normalizeText(collection))}">
-      <img src="${safeUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
+      <img class="video-card-thumbnail" src="${safeUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
+      ${logo && logo !== '#' ? `<img class="video-card-logo" src="${safeUrl(logo)}" alt="" aria-hidden="true" loading="lazy" decoding="async" onerror="this.hidden=true">` : ''}
     </a>`;
   }
 
@@ -2000,6 +2001,27 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
   let activeSectionView = null;
 
+  function sectionHomeUrl() {
+    const url = new URL(location.href);
+    url.pathname = '/';
+    url.hash = '';
+    ['video','content','section'].forEach(name => url.searchParams.delete(name));
+    return url.pathname + (url.search || '');
+  }
+
+  function returnSectionToHome(options = {}) {
+    const replaceRoute = options.replaceRoute !== false;
+    closeSectionView(false);
+    document.getElementById('logoBtn')?.click();
+    document.body.dataset.homeView = 'home';
+    window.dispatchEvent(new CustomEvent('be:close-public-search'));
+    window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
+    if (replaceRoute) {
+      try { history.replaceState({ beRoute: 'home' }, '', sectionHomeUrl()); } catch (_) {}
+    }
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: 'auto' }));
+  }
+
   function closeSectionView(scrollHome = false) {
     const host = document.getElementById('dynamicSections');
     if (!host || !host.classList.contains('section-view-mode')) return;
@@ -2013,7 +2035,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     host.classList.remove('section-view-mode');
     document.body.classList.remove('section-catalog-active');
     host.querySelectorAll('.video-rail-section').forEach(section => section.classList.remove('section-view-active'));
-    host.querySelectorAll('.section-view-back').forEach(button => button.remove());
+    host.querySelectorAll('.section-view-back,.section-view-mobile-home').forEach(button => button.remove());
     activeSectionView = null;
     if (scrollHome && active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
@@ -2053,6 +2075,25 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
     const title = section.querySelector('.video-rail-title span')?.textContent?.trim() || 'Seção';
     section.setAttribute('aria-label', title);
+
+    section.querySelector('.section-view-mobile-home')?.remove();
+    const mobileHomeButton = document.createElement('button');
+    mobileHomeButton.className = 'section-view-mobile-home';
+    mobileHomeButton.type = 'button';
+    mobileHomeButton.setAttribute('aria-label', 'Voltar para a Home');
+    mobileHomeButton.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
+    mobileHomeButton.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      returnSectionToHome({ replaceRoute: true });
+    });
+    section.insertBefore(mobileHomeButton, section.querySelector('.video-rail-title'));
+
+    if (options.updateHistory !== false) {
+      try {
+        history.pushState({ beRoute: 'section', sectionTitle: title }, '', sectionHomeUrl());
+      } catch (_) {}
+    }
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
@@ -2105,7 +2146,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       document.addEventListener('click', event => {
         if (event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"]')) closeSectionView(false);
       });
-      window.addEventListener('popstate', () => closeSectionView(false));
+      window.addEventListener('popstate', () => {
+        const host = document.getElementById('dynamicSections');
+        if (!host?.classList.contains('section-view-mode')) return;
+        returnSectionToHome({ replaceRoute: true });
+      });
     }
   }
 

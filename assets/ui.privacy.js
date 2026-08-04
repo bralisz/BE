@@ -771,7 +771,7 @@
       e.preventDefault();
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=form.elements.namedItem('email').value.trim().toLowerCase();
       if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('Continuando com segurança…');
+      authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando..');
       try{
         var exists=typeof auth.accountExists==='function'?await auth.accountExists(email):null;
         selectedAuthEmail=email;
