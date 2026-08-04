@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const FIXED_SHARE_IMAGE_PATH = '/assets/images/social/share-preview.jpg?v=20260804';
+const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
 const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
 const SETTINGS_CACHE_TTL_MS = 60000;
 let cachedTemplate = '';
@@ -82,7 +82,7 @@ function absoluteHttpUrl(value, origin) {
 
 function proxiedMediaUrl(value, origin) {
   const absolute = absoluteHttpUrl(value, origin);
-  if (!absolute) return absoluteHttpUrl(FIXED_SHARE_IMAGE_PATH, origin);
+  if (!absolute) return FIXED_SHARE_IMAGE_URL;
   try {
     const parsed = new URL(absolute);
     if (parsed.origin === origin) return parsed.href;
@@ -127,13 +127,13 @@ function injectSocialMetadata(html, settings, origin) {
   const title = 'Billie Eilish TV';
   const description = String(
     settings.description ||
-    'Filmes, entrevistas, shows e vídeos da Billie Eilish em um só lugar — uma plataforma feita por fãs, para fãs.'
+    'Todo o conteúdo da Billie Eilish em um só lugar.'
   ).trim();
-  const socialDescription = 'Filmes, entrevistas, shows e vídeos em um só lugar. Feito por fãs, para fãs.';
+  const socialDescription = 'Todo o conteúdo da Billie Eilish em um só lugar.';
   // O preview social do site é fixo e não pode ser substituído pelas configurações do painel.
-  const image = absoluteHttpUrl(FIXED_SHARE_IMAGE_PATH, origin);
+  const image = FIXED_SHARE_IMAGE_URL;
   const canonical = `${origin}/`;
-  const imageAlt = 'Billie Eilish TV — filmes, entrevistas, shows e vídeos em um só lugar';
+  const imageAlt = 'Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar';
 
   html = html
     .replace(/\s*<meta\s+(?:property=["']og:[^>]+|name=["']twitter:[^>]+)[^>]*>/gi, '')
@@ -150,7 +150,7 @@ function injectSocialMetadata(html, settings, origin) {
 <meta property="og:url" content="${attr(canonical)}">
 <meta property="og:image" content="${attr(image)}">
 <meta property="og:image:secure_url" content="${attr(image)}">
-<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="${attr(imageAlt)}">
