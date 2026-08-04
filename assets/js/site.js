@@ -3404,8 +3404,30 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   window.beGetSavedContents = collectSavedContents;
   window.beGetCatalogContents = function() {
+    const completeCatalog = [
+      ...randomFeaturedPools.videos,
+      ...randomFeaturedPools.movies,
+      ...randomFeaturedPools.series
+    ];
+    const candidates = completeCatalog.length ? completeCatalog.map(item => {
+      const collection = String(item.collection || 'videos').toLowerCase();
+      const recordId = String(item.id || item.videoId || '');
+      const itemId = String(numericPublicId(item.publicId || recordId || item.title));
+      return normalizeSavedContent({
+        ...item,
+        itemId,
+        recordId,
+        favoriteId:recordId ? `${collection}:${recordId}` : itemId,
+        collection,
+        contentUrl:item.videoUrl || item.contentUrl || item.link || '#',
+        imageUrl:item.thumbnailUrl || item.imageUrl || item.bannerUrl || '',
+        bannerUrl:['movies', 'series'].includes(collection)
+          ? (item.thumbnailUrl || item.imageUrl || item.bannerUrl || '')
+          : (item.bannerUrl || item.imageUrl || item.thumbnailUrl || '')
+      });
+    }) : domCatalogCandidates();
     const result = [];
-    domCatalogCandidates().forEach(item => {
+    candidates.forEach(item => {
       const normalized = normalizeSavedContent(item);
       if (!normalized.itemId && !normalized.favoriteId && !normalized.recordId) return;
       if (result.some(current => savedContentMatches(current, normalized))) return;
@@ -4950,7 +4972,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     function profileFavoriteIdentity(item){
-      return String((item&&item.itemId)||(item&&item.favoriteId)||((item&&item.collection&&item.recordId)?item.collection+':'+item.recordId:'')||(item&&item.title)||'').trim();
+      return String((item&&item.favoriteId)||((item&&item.collection&&item.recordId)?item.collection+':'+item.recordId:'')||(item&&item.itemId)||(item&&item.title)||'').trim();
     }
     function normalizeProfileFavorite(item){
       return {
@@ -5055,9 +5077,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return [item.title,item.year,item.duration,profileFavoriteCollectionLabel(item)].join(' ').toLocaleLowerCase('pt-BR').indexOf(query)>=0;
       });
       if(!filtered.length){
-        profileFavoritesPickerBody.innerHTML='<div class="profile-favorites-picker-empty"><strong>Nenhum conteúdo encontrado</strong><span>Tente pesquisar com outro nome.</span></div>';
+        profileFavoritesPickerBody.innerHTML='<div class="profile-favorites-picker-empty"><strong>Nenhum conteúdo encontrado</strong><span>Pesquise usando outro nome ou uma parte do título.</span></div>';
       }else{
-        profileFavoritesPickerBody.innerHTML='<div class="profile-favorites-picker-grid">'+filtered.map(function(item){
+        var visibleItems=filtered.slice(0,10);
+        profileFavoritesPickerBody.innerHTML='<div class="profile-favorites-picker-grid">'+visibleItems.map(function(item){
           var catalogIndex=profileFavoritesCatalog.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(item);});
           var selectedIndex=profileFavoritesDraft.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(item);});
           var selected=selectedIndex>=0;
@@ -5067,7 +5090,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             +'<span class="profile-favorites-option-order">'+(selected?selectedIndex+1:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>')+'</span></span>'
             +'<span class="profile-favorites-option-copy"><strong>'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
             +'</button>';
-        }).join('')+'</div>';
+        }).join('')+'</div><p class="profile-favorites-search-hint"><strong>Não achou o vídeo que queria?</strong><span>Pesquise pelo nome na barra acima.</span></p>';
       }
       if(profileFavoritesSelectionCount)profileFavoritesSelectionCount.textContent=profileFavoritesDraft.length+' de 4';
       var favoritesReadyToSave=profileFavoritesDraft.length===4;
