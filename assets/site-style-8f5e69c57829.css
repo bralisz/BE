@@ -6381,3 +6381,98 @@ body.settings-page-active #settingsPageBody{width:min(1260px,calc(100% - 40px))!
   .settings-panel-card .settings-btn-row{display:grid;grid-template-columns:1fr}
   .settings-panel-card .settings-button,.settings-panel-card .settings-danger{width:100%}
 }
+
+
+/* Atualização: suporte direto, apelação por e-mail e ícones opticamente centralizados. */
+.support-contact{
+  scroll-margin-top:clamp(92px,10vh,132px);
+}
+
+/* Todos os controles circulares usam a mesma caixa de alinhamento. */
+.notification-button,
+.mobile-notification-button,
+.mobile-search-button,
+.section-view-mobile-home,
+.avatar-picker-close,
+.banner-picker-close,
+.settings-close-page,
+.profile-close,
+.notification-header-close,
+.notification-page-close,
+.mobile-drawer-close{
+  box-sizing:border-box!important;
+  display:grid!important;
+  place-items:center!important;
+  align-content:center!important;
+  justify-content:center!important;
+  padding:0!important;
+  line-height:0!important;
+  text-align:center!important;
+}
+
+.notification-button > svg,
+.mobile-notification-button > svg,
+.section-view-mobile-home > svg,
+.avatar-picker-close > svg,
+.banner-picker-close > svg,
+.settings-close-page > svg,
+.profile-close > svg,
+.notification-header-close > svg,
+.notification-page-close > svg,
+.mobile-drawer-close > svg{
+  display:block!important;
+  margin:0!important;
+  flex:0 0 auto!important;
+  transform:none!important;
+  transform-origin:center!important;
+  overflow:visible!important;
+  pointer-events:none!important;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+
+.mobile-search-button > span{
+  display:grid!important;
+  place-items:center!important;
+  line-height:0!important;
+}
+.mobile-search-button > span > svg{
+  display:block!important;
+  margin:0!important;
+  flex:none!important;
+  transform-origin:center!important;
+  overflow:visible!important;
+}
+
+/* Ajuste óptico do chevron: a área geométrica fica centrada dentro do círculo. */
+.section-view-mobile-home > svg{
+  translate:-1px 0;
+}
+
+.avatar-picker-close > svg,
+.banner-picker-close > svg,
+.settings-close-page > svg,
+.profile-close > svg,
+.notification-header-close > svg,
+.notification-page-close > svg,
+.mobile-drawer-close > svg{
+  width:20px!important;
+  height:20px!important;
+}
+
+@media(max-width:760px){
+  body.section-catalog-active .section-view-mobile-home{
+    display:grid!important;
+    place-items:center!important;
+    overflow:hidden!important;
+  }
+  body.section-catalog-active .section-view-mobile-home > svg{
+    width:23px!important;
+    height:23px!important;
+  }
+  .avatar-picker-close,
+  .banner-picker-close{
+    display:grid!important;
+    place-items:center!important;
+  }
+}

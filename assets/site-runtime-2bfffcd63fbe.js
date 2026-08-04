@@ -2985,7 +2985,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         host.prepend(empty);
       }
       if (query) {
-        empty.innerHTML = `<strong>Nenhum conteúdo encontrado para “${escapeHtml(input.value.trim())}”.</strong><span>Não encontrou o que procurava? <a href="/suporte">Relate para o suporte</a>.</span>`;
+        empty.innerHTML = `<strong>Nenhum conteúdo encontrado para “${escapeHtml(input.value.trim())}”.</strong><span>Não encontrou o que procurava? <a href="/suporte" data-public-action="support" data-support-target="contact">Relate para o suporte</a>.</span>`;
       } else {
         empty.textContent = 'Nenhum filme ou série publicado.';
       }
@@ -4514,8 +4514,10 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     var accountEmail=String(detail.email||selectedAuthEmail||'').trim();
     var reason=String(detail.reason||'').trim();
     if(appeal){
-      var params=new URLSearchParams({view:'cm',fs:'1',to:'billieilishtv@gmail.com',su:'Apelação de desbanimento - BETV',body:'Olá, gostaria de solicitar a revisão do banimento da minha conta BETV.'+(accountEmail?'\n\nE-mail da conta: '+accountEmail:'')+(reason?'\nMotivo informado: '+reason:'')+'\n\nExplique aqui por que o acesso deve ser restaurado:'});
-      appeal.href='https://mail.google.com/mail/?'+params.toString();
+      var params=new URLSearchParams({subject:'Apelação a banimento - BETV',body:'Olá, gostaria de solicitar a revisão do banimento da minha conta BETV.'+(accountEmail?'\n\nE-mail da conta: '+accountEmail:'')+(reason?'\nMotivo informado: '+reason:'')+'\n\nExplique aqui por que o acesso deve ser restaurado:'});
+      appeal.href='mailto:billieilishtv@gmail.com?'+params.toString();
+      appeal.removeAttribute('target');
+      appeal.removeAttribute('rel');
     }
     toast.hidden=false;window.requestAnimationFrame(function(){toast.classList.add('show');});
     window.clearTimeout(banToastTimer);banToastTimer=window.setTimeout(hideBannedToast,10000);
@@ -5161,11 +5163,18 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   });
 
   document.addEventListener('click',function(event){
-    var target=event.target&&event.target.closest?event.target.closest('[data-public-action="support"],[data-mobile-destination="support"],a[href="#suporte"],a[href="#/suporte"],.home-nav-link[data-home-view],#logoBtn,[data-public-action="profile"],[data-public-action="settings"],[data-public-action="auth"]'):null;
+    var target=event.target&&event.target.closest?event.target.closest('[data-public-action="support"],[data-mobile-destination="support"],a[href="/suporte"],a[href="#suporte"],a[href="#/suporte"],.home-nav-link[data-home-view],#logoBtn,[data-public-action="profile"],[data-public-action="settings"],[data-public-action="auth"]'):null;
     if(!target)return;
-    if(target.matches('[data-public-action="support"],[data-mobile-destination="support"],a[href="#suporte"],a[href="#/suporte"]')){
+    if(target.matches('[data-public-action="support"],[data-mobile-destination="support"],a[href="/suporte"],a[href="#suporte"],a[href="#/suporte"]')){
       event.preventDefault();
+      var shouldFocusContact=target.matches('[data-support-target="contact"]');
       openSupport(true);
+      if(shouldFocusContact){
+        window.requestAnimationFrame(function(){
+          var contact=page.querySelector('.support-contact');
+          if(contact)contact.scrollIntoView({behavior:'smooth',block:'start'});
+        });
+      }
       return;
     }
     if(document.body.classList.contains('support-page-active')){
