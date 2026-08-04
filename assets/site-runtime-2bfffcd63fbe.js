@@ -345,6 +345,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       return backendError('auth/provider-not-enabled', 'O login com Discord ainda não foi ativado no Supabase.', error);
     }
     if (/email not confirmed/i.test(message)) return backendError('auth/email-not-confirmed', 'Confirme seu e-mail antes de entrar.', error);
+    if (/user[_ -]?banned|account[_ -]?banned|banned/i.test(`${code} ${message}`)) return backendError('auth/user-banned', 'Esta conta foi banida.', error);
     if (/invalid login credentials/i.test(message)) return backendError('auth/invalid-credential', 'E-mail ou senha incorretos.', error);
     if (/already registered|already been registered|user already/i.test(message)) return backendError('auth/email-already-in-use', 'Este e-mail já possui uma conta.', error);
     if (/password/i.test(message) && /6|weak|short/i.test(message)) return backendError('auth/weak-password', 'Use uma senha com pelo menos 6 caracteres.', error);
@@ -1026,6 +1027,21 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       const profile = await data.get('users', currentUser.uid).catch(() => null);
       return { banned: Boolean(profile && profile.banned), reason: profile?.banReason || '' };
     },
+    async exportAccount() {
+      if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para exportar seus dados.');
+      const profile = await data.get('users', currentUser.uid).catch(() => null);
+      return {
+        ok: true,
+        exportedAt: now(),
+        account: {
+          id: currentUser.uid,
+          email: currentUser.email || '',
+          displayName: currentUser.displayName || '',
+          provider: 'local'
+        },
+        profile
+      };
+    },
     async deleteAccount() {
       if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para continuar.');
       const database = loadLocalDatabase();
@@ -1212,6 +1228,35 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       } catch (_) {
         return { banned: false };
       }
+    },
+    async exportAccount() {
+      if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para exportar seus dados.');
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+      if (sessionError) throw mapAuthError(sessionError);
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) throw backendError('auth/not-authenticated', 'Sua sessão expirou. Entre novamente para exportar seus dados.');
+
+      let response;
+      try {
+        response = await fetch('/api/export-account', {
+          method: 'GET',
+          credentials: 'same-origin',
+          cache: 'no-store',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/json'
+          }
+        });
+      } catch (_) {
+        throw backendError('auth/export-account-failed', 'Não foi possível acessar o servidor para exportar seus dados.');
+      }
+
+      let payload = null;
+      try { payload = await response.json(); } catch (_) {}
+      if (!response.ok || payload?.ok !== true) {
+        throw backendError('auth/export-account-failed', payload?.error || payload?.message || 'Não foi possível exportar os dados da conta.');
+      }
+      return payload;
     },
     async deleteAccount() {
       if (!currentUser) throw backendError('auth/not-authenticated', 'Faça login para continuar.');
@@ -1418,6 +1463,130 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   const randomFeaturedPools = { videos: [], films: [], movies: [], series: [] };
   const lastRandomFeaturedId = { videos: '', films: '', movies: '', series: '' };
 
+  function markdownInline(value) {
+    let source = String(value ?? '');
+    const tokens = [];
+    const token = html => `@@BETVMD${tokens.push(html) - 1}@@`;
+
+    source = source.replace(/`([^`\n]+)`/g, (_, code) => token(`<code>${escapeHtml(code)}</code>`));
+    source = source.replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/gi, (_, label, url) => {
+      const safeHref = escapeHtml(url);
+      const external = /^https?:\/\//i.test(url);
+      return token(`<a href="${safeHref}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${escapeHtml(label)}</a>`);
+    });
+
+    let html = escapeHtml(source);
+    html = html
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/__([^_\n]+)__/g, '<strong>$1</strong>')
+      .replace(/~~([^~\n]+)~~/g, '<del>$1</del>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+
+    return html.replace(/@@BETVMD(\d+)@@/g, (_, index) => tokens[Number(index)] || '');
+  }
+
+  function markdownToHtml(value) {
+    const source = String(value ?? '').replace(/\r\n?/g, '\n').trim();
+    if (!source) return '';
+    const lines = source.split('\n');
+    const blocks = [];
+    let index = 0;
+
+    while (index < lines.length) {
+      const line = lines[index];
+      if (!line.trim()) { index += 1; continue; }
+
+      if (/^```/.test(line.trim())) {
+        const code = [];
+        index += 1;
+        while (index < lines.length && !/^```/.test(lines[index].trim())) {
+          code.push(lines[index]);
+          index += 1;
+        }
+        if (index < lines.length) index += 1;
+        blocks.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`);
+        continue;
+      }
+
+      const heading = line.match(/^(#{1,4})\s+(.+)$/);
+      if (heading) {
+        const level = heading[1].length;
+        blocks.push(`<h${level}>${markdownInline(heading[2])}</h${level}>`);
+        index += 1;
+        continue;
+      }
+
+      if (/^\s*[-*+]\s+/.test(line)) {
+        const items = [];
+        while (index < lines.length && /^\s*[-*+]\s+/.test(lines[index])) {
+          items.push(`<li>${markdownInline(lines[index].replace(/^\s*[-*+]\s+/, ''))}</li>`);
+          index += 1;
+        }
+        blocks.push(`<ul>${items.join('')}</ul>`);
+        continue;
+      }
+
+      if (/^\s*\d+[.)]\s+/.test(line)) {
+        const items = [];
+        while (index < lines.length && /^\s*\d+[.)]\s+/.test(lines[index])) {
+          items.push(`<li>${markdownInline(lines[index].replace(/^\s*\d+[.)]\s+/, ''))}</li>`);
+          index += 1;
+        }
+        blocks.push(`<ol>${items.join('')}</ol>`);
+        continue;
+      }
+
+      if (/^>\s?/.test(line)) {
+        const quotes = [];
+        while (index < lines.length && /^>\s?/.test(lines[index])) {
+          quotes.push(markdownInline(lines[index].replace(/^>\s?/, '')));
+          index += 1;
+        }
+        blocks.push(`<blockquote>${quotes.join('<br>')}</blockquote>`);
+        continue;
+      }
+
+      if (/^\s*(?:---|___|\*\*\*)\s*$/.test(line)) {
+        blocks.push('<hr>');
+        index += 1;
+        continue;
+      }
+
+      const paragraph = [line];
+      index += 1;
+      while (index < lines.length && lines[index].trim() &&
+        !/^(?:```|#{1,4}\s+|\s*[-*+]\s+|\s*\d+[.)]\s+|>\s?|\s*(?:---|___|\*\*\*)\s*$)/.test(lines[index])) {
+        paragraph.push(lines[index]);
+        index += 1;
+      }
+      blocks.push(`<p>${paragraph.map(markdownInline).join('<br>')}</p>`);
+    }
+
+    return blocks.join('');
+  }
+
+  function markdownToPlainText(value) {
+    return String(value ?? '')
+      .replace(/```[\s\S]*?```/g, block => block.replace(/^```[^\n]*\n?/, '').replace(/```$/, ''))
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]+)\]\((?:https?:\/\/|mailto:)[^)]*\)/gi, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/^>\s?/gm, '')
+      .replace(/^\s*[-*+]\s+/gm, '')
+      .replace(/^\s*\d+[.)]\s+/gm, '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/~~([^~]+)~~/g, '$1')
+      .replace(/[*_~]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  window.beRenderMarkdown = markdownToHtml;
+  window.beMarkdownPlainText = markdownToPlainText;
+
   window.addEventListener('load', async () => {
     setupHomeNavigation();
     setupDetailControls();
@@ -1545,7 +1714,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         <div class="f-info">
           <div class="f-logo">${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
           <div class="f-meta">${meta}</div>
-          <p class="f-desc">${escapeHtml(item.description || '')}</p>
+          <div class="f-desc be-markdown">${markdownToHtml(item.description || '')}</div>
           <div class="f-actions">
             <button class="f-play" type="button" data-open-detail="true"
               data-item-id="${escapeHtml(String(item.publicId || numericPublicId(item.id || item.videoId || title)))}"
@@ -1685,7 +1854,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       <div class="f-info">
         <div class="f-logo">${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
         <div class="f-meta">${meta}</div>
-        <p class="f-desc">${escapeHtml(item.description || '')}</p>
+        <div class="f-desc be-markdown">${markdownToHtml(item.description || '')}</div>
         <div class="f-actions">
           <button class="f-play" type="button" data-open-detail="true"
             data-item-id="${escapeHtml(String(publicId))}"
@@ -2494,7 +2663,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     if (year && duration) metaParts.push('<span class="detail-dot"></span>');
     if (duration) metaParts.push(`<span class="detail-duration">${escapeHtml(duration)}</span>`);
     meta.innerHTML = metaParts.join('');
-    desc.textContent = description;
+    desc.classList.add('be-markdown');
+    desc.innerHTML = markdownToHtml(description);
 
     play.href = safeUrlValue(contentUrl);
     if (/^https?:\/\//i.test(contentUrl)) {
@@ -2814,9 +2984,11 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         empty.setAttribute('role', 'status');
         host.prepend(empty);
       }
-      empty.textContent = query
-        ? `Nenhum conteúdo encontrado para “${input.value.trim()}”.`
-        : 'Nenhum filme ou série publicado.';
+      if (query) {
+        empty.innerHTML = `<strong>Nenhum conteúdo encontrado para “${escapeHtml(input.value.trim())}”.</strong><span>Não encontrou o que procurava? <a href="/suporte">Relate para o suporte</a>.</span>`;
+      } else {
+        empty.textContent = 'Nenhum filme ou série publicado.';
+      }
       empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && Boolean(query));
     };
 
@@ -3921,6 +4093,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         +  '<div class="settings-side-stack">'
         +    '<section class="settings-card settings-account-card"><h2>Conta</h2><p>Altere o nome exibido e o @ do seu perfil.</p><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></section>'
         +    '<section class="settings-card settings-connections-card"><h2>Conexões conectadas</h2><p>Conecte o Discord à sua conta.</p><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></section>'
+        +    '<section class="settings-card settings-data-card"><h2>Seus dados</h2><p>Baixe uma cópia das informações essenciais da sua conta e do seu perfil em formato JSON.</p><div class="settings-btn-row"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button></div><div class="settings-status" id="settingsExportStatus"></div></section>'
         +    '<section class="settings-card settings-session-card"><h2>Conta e sessão</h2><p>Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status" id="settingsDeleteStatus"></div></section>'
         +  '</div>'
         +'</div>';
@@ -3932,6 +4105,32 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         this.disabled=true;msg.textContent='Abrindo conexão com Discord…';msg.className='settings-status';
         try{sessionStorage.setItem('beOpenSettingsAfterDiscord','1');await auth.connectDiscord();msg.textContent='Redirecionando para o Discord…';msg.className='settings-status ok';}
         catch(error){msg.textContent='Não foi possível conectar: '+(error&&error.message?error.message:'Tente novamente.');msg.className='settings-status err';this.disabled=false;}
+      };
+      document.getElementById('settingsExportData').onclick=async function(){
+        var button=this;
+        var msg=document.getElementById('settingsExportStatus');
+        button.disabled=true;msg.textContent='Preparando seus dados…';msg.className='settings-status';
+        try{
+          var payload=await auth.exportAccount();
+          var localData={};
+          try{localData.featuredFavorites=JSON.parse(localStorage.getItem('beFeaturedFavorites')||'[]');}catch(_){localData.featuredFavorites=[];}
+          try{localData.detailFavorites=JSON.parse(localStorage.getItem('beDetailFavorites')||'[]');}catch(_){localData.detailFavorites=[];}
+          try{localData.preferences=JSON.parse(localStorage.getItem('beCookiePreferences')||'{}');}catch(_){localData.preferences={};}
+          var exportData={
+            exportedAt:payload.exportedAt||beBackend.now(),
+            account:payload.account||null,
+            profile:payload.profile||currentProfile||null,
+            siteData:localData
+          };
+          var json=JSON.stringify(exportData,null,2);
+          var blob=new Blob([json],{type:'application/json;charset=utf-8'});
+          var link=document.createElement('a');
+          var handle=String((currentProfile&&currentProfile.username)||(currentProfile&&currentProfile.displayName)||(user&&user.uid)||'usuario').replace(/[^a-z0-9_-]+/gi,'-');
+          link.href=URL.createObjectURL(blob);link.download='dados-betv-'+handle+'.json';document.body.appendChild(link);link.click();link.remove();
+          setTimeout(function(){URL.revokeObjectURL(link.href);},1000);
+          msg.textContent='Arquivo exportado com sucesso.';msg.className='settings-status ok';
+        }catch(error){msg.textContent='Não foi possível exportar: '+(error&&error.message?error.message:'Tente novamente.');msg.className='settings-status err';}
+        finally{button.disabled=false;}
       };
       document.getElementById('settingsLogoutAccount').onclick=async function(){
         var msg=document.getElementById('settingsDeleteStatus');
@@ -4154,7 +4353,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       var isAdmin=false;
       if(currentUser){
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
-        if(currentProfile&&currentProfile.banned){try{await auth.signOut();}catch(_){ }location.replace('/404.html');return;}
+        if(currentProfile&&currentProfile.banned){window.dispatchEvent(new CustomEvent('be:user-banned',{detail:{email:currentUser.email||'',reason:currentProfile.banReason||'',bannedAt:currentProfile.bannedAt||''}}));try{await auth.signOut();}catch(_){ }return;}
         var restoredBanner=resolvedProfileBanner(currentUser);if(restoredBanner.bannerUrl){currentProfile.bannerUrl=restoredBanner.bannerUrl;currentProfile.bannerId=restoredBanner.bannerId;}
         username.textContent=currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário');selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);authAction.textContent='Sair';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false);},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
       }else{username.textContent='Visitante';currentProfile={};selectedAvatar='';setMainAvatar('');authAction.textContent='Entrar';renderProfilePage();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
@@ -4262,6 +4461,22 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   window.addEventListener('be:content-ready',hideSiteSkeleton);
 
   function q(id){return document.getElementById(id)}
+  var banToastTimer=0;
+  function hideBannedToast(){var toast=q('accountBanToast');if(!toast)return;toast.classList.remove('show');window.setTimeout(function(){if(!toast.classList.contains('show'))toast.hidden=true;},260);}
+  function showBannedToast(detail){
+    detail=detail||{};
+    var toast=q('accountBanToast');var appeal=q('accountBanAppeal');if(!toast)return;
+    var accountEmail=String(detail.email||selectedAuthEmail||'').trim();
+    var reason=String(detail.reason||'').trim();
+    if(appeal){
+      var params=new URLSearchParams({view:'cm',fs:'1',to:'billieilishtv@gmail.com',su:'Apelação de desbanimento - BETV',body:'Olá, gostaria de solicitar a revisão do banimento da minha conta BETV.'+(accountEmail?'\n\nE-mail da conta: '+accountEmail:'')+(reason?'\nMotivo informado: '+reason:'')+'\n\nExplique aqui por que o acesso deve ser restaurado:'});
+      appeal.href='https://mail.google.com/mail/?'+params.toString();
+    }
+    toast.hidden=false;window.requestAnimationFrame(function(){toast.classList.add('show');});
+    window.clearTimeout(banToastTimer);banToastTimer=window.setTimeout(hideBannedToast,10000);
+  }
+  function isBannedError(error){var value=String((error&&error.code)||'')+' '+String((error&&error.message)||'');return /user[_ -]?banned|account[_ -]?banned|banid|banned/i.test(value);}
+  window.addEventListener('be:user-banned',function(event){showBannedToast(event&&event.detail||{});});
   function setStatus(message,type){var el=q('authStatus');if(!el)return;el.textContent=message||'';el.className='auth-status '+(type||'');}
   function friendly(error){
     var code=(error&&error.code)||'';
@@ -4275,6 +4490,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
       'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
       'auth/session-missing':'Não foi possível concluir a sessão de login. Tente entrar novamente.',
+      'auth/user-banned':'Esta conta foi banida.',
       'auth/email-rate-limit':'O limite temporário de e-mails do Supabase foi atingido. Aguarde e tente novamente mais tarde ou continue com o Discord.',
       'auth/provider-not-enabled':'O login com Discord ainda não foi ativado no Supabase.',
       'backend/not-configured':'Este recurso será ativado quando o Supabase estiver conectado.',
@@ -4301,7 +4517,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
   function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
   function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(location.hash!=='#login'&&location.hash!=='#/login')replaceRoute('#login');}
-  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.scrollTo(0,0);}
+  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
   function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
@@ -4391,8 +4607,9 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       try{var latest=await auth.accountStatus();if(latest)status={...status,...latest,banned:Boolean(status.banned||latest.banned)};}catch(error){console.warn('Não foi possível confirmar o status da conta:',error);}
     }
     if(!status.banned)return true;
+    var detail={email:user.email||'',reason:status.reason||'',bannedAt:status.bannedAt||''};
     try{await auth.signOut();}catch(_){ }
-    location.replace('/404.html');
+    showLogin();setMode('email',detail.email);setStatus('Esta conta foi banida.','error');showBannedToast(detail);
     return false;
   }
 
@@ -4415,6 +4632,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
 
   async function boot(){
     auth=beBackend.auth;
+    var banToastClose=q('accountBanToastClose');if(banToastClose)banToastClose.onclick=function(){window.clearTimeout(banToastTimer);hideBannedToast();};
     q('discordAuthButton').onclick=async function(){
       var button=this;
       if(authFlowBusy)return;
@@ -4459,7 +4677,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       if(!validAuthPassword(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando…');
-      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setMode('password',email);setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
+      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setMode('password',email);if(isBannedError(err)){setStatus('Esta conta foi banida.','error');showBannedToast({email:email});}else setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
 
     q('signupForm').addEventListener('submit',async function(e){
@@ -4588,9 +4806,26 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     try{localStorage.setItem('beCookieAcknowledged','1');}catch(_){ }
     if(cookieNotice)cookieNotice.hidden=true;
   }
+  function isAuthenticatedHome(){
+    var account=window.beBackend&&beBackend.auth?beBackend.auth.currentUser:null;
+    if(!account)return false;
+    var path='/' ;
+    try{path=decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){path=String(location.pathname||'/').replace(/\/+$/,'')||'/';}
+    if(path!=='/'||location.hash)return false;
+    return !document.body.classList.contains('login-mode')&&
+      !document.body.classList.contains('profile-page-active')&&
+      !document.body.classList.contains('settings-page-active')&&
+      !document.body.classList.contains('support-page-active')&&
+      !document.body.classList.contains('notification-page-active')&&
+      !document.body.classList.contains('legal-page-active')&&
+      !document.body.classList.contains('detail-page-active')&&
+      !document.body.classList.contains('section-catalog-active');
+  }
   function showCookieNotice(){
+    if(!cookieNotice)return;
+    if(acknowledged()||!isAuthenticatedHome()){cookieNotice.hidden=true;return;}
     establishNecessaryStorage();
-    if(cookieNotice)cookieNotice.hidden=acknowledged();
+    cookieNotice.hidden=false;
   }
 
   function syncLegalAvatar(){
@@ -4673,7 +4908,14 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
   window.addEventListener('popstate',renderLegalRoute);
   window.addEventListener('be:open-legal-route',renderLegalRoute);
   window.addEventListener('be:profile-avatar-changed',syncLegalAvatar);
-  if(window.beBackend&&beBackend.ready){beBackend.ready.then(function(){if(beBackend.auth&&beBackend.auth.onChange)beBackend.auth.onChange(syncLegalAvatar);syncLegalAvatar();}).catch(syncLegalAvatar);}
+  if(window.beBackend&&beBackend.ready){beBackend.ready.then(function(){if(beBackend.auth&&beBackend.auth.onChange)beBackend.auth.onChange(function(){syncLegalAvatar();window.setTimeout(showCookieNotice,80);});syncLegalAvatar();window.setTimeout(showCookieNotice,80);}).catch(function(){syncLegalAvatar();showCookieNotice();});}
+  window.addEventListener('be:home-entered',function(){window.setTimeout(showCookieNotice,80);});
+  window.addEventListener('be:open-config',showCookieNotice);
+  window.addEventListener('be:open-profile-route',showCookieNotice);
+  window.addEventListener('be:open-support',showCookieNotice);
+  window.addEventListener('be:open-notifications',showCookieNotice);
+  window.addEventListener('hashchange',showCookieNotice);
+  window.addEventListener('popstate',function(){window.setTimeout(showCookieNotice,50);});
   document.addEventListener('DOMContentLoaded',function(){renderLegalRoute();showCookieNotice();});
   if(document.readyState!=='loading'){renderLegalRoute();showCookieNotice();}
 })();
@@ -5080,7 +5322,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     return items.slice(0,3).map(function(item){
       return '<button class="notification-preview-item" type="button" data-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
-        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(item.description,100)||'Confira esta atualização.')+'</span></span>'+
+        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(window.beMarkdownPlainText?window.beMarkdownPlainText(item.description):item.description,100)||'Confira esta atualização.')+'</span></span>'+
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
       '</button>';
     }).join('');
@@ -5112,7 +5354,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       var selected=String(item.id)===selectedId;
       return '<button class="notification-page-link '+(selected?'active':'')+'" type="button" data-notification-page-id="'+esc(item.id)+'" aria-current="'+(selected?'page':'false')+'">'+
         '<strong>'+esc(item.title||'Atualização')+'</strong>'+
-        '<span>'+esc(trimText(item.description,92)||'Confira esta atualização.')+'</span>'+
+        '<span>'+esc(trimText(window.beMarkdownPlainText?window.beMarkdownPlainText(item.description):item.description,92)||'Confira esta atualização.')+'</span>'+
       '</button>';
     }).join('');
     pageNav.querySelectorAll('[data-notification-page-id]').forEach(function(button){
@@ -5121,7 +5363,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     pageContent.innerHTML='<article class="notification-article">'+
       '<h1>'+esc(active.title||'Atualização')+'</h1>'+
       '<p class="notification-article-date">'+esc(formatDate(active))+'</p>'+
-      '<div class="notification-article-body">'+esc(active.description||'').replace(/\r?\n/g,'<br>')+'</div>'+
+      '<div class="notification-article-body be-markdown">'+(window.beRenderMarkdown?window.beRenderMarkdown(active.description||''):esc(active.description||'').replace(/\r?\n/g,'<br>'))+'</div>'+
     '</article>';
   }
 

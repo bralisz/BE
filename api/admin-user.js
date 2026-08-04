@@ -22,6 +22,15 @@ function envConfig() {
   };
 }
 
+function supabaseHeaders(apiKey, bearerToken, extra = {}) {
+  const headers = { apikey: apiKey, ...extra };
+  const isSecretKey = /^sb_secret_/i.test(String(apiKey || ''));
+  if (bearerToken && (!isSecretKey || bearerToken !== apiKey)) {
+    headers.Authorization = `Bearer ${bearerToken}`;
+  }
+  return headers;
+}
+
 async function jsonResponse(response) {
   const text = await response.text();
   if (!text) return {};
@@ -62,10 +71,7 @@ async function requesterIsAdmin(url, publishableKey, accessToken) {
 
 async function getAdminUser(url, serviceKey, userId) {
   const response = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
-    headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`
-    }
+    headers: supabaseHeaders(serviceKey, serviceKey)
   });
   const body = await jsonResponse(response);
   if (!response.ok || !body?.id) throw apiError(body, 'Usuário não encontrado.', response.status || 404);
@@ -74,11 +80,7 @@ async function getAdminUser(url, serviceKey, userId) {
 
 async function getProfile(url, apiKey, bearerToken, userId) {
   const response = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=*`, {
-    headers: {
-      apikey: apiKey,
-      Authorization: `Bearer ${bearerToken}`,
-      Accept: 'application/json'
-    }
+    headers: supabaseHeaders(apiKey, bearerToken, { Accept: 'application/json' })
   });
   const body = await jsonResponse(response);
   if (!response.ok) throw apiError(body, 'Não foi possível carregar o perfil.', response.status);
@@ -88,12 +90,10 @@ async function getProfile(url, apiKey, bearerToken, userId) {
 async function patchProfile(url, apiKey, bearerToken, userId, patch) {
   const response = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`, {
     method: 'PATCH',
-    headers: {
-      apikey: apiKey,
-      Authorization: `Bearer ${bearerToken}`,
+    headers: supabaseHeaders(apiKey, bearerToken, {
       'Content-Type': 'application/json',
       Prefer: 'return=representation'
-    },
+    }),
     body: JSON.stringify(patch)
   });
   const body = await jsonResponse(response);
@@ -104,11 +104,7 @@ async function patchProfile(url, apiKey, bearerToken, userId, patch) {
 async function deleteProfile(url, serviceKey, userId) {
   const response = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`, {
     method: 'DELETE',
-    headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
-      Prefer: 'return=minimal'
-    }
+    headers: supabaseHeaders(serviceKey, serviceKey, { Prefer: 'return=minimal' })
   });
   if (!response.ok && response.status !== 404) {
     const body = await jsonResponse(response);
@@ -119,11 +115,7 @@ async function deleteProfile(url, serviceKey, userId) {
 async function deleteAuthUser(url, serviceKey, userId) {
   const response = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
     method: 'DELETE',
-    headers: {
-      apikey: serviceKey,
-      Authorization: `Bearer ${serviceKey}`,
-      'Content-Type': 'application/json'
-    }
+    headers: supabaseHeaders(serviceKey, serviceKey, { 'Content-Type': 'application/json' })
   });
   const body = await jsonResponse(response);
   if (!response.ok) throw apiError(body, 'Não foi possível apagar a conta.', response.status);
@@ -290,11 +282,7 @@ module.exports = async function adminUserHandler(req, res) {
     };
     const response = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
       method: 'PUT',
-      headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-        'Content-Type': 'application/json'
-      },
+      headers: supabaseHeaders(serviceKey, serviceKey, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         ban_duration: banned ? '876000h' : 'none',
         app_metadata: appMetadata

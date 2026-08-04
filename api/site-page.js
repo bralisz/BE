@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const DEFAULT_SHARE_IMAGE_PATH = '/assets/login-admin-banner.jpg';
+const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
 
 function supabaseConfig() {
   return {
@@ -74,7 +74,7 @@ function absoluteHttpUrl(value, origin) {
 
 function proxiedMediaUrl(value, origin) {
   const absolute = absoluteHttpUrl(value, origin);
-  if (!absolute) return `${origin}${DEFAULT_SHARE_IMAGE_PATH}`;
+  if (!absolute) return FIXED_SHARE_IMAGE_URL;
   try {
     const parsed = new URL(absolute);
     if (parsed.origin === origin) return parsed.href;
@@ -105,9 +105,8 @@ async function loadSettings() {
 function injectSocialMetadata(html, settings, origin) {
   const title = 'Billie Eilish TV';
   const description = String(settings.description || 'Filmes, vídeos, entrevistas e atualizações em um só lugar.').trim();
-  const image = settings.shareImage
-    ? `${origin}/api/media?c=settings&id=site&f=shareImage`
-    : `${origin}${DEFAULT_SHARE_IMAGE_PATH}`;
+  // O preview social do site é fixo e não pode ser substituído pelas configurações do painel.
+  const image = FIXED_SHARE_IMAGE_URL;
   const canonical = `${origin}/`;
 
   html = html

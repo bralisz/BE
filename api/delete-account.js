@@ -22,6 +22,14 @@ function getConfig() {
   };
 }
 
+function serviceHeaders(serviceKey, extra = {}) {
+  const headers = { apikey: serviceKey, ...extra };
+  if (!/^sb_secret_/i.test(String(serviceKey || ''))) {
+    headers.Authorization = `Bearer ${serviceKey}`;
+  }
+  return headers;
+}
+
 async function readJson(response) {
   const text = await response.text();
   if (!text) return null;
@@ -52,11 +60,7 @@ async function getAuthenticatedUser(url, publishableKey, accessToken) {
 async function deleteWithServiceRole(url, serviceRoleKey, userId) {
   const response = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
     method: 'DELETE',
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json'
-    }
+    headers: serviceHeaders(serviceRoleKey, { 'Content-Type': 'application/json' })
   });
   const payload = await readJson(response);
   if (!response.ok) {
@@ -68,11 +72,7 @@ async function deleteWithServiceRole(url, serviceRoleKey, userId) {
   try {
     await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`, {
       method: 'DELETE',
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-        Prefer: 'return=minimal'
-      }
+      headers: serviceHeaders(serviceRoleKey, { Prefer: 'return=minimal' })
     });
   } catch (_) {}
 }

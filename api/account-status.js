@@ -2,6 +2,14 @@
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 
+function serviceHeaders(serviceKey) {
+  const headers = { apikey: serviceKey };
+  if (!/^sb_secret_/i.test(String(serviceKey || ''))) {
+    headers.Authorization = `Bearer ${serviceKey}`;
+  }
+  return headers;
+}
+
 async function parseJson(response) {
   const text = await response.text();
   if (!text) return {};
@@ -51,10 +59,7 @@ module.exports = async function accountStatusHandler(req, res) {
 
     if (serviceRoleKey) {
       const adminResponse = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(sessionUser.id)}`, {
-        headers: {
-          apikey: serviceRoleKey,
-          Authorization: `Bearer ${serviceRoleKey}`
-        }
+        headers: serviceHeaders(serviceRoleKey)
       });
       const account = await parseJson(adminResponse);
       if (adminResponse.ok && account?.id) {

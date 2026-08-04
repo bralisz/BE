@@ -10,14 +10,14 @@
 <meta property="og:title" content="Billie Eilish TV">
 <meta property="og:description" content="Filmes, vídeos, entrevistas e atualizações em um só lugar.">
 <meta property="og:url" content="https://billieilish-tv.vercel.app/">
-<meta property="og:image" content="/assets/login-admin-banner.jpg">
-<meta property="og:image:secure_url" content="/assets/login-admin-banner.jpg">
-<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image" content="https://i.imgur.com/tnBMpHr.png">
+<meta property="og:image:secure_url" content="https://i.imgur.com/tnBMpHr.png">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:alt" content="Billie Eilish TV">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Billie Eilish TV">
 <meta name="twitter:description" content="Filmes, vídeos, entrevistas e atualizações em um só lugar.">
-<meta name="twitter:image" content="/assets/login-admin-banner.jpg">
+<meta name="twitter:image" content="https://i.imgur.com/tnBMpHr.png">
 <meta name="twitter:image:alt" content="Billie Eilish TV">
 <link rel="canonical" href="https://billieilish-tv.vercel.app/">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -52,9 +52,9 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/site-style-8f5e69c57829.css?v=2.114.0">
+<link rel="stylesheet" href="/assets/site-style-8f5e69c57829.css?v=2.115.0">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/site-runtime-2bfffcd63fbe.js?v=2.114.0"></script>
+<script defer src="/assets/site-runtime-2bfffcd63fbe.js?v=2.115.0"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -516,6 +516,14 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
 <div class="ios-save-toast" id="settingsSaveToast" hidden role="status" aria-live="polite">
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4.2 4.2L19 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
   <span>Alterações salvas</span>
+</div>
+<div class="ios-ban-toast" id="accountBanToast" hidden role="alert" aria-live="assertive" aria-atomic="true">
+  <span class="ios-ban-toast-icon" aria-hidden="true">!</span>
+  <div class="ios-ban-toast-copy">
+    <strong>Usuário banido</strong>
+    <a id="accountBanAppeal" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=billieilishtv@gmail.com&amp;su=Apela%C3%A7%C3%A3o%20de%20desbanimento%20-%20BETV" target="_blank" rel="noopener noreferrer">Faça uma apelação de desbanimento</a>
+  </div>
+  <button class="ios-ban-toast-close" id="accountBanToastClose" type="button" aria-label="Fechar aviso">×</button>
 </div>
 <section class="support-page-shell" id="supportPage" hidden aria-label="Central de suporte do BETV">
   <div class="support-page-inner">
