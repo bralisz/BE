@@ -5647,7 +5647,8 @@ body.legal-page-active #dynamicSections{
   body.section-catalog-active .section-view-mobile-home{
     position:absolute!important;
     top:-5px!important;
-    left:0!important;
+    right:0!important;
+    left:auto!important;
     z-index:12!important;
     display:inline-grid!important;
     place-items:center!important;
@@ -5655,6 +5656,7 @@ body.legal-page-active #dynamicSections{
     height:44px!important;
     min-width:44px!important;
     padding:0!important;
+    margin:0!important;
     border:1px solid rgba(255,255,255,.16)!important;
     border-radius:50%!important;
     background:#17191c!important;
@@ -5671,10 +5673,12 @@ body.legal-page-active #dynamicSections{
     height:23px!important;
   }
   body.section-catalog-active .section-view-active > .video-rail-title{
-    min-height:44px!important;
-    margin-left:58px!important;
-    margin-right:0!important;
+    display:flex!important;
     align-items:center!important;
+    min-height:44px!important;
+    margin-left:0!important;
+    margin-right:58px!important;
+    padding-right:0!important;
   }
 }
 
@@ -5715,5 +5719,53 @@ body.legal-page-active #dynamicSections{
     left:12px!important;
     max-width:48%!important;
     max-height:56%!important;
+  }
+}
+
+/* Ajuste final: mais espaço nas recomendações dos detalhes. */
+.detail-recommendations{
+  padding-top:48px!important;
+  padding-bottom:82px!important;
+}
+.detail-reco-rail{
+  column-gap:18px!important;
+  row-gap:34px!important;
+}
+.detail-reco-name{
+  margin-top:12px!important;
+  padding-inline:2px;
+}
+
+/* Mantém logos grandes inteiras dentro do banner, inclusive no hover. */
+.video-card > .video-card-logo{
+  width:min(46%,240px)!important;
+  height:58%!important;
+  max-width:calc(100% - 28px)!important;
+  max-height:calc(100% - 24px)!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+  transform:translateY(-50%)!important;
+  transform-origin:left center!important;
+}
+@media (hover:hover) and (pointer:fine){
+  .video-card:hover > .video-card-logo{
+    transform:translateY(-50%)!important;
+  }
+}
+@media(max-width:760px){
+  .detail-recommendations{
+    padding:34px 18px 62px!important;
+  }
+  .detail-reco-rail{
+    column-gap:14px!important;
+    row-gap:24px!important;
+    padding-top:6px!important;
+    padding-bottom:12px!important;
+  }
+  .video-card > .video-card-logo{
+    width:min(48%,190px)!important;
+    height:56%!important;
+    max-width:calc(100% - 22px)!important;
+    max-height:calc(100% - 20px)!important;
   }
 }

@@ -2087,7 +2087,12 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       event.stopPropagation();
       returnSectionToHome({ replaceRoute: true });
     });
-    section.insertBefore(mobileHomeButton, section.querySelector('.video-rail-title'));
+    const titleNode = section.querySelector('.video-rail-title');
+    if (titleNode && titleNode.parentNode === section) {
+      titleNode.insertAdjacentElement('afterend', mobileHomeButton);
+    } else {
+      section.appendChild(mobileHomeButton);
+    }
 
     if (options.updateHistory !== false) {
       try {
