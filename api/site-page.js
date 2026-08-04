@@ -2,17 +2,15 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const DEFAULT_SHARE_IMAGE = 'https://i.imgur.com/tnBMpHr.png';
 
 function supabaseConfig() {
-  const publishableKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_PUBLISHABLE_KEY;
-  const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || publishableKey;
   return {
     url: String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://cxkevnnxibhezvospkce.supabase.co').replace(/\/$/, ''),
-    publishableKey,
-    serverKey
+    publishableKey: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_PUBLISHABLE_KEY
   };
 }
 
@@ -34,8 +32,9 @@ function deploymentVersion() {
   const commit = String(process.env.VERCEL_GIT_COMMIT_SHA || '').trim();
   const deploymentUrl = String(process.env.VERCEL_URL || '').trim();
   const environment = String(process.env.VERCEL_ENV || process.env.NODE_ENV || 'development').trim();
-  if (commit || deploymentUrl) return [commit || 'no-commit', deploymentUrl || 'no-deployment-url'].join(':');
-  return `local:${environment}`;
+  if (!commit && !deploymentUrl) return `local:${environment}`;
+  const fingerprint = crypto.createHash('sha256').update(`${commit}:${deploymentUrl}`).digest('hex').slice(0, 24);
+  return `v:${fingerprint}`;
 }
 
 function injectDeploymentVersion(html) {
@@ -74,12 +73,12 @@ function absoluteHttpUrl(value, origin) {
 }
 
 async function loadSettings() {
-  const { url, publishableKey, serverKey } = supabaseConfig();
+  const { url, publishableKey } = supabaseConfig();
   try {
     const response = await fetch(`${url}/rest/v1/site_settings?id=eq.site&select=data,updated_at&limit=1`, {
       headers: {
-        apikey: serverKey || publishableKey,
-        Authorization: `Bearer ${serverKey || publishableKey}`,
+        apikey: publishableKey,
+        Authorization: `Bearer ${publishableKey}`,
         Accept: 'application/json'
       }
     });

@@ -308,11 +308,13 @@ begin
   end loop;
 end $$;
 
+drop policy if exists "profiles read own or admin" on public.profiles;
 create policy "profiles read own or admin"
 on public.profiles for select
 to authenticated
 using ((select auth.uid()) = id or public.is_admin());
 
+drop policy if exists "profiles insert own or admin" on public.profiles;
 create policy "profiles insert own or admin"
 on public.profiles for insert
 to authenticated
@@ -328,6 +330,7 @@ with check (
   )
 );
 
+drop policy if exists "profiles update own or admin" on public.profiles;
 create policy "profiles update own or admin"
 on public.profiles for update
 to authenticated

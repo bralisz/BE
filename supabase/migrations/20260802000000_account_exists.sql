@@ -242,11 +242,13 @@ alter table public.content_items enable row level security;
 alter table public.site_settings enable row level security;
 alter table public.admin_logs enable row level security;
 
+drop policy if exists "profiles read own or admin" on public.profiles;
 create policy "profiles read own or admin"
 on public.profiles for select
 to authenticated
 using ((select auth.uid()) = id or public.is_admin());
 
+drop policy if exists "profiles insert own or admin" on public.profiles;
 create policy "profiles insert own or admin"
 on public.profiles for insert
 to authenticated
@@ -262,6 +264,7 @@ with check (
   )
 );
 
+drop policy if exists "profiles update own or admin" on public.profiles;
 create policy "profiles update own or admin"
 on public.profiles for update
 to authenticated
@@ -278,53 +281,63 @@ with check (
   )
 );
 
+drop policy if exists "content read published" on public.content_items;
 create policy "content read published"
 on public.content_items for select
 to anon, authenticated
 using (public.is_admin() or coalesce(lower(data ->> 'active'), 'true') = 'true');
 
+drop policy if exists "content admin insert" on public.content_items;
 create policy "content admin insert"
 on public.content_items for insert
 to authenticated
 with check (public.is_admin());
 
+drop policy if exists "content admin update" on public.content_items;
 create policy "content admin update"
 on public.content_items for update
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+drop policy if exists "content admin delete" on public.content_items;
 create policy "content admin delete"
 on public.content_items for delete
 to authenticated
 using (public.is_admin());
 
+drop policy if exists "settings public read" on public.site_settings;
 create policy "settings public read"
 on public.site_settings for select
 to anon, authenticated
 using (true);
 
+drop policy if exists "settings admin insert" on public.site_settings;
 create policy "settings admin insert"
 on public.site_settings for insert
 to authenticated
 with check (public.is_admin());
 
+drop policy if exists "settings admin update" on public.site_settings;
 create policy "settings admin update"
 on public.site_settings for update
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+drop policy if exists "settings admin delete" on public.site_settings;
 create policy "settings admin delete"
 on public.site_settings for delete
 to authenticated
 using (public.is_admin());
 
+drop policy if exists "logs admin read" on public.admin_logs;
 create policy "logs admin read"
 on public.admin_logs for select
 to authenticated
 using (public.is_admin());
 
+drop policy if exists "logs admin insert" on public.admin_logs;
 create policy "logs admin insert"
 on public.admin_logs for insert
 to authenticated
