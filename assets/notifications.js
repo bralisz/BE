@@ -282,6 +282,10 @@
     if(event)event.stopPropagation();
     if(!desktopDropdown||!desktopButton)return;
     var open=!desktopDropdown.classList.contains('open');
+    if(open){
+      window.dispatchEvent(new CustomEvent('be:close-public-search'));
+      window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
+    }
     closeMobile();
     closeAccountMenu();
     desktopDropdown.classList.toggle('open',open);
@@ -293,6 +297,10 @@
     if(event)event.stopPropagation();
     if(!mobilePopover)return;
     var open=mobilePopover.hidden;
+    if(open){
+      window.dispatchEvent(new CustomEvent('be:close-public-search'));
+      window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
+    }
     closeDesktop();
     closeAccountMenu();
     mobilePopover.hidden=!open;

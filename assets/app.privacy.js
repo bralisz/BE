@@ -2018,6 +2018,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     if (scrollHome && active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  window.addEventListener('be:close-section-view', () => closeSectionView(false));
+
   function openSectionView(section, options = {}) {
     const host = section?.closest?.('#dynamicSections');
     if (!host || !section) return;
@@ -2467,6 +2469,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       toggle.setAttribute('aria-expanded', String(open));
       toggle.setAttribute('aria-label', open ? 'Fechar pesquisa' : 'Abrir pesquisa');
       if (open) {
+        window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
         requestAnimationFrame(() => input.focus({ preventScroll: true }));
       } else {
         input.value = '';
@@ -2474,6 +2477,10 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         toggle.focus({ preventScroll: true });
       }
     };
+
+    window.addEventListener('be:close-public-search', () => {
+      if (topbar.classList.contains('search-open')) setSearchOpen(false);
+    });
 
     const isFilm = category => {
       const value = normalizeText(category);
@@ -2679,6 +2686,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       button.setAttribute('aria-label', shouldOpen ? 'Fechar pesquisa' : 'Abrir pesquisa');
     }
     if (shouldOpen) {
+      window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
       openDrawer(false);
       window.requestAnimationFrame(() => input?.focus({ preventScroll:true }));
     } else if (clearOnClose && input) {
@@ -2687,6 +2695,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       button?.focus({ preventScroll:true });
     }
   }
+
+  window.addEventListener('be:close-mobile-search', () => openMobileSearch(false));
 
   function setActiveDestination(destination) {
     document.querySelectorAll('[data-mobile-destination]').forEach(button => {

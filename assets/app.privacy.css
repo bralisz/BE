@@ -5507,3 +5507,83 @@ body.section-catalog-active #dynamicSections.section-view-mode > .section-view-a
     padding-bottom:56px!important;
   }
 }
+
+
+/* Correções finais: notificações, busca e navegação para o perfil. */
+.notification-dropdown-header,
+.mobile-notification-head{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:center!important;
+  gap:12px!important;
+}
+.notification-dropdown-header>strong,
+.mobile-notification-head>strong{
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+.notification-header-actions{
+  min-width:max-content!important;
+  flex:0 0 auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:8px!important;
+}
+.notification-mark-all{
+  width:auto!important;
+  min-width:max-content!important;
+  height:36px!important;
+  min-height:36px!important;
+  padding:0 13px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  flex:0 0 auto!important;
+}
+.notification-header-close{
+  flex:0 0 auto!important;
+}
+
+/* Uma página dedicada nunca deixa a grade de uma seção aberta por cima. */
+body.profile-page-active #dynamicSections,
+body.settings-page-active #dynamicSections,
+body.notification-page-active #dynamicSections,
+body.support-page-active #dynamicSections,
+body.legal-page-active #dynamicSections{
+  display:none!important;
+}
+
+@media(max-width:760px){
+  /* Na página de Atualizações, o mobile mostra somente título e fechar. */
+  .notification-page-header{
+    grid-template-columns:1fr auto 1fr!important;
+  }
+  .notification-page-leading{
+    display:none!important;
+  }
+  .notification-page-heading{
+    grid-column:2!important;
+    justify-self:center!important;
+  }
+  .notification-page-close{
+    grid-column:3!important;
+    justify-self:end!important;
+  }
+  .mobile-notification-head{
+    padding:7px 8px 10px 14px!important;
+  }
+  .mobile-notification-head>.notification-header-actions{
+    display:flex!important;
+  }
+  .mobile-notification-head .notification-mark-all{
+    height:36px!important;
+    min-height:36px!important;
+    padding:0 12px!important;
+    font-size:12px!important;
+  }
+}

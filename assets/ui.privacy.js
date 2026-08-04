@@ -417,6 +417,8 @@
     }
     function openPublicProfile(updateRoute){
       closeDetailBeforeDedicatedPage();
+      window.dispatchEvent(new CustomEvent('be:close-section-view'));
+      document.body.classList.remove('section-catalog-active');
       toggleDropdown(false);settingsPage.hidden=true;profilePage.hidden=false;
       document.body.classList.remove('settings-page-active','login-mode');document.body.classList.add('profile-page-active');
       try{renderProfilePage();}catch(error){console.error('Falha ao renderizar perfil:',error);}
@@ -425,6 +427,8 @@
     }
     function openSettingsPage(updateRoute){
       closeDetailBeforeDedicatedPage();
+      window.dispatchEvent(new CustomEvent('be:close-section-view'));
+      document.body.classList.remove('section-catalog-active');
       closeNotificationMenus();
       toggleDropdown(false);profilePage.hidden=true;settingsPage.hidden=false;
       document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');
