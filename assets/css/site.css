@@ -7551,3 +7551,33 @@ body.profile-favorites-picker-active{overflow:hidden!important}
     padding-top:42px!important;
   }
 }
+
+
+/* Correções de sessão e layout de Meus Dados — 04/08/2026. */
+html:not(.admin-route-boot).site-loading-active body > :not(#authLoading):not(script):not(style){
+  visibility:hidden!important;
+}
+html:not(.admin-route-boot).site-loading-active body > #authLoading{
+  visibility:visible!important;
+}
+.settings-data-panel .settings-data-actions-outside{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:0;
+}
+.settings-data-panel .settings-data-status{
+  margin-top:12px;
+}
+@media(max-width:560px){
+  .settings-data-panel .settings-data-actions-outside{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  .settings-data-panel .settings-data-actions-outside .settings-button,
+  .settings-data-panel .settings-data-actions-outside .settings-data-privacy-button{
+    width:100%;
+    justify-content:center;
+  }
+}

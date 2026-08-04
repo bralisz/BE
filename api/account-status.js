@@ -37,7 +37,7 @@ module.exports = async function accountStatusHandler(req, res) {
   const authorization = String(req.headers.authorization || '');
   const accessToken = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
 
-  if (!accessToken) return res.status(401).json({ error: 'Sessão não encontrada.' });
+  if (!accessToken) return res.status(200).json({ ok: true, authenticated: false, banned: false, reason: '', bannedAt: '' });
 
   try {
     const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
@@ -52,9 +52,9 @@ module.exports = async function accountStatusHandler(req, res) {
       const authMessage = String(sessionUser?.msg || sessionUser?.message || '').toLowerCase();
       const isBanned = authCode === 'user_banned' || authMessage.includes('banned');
       if (isBanned) {
-        return res.status(200).json({ ok: true, banned: true, reason: '', bannedAt: '' });
+        return res.status(200).json({ ok: true, authenticated: true, banned: true, reason: '', bannedAt: '' });
       }
-      return res.status(401).json({ error: sessionUser?.msg || sessionUser?.message || 'Sessão inválida.' });
+      return res.status(200).json({ ok: true, authenticated: false, banned: false, reason: '', bannedAt: '' });
     }
 
     if (serviceRoleKey) {
@@ -69,6 +69,7 @@ module.exports = async function accountStatusHandler(req, res) {
         if (banned) {
           return res.status(200).json({
             ok: true,
+            authenticated: true,
             banned: true,
             bannedAt: account.app_metadata?.banned_at || '',
             reason: account.app_metadata?.ban_reason || ''
@@ -91,12 +92,13 @@ module.exports = async function accountStatusHandler(req, res) {
     const profile = profileResponse.ok && Array.isArray(profiles) ? profiles[0] : null;
     return res.status(200).json({
       ok: true,
+      authenticated: true,
       banned: Boolean(profile?.banned),
       bannedAt: profile?.banned_at || '',
       reason: profile?.ban_reason || '',
       checkAvailable: profileResponse.ok
     });
   } catch (_) {
-    return res.status(200).json({ ok: true, banned: false, checkAvailable: false });
+    return res.status(200).json({ ok: true, authenticated: null, banned: false, checkAvailable: false });
   }
 };
