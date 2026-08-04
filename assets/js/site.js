@@ -2989,6 +2989,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   window.beGetSavedContents = collectSavedContents;
+  window.beGetCatalogContents = function() {
+    const result = [];
+    domCatalogCandidates().forEach(item => {
+      const normalized = normalizeSavedContent(item);
+      if (!normalized.itemId && !normalized.favoriteId && !normalized.recordId) return;
+      if (result.some(current => savedContentMatches(current, normalized))) return;
+      result.push(normalized);
+    });
+    return result.sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR'));
+  };
   window.beOpenSavedContent = function(data) {
     const item = normalizeSavedContent(data);
     if (!item.itemId) return;
@@ -4009,6 +4019,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profilePageMore=document.getElementById('profilePageMore');
     var profilePageLogout=document.getElementById('profilePageLogout');
     var profilePageHome=document.getElementById('profilePageHome');
+    var profileFavoritesSection=document.getElementById('profileFavoritesSection');
+    var profileFavoritesContent=document.getElementById('profileFavoritesContent');
+    var profileFavoritesEdit=document.getElementById('profileFavoritesEdit');
+    var profileFavoritesPicker=document.getElementById('profileFavoritesPicker');
+    var profileFavoritesPickerBody=document.getElementById('profileFavoritesPickerBody');
+    var profileFavoritesPickerClose=document.getElementById('profileFavoritesPickerClose');
+    var profileFavoritesCancel=document.getElementById('profileFavoritesCancel');
+    var profileFavoritesSave=document.getElementById('profileFavoritesSave');
+    var profileFavoritesSearch=document.getElementById('profileFavoritesSearch');
+    var profileFavoritesSelectionCount=document.getElementById('profileFavoritesSelectionCount');
+    var profileFavoritesItems=[];
+    var profileFavoritesDraft=[];
+    var profileFavoritesCatalog=[];
+    var profileFavoritesLastFocus=null;
     var profileSavedSection=document.getElementById('profileSavedSection');
     var profileSavedGrid=document.getElementById('profileSavedGrid');
     var profileSavedCount=document.getElementById('profileSavedCount');
@@ -4272,6 +4296,193 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return beBackend.normalizeUsername(routeHandle)===beBackend.normalizeUsername((currentProfile&&currentProfile.username)||'');
     }
 
+    function profileFavoriteIdentity(item){
+      return String((item&&item.itemId)||(item&&item.favoriteId)||((item&&item.collection&&item.recordId)?item.collection+':'+item.recordId:'')||(item&&item.title)||'').trim();
+    }
+    function normalizeProfileFavorite(item){
+      return {
+        itemId:String(item&&item.itemId||''),
+        recordId:String(item&&item.recordId||''),
+        favoriteId:String(item&&item.favoriteId||''),
+        title:String(item&&item.title||'Conteúdo'),
+        description:String(item&&item.description||''),
+        year:String(item&&item.year||''),
+        duration:String(item&&item.duration||''),
+        contentUrl:String(item&&item.contentUrl||'#'),
+        imageUrl:String(item&&(item.imageUrl||item.thumbnailUrl||item.bannerUrl)||''),
+        bannerUrl:String(item&&(item.bannerUrl||item.imageUrl||item.thumbnailUrl)||''),
+        logoUrl:String(item&&item.logoUrl||''),
+        collection:String(item&&item.collection||'videos').toLowerCase()
+      };
+    }
+    function profileFavoritesStorageKey(){
+      return 'beProfileTopFavorites:'+(auth.currentUser&&auth.currentUser.uid?auth.currentUser.uid:'guest');
+    }
+    function readProfileFavorites(){
+      try{
+        var parsed=JSON.parse(localStorage.getItem(profileFavoritesStorageKey())||'[]');
+        if(!Array.isArray(parsed))return [];
+        var result=[];
+        parsed.map(normalizeProfileFavorite).forEach(function(item){
+          var identity=profileFavoriteIdentity(item);
+          if(identity&&!result.some(function(current){return profileFavoriteIdentity(current)===identity;}))result.push(item);
+        });
+        return result.slice(0,4);
+      }catch(_){return [];}
+    }
+    function writeProfileFavorites(items){
+      var normalized=(Array.isArray(items)?items:[]).map(normalizeProfileFavorite).slice(0,4);
+      localStorage.setItem(profileFavoritesStorageKey(),JSON.stringify(normalized));
+      profileFavoritesItems=normalized;
+      window.dispatchEvent(new CustomEvent('be:profile-favorites-changed',{detail:{items:normalized}}));
+    }
+    function profileFavoriteCollectionLabel(item){
+      var type=String(item&&item.collection||'videos').toLowerCase();
+      if(type==='movies')return 'FILME';
+      if(type==='series')return 'SÉRIE';
+      return 'VÍDEO';
+    }
+    function profileFavoriteImage(item){
+      return String(item&&(item.imageUrl||item.bannerUrl)||'').trim();
+    }
+    function profileCatalogContents(){
+      var source=[];
+      try{source=typeof window.beGetCatalogContents==='function'?window.beGetCatalogContents():[];}catch(error){console.warn('Não foi possível carregar o catálogo para favoritos:',error);}
+      var result=[];
+      source.map(normalizeProfileFavorite).forEach(function(item){
+        var identity=profileFavoriteIdentity(item);
+        if(identity&&!result.some(function(current){return profileFavoriteIdentity(current)===identity;}))result.push(item);
+      });
+      profileFavoritesItems.forEach(function(item){
+        var identity=profileFavoriteIdentity(item);
+        if(identity&&!result.some(function(current){return profileFavoriteIdentity(current)===identity;}))result.unshift(item);
+      });
+      return result;
+    }
+    function renderProfileFavorites(){
+      if(!profileFavoritesSection||!profileFavoritesContent)return;
+      var ownProfile=Boolean(auth.currentUser&&isOwnProfileView());
+      profileFavoritesSection.hidden=!ownProfile;
+      if(!ownProfile){profileFavoritesItems=[];profileFavoritesContent.innerHTML='';if(profileFavoritesEdit)profileFavoritesEdit.hidden=true;return;}
+      profileFavoritesItems=readProfileFavorites();
+      if(profileFavoritesEdit)profileFavoritesEdit.hidden=profileFavoritesItems.length!==4;
+      if(profileFavoritesItems.length!==4){
+        profileFavoritesContent.innerHTML='<button class="profile-favorites-empty" id="profileFavoritesAdd" type="button"><span class="profile-favorites-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><strong>Adicionar favoritos</strong><span>Escolha quatro conteúdos que representam o seu gosto.</span></button>';
+        var addButton=document.getElementById('profileFavoritesAdd');
+        if(addButton)addButton.addEventListener('click',openProfileFavoritesPicker);
+        return;
+      }
+      profileFavoritesContent.innerHTML='<div class="profile-favorites-ranking">'+profileFavoritesItems.map(function(item,index){
+        var image=profileFavoriteImage(item);
+        return '<button class="profile-favorite-ranked-item" type="button" data-profile-favorite-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'favorito')+'">'
+          +'<span class="profile-favorite-rank" aria-hidden="true">'+(index+1)+'</span>'
+          +'<span class="profile-favorite-poster">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
+          +'<span class="profile-favorite-type">'+profileFavoriteCollectionLabel(item)+'</span>'
+          +'<span class="profile-favorite-title">'+escapePublic(item.title||'Conteúdo')+'</span></span>'
+          +'</button>';
+      }).join('')+'</div>';
+    }
+    function profileFavoriteIsSelected(item){
+      var identity=profileFavoriteIdentity(item);
+      return profileFavoritesDraft.some(function(current){return profileFavoriteIdentity(current)===identity;});
+    }
+    function renderProfileFavoritesPicker(){
+      if(!profileFavoritesPickerBody)return;
+      var query=String(profileFavoritesSearch&&profileFavoritesSearch.value||'').trim().toLocaleLowerCase('pt-BR');
+      var filtered=profileFavoritesCatalog.filter(function(item){
+        if(!query)return true;
+        return [item.title,item.year,item.duration,profileFavoriteCollectionLabel(item)].join(' ').toLocaleLowerCase('pt-BR').indexOf(query)>=0;
+      });
+      if(!filtered.length){
+        profileFavoritesPickerBody.innerHTML='<div class="profile-favorites-picker-empty"><strong>Nenhum conteúdo encontrado</strong><span>Tente pesquisar com outro nome.</span></div>';
+      }else{
+        profileFavoritesPickerBody.innerHTML='<div class="profile-favorites-picker-grid">'+filtered.map(function(item){
+          var catalogIndex=profileFavoritesCatalog.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(item);});
+          var selectedIndex=profileFavoritesDraft.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(item);});
+          var selected=selectedIndex>=0;
+          var image=profileFavoriteImage(item);
+          return '<button class="profile-favorites-option'+(selected?' selected':'')+'" type="button" data-profile-favorite-option="'+catalogIndex+'" aria-pressed="'+String(selected)+'">'
+            +'<span class="profile-favorites-option-media">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
+            +'<span class="profile-favorites-option-order">'+(selected?selectedIndex+1:'+')+'</span></span>'
+            +'<span class="profile-favorites-option-copy"><strong>'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
+            +'</button>';
+        }).join('')+'</div>';
+      }
+      if(profileFavoritesSelectionCount)profileFavoritesSelectionCount.textContent=profileFavoritesDraft.length+' de 4';
+      if(profileFavoritesSave)profileFavoritesSave.disabled=profileFavoritesDraft.length!==4;
+    }
+    function openProfileFavoritesPicker(event){
+      if(event&&event.currentTarget)profileFavoritesLastFocus=event.currentTarget;
+      else profileFavoritesLastFocus=document.activeElement;
+      profileFavoritesItems=readProfileFavorites();
+      profileFavoritesDraft=profileFavoritesItems.slice(0,4);
+      profileFavoritesCatalog=profileCatalogContents();
+      if(profileFavoritesSearch)profileFavoritesSearch.value='';
+      renderProfileFavoritesPicker();
+      profileFavoritesPicker.hidden=false;
+      document.body.classList.add('profile-favorites-picker-active');
+      requestAnimationFrame(function(){if(profileFavoritesSearch)profileFavoritesSearch.focus({preventScroll:true});});
+    }
+    function closeProfileFavoritesPicker(){
+      if(!profileFavoritesPicker||profileFavoritesPicker.hidden)return;
+      profileFavoritesPicker.hidden=true;
+      document.body.classList.remove('profile-favorites-picker-active');
+      profileFavoritesDraft=[];
+      if(profileFavoritesLastFocus&&typeof profileFavoritesLastFocus.focus==='function')profileFavoritesLastFocus.focus({preventScroll:true});
+      profileFavoritesLastFocus=null;
+    }
+    function toggleProfileFavoriteOption(index){
+      var item=profileFavoritesCatalog[index];
+      if(!item)return;
+      var identity=profileFavoriteIdentity(item);
+      var selectedIndex=profileFavoritesDraft.findIndex(function(current){return profileFavoriteIdentity(current)===identity;});
+      if(selectedIndex>=0)profileFavoritesDraft.splice(selectedIndex,1);
+      else if(profileFavoritesDraft.length<4)profileFavoritesDraft.push(item);
+      else{
+        if(profileFavoritesSelectionCount){profileFavoritesSelectionCount.textContent='Limite de 4 favoritos';profileFavoritesSelectionCount.classList.add('limit');setTimeout(function(){profileFavoritesSelectionCount.classList.remove('limit');profileFavoritesSelectionCount.textContent=profileFavoritesDraft.length+' de 4';},900);}
+        if(navigator.vibrate)navigator.vibrate(20);
+        return;
+      }
+      renderProfileFavoritesPicker();
+    }
+    function saveProfileFavorites(){
+      if(profileFavoritesDraft.length!==4)return;
+      writeProfileFavorites(profileFavoritesDraft);
+      closeProfileFavoritesPicker();
+      renderProfileFavorites();
+    }
+    function bindProfileFavorites(){
+      if(profileFavoritesContent&&profileFavoritesContent.dataset.bound!=='true'){
+        profileFavoritesContent.dataset.bound='true';
+        profileFavoritesContent.addEventListener('click',function(event){
+          var button=event.target.closest('[data-profile-favorite-index]');
+          if(!button)return;
+          var item=profileFavoritesItems[Number(button.dataset.profileFavoriteIndex)];
+          if(!item)return;
+          closePublicPages(false);
+          if(typeof window.beOpenSavedContent==='function')window.beOpenSavedContent(item);
+        });
+      }
+      if(profileFavoritesEdit&&profileFavoritesEdit.dataset.bound!=='true'){
+        profileFavoritesEdit.dataset.bound='true';
+        profileFavoritesEdit.addEventListener('click',openProfileFavoritesPicker);
+      }
+      if(profileFavoritesPicker&&profileFavoritesPicker.dataset.bound!=='true'){
+        profileFavoritesPicker.dataset.bound='true';
+        if(profileFavoritesPickerClose)profileFavoritesPickerClose.addEventListener('click',closeProfileFavoritesPicker);
+        if(profileFavoritesCancel)profileFavoritesCancel.addEventListener('click',closeProfileFavoritesPicker);
+        if(profileFavoritesSave)profileFavoritesSave.addEventListener('click',saveProfileFavorites);
+        if(profileFavoritesSearch)profileFavoritesSearch.addEventListener('input',renderProfileFavoritesPicker);
+        if(profileFavoritesPickerBody)profileFavoritesPickerBody.addEventListener('click',function(event){
+          var button=event.target.closest('[data-profile-favorite-option]');
+          if(!button)return;
+          toggleProfileFavoriteOption(Number(button.dataset.profileFavoriteOption));
+        });
+        profileFavoritesPicker.addEventListener('click',function(event){if(event.target===profileFavoritesPicker)closeProfileFavoritesPicker();});
+        document.addEventListener('keydown',function(event){if(event.key==='Escape'&&profileFavoritesPicker&&!profileFavoritesPicker.hidden){event.preventDefault();closeProfileFavoritesPicker();}});
+      }
+    }
+
     function renderProfileSaved(){
       if(!profileSavedSection||!profileSavedGrid)return;
       var user=auth.currentUser;
@@ -4327,6 +4538,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profilePageMemberSince.textContent='';
         profilePageAvatar.innerHTML=profileFallbackAvatar();
         profilePageBanner.hidden=true;profilePageBannerImg.removeAttribute('src');profilePageBannerFallback.hidden=false;
+        renderProfileFavorites();
         renderProfileSaved();
         return;
       }
@@ -4342,7 +4554,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profilePageMemberSince.textContent='Membro desde '+publicProfileYear();
       profilePageAvatar.innerHTML=avatar?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar do perfil">':profileFallbackAvatar();
       applyProfileBanner(banner);
+      renderProfileFavorites();
       renderProfileSaved();
+      bindProfileFavorites();
       bindProfileSavedGrid();
     }
     function renderSettingsPage(){
@@ -4655,7 +4869,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     function openProfile(){openPublicProfile(true);}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(){closePublicPages(true);var home=document.getElementById('logoBtn');if(home)home.click();else location.assign('/');});bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();});document.getElementById('settingsClosePage').addEventListener('click',function(){closePublicPages(false);replacePublicRoute('/');window.scrollTo(0,0);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(){closePublicPages(true);var home=document.getElementById('logoBtn');if(home)home.click();else location.assign('/');});bindProfileFavorites();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();});document.getElementById('settingsClosePage').addEventListener('click',function(){closePublicPages(false);replacePublicRoute('/');window.scrollTo(0,0);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){
       if(!avatarPicker.hidden)closeAvatarPicker(false);
       if(!bannerPicker.hidden)closeBannerPicker(false);
       if(!auth.currentUser)return;
@@ -4784,8 +4998,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var accountEmail=String(detail.email||selectedAuthEmail||'').trim();
     var reason=String(detail.reason||'').trim();
     if(appeal){
-      var params=new URLSearchParams({subject:'Apelação a banimento',body:'Olá, gostaria de solicitar a revisão do banimento da minha conta BETV.'+(accountEmail?'\n\nE-mail da conta: '+accountEmail:'')+(reason?'\nMotivo informado: '+reason:'')+'\n\nExplique aqui por que o acesso deve ser restaurado:'});
-      appeal.href='mailto:billieilishtv@gmail.com?'+params.toString();
+      var appealSubject='Apelação a banimento';
+      var appealBody='Olá, gostaria de solicitar a revisão do banimento da minha conta BETV.'+(accountEmail?'\n\nE-mail da conta: '+accountEmail:'')+(reason?'\nMotivo informado: '+reason:'')+'\n\nExplique aqui por que o acesso deve ser restaurado:';
+      function encodeEmailField(value){
+        return encodeURIComponent(String(value||'').replace(/\r?\n/g,'\r\n'));
+      }
+      appeal.href='mailto:billieilishtv@gmail.com?subject='+encodeEmailField(appealSubject)+'&body='+encodeEmailField(appealBody);
       appeal.removeAttribute('target');
       appeal.removeAttribute('rel');
     }
