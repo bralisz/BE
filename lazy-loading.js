@@ -44,7 +44,7 @@
     const background = element.getAttribute('data-bg-src');
 
     if (source) {
-      element.setAttribute('src', source);
+      element.setAttribute('src', window.beMediaUrl ? window.beMediaUrl(source) : source);
       element.removeAttribute('data-src');
     }
     if (sourceSet) {
@@ -52,7 +52,8 @@
       element.removeAttribute('data-srcset');
     }
     if (background) {
-      element.style.backgroundImage = `url("${background.replace(/"/g, '\\"')}")`;
+      const shownBackground = window.beMediaUrl ? window.beMediaUrl(background) : background;
+      element.style.backgroundImage = `url("${shownBackground.replace(/"/g, '\\"')}")`;
       element.removeAttribute('data-bg-src');
     }
   };

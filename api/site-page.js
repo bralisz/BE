@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const DEFAULT_SHARE_IMAGE = 'https://i.imgur.com/tnBMpHr.png';
+const DEFAULT_SHARE_IMAGE_PATH = '/assets/logo.png';
 
 function supabaseConfig() {
   return {
@@ -72,6 +72,17 @@ function absoluteHttpUrl(value, origin) {
   }
 }
 
+function proxiedMediaUrl(value, origin) {
+  const absolute = absoluteHttpUrl(value, origin);
+  if (!absolute) return `${origin}${DEFAULT_SHARE_IMAGE_PATH}`;
+  try {
+    const parsed = new URL(absolute);
+    if (parsed.origin === origin) return parsed.href;
+  } catch (_) {}
+  const token = Buffer.from(absolute, 'utf8').toString('base64url');
+  return `${origin}/api/media?u=${token}`;
+}
+
 async function loadSettings() {
   const { url, publishableKey } = supabaseConfig();
   try {
@@ -94,8 +105,7 @@ async function loadSettings() {
 function injectSocialMetadata(html, settings, origin) {
   const title = 'Billie Eilish TV';
   const description = String(settings.description || 'Filmes, vídeos, entrevistas e atualizações em um só lugar.').trim();
-  const selectedImage = absoluteHttpUrl(settings.shareImage, origin);
-  const image = selectedImage || DEFAULT_SHARE_IMAGE;
+  const image = proxiedMediaUrl(settings.shareImage || DEFAULT_SHARE_IMAGE_PATH, origin);
   const canonical = `${origin}/`;
 
   html = html
