@@ -4514,7 +4514,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     var accountEmail=String(detail.email||selectedAuthEmail||'').trim();
     var reason=String(detail.reason||'').trim();
     if(appeal){
-      var params=new URLSearchParams({subject:'Apelação a banimento - BETV',body:'Olá, gostaria de solicitar a revisão do banimento da minha conta BETV.'+(accountEmail?'\n\nE-mail da conta: '+accountEmail:'')+(reason?'\nMotivo informado: '+reason:'')+'\n\nExplique aqui por que o acesso deve ser restaurado:'});
+      var params=new URLSearchParams({subject:'Apelação a banimento',body:'Olá, gostaria de solicitar a revisão do banimento da minha conta BETV.'+(accountEmail?'\n\nE-mail da conta: '+accountEmail:'')+(reason?'\nMotivo informado: '+reason:'')+'\n\nExplique aqui por que o acesso deve ser restaurado:'});
       appeal.href='mailto:billieilishtv@gmail.com?'+params.toString();
       appeal.removeAttribute('target');
       appeal.removeAttribute('rel');
