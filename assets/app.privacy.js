@@ -1850,6 +1850,9 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       block.dataset.category = normalizeText(category);
       block.dataset.collection = 'mixed';
       block.dataset.homeView = 'default';
+      block.dataset.hasVideos = String(allSectionContents.some(item => (item.collection || 'videos') === 'videos'));
+      block.dataset.hasMovies = String(allSectionContents.some(item => item.collection === 'movies'));
+      block.dataset.hasSeries = String(allSectionContents.some(item => item.collection === 'series'));
       block.innerHTML = `
         <a class="video-rail-title" href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
           <span>${escapeHtml(section.title || 'Seção')}</span>
@@ -2061,6 +2064,21 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         if (isFilmsAndSeriesSection) {
           closeSectionView(false);
           document.querySelector('[data-home-view="films"]')?.click();
+          return;
+        }
+
+        // Se a seção foi vinculada a conteúdos de Vídeos no dashboard,
+        // ela funciona como atalho para a aba Vídeos e mantém a mesma
+        // seção em foco, em vez de abrir uma página isolada.
+        if (section.dataset.hasVideos === 'true') {
+          closeSectionView(false);
+          const videosTab = document.querySelector('[data-home-view="videos"]');
+          videosTab?.click();
+          window.requestAnimationFrame(() => {
+            window.setTimeout(() => {
+              if (!section.hidden) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
+          });
           return;
         }
 
