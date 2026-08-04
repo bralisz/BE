@@ -143,15 +143,17 @@ async function callRpc(url, publishableKey, accessToken, name, body) {
 }
 
 async function tryAdminRpc(url, publishableKey, accessToken, action, userId, reason) {
-  const attempts = [
-    ['admin_manage_user', { p_action: action, p_user_id: userId, p_reason: reason || '' }]
-  ];
-  if (action === 'delete') {
-    attempts.push(
-      ['admin_delete_user', { p_user_id: userId }],
-      ['delete_user_by_admin', { p_user_id: userId }]
-    );
-  }
+  // Exclusão e bloqueio são fluxos separados. A ação "delete" nunca passa
+  // pelo RPC genérico de moderação, evitando que uma exclusão seja tratada
+  // como banimento por uma função antiga do banco.
+  const attempts = action === 'delete'
+    ? [
+        ['admin_delete_user', { p_user_id: userId }],
+        ['delete_user_by_admin', { p_user_id: userId }]
+      ]
+    : [
+        ['admin_manage_user', { p_action: action, p_user_id: userId, p_reason: reason || '' }]
+      ];
 
   let last = null;
   for (const [name, body] of attempts) {
@@ -192,6 +194,12 @@ module.exports = async function adminUserHandler(req, res) {
     }
 
     if (!serviceKey) {
+      if (action === 'delete') {
+        return res.status(503).json({
+          error: 'A exclusão permanente precisa da chave secreta do Supabase no servidor. Configure SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_SECRET_KEY na Vercel.'
+        });
+      }
+
       const rpc = await tryAdminRpc(url, publishableKey, accessToken, action, userId, reason);
       if (rpc?.ok) return res.status(200).json({ ok: true, ...(rpc.body && typeof rpc.body === 'object' ? rpc.body : {}) });
 
@@ -221,14 +229,13 @@ module.exports = async function adminUserHandler(req, res) {
         const updatedProfile = await patchProfile(url, publishableKey, accessToken, userId, {
           banned,
           banned_at: banned ? now : null,
+          ban_reason: banned ? reason : '',
           updated_at: now
         });
         return res.status(200).json({ ok: true, banned, profile: updatedProfile, mode: 'profile' });
       }
 
-      return res.status(503).json({
-        error: 'A exclusão permanente precisa da chave secreta do Supabase no servidor. Configure SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_SECRET_KEY na Vercel.'
-      });
+      return res.status(400).json({ error: 'Ação administrativa não disponível sem a chave secreta.' });
     }
 
     const target = await getAdminUser(url, serviceKey, userId);
@@ -301,6 +308,7 @@ module.exports = async function adminUserHandler(req, res) {
       await patchProfile(url, serviceKey, serviceKey, userId, {
         banned,
         banned_at: banned ? now : null,
+        ban_reason: banned ? reason : '',
         updated_at: now
       });
     } catch (error) {

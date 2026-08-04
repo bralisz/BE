@@ -77,40 +77,6 @@ async function deleteWithServiceRole(url, serviceRoleKey, userId) {
   } catch (_) {}
 }
 
-async function callDeleteRpc(url, publishableKey, accessToken, functionName) {
-  const response = await fetch(`${url}/rest/v1/rpc/${functionName}`, {
-    method: 'POST',
-    headers: {
-      apikey: publishableKey,
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: '{}'
-  });
-  return { response, payload: await readJson(response) };
-}
-
-async function deleteWithDatabaseFunction(url, publishableKey, accessToken) {
-  let last = null;
-  for (const functionName of ['delete_my_account', 'delete_own_account', 'delete_account']) {
-    const result = await callDeleteRpc(url, publishableKey, accessToken, functionName);
-    last = result;
-    if (result.response.ok) return;
-  }
-  const error = new Error(errorMessage(last?.payload, 'A exclusão de conta não está configurada no servidor.'));
-  error.status = last?.response?.status || 503;
-  throw error;
-}
-
-async function accountStillExists(url, publishableKey, accessToken) {
-  for (const delay of [0, 120, 300]) {
-    if (delay) await new Promise(resolve => setTimeout(resolve, delay));
-    const { response, payload } = await getAuthenticatedUser(url, publishableKey, accessToken);
-    if (!response.ok || !payload?.id) return false;
-  }
-  return true;
-}
-
 module.exports = async function deleteAccountHandler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   res.setHeader('Pragma', 'no-cache');
@@ -133,18 +99,17 @@ module.exports = async function deleteAccountHandler(req, res) {
       return res.status(401).json({ error: errorMessage(user, 'Sessão inválida ou expirada.') });
     }
 
-    if (serviceRoleKey) {
-      await deleteWithServiceRole(url, serviceRoleKey, user.id);
-    } else {
-      await deleteWithDatabaseFunction(url, publishableKey, accessToken);
-      if (await accountStillExists(url, publishableKey, accessToken)) {
-        return res.status(503).json({
-          error: 'A exclusão permanente precisa da chave secreta do Supabase no servidor. Configure SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_SECRET_KEY na Vercel.'
-        });
-      }
+    if (!serviceRoleKey) {
+      return res.status(503).json({
+        error: 'A exclusão permanente precisa da chave secreta do Supabase no servidor. Configure SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_SECRET_KEY na Vercel.'
+      });
     }
 
-    return res.status(200).json({ ok: true, deleted: true, userId: user.id });
+    // Exclusão própria é sempre permanente: não altera ban_duration nem marca
+    // o perfil como banido. O usuário é removido diretamente do Supabase Auth.
+    await deleteWithServiceRole(url, serviceRoleKey, user.id);
+
+    return res.status(200).json({ ok: true, deleted: true, banned: false, userId: user.id });
   } catch (error) {
     const status = Number(error?.status) >= 400 && Number(error?.status) < 600 ? Number(error.status) : 500;
     return res.status(status).json({ error: error?.message || 'Falha interna ao excluir a conta.' });

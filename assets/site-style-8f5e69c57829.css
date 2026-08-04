@@ -5957,3 +5957,107 @@ body.legal-page-active #dynamicSections{
   .betv-update-action{transition:none}
 }
 
+
+/* Ações do perfil: alinhamento óptico e botão de sair. */
+.profile-page-logout{
+  position:absolute;
+  z-index:3;
+  padding:0;
+  border:1px solid rgba(255,69,58,.34);
+  border-radius:50%;
+  background:rgba(28,15,16,.88);
+  color:#ff453a;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  line-height:0;
+  -webkit-appearance:none;
+  appearance:none;
+  box-shadow:0 12px 34px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.06);
+  transition:transform .2s ease,background .2s ease,border-color .2s ease;
+}
+.profile-page-logout:hover{
+  border-color:rgba(255,69,58,.62);
+  background:rgba(75,22,24,.9);
+}
+.profile-page-logout:active{transform:scale(.96)}
+.profile-page-logout:disabled{opacity:.55;cursor:wait}
+.profile-page-logout svg{display:block;width:23px;height:23px;overflow:visible}
+body.profile-page-active{
+  --profile-action-size:56px;
+  --profile-action-gap:16px;
+  --profile-action-edge:24px;
+  --profile-action-top:24px;
+}
+body.profile-page-active .home-notification-menu,
+body.profile-page-active .profile-page-more,
+body.profile-page-active .profile-page-logout{
+  right:var(--profile-action-edge)!important;
+  width:var(--profile-action-size)!important;
+  height:var(--profile-action-size)!important;
+  min-width:var(--profile-action-size)!important;
+  min-height:var(--profile-action-size)!important;
+  box-sizing:border-box!important;
+  margin:0!important;
+}
+body.profile-page-active .home-notification-menu{top:var(--profile-action-top)!important}
+body.profile-page-active .home-notification-menu .notification-button{
+  width:100%!important;
+  height:100%!important;
+  min-width:100%!important;
+  min-height:100%!important;
+  margin:0!important;
+}
+body.profile-page-active .profile-page-more{
+  top:calc(var(--profile-action-top) + var(--profile-action-size) + var(--profile-action-gap))!important;
+  padding:0!important;
+  line-height:0!important;
+}
+body.profile-page-active .profile-page-logout{
+  top:calc(var(--profile-action-top) + var(--profile-action-size) + var(--profile-action-gap) + var(--profile-action-size) + var(--profile-action-gap))!important;
+}
+body.profile-page-active .notification-button svg,
+body.profile-page-active .mobile-notification-button svg,
+body.profile-page-active .profile-page-more svg,
+body.profile-page-active .profile-page-logout svg{
+  display:block;
+  margin:auto;
+}
+body.profile-page-active .profile-page-more svg{width:22px!important;height:22px!important;transform:translateY(-.5px)}
+
+@media(max-width:760px){
+  body.profile-page-active{
+    --profile-action-size:46px;
+    --profile-action-gap:14px;
+    --profile-action-edge:16px;
+    --profile-action-top:calc(22px + env(safe-area-inset-top));
+  }
+  body.profile-page-active .mobile-header-actions{
+    top:var(--profile-action-top)!important;
+    right:var(--profile-action-edge)!important;
+    width:var(--profile-action-size)!important;
+    height:var(--profile-action-size)!important;
+  }
+  body.profile-page-active .mobile-notification-button{
+    width:var(--profile-action-size)!important;
+    height:var(--profile-action-size)!important;
+    min-width:var(--profile-action-size)!important;
+    min-height:var(--profile-action-size)!important;
+    margin:0!important;
+  }
+  body.profile-page-active .profile-page-more,
+  body.profile-page-active .profile-page-logout{
+    right:var(--profile-action-edge)!important;
+    width:var(--profile-action-size)!important;
+    height:var(--profile-action-size)!important;
+    min-width:var(--profile-action-size)!important;
+    min-height:var(--profile-action-size)!important;
+  }
+  body.profile-page-active .profile-page-more{
+    top:calc(var(--profile-action-top) + var(--profile-action-size) + var(--profile-action-gap))!important;
+  }
+  body.profile-page-active .profile-page-logout{
+    top:calc(var(--profile-action-top) + var(--profile-action-size) + var(--profile-action-gap) + var(--profile-action-size) + var(--profile-action-gap))!important;
+  }
+  .profile-page-logout svg{width:21px;height:21px}
+}

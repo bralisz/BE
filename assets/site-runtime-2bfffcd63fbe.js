@@ -3433,6 +3433,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     var profilePageMetaLabel=document.getElementById('profilePageMetaLabel');
     var profilePageMemberSince=document.getElementById('profilePageMemberSince');
     var profilePageMore=document.getElementById('profilePageMore');
+    var profilePageLogout=document.getElementById('profilePageLogout');
     var settingsPage=document.getElementById('settingsPage');
     var settingsPageBody=document.getElementById('settingsPageBody');
     var bannerPicker=document.getElementById('bannerPicker');
@@ -3837,8 +3838,23 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       }finally{submit.disabled=false;}
     });
 
+    async function logoutFromProfile(){
+      if(!profilePageLogout||profilePageLogout.disabled)return;
+      profilePageLogout.disabled=true;
+      profilePageLogout.setAttribute('aria-busy','true');
+      try{
+        await auth.signOut();
+        location.replace('/#login');
+      }catch(error){
+        profilePageLogout.disabled=false;
+        profilePageLogout.removeAttribute('aria-busy');
+        console.error('Não foi possível sair da conta:',error);
+        alert('Não foi possível sair da conta. Tente novamente.');
+      }
+    }
+
     function openProfile(){openPublicProfile(true);}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){if(!auth.currentUser)return;if(isConfigRoute())openSettingsPage(false);else if(isProfileRoute())openPublicProfile(false);else closePublicPages(false);});
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){openSettingsPage(true);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);document.getElementById('settingsClosePage').addEventListener('click',function(){openPublicProfile(true);});document.querySelectorAll('[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){if(auth.currentUser)openPublicProfile(false);});window.addEventListener('popstate',function(){if(!auth.currentUser)return;if(isConfigRoute())openSettingsPage(false);else if(isProfileRoute())openPublicProfile(false);else closePublicPages(false);});
     auth.onChange(async function(currentUser){
       dashboard.hidden=true;
       var isAdmin=false;
@@ -4215,7 +4231,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     }
     window.addEventListener('hashchange',handlePublicRoute);
     window.addEventListener('popstate',handlePublicRoute);
-    window.setInterval(function(){if(auth.currentUser)enforceAccountAccess(auth.currentUser);},60000);
+    window.setInterval(function(){if(auth.currentUser)enforceAccountAccess(auth.currentUser);},10000);
   }
 
   async function startAuthentication(){

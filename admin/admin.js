@@ -641,14 +641,14 @@
       document.querySelectorAll('[data-user-delete]').forEach(button => button.onclick = async () => {
         const profile = items.find(item => String(item.id) === String(button.dataset.userDelete));
         const label = profile.displayName || profile.email || profile.id;
-        if (!confirm(`Apagar permanentemente a conta de ${label}? Esta ação remove o acesso e não pode ser desfeita.`)) return;
+        if (!confirm(`Apagar permanentemente a conta de ${label}? A conta será excluída, não banida, e esta ação não pode ser desfeita.`)) return;
         button.disabled = true;
         try {
           await adminUserRequest('delete', profile.id);
           items = items.filter(item => String(item.id) !== String(profile.id));
           draw();
           $('.users-total strong').textContent = String(items.length);
-          toast('Conta removida e acesso bloqueado.');
+          toast('Conta apagada permanentemente.');
           await logAction('user_deleted', 'users', profile.id, `Conta apagada: ${profile.email || profile.id}`);
         } catch (error) {
           toast(error.message, 'err');

@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const DEFAULT_SHARE_IMAGE_PATH = '/assets/logo.png';
+const DEFAULT_SHARE_IMAGE_PATH = '/assets/login-admin-banner.jpg';
 
 function supabaseConfig() {
   return {
@@ -124,13 +124,12 @@ function injectSocialMetadata(html, settings, origin) {
 <meta property="og:url" content="${attr(canonical)}">
 <meta property="og:image" content="${attr(image)}">
 <meta property="og:image:secure_url" content="${attr(image)}">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:alt" content="${attr(title)}">
+<meta property="og:image:alt" content="Banner do ${attr(title)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${attr(title)}">
 <meta name="twitter:description" content="${attr(description)}">
 <meta name="twitter:image" content="${attr(image)}">
-<meta name="twitter:image:alt" content="${attr(title)}">
+<meta name="twitter:image:alt" content="Banner do ${attr(title)}">
 <link rel="canonical" href="${attr(canonical)}">`;
 
   return html.replace('</title>', `</title>${metadata}`);

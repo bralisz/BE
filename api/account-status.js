@@ -40,6 +40,12 @@ module.exports = async function accountStatusHandler(req, res) {
     });
     const sessionUser = await parseJson(userResponse);
     if (!userResponse.ok || !sessionUser?.id) {
+      const authCode = String(sessionUser?.code || sessionUser?.error_code || '').toLowerCase();
+      const authMessage = String(sessionUser?.msg || sessionUser?.message || '').toLowerCase();
+      const isBanned = authCode === 'user_banned' || authMessage.includes('banned');
+      if (isBanned) {
+        return res.status(200).json({ ok: true, banned: true, reason: '', bannedAt: '' });
+      }
       return res.status(401).json({ error: sessionUser?.msg || sessionUser?.message || 'Sessão inválida.' });
     }
 
