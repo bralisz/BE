@@ -6690,14 +6690,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }catch(_){return '';}
   }
 
+  function replaceNotificationImageMarkdown(value,onImage){
+    // Exclusivo das notificações. Aceita:
+    // [](https://site/imagem.png) e ![](https://site/imagem.png)
+    // Também aceita a forma tradicional ![descrição](https://site/imagem.png).
+    var pattern=/(?:!\[([^\]\r\n]*)\]|\[\s*\])\(\s*(?:<([^>\r\n]+)>|([^\s)\r\n]+))\s*(?:["']([^"'\r\n]*)["'])?\s*\)/g;
+    return String(value||'').replace(pattern,function(match,alt,angleUrl,plainUrl){
+      var safeUrl=safeNotificationImageUrl(angleUrl||plainUrl||'');
+      if(!safeUrl)return match;
+      return onImage(safeUrl,String(alt||'').trim());
+    });
+  }
+
   function renderNotificationMarkdown(value){
     var images=[];
-    var source=String(value||'').replace(/!?\[\s*\]\(\s*([^)]+?)\s*\)/g,function(match,url){
-      var safeUrl=safeNotificationImageUrl(url);
-      if(!safeUrl)return match;
+    var source=replaceNotificationImageMarkdown(value,function(safeUrl,alt){
       var token='BETVNOTIFICATIONIMAGE'+images.length+'TOKEN';
       images.push('<a class="notification-markdown-image" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagem em tamanho completo">'+
-        '<img loading="lazy" decoding="async" src="'+esc(safeUrl)+'" alt="Imagem da notificação">'+
+        '<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(safeUrl)+'" alt="'+esc(alt||'Imagem da notificação')+'">'+
       '</a>');
       return token;
     });
@@ -6706,7 +6716,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function notificationPlainText(value){
-    var source=String(value||'').replace(/!?\[\s*\]\(\s*[^)]+?\s*\)/g,' ');
+    var source=replaceNotificationImageMarkdown(value,function(){return ' ';});
     return window.beMarkdownPlainText?window.beMarkdownPlainText(source):source.replace(/\s+/g,' ').trim();
   }
 
