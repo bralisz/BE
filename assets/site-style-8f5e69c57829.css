@@ -6061,3 +6061,120 @@ body.profile-page-active .profile-page-more svg{width:22px!important;height:22px
   }
   .profile-page-logout svg{width:21px;height:21px}
 }
+
+/* Atualização: páginas dedicadas de Filmes/Séries e seletores mais leves. */
+body.section-catalog-active #dynamicSections.section-view-mode > .video-rail-section:not(.section-view-active),
+body.section-catalog-active #dynamicSections.section-view-mode > .film-library-section:not(.section-view-active){
+  display:none!important;
+}
+
+/* Evita blur e repinturas pesadas enquanto a galeria está aberta. */
+.avatar-picker-backdrop,
+.banner-picker-backdrop.avatar-picker-backdrop{
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+.avatar-picker-header,
+.banner-picker-header.avatar-picker-header,
+.avatar-picker-footer,
+.banner-picker-footer.avatar-picker-footer,
+.avatar-category,
+.banner-group,
+.avatar-rail-arrow{
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+.avatar-picker-modal,
+.banner-picker-modal.avatar-picker-modal{
+  contain:layout paint style;
+}
+.avatar-category,
+.banner-group{
+  content-visibility:auto;
+  contain:layout paint style;
+  contain-intrinsic-size:auto 260px;
+}
+.avatar-option,
+.banner-option{
+  contain:layout paint;
+}
+.avatar-option img,
+.banner-option img{
+  background:#111722;
+}
+.avatar-option img:not([src]),
+.banner-option img:not([src]){
+  opacity:0;
+}
+.avatar-option img[src],
+.banner-option img[src]{
+  opacity:1;
+  transition:opacity .12s linear;
+}
+
+@media(max-width:760px){
+  /* A página completa de uma seção nunca deixa Filmes/Séries irmãos visíveis. */
+  body.section-catalog-active #dynamicSections.section-view-mode > .video-rail-section:not(.section-view-active),
+  body.section-catalog-active #dynamicSections.section-view-mode > .film-library-section:not(.section-view-active){
+    display:none!important;
+  }
+
+  /* Ao escolher avatar ou banner, mostra apenas a interface do seletor. */
+  body.avatar-picker-active #mobileAppBar,
+  body.avatar-picker-active .mobile-app-bar,
+  body.avatar-picker-active .topbar-wrap,
+  body.avatar-picker-active .mobile-drawer,
+  body.avatar-picker-active .mobile-drawer-backdrop,
+  body.avatar-picker-active .mobile-footer-support-cta,
+  body.banner-picker-active #mobileAppBar,
+  body.banner-picker-active .mobile-app-bar,
+  body.banner-picker-active .topbar-wrap,
+  body.banner-picker-active .mobile-drawer,
+  body.banner-picker-active .mobile-drawer-backdrop,
+  body.banner-picker-active .mobile-footer-support-cta{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  body.avatar-picker-active,
+  body.banner-picker-active{
+    overflow:hidden!important;
+    background:#05070b!important;
+  }
+  body.avatar-picker-active .avatar-picker-backdrop,
+  body.banner-picker-active .banner-picker-backdrop{
+    z-index:20080!important;
+    background:#05070b!important;
+  }
+  body.avatar-picker-active .avatar-picker-modal,
+  body.banner-picker-active .banner-picker-modal{
+    height:100dvh!important;
+    max-height:100dvh!important;
+    background:#05070b!important;
+  }
+  body.avatar-picker-active .avatar-picker-header,
+  body.banner-picker-active .banner-picker-header{
+    padding-top:max(20px,env(safe-area-inset-top))!important;
+    background:#080c13!important;
+    box-shadow:none!important;
+  }
+  body.avatar-picker-active .avatar-picker-body,
+  body.banner-picker-active .banner-picker-body{
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .avatar-category,
+  .banner-group{
+    background:#10151d!important;
+    box-shadow:none!important;
+  }
+  .avatar-option,
+  .banner-option{
+    box-shadow:none!important;
+    transition:border-color .12s linear!important;
+  }
+  .avatar-option:hover,
+  .banner-option:hover{
+    transform:none!important;
+  }
+}

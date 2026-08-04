@@ -2078,7 +2078,13 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     }
     host.classList.remove('section-view-mode');
     document.body.classList.remove('section-catalog-active');
-    host.querySelectorAll('.video-rail-section').forEach(section => section.classList.remove('section-view-active'));
+    host.querySelectorAll('.video-rail-section').forEach(section => {
+      section.classList.remove('section-view-active');
+      if (section.dataset.sectionViewPreviousHidden !== undefined) {
+        section.hidden = section.dataset.sectionViewPreviousHidden === 'true';
+        delete section.dataset.sectionViewPreviousHidden;
+      }
+    });
     host.querySelectorAll('.section-view-back,.section-view-mobile-home').forEach(button => button.remove());
     activeSectionView = null;
     if (scrollHome && active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2093,8 +2099,13 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     if (host.classList.contains('section-view-mode') && activeSectionView === section) return;
     closeSectionView(false);
     activeSectionView = section;
+    host.querySelectorAll('.video-rail-section').forEach(item => {
+      item.dataset.sectionViewPreviousHidden = String(Boolean(item.hidden));
+      item.hidden = item !== section;
+    });
     host.classList.add('section-view-mode');
     document.body.classList.add('section-catalog-active');
+    section.hidden = false;
     section.classList.add('section-view-active');
     const rail = section.querySelector('.video-rail');
     const allItems = section.querySelector('.section-view-all-items');
@@ -2108,9 +2119,10 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
           if (collection !== requestedCollection) card.remove();
         });
         const hasMatchingItems = Boolean(filteredItems.querySelector('.video-card'));
+        const emptyLabel = requestedCollection === 'movies' ? 'Nenhum filme publicado nesta seção.' : requestedCollection === 'series' ? 'Nenhuma série publicada nesta seção.' : 'Nenhum vídeo publicado nesta seção.';
         rail.innerHTML = hasMatchingItems
           ? filteredItems.innerHTML
-          : '<p class="video-rail-empty">Nenhum vídeo publicado nesta seção.</p>';
+          : '<p class="video-rail-empty">'+emptyLabel+'</p>';
       } else {
         rail.innerHTML = allItems.innerHTML;
       }
@@ -2170,6 +2182,24 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         if (isFilmsAndSeriesSection) {
           closeSectionView(false);
           document.querySelector('[data-home-view="films"]')?.click();
+          return;
+        }
+
+        // Filmes e Séries abrem em páginas dedicadas. Mesmo que uma seção
+        // tenha vínculos mistos no dashboard, o catálogo mostra somente o
+        // tipo indicado pelo título/categoria clicado.
+        const explicitCollection = normalizeText(section.dataset.collection || '');
+        const dedicatedCollection = explicitCollection === 'movies' || explicitCollection === 'series'
+          ? explicitCollection
+          : ([sectionTitle, sectionCategory].some(value => ['filme','filmes','movie','movies'].includes(value))
+              ? 'movies'
+              : ([sectionTitle, sectionCategory].some(value => ['serie','series'].includes(value)) ? 'series' : ''));
+        if (dedicatedCollection) {
+          closeSectionView(false);
+          document.querySelector('[data-home-view="films"]')?.click();
+          window.requestAnimationFrame(() => {
+            window.setTimeout(() => openSectionView(section, { collection: dedicatedCollection }), 80);
+          });
           return;
         }
 
@@ -3458,6 +3488,12 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     var settingsSaveToast=document.getElementById('settingsSaveToast');
     var settingsConfirmResolver=null;
     var settingsToastTimer=null;
+    var pickerGalleryCache=null;
+    var pickerGalleryPromise=null;
+    var avatarGalleryRendered=false;
+    var bannerGalleryRendered=false;
+    var avatarImageObserver=null;
+    var bannerImageObserver=null;
 
     function escapePublic(value){return String(value||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     function avatarCacheKey(user){return 'beSelectedAvatar:'+(user&&user.uid?user.uid:'guest');}
@@ -3473,8 +3509,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       document.body.classList.add('settings-page-active');
       if(!isConfigRoute())replacePublicRoute('/config');
     }
-    function closeAvatarPicker(){var returnView=avatarPickerReturnView;avatarPicker.hidden=true;avatarPickerReturnView='';syncBodyScroll();if(returnView==='settings')keepSettingsOpen();}
-    function closeBannerPicker(){var returnView=bannerPickerReturnView;bannerPicker.hidden=true;bannerPickerReturnView='';syncBodyScroll();if(returnView==='settings')keepSettingsOpen();}
+    function closeAvatarPicker(){var returnView=avatarPickerReturnView;avatarPicker.hidden=true;avatarPickerReturnView='';document.body.classList.remove('avatar-picker-active');if(avatarImageObserver){avatarImageObserver.disconnect();avatarImageObserver=null;}syncBodyScroll();if(returnView==='settings')keepSettingsOpen();}
+    function closeBannerPicker(){var returnView=bannerPickerReturnView;bannerPicker.hidden=true;bannerPickerReturnView='';document.body.classList.remove('banner-picker-active');if(bannerImageObserver){bannerImageObserver.disconnect();bannerImageObserver=null;}syncBodyScroll();if(returnView==='settings')keepSettingsOpen();}
     function closeProfile(){profileModal.hidden=true;syncBodyScroll();}
     function resolveSettingsConfirm(value){
       if(!settingsSaveConfirm||settingsSaveConfirm.hidden)return;
@@ -3513,41 +3549,94 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       return String(category||'Outros').trim()||'Outros';
     }
 
+    async function loadPickerGallery(){
+      if(Array.isArray(pickerGalleryCache))return pickerGalleryCache;
+      if(!pickerGalleryPromise){
+        pickerGalleryPromise=beBackend.data.list('gallery',{orderBy:'order',direction:'asc'}).then(function(items){
+          pickerGalleryCache=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&item.imageUrl;});
+          return pickerGalleryCache;
+        }).finally(function(){pickerGalleryPromise=null;});
+      }
+      return pickerGalleryPromise;
+    }
+
+    function activatePickerImages(root,kind){
+      if(!root)return;
+      var images=Array.from(root.querySelectorAll('img[data-picker-src]'));
+      if(!images.length)return;
+      var hydrate=function(image){
+        var src=image.dataset.pickerSrc||'';
+        if(!src)return;
+        image.src=src;
+        image.removeAttribute('data-picker-src');
+      };
+      if(!('IntersectionObserver' in window)){images.forEach(hydrate);return;}
+      if(kind==='avatar'&&avatarImageObserver)avatarImageObserver.disconnect();
+      if(kind==='banner'&&bannerImageObserver)bannerImageObserver.disconnect();
+      var observer=new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){if(!entry.isIntersecting)return;hydrate(entry.target);observer.unobserve(entry.target);});
+      },{root:root,rootMargin:'260px 220px',threshold:.01});
+      images.forEach(function(image){observer.observe(image);});
+      if(kind==='avatar')avatarImageObserver=observer;else bannerImageObserver=observer;
+    }
+
+    function syncAvatarPickerSelection(){
+      var current=selectedAvatar||selectedProfileAvatar(currentProfile)||'';
+      avatarPickerBody.querySelectorAll('.avatar-option').forEach(function(option){option.classList.toggle('selected',option.dataset.avatarUrl===current);});
+    }
+
+    function bindAvatarPickerSelection(){
+      if(avatarPickerBody.dataset.selectionBound==='true')return;
+      avatarPickerBody.dataset.selectionBound='true';
+      avatarPickerBody.addEventListener('click',async function(event){
+        var button=event.target.closest('[data-avatar-url]');
+        if(!button||!avatarPickerBody.contains(button)||button.disabled)return;
+        var url=button.dataset.avatarUrl||'';
+        var returnView=avatarPickerReturnView;
+        button.disabled=true;
+        try{
+          if(auth.currentUser){
+            var savedProfile=await beBackend.profiles.setAvatar(auth.currentUser.uid,url,button.dataset.avatarId);
+            if(savedProfile)currentProfile=savedProfile;
+          }else{currentProfile.avatarUrl=url;}
+          selectedAvatar=(currentProfile&&currentProfile.avatarUrl)||url;
+          setMainAvatar(selectedAvatar);
+          localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
+          syncAvatarPickerSelection();
+          if(returnView==='settings'){renderSettingsPage();keepSettingsOpen();showSettingsSaved();}
+          setTimeout(closeAvatarPicker,120);
+        }catch(error){
+          button.disabled=false;
+          console.warn('Avatar não salvo no perfil:',error.message);
+          alert('Não foi possível salvar o avatar. Tente novamente.');
+        }
+      });
+    }
+
     async function openAvatarPicker(){
       avatarPickerReturnView=document.body.classList.contains('settings-page-active')||isConfigRoute()?'settings':(document.body.classList.contains('profile-page-active')?'profile':'');
-      toggleDropdown(false);avatarPicker.hidden=false;syncBodyScroll();
+      toggleDropdown(false);document.body.classList.add('avatar-picker-active');avatarPicker.hidden=false;syncBodyScroll();
+      bindAvatarPickerSelection();
+      if(avatarGalleryRendered){
+        syncAvatarPickerSelection();
+        activatePickerImages(avatarPickerBody,'avatar');
+        return;
+      }
       avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Carregando avatares…</div>';
       try{
-        var items=(await beBackend.data.list('gallery',{orderBy:'order',direction:'asc'})).filter(function(item){var type=String(item.itemType||'').toLowerCase();return item.active!==false&&item.imageUrl&&type!=='banner';});
+        var items=(await loadPickerGallery()).filter(function(item){var type=String(item.itemType||'').toLowerCase();return type!=='banner'&&!/banner/i.test(String(item.category||''));});
         if(!items.length){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Nenhum avatar disponível no momento.</div>';return;}
         var groups={};
         items.forEach(function(item){var cat=(item.category||'Outros').trim()||'Outros';(groups[cat]||(groups[cat]=[])).push(item);});
         avatarPickerBody.innerHTML='<div class="avatar-category-columns">'+Object.keys(groups).map(function(cat){
-          return '<section class="avatar-category"><h3>'+escapePublic(avatarCategoryTitle(cat))+'</h3><div class="avatar-rail-shell"><button class="avatar-rail-arrow prev" type="button" aria-label="Ver avatares anteriores" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button><div class="avatar-options">'+groups[cat].map(function(item){return '<button class="avatar-option '+(selectedAvatar===item.imageUrl?'selected':'')+'" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'" aria-label="Avatar da categoria '+escapePublic(cat)+'"><img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(item.imageUrl):item.imageUrl)+'" alt="Avatar da categoria '+escapePublic(cat)+'"></button>';}).join('')+'</div><button class="avatar-rail-arrow next" type="button" aria-label="Ver mais avatares"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button></div></section>';
+          return '<section class="avatar-category"><h3>'+escapePublic(avatarCategoryTitle(cat))+'</h3><div class="avatar-rail-shell"><button class="avatar-rail-arrow prev" type="button" aria-label="Ver avatares anteriores" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button><div class="avatar-options">'+groups[cat].map(function(item){var imageUrl=window.beMediaUrl?window.beMediaUrl(item.imageUrl):item.imageUrl;return '<button class="avatar-option" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'" aria-label="Avatar da categoria '+escapePublic(cat)+'"><img data-picker-src="'+escapePublic(imageUrl)+'" loading="lazy" decoding="async" fetchpriority="low" width="160" height="160" alt="Avatar da categoria '+escapePublic(cat)+'"></button>';}).join('')+'</div><button class="avatar-rail-arrow next" type="button" aria-label="Ver mais avatares"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button></div></section>';
         }).join('')+'</div>';
+        avatarGalleryRendered=true;
         setupAvatarRails();
-        avatarPickerBody.querySelectorAll('[data-avatar-url]').forEach(function(button){button.addEventListener('click',async function(){
-          var url=button.dataset.avatarUrl;button.disabled=true;
-          try{
-            if(auth.currentUser){
-              var savedProfile=await beBackend.profiles.setAvatar(auth.currentUser.uid,url,button.dataset.avatarId);
-              if(savedProfile)currentProfile=savedProfile;
-            }else{currentProfile.avatarUrl=url;}
-            selectedAvatar=(currentProfile&&currentProfile.avatarUrl)||url;
-            setMainAvatar(selectedAvatar);
-            localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
-            avatarPickerBody.querySelectorAll('.avatar-option').forEach(function(x){x.classList.toggle('selected',x===button);});
-            if(avatarPickerReturnView==='settings'){renderSettingsPage();keepSettingsOpen();showSettingsSaved();}
-            setTimeout(closeAvatarPicker,180);
-          }catch(error){
-            button.disabled=false;
-            console.warn('Avatar não salvo no perfil:',error.message);
-            alert('Não foi possível salvar o avatar. Tente novamente.');
-          }
-        });});
+        syncAvatarPickerSelection();
+        activatePickerImages(avatarPickerBody,'avatar');
       }catch(error){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Não foi possível carregar a galeria.</div>';console.warn(error);}
     }
-
 
 
     function profileFallbackAvatar(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>';}
@@ -3715,43 +3804,60 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         finally{submit.disabled=false;}
       });
     }
+    function syncBannerPickerSelection(){
+      var current=resolvedProfileBanner(auth.currentUser).bannerUrl;
+      bannerPickerBody.querySelectorAll('.banner-option').forEach(function(option){option.classList.toggle('selected',option.dataset.bannerUrl===current);});
+    }
+    function bindBannerPickerSelection(){
+      if(bannerPickerBody.dataset.selectionBound==='true')return;
+      bannerPickerBody.dataset.selectionBound='true';
+      bannerPickerBody.addEventListener('click',async function(event){
+        var button=event.target.closest('[data-banner-url]');
+        if(!button||!bannerPickerBody.contains(button)||button.disabled||!auth.currentUser)return;
+        var returnView=bannerPickerReturnView;
+        button.disabled=true;
+        var bannerUrl=button.dataset.bannerUrl||'';
+        var bannerId=button.dataset.bannerId||'';
+        currentProfile={...(currentProfile||{}),bannerUrl:bannerUrl,bannerId:bannerId};
+        try{localStorage.setItem('beProfileBanner:'+auth.currentUser.uid,JSON.stringify({bannerUrl:bannerUrl,bannerId:bannerId,updatedAt:beBackend.now()}));}catch(_){ }
+        syncBannerPickerSelection();
+        applyProfileBanner(bannerUrl);
+        renderProfilePage();
+        try{
+          var savedProfile=await beBackend.profiles.setBanner(auth.currentUser.uid,bannerUrl,bannerId);
+          if(savedProfile)currentProfile={...savedProfile,bannerUrl:bannerUrl,bannerId:bannerId};
+        }catch(error){
+          console.warn('O banner foi mantido no perfil local; o banco não aceitou a atualização:',error&&error.message?error.message:error);
+        }
+        renderProfilePage();
+        if(returnView==='settings'||document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();showSettingsSaved();}
+        setTimeout(closeBannerPicker,100);
+      });
+    }
     async function openBannerPicker(){
       bannerPickerReturnView=document.body.classList.contains('settings-page-active')||isConfigRoute()?'settings':'';
-      bannerPicker.hidden=false;syncBodyScroll();
+      document.body.classList.add('banner-picker-active');bannerPicker.hidden=false;syncBodyScroll();
+      bindBannerPickerSelection();
+      if(bannerGalleryRendered){
+        syncBannerPickerSelection();
+        activatePickerImages(bannerPickerBody,'banner');
+        return;
+      }
       bannerPickerBody.innerHTML='<div class="banner-picker-empty">Carregando banners…</div>';
       try{
-        var items=(await beBackend.data.list('gallery',{orderBy:'order',direction:'asc'})).filter(function(item){
-          if(item.active===false||!item.imageUrl)return false;
+        var items=(await loadPickerGallery()).filter(function(item){
           var type=String(item.itemType||'').toLowerCase();
-          return type==='banner' || /banner/i.test(String(item.category||''));
+          return type==='banner'||/banner/i.test(String(item.category||''));
         });
         if(!items.length){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Nenhum banner disponível no momento.</div>';return;}
         var groups={};
         items.forEach(function(item){var cat=(item.category||'Banners de perfil').trim()||'Banners de perfil';(groups[cat]||(groups[cat]=[])).push(item);});
-        var selectedBanner=resolvedProfileBanner(auth.currentUser).bannerUrl;
         bannerPickerBody.innerHTML=Object.keys(groups).map(function(cat){
-          return '<section class="banner-group"><h3>'+escapePublic(cat)+'</h3><div class="banner-grid">'+groups[cat].map(function(item){return '<button class="banner-option '+(selectedBanner===item.imageUrl?'selected':'')+'" type="button" data-banner-url="'+escapePublic(item.imageUrl)+'" data-banner-id="'+escapePublic(item.id)+'" aria-label="Selecionar banner de perfil"><img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(item.imageUrl):item.imageUrl)+'" alt="Banner de perfil"></button>';}).join('')+'</div></section>';
+          return '<section class="banner-group"><h3>'+escapePublic(cat)+'</h3><div class="banner-grid">'+groups[cat].map(function(item){var imageUrl=window.beMediaUrl?window.beMediaUrl(item.imageUrl):item.imageUrl;return '<button class="banner-option" type="button" data-banner-url="'+escapePublic(item.imageUrl)+'" data-banner-id="'+escapePublic(item.id)+'" aria-label="Selecionar banner de perfil"><img data-picker-src="'+escapePublic(imageUrl)+'" loading="lazy" decoding="async" fetchpriority="low" width="640" height="220" alt="Banner de perfil"></button>';}).join('')+'</div></section>';
         }).join('');
-        bannerPickerBody.querySelectorAll('[data-banner-url]').forEach(function(button){button.addEventListener('click',async function(){
-          if(!auth.currentUser)return;
-          button.disabled=true;
-          var bannerUrl=button.dataset.bannerUrl||'';
-          var bannerId=button.dataset.bannerId||'';
-          currentProfile={...(currentProfile||{}),bannerUrl:bannerUrl,bannerId:bannerId};
-          try{localStorage.setItem('beProfileBanner:'+auth.currentUser.uid,JSON.stringify({bannerUrl:bannerUrl,bannerId:bannerId,updatedAt:beBackend.now()}));}catch(_){ }
-          bannerPickerBody.querySelectorAll('.banner-option').forEach(function(option){option.classList.toggle('selected',option===button);});
-          applyProfileBanner(bannerUrl);
-          renderProfilePage();
-          try{
-            var savedProfile=await beBackend.profiles.setBanner(auth.currentUser.uid,bannerUrl,bannerId);
-            if(savedProfile)currentProfile={...savedProfile,bannerUrl:bannerUrl,bannerId:bannerId};
-          }catch(error){
-            console.warn('O banner foi mantido no perfil local; o banco não aceitou a atualização:',error&&error.message?error.message:error);
-          }
-          renderProfilePage();
-          if(bannerPickerReturnView==='settings'||document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();showSettingsSaved();}
-          setTimeout(closeBannerPicker,120);
-        });});
+        bannerGalleryRendered=true;
+        syncBannerPickerSelection();
+        activatePickerImages(bannerPickerBody,'banner');
       }catch(error){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Não foi possível carregar os banners.</div>';console.warn(error);}
     }
     function closeDetailBeforeDedicatedPage(){
