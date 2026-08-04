@@ -4027,6 +4027,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profileFavoritesPicker=document.getElementById('profileFavoritesPicker');
     var profileFavoritesPickerBody=document.getElementById('profileFavoritesPickerBody');
     var profileFavoritesPickerClose=document.getElementById('profileFavoritesPickerClose');
+    var profileFavoritesHeaderSave=document.getElementById('profileFavoritesHeaderSave');
     var profileFavoritesCancel=document.getElementById('profileFavoritesCancel');
     var profileFavoritesSave=document.getElementById('profileFavoritesSave');
     var profileFavoritesSearch=document.getElementById('profileFavoritesSearch');
@@ -4035,6 +4036,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profileFavoritesDraft=[];
     var profileFavoritesCatalog=[];
     var profileFavoritesLastFocus=null;
+    var profileFavoritesReturnPath='';
     var profileSavedSection=document.getElementById('profileSavedSection');
     var profileSavedGrid=document.getElementById('profileSavedGrid');
     var profileSavedCount=document.getElementById('profileSavedCount');
@@ -4409,7 +4411,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           var selectedIndex=profileFavoritesDraft.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(item);});
           var selected=selectedIndex>=0;
           var image=profileFavoriteImage(item);
-          return '<button class="profile-favorites-option'+(selected?' selected':'')+'" type="button" data-profile-favorite-option="'+catalogIndex+'" aria-pressed="'+String(selected)+'">'
+          return '<button class="profile-favorites-option'+(selected?' selected':'')+'" type="button" data-profile-favorite-option="'+catalogIndex+'" data-no-content-open="true" aria-pressed="'+String(selected)+'">'
             +'<span class="profile-favorites-option-media">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
             +'<span class="profile-favorites-option-order">'+(selected?selectedIndex+1:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>')+'</span></span>'
             +'<span class="profile-favorites-option-copy"><strong>'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
@@ -4417,7 +4419,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }).join('')+'</div>';
       }
       if(profileFavoritesSelectionCount)profileFavoritesSelectionCount.textContent=profileFavoritesDraft.length+' de 4';
-      if(profileFavoritesSave)profileFavoritesSave.disabled=profileFavoritesDraft.length!==4;
+      var favoritesReadyToSave=profileFavoritesDraft.length===4;
+      if(profileFavoritesSave)profileFavoritesSave.disabled=!favoritesReadyToSave;
+      if(profileFavoritesHeaderSave)profileFavoritesHeaderSave.disabled=!favoritesReadyToSave;
     }
     function openProfileFavoritesPicker(event){
       if(event&&event.currentTarget)profileFavoritesLastFocus=event.currentTarget;
@@ -4426,6 +4430,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileFavoritesDraft=profileFavoritesItems.slice(0,4);
       profileFavoritesCatalog=profileCatalogContents();
       if(profileFavoritesSearch)profileFavoritesSearch.value='';
+      profileFavoritesReturnPath=location.pathname+(location.search||'');
       renderProfileFavoritesPicker();
       profileFavoritesPicker.hidden=false;
       document.body.classList.add('profile-favorites-picker-active');
@@ -4438,6 +4443,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileFavoritesDraft=[];
       if(profileFavoritesLastFocus&&typeof profileFavoritesLastFocus.focus==='function')profileFavoritesLastFocus.focus({preventScroll:true});
       profileFavoritesLastFocus=null;
+      profileFavoritesReturnPath='';
+    }
+    function restoreProfileFavoritesContext(){
+      document.body.classList.add('profile-page-active');
+      document.body.classList.remove('detail-page-active');
+      if(profilePage){
+        profilePage.hidden=false;
+        profilePage.removeAttribute('hidden');
+      }
+      if(profileFavoritesPicker){
+        profileFavoritesPicker.hidden=false;
+        profileFavoritesPicker.removeAttribute('hidden');
+      }
+      var expected=profileFavoritesReturnPath||location.pathname+(location.search||'');
+      if(expected&&location.pathname+(location.search||'')!==expected){
+        try{history.replaceState({beRoute:'profile'},'',expected);}catch(_){}
+      }
     }
     function toggleProfileFavoriteOption(index){
       var item=profileFavoritesCatalog[index];
@@ -4452,6 +4474,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return;
       }
       renderProfileFavoritesPicker();
+      restoreProfileFavoritesContext();
+      requestAnimationFrame(restoreProfileFavoritesContext);
+      setTimeout(restoreProfileFavoritesContext,80);
     }
     function saveProfileFavorites(){
       if(profileFavoritesDraft.length!==4)return;
@@ -4480,6 +4505,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(profileFavoritesPickerClose)profileFavoritesPickerClose.addEventListener('click',closeProfileFavoritesPicker);
         if(profileFavoritesCancel)profileFavoritesCancel.addEventListener('click',closeProfileFavoritesPicker);
         if(profileFavoritesSave)profileFavoritesSave.addEventListener('click',saveProfileFavorites);
+        if(profileFavoritesHeaderSave)profileFavoritesHeaderSave.addEventListener('click',saveProfileFavorites);
         if(profileFavoritesSearch)profileFavoritesSearch.addEventListener('input',renderProfileFavoritesPicker);
         if(profileFavoritesPickerBody){
           var profileFavoriteTouchHandledUntil=0;
@@ -4513,7 +4539,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             keepFavoritePickerInProfile();
           });
         }
-        profileFavoritesPicker.addEventListener('click',function(event){if(event.target===profileFavoritesPicker)closeProfileFavoritesPicker();});
+        profileFavoritesPicker.addEventListener('click',function(event){
+          var option=event.target&&event.target.closest?event.target.closest('[data-profile-favorite-option]'):null;
+          if(option){
+            event.preventDefault();
+            event.stopPropagation();
+            if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
+            if(Date.now()>=profileFavoriteTouchHandledUntil){
+              toggleProfileFavoriteOption(Number(option.dataset.profileFavoriteOption));
+            }
+            restoreProfileFavoritesContext();
+            return;
+          }
+          if(event.target===profileFavoritesPicker)closeProfileFavoritesPicker();
+        },true);
         document.addEventListener('keydown',function(event){if(event.key==='Escape'&&profileFavoritesPicker&&!profileFavoritesPicker.hidden){event.preventDefault();closeProfileFavoritesPicker();}});
       }
     }

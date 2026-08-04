@@ -291,19 +291,22 @@ module.exports = async function adminUserHandler(req, res) {
     const body = await jsonResponse(response);
     if (!response.ok) throw apiError(body, 'Não foi possível atualizar o bloqueio.', response.status);
 
-    let profileWarning = '';
-    try {
-      await patchProfile(url, serviceKey, serviceKey, userId, {
+    let persistedProfile = null;
+    const moderationRpc = await tryAdminRpc(url, publishableKey, accessToken, action, userId, reason);
+    if (moderationRpc?.ok) {
+      persistedProfile = moderationRpc.body && typeof moderationRpc.body === 'object'
+        ? moderationRpc.body
+        : null;
+    } else {
+      persistedProfile = await patchProfile(url, serviceKey, serviceKey, userId, {
         banned,
         banned_at: banned ? now : null,
         ban_reason: banned ? reason : '',
         updated_at: now
       });
-    } catch (error) {
-      profileWarning = error.message;
     }
 
-    return res.status(200).json({ ok: true, banned, warning: profileWarning || undefined });
+    return res.status(200).json({ ok: true, banned, profile: persistedProfile });
   } catch (error) {
     return res.status(error?.status || 500).json({ error: error?.message || 'Falha interna ao gerenciar o usuário.' });
   }

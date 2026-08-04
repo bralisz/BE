@@ -7389,3 +7389,42 @@ body.profile-favorites-picker-active{overflow:hidden!important}
   .settings-data-copy-outside{margin:-10px 0 18px!important}
   .settings-data-action-card{padding:20px!important}
 }
+
+
+/* Ajuste do ranking e ação rápida de salvar no seletor de Favoritos. */
+@media(min-width:761px){
+  .profile-favorite-rank{
+    left:-14px;
+  }
+}
+.profile-favorites-picker-header-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:12px;
+  flex:0 0 auto;
+}
+.profile-favorites-header-save{
+  min-width:96px;
+  min-height:42px;
+  padding:0 20px;
+  border:0;
+  border-radius:13px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#0a84ff;
+  color:#fff;
+  font:750 14px/1 var(--font-body);
+  box-shadow:0 9px 24px rgba(10,132,255,.24);
+  cursor:pointer;
+}
+.profile-favorites-header-save:hover{background:#168dff}
+.profile-favorites-header-save:active{transform:scale(.97)}
+.profile-favorites-header-save:disabled{
+  background:rgba(118,118,128,.22);
+  color:rgba(255,255,255,.35);
+  box-shadow:none;
+  cursor:not-allowed;
+  transform:none;
+}
