@@ -4473,15 +4473,38 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(profileFavoritesCancel)profileFavoritesCancel.addEventListener('click',closeProfileFavoritesPicker);
         if(profileFavoritesSave)profileFavoritesSave.addEventListener('click',saveProfileFavorites);
         if(profileFavoritesSearch)profileFavoritesSearch.addEventListener('input',renderProfileFavoritesPicker);
-        if(profileFavoritesPickerBody)profileFavoritesPickerBody.addEventListener('click',function(event){
-          var button=event.target.closest('[data-profile-favorite-option]');
-          if(!button)return;
-          event.preventDefault();
-          event.stopPropagation();
-          if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
-          toggleProfileFavoriteOption(Number(button.dataset.profileFavoriteOption));
-          if(!document.body.classList.contains('profile-page-active'))document.body.classList.add('profile-page-active');
-        });
+        if(profileFavoritesPickerBody){
+          var profileFavoriteTouchHandledUntil=0;
+          function keepFavoritePickerInProfile(){
+            document.body.classList.add('profile-page-active');
+            if(profileFavoritesPicker)profileFavoritesPicker.hidden=false;
+          }
+          function stopFavoriteOptionEvent(event){
+            var button=event.target&&event.target.closest?event.target.closest('[data-profile-favorite-option]'):null;
+            if(!button)return null;
+            event.preventDefault();
+            event.stopPropagation();
+            if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
+            return button;
+          }
+          profileFavoritesPickerBody.addEventListener('pointerdown',function(event){
+            stopFavoriteOptionEvent(event);
+          });
+          profileFavoritesPickerBody.addEventListener('pointerup',function(event){
+            var button=stopFavoriteOptionEvent(event);
+            if(!button||event.pointerType==='mouse')return;
+            profileFavoriteTouchHandledUntil=Date.now()+700;
+            toggleProfileFavoriteOption(Number(button.dataset.profileFavoriteOption));
+            keepFavoritePickerInProfile();
+          });
+          profileFavoritesPickerBody.addEventListener('click',function(event){
+            var button=stopFavoriteOptionEvent(event);
+            if(!button)return;
+            if(Date.now()<profileFavoriteTouchHandledUntil)return;
+            toggleProfileFavoriteOption(Number(button.dataset.profileFavoriteOption));
+            keepFavoritePickerInProfile();
+          });
+        }
         profileFavoritesPicker.addEventListener('click',function(event){if(event.target===profileFavoritesPicker)closeProfileFavoritesPicker();});
         document.addEventListener('keydown',function(event){if(event.key==='Escape'&&profileFavoritesPicker&&!profileFavoritesPicker.hidden){event.preventDefault();closeProfileFavoritesPicker();}});
       }
@@ -4591,7 +4614,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner de fundo do perfil e troque o avatar.</p><div class="settings-panel-card"><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></div></section>'
         +    '<section class="settings-section-panel" data-settings-panel="account"'+(settingsActiveTab==='account'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div></section>'
         +    '<section class="settings-section-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões</h1><p class="settings-panel-lead">Gerencie serviços conectados à sua conta.</p><div class="settings-panel-card"><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div></section>'
-        +    '<section class="settings-section-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Seus dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-panel-card"><p class="settings-data-copy">O arquivo é gerado em JSON e reúne conta, perfil, favoritos e preferências essenciais salvas no navegador.</p><div class="settings-data-actions"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><div class="settings-data-privacy-note"><span>Saiba como seus dados são usados e protegidos.</span><a class="settings-data-privacy-button" href="/privacy">Ver privacidade</a></div></div><div class="settings-status" id="settingsExportStatus"></div></div></section>'
+        +    '<section class="settings-section-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Seus dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-panel-card"><p class="settings-data-copy">O arquivo é gerado em JSON e reúne conta, perfil, favoritos e preferências essenciais salvas no navegador.</p><div class="settings-data-actions"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><div class="settings-data-privacy-note"><a class="settings-data-privacy-button" href="/privacy">Ver termos de privacidade</a></div></div><div class="settings-status" id="settingsExportStatus"></div></div></section>'
         +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta e sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></section>'
         +  '</main>'
         +'</div>';

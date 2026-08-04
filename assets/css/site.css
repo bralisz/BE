@@ -6984,7 +6984,7 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
 }
 .profile-favorites-edit:hover{background:rgba(10,132,255,.2);border-color:rgba(10,132,255,.75)}
 .profile-favorites-edit:active{transform:scale(.97)}
-.profile-favorites-content{max-width:1540px;margin:0 auto}
+.profile-favorites-content{max-width:1540px;margin:0 auto;overflow:hidden}
 .profile-favorites-empty{
   width:100%;
   min-height:176px;
@@ -7012,21 +7012,31 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
 .profile-favorites-empty strong{font-size:18px;letter-spacing:-.02em}
 .profile-favorites-empty>span:last-child{color:rgba(255,255,255,.5);font-size:13px}
 .profile-favorites-ranking{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
-  gap:clamp(16px,2.2vw,34px);
+  display:flex;
   align-items:center;
+  gap:clamp(14px,1.5vw,24px);
+  width:100%;
+  padding:4px 2px 15px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scroll-snap-type:x proximity;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
 }
+.profile-favorites-ranking::-webkit-scrollbar{display:none}
 .profile-favorite-ranked-item{
   position:relative;
-  min-width:0;
-  min-height:180px;
-  padding:14px 0 0 clamp(42px,5vw,78px);
+  flex:0 0 clamp(330px,23vw,365px);
+  min-width:330px;
+  min-height:184px;
+  padding:12px 0 0 clamp(68px,5.2vw,88px);
   border:0;
   background:transparent;
   color:#fff;
   text-align:left;
   cursor:pointer;
+  scroll-snap-align:start;
 }
 .profile-favorite-rank{
   position:absolute;
@@ -7035,9 +7045,9 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
   z-index:0;
   transform:translateY(-50%);
   color:#7d828c;
-  font:900 clamp(92px,9vw,154px)/.78 var(--font-display);
+  font:900 clamp(108px,8vw,142px)/.78 var(--font-display);
   letter-spacing:-.09em;
-  opacity:.82;
+  opacity:.86;
   pointer-events:none;
   text-shadow:0 8px 28px rgba(0,0,0,.38);
 }
@@ -7046,7 +7056,7 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
   z-index:1;
   display:block;
   width:100%;
-  aspect-ratio:16/8.6;
+  aspect-ratio:16/8.9;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.13);
   border-radius:15px;
@@ -7251,11 +7261,66 @@ body.profile-favorites-picker-active{overflow:hidden!important}
 }
 .profile-favorites-selection-count.limit{color:#ff9f0a}
 @media(max-width:1100px){
-  .profile-favorites-ranking{gap:16px}
-  .profile-favorite-ranked-item{padding-left:48px}
+  .profile-favorites-ranking{gap:14px}
+  .profile-favorite-ranked-item{flex-basis:330px;min-width:330px;padding-left:68px}
+  .profile-favorite-rank{font-size:108px}
   .profile-favorites-picker-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media(max-width:760px){
   .profile-favorites-section{display:none!important}
   .profile-favorites-picker-backdrop{display:none!important}
+}
+
+
+/* Ajustes finais: alinhamento de Favoritos, sobreposição do ranking e scroll consistente. */
+@media(min-width:761px){
+  .profile-favorites-section{
+    padding:34px clamp(22px,4vw,60px) 58px;
+  }
+  .profile-favorites-heading,
+  .profile-favorites-content{
+    max-width:none;
+    margin-left:0;
+    margin-right:0;
+  }
+  .profile-favorites-heading{
+    margin-bottom:28px;
+  }
+  .profile-favorite-ranked-item{
+    flex:0 0 clamp(390px,23vw,430px);
+    min-width:390px;
+    padding-left:clamp(44px,3.2vw,56px);
+  }
+}
+
+/* O atalho de privacidade fica sozinho ao lado da exportação. */
+.settings-data-privacy-note{
+  gap:0;
+}
+
+/* Mesmo acabamento de scrollbar da Home em todas as áreas roláveis. */
+*{
+  scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,.24) transparent;
+}
+*::-webkit-scrollbar{
+  width:8px;
+  height:8px;
+}
+*::-webkit-scrollbar-track{
+  background:transparent;
+}
+*::-webkit-scrollbar-thumb{
+  min-height:42px;
+  border:2px solid transparent;
+  border-radius:999px;
+  background:rgba(255,255,255,.24);
+  background-clip:padding-box;
+}
+*::-webkit-scrollbar-thumb:hover{
+  background:rgba(255,255,255,.36);
+  background-clip:padding-box;
+}
+*::-webkit-scrollbar-corner{
+  background:transparent;
 }
