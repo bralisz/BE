@@ -2,6 +2,15 @@
 
 ## 1.1.0 — 4 de agosto de 2026
 
+### Perfis públicos compartilháveis
+
+- Rotas `/@usuario` abertas para visitantes, sem exigir login.
+- Visitantes veem somente o botão Home; ele direciona para o login.
+- Usuários autenticados continuam vendo Home, Notificações e Configurações.
+- A resposta pública contém apenas nome, @, aparência escolhida, favoritos e vídeos salvos.
+- E-mail, identificadores internos, permissões, dados de login e demais preferências não são expostos.
+- Perfis sem uma foto escolhida são exibidos sem avatar.
+
 ### Escalabilidade e picos de login
 
 - Agrupamento de consultas simultâneas do mesmo perfil para impedir requisições duplicadas durante a inicialização.

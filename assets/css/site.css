@@ -8049,3 +8049,42 @@ body.detail-page-active #detailRecommendations:not([hidden]){
   }
   .profile-favorites-selection-count{min-width:54px!important}
 }
+
+/* Perfil público compartilhável — 04/08/2026. */
+body.profile-page-active .profile-page-avatar[hidden],
+body.profile-page-active .profile-page-notifications[hidden],
+body.profile-page-active .profile-page-more[hidden]{
+  display:none!important;
+}
+body.profile-page-active .profile-page-info.without-avatar{
+  gap:0!important;
+}
+body.profile-page-active .profile-page-info.without-avatar .profile-page-copy{
+  max-width:min(900px,100%)!important;
+}
+body.profile-page-active .profile-public-empty{
+  cursor:default!important;
+  pointer-events:none!important;
+}
+body.profile-viewer-guest.profile-page-active .profile-page-notifications,
+body.profile-viewer-guest.profile-page-active .profile-page-more,
+body.profile-viewer-guest.profile-page-active .home-notification-menu,
+body.profile-viewer-guest.profile-page-active .mobile-header-actions,
+body.profile-viewer-guest.profile-page-active .profile-page-logout{
+  display:none!important;
+}
+@media(min-width:761px){
+  body.profile-viewer-guest.profile-page-active .profile-page-home{
+    left:auto!important;
+    right:clamp(24px,3vw,46px)!important;
+  }
+}
+@media(max-width:760px){
+  body.profile-page-active .profile-page-info.without-avatar{
+    align-items:center!important;
+  }
+  body.profile-page-active .profile-page-info.without-avatar .profile-page-copy{
+    align-items:center!important;
+    text-align:center!important;
+  }
+}

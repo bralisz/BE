@@ -608,6 +608,43 @@
       if (profile && MODE === 'supabase') cacheProfile(profile);
       return profile;
     },
+    async getPublic(username) {
+      const normalized = normalizeUsername(username);
+      if (!validUsername(normalized)) return null;
+
+      if (MODE === 'local') {
+        const profiles = await data.list('users');
+        const profile = profiles.find(item => normalizeUsername(item && item.username) === normalized);
+        if (!profile) return null;
+        let preferenceData = {};
+        try {
+          const stored = JSON.parse(localStorage.getItem(localPreferenceKey(profile.uid || profile.id)) || 'null');
+          preferenceData = stored && typeof stored === 'object' ? normalizePreferencePayload(stored.data || stored) : {};
+        } catch (_) {}
+        return {
+          displayName: String(profile.displayName || 'Usuário'),
+          username: normalized,
+          avatarUrl: profile.avatarId && profile.avatarUrl ? String(profile.avatarUrl) : '',
+          bannerUrl: profile.bannerId && profile.bannerUrl ? String(profile.bannerUrl) : '',
+          createdAt: String(profile.createdAt || ''),
+          favorites: Array.isArray(preferenceData.profileTopFavorites) ? clone(preferenceData.profileTopFavorites).slice(0, 4) : [],
+          savedContents: Array.isArray(preferenceData.savedContents) ? clone(preferenceData.savedContents).slice(0, 20) : []
+        };
+      }
+
+      try {
+        const response = await fetch(`/api/public-profile?username=${encodeURIComponent(normalized)}`, {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        });
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error(`public_profile_${response.status}`);
+        const payload = await response.json();
+        return payload && typeof payload === 'object' && !Array.isArray(payload) ? clone(payload) : null;
+      } catch (error) {
+        throw backendError('profile/public-unavailable', 'Não foi possível carregar este perfil público.', error);
+      }
+    },
     async ensure(user) {
       if (!user) throw backendError('auth/not-authenticated', 'Faça login para acessar o perfil.');
 

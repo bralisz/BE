@@ -12,6 +12,7 @@ Esta pasta contém as funções executadas no ambiente serverless da Vercel. Ela
 - `export-account.js`: prepara a exportação dos dados da conta;
 - `media.js`: atende solicitações relacionadas a arquivos e mídias do catálogo;
 - `public-data.js`: disponibiliza dados públicos usados pelo site;
+- `public-profile.js`: entrega somente os campos seguros de um perfil compartilhado por `@`;
 - `runtime.js`: fornece configurações públicas de execução;
 - `site-page.js`: trata páginas e rotas públicas da aplicação;
 - `supabase-client.js`: centraliza a criação do cliente Supabase usado pelas funções.
