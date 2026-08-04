@@ -1828,7 +1828,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       const legacyIds = (Array.isArray(section.contentIds) ? section.contentIds : []).map(String);
       const limit = Math.max(1, Number(section.itemLimit || 12));
 
-      let sectionContents = [
+      let allSectionContents = [
         ...allVideos.filter(item => belongsToSection(item, section, legacyIds, 'videos')).map(item => ({ ...item, collection: 'videos' })),
         ...allMovies.filter(item => belongsToSection(item, section, legacyIds, 'movies')).map(item => ({ ...item, collection: 'movies' })),
         ...allSeries.filter(item => belongsToSection(item, section, legacyIds, 'series')).map(item => ({ ...item, collection: 'series' }))
@@ -1836,11 +1836,13 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         const orderDifference = Number(a.order || 0) - Number(b.order || 0);
         if (orderDifference) return orderDifference;
         return String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR');
-      }).slice(0, limit);
+      });
+      let sectionContents = allSectionContents.slice(0, limit);
 
       if (!sectionContents.length && legacyIds.length) {
-        const reads = await Promise.all(legacyIds.slice(0, limit).map(id => beBackend.data.get('contents', id)));
-        sectionContents = reads.filter(item => item && item.active !== false).map(item => ({ ...item, collection: item.collection || 'videos' }));
+        const reads = await Promise.all(legacyIds.map(id => beBackend.data.get('contents', id)));
+        allSectionContents = reads.filter(item => item && item.active !== false).map(item => ({ ...item, collection: item.collection || 'videos' }));
+        sectionContents = allSectionContents.slice(0, limit);
       }
 
       const block = document.createElement('section');
@@ -1863,13 +1865,15 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
           <button class="video-rail-arrow next" type="button" aria-label="Ver mais conteúdos">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
           </button>
-        </div>`;
+        </div>
+        <template class="section-view-all-items">${allSectionContents.length ? allSectionContents.map(item => videoCard(item)).join('') : '<p class="video-rail-empty">Nenhum conteúdo publicado nesta seção.</p>'}</template>`;
       host.append(block);
       setupRail(block);
     }
 
     main.insertAdjacentElement('afterend', host);
     setupContentDetailInteractions(host);
+    setupSectionTitleInteractions(host);
     window.dispatchEvent(new Event('be:catalog-ready'));
   }
 
@@ -1989,6 +1993,70 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         openContentDetail(cardDataWithSection(card), { updateRoute: true });
       });
     });
+  }
+
+  let activeSectionView = null;
+
+  function closeSectionView(scrollHome = false) {
+    const host = document.getElementById('dynamicSections');
+    if (!host || !host.classList.contains('section-view-mode')) return;
+    const active = activeSectionView || host.querySelector('.section-view-active');
+    const activeRail = active?.querySelector?.('.video-rail');
+    if (activeRail && typeof activeRail._beHomeMarkup === 'string') {
+      activeRail.innerHTML = activeRail._beHomeMarkup;
+      delete activeRail._beHomeMarkup;
+      setupContentDetailInteractions(activeRail);
+    }
+    host.classList.remove('section-view-mode');
+    document.body.classList.remove('section-catalog-active');
+    host.querySelectorAll('.video-rail-section').forEach(section => section.classList.remove('section-view-active'));
+    host.querySelectorAll('.section-view-back').forEach(button => button.remove());
+    activeSectionView = null;
+    if (scrollHome && active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function openSectionView(section) {
+    const host = section?.closest?.('#dynamicSections');
+    if (!host || !section) return;
+    if (host.classList.contains('section-view-mode') && activeSectionView === section) return;
+    closeSectionView(false);
+    activeSectionView = section;
+    host.classList.add('section-view-mode');
+    document.body.classList.add('section-catalog-active');
+    section.classList.add('section-view-active');
+    const rail = section.querySelector('.video-rail');
+    const allItems = section.querySelector('.section-view-all-items');
+    if (rail && allItems) {
+      rail._beHomeMarkup = rail.innerHTML;
+      rail.innerHTML = allItems.innerHTML;
+      setupContentDetailInteractions(rail);
+    }
+
+    const title = section.querySelector('.video-rail-title span')?.textContent?.trim() || 'Seção';
+    section.setAttribute('aria-label', title);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setupSectionTitleInteractions(host) {
+    if (!host) return;
+    host.querySelectorAll('.video-rail-title').forEach(title => {
+      if (title.dataset.sectionBound === 'true') return;
+      title.dataset.sectionBound = 'true';
+      title.addEventListener('click', event => {
+        const section = title.closest('.video-rail-section');
+        if (!section) return;
+        event.preventDefault();
+        openSectionView(section);
+      });
+    });
+
+    if (document.body.dataset.sectionExitBound !== 'true') {
+      document.body.dataset.sectionExitBound = 'true';
+      document.addEventListener('click', event => {
+        if (event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"]')) closeSectionView(false);
+      });
+      window.addEventListener('popstate', () => closeSectionView(false));
+    }
   }
 
   function cardDataWithSection(card) {

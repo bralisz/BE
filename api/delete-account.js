@@ -9,15 +9,23 @@ function getConfig() {
       process.env.NEXT_PUBLIC_SUPABASE_URL ||
       'https://cxkevnnxibhezvospkce.supabase.co'
     ).replace(/\/$/, ''),
-    publishableKey: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_PUBLISHABLE_KEY,
-    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    publishableKey:
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      DEFAULT_PUBLISHABLE_KEY,
+    serviceRoleKey:
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SECRET_KEY ||
+      process.env.SUPABASE_SERVICE_KEY ||
+      process.env.SB_SERVICE_ROLE_KEY ||
+      ''
   };
 }
 
 async function readJson(response) {
   const text = await response.text();
   if (!text) return null;
-  try { return JSON.parse(text); } catch (_) { return null; }
+  try { return JSON.parse(text); } catch (_) { return { message: text }; }
 }
 
 function errorMessage(payload, fallback) {
@@ -57,8 +65,6 @@ async function deleteWithServiceRole(url, serviceRoleKey, userId) {
     throw error;
   }
 
-  // Normalmente o perfil é removido por ON DELETE CASCADE. Esta limpeza extra
-  // cobre projetos antigos onde a relação ainda não possui cascade.
   try {
     await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`, {
       method: 'DELETE',
@@ -71,8 +77,8 @@ async function deleteWithServiceRole(url, serviceRoleKey, userId) {
   } catch (_) {}
 }
 
-async function deleteWithDatabaseFunction(url, publishableKey, accessToken) {
-  const response = await fetch(`${url}/rest/v1/rpc/delete_my_account`, {
+async function callDeleteRpc(url, publishableKey, accessToken, functionName) {
+  const response = await fetch(`${url}/rest/v1/rpc/${functionName}`, {
     method: 'POST',
     headers: {
       apikey: publishableKey,
@@ -81,12 +87,19 @@ async function deleteWithDatabaseFunction(url, publishableKey, accessToken) {
     },
     body: '{}'
   });
-  const payload = await readJson(response);
-  if (!response.ok) {
-    const error = new Error(errorMessage(payload, 'A exclusão de conta não está configurada no servidor.'));
-    error.status = response.status;
-    throw error;
+  return { response, payload: await readJson(response) };
+}
+
+async function deleteWithDatabaseFunction(url, publishableKey, accessToken) {
+  let last = null;
+  for (const functionName of ['delete_my_account', 'delete_own_account', 'delete_account']) {
+    const result = await callDeleteRpc(url, publishableKey, accessToken, functionName);
+    last = result;
+    if (result.response.ok) return;
   }
+  const error = new Error(errorMessage(last?.payload, 'A exclusão de conta não está configurada no servidor.'));
+  error.status = last?.response?.status || 503;
+  throw error;
 }
 
 async function accountStillExists(url, publishableKey, accessToken) {
@@ -126,7 +139,7 @@ module.exports = async function deleteAccountHandler(req, res) {
       await deleteWithDatabaseFunction(url, publishableKey, accessToken);
       if (await accountStillExists(url, publishableKey, accessToken)) {
         return res.status(503).json({
-          error: 'A função de exclusão removeu dados do perfil, mas não excluiu a conta de acesso. Configure SUPABASE_SERVICE_ROLE_KEY no projeto da Vercel.'
+          error: 'A exclusão permanente precisa da chave secreta do Supabase no servidor. Configure SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_SECRET_KEY na Vercel.'
         });
       }
     }

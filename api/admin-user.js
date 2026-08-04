@@ -9,8 +9,16 @@ function envConfig() {
       process.env.NEXT_PUBLIC_SUPABASE_URL ||
       'https://cxkevnnxibhezvospkce.supabase.co'
     ).replace(/\/$/, ''),
-    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-    publishableKey: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_PUBLISHABLE_KEY
+    serviceKey:
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SECRET_KEY ||
+      process.env.SUPABASE_SERVICE_KEY ||
+      process.env.SB_SERVICE_ROLE_KEY ||
+      '',
+    publishableKey:
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      DEFAULT_PUBLISHABLE_KEY
   };
 }
 
@@ -20,22 +28,23 @@ async function jsonResponse(response) {
   try { return JSON.parse(text); } catch (_) { return { message: text }; }
 }
 
-async function getUserByToken(url, apiKey, accessToken) {
+function apiError(payload, fallback, status) {
+  const error = new Error(payload?.msg || payload?.message || payload?.error_description || payload?.error || fallback);
+  error.status = status || 500;
+  return error;
+}
+
+async function getUserByToken(url, publishableKey, accessToken) {
   const response = await fetch(`${url}/auth/v1/user`, {
     headers: {
-      apikey: apiKey,
+      apikey: publishableKey,
       Authorization: `Bearer ${accessToken}`
     }
   });
   const body = await jsonResponse(response);
-  if (!response.ok || !body?.id) {
-    const error = new Error(body?.msg || body?.message || 'Sessão inválida ou expirada.');
-    error.status = 401;
-    throw error;
-  }
+  if (!response.ok || !body?.id) throw apiError(body, 'Sessão inválida ou expirada.', 401);
   return body;
 }
-
 
 async function requesterIsAdmin(url, publishableKey, accessToken) {
   const response = await fetch(`${url}/rest/v1/rpc/is_admin`, {
@@ -59,31 +68,20 @@ async function getAdminUser(url, serviceKey, userId) {
     }
   });
   const body = await jsonResponse(response);
-  if (!response.ok || !body?.id) {
-    const error = new Error(body?.msg || body?.message || 'Usuário não encontrado.');
-    error.status = response.status || 404;
-    throw error;
-  }
+  if (!response.ok || !body?.id) throw apiError(body, 'Usuário não encontrado.', response.status || 404);
   return body;
 }
 
 async function getProfile(url, apiKey, bearerToken, userId) {
-  const response = await fetch(
-    `${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=*`,
-    {
-      headers: {
-        apikey: apiKey,
-        Authorization: `Bearer ${bearerToken}`,
-        Accept: 'application/json'
-      }
+  const response = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=*`, {
+    headers: {
+      apikey: apiKey,
+      Authorization: `Bearer ${bearerToken}`,
+      Accept: 'application/json'
     }
-  );
+  });
   const body = await jsonResponse(response);
-  if (!response.ok) {
-    const error = new Error(body?.message || body?.error || 'Não foi possível carregar o perfil.');
-    error.status = response.status;
-    throw error;
-  }
+  if (!response.ok) throw apiError(body, 'Não foi possível carregar o perfil.', response.status);
   return Array.isArray(body) ? body[0] || null : null;
 }
 
@@ -99,30 +97,75 @@ async function patchProfile(url, apiKey, bearerToken, userId, patch) {
     body: JSON.stringify(patch)
   });
   const body = await jsonResponse(response);
-  if (!response.ok) {
-    const error = new Error(body?.message || body?.error || 'Não foi possível atualizar o perfil.');
-    error.status = response.status;
-    throw error;
-  }
+  if (!response.ok) throw apiError(body, 'Não foi possível atualizar o perfil.', response.status);
   return Array.isArray(body) ? body[0] || null : body;
 }
 
-async function callAdminRpc(url, publishableKey, accessToken, action, userId, reason) {
-  const response = await fetch(`${url}/rest/v1/rpc/admin_manage_user`, {
+async function deleteProfile(url, serviceKey, userId) {
+  const response = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      Prefer: 'return=minimal'
+    }
+  });
+  if (!response.ok && response.status !== 404) {
+    const body = await jsonResponse(response);
+    throw apiError(body, 'A conta foi removida, mas não foi possível limpar o perfil.', response.status);
+  }
+}
+
+async function deleteAuthUser(url, serviceKey, userId) {
+  const response = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'DELETE',
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  const body = await jsonResponse(response);
+  if (!response.ok) throw apiError(body, 'Não foi possível apagar a conta.', response.status);
+}
+
+async function callRpc(url, publishableKey, accessToken, name, body) {
+  const response = await fetch(`${url}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
       apikey: publishableKey,
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ p_action: action, p_user_id: userId, p_reason: reason || '' })
+    body: JSON.stringify(body || {})
   });
-  const body = await jsonResponse(response);
-  if (!response.ok) return null;
-  return body;
+  return { ok: response.ok, status: response.status, body: await jsonResponse(response) };
+}
+
+async function tryAdminRpc(url, publishableKey, accessToken, action, userId, reason) {
+  const attempts = [
+    ['admin_manage_user', { p_action: action, p_user_id: userId, p_reason: reason || '' }]
+  ];
+  if (action === 'delete') {
+    attempts.push(
+      ['admin_delete_user', { p_user_id: userId }],
+      ['delete_user_by_admin', { p_user_id: userId }]
+    );
+  }
+
+  let last = null;
+  for (const [name, body] of attempts) {
+    const result = await callRpc(url, publishableKey, accessToken, name, body);
+    last = result;
+    if (result.ok) return result;
+  }
+  return last;
 }
 
 module.exports = async function adminUserHandler(req, res) {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Método não permitido.' });
@@ -137,12 +180,10 @@ module.exports = async function adminUserHandler(req, res) {
 
   if (!accessToken) return res.status(401).json({ error: 'Sessão administrativa não encontrada.' });
   if (!userId) return res.status(400).json({ error: 'Usuário não informado.' });
-  if (!['delete', 'ban', 'unban', 'export'].includes(action)) {
-    return res.status(400).json({ error: 'Ação inválida.' });
-  }
+  if (!['delete', 'ban', 'unban', 'export'].includes(action)) return res.status(400).json({ error: 'Ação inválida.' });
 
   try {
-    const requester = await getUserByToken(url, serviceKey || publishableKey, accessToken);
+    const requester = await getUserByToken(url, publishableKey, accessToken);
     if (!await requesterIsAdmin(url, publishableKey, accessToken)) {
       return res.status(403).json({ error: 'Apenas o administrador pode realizar esta ação.' });
     }
@@ -151,16 +192,12 @@ module.exports = async function adminUserHandler(req, res) {
     }
 
     if (!serviceKey) {
-      const rpcResult = await callAdminRpc(url, publishableKey, accessToken, action, userId, reason);
-      if (rpcResult) {
-        return res.status(200).json({ ok: true, ...rpcResult });
-      }
+      const rpc = await tryAdminRpc(url, publishableKey, accessToken, action, userId, reason);
+      if (rpc?.ok) return res.status(200).json({ ok: true, ...(rpc.body && typeof rpc.body === 'object' ? rpc.body : {}) });
 
       const profile = await getProfile(url, publishableKey, accessToken, userId);
       if (!profile) return res.status(404).json({ error: 'Usuário não encontrado.' });
-      if (profile.role === 'admin') {
-        return res.status(403).json({ error: 'A conta administrativa principal não pode ser alterada aqui.' });
-      }
+      if (profile.role === 'admin') return res.status(403).json({ error: 'A conta administrativa principal não pode ser alterada aqui.' });
 
       if (action === 'export') {
         return res.status(200).json({
@@ -172,46 +209,25 @@ module.exports = async function adminUserHandler(req, res) {
             createdAt: profile.created_at || '',
             updatedAt: profile.updated_at || '',
             lastSignInAt: profile.last_login_at || '',
-            bannedUntil: profile.banned ? 'indefinido' : '',
             source: 'perfil'
           },
           profile
         });
       }
 
-      const now = new Date().toISOString();
       if (action === 'ban' || action === 'unban') {
         const banned = action === 'ban';
+        const now = new Date().toISOString();
         const updatedProfile = await patchProfile(url, publishableKey, accessToken, userId, {
           banned,
           banned_at: banned ? now : null,
-          ban_reason: banned ? reason : '',
           updated_at: now
         });
         return res.status(200).json({ ok: true, banned, profile: updatedProfile, mode: 'profile' });
       }
 
-      const updatedProfile = await patchProfile(url, publishableKey, accessToken, userId, {
-        email: `removed+${userId}@deleted.invalid`,
-        display_name: 'Conta removida',
-        username: null,
-        bio: '',
-        avatar_url: '',
-        avatar_id: '',
-        banner_url: '',
-        banner_id: '',
-        banned: true,
-        banned_at: now,
-        ban_reason: 'Conta removida pelo administrador',
-        profile_complete: false,
-        updated_at: now
-      });
-      return res.status(200).json({
-        ok: true,
-        deleted: true,
-        softDeleted: true,
-        profile: updatedProfile,
-        mode: 'profile'
+      return res.status(503).json({
+        error: 'A exclusão permanente precisa da chave secreta do Supabase no servidor. Configure SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_SECRET_KEY na Vercel.'
       });
     }
 
@@ -252,20 +268,9 @@ module.exports = async function adminUserHandler(req, res) {
     }
 
     if (action === 'delete') {
-      const response = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
-        method: 'DELETE',
-        headers: {
-          apikey: serviceKey,
-          Authorization: `Bearer ${serviceKey}`
-        }
-      });
-      const body = await jsonResponse(response);
-      if (!response.ok) {
-        return res.status(response.status).json({
-          error: body?.msg || body?.message || body?.error_description || 'Não foi possível apagar a conta.'
-        });
-      }
-      return res.status(200).json({ ok: true, deleted: true });
+      await deleteAuthUser(url, serviceKey, userId);
+      await deleteProfile(url, serviceKey, userId).catch(() => null);
+      return res.status(200).json({ ok: true, deleted: true, userId });
     }
 
     const banned = action === 'ban';
@@ -289,32 +294,21 @@ module.exports = async function adminUserHandler(req, res) {
       })
     });
     const body = await jsonResponse(response);
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: body?.msg || body?.message || body?.error_description || 'Não foi possível atualizar o bloqueio.'
-      });
-    }
+    if (!response.ok) throw apiError(body, 'Não foi possível atualizar o bloqueio.', response.status);
 
     let profileWarning = '';
     try {
       await patchProfile(url, serviceKey, serviceKey, userId, {
         banned,
         banned_at: banned ? now : null,
-        ban_reason: banned ? reason : '',
         updated_at: now
       });
     } catch (error) {
       profileWarning = error.message;
     }
 
-    return res.status(200).json({
-      ok: true,
-      banned,
-      warning: profileWarning || undefined
-    });
+    return res.status(200).json({ ok: true, banned, warning: profileWarning || undefined });
   } catch (error) {
-    return res.status(error?.status || 500).json({
-      error: error?.message || 'Falha interna ao gerenciar o usuário.'
-    });
+    return res.status(error?.status || 500).json({ error: error?.message || 'Falha interna ao gerenciar o usuário.' });
   }
 };

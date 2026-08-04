@@ -19,7 +19,12 @@ module.exports = async function accountStatusHandler(req, res) {
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
     'https://cxkevnnxibhezvospkce.supabase.co'
   ).replace(/\/$/, '');
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const serviceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    process.env.SB_SERVICE_ROLE_KEY ||
+    '';
   const publishableKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_PUBLISHABLE_KEY;
   const authorization = String(req.headers.authorization || '');
   const accessToken = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
@@ -29,7 +34,7 @@ module.exports = async function accountStatusHandler(req, res) {
   try {
     const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: {
-        apikey: serviceRoleKey || publishableKey,
+        apikey: publishableKey,
         Authorization: `Bearer ${accessToken}`
       }
     });
@@ -62,7 +67,7 @@ module.exports = async function accountStatusHandler(req, res) {
     }
 
     const profileResponse = await fetch(
-      `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(sessionUser.id)}&select=banned,banned_at,ban_reason`,
+      `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(sessionUser.id)}&select=*`,
       {
         headers: {
           apikey: publishableKey,
@@ -72,13 +77,13 @@ module.exports = async function accountStatusHandler(req, res) {
       }
     );
     const profiles = await parseJson(profileResponse);
-    const profile = Array.isArray(profiles) ? profiles[0] : null;
+    const profile = profileResponse.ok && Array.isArray(profiles) ? profiles[0] : null;
     return res.status(200).json({
       ok: true,
       banned: Boolean(profile?.banned),
       bannedAt: profile?.banned_at || '',
       reason: profile?.ban_reason || '',
-      checkAvailable: true
+      checkAvailable: profileResponse.ok
     });
   } catch (_) {
     return res.status(200).json({ ok: true, banned: false, checkAvailable: false });
