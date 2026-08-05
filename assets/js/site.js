@@ -3192,6 +3192,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         </div>
         <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span><a class="drive-player-support-link" href="/suporte" data-public-action="support" data-support-target="contact" hidden>Informe o erro ao suporte</a></div>
         <div class="drive-player-top-controls">
+          <button class="drive-player-icon drive-player-fullscreen" id="drivePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M3 3l6 6M16 3h5v5M21 3l-6 6M8 21H3v-5M3 21l6-6M16 21h5v-5M21 21l-6-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9H4V4M4 9l5-5M15 9h5V4M20 9l-5-5M9 15H4v5M4 15l5 5M15 15h5v5M20 15l-5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
             <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -3238,6 +3242,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const loading = document.getElementById('drivePlayerLoading');
     const loadingText = loading?.querySelector('.drive-player-loading-message');
     const supportLink = loading?.querySelector('.drive-player-support-link');
+    const fullscreenButton = document.getElementById('drivePlayerFullscreen');
     const closeButton = document.getElementById('drivePlayerClose');
     const externalButton = document.getElementById('drivePlayerExternal');
     const volumeButton = document.getElementById('drivePlayerVolume');
@@ -3247,7 +3252,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const progress = document.getElementById('drivePlayerProgress');
     const currentLabel = document.getElementById('drivePlayerCurrent');
     const durationLabel = document.getElementById('drivePlayerDuration');
-    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
+    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
@@ -3266,6 +3271,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let mediaReady = false;
     let openingToken = 0;
     let youtubeMuted = false;
+
+    const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+
+    const playerOwnsFullscreen = () => {
+      const fullscreenElement = currentFullscreenElement();
+      return Boolean(fullscreenElement && (fullscreenElement === shell || fullscreenElement === overlay || shell.contains(fullscreenElement)));
+    };
+
+    const syncFullscreenButton = () => {
+      const active = playerOwnsFullscreen();
+      overlay.classList.toggle('is-browser-fullscreen', active);
+      fullscreenButton.setAttribute('aria-label', active ? 'Sair da tela cheia' : 'Entrar em tela cheia');
+      fullscreenButton.title = active ? 'Sair da tela cheia' : 'Tela cheia';
+    };
+
+    const toggleBrowserFullscreen = async () => {
+      try {
+        if (playerOwnsFullscreen()) {
+          if (typeof document.exitFullscreen === 'function') await document.exitFullscreen();
+          else if (typeof document.webkitExitFullscreen === 'function') document.webkitExitFullscreen();
+        } else if (typeof shell.requestFullscreen === 'function') {
+          await shell.requestFullscreen();
+        } else if (typeof shell.webkitRequestFullscreen === 'function') {
+          shell.webkitRequestFullscreen();
+        }
+      } catch (_) {
+        // Alguns navegadores recusam tela cheia fora de uma interação direta.
+      }
+      syncFullscreenButton();
+      showControls(true);
+    };
 
     const postYouTubeCommand = (func, args = []) => {
       if (activeProvider !== 'youtube' || !frameMode || !frame.contentWindow) return false;
@@ -3497,6 +3533,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const closePlayer = () => {
       if (overlay.hidden) return;
+      if (playerOwnsFullscreen()) {
+        try {
+          if (typeof document.exitFullscreen === 'function') document.exitFullscreen();
+          else if (typeof document.webkitExitFullscreen === 'function') document.webkitExitFullscreen();
+        } catch (_) {}
+      }
       openingToken += 1;
       clearPlayerTimers();
       video.pause();
@@ -3518,7 +3560,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
       youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
@@ -3671,6 +3713,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     }, true);
 
+    fullscreenButton.addEventListener('click', toggleBrowserFullscreen);
     closeButton.addEventListener('click', closePlayer);
     externalButton.addEventListener('click', () => {
       if (!activeExternalUrl) return;
@@ -3758,8 +3801,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('keydown', event => {
       if (overlay.hidden) return;
       if (event.key === 'Escape') {
+        if (playerOwnsFullscreen()) return;
         event.preventDefault();
         closePlayer();
+        return;
+      }
+      if (event.key.toLowerCase() === 'f' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')) {
+        event.preventDefault();
+        toggleBrowserFullscreen();
         return;
       }
       if (frameMode || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')) return;
@@ -3780,6 +3829,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls();
     });
 
+    document.addEventListener('fullscreenchange', syncFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
     window.addEventListener('pagehide', closePlayer);
     window.addEventListener('be:close-drive-player', closePlayer);
     setPlayerInteractive(false);

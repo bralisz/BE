@@ -2010,3 +2010,21 @@ document.head.appendChild(s);
   `;
   document.head.appendChild(style);
 })();
+
+/* Navegação administrativa reduzida no mobile: Painel e Notificações. */
+(()=>{
+  'use strict';
+  const style=document.createElement('style');
+  style.id='be-admin-mobile-primary-navigation';
+  style.textContent=`
+    @media (max-width:760px){
+      body.admin-mode .admin-nav button:not([data-route="dashboard"]):not([data-route="notifications"]){
+        display:none!important;
+      }
+      body.admin-mode .admin-nav{
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
