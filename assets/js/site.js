@@ -3026,71 +3026,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  function parseMediaStartSeconds(value) {
-    const raw = String(value || '').trim().toLowerCase();
-    if (!raw) return 0;
-    if (/^\d+$/.test(raw)) return Math.max(0, Number(raw));
-    const match = raw.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
-    if (!match) return 0;
-    return Math.max(0, (Number(match[1] || 0) * 3600) + (Number(match[2] || 0) * 60) + Number(match[3] || 0));
-  }
-
-  function youtubeMediaInfo(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return null;
-    try {
-      const url = new URL(raw, location.origin);
-      const host = String(url.hostname || '').toLowerCase().replace(/^www\./, '');
-      const youtubeHosts = ['youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtube-nocookie.com'];
-      const isShortHost = host === 'youtu.be';
-      if (!isShortHost && !youtubeHosts.includes(host)) return null;
-
-      const parts = String(url.pathname || '').split('/').filter(Boolean);
-      let videoId = '';
-      if (isShortHost) videoId = parts[0] || '';
-      else if (['embed', 'shorts', 'live', 'v'].includes(parts[0] || '')) videoId = parts[1] || '';
-      else videoId = url.searchParams.get('v') || '';
-
-      const playlistId = String(url.searchParams.get('list') || '').trim();
-      if (videoId && !/^[a-z0-9_-]{6,20}$/i.test(videoId)) videoId = '';
-      if (!videoId && !/^[a-z0-9_-]{6,80}$/i.test(playlistId)) return null;
-
-      const startSeconds = parseMediaStartSeconds(
-        url.searchParams.get('start') || url.searchParams.get('t') || url.searchParams.get('time_continue') || ''
-      );
-      return { videoId, playlistId, startSeconds };
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function youtubeEmbedUrl(info) {
-    if (!info) return '';
-    const params = new URLSearchParams({
-      autoplay: '1',
-      playsinline: '1',
-      rel: '0',
-      modestbranding: '1'
-    });
-    if (info.playlistId) params.set('list', info.playlistId);
-    if (info.startSeconds > 0) params.set('start', String(info.startSeconds));
-    const path = info.videoId
-      ? `embed/${encodeURIComponent(info.videoId)}`
-      : 'embed/videoseries';
-    return `https://www.youtube-nocookie.com/${path}?${params.toString()}`;
-  }
-
-  function youtubeWatchUrl(info) {
-    if (!info) return '';
-    const params = new URLSearchParams();
-    if (info.videoId) params.set('v', info.videoId);
-    if (info.playlistId) params.set('list', info.playlistId);
-    if (info.startSeconds > 0) params.set('t', `${info.startSeconds}s`);
-    return info.videoId
-      ? `https://www.youtube.com/watch?${params.toString()}`
-      : `https://www.youtube.com/playlist?list=${encodeURIComponent(info.playlistId || '')}`;
-  }
-
   function googleDrivePreviewUrl(fileId, resourceKey = '') {
     const params = new URLSearchParams({ autoplay: '1' });
     if (resourceKey) params.set('resourcekey', resourceKey);
@@ -3171,9 +3106,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         </div>
         <video class="drive-player-video" id="drivePlayerVideo" preload="metadata" playsinline></video>
         <div class="drive-player-frame-shell" id="drivePlayerFrameShell" hidden>
-          <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor de mídia" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor do Google Drive" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span></div>
+        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-live="polite"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message">Carregando mídia...</span></div>
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -3239,8 +3174,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeBannerUrl = '';
     let activeTitle = '';
     let activeMediaKind = '';
-    let activeProvider = '';
-    let activeExternalUrl = '';
     let frameMode = false;
     let audioMode = false;
     let streamAttempt = '';
@@ -3255,10 +3188,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       controlsTimer = 0;
     };
 
-    const setLoadingMessage = (message, visible = true, revealText = false) => {
-      loadingText.textContent = String(message || '');
-      loadingText.hidden = !revealText;
-      loading.setAttribute('aria-label', String(message || 'Carregando mídia'));
+    const setLoadingMessage = (message, visible = true) => {
+      loadingText.textContent = String(message || 'Carregando mídia...');
       loading.hidden = !visible;
       overlay.classList.toggle('is-loading', visible);
     };
@@ -3359,7 +3290,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.clearTimeout(fallbackTimer);
       overlay.classList.add('is-error');
       setPlayerInteractive(false);
-      setLoadingMessage(message || 'Não foi possível carregar esta mídia.', true, true);
+      setLoadingMessage(message || 'Não foi possível carregar este arquivo do Google Drive.');
       showControls(true);
     };
 
@@ -3479,12 +3410,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeBannerUrl = '';
       activeTitle = '';
       activeMediaKind = '';
-      activeProvider = '';
-      activeExternalUrl = '';
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-audio-frame-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted');
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
       activeResourceKey = '';
@@ -3507,12 +3436,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const safeBanner = requestedBanner ? safeAssetUrlValue(requestedBanner) : '';
       activeBannerUrl = safeBanner && safeBanner !== '#' ? safeBanner : '';
       activeTitle = String(context?.title || '').trim();
-      activeProvider = 'drive';
-      const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
-      activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
-      externalButton.setAttribute('aria-label', 'Abrir no Google Drive');
-      externalButton.title = 'Abrir no Google Drive';
-      frame.title = 'Reprodutor do Google Drive';
       activeMediaKind = normalizeDriveMediaKind(context?.mediaKind)
         || inferDriveMediaKind(context?.mediaType, context?.contentType, context?.category, activeTitle, context?.contentUrl);
       frameMode = false;
@@ -3524,7 +3447,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = document.activeElement;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
-      overlay.classList.remove('is-frame-mode', 'is-youtube-mode', 'is-error');
+      overlay.classList.remove('is-frame-mode', 'is-error');
       overlay.classList.add('is-open', 'controls-visible', 'is-paused');
       document.body.classList.add('drive-player-open');
       frameShell.hidden = true;
@@ -3542,38 +3465,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeButton.focus({ preventScroll: true });
     };
 
-    const openYouTubePlayer = (info, context = {}) => {
-      const embedUrl = youtubeEmbedUrl(info);
-      if (!embedUrl) return;
-      closePlayer();
-      openingToken += 1;
-      activeProvider = 'youtube';
-      activeExternalUrl = youtubeWatchUrl(info);
-      activeTitle = String(context?.title || '').trim();
-      activeMediaKind = 'video';
-      frameMode = true;
-      mediaReady = false;
-      previousFocus = document.activeElement;
-      setAudioMode(false);
-      overlay.hidden = false;
-      overlay.setAttribute('aria-hidden', 'false');
-      overlay.classList.remove('is-error', 'is-loading', 'is-audio-frame-mode');
-      overlay.classList.add('is-open', 'is-frame-mode', 'is-youtube-mode', 'controls-visible');
-      document.body.classList.add('drive-player-open');
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
-      frameShell.hidden = false;
-      loading.hidden = true;
-      loadingText.hidden = true;
-      frame.title = activeTitle ? `YouTube — ${activeTitle}` : 'Reprodutor do YouTube';
-      frame.src = embedUrl;
-      externalButton.setAttribute('aria-label', 'Abrir no YouTube');
-      externalButton.title = 'Abrir no YouTube';
-      setPlayerInteractive(false);
-      closeButton.focus({ preventScroll: true });
-    };
-
     const togglePlayback = () => {
       if (frameMode) return;
       if (!mediaReady && video.readyState < 2) {
@@ -3586,52 +3477,58 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     document.addEventListener('click', event => {
-      const link = event.target.closest('#contentDetailPlay');
+      const link = event.target.closest('a[href]');
       if (!link) return;
-      const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
-      const fileId = googleDriveFileId(mediaUrl);
-      const youtubeInfo = youtubeMediaInfo(mediaUrl);
-      if (!fileId && !youtubeInfo) return;
-
+      const driveUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
+      const fileId = googleDriveFileId(driveUrl);
+      if (!fileId) return;
       const linkedContent = contentDataFromElement(link);
+      const contentOwner = link.closest('#contentDetailSection, .f-slide, .video-card, .detail-reco-card');
       const detailBannerImage = document.querySelector('#contentDetailBg img');
+      const ownerImage = contentOwner?.querySelector?.('.video-card-thumbnail, .f-media img, .detail-reco-thumb img, img');
       const bannerUrl = link.dataset.bannerUrl
+        || contentOwner?.dataset?.bannerUrl
         || linkedContent.bannerUrl
         || detailBannerImage?.currentSrc
         || detailBannerImage?.src
+        || ownerImage?.currentSrc
+        || ownerImage?.src
         || linkedContent.imageUrl
         || '';
-      const title = link.dataset.title || linkedContent.title || '';
-
-      event.preventDefault();
-      if (youtubeInfo) {
-        openYouTubePlayer(youtubeInfo, { bannerUrl, title, contentUrl: mediaUrl });
-        return;
-      }
-
-      const explicitKind = normalizeDriveMediaKind(link.dataset.mediaKind || link.dataset.mediaType || '');
+      const title = link.dataset.title || contentOwner?.dataset?.title || linkedContent.title || '';
+      const explicitKind = normalizeDriveMediaKind(
+        link.dataset.mediaKind
+          || link.dataset.mediaType
+          || contentOwner?.dataset?.mediaKind
+          || contentOwner?.dataset?.mediaType
+          || ''
+      );
       const inferredKind = explicitKind || inferDriveMediaKind(
         link.dataset.contentType,
         link.dataset.category,
+        contentOwner?.dataset?.contentType,
+        contentOwner?.dataset?.category,
         linkedContent.collection,
         title,
-        mediaUrl
+        driveUrl
       );
-      openPlayer(fileId, googleDriveResourceKey(mediaUrl), {
+      event.preventDefault();
+      openPlayer(fileId, googleDriveResourceKey(driveUrl), {
         bannerUrl,
         title,
         mediaKind: inferredKind,
-        mediaType: link.dataset.mediaType || '',
-        contentType: link.dataset.contentType || '',
-        category: link.dataset.category || '',
-        contentUrl: mediaUrl
+        mediaType: link.dataset.mediaType || contentOwner?.dataset?.mediaType || '',
+        contentType: link.dataset.contentType || contentOwner?.dataset?.contentType || '',
+        category: link.dataset.category || contentOwner?.dataset?.category || '',
+        contentUrl: driveUrl
       });
     }, true);
 
     closeButton.addEventListener('click', closePlayer);
     externalButton.addEventListener('click', () => {
-      if (!activeExternalUrl) return;
-      window.open(activeExternalUrl, '_blank', 'noopener,noreferrer');
+      if (!activeFileId) return;
+      const resourceQuery = activeResourceKey ? `?resourcekey=${encodeURIComponent(activeResourceKey)}` : '';
+      window.open(`https://drive.google.com/file/d/${encodeURIComponent(activeFileId)}/view${resourceQuery}`, '_blank', 'noopener,noreferrer');
       showControls(true);
     });
     volumeButton.addEventListener('click', () => {
@@ -3690,10 +3587,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     video.addEventListener('pause', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
     video.addEventListener('ended', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
     video.addEventListener('waiting', () => {
-      if (!mediaReady) setLoadingMessage(audioMode ? 'Aguardando dados do MP3...' : 'Aguardando dados da mídia...');
+      if (!mediaReady || video.currentTime <= 0.05) setLoadingMessage(audioMode ? 'Aguardando dados do MP3...' : 'Aguardando dados da mídia...');
     });
     video.addEventListener('stalled', () => {
-      if (!mediaReady) setLoadingMessage(audioMode ? 'O Google Drive ainda está enviando o MP3...' : 'O Google Drive ainda está enviando a mídia...');
+      if (!mediaReady || video.currentTime <= 0.05) setLoadingMessage(audioMode ? 'O Google Drive ainda está enviando o MP3...' : 'O Google Drive ainda está enviando a mídia...');
     });
     video.addEventListener('error', handleStreamFailure);
 
@@ -3796,9 +3693,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     desc.innerHTML = markdownToHtml(description);
 
     play.href = safeUrlValue(contentUrl);
-    const usesInternalPlayer = Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl));
-    play.dataset.mediaPlayerTrigger = usesInternalPlayer ? 'true' : 'false';
-    if (/^https?:\/\//i.test(contentUrl) && !usesInternalPlayer) {
+    if (/^https?:\/\//i.test(contentUrl)) {
       play.target = '_blank';
       play.rel = 'noopener';
     } else {
