@@ -8324,3 +8324,32 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
     border-radius:15px;
   }
 }
+
+/* MP3 do Drive v5: o player permanece no layout do site enquanto o arquivo é preparado. */
+.drive-player-overlay.is-audio-mode .drive-player-backdrop{display:block!important}
+.drive-player-overlay.is-audio-mode.has-backdrop .drive-player-backdrop-image{
+  transform:scale(1.025);
+  filter:brightness(.58) saturate(1.08);
+}
+.drive-player-overlay.is-audio-mode .drive-player-loading{
+  background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.34));
+  text-shadow:0 1px 16px rgba(0,0,0,.72);
+}
+.drive-player-overlay.is-loading .drive-player-center-controls,
+.drive-player-overlay.is-loading .drive-player-bottom-controls{
+  opacity:.34!important;
+}
+.drive-player-icon:disabled,
+.drive-player-skip:disabled,
+.drive-player-toggle:disabled,
+.drive-player-progress:disabled{
+  cursor:wait;
+  opacity:.42;
+}
+.drive-player-overlay.is-error .drive-player-loading>span:first-child{display:none}
+.drive-player-overlay.is-error .drive-player-loading{
+  padding:24px;
+  text-align:center;
+  line-height:1.55;
+  background:rgba(0,0,0,.56);
+}

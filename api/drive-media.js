@@ -47,6 +47,7 @@ function sourceUrls(fileId, resourceKey) {
     url.searchParams.set('id', fileId);
     url.searchParams.set('export', 'download');
     url.searchParams.set('confirm', 't');
+    url.searchParams.set('authuser', '0');
     if (resourceKey) url.searchParams.set('resourcekey', resourceKey);
     return url;
   };
@@ -154,6 +155,61 @@ async function fetchWithTimeout(url, options = {}) {
   }
 }
 
+function decodeGoogleEscapes(value) {
+  return decodeHtmlEntities(String(value || ''))
+    .replace(/\\u003d/gi, '=')
+    .replace(/\\u0026/gi, '&')
+    .replace(/\\u003f/gi, '?')
+    .replace(/\\\//g, '/');
+}
+
+function responseCookies(response) {
+  try {
+    const values = typeof response.headers.getSetCookie === 'function'
+      ? response.headers.getSetCookie()
+      : [response.headers.get('set-cookie')].filter(Boolean);
+    return values
+      .flatMap(value => String(value || '').split(/,(?=[^;,]+=)/))
+      .map(value => value.split(';')[0].trim())
+      .filter(Boolean)
+      .join('; ');
+  } catch (_) {
+    return '';
+  }
+}
+
+function confirmedDownloadUrl(html, baseUrl) {
+  const source = String(html || '');
+  const directPatterns = [
+    /["']downloadUrl["']\s*:\s*["']([^"']+)["']/i,
+    /["']download_url["']\s*:\s*["']([^"']+)["']/i,
+    /href=["']([^"']*(?:drive\.usercontent\.google\.com|drive\.google\.com)[^"']*(?:confirm|export=download)[^"']*)["']/i
+  ];
+
+  for (const pattern of directPatterns) {
+    const match = source.match(pattern);
+    if (!match?.[1]) continue;
+    try {
+      const candidate = new URL(decodeGoogleEscapes(match[1]), baseUrl);
+      if (['drive.google.com', 'drive.usercontent.google.com'].includes(candidate.hostname.toLowerCase())) return candidate;
+    } catch (_) { /* tenta o formulário abaixo */ }
+  }
+
+  const formMatch = source.match(/<form[^>]+(?:id=["']download-form["'][^>]*|action=["'][^"']*(?:drive\.usercontent\.google\.com|drive\.google\.com)[^"']*["'][^>]*)>/i);
+  if (!formMatch?.[0]) return null;
+  const actionMatch = formMatch[0].match(/action=["']([^"']+)["']/i);
+  if (!actionMatch?.[1]) return null;
+
+  try {
+    const candidate = new URL(decodeGoogleEscapes(actionMatch[1]), baseUrl);
+    const inputs = source.matchAll(/<input[^>]+name=["']([^"']+)["'][^>]+value=["']([^"']*)["'][^>]*>/gi);
+    for (const input of inputs) candidate.searchParams.set(decodeGoogleEscapes(input[1]), decodeGoogleEscapes(input[2]));
+    if (!candidate.searchParams.has('confirm')) candidate.searchParams.set('confirm', 't');
+    if (['drive.google.com', 'drive.usercontent.google.com'].includes(candidate.hostname.toLowerCase())) return candidate;
+  } catch (_) { /* URL inválida */ }
+  return null;
+}
+
 async function fetchDriveSource(url, req, probeOnly = false) {
   const clientRange = String(req.headers.range || '').trim();
   const requestedRange = probeOnly && !clientRange ? 'bytes=0-0' : clientRange;
@@ -164,10 +220,26 @@ async function fetchDriveSource(url, req, probeOnly = false) {
   };
   if (requestedRange) headers.Range = requestedRange;
 
-  return fetchWithTimeout(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'GET',
     redirect: 'follow',
     headers
+  });
+
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+  if (!contentType.startsWith('text/html')) return response;
+
+  const html = await response.text();
+  const confirmedUrl = confirmedDownloadUrl(html, response.url || url);
+  if (!confirmedUrl) return response;
+
+  const cookie = responseCookies(response);
+  const confirmedHeaders = { ...headers };
+  if (cookie) confirmedHeaders.Cookie = cookie;
+  return fetchWithTimeout(confirmedUrl, {
+    method: 'GET',
+    redirect: 'follow',
+    headers: confirmedHeaders
   });
 }
 

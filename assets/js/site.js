@@ -3154,6 +3154,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const frameShell = document.getElementById('drivePlayerFrameShell');
     const frame = document.getElementById('drivePlayerFrame');
     const loading = document.getElementById('drivePlayerLoading');
+    const loadingText = loading?.querySelector('span:last-child');
     const closeButton = document.getElementById('drivePlayerClose');
     const externalButton = document.getElementById('drivePlayerExternal');
     const volumeButton = document.getElementById('drivePlayerVolume');
@@ -3163,7 +3164,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const progress = document.getElementById('drivePlayerProgress');
     const currentLabel = document.getElementById('drivePlayerCurrent');
     const durationLabel = document.getElementById('drivePlayerDuration');
-    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
+    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
@@ -3177,12 +3178,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let audioMode = false;
     let streamAttempt = '';
     let metadataProbeFinished = false;
+    let mediaReady = false;
+    let openingToken = 0;
 
     const clearPlayerTimers = () => {
       window.clearTimeout(fallbackTimer);
       window.clearTimeout(controlsTimer);
       fallbackTimer = 0;
       controlsTimer = 0;
+    };
+
+    const setLoadingMessage = (message, visible = true) => {
+      loadingText.textContent = String(message || 'Carregando mídia...');
+      loading.hidden = !visible;
+      overlay.classList.toggle('is-loading', visible);
+    };
+
+    const setPlayerInteractive = enabled => {
+      const disabled = !enabled;
+      toggleButton.disabled = disabled;
+      backButton.disabled = disabled;
+      forwardButton.disabled = disabled;
+      volumeButton.disabled = disabled;
+      progress.disabled = disabled;
     };
 
     const applyBackdrop = () => {
@@ -3208,21 +3226,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const normalized = String(kind || '').trim().toLowerCase();
       if (normalized !== 'audio' && normalized !== 'video') return;
       activeMediaKind = normalized;
-      if (normalized === 'audio') setAudioMode(true);
-      else if (!frameMode) setAudioMode(false);
+      if (normalized === 'audio') {
+        setAudioMode(true);
+        if (!mediaReady) setLoadingMessage('Carregando MP3 do Google Drive...');
+      } else if (!frameMode) {
+        setAudioMode(false);
+      }
     };
 
     const detectAudioMode = () => {
       if (overlay.hidden || frameMode) return;
       const hasVideoDimensions = Number(video.videoWidth) > 0 && Number(video.videoHeight) > 0;
       const shouldUseAudioMode = video.readyState >= 1 && !hasVideoDimensions;
+      if (shouldUseAudioMode) activeMediaKind = 'audio';
+      else if (hasVideoDimensions) activeMediaKind = 'video';
       setAudioMode(shouldUseAudioMode);
     };
 
     const showControls = (keepVisible = false) => {
       overlay.classList.add('controls-visible');
       window.clearTimeout(controlsTimer);
-      if (!keepVisible && !video.paused && !frameMode) {
+      if (!keepVisible && mediaReady && !video.paused && !frameMode) {
         controlsTimer = window.setTimeout(() => overlay.classList.remove('controls-visible'), 2400);
       }
     };
@@ -3248,14 +3272,49 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       fallbackTimer = window.setTimeout(callback, delay);
     };
 
+    const markMediaReady = () => {
+      if (overlay.hidden || frameMode) return;
+      mediaReady = true;
+      window.clearTimeout(fallbackTimer);
+      overlay.classList.remove('is-error');
+      setLoadingMessage('', false);
+      setPlayerInteractive(true);
+      detectAudioMode();
+      syncPlayerState();
+      showControls();
+    };
+
+    const showStreamError = message => {
+      if (overlay.hidden) return;
+      mediaReady = false;
+      window.clearTimeout(fallbackTimer);
+      overlay.classList.add('is-error');
+      setPlayerInteractive(false);
+      setLoadingMessage(message || 'Não foi possível carregar este arquivo do Google Drive.');
+      showControls(true);
+    };
+
+    const proxyStreamUrl = (fileId, resourceKey = '', retry = false) => {
+      const url = new URL(googleDriveStreamUrl(fileId, resourceKey), location.origin);
+      if (retry) url.searchParams.set('retry', String(Date.now()));
+      return `${url.pathname}${url.search}`;
+    };
+
+    const requestPlayback = () => {
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => showControls(true));
+      }
+    };
+
     const useFrameFallback = () => {
       if (!activeFileId || frameMode || overlay.hidden) return;
-      const preserveAudioLayout = activeMediaKind === 'audio'
-        || audioMode
-        || (!activeMediaKind && Boolean(activeBannerUrl));
+      if (activeMediaKind === 'audio' || audioMode) {
+        showStreamError('O MP3 não pôde ser reproduzido. Confirme se o arquivo está público para qualquer pessoa com o link.');
+        return;
+      }
       frameMode = true;
       streamAttempt = 'frame';
-      setAudioMode(preserveAudioLayout);
       window.clearTimeout(fallbackTimer);
       video.pause();
       video.removeAttribute('src');
@@ -3263,25 +3322,79 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
       frameShell.hidden = false;
       overlay.classList.add('is-frame-mode');
-      overlay.classList.toggle('is-audio-frame-mode', preserveAudioLayout);
       loading.hidden = true;
+      overlay.classList.remove('is-loading');
+      setPlayerInteractive(false);
       showControls(true);
+    };
+
+    const loadProxyStream = retry => {
+      if (!activeFileId || overlay.hidden || frameMode) return;
+      mediaReady = false;
+      streamAttempt = retry ? 'proxy-retry' : 'proxy';
+      overlay.classList.remove('is-error');
+      setPlayerInteractive(false);
+      setLoadingMessage(audioMode || activeMediaKind === 'audio'
+        ? (retry ? 'Tentando carregar o MP3 novamente...' : 'Carregando MP3 do Google Drive...')
+        : (retry ? 'Tentando carregar a mídia novamente...' : 'Carregando mídia do Google Drive...'));
+      video.pause();
+      video.src = proxyStreamUrl(activeFileId, activeResourceKey, retry);
+      video.load();
+      requestPlayback();
+      armFallbackTimer(() => {
+        if (mediaReady || overlay.hidden || frameMode) return;
+        if (activeMediaKind === 'audio' || audioMode) {
+          if (!retry) {
+            setLoadingMessage('O Google Drive ainda está preparando o MP3...');
+            loadProxyStream(true);
+          } else {
+            showStreamError('O MP3 demorou demais para carregar. Confirme se ele está público para qualquer pessoa com o link.');
+          }
+          return;
+        }
+        if (!metadataProbeFinished && !retry) {
+          setLoadingMessage('O Google Drive ainda está preparando o arquivo...');
+          loadProxyStream(true);
+          return;
+        }
+        tryDirectDriveStream();
+      }, retry ? 26000 : 18000);
     };
 
     const tryDirectDriveStream = () => {
       if (!activeFileId || frameMode || overlay.hidden || streamAttempt === 'direct') return;
+      if (activeMediaKind === 'audio' || audioMode) {
+        if (streamAttempt !== 'proxy-retry') loadProxyStream(true);
+        else showStreamError('Não foi possível acessar o MP3 pelo link público do Google Drive.');
+        return;
+      }
+      mediaReady = false;
       streamAttempt = 'direct';
       window.clearTimeout(fallbackTimer);
+      setPlayerInteractive(false);
+      setLoadingMessage('Aguardando o Google Drive liberar o arquivo...');
       video.pause();
       video.src = googleDriveDirectStreamUrl(activeFileId, activeResourceKey);
       video.load();
-      armFallbackTimer(useFrameFallback, 9000);
-      const playPromise = video.play();
-      if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => showControls(true));
+      requestPlayback();
+      armFallbackTimer(useFrameFallback, 18000);
+    };
+
+    const handleStreamFailure = () => {
+      if (overlay.hidden || frameMode || mediaReady) return;
+      if (activeMediaKind === 'audio' || audioMode) {
+        if (streamAttempt === 'proxy') loadProxyStream(true);
+        else showStreamError('Não foi possível carregar o MP3. Verifique a permissão pública do arquivo no Google Drive.');
+        return;
+      }
+      if (streamAttempt === 'proxy') tryDirectDriveStream();
+      else if (streamAttempt === 'proxy-retry') tryDirectDriveStream();
+      else useFrameFallback();
     };
 
     const closePlayer = () => {
       if (overlay.hidden) return;
+      openingToken += 1;
       clearPlayerTimers();
       video.pause();
       video.removeAttribute('src');
@@ -3292,6 +3405,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
       frameMode = false;
+      mediaReady = false;
       setAudioMode(false);
       activeBannerUrl = '';
       activeTitle = '';
@@ -3299,7 +3413,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-audio-frame-mode', 'controls-visible', 'is-paused', 'is-muted');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-audio-frame-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted');
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
       activeResourceKey = '';
@@ -3307,6 +3421,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       progress.style.setProperty('--drive-progress', '0%');
       currentLabel.textContent = '0:00';
       durationLabel.textContent = '0:00';
+      setPlayerInteractive(false);
       if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
       previousFocus = null;
     };
@@ -3314,6 +3429,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const openPlayer = (fileId, resourceKey = '', context = {}) => {
       if (!fileId) return;
       closePlayer();
+      const token = ++openingToken;
       activeFileId = fileId;
       activeResourceKey = resourceKey;
       const requestedBanner = String(context?.bannerUrl || '').trim();
@@ -3323,40 +3439,41 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeMediaKind = normalizeDriveMediaKind(context?.mediaKind)
         || inferDriveMediaKind(context?.mediaType, context?.contentType, context?.category, activeTitle, context?.contentUrl);
       frameMode = false;
-      streamAttempt = 'proxy';
+      streamAttempt = '';
       metadataProbeFinished = false;
+      mediaReady = false;
       setAudioMode(activeMediaKind === 'audio');
       applyBackdrop();
       previousFocus = document.activeElement;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
-      overlay.classList.remove('is-frame-mode');
+      overlay.classList.remove('is-frame-mode', 'is-error');
       overlay.classList.add('is-open', 'controls-visible', 'is-paused');
       document.body.classList.add('drive-player-open');
       frameShell.hidden = true;
       frame.src = 'about:blank';
-      loading.hidden = false;
-      video.src = googleDriveStreamUrl(fileId, resourceKey);
-      video.load();
+      setPlayerInteractive(false);
+      setLoadingMessage(activeMediaKind === 'audio' ? 'Carregando MP3 do Google Drive...' : 'Preparando arquivo do Google Drive...');
+
       googleDriveMediaKind(fileId, resourceKey).then(kind => {
         metadataProbeFinished = true;
-        if (overlay.hidden || activeFileId !== fileId) return;
+        if (overlay.hidden || activeFileId !== fileId || token !== openingToken) return;
         applyMediaKind(kind);
       });
+
+      loadProxyStream(false);
       closeButton.focus({ preventScroll: true });
-      armFallbackTimer(tryDirectDriveStream, 7000);
-      const playPromise = video.play();
-      if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => showControls(true));
     };
 
     const togglePlayback = () => {
       if (frameMode) return;
-      if (video.paused) {
-        const playPromise = video.play();
-        if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
-      } else {
-        video.pause();
+      if (!mediaReady && video.readyState < 2) {
+        setLoadingMessage(audioMode ? 'Aguardando o MP3 ficar pronto...' : 'Aguardando a mídia ficar pronta...');
+        requestPlayback();
+        return;
       }
+      if (video.paused) requestPlayback();
+      else video.pause();
     };
 
     document.addEventListener('click', event => {
@@ -3415,22 +3532,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(true);
     });
     volumeButton.addEventListener('click', () => {
-      if (frameMode) return;
+      if (frameMode || !mediaReady) return;
       video.muted = !video.muted;
       syncPlayerState();
       showControls();
     });
     toggleButton.addEventListener('click', togglePlayback);
     backButton.addEventListener('click', () => {
-      if (!frameMode) video.currentTime = Math.max(0, video.currentTime - 10);
+      if (!frameMode && mediaReady) video.currentTime = Math.max(0, video.currentTime - 10);
       showControls();
     });
     forwardButton.addEventListener('click', () => {
-      if (!frameMode) video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
+      if (!frameMode && mediaReady) video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
       showControls();
     });
     progress.addEventListener('input', () => {
-      if (frameMode || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      if (frameMode || !mediaReady || !Number.isFinite(video.duration) || video.duration <= 0) return;
       video.currentTime = (Number(progress.value) / 1000) * video.duration;
       syncPlayerState();
       showControls(true);
@@ -3447,20 +3564,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       togglePlayback();
     });
 
+    video.addEventListener('loadstart', () => {
+      mediaReady = false;
+      setPlayerInteractive(false);
+    });
     video.addEventListener('loadedmetadata', () => {
-      window.clearTimeout(fallbackTimer);
       detectAudioMode();
-      if (audioMode) activeMediaKind = 'audio';
-      else if (Number(video.videoWidth) > 0 && Number(video.videoHeight) > 0) activeMediaKind = 'video';
-      loading.hidden = true;
       syncPlayerState();
-      showControls();
+      setLoadingMessage(audioMode ? 'Sincronizando o MP3 com o player...' : 'Sincronizando mídia com o player...');
+      showControls(true);
     });
-    video.addEventListener('canplay', () => {
-      window.clearTimeout(fallbackTimer);
-      loading.hidden = true;
-      detectAudioMode();
-    });
+    video.addEventListener('loadeddata', markMediaReady);
+    video.addEventListener('canplay', markMediaReady);
+    video.addEventListener('playing', markMediaReady);
     video.addEventListener('timeupdate', syncPlayerState);
     video.addEventListener('durationchange', () => {
       detectAudioMode();
@@ -3470,15 +3586,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     video.addEventListener('play', () => { detectAudioMode(); syncPlayerState(); showControls(); });
     video.addEventListener('pause', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
     video.addEventListener('ended', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
-    video.addEventListener('error', () => {
-      if (overlay.hidden || frameMode) return;
-      if (streamAttempt === 'proxy') tryDirectDriveStream();
-      else useFrameFallback();
+    video.addEventListener('waiting', () => {
+      if (!mediaReady || video.currentTime <= 0.05) setLoadingMessage(audioMode ? 'Aguardando dados do MP3...' : 'Aguardando dados da mídia...');
     });
     video.addEventListener('stalled', () => {
-      if (video.readyState !== 0 || overlay.hidden || frameMode) return;
-      armFallbackTimer(streamAttempt === 'proxy' ? tryDirectDriveStream : useFrameFallback, 3500);
+      if (!mediaReady || video.currentTime <= 0.05) setLoadingMessage(audioMode ? 'O Google Drive ainda está enviando o MP3...' : 'O Google Drive ainda está enviando a mídia...');
     });
+    video.addEventListener('error', handleStreamFailure);
 
     window.addEventListener('keydown', event => {
       if (overlay.hidden) return;
@@ -3491,13 +3605,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (event.key === ' ' || event.key.toLowerCase() === 'k') {
         event.preventDefault();
         togglePlayback();
-      } else if (event.key === 'ArrowLeft') {
+      } else if (event.key === 'ArrowLeft' && mediaReady) {
         event.preventDefault();
         video.currentTime = Math.max(0, video.currentTime - 10);
-      } else if (event.key === 'ArrowRight') {
+      } else if (event.key === 'ArrowRight' && mediaReady) {
         event.preventDefault();
         video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
-      } else if (event.key.toLowerCase() === 'm') {
+      } else if (event.key.toLowerCase() === 'm' && mediaReady) {
         event.preventDefault();
         video.muted = !video.muted;
       }
@@ -3507,6 +3621,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     window.addEventListener('pagehide', closePlayer);
     window.addEventListener('be:close-drive-player', closePlayer);
+    setPlayerInteractive(false);
   }
 
   function setupDetailControls() {
