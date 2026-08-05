@@ -3108,7 +3108,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-player-frame-shell" id="drivePlayerFrameShell" hidden>
           <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor do Google Drive" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-live="polite"><span></span><span>Carregando mídia...</span></div>
+        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-live="polite"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message">Carregando mídia...</span></div>
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
