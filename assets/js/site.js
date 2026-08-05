@@ -2487,6 +2487,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           </button>
           <div class="video-rail" tabindex="0" aria-label="${escapeHtml(section.title || 'Conteúdos')}">
             ${sectionContents.length ? sectionContents.map(item => videoCard(item)).join('') : '<p class="video-rail-empty">Nenhum conteúdo publicado nesta seção.</p>'}
+            ${allSectionContents.length > sectionContents.length ? `<button class="video-rail-more" type="button" aria-label="Ver todos os conteúdos de ${escapeHtml(section.title || 'esta seção')}" title="Ver todos">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>` : ''}
           </div>
           <button class="video-rail-arrow next" type="button" aria-label="Ver mais conteúdos">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
@@ -2817,6 +2820,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (host.dataset.sectionDelegated !== 'true') {
       host.dataset.sectionDelegated = 'true';
       host.addEventListener('click', event => {
+        const moreButton = event.target.closest('.video-rail-more');
+        if (moreButton && host.contains(moreButton)) {
+          const section = moreButton.closest('.video-rail-section');
+          if (!section) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const titleLink = section.querySelector('.video-rail-title');
+          if (titleLink) titleLink.click();
+          else openSectionView(section);
+          return;
+        }
+
         const title = event.target.closest('.video-rail-title');
         if (!title || !host.contains(title)) return;
         const section = title.closest('.video-rail-section');
@@ -3070,7 +3085,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       autoplay: '1',
       playsinline: '1',
       rel: '0',
-      modestbranding: '1'
+      modestbranding: '1',
+      enablejsapi: '1',
+      origin: location.origin
     });
     if (info.playlistId) params.set('list', info.playlistId);
     if (info.startSeconds > 0) params.set('start', String(info.startSeconds));
@@ -3248,6 +3265,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let metadataProbeFinished = false;
     let mediaReady = false;
     let openingToken = 0;
+    let youtubeMuted = false;
+
+    const postYouTubeCommand = (func, args = []) => {
+      if (activeProvider !== 'youtube' || !frameMode || !frame.contentWindow) return false;
+      try {
+        frame.contentWindow.postMessage(JSON.stringify({
+          event: 'command',
+          func,
+          args
+        }), '*');
+        return true;
+      } catch (_) {
+        return false;
+      }
+    };
 
     const clearPlayerTimers = () => {
       window.clearTimeout(fallbackTimer);
@@ -3392,7 +3424,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       video.load();
       frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
       frameShell.hidden = false;
-      overlay.classList.add('is-frame-mode');
+      overlay.classList.add('is-frame-mode', 'is-drive-frame-mode');
       loading.hidden = true;
       overlay.classList.remove('is-loading');
       setPlayerInteractive(false);
@@ -3486,7 +3518,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted');
+      youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
       activeResourceKey = '';
@@ -3530,7 +3563,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = document.activeElement;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
-      overlay.classList.remove('is-frame-mode', 'is-youtube-mode', 'is-error');
+      overlay.classList.remove('is-frame-mode', 'is-drive-frame-mode', 'is-youtube-mode', 'is-error');
       overlay.classList.add('is-open', 'controls-visible', 'is-paused');
       document.body.classList.add('drive-player-open');
       frameShell.hidden = true;
@@ -3563,7 +3596,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setAudioMode(false);
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
-      overlay.classList.remove('is-error', 'is-loading', 'is-audio-frame-mode');
+      youtubeMuted = false;
+      overlay.classList.remove('is-error', 'is-loading', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-muted');
       overlay.classList.add('is-open', 'is-frame-mode', 'is-youtube-mode', 'controls-visible');
       document.body.classList.add('drive-player-open');
       video.pause();
@@ -3577,6 +3611,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       externalButton.setAttribute('aria-label', 'Abrir no YouTube');
       externalButton.title = 'Abrir no YouTube';
       setPlayerInteractive(false);
+      volumeButton.disabled = false;
+      volumeButton.setAttribute('aria-label', 'Silenciar');
+      volumeButton.title = 'Silenciar';
       closeButton.focus({ preventScroll: true });
     };
 
@@ -3641,10 +3678,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(true);
     });
     volumeButton.addEventListener('click', () => {
+      if (activeProvider === 'youtube' && frameMode) {
+        youtubeMuted = !youtubeMuted;
+        postYouTubeCommand(youtubeMuted ? 'mute' : 'unMute');
+        overlay.classList.toggle('is-muted', youtubeMuted);
+        volumeButton.setAttribute('aria-label', youtubeMuted ? 'Ativar som' : 'Silenciar');
+        volumeButton.title = youtubeMuted ? 'Ativar som' : 'Silenciar';
+        showControls(true);
+        return;
+      }
       if (frameMode || !mediaReady) return;
       video.muted = !video.muted;
       syncPlayerState();
       showControls();
+    });
+    frame.addEventListener('load', () => {
+      if (activeProvider !== 'youtube') return;
+      window.setTimeout(() => {
+        if (youtubeMuted) postYouTubeCommand('mute');
+      }, 120);
     });
     toggleButton.addEventListener('click', togglePlayback);
     backButton.addEventListener('click', () => {
@@ -6448,14 +6500,28 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function openProfile(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}openPublicProfile(true,(currentProfile&&currentProfile.username)||'');}
     avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){if(auth.currentUser)openSettingsPage(true);else window.BETVPublicRoutes.go('/login');});if(profilePageNotifications)profilePageNotifications.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();window.dispatchEvent(new CustomEvent('be:open-notifications',{detail:{}}));});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}closePublicPages(true);var home=document.getElementById('logoBtn');if(home)home.click();else location.assign('/');});bindProfileFavorites();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
       if(event){event.preventDefault();event.stopPropagation();}
+
+      // Fecha as configurações e troca primeiro a rota para a Home. Isso evita
+      // que o clique no logo crie uma entrada extra de /config no histórico.
       closePublicPages(false);
-      window.scrollTo(0,0);
       if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.replace==='function'){
         window.BETVPublicRoutes.replace('/');
       }else{
         history.replaceState({beRoute:'public'},'','/');
         window.dispatchEvent(new PopStateEvent('popstate',{state:{beRoute:'public'}}));
       }
+
+      // A visualização do catálogo é mantida em memória. Ao sair de Conta e
+      // Sessão, força explicitamente a aba Home para não reaparecer em Vídeos.
+      var homeButton=document.getElementById('logoBtn');
+      if(homeButton){
+        homeButton.dataset.beHistoryMode='none';
+        homeButton.click();
+        delete homeButton.dataset.beHistoryMode;
+      }else{
+        document.body.dataset.homeView='home';
+      }
+      window.scrollTo({top:0,left:0,behavior:'auto'});
     });document.querySelectorAll('button[data-home-view],a[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});});window.addEventListener('popstate',function(){
       if(!avatarPicker.hidden)closeAvatarPicker(false);
       if(!bannerPicker.hidden)closeBannerPicker(false);
