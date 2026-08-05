@@ -3026,6 +3026,71 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  function parseMediaStartSeconds(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 0;
+    if (/^\d+$/.test(raw)) return Math.max(0, Number(raw));
+    const match = raw.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
+    if (!match) return 0;
+    return Math.max(0, (Number(match[1] || 0) * 3600) + (Number(match[2] || 0) * 60) + Number(match[3] || 0));
+  }
+
+  function youtubeMediaInfo(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    try {
+      const url = new URL(raw, location.origin);
+      const host = String(url.hostname || '').toLowerCase().replace(/^www\./, '');
+      const youtubeHosts = ['youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtube-nocookie.com'];
+      const isShortHost = host === 'youtu.be';
+      if (!isShortHost && !youtubeHosts.includes(host)) return null;
+
+      const parts = String(url.pathname || '').split('/').filter(Boolean);
+      let videoId = '';
+      if (isShortHost) videoId = parts[0] || '';
+      else if (['embed', 'shorts', 'live', 'v'].includes(parts[0] || '')) videoId = parts[1] || '';
+      else videoId = url.searchParams.get('v') || '';
+
+      const playlistId = String(url.searchParams.get('list') || '').trim();
+      if (videoId && !/^[a-z0-9_-]{6,20}$/i.test(videoId)) videoId = '';
+      if (!videoId && !/^[a-z0-9_-]{6,80}$/i.test(playlistId)) return null;
+
+      const startSeconds = parseMediaStartSeconds(
+        url.searchParams.get('start') || url.searchParams.get('t') || url.searchParams.get('time_continue') || ''
+      );
+      return { videoId, playlistId, startSeconds };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function youtubeEmbedUrl(info) {
+    if (!info) return '';
+    const params = new URLSearchParams({
+      autoplay: '1',
+      playsinline: '1',
+      rel: '0',
+      modestbranding: '1'
+    });
+    if (info.playlistId) params.set('list', info.playlistId);
+    if (info.startSeconds > 0) params.set('start', String(info.startSeconds));
+    const path = info.videoId
+      ? `embed/${encodeURIComponent(info.videoId)}`
+      : 'embed/videoseries';
+    return `https://www.youtube-nocookie.com/${path}?${params.toString()}`;
+  }
+
+  function youtubeWatchUrl(info) {
+    if (!info) return '';
+    const params = new URLSearchParams();
+    if (info.videoId) params.set('v', info.videoId);
+    if (info.playlistId) params.set('list', info.playlistId);
+    if (info.startSeconds > 0) params.set('t', `${info.startSeconds}s`);
+    return info.videoId
+      ? `https://www.youtube.com/watch?${params.toString()}`
+      : `https://www.youtube.com/playlist?list=${encodeURIComponent(info.playlistId || '')}`;
+  }
+
   function googleDrivePreviewUrl(fileId, resourceKey = '') {
     const params = new URLSearchParams({ autoplay: '1' });
     if (resourceKey) params.set('resourcekey', resourceKey);
@@ -3106,9 +3171,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         </div>
         <video class="drive-player-video" id="drivePlayerVideo" preload="metadata" playsinline></video>
         <div class="drive-player-frame-shell" id="drivePlayerFrameShell" hidden>
-          <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor do Google Drive" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor de mídia" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-live="polite"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message">Carregando mídia...</span></div>
+        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span></div>
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -3174,6 +3239,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeBannerUrl = '';
     let activeTitle = '';
     let activeMediaKind = '';
+    let activeProvider = '';
+    let activeExternalUrl = '';
     let frameMode = false;
     let audioMode = false;
     let streamAttempt = '';
@@ -3188,8 +3255,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       controlsTimer = 0;
     };
 
-    const setLoadingMessage = (message, visible = true) => {
-      loadingText.textContent = String(message || 'Carregando mídia...');
+    const setLoadingMessage = (message, visible = true, revealText = false) => {
+      loadingText.textContent = String(message || '');
+      loadingText.hidden = !revealText;
+      loading.setAttribute('aria-label', String(message || 'Carregando mídia'));
       loading.hidden = !visible;
       overlay.classList.toggle('is-loading', visible);
     };
@@ -3290,7 +3359,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.clearTimeout(fallbackTimer);
       overlay.classList.add('is-error');
       setPlayerInteractive(false);
-      setLoadingMessage(message || 'Não foi possível carregar este arquivo do Google Drive.');
+      setLoadingMessage(message || 'Não foi possível carregar esta mídia.', true, true);
       showControls(true);
     };
 
@@ -3410,10 +3479,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeBannerUrl = '';
       activeTitle = '';
       activeMediaKind = '';
+      activeProvider = '';
+      activeExternalUrl = '';
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-audio-frame-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted');
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
       activeResourceKey = '';
@@ -3436,6 +3507,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const safeBanner = requestedBanner ? safeAssetUrlValue(requestedBanner) : '';
       activeBannerUrl = safeBanner && safeBanner !== '#' ? safeBanner : '';
       activeTitle = String(context?.title || '').trim();
+      activeProvider = 'drive';
+      const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
+      activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
+      externalButton.setAttribute('aria-label', 'Abrir no Google Drive');
+      externalButton.title = 'Abrir no Google Drive';
+      frame.title = 'Reprodutor do Google Drive';
       activeMediaKind = normalizeDriveMediaKind(context?.mediaKind)
         || inferDriveMediaKind(context?.mediaType, context?.contentType, context?.category, activeTitle, context?.contentUrl);
       frameMode = false;
@@ -3447,7 +3524,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = document.activeElement;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
-      overlay.classList.remove('is-frame-mode', 'is-error');
+      overlay.classList.remove('is-frame-mode', 'is-youtube-mode', 'is-error');
       overlay.classList.add('is-open', 'controls-visible', 'is-paused');
       document.body.classList.add('drive-player-open');
       frameShell.hidden = true;
@@ -3465,6 +3542,38 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeButton.focus({ preventScroll: true });
     };
 
+    const openYouTubePlayer = (info, context = {}) => {
+      const embedUrl = youtubeEmbedUrl(info);
+      if (!embedUrl) return;
+      closePlayer();
+      openingToken += 1;
+      activeProvider = 'youtube';
+      activeExternalUrl = youtubeWatchUrl(info);
+      activeTitle = String(context?.title || '').trim();
+      activeMediaKind = 'video';
+      frameMode = true;
+      mediaReady = false;
+      previousFocus = document.activeElement;
+      setAudioMode(false);
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.classList.remove('is-error', 'is-loading', 'is-audio-frame-mode');
+      overlay.classList.add('is-open', 'is-frame-mode', 'is-youtube-mode', 'controls-visible');
+      document.body.classList.add('drive-player-open');
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      frameShell.hidden = false;
+      loading.hidden = true;
+      loadingText.hidden = true;
+      frame.title = activeTitle ? `YouTube — ${activeTitle}` : 'Reprodutor do YouTube';
+      frame.src = embedUrl;
+      externalButton.setAttribute('aria-label', 'Abrir no YouTube');
+      externalButton.title = 'Abrir no YouTube';
+      setPlayerInteractive(false);
+      closeButton.focus({ preventScroll: true });
+    };
+
     const togglePlayback = () => {
       if (frameMode) return;
       if (!mediaReady && video.readyState < 2) {
@@ -3477,58 +3586,52 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     document.addEventListener('click', event => {
-      const link = event.target.closest('a[href]');
+      const link = event.target.closest('#contentDetailPlay');
       if (!link) return;
-      const driveUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
-      const fileId = googleDriveFileId(driveUrl);
-      if (!fileId) return;
+      const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
+      const fileId = googleDriveFileId(mediaUrl);
+      const youtubeInfo = youtubeMediaInfo(mediaUrl);
+      if (!fileId && !youtubeInfo) return;
+
       const linkedContent = contentDataFromElement(link);
-      const contentOwner = link.closest('#contentDetailSection, .f-slide, .video-card, .detail-reco-card');
       const detailBannerImage = document.querySelector('#contentDetailBg img');
-      const ownerImage = contentOwner?.querySelector?.('.video-card-thumbnail, .f-media img, .detail-reco-thumb img, img');
       const bannerUrl = link.dataset.bannerUrl
-        || contentOwner?.dataset?.bannerUrl
         || linkedContent.bannerUrl
         || detailBannerImage?.currentSrc
         || detailBannerImage?.src
-        || ownerImage?.currentSrc
-        || ownerImage?.src
         || linkedContent.imageUrl
         || '';
-      const title = link.dataset.title || contentOwner?.dataset?.title || linkedContent.title || '';
-      const explicitKind = normalizeDriveMediaKind(
-        link.dataset.mediaKind
-          || link.dataset.mediaType
-          || contentOwner?.dataset?.mediaKind
-          || contentOwner?.dataset?.mediaType
-          || ''
-      );
+      const title = link.dataset.title || linkedContent.title || '';
+
+      event.preventDefault();
+      if (youtubeInfo) {
+        openYouTubePlayer(youtubeInfo, { bannerUrl, title, contentUrl: mediaUrl });
+        return;
+      }
+
+      const explicitKind = normalizeDriveMediaKind(link.dataset.mediaKind || link.dataset.mediaType || '');
       const inferredKind = explicitKind || inferDriveMediaKind(
         link.dataset.contentType,
         link.dataset.category,
-        contentOwner?.dataset?.contentType,
-        contentOwner?.dataset?.category,
         linkedContent.collection,
         title,
-        driveUrl
+        mediaUrl
       );
-      event.preventDefault();
-      openPlayer(fileId, googleDriveResourceKey(driveUrl), {
+      openPlayer(fileId, googleDriveResourceKey(mediaUrl), {
         bannerUrl,
         title,
         mediaKind: inferredKind,
-        mediaType: link.dataset.mediaType || contentOwner?.dataset?.mediaType || '',
-        contentType: link.dataset.contentType || contentOwner?.dataset?.contentType || '',
-        category: link.dataset.category || contentOwner?.dataset?.category || '',
-        contentUrl: driveUrl
+        mediaType: link.dataset.mediaType || '',
+        contentType: link.dataset.contentType || '',
+        category: link.dataset.category || '',
+        contentUrl: mediaUrl
       });
     }, true);
 
     closeButton.addEventListener('click', closePlayer);
     externalButton.addEventListener('click', () => {
-      if (!activeFileId) return;
-      const resourceQuery = activeResourceKey ? `?resourcekey=${encodeURIComponent(activeResourceKey)}` : '';
-      window.open(`https://drive.google.com/file/d/${encodeURIComponent(activeFileId)}/view${resourceQuery}`, '_blank', 'noopener,noreferrer');
+      if (!activeExternalUrl) return;
+      window.open(activeExternalUrl, '_blank', 'noopener,noreferrer');
       showControls(true);
     });
     volumeButton.addEventListener('click', () => {
@@ -3587,10 +3690,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     video.addEventListener('pause', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
     video.addEventListener('ended', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
     video.addEventListener('waiting', () => {
-      if (!mediaReady || video.currentTime <= 0.05) setLoadingMessage(audioMode ? 'Aguardando dados do MP3...' : 'Aguardando dados da mídia...');
+      if (!mediaReady) setLoadingMessage(audioMode ? 'Aguardando dados do MP3...' : 'Aguardando dados da mídia...');
     });
     video.addEventListener('stalled', () => {
-      if (!mediaReady || video.currentTime <= 0.05) setLoadingMessage(audioMode ? 'O Google Drive ainda está enviando o MP3...' : 'O Google Drive ainda está enviando a mídia...');
+      if (!mediaReady) setLoadingMessage(audioMode ? 'O Google Drive ainda está enviando o MP3...' : 'O Google Drive ainda está enviando a mídia...');
     });
     video.addEventListener('error', handleStreamFailure);
 
@@ -3693,7 +3796,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     desc.innerHTML = markdownToHtml(description);
 
     play.href = safeUrlValue(contentUrl);
-    if (/^https?:\/\//i.test(contentUrl)) {
+    const usesInternalPlayer = Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl));
+    play.dataset.mediaPlayerTrigger = usesInternalPlayer ? 'true' : 'false';
+    if (/^https?:\/\//i.test(contentUrl) && !usesInternalPlayer) {
       play.target = '_blank';
       play.rel = 'noopener';
     } else {
@@ -6012,23 +6117,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var identities=user&&user.raw&&Array.isArray(user.raw.identities)?user.raw.identities:[];
       var providers=user&&user.raw&&user.raw.app_metadata&&Array.isArray(user.raw.app_metadata.providers)?user.raw.app_metadata.providers:[];
       var discordConnected=providers.indexOf('discord')>=0||identities.some(function(identity){return String(identity.provider||'').toLowerCase()==='discord';});
-      var settingsTabs=['profile','account','connections','data','session'];
+      var settingsTabs=['profile','connections','data','session'];
+      if(settingsActiveTab==='account')settingsActiveTab='session';
       if(settingsTabs.indexOf(settingsActiveTab)<0)settingsActiveTab='profile';
       settingsPageBody.innerHTML=''
         +'<div class="settings-legal-layout">'
         +  '<nav class="settings-page-nav" aria-label="Seções das configurações">'
         +    '<button type="button" data-settings-tab="profile"'+(settingsActiveTab==='profile'?' class="active" aria-current="page"':'')+'>Perfil</button>'
-        +    '<button type="button" data-settings-tab="account"'+(settingsActiveTab==='account'?' class="active" aria-current="page"':'')+'>Conta</button>'
         +    '<button type="button" data-settings-tab="connections"'+(settingsActiveTab==='connections'?' class="active" aria-current="page"':'')+'>Conexões</button>'
         +    '<button type="button" data-settings-tab="data"'+(settingsActiveTab==='data'?' class="active" aria-current="page"':'')+'>Meus Dados</button>'
         +    '<button type="button" data-settings-tab="session"'+(settingsActiveTab==='session'?' class="active" aria-current="page"':'')+'>Conta e Sessão</button>'
         +  '</nav>'
         +  '<main class="settings-page-content">'
-        +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner e o avatar. As alterações são compartilhadas automaticamente entre celular e computador.</p><div class="settings-panel-card">'+settingsSyncMarkup()+'<div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></div></section>'
-        +    '<section class="settings-section-panel" data-settings-panel="account"'+(settingsActiveTab==='account'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div></section>'
+        +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner e o avatar do seu perfil.</p><div class="settings-panel-card"><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></div></section>'
         +    '<section class="settings-section-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões</h1><p class="settings-panel-lead">Gerencie serviços conectados à sua conta.</p><div class="settings-panel-card"><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div></section>'
         +    '<section class="settings-section-panel settings-data-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Meus Dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-data-actions settings-data-actions-outside"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><a class="settings-data-privacy-button" href="/privacy">Ver Termos de Privacidade</a></div><div class="settings-status settings-data-status" id="settingsExportStatus"></div></section>'
-        +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta e Sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></section>'
+        +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div><div class="settings-session-section"><h1>Sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></div></section>'
         +  '</main>'
         +'</div>';
       function activateSettingsTab(tab,moveToTop){
