@@ -2999,7 +2999,328 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     panel.setAttribute('aria-hidden', 'false');
   }
 
+
+  function googleDriveFileId(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const url = new URL(raw, location.origin);
+      const host = String(url.hostname || '').toLowerCase();
+      if (!['drive.google.com', 'drive.usercontent.google.com'].includes(host)) return '';
+      const pathMatch = String(url.pathname || '').match(/\/file\/d\/([^/]+)/i)
+        || String(url.pathname || '').match(/\/d\/([^/]+)/i);
+      const fileId = pathMatch?.[1] || url.searchParams.get('id') || '';
+      return /^[a-z0-9_-]{10,}$/i.test(fileId) ? fileId : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function googleDriveResourceKey(value) {
+    try {
+      const url = new URL(String(value || '').trim(), location.origin);
+      const resourceKey = String(url.searchParams.get('resourcekey') || '').trim();
+      return /^[a-z0-9_-]+$/i.test(resourceKey) ? resourceKey : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function googleDrivePreviewUrl(fileId, resourceKey = '') {
+    const params = new URLSearchParams({ autoplay: '1' });
+    if (resourceKey) params.set('resourcekey', resourceKey);
+    return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview?${params.toString()}`;
+  }
+
+  function googleDriveStreamUrl(fileId, resourceKey = '') {
+    const params = new URLSearchParams({ export: 'download', id: fileId });
+    if (resourceKey) params.set('resourcekey', resourceKey);
+    return `https://drive.google.com/uc?${params.toString()}`;
+  }
+
+  function formatPlayerTime(value) {
+    const seconds = Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const rest = seconds % 60;
+    return hours
+      ? `${hours}:${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
+      : `${minutes}:${String(rest).padStart(2, '0')}`;
+  }
+
+  function drivePlayerMarkup() {
+    return `<div class="drive-player-overlay" id="drivePlayerOverlay" hidden aria-hidden="true">
+      <section class="drive-player-shell" id="drivePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo">
+        <video class="drive-player-video" id="drivePlayerVideo" preload="metadata" playsinline></video>
+        <div class="drive-player-frame-shell" id="drivePlayerFrameShell" hidden>
+          <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor do Google Drive" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-live="polite"><span></span><span>Carregando vídeo...</span></div>
+        <div class="drive-player-top-controls">
+          <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
+            <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <button class="drive-player-icon drive-player-external" id="drivePlayerExternal" type="button" aria-label="Abrir no Google Drive" title="Abrir no Google Drive">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="drive-player-icon drive-player-close" id="drivePlayerClose" type="button" aria-label="Fechar reprodutor" title="Fechar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="drive-player-center-controls" aria-label="Controles de reprodução">
+          <button class="drive-player-skip" id="drivePlayerBack10" type="button" aria-label="Voltar 10 segundos" title="Voltar 10 segundos">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 18H8V6"/><path d="M10 18a24 24 0 1 1-2 18"/><text x="32" y="40">10</text></svg>
+          </button>
+          <button class="drive-player-toggle" id="drivePlayerToggle" type="button" aria-label="Pausar" title="Pausar">
+            <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zm7 0h3v14h-3z"/></svg>
+            <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>
+          </button>
+          <button class="drive-player-skip" id="drivePlayerForward10" type="button" aria-label="Avançar 10 segundos" title="Avançar 10 segundos">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M44 18h12V6"/><path d="M54 18a24 24 0 1 0 2 18"/><text x="32" y="40">10</text></svg>
+          </button>
+        </div>
+        <div class="drive-player-bottom-controls">
+          <input class="drive-player-progress" id="drivePlayerProgress" type="range" min="0" max="1000" value="0" step="1" aria-label="Progresso do vídeo">
+          <div class="drive-player-time"><span id="drivePlayerCurrent">0:00</span><span aria-hidden="true">/</span><span id="drivePlayerDuration">0:00</span></div>
+        </div>
+      </section>
+    </div>`;
+  }
+
+  function setupGoogleDrivePlayer() {
+    if (document.body.dataset.drivePlayerBound === 'true') return;
+    document.body.dataset.drivePlayerBound = 'true';
+    document.body.insertAdjacentHTML('beforeend', drivePlayerMarkup());
+
+    const overlay = document.getElementById('drivePlayerOverlay');
+    const shell = document.getElementById('drivePlayerShell');
+    const video = document.getElementById('drivePlayerVideo');
+    const frameShell = document.getElementById('drivePlayerFrameShell');
+    const frame = document.getElementById('drivePlayerFrame');
+    const loading = document.getElementById('drivePlayerLoading');
+    const closeButton = document.getElementById('drivePlayerClose');
+    const externalButton = document.getElementById('drivePlayerExternal');
+    const volumeButton = document.getElementById('drivePlayerVolume');
+    const toggleButton = document.getElementById('drivePlayerToggle');
+    const backButton = document.getElementById('drivePlayerBack10');
+    const forwardButton = document.getElementById('drivePlayerForward10');
+    const progress = document.getElementById('drivePlayerProgress');
+    const currentLabel = document.getElementById('drivePlayerCurrent');
+    const durationLabel = document.getElementById('drivePlayerDuration');
+    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
+
+    let fallbackTimer = 0;
+    let controlsTimer = 0;
+    let previousFocus = null;
+    let activeFileId = '';
+    let activeResourceKey = '';
+    let frameMode = false;
+
+    const clearPlayerTimers = () => {
+      window.clearTimeout(fallbackTimer);
+      window.clearTimeout(controlsTimer);
+      fallbackTimer = 0;
+      controlsTimer = 0;
+    };
+
+    const showControls = (keepVisible = false) => {
+      overlay.classList.add('controls-visible');
+      window.clearTimeout(controlsTimer);
+      if (!keepVisible && !video.paused && !frameMode) {
+        controlsTimer = window.setTimeout(() => overlay.classList.remove('controls-visible'), 2400);
+      }
+    };
+
+    const syncPlayerState = () => {
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      const current = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+      const ratio = duration > 0 ? Math.min(1, Math.max(0, current / duration)) : 0;
+      progress.value = String(Math.round(ratio * 1000));
+      progress.style.setProperty('--drive-progress', `${Math.round(ratio * 10000) / 100}%`);
+      currentLabel.textContent = formatPlayerTime(current);
+      durationLabel.textContent = formatPlayerTime(duration);
+      overlay.classList.toggle('is-paused', video.paused);
+      overlay.classList.toggle('is-muted', video.muted || video.volume === 0);
+      toggleButton.setAttribute('aria-label', video.paused ? 'Reproduzir' : 'Pausar');
+      toggleButton.title = video.paused ? 'Reproduzir' : 'Pausar';
+      volumeButton.setAttribute('aria-label', video.muted || video.volume === 0 ? 'Ativar som' : 'Silenciar');
+      volumeButton.title = video.muted || video.volume === 0 ? 'Ativar som' : 'Silenciar';
+    };
+
+    const useFrameFallback = () => {
+      if (!activeFileId || frameMode || overlay.hidden) return;
+      frameMode = true;
+      window.clearTimeout(fallbackTimer);
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
+      frameShell.hidden = false;
+      overlay.classList.add('is-frame-mode');
+      loading.hidden = true;
+      showControls(true);
+    };
+
+    const closePlayer = () => {
+      if (overlay.hidden) return;
+      clearPlayerTimers();
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      frame.src = 'about:blank';
+      frameShell.hidden = true;
+      loading.hidden = false;
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'controls-visible', 'is-paused', 'is-muted');
+      document.body.classList.remove('drive-player-open');
+      activeFileId = '';
+      activeResourceKey = '';
+      frameMode = false;
+      progress.value = '0';
+      progress.style.setProperty('--drive-progress', '0%');
+      currentLabel.textContent = '0:00';
+      durationLabel.textContent = '0:00';
+      if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
+      previousFocus = null;
+    };
+
+    const openPlayer = (fileId, resourceKey = '') => {
+      if (!fileId) return;
+      closePlayer();
+      activeFileId = fileId;
+      activeResourceKey = resourceKey;
+      frameMode = false;
+      previousFocus = document.activeElement;
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.classList.remove('is-frame-mode');
+      overlay.classList.add('is-open', 'controls-visible', 'is-paused');
+      document.body.classList.add('drive-player-open');
+      frameShell.hidden = true;
+      frame.src = 'about:blank';
+      loading.hidden = false;
+      video.src = googleDriveStreamUrl(fileId, resourceKey);
+      video.load();
+      closeButton.focus({ preventScroll: true });
+      fallbackTimer = window.setTimeout(useFrameFallback, 9000);
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => showControls(true));
+    };
+
+    const togglePlayback = () => {
+      if (frameMode) return;
+      if (video.paused) {
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
+      } else {
+        video.pause();
+      }
+    };
+
+    document.addEventListener('click', event => {
+      const link = event.target.closest('a[href]');
+      if (!link) return;
+      const driveUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
+      const fileId = googleDriveFileId(driveUrl);
+      if (!fileId) return;
+      event.preventDefault();
+      openPlayer(fileId, googleDriveResourceKey(driveUrl));
+    }, true);
+
+    closeButton.addEventListener('click', closePlayer);
+    externalButton.addEventListener('click', () => {
+      if (!activeFileId) return;
+      const resourceQuery = activeResourceKey ? `?resourcekey=${encodeURIComponent(activeResourceKey)}` : '';
+      window.open(`https://drive.google.com/file/d/${encodeURIComponent(activeFileId)}/view${resourceQuery}`, '_blank', 'noopener,noreferrer');
+      showControls(true);
+    });
+    volumeButton.addEventListener('click', () => {
+      if (frameMode) return;
+      video.muted = !video.muted;
+      syncPlayerState();
+      showControls();
+    });
+    toggleButton.addEventListener('click', togglePlayback);
+    backButton.addEventListener('click', () => {
+      if (!frameMode) video.currentTime = Math.max(0, video.currentTime - 10);
+      showControls();
+    });
+    forwardButton.addEventListener('click', () => {
+      if (!frameMode) video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
+      showControls();
+    });
+    progress.addEventListener('input', () => {
+      if (frameMode || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      video.currentTime = (Number(progress.value) / 1000) * video.duration;
+      syncPlayerState();
+      showControls(true);
+    });
+    progress.addEventListener('change', () => showControls());
+
+    shell.addEventListener('pointermove', () => showControls());
+    shell.addEventListener('pointerdown', event => {
+      if (event.target.closest('button,input,iframe')) return;
+      showControls();
+    });
+    shell.addEventListener('dblclick', event => {
+      if (frameMode || event.target.closest('button,input,iframe')) return;
+      togglePlayback();
+    });
+
+    video.addEventListener('loadedmetadata', () => {
+      window.clearTimeout(fallbackTimer);
+      loading.hidden = true;
+      syncPlayerState();
+      showControls();
+    });
+    video.addEventListener('canplay', () => {
+      window.clearTimeout(fallbackTimer);
+      loading.hidden = true;
+    });
+    video.addEventListener('timeupdate', syncPlayerState);
+    video.addEventListener('durationchange', syncPlayerState);
+    video.addEventListener('volumechange', syncPlayerState);
+    video.addEventListener('play', () => { syncPlayerState(); showControls(); });
+    video.addEventListener('pause', () => { syncPlayerState(); showControls(true); });
+    video.addEventListener('ended', () => { syncPlayerState(); showControls(true); });
+    video.addEventListener('error', useFrameFallback);
+    video.addEventListener('stalled', () => {
+      if (video.readyState === 0) fallbackTimer = window.setTimeout(useFrameFallback, 3500);
+    });
+
+    window.addEventListener('keydown', event => {
+      if (overlay.hidden) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closePlayer();
+        return;
+      }
+      if (frameMode || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')) return;
+      if (event.key === ' ' || event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        togglePlayback();
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        video.currentTime = Math.max(0, video.currentTime - 10);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
+      } else if (event.key.toLowerCase() === 'm') {
+        event.preventDefault();
+        video.muted = !video.muted;
+      }
+      syncPlayerState();
+      showControls();
+    });
+
+    window.addEventListener('pagehide', closePlayer);
+    window.addEventListener('be:close-drive-player', closePlayer);
+  }
+
   function setupDetailControls() {
+    setupGoogleDrivePlayer();
     const section = document.getElementById('contentDetailSection');
     const back = document.getElementById('detailBackButton');
     if (back && back.dataset.bound !== 'true') {
@@ -4760,8 +5081,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{
         var saved=await beBackend.preferences.save(userId,payload);
         if(auth.currentUser&&auth.currentUser.uid===userId){
-          var when=saved&&saved.updatedAt?new Date(saved.updatedAt):new Date();
-          setSettingsSyncStatus('active','Sincronizado entre celular e computador às '+when.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.');
+          setSettingsSyncStatus('active','Sincronizado entre celular e computador.');
         }
       }catch(error){
         console.warn('Não foi possível sincronizar as preferências:',error&&error.message?error.message:error);
@@ -4823,12 +5143,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         preferenceDeviceSyncStop=beBackend.preferences.subscribe(userId,function(record){
           if(!record||!auth.currentUser||auth.currentUser.uid!==userId)return;
           applyCrossDeviceData(record.data,userId,'remote');
-          var when=record.updatedAt?new Date(record.updatedAt):new Date();
-          setSettingsSyncStatus('active','Atualizado em todos os dispositivos às '+when.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.');
+          setSettingsSyncStatus('active','Atualizado em todos os dispositivos.');
         });
         if(beBackend.profiles&&typeof beBackend.profiles.subscribe==='function')profileDeviceSyncStop=beBackend.profiles.subscribe(userId,function(profile){applyRemoteProfile(profile,userId);});
-        var syncedAt=saved&&saved.updatedAt?new Date(saved.updatedAt):new Date();
-        setSettingsSyncStatus('active','Sincronizado entre celular e computador às '+syncedAt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.');
+        setSettingsSyncStatus('active','Sincronizado entre celular e computador.');
       }catch(error){
         console.warn('Sincronização entre dispositivos indisponível:',error&&error.message?error.message:error);
         setSettingsSyncStatus('error','Os dados continuam salvos neste aparelho; verifique a conexão para sincronizar.');
@@ -6702,17 +7020,35 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
   }
 
+  function notificationImageProxyUrl(value){
+    if(!window.beMediaUrl)return '';
+    var proxy=window.beMediaUrl(value);
+    return proxy&&proxy!=='#'&&proxy!==value?proxy:'';
+  }
+
   function renderNotificationMarkdown(value){
     var images=[];
     var source=replaceNotificationImageMarkdown(value,function(safeUrl,alt){
       var token='BETVNOTIFICATIONIMAGE'+images.length+'TOKEN';
+      var fallbackUrl=notificationImageProxyUrl(safeUrl);
       images.push('<a class="notification-markdown-image" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagem em tamanho completo">'+
-        '<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(safeUrl)+'" alt="'+esc(alt||'Imagem da notificação')+'">'+
+        '<img loading="lazy" decoding="async" src="'+esc(safeUrl)+'"'+(fallbackUrl?' data-notification-fallback-src="'+esc(fallbackUrl)+'"':'')+' alt="'+esc(alt||'Imagem da notificação')+'">'+
       '</a>');
       return token;
     });
     var html=window.beRenderMarkdown?window.beRenderMarkdown(source):esc(source).replace(/\r?\n/g,'<br>');
     return html.replace(/BETVNOTIFICATIONIMAGE(\d+)TOKEN/g,function(_,index){return images[Number(index)]||'';});
+  }
+
+  function bindNotificationImages(root){
+    if(!root)return;
+    root.querySelectorAll('img[data-notification-fallback-src]').forEach(function(image){
+      image.addEventListener('error',function useProxyFallback(){
+        var fallback=image.getAttribute('data-notification-fallback-src')||'';
+        image.removeAttribute('data-notification-fallback-src');
+        if(fallback&&image.src!==fallback)image.src=fallback;
+      },{once:true});
+    });
   }
 
   function notificationPlainText(value){
@@ -6841,6 +7177,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       '<p class="notification-article-date">'+esc(formatDate(active))+'</p>'+
       '<div class="notification-article-body be-markdown">'+renderNotificationMarkdown(active.description||'')+'</div>'+
     '</article>';
+    bindNotificationImages(pageContent);
   }
 
   async function loadNotifications(force){
@@ -6890,6 +7227,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.dispatchEvent(new CustomEvent('be:close-support'));
     await loadNotifications(false);
     renderPage(selectedId);
+    markAllRead();
     window.scrollTo(0,0);
   }
 

@@ -51,7 +51,11 @@
     var name=String(parts[0]||'').toLowerCase();
     var aliases=['atualizacoes','atualizações','notificacoes','notificações','updates','notifications'];
     var legacy=aliases.indexOf(name)!==-1;
-    return {active:Boolean(pathMatch)||legacy,id:pathMatch?decodeURIComponent(pathMatch[1]||''):decodeURIComponent(parts[1]||''),legacy:legacy};
+    return {
+      active:Boolean(pathMatch)||legacy,
+      id:pathMatch?decodeURIComponent(pathMatch[1]||''):decodeURIComponent(parts[1]||''),
+      legacy:legacy
+    };
   }
 
   function dateValue(item){
@@ -82,6 +86,65 @@
     return text.length>max?text.slice(0,max-1).trim()+'…':text;
   }
 
+  function safeNotificationImageUrl(value){
+    var raw=String(value||'').trim().replace(/^<|>$/g,'');
+    if(!raw||/[\u0000-\u001f\u007f]/.test(raw))return '';
+    try{
+      var parsed=new URL(raw,location.origin);
+      if(parsed.protocol!=='https:'&&parsed.protocol!=='http:')return '';
+      if(parsed.username||parsed.password)return '';
+      return parsed.href;
+    }catch(_){return '';}
+  }
+
+  function replaceNotificationImageMarkdown(value,onImage){
+    // Exclusivo das notificações. Aceita:
+    // [](https://site/imagem.png) e ![](https://site/imagem.png)
+    // Também aceita a forma tradicional ![descrição](https://site/imagem.png).
+    var pattern=/(?:!\[([^\]\r\n]*)\]|\[\s*\])\(\s*(?:<([^>\r\n]+)>|([^\s)\r\n]+))\s*(?:["']([^"'\r\n]*)["'])?\s*\)/g;
+    return String(value||'').replace(pattern,function(match,alt,angleUrl,plainUrl){
+      var safeUrl=safeNotificationImageUrl(angleUrl||plainUrl||'');
+      if(!safeUrl)return match;
+      return onImage(safeUrl,String(alt||'').trim());
+    });
+  }
+
+  function notificationImageProxyUrl(value){
+    if(!window.beMediaUrl)return '';
+    var proxy=window.beMediaUrl(value);
+    return proxy&&proxy!=='#'&&proxy!==value?proxy:'';
+  }
+
+  function renderNotificationMarkdown(value){
+    var images=[];
+    var source=replaceNotificationImageMarkdown(value,function(safeUrl,alt){
+      var token='BETVNOTIFICATIONIMAGE'+images.length+'TOKEN';
+      var fallbackUrl=notificationImageProxyUrl(safeUrl);
+      images.push('<a class="notification-markdown-image" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagem em tamanho completo">'+
+        '<img loading="lazy" decoding="async" src="'+esc(safeUrl)+'"'+(fallbackUrl?' data-notification-fallback-src="'+esc(fallbackUrl)+'"':'')+' alt="'+esc(alt||'Imagem da notificação')+'">'+
+      '</a>');
+      return token;
+    });
+    var html=window.beRenderMarkdown?window.beRenderMarkdown(source):esc(source).replace(/\r?\n/g,'<br>');
+    return html.replace(/BETVNOTIFICATIONIMAGE(\d+)TOKEN/g,function(_,index){return images[Number(index)]||'';});
+  }
+
+  function bindNotificationImages(root){
+    if(!root)return;
+    root.querySelectorAll('img[data-notification-fallback-src]').forEach(function(image){
+      image.addEventListener('error',function useProxyFallback(){
+        var fallback=image.getAttribute('data-notification-fallback-src')||'';
+        image.removeAttribute('data-notification-fallback-src');
+        if(fallback&&image.src!==fallback)image.src=fallback;
+      },{once:true});
+    });
+  }
+
+  function notificationPlainText(value){
+    var source=replaceNotificationImageMarkdown(value,function(){return ' ';});
+    return window.beMarkdownPlainText?window.beMarkdownPlainText(source):source.replace(/\s+/g,' ').trim();
+  }
+
   function getMobileButton(){return document.getElementById('mobileNotificationButton');}
 
   function closeDesktop(){
@@ -103,7 +166,7 @@
     var source=document.getElementById('publicUserPhoto');
     var src=source&&!source.hidden?String(source.getAttribute('src')||''):'';
     if(account&&src){
-      pageAvatarImage.src=src;
+      pageAvatarImage.src=window.beMediaUrl?window.beMediaUrl(src):src;
       pageAvatarImage.hidden=false;
       pageAvatarFallback.hidden=true;
       pageAvatar.setAttribute('aria-label','Abrir perfil');
@@ -123,7 +186,7 @@
     closePage(true);
     window.setTimeout(function(){
       if(!account){
-        location.assign('/login');
+        window.BETVPublicRoutes.go('/login');
         document.body.classList.add('login-mode');
         return;
       }
@@ -160,7 +223,7 @@
     return items.slice(0,3).map(function(item){
       return '<button class="notification-preview-item" type="button" data-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
-        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(item.description,100)||'Confira esta atualização.')+'</span></span>'+
+        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(notificationPlainText(item.description),100)||'Confira esta atualização.')+'</span></span>'+
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
       '</button>';
     }).join('');
@@ -192,7 +255,7 @@
       var selected=String(item.id)===selectedId;
       return '<button class="notification-page-link '+(selected?'active':'')+'" type="button" data-notification-page-id="'+esc(item.id)+'" aria-current="'+(selected?'page':'false')+'">'+
         '<strong>'+esc(item.title||'Atualização')+'</strong>'+
-        '<span>'+esc(trimText(item.description,92)||'Confira esta atualização.')+'</span>'+
+        '<span>'+esc(trimText(notificationPlainText(item.description),92)||'Confira esta atualização.')+'</span>'+
       '</button>';
     }).join('');
     pageNav.querySelectorAll('[data-notification-page-id]').forEach(function(button){
@@ -201,8 +264,9 @@
     pageContent.innerHTML='<article class="notification-article">'+
       '<h1>'+esc(active.title||'Atualização')+'</h1>'+
       '<p class="notification-article-date">'+esc(formatDate(active))+'</p>'+
-      '<div class="notification-article-body">'+esc(active.description||'').replace(/\r?\n/g,'<br>')+'</div>'+
+      '<div class="notification-article-body be-markdown">'+renderNotificationMarkdown(active.description||'')+'</div>'+
     '</article>';
+    bindNotificationImages(pageContent);
   }
 
   async function loadNotifications(force){
@@ -252,6 +316,7 @@
     window.dispatchEvent(new CustomEvent('be:close-support'));
     await loadNotifications(false);
     renderPage(selectedId);
+    markAllRead();
     window.scrollTo(0,0);
   }
 
