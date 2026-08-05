@@ -3038,24 +3038,54 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `/api/drive-media?${params.toString()}`;
   }
 
+  function googleDriveDirectStreamUrl(fileId, resourceKey = '') {
+    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: 't' });
+    if (resourceKey) params.set('resourcekey', resourceKey);
+    return `https://drive.google.com/uc?${params.toString()}`;
+  }
+
+  function normalizeDriveMediaKind(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'audio' || normalized === 'music' || normalized === 'song') return 'audio';
+    if (normalized === 'video' || normalized === 'movie' || normalized === 'film') return 'video';
+    return '';
+  }
+
+  function inferDriveMediaKind(...values) {
+    const text = values.map(value => String(value || '').trim().toLowerCase()).filter(Boolean).join(' | ');
+    if (!text) return '';
+    if (/(^|[\s._/?:=&-])(mp4|m4v|webm|mov|mkv)(?=$|[\s._/?:=&-])|\b(v[ií]deo|video|filme|movie|s[eé]rie|series|vlog|entrevista|festival|show)\b/i.test(text)) return 'video';
+    if (/(^|[\s._/?:=&-])(mp3|m4a|aac|wav|ogg|oga|opus|flac)(?=$|[\s._/?:=&-])|\b([aá]udio|audio|m[uú]sica|musica|song|faixa|track|album|[aá]lbum|podcast)\b/i.test(text)) return 'audio';
+    return '';
+  }
+
   async function googleDriveMediaKind(fileId, resourceKey = '') {
     if (!fileId) return '';
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12000);
     try {
-      const response = await fetch(googleDriveStreamUrl(fileId, resourceKey), {
-        method: 'HEAD',
+      const metadataUrl = new URL(googleDriveStreamUrl(fileId, resourceKey), location.origin);
+      metadataUrl.searchParams.set('metadata', '1');
+      const response = await fetch(`${metadataUrl.pathname}${metadataUrl.search}`, {
+        method: 'GET',
         cache: 'no-store',
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        signal: controller.signal
       });
       if (!response.ok) return '';
-      const declaredKind = String(response.headers.get('x-betv-media-kind') || '').trim().toLowerCase();
-      if (declaredKind === 'audio' || declaredKind === 'video') return declaredKind;
-      const contentType = String(response.headers.get('content-type') || '').trim().toLowerCase();
+      const payload = await response.json().catch(() => ({}));
+      const declaredKind = normalizeDriveMediaKind(payload?.kind);
+      if (declaredKind) return declaredKind;
+      const contentType = String(payload?.contentType || '').trim().toLowerCase();
       if (contentType.startsWith('audio/')) return 'audio';
       if (contentType.startsWith('video/')) return 'video';
+      return inferDriveMediaKind(payload?.filename, contentType);
     } catch (_) {
-      // O carregamento normal do player continua mesmo quando a sondagem falha.
+      // O player continua e tenta a URL direta/preview quando a sondagem falha.
+      return '';
+    } finally {
+      window.clearTimeout(timeout);
     }
-    return '';
   }
 
   function formatPlayerTime(value) {
@@ -3145,6 +3175,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeMediaKind = '';
     let frameMode = false;
     let audioMode = false;
+    let streamAttempt = '';
+    let metadataProbeFinished = false;
 
     const clearPlayerTimers = () => {
       window.clearTimeout(fallbackTimer);
@@ -3154,8 +3186,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const applyBackdrop = () => {
-      const hasBanner = Boolean(activeBannerUrl);
-      backdrop.hidden = !audioMode || !hasBanner;
+      const hasBanner = Boolean(activeBannerUrl && activeBannerUrl !== '#');
+      backdrop.hidden = !audioMode;
       overlay.classList.toggle('has-backdrop', audioMode && hasBanner);
       backdropImage.alt = activeTitle ? `Capa de ${activeTitle}` : 'Capa do áudio';
       if (hasBanner) {
@@ -3181,10 +3213,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const detectAudioMode = () => {
-      if (frameMode || overlay.hidden) {
-        setAudioMode(false);
-        return;
-      }
+      if (overlay.hidden || frameMode) return;
       const hasVideoDimensions = Number(video.videoWidth) > 0 && Number(video.videoHeight) > 0;
       const shouldUseAudioMode = video.readyState >= 1 && !hasVideoDimensions;
       setAudioMode(shouldUseAudioMode);
@@ -3214,10 +3243,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       volumeButton.title = video.muted || video.volume === 0 ? 'Ativar som' : 'Silenciar';
     };
 
+    const armFallbackTimer = (callback, delay) => {
+      window.clearTimeout(fallbackTimer);
+      fallbackTimer = window.setTimeout(callback, delay);
+    };
+
     const useFrameFallback = () => {
       if (!activeFileId || frameMode || overlay.hidden) return;
-      const preserveAudioLayout = activeMediaKind === 'audio' || audioMode;
+      const preserveAudioLayout = activeMediaKind === 'audio'
+        || audioMode
+        || (!activeMediaKind && Boolean(activeBannerUrl));
       frameMode = true;
+      streamAttempt = 'frame';
       setAudioMode(preserveAudioLayout);
       window.clearTimeout(fallbackTimer);
       video.pause();
@@ -3229,6 +3266,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.toggle('is-audio-frame-mode', preserveAudioLayout);
       loading.hidden = true;
       showControls(true);
+    };
+
+    const tryDirectDriveStream = () => {
+      if (!activeFileId || frameMode || overlay.hidden || streamAttempt === 'direct') return;
+      streamAttempt = 'direct';
+      window.clearTimeout(fallbackTimer);
+      video.pause();
+      video.src = googleDriveDirectStreamUrl(activeFileId, activeResourceKey);
+      video.load();
+      armFallbackTimer(useFrameFallback, 9000);
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => showControls(true));
     };
 
     const closePlayer = () => {
@@ -3247,6 +3296,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeBannerUrl = '';
       activeTitle = '';
       activeMediaKind = '';
+      streamAttempt = '';
+      metadataProbeFinished = false;
       applyBackdrop();
       overlay.classList.remove('is-open', 'is-frame-mode', 'is-audio-frame-mode', 'controls-visible', 'is-paused', 'is-muted');
       document.body.classList.remove('drive-player-open');
@@ -3265,10 +3316,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closePlayer();
       activeFileId = fileId;
       activeResourceKey = resourceKey;
-      activeBannerUrl = safeAssetUrlValue(context?.bannerUrl || '');
+      const requestedBanner = String(context?.bannerUrl || '').trim();
+      const safeBanner = requestedBanner ? safeAssetUrlValue(requestedBanner) : '';
+      activeBannerUrl = safeBanner && safeBanner !== '#' ? safeBanner : '';
       activeTitle = String(context?.title || '').trim();
-      activeMediaKind = String(context?.mediaKind || '').trim().toLowerCase();
+      activeMediaKind = normalizeDriveMediaKind(context?.mediaKind)
+        || inferDriveMediaKind(context?.mediaType, context?.contentType, context?.category, activeTitle, context?.contentUrl);
       frameMode = false;
+      streamAttempt = 'proxy';
+      metadataProbeFinished = false;
       setAudioMode(activeMediaKind === 'audio');
       applyBackdrop();
       previousFocus = document.activeElement;
@@ -3280,15 +3336,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frameShell.hidden = true;
       frame.src = 'about:blank';
       loading.hidden = false;
-      const streamUrl = googleDriveStreamUrl(fileId, resourceKey);
-      video.src = streamUrl;
+      video.src = googleDriveStreamUrl(fileId, resourceKey);
       video.load();
       googleDriveMediaKind(fileId, resourceKey).then(kind => {
+        metadataProbeFinished = true;
         if (overlay.hidden || activeFileId !== fileId) return;
         applyMediaKind(kind);
       });
       closeButton.focus({ preventScroll: true });
-      fallbackTimer = window.setTimeout(useFrameFallback, 12000);
+      armFallbackTimer(tryDirectDriveStream, 7000);
       const playPromise = video.play();
       if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => showControls(true));
     };
@@ -3310,18 +3366,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const fileId = googleDriveFileId(driveUrl);
       if (!fileId) return;
       const linkedContent = contentDataFromElement(link);
-      const detailBannerImage = link.id === 'contentDetailPlay'
-        ? document.querySelector('#contentDetailBg img')
-        : null;
+      const contentOwner = link.closest('#contentDetailSection, .f-slide, .video-card, .detail-reco-card');
+      const detailBannerImage = document.querySelector('#contentDetailBg img');
+      const ownerImage = contentOwner?.querySelector?.('.video-card-thumbnail, .f-media img, .detail-reco-thumb img, img');
+      const bannerUrl = link.dataset.bannerUrl
+        || contentOwner?.dataset?.bannerUrl
+        || linkedContent.bannerUrl
+        || detailBannerImage?.currentSrc
+        || detailBannerImage?.src
+        || ownerImage?.currentSrc
+        || ownerImage?.src
+        || linkedContent.imageUrl
+        || '';
+      const title = link.dataset.title || contentOwner?.dataset?.title || linkedContent.title || '';
+      const explicitKind = normalizeDriveMediaKind(
+        link.dataset.mediaKind
+          || link.dataset.mediaType
+          || contentOwner?.dataset?.mediaKind
+          || contentOwner?.dataset?.mediaType
+          || ''
+      );
+      const inferredKind = explicitKind || inferDriveMediaKind(
+        link.dataset.contentType,
+        link.dataset.category,
+        contentOwner?.dataset?.contentType,
+        contentOwner?.dataset?.category,
+        linkedContent.collection,
+        title,
+        driveUrl
+      );
       event.preventDefault();
       openPlayer(fileId, googleDriveResourceKey(driveUrl), {
-        bannerUrl: link.dataset.bannerUrl
-          || linkedContent.bannerUrl
-          || detailBannerImage?.currentSrc
-          || detailBannerImage?.src
-          || linkedContent.imageUrl
-          || '',
-        title: link.dataset.title || linkedContent.title || ''
+        bannerUrl,
+        title,
+        mediaKind: inferredKind,
+        mediaType: link.dataset.mediaType || contentOwner?.dataset?.mediaType || '',
+        contentType: link.dataset.contentType || contentOwner?.dataset?.contentType || '',
+        category: link.dataset.category || contentOwner?.dataset?.category || '',
+        contentUrl: driveUrl
       });
     }, true);
 
@@ -3388,9 +3470,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     video.addEventListener('play', () => { detectAudioMode(); syncPlayerState(); showControls(); });
     video.addEventListener('pause', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
     video.addEventListener('ended', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
-    video.addEventListener('error', useFrameFallback);
+    video.addEventListener('error', () => {
+      if (overlay.hidden || frameMode) return;
+      if (streamAttempt === 'proxy') tryDirectDriveStream();
+      else useFrameFallback();
+    });
     video.addEventListener('stalled', () => {
-      if (video.readyState === 0) fallbackTimer = window.setTimeout(useFrameFallback, 3500);
+      if (video.readyState !== 0 || overlay.hidden || frameMode) return;
+      armFallbackTimer(streamAttempt === 'proxy' ? tryDirectDriveStream : useFrameFallback, 3500);
     });
 
     window.addEventListener('keydown', event => {

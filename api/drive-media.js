@@ -36,6 +36,11 @@ function safeResourceKey(value) {
   return !normalized || RESOURCE_KEY_PATTERN.test(normalized) ? normalized : '';
 }
 
+function wantsMetadata(req) {
+  const value = String(firstQueryValue(req.query?.metadata ?? req.query?.meta) || '').trim().toLowerCase();
+  return value === '1' || value === 'true' || value === 'yes';
+}
+
 function sourceUrls(fileId, resourceKey) {
   const makeUrl = base => {
     const url = new URL(base);
@@ -51,6 +56,13 @@ function sourceUrls(fileId, resourceKey) {
   ];
 }
 
+function previewUrl(fileId, resourceKey) {
+  const url = new URL(`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`);
+  url.searchParams.set('usp', 'sharing');
+  if (resourceKey) url.searchParams.set('resourcekey', resourceKey);
+  return url;
+}
+
 function filenameFromDisposition(value) {
   const header = String(value || '');
   const utf8 = header.match(/filename\*=UTF-8''([^;]+)/i);
@@ -63,23 +75,27 @@ function filenameFromDisposition(value) {
 }
 
 function extensionFromFilename(filename) {
-  const match = String(filename || '').toLowerCase().match(/\.([a-z0-9]{2,5})$/);
+  const match = String(filename || '').toLowerCase().match(/\.([a-z0-9]{2,5})(?:$|[?#])/);
   return match?.[1] || '';
+}
+
+function mimeFromFilename(filename) {
+  return MIME_BY_EXTENSION[extensionFromFilename(filename)] || '';
 }
 
 function normalizedContentType(response) {
   const raw = String(response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
   const filename = filenameFromDisposition(response.headers.get('content-disposition'));
-  const guessed = MIME_BY_EXTENSION[extensionFromFilename(filename)] || '';
+  const guessed = mimeFromFilename(filename);
   if (!raw || raw === 'application/octet-stream' || raw === 'binary/octet-stream') return guessed || 'application/octet-stream';
   return raw;
 }
 
-function mediaKind(contentType, disposition) {
+function mediaKind(contentType, disposition = '', filename = '') {
   const type = String(contentType || '').toLowerCase();
   if (type.startsWith('audio/')) return 'audio';
   if (type.startsWith('video/')) return 'video';
-  const guessed = MIME_BY_EXTENSION[extensionFromFilename(filenameFromDisposition(disposition))] || '';
+  const guessed = mimeFromFilename(filename || filenameFromDisposition(disposition));
   if (guessed.startsWith('audio/')) return 'audio';
   if (guessed.startsWith('video/')) return 'video';
   return '';
@@ -91,27 +107,92 @@ function looksLikeDriveError(response, contentType) {
   return type.startsWith('text/html') || type.startsWith('application/json');
 }
 
-async function fetchDriveSource(url, req) {
+function decodeHtmlEntities(value) {
+  return String(value || '')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code) || 0));
+}
+
+function filenameFromPreviewHtml(html) {
+  const source = String(html || '');
+  const patterns = [
+    /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i,
+    /<meta[^>]+itemprop=["']name["'][^>]+content=["']([^"']+)["']/i,
+    /<title>([^<]+)<\/title>/i,
+    /["']([^"']+\.(?:mp3|m4a|aac|wav|ogg|oga|opus|flac|mp4|m4v|webm|mov|mkv))["']/i
+  ];
+  for (const pattern of patterns) {
+    const match = source.match(pattern);
+    if (!match?.[1]) continue;
+    const value = decodeHtmlEntities(match[1]).replace(/\s+-\s+Google Drive\s*$/i, '').trim();
+    if (value) return value;
+  }
+  return '';
+}
+
+function mimeFromPreviewHtml(html) {
+  const source = String(html || '').toLowerCase();
+  const knownTypes = [
+    'audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/ogg', 'audio/flac',
+    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska'
+  ];
+  return knownTypes.find(type => source.includes(type)) || '';
+}
+
+async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchDriveSource(url, req, probeOnly = false) {
   const clientRange = String(req.headers.range || '').trim();
-  const probeRange = req.method === 'HEAD' && !clientRange ? 'bytes=0-0' : clientRange;
+  const requestedRange = probeOnly && !clientRange ? 'bytes=0-0' : clientRange;
   const headers = {
     Accept: '*/*',
     'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36'
   };
-  if (probeRange) headers.Range = probeRange;
+  if (requestedRange) headers.Range = requestedRange;
 
+  return fetchWithTimeout(url, {
+    method: 'GET',
+    redirect: 'follow',
+    headers
+  });
+}
+
+async function fetchPreviewMetadata(fileId, resourceKey) {
   try {
-    return await fetch(url, {
+    const response = await fetchWithTimeout(previewUrl(fileId, resourceKey), {
       method: 'GET',
       redirect: 'follow',
-      headers,
-      signal: controller.signal
+      headers: {
+        Accept: 'text/html,application/xhtml+xml',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36'
+      }
     });
-  } finally {
-    clearTimeout(timer);
+    if (!response.ok) return null;
+    const html = await response.text();
+    const filename = filenameFromPreviewHtml(html);
+    const contentType = mimeFromPreviewHtml(html) || mimeFromFilename(filename) || 'application/octet-stream';
+    return {
+      filename,
+      contentType,
+      kind: mediaKind(contentType, '', filename)
+    };
+  } catch (_) {
+    return null;
   }
 }
 
@@ -136,6 +217,18 @@ async function pipeBody(upstream, req, res) {
   }
 }
 
+function sendMetadata(res, metadata) {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  return res.end(JSON.stringify({
+    kind: metadata?.kind || '',
+    contentType: metadata?.contentType || 'application/octet-stream',
+    filename: metadata?.filename || ''
+  }));
+}
+
 module.exports = async function driveMediaProxy(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
@@ -147,18 +240,39 @@ module.exports = async function driveMediaProxy(req, res) {
   const resourceKey = safeResourceKey(rawResourceKey);
   if (!fileId || (rawResourceKey && !resourceKey)) return res.status(400).end();
 
+  const metadataRequest = wantsMetadata(req);
+
   try {
     let upstream = null;
     let contentType = '';
+    let filename = '';
+
     for (const url of sourceUrls(fileId, resourceKey)) {
-      const candidate = await fetchDriveSource(url, req);
+      const candidate = await fetchDriveSource(url, req, metadataRequest || req.method === 'HEAD');
       const candidateType = normalizedContentType(candidate);
       if (!looksLikeDriveError(candidate, candidateType)) {
         upstream = candidate;
         contentType = candidateType;
+        filename = filenameFromDisposition(candidate.headers.get('content-disposition'));
         break;
       }
       try { await candidate.body?.cancel(); } catch (_) { /* sem ação */ }
+    }
+
+    if (metadataRequest) {
+      if (upstream) {
+        const metadata = {
+          filename,
+          contentType,
+          kind: mediaKind(contentType, upstream.headers.get('content-disposition'), filename)
+        };
+        try { await upstream.body?.cancel(); } catch (_) { /* sem ação */ }
+        if (metadata.kind) return sendMetadata(res, metadata);
+      }
+
+      const previewMetadata = await fetchPreviewMetadata(fileId, resourceKey);
+      if (previewMetadata) return sendMetadata(res, previewMetadata);
+      return sendMetadata(res, { filename, contentType, kind: mediaKind(contentType, '', filename) });
     }
 
     if (!upstream) return res.status(502).end();
@@ -170,7 +284,7 @@ module.exports = async function driveMediaProxy(req, res) {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Accept-Ranges', upstream.headers.get('accept-ranges') || 'bytes');
 
-    const kind = mediaKind(contentType, upstream.headers.get('content-disposition'));
+    const kind = mediaKind(contentType, upstream.headers.get('content-disposition'), filename);
     if (kind) res.setHeader('X-BETV-Media-Kind', kind);
 
     copyHeader(upstream, res, 'content-length');
