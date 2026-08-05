@@ -3050,12 +3050,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function drivePlayerMarkup() {
     return `<div class="drive-player-overlay" id="drivePlayerOverlay" hidden aria-hidden="true">
-      <section class="drive-player-shell" id="drivePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo">
+      <section class="drive-player-shell" id="drivePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor de mídia">
+        <div class="drive-player-backdrop" id="drivePlayerBackdrop" hidden aria-hidden="true">
+          <img class="drive-player-backdrop-image" id="drivePlayerBackdropImage" alt="">
+        </div>
         <video class="drive-player-video" id="drivePlayerVideo" preload="metadata" playsinline></video>
         <div class="drive-player-frame-shell" id="drivePlayerFrameShell" hidden>
           <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor do Google Drive" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-live="polite"><span></span><span>Carregando vídeo...</span></div>
+        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-live="polite"><span></span><span>Carregando mídia...</span></div>
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -3081,7 +3084,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           </button>
         </div>
         <div class="drive-player-bottom-controls">
-          <input class="drive-player-progress" id="drivePlayerProgress" type="range" min="0" max="1000" value="0" step="1" aria-label="Progresso do vídeo">
+          <input class="drive-player-progress" id="drivePlayerProgress" type="range" min="0" max="1000" value="0" step="1" aria-label="Progresso da mídia">
           <div class="drive-player-time"><span id="drivePlayerCurrent">0:00</span><span aria-hidden="true">/</span><span id="drivePlayerDuration">0:00</span></div>
         </div>
       </section>
@@ -3095,6 +3098,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const overlay = document.getElementById('drivePlayerOverlay');
     const shell = document.getElementById('drivePlayerShell');
+    const backdrop = document.getElementById('drivePlayerBackdrop');
+    const backdropImage = document.getElementById('drivePlayerBackdropImage');
     const video = document.getElementById('drivePlayerVideo');
     const frameShell = document.getElementById('drivePlayerFrameShell');
     const frame = document.getElementById('drivePlayerFrame');
@@ -3108,20 +3113,51 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const progress = document.getElementById('drivePlayerProgress');
     const currentLabel = document.getElementById('drivePlayerCurrent');
     const durationLabel = document.getElementById('drivePlayerDuration');
-    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
+    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
     let previousFocus = null;
     let activeFileId = '';
     let activeResourceKey = '';
+    let activeBannerUrl = '';
+    let activeTitle = '';
     let frameMode = false;
+    let audioMode = false;
 
     const clearPlayerTimers = () => {
       window.clearTimeout(fallbackTimer);
       window.clearTimeout(controlsTimer);
       fallbackTimer = 0;
       controlsTimer = 0;
+    };
+
+    const applyBackdrop = () => {
+      const hasBanner = Boolean(activeBannerUrl);
+      backdrop.hidden = !audioMode || !hasBanner;
+      overlay.classList.toggle('has-backdrop', audioMode && hasBanner);
+      backdropImage.alt = activeTitle ? `Capa de ${activeTitle}` : 'Capa do áudio';
+      if (hasBanner) {
+        if (backdropImage.getAttribute('src') !== activeBannerUrl) backdropImage.setAttribute('src', activeBannerUrl);
+      } else {
+        backdropImage.removeAttribute('src');
+      }
+    };
+
+    const setAudioMode = enabled => {
+      audioMode = Boolean(enabled) && !frameMode;
+      overlay.classList.toggle('is-audio-mode', audioMode);
+      applyBackdrop();
+    };
+
+    const detectAudioMode = () => {
+      if (frameMode || overlay.hidden) {
+        setAudioMode(false);
+        return;
+      }
+      const hasVideoDimensions = Number(video.videoWidth) > 0 && Number(video.videoHeight) > 0;
+      const shouldUseAudioMode = video.readyState >= 1 && !hasVideoDimensions;
+      setAudioMode(shouldUseAudioMode);
     };
 
     const showControls = (keepVisible = false) => {
@@ -3151,6 +3187,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const useFrameFallback = () => {
       if (!activeFileId || frameMode || overlay.hidden) return;
       frameMode = true;
+      setAudioMode(false);
       window.clearTimeout(fallbackTimer);
       video.pause();
       video.removeAttribute('src');
@@ -3173,11 +3210,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       loading.hidden = false;
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
+      frameMode = false;
+      setAudioMode(false);
+      activeBannerUrl = '';
+      activeTitle = '';
+      applyBackdrop();
       overlay.classList.remove('is-open', 'is-frame-mode', 'controls-visible', 'is-paused', 'is-muted');
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
       activeResourceKey = '';
-      frameMode = false;
       progress.value = '0';
       progress.style.setProperty('--drive-progress', '0%');
       currentLabel.textContent = '0:00';
@@ -3186,12 +3227,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = null;
     };
 
-    const openPlayer = (fileId, resourceKey = '') => {
+    const openPlayer = (fileId, resourceKey = '', context = {}) => {
       if (!fileId) return;
       closePlayer();
       activeFileId = fileId;
       activeResourceKey = resourceKey;
+      activeBannerUrl = safeAssetUrlValue(context?.bannerUrl || '');
+      activeTitle = String(context?.title || '').trim();
       frameMode = false;
+      setAudioMode(false);
+      applyBackdrop();
       previousFocus = document.activeElement;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
@@ -3225,8 +3270,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const driveUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
       const fileId = googleDriveFileId(driveUrl);
       if (!fileId) return;
+      const linkedContent = contentDataFromElement(link);
+      const detailBannerImage = link.id === 'contentDetailPlay'
+        ? document.querySelector('#contentDetailBg img')
+        : null;
       event.preventDefault();
-      openPlayer(fileId, googleDriveResourceKey(driveUrl));
+      openPlayer(fileId, googleDriveResourceKey(driveUrl), {
+        bannerUrl: link.dataset.bannerUrl
+          || linkedContent.bannerUrl
+          || detailBannerImage?.currentSrc
+          || detailBannerImage?.src
+          || linkedContent.imageUrl
+          || '',
+        title: link.dataset.title || linkedContent.title || ''
+      });
     }, true);
 
     closeButton.addEventListener('click', closePlayer);
@@ -3272,19 +3329,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     video.addEventListener('loadedmetadata', () => {
       window.clearTimeout(fallbackTimer);
       loading.hidden = true;
+      detectAudioMode();
       syncPlayerState();
       showControls();
     });
     video.addEventListener('canplay', () => {
       window.clearTimeout(fallbackTimer);
       loading.hidden = true;
+      detectAudioMode();
     });
     video.addEventListener('timeupdate', syncPlayerState);
-    video.addEventListener('durationchange', syncPlayerState);
+    video.addEventListener('durationchange', () => {
+      detectAudioMode();
+      syncPlayerState();
+    });
     video.addEventListener('volumechange', syncPlayerState);
-    video.addEventListener('play', () => { syncPlayerState(); showControls(); });
-    video.addEventListener('pause', () => { syncPlayerState(); showControls(true); });
-    video.addEventListener('ended', () => { syncPlayerState(); showControls(true); });
+    video.addEventListener('play', () => { detectAudioMode(); syncPlayerState(); showControls(); });
+    video.addEventListener('pause', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
+    video.addEventListener('ended', () => { detectAudioMode(); syncPlayerState(); showControls(true); });
     video.addEventListener('error', useFrameFallback);
     video.addEventListener('stalled', () => {
       if (video.readyState === 0) fallbackTimer = window.setTimeout(useFrameFallback, 3500);

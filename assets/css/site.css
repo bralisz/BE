@@ -8134,8 +8134,29 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
 .drive-player-overlay[hidden]{display:none!important}
 .drive-player-overlay.is-open{opacity:1;visibility:visible}
 .drive-player-shell{position:relative;width:100%;height:100%;height:100dvh;overflow:hidden;background:#000;isolation:isolate}
-.drive-player-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
-.drive-player-frame-shell{position:absolute;inset:0;overflow:hidden;background:#000}
+.drive-player-backdrop{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  overflow:hidden;
+  background:radial-gradient(circle at center,#15202f 0%,#06080d 68%,#000 100%);
+}
+.drive-player-backdrop[hidden]{display:none!important}
+.drive-player-backdrop::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,rgba(0,0,0,.38) 0%,rgba(0,0,0,.52) 48%,rgba(0,0,0,.78) 100%);
+}
+.drive-player-backdrop-image{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transform:scale(1.06);
+  filter:blur(16px) saturate(1.08);
+}
+.drive-player-video{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:contain;background:#000}
+.drive-player-frame-shell{position:absolute;inset:0;z-index:2;overflow:hidden;background:#000}
 .drive-player-frame-shell[hidden]{display:none!important}
 .drive-player-frame{
   position:absolute;
@@ -8161,6 +8182,7 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
   background:#000;
 }
 .drive-player-loading[hidden]{display:none!important}
+.drive-player-overlay.is-audio-mode.has-backdrop .drive-player-loading{background:rgba(0,0,0,.28)}
 .drive-player-loading>span:first-child{width:38px;height:38px;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:drive-player-spin .85s linear infinite}
 @keyframes drive-player-spin{to{transform:rotate(360deg)}}
 .drive-player-top-controls,
@@ -8243,6 +8265,9 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
 .drive-player-progress::-moz-range-progress{height:4px;border-radius:99px;background:#fff}
 .drive-player-progress::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:#fff}
 .drive-player-time{display:flex;align-items:center;gap:5px;margin-top:1px;color:rgba(255,255,255,.82);font-size:15px;font-variant-numeric:tabular-nums}
+.drive-player-overlay.is-audio-mode .drive-player-shell{background:#05070b}
+.drive-player-overlay.is-audio-mode .drive-player-video{opacity:0;background:transparent}
+.drive-player-overlay.is-audio-mode .drive-player-shell::after{background:linear-gradient(180deg,rgba(0,0,0,.3),transparent 28%,transparent 68%,rgba(0,0,0,.62))}
 .drive-player-overlay.is-frame-mode .drive-player-video,
 .drive-player-overlay.is-frame-mode .drive-player-loading,
 .drive-player-overlay.is-frame-mode .drive-player-volume,
