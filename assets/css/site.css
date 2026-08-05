@@ -8668,3 +8668,68 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
 .drive-player-overlay.is-youtube-mode.is-browser-fullscreen .drive-player-external{
   display:none!important;
 }
+
+/* Player: botão de tela cheia refinado e barra limpa no modo fullscreen. */
+.drive-player-top-controls .drive-player-fullscreen{
+  width:40px!important;
+  height:40px!important;
+  flex:0 0 40px!important;
+  margin-right:auto!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  border-radius:13px!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.055))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 8px 24px rgba(0,0,0,.2)!important;
+  -webkit-backdrop-filter:blur(14px) saturate(1.15)!important;
+  backdrop-filter:blur(14px) saturate(1.15)!important;
+}
+.drive-player-top-controls .drive-player-fullscreen svg{
+  width:21px!important;
+  height:21px!important;
+  fill:none!important;
+}
+.drive-player-top-controls .drive-player-fullscreen:hover,
+.drive-player-top-controls .drive-player-fullscreen:focus-visible{
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.085))!important;
+  border-color:rgba(255,255,255,.18)!important;
+}
+.drive-player-top-controls .drive-player-fullscreen:focus-visible{
+  outline:2px solid rgba(255,255,255,.86)!important;
+  outline-offset:3px!important;
+}
+
+/* Em tela cheia, remove totalmente a barra e aproveita toda a altura do vídeo. */
+.drive-player-overlay.is-browser-fullscreen{
+  --drive-player-actionbar-height:0px;
+}
+.drive-player-overlay.is-browser-fullscreen .drive-player-top-controls{
+  display:none!important;
+}
+.drive-player-overlay.is-browser-fullscreen .drive-player-video{
+  height:100%!important;
+}
+.drive-player-overlay.is-browser-fullscreen .drive-player-loading,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell::after{
+  bottom:0!important;
+}
+.drive-player-overlay.is-browser-fullscreen .drive-player-center-controls{
+  top:50%!important;
+}
+.drive-player-overlay.is-browser-fullscreen .drive-player-bottom-controls{
+  bottom:max(20px,env(safe-area-inset-bottom))!important;
+}
+@media(max-width:700px){
+  .drive-player-top-controls .drive-player-fullscreen{
+    width:38px!important;
+    height:38px!important;
+    flex-basis:38px!important;
+    border-radius:12px!important;
+  }
+  .drive-player-top-controls .drive-player-fullscreen svg{
+    width:20px!important;
+    height:20px!important;
+  }
+  .drive-player-overlay.is-browser-fullscreen .drive-player-bottom-controls{
+    bottom:max(12px,env(safe-area-inset-bottom))!important;
+  }
+}
+
