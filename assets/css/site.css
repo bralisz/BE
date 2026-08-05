@@ -8191,7 +8191,7 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
   color:#fff;
   background:#000;
 }
-.drive-player-loading[hidden]{display:none!important}
+.drive-player-loading[hidden],.drive-player-loading-message[hidden]{display:none!important}
 .drive-player-overlay.is-audio-mode.has-backdrop .drive-player-loading{background:rgba(0,0,0,.22)}
 .drive-player-loader{
   position:relative;
@@ -8335,6 +8335,13 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
 .drive-player-overlay.is-frame-mode .drive-player-shell::after{display:none}
 .drive-player-overlay.is-frame-mode .drive-player-top-controls{opacity:1;pointer-events:auto;transform:none}
 .drive-player-overlay.is-frame-mode .drive-player-close{background:rgba(0,0,0,.55);backdrop-filter:blur(8px)}
+.drive-player-overlay.is-youtube-mode .drive-player-frame{
+  inset:0;
+  top:0;
+  width:100%;
+  height:100%;
+}
+.drive-player-overlay.is-youtube-mode .drive-player-frame-shell{background:#000}
 @media (max-width:700px){
   .drive-player-frame{top:-52px;height:calc(100% + 52px)}
   .drive-player-top-controls{top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
@@ -8395,9 +8402,11 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
   background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.34));
   text-shadow:0 1px 16px rgba(0,0,0,.72);
 }
-.drive-player-overlay.is-loading .drive-player-center-controls,
-.drive-player-overlay.is-loading .drive-player-bottom-controls{
-  opacity:.34!important;
+.drive-player-overlay.is-loading:not(.is-error) .drive-player-center-controls,
+.drive-player-overlay.is-loading:not(.is-error) .drive-player-bottom-controls{
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
 }
 .drive-player-icon:disabled,
 .drive-player-skip:disabled,
