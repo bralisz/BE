@@ -3173,7 +3173,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-player-frame-shell" id="drivePlayerFrameShell" hidden>
           <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor de mídia" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span></div>
+        <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span><a class="drive-player-support-link" href="/suporte" data-public-action="support" data-support-target="contact" hidden>Informe o erro ao suporte</a></div>
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -3219,7 +3219,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const frameShell = document.getElementById('drivePlayerFrameShell');
     const frame = document.getElementById('drivePlayerFrame');
     const loading = document.getElementById('drivePlayerLoading');
-    const loadingText = loading?.querySelector('span:last-child');
+    const loadingText = loading?.querySelector('.drive-player-loading-message');
+    const supportLink = loading?.querySelector('.drive-player-support-link');
     const closeButton = document.getElementById('drivePlayerClose');
     const externalButton = document.getElementById('drivePlayerExternal');
     const volumeButton = document.getElementById('drivePlayerVolume');
@@ -3229,7 +3230,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const progress = document.getElementById('drivePlayerProgress');
     const currentLabel = document.getElementById('drivePlayerCurrent');
     const durationLabel = document.getElementById('drivePlayerDuration');
-    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
+    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
@@ -3258,6 +3259,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const setLoadingMessage = (message, visible = true, revealText = false) => {
       loadingText.textContent = String(message || '');
       loadingText.hidden = !revealText;
+      supportLink.hidden = !revealText;
       loading.setAttribute('aria-label', String(message || 'Carregando mídia'));
       loading.hidden = !visible;
       overlay.classList.toggle('is-loading', visible);
@@ -3353,13 +3355,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls();
     };
 
-    const showStreamError = message => {
+    const showStreamError = () => {
       if (overlay.hidden) return;
       mediaReady = false;
       window.clearTimeout(fallbackTimer);
       overlay.classList.add('is-error');
       setPlayerInteractive(false);
-      setLoadingMessage(message || 'Não foi possível carregar esta mídia.', true, true);
+      setLoadingMessage('Não foi possível carregar esta mídia.', true, true);
       showControls(true);
     };
 
@@ -3496,6 +3498,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
       previousFocus = null;
     };
+
+    supportLink.addEventListener('click', () => {
+      closePlayer();
+    });
 
     const openPlayer = (fileId, resourceKey = '', context = {}) => {
       if (!fileId) return;
