@@ -87,50 +87,6 @@
     image.setAttribute('data-avatar-fallback', DEFAULT_AVATAR);
     return resolved;
   };
-
-  function isDefaultAvatarValue(value) {
-    const raw = String(value || '').trim();
-    if (!raw || raw === '#') return true;
-    try {
-      return new URL(raw, location.origin).pathname === DEFAULT_AVATAR;
-    } catch (_) {
-      return raw.split(/[?#]/)[0] === DEFAULT_AVATAR;
-    }
-  }
-
-  window.BETVReadSelectedAvatar = function BETVReadSelectedAvatar(event) {
-    const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
-    const account = window.beBackend && window.beBackend.auth ? window.beBackend.auth.currentUser : null;
-    const source = document.getElementById('publicUserPhoto');
-    const candidates = [
-      detail.avatarUrl,
-      detail.profile && detail.profile.avatarUrl,
-      account && account.profile && account.profile.avatarUrl,
-      account && account.photoURL,
-      source && !source.hidden ? (source.getAttribute('src') || source.currentSrc || source.src) : ''
-    ];
-    for (const candidate of candidates) {
-      const normalized = String(candidate || '').trim();
-      if (normalized && !isDefaultAvatarValue(normalized)) return normalized;
-    }
-    return '';
-  };
-
-  window.BETVLoadSelectedAvatar = async function BETVLoadSelectedAvatar(event) {
-    const immediate = window.BETVReadSelectedAvatar(event);
-    const backend = window.beBackend;
-    const account = backend && backend.auth ? backend.auth.currentUser : null;
-    if (!account || !account.uid || !backend.profiles || typeof backend.profiles.ensure !== 'function') return immediate;
-    try {
-      const profile = await backend.profiles.ensure(account);
-      const current = backend.auth && backend.auth.currentUser;
-      if (!current || current.uid !== account.uid) return '';
-      const selected = profile && profile.avatarUrl ? String(profile.avatarUrl).trim() : '';
-      return selected && !isDefaultAvatarValue(selected) ? selected : immediate;
-    } catch (_) {
-      return immediate;
-    }
-  };
   document.addEventListener('error', function (event) {
     const image = event.target;
     if (!(image instanceof HTMLImageElement) || !image.hasAttribute('data-avatar-fallback')) return;
@@ -562,41 +518,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
 
-  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','news','notifications','ongs','sections','series','settings','videos']);
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
-  const ORIGINAL_MUSIC_TITLE_SECTION_IDS = new Set([
-    '14386598-4978-403a-8548-db0ee582e291',
-    '18db9515-179c-4bad-9646-1fcda63df14a'
-  ]);
-  const ORIGINAL_MUSIC_TITLE_SECTION_NAMES = new Set(['live performances & tv','videoclipes']);
-
-  function normalizedTitleContext(value) {
-    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
-  }
-
-  function isMusicTitleRecord(record) {
-    const sectionId = String(record?.sectionId || '').trim();
-    const context = [record?.sectionName, record?.sourceSectionTitle, record?.category, record?.type, record?.contentType]
-      .map(normalizedTitleContext)
-      .filter(Boolean)
-      .join(' ');
-    return ORIGINAL_MUSIC_TITLE_SECTION_IDS.has(sectionId)
-      || ORIGINAL_MUSIC_TITLE_SECTION_NAMES.has(normalizedTitleContext(record?.sectionName || record?.sourceSectionTitle))
-      || /(^|\s)(music|musica|song|faixa|track|album|videoclipe|live performances)(\s|$)/.test(context);
-  }
-
-  function shouldPreserveOriginalTitle(collection, record, requestedSlug = activeLocaleSlug()) {
-    const name = String(collection || record?.collection || '').trim().toLowerCase();
-    const slug = String(requestedSlug || 'pt-br').toLowerCase();
-    if (name === 'videos' && isMusicTitleRecord(record)) return true;
-    if (slug !== 'es') return false;
-    if (name === 'movies' || name === 'news') return true;
-    if (name === 'sections') {
-      const title = normalizedTitleContext(record?.title || record?.name);
-      return title === 'vanity fair';
-    }
-    return false;
-  }
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
@@ -618,17 +541,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function localizeContentRecord(record, collection = '') {
+  function localizeContentRecord(record) {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
-    if (shouldPreserveOriginalTitle(collection, record, slug)) {
-      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
-      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
-    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
@@ -642,57 +561,42 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return !localized || typeof localized !== 'object';
   }
 
-  const pendingTranslationBatches = new Set();
-
-  function requestMissingTranslationsInBackground(collection, records, slug) {
-    if (!records.length || !supabaseClient?.functions?.invoke) return;
-    // O trigger do Supabase traduz notificações após a publicação.
-    if (String(collection || '').toLowerCase() === 'notifications') return;
-    const ids = records.map(record => String(record.id || '')).filter(Boolean);
-    if (!ids.length) return;
-    const key = `${String(collection || '')}:${slug}:${ids.join(',')}`;
-    if (pendingTranslationBatches.has(key)) return;
-    pendingTranslationBatches.add(key);
-
-    window.setTimeout(async () => {
-      try {
-        for (let offset = 0; offset < ids.length; offset += 20) {
-          const batchIds = ids.slice(offset, offset + 20);
-          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-            body: { collection: String(collection), ids: batchIds, locales: [slug] }
-          });
-          if (result?.error) {
-            console.warn('Tradução automática indisponível; o conteúdo original foi mantido:', result.error.message || result.error);
-            break;
-          }
-        }
-      } catch (error) {
-        console.warn('Tradução automática indisponível; o conteúdo original foi mantido:', error?.message || error);
-      } finally {
-        pendingTranslationBatches.delete(key);
-      }
-    }, 0);
-  }
-
   async function ensureTranslatedRecords(collection, records) {
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
-
-    // Nunca bloqueia a exibição dos vídeos esperando a tradução automática.
-    // Traduções já salvas são aplicadas imediatamente; as ausentes são geradas
-    // em segundo plano e ficam disponíveis na próxima atualização da página.
-    if (slug !== 'pt-br' && TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) {
-      const missing = values.filter(record => recordNeedsTranslation(record, slug));
-      requestMissingTranslationsInBackground(collection, missing, slug);
+    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
+      return values.map(localizeContentRecord);
     }
-
-    return values.map(record => localizeContentRecord(record, collection));
+    const missing = values.filter(record => recordNeedsTranslation(record, slug));
+    if (missing.length) {
+      try {
+        const translatedById = new Map();
+        for (let offset = 0; offset < missing.length; offset += 20) {
+          const batch = missing.slice(offset, offset + 20);
+          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+            body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
+          });
+          if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
+            console.warn('Um lote de tradução não foi concluído:', result?.error?.message || 'resposta inválida');
+            continue;
+          }
+          result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
+        }
+        values.forEach(record => {
+          const translation = translatedById.get(String(record.id));
+          if (!translation || typeof translation !== 'object') return;
+          if (!record.translations || typeof record.translations !== 'object') record.translations = {};
+          record.translations[slug] = translation;
+        });
+      } catch (error) {
+        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
+      }
+    }
+    return values.map(localizeContentRecord);
   }
 
   function queueRecordTranslation(collection, id) {
     if (!currentUser || currentUser.role !== 'admin' || !supabaseClient?.functions?.invoke) return;
-    // O trigger do banco já traduz notificações; evita chamada duplicada e 403.
-    if (String(collection || '').toLowerCase() === 'notifications') return;
     if (collection !== 'settings' && !TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) return;
     window.setTimeout(() => {
       supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
@@ -769,65 +673,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return hash.startsWith('#/admin') || callback === 'admin';
   }
 
-  function flattenPublicRpcRows(payload) {
-    const rows = Array.isArray(payload) ? payload : (payload ? [payload] : []);
-    return rows.map(row => {
-      if (!row || typeof row !== 'object') return null;
-      if (row.data && typeof row.data === 'object' && !Array.isArray(row.data)) {
-        return {
-          id: row.id,
-          ...row.data,
-          createdAt: row.data.createdAt || row.created_at || '',
-          updatedAt: row.data.updatedAt || row.updated_at || ''
-        };
-      }
-      return row;
-    }).filter(Boolean);
-  }
-
-  async function readPublicDataFromSupabase(name, id = '') {
-    if (!supabaseClient || typeof supabaseClient.rpc !== 'function') {
-      throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-    }
-    if (String(name) === 'settings') {
-      if (!id) return [];
-      const { data, error } = await supabaseClient.rpc('get_public_site_setting', { p_id: String(id) });
-      if (error) throw error;
-      const values = flattenPublicRpcRows(data);
-      return values[0] || null;
-    }
-    const { data, error } = await supabaseClient.rpc('get_public_content_items', {
-      p_collection: String(name || ''),
-      p_id: id ? String(id) : null
-    });
-    if (error) throw error;
-    const values = flattenPublicRpcRows(data);
-    return id ? (values[0] || null) : values;
-  }
-
   async function readPublicData(name, id = '') {
     const params = new URLSearchParams({ name: String(name || '') });
     if (id) params.set('id', String(id));
-    try {
-      const requestOptions = {
-        method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
-      };
-      if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
-        requestOptions.signal = AbortSignal.timeout(10000);
-      }
-      const response = await fetch(`/api/public-data?${params.toString()}`, requestOptions);
-      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-      return await response.json();
-    } catch (apiError) {
-      // Em previews ou durante uma implantação, a rota /api pode ficar alguns
-      // segundos indisponível. O RPC público possui os mesmos campos seguros e
-      // mantém o catálogo visível sem depender dessa rota intermediária.
-      try {
-        return await readPublicDataFromSupabase(name, id);
-      } catch (rpcError) {
-        throw backendError('public_data_unavailable', 'Conteúdo público indisponível.', rpcError || apiError);
-      }
-    }
+    const response = await fetch(`/api/public-data?${params.toString()}`, {
+      method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+    return response.json();
   }
 
   const supabaseData = {
@@ -871,7 +724,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const publicValue = await readPublicData(name, id);
           if (!publicValue) return null;
           const translated = await ensureTranslatedRecords(name, [publicValue]);
-          return translated[0] || localizeContentRecord(publicValue, name);
+          return translated[0] || localizeContentRecord(publicValue);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -884,7 +737,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value, name);
+          return translated[0] || localizeContentRecord(value);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -896,7 +749,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value, name);
+        return translated[0] || localizeContentRecord(value);
       } catch (error) {
         throw mapAuthError(error);
       }
@@ -2338,68 +2191,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.beRenderMarkdown = markdownToHtml;
   window.beMarkdownPlainText = markdownToPlainText;
 
-  async function runHomeContentStep(label, task) {
-    try {
-      await task();
-      return true;
-    } catch (error) {
-      console.warn(`${label} indisponível:`, error?.message || error);
-      return false;
-    }
-  }
-
   window.addEventListener('load', async () => {
     setupHomeNavigation();
     setupDetailControls();
     try {
       if (!window.beBackend) return;
       await window.beBackend.ready;
-
-      // Uma falha em configurações ou destaques não pode impedir o catálogo.
-      await runHomeContentStep('Configurações do site', applySiteSettings);
-      await runHomeContentStep('Destaques', renderFeatured);
-      const catalogLoaded = await runHomeContentStep('Catálogo de vídeos', renderVideoCatalog);
-
-      // Tenta novamente uma vez em caso de oscilação temporária da API.
-      if (!catalogLoaded) {
-        window.setTimeout(() => {
-          runHomeContentStep('Nova tentativa do catálogo de vídeos', renderVideoCatalog);
-        }, 1200);
-      }
-
+      await applySiteSettings();
+      await renderFeatured();
+      await renderVideoCatalog();
       setupHomeNavigation();
       setupDetailControls();
-      await runHomeContentStep('Detalhes do conteúdo', openContentDetailFromRoute);
+      await openContentDetailFromRoute();
     } catch (error) {
-      console.warn('Inicialização do conteúdo indisponível:', error?.message || error);
+      console.warn('Conteúdo dinâmico indisponível:', error.message);
     } finally {
       window.__beContentReady = true;
       window.dispatchEvent(new Event('be:content-ready'));
     }
-  });
-
-  let catalogRecoveryPromise = null;
-  function catalogIsVisible() {
-    const host = document.getElementById('dynamicSections');
-    return Boolean(host && (host.querySelector('.video-card') || host.querySelector('.video-rail-section')));
-  }
-  function recoverVideoCatalog(delay = 0) {
-    window.setTimeout(() => {
-      if (catalogIsVisible() || !window.beBackend) return;
-      if (document.body.classList.contains('login-mode') || document.body.classList.contains('admin-mode')) return;
-      if (catalogRecoveryPromise) return;
-      catalogRecoveryPromise = Promise.resolve(window.beBackend.ready)
-        .then(() => renderVideoCatalog())
-        .catch(error => console.warn('Recuperação do catálogo indisponível:', error?.message || error))
-        .finally(() => { catalogRecoveryPromise = null; });
-    }, Math.max(0, Number(delay) || 0));
-  }
-  window.addEventListener('be:home-entered', () => recoverVideoCatalog(0));
-  window.addEventListener('be:close-notifications', () => recoverVideoCatalog(0));
-  window.addEventListener('online', () => recoverVideoCatalog(150));
-  window.addEventListener('pageshow', () => recoverVideoCatalog(150));
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) recoverVideoCatalog(150);
   });
 
   function normalizedFooterLink(value, network = 'website') {
@@ -2690,91 +2499,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     setupContentDetailInteractions(host);
   }
 
-  async function loadCatalogList(collection) {
-    try {
-      const rows = await beBackend.data.list(collection, { orderBy: 'order', direction: 'asc' });
-      return { collection, ok: true, rows: Array.isArray(rows) ? rows : [] };
-    } catch (error) {
-      console.warn(`Coleção ${collection} indisponível no catálogo:`, error?.message || error);
-      return { collection, ok: false, rows: [], error };
-    }
-  }
-
-  function fallbackVideoSections(videos) {
-    const groups = new Map();
-    (Array.isArray(videos) ? videos : []).forEach((video, index) => {
-      const sectionId = String(video?.sectionId || '').trim();
-      const sectionName = String(video?.sectionName || video?.category || video?.type || '').trim();
-      const normalizedName = normalizeText(sectionName || 'Vídeos');
-      const key = sectionId || normalizedName || `videos-${index}`;
-      if (!groups.has(key)) {
-        groups.set(key, {
-          id: sectionId || `fallback-${numericPublicId(key)}`,
-          title: sectionName || 'Vídeos',
-          category: normalizedName || 'videos',
-          order: groups.size + 1,
-          itemLimit: 12,
-          active: true,
-          fallbackSection: true
-        });
-      }
-    });
-    return Array.from(groups.values());
-  }
-
-  function catalogStatusHost(main, message) {
-    const old = document.getElementById('dynamicSections');
-    if (old && old.querySelector('.video-card')) return old;
-    const host = old || document.createElement('section');
-    host.id = 'dynamicSections';
-    host.className = 'video-catalog';
-    host.setAttribute('aria-label', 'Categorias de conteúdos');
-    host.innerHTML = `<div class="home-filter-empty show" role="status"><strong>${escapeHtml(message || 'O catálogo não pôde ser carregado agora.')}</strong><span>Atualize a página para tentar novamente.</span></div>`;
-    if (!old) main.insertAdjacentElement('afterend', host);
-    return host;
-  }
-
   async function renderVideoCatalog() {
     const main = document.querySelector('main');
-    if (!main) return false;
+    if (!main) return;
 
-    const previousCatalog = document.getElementById('dynamicSections');
-    const results = await Promise.all([
-      loadCatalogList('sections'),
-      loadCatalogList('videos'),
-      loadCatalogList('movies'),
-      loadCatalogList('series'),
-      loadCatalogList('featured')
+    const sections = (await beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }))
+      .filter(section => section.active !== false);
+    const [videoRows, movieRows, seriesRows, featuredRows] = await Promise.all([
+      beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
+      beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => []),
+      beBackend.data.list('series', { orderBy: 'order', direction: 'asc' }).catch(() => []),
+      beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => [])
     ]);
-    const byCollection = new Map(results.map(result => [result.collection, result]));
-    const sectionResult = byCollection.get('sections') || { ok: false, rows: [] };
-    const videoResult = byCollection.get('videos') || { ok: false, rows: [] };
-    const movieResult = byCollection.get('movies') || { ok: false, rows: [] };
-    const seriesResult = byCollection.get('series') || { ok: false, rows: [] };
-    const featuredResult = byCollection.get('featured') || { ok: false, rows: [] };
-
-    let sections = sectionResult.rows.filter(section => section && section.active !== false);
-    const allVideos = videoResult.rows.filter(video => video && video.active !== false);
-    const allMovies = movieResult.rows.filter(movie => movie && movie.active !== false);
-    const allSeries = seriesResult.rows.filter(series => series && series.active !== false);
-    const featuredRows = featuredResult.rows.filter(Boolean);
-    if (!sections.length && allVideos.length) sections = fallbackVideoSections(allVideos);
-
-    const contentRequestsFailed = !videoResult.ok && !movieResult.ok && !seriesResult.ok && !featuredResult.ok;
-    const everyRequestFailed = contentRequestsFailed && !sectionResult.ok;
-
-    // Não apaga um catálogo que já estava funcionando por causa de uma oscilação
-    // momentânea na API. Em uma falha total, mantém o último catálogo renderizado.
-    if (everyRequestFailed || (contentRequestsFailed && !allVideos.length && !allMovies.length && !allSeries.length)) {
-      if (previousCatalog && previousCatalog.querySelector('.video-card')) return true;
-      catalogStatusHost(main, 'Não foi possível carregar os vídeos neste momento.');
-      return false;
-    }
-
-    // Se as seções falharem, os próprios vídeos ainda formam os trilhos usando
-    // sectionId/sectionName. Assim uma única coleção nunca derruba toda a Home.
-    if (!sections.length && allVideos.length) sections = fallbackVideoSections(allVideos);
-
+    const allVideos = videoRows.filter(video => video.active !== false);
+    const allMovies = movieRows.filter(movie => movie.active !== false);
+    const allSeries = seriesRows.filter(series => series.active !== false);
     randomFeaturedPools.videos = allVideos.map(item => ({ ...item, collection: 'videos' }));
     randomFeaturedPools.movies = allMovies.map(item => ({ ...item, collection: 'movies' }));
     randomFeaturedPools.series = allSeries.map(item => ({ ...item, collection: 'series' }));
@@ -2818,6 +2557,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         };
       })
       .filter(Boolean);
+    if (!sections.length && !featuredContents.length) return;
+
+    const old = document.getElementById('dynamicSections');
+    if (old) old.remove();
 
     const host = document.createElement('section');
     host.id = 'dynamicSections';
@@ -2937,9 +2680,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       block.dataset.hasVideos = String(allSectionContents.some(item => (item.collection || 'videos') === 'videos'));
       block.dataset.hasMovies = String(allSectionContents.some(item => item.collection === 'movies'));
       block.dataset.hasSeries = String(allSectionContents.some(item => item.collection === 'series'));
-      const preserveSectionTitle = shouldPreserveOriginalTitle('sections', section, activeLocaleSlug());
       block.innerHTML = `
-        <a class="video-rail-title${preserveSectionTitle ? ' notranslate' : ''}" ${preserveSectionTitle ? 'translate="no" data-i18n-ignore' : ''} href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
+        <a class="video-rail-title" href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
           <span>${escapeHtml(section.title || 'Seção')}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </a>
@@ -2962,21 +2704,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setupRail(block);
     }
 
-    // Insere o catálogo antes dos blocos opcionais. Assim uma falha no banner da
-    // Billie ou da ONG nunca deixa a Home completamente vazia.
-    if (previousCatalog) previousCatalog.replaceWith(host);
-    else main.insertAdjacentElement('afterend', host);
-
+    await addBillieHomeSpotlight(host);
+    await addDonateHomeSpotlight(host);
+    main.insertAdjacentElement('afterend', host);
     setupContentDetailInteractions(host);
     setupSectionTitleInteractions(host);
     window.dispatchEvent(new Event('be:catalog-ready'));
-
-    await Promise.allSettled([
-      addBillieHomeSpotlight(host),
-      addDonateHomeSpotlight(host)
-    ]);
-    window.dispatchEvent(new Event('be:catalog-ready'));
-    return true;
   }
 
   async function addBillieHomeSpotlight(host) {
@@ -3037,8 +2770,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (image) image.addEventListener('error', () => spotlight.remove(), { once:true });
   }
 
+  const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a'
+  ]);
   function preservesOriginalMusicTitle(data) {
-    return shouldPreserveOriginalTitle(String(data?.collection || 'videos'), data, activeLocaleSlug());
+    if (String(data?.collection || 'videos').toLowerCase() !== 'videos') return false;
+    const sectionId = String(data?.sectionId || '').trim();
+    const sectionName = String(data?.sectionName || data?.sourceSectionTitle || '').trim().toLowerCase();
+    return MUSIC_TITLE_SECTION_IDS_FRONTEND.has(sectionId) || ['live performances & tv','videoclipes'].includes(sectionName);
   }
 
   function videoCard(video) {
@@ -7811,19 +7551,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },50);
   }
 
-  if(legalPage)legalPage.addEventListener('click',function(event){
-    var link=event.target&&event.target.closest?event.target.closest('[data-legal-link]'):null;
-    if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
-    var route=String(link.getAttribute('data-legal-link')||'').trim();
-    if(!route)return;
-    event.preventDefault();
-    if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/'+route);
-    else{
-      var target=window.BETVLocaleURL?window.BETVLocaleURL('/'+route):('/'+route);
-      history.pushState({beRoute:route},'',target);
-      renderLegalRoute();
-    }
-  });
   if(legalHomeButton)legalHomeButton.addEventListener('click',goHome);
   if(legalAvatarButton)legalAvatarButton.addEventListener('click',openProfile);
   if(cookieAccept)cookieAccept.addEventListener('click',acceptCookies);
@@ -7891,7 +7618,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(!page||!input||!faqList)return;
 
   var faqItems=Array.prototype.slice.call(faqList.querySelectorAll('.support-faq-item'));
-  var faqGroupTitles=Array.prototype.slice.call(faqList.querySelectorAll('[data-faq-group-title]'));
 
   function normalize(value){
     return String(value||'')
@@ -8018,7 +7744,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function filterFaq(){
     var query=normalize(input.value);
     var visible=0;
-    faqGroupTitles.forEach(function(title){title.hidden=Boolean(query);});
     faqItems.forEach(function(item){
       var searchOnly=item.getAttribute('data-search-only')==='true';
       var match=query?normalize(item.textContent).indexOf(query)!==-1:!searchOnly;
@@ -8493,18 +8218,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(pageAvatar)pageAvatar.addEventListener('click',openProfileFromPage);
   if(pageClose)pageClose.addEventListener('click',function(){closePage(true);});
 
-  // A barra superior continua visível na página de notificações. Ao clicar no
-  // logo, Filmes ou Vídeos, encerra a rota de notificações antes de aplicar o
-  // filtro do catálogo; sem isso o body mantinha notification-page-active e
-  // escondia todos os trilhos, resultando na tela preta mostrada pelo usuário.
-  document.addEventListener('click',function(event){
-    var homeTarget=event.target&&event.target.closest?event.target.closest('#logoBtn,button[data-home-view],a[data-home-view]'):null;
-    if(homeTarget&&document.body.classList.contains('notification-page-active'))closePage(true);
-  },true);
-  window.addEventListener('be:home-entered',function(){
-    if(document.body.classList.contains('notification-page-active')||!page.hidden)closePage(false);
-  });
-
   document.addEventListener('click',function(event){
     var desktopTrigger=event.target&&event.target.closest?event.target.closest('#notificationButton'):null;
     if(!desktopTrigger)return;
@@ -8538,8 +8251,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     openPage(detail.id||routeInfo().id,false);
   });
   window.addEventListener('be:close-notifications',function(){closePage(false);});
-  window.addEventListener('be:content-ready',function(){window.setTimeout(function(){loadNotifications(true);},0);});
-  window.addEventListener('be:auth-changed',function(){syncPageAvatar();if(window.__beContentReady)loadNotifications(true);});
+  window.addEventListener('be:content-ready',function(){loadNotifications(true);});
+  window.addEventListener('be:auth-changed',function(){syncPageAvatar();loadNotifications(true);});
   window.addEventListener('be:profile-avatar-changed',syncPageAvatar);
   window.addEventListener('be:content-ready',syncPageAvatar);
   window.addEventListener('hashchange',function(){
@@ -8554,9 +8267,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   });
 
   syncPageAvatar();
+  loadNotifications(false);
   var initial=routeInfo();
   if(initial.active)openPage(initial.id,false);
-  else if(window.__beContentReady)window.setTimeout(function(){loadNotifications(false);},0);
 })();
 
 ;/* module boundary */
@@ -8785,20 +8498,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!raw)return '';
     return window.beMediaUrl?window.beMediaUrl(raw):raw;
   }
-  var avatarSyncVersion=0;
-  function applyBillieAvatar(url){
+  function syncAvatar(){
+    var source=document.getElementById('publicUserPhoto');
+    var url=source&&!source.hidden?String(source.currentSrc||source.src||'').trim():'';
     if(window.BETVApplyAvatar)window.BETVApplyAvatar(avatarImage,url);else{avatarImage.src=url||window.BETV_DEFAULT_AVATAR;avatarImage.hidden=false;}
     avatarFallback.hidden=true;
-  }
-  function syncAvatar(event){
-    var version=++avatarSyncVersion;
-    var immediate=window.BETVReadSelectedAvatar?window.BETVReadSelectedAvatar(event):'';
-    applyBillieAvatar(immediate);
-    if(!window.BETVLoadSelectedAvatar)return;
-    Promise.resolve(window.BETVLoadSelectedAvatar(event)).then(function(url){
-      if(version!==avatarSyncVersion||!isBillieRoute())return;
-      applyBillieAvatar(url);
-    }).catch(function(){});
   }
   function syncUnread(){
     var source=document.getElementById('notificationUnreadDot');
@@ -9266,23 +8970,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     hero.classList.add('has-banner');
   }
 
-  var avatarSyncVersion=0;
-  function applyDonateAvatar(url){
+  function syncAvatar(){
+    var source=document.getElementById('publicUserPhoto');
     var image=document.getElementById('donatePageAvatarImage');
     var fallback=document.getElementById('donatePageAvatarFallback');
     if(!image||!fallback)return;
-    if(window.BETVApplyAvatar)window.BETVApplyAvatar(image,url);else{image.src=url||window.BETV_DEFAULT_AVATAR;image.hidden=false;}
+    var src=source&&!source.hidden?String(source.currentSrc||source.src||'').trim():'';
+    if(window.BETVApplyAvatar)window.BETVApplyAvatar(image,src);else{image.src=src||window.BETV_DEFAULT_AVATAR;image.hidden=false;}
     fallback.hidden=true;
-  }
-  function syncAvatar(event){
-    var version=++avatarSyncVersion;
-    var immediate=window.BETVReadSelectedAvatar?window.BETVReadSelectedAvatar(event):'';
-    applyDonateAvatar(immediate);
-    if(!window.BETVLoadSelectedAvatar)return;
-    Promise.resolve(window.BETVLoadSelectedAvatar(event)).then(function(url){
-      if(version!==avatarSyncVersion||!isRoute())return;
-      applyDonateAvatar(url);
-    }).catch(function(){});
   }
 
   function syncUnread(){
@@ -9785,7 +9480,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     syncUnread();
     load(false);
     if(supportersLoaded)observeSupportersEnd();
-    document.title='Billie Eilish TV';
+    document.title='Apoie uma ONG — Billie Eilish TV';
   }
 
   function close(){
