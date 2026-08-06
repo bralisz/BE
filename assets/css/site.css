@@ -9657,3 +9657,106 @@ body.donate-page-active > footer > .footer-card{width:min(100%,1390px)!important
     height:54px!important;
   }
 }
+
+/* Divulgação da ONG no fim da Home — exibida somente no mobile. */
+.donate-home-spotlight{display:none}
+@media (max-width:760px){
+  .donate-home-spotlight{
+    display:block;
+    width:100%;
+    margin:12px 0 34px;
+    padding:0 18px;
+  }
+  .donate-home-spotlight[hidden]{display:none!important}
+  .donate-home-spotlight-frame{
+    position:relative;
+    width:100%;
+    height:230px;
+    overflow:hidden;
+    isolation:isolate;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:26px;
+    background:#080a0f;
+    box-shadow:0 22px 54px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.1);
+  }
+  .donate-home-spotlight-frame>img{
+    position:absolute;
+    inset:0;
+    z-index:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    object-position:center;
+    filter:saturate(.92) contrast(1.03) brightness(.76);
+  }
+  .donate-home-spotlight-overlay{
+    position:absolute;
+    inset:0;
+    z-index:1;
+    background:linear-gradient(90deg,rgba(2,5,8,.72),rgba(2,5,8,.12) 72%),linear-gradient(0deg,rgba(2,5,8,.58),transparent 72%);
+    pointer-events:none;
+  }
+  .donate-home-spotlight-button{
+    position:absolute;
+    left:20px;
+    bottom:18px;
+    z-index:2;
+    min-height:42px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 17px;
+    border:1px solid rgba(255,255,255,.94);
+    border-radius:12px;
+    color:#08090a!important;
+    background:#fff;
+    box-shadow:none;
+    font-size:13px;
+    font-weight:800;
+    line-height:1;
+    text-decoration:none;
+  }
+  .donate-home-spotlight-button:active{transform:scale(.98)}
+
+  /* Os controles da página ONG permanecem acessíveis durante o scroll. */
+  body.donate-page-active .donate-page-header{
+    position:fixed!important;
+    inset:0 0 auto!important;
+    min-height:72px;
+    padding:12px 14px 20px!important;
+    pointer-events:none;
+  }
+  body.donate-page-active .donate-page-header>.donate-page-home,
+  body.donate-page-active .donate-page-header>.donate-page-header-actions,
+  body.donate-page-active .donate-notification-dropdown{pointer-events:auto}
+  body.donate-page-active .donate-page-header-actions{gap:8px!important}
+  body.donate-page-active .donate-page-home{
+    width:42px!important;
+    height:42px!important;
+    flex:0 0 42px!important;
+  }
+  body.donate-page-active .donate-page-notifications,
+  body.donate-page-active .donate-page-avatar{
+    width:38px!important;
+    height:38px!important;
+    flex:0 0 38px!important;
+  }
+  body.donate-page-active .donate-page-home svg{width:20px!important;height:20px!important}
+  body.donate-page-active .donate-page-notifications svg,
+  body.donate-page-active .donate-page-avatar svg{width:18px!important;height:18px!important}
+  body.donate-page-active .donate-page-unread-dot{
+    top:1px;
+    right:1px;
+    width:9px;
+    height:9px;
+  }
+  body.donate-page-active .donate-notification-dropdown{
+    top:calc(100% + 10px);
+    right:-48px!important;
+  }
+}
+@media (max-width:390px){
+  .donate-home-spotlight-frame{height:196px}
+  body.donate-page-active .donate-page-header{padding-right:12px!important;padding-left:12px!important}
+}
+

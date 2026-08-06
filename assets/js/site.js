@@ -2503,6 +2503,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     await addBillieHomeSpotlight(host);
+    await addDonateHomeSpotlight(host);
     main.insertAdjacentElement('afterend', host);
     setupContentDetailInteractions(host);
     setupSectionTitleInteractions(host);
@@ -2534,6 +2535,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     image.addEventListener('error', () => {
       if (!image.src.endsWith(defaultBanner)) image.src = defaultBanner;
     });
+  }
+
+
+  async function addDonateHomeSpotlight(host) {
+    if (!host || host.querySelector('.donate-home-spotlight')) return;
+
+    let settings = null;
+    try {
+      settings = await beBackend.data.get('settings', 'ong');
+    } catch (_) {
+      settings = null;
+    }
+
+    const rawBanner = String(settings?.bannerUrl || '').trim();
+    if (!rawBanner) return;
+    const banner = safeAssetUrl(rawBanner);
+    if (!banner || banner === '#') return;
+
+    const spotlight = document.createElement('section');
+    spotlight.className = 'donate-home-spotlight';
+    spotlight.setAttribute('aria-label', 'Apoie uma ONG');
+    spotlight.innerHTML = `
+      <div class="donate-home-spotlight-frame">
+        <img src="${banner}" alt="Apoie uma ONG" loading="lazy" decoding="async">
+        <div class="donate-home-spotlight-overlay" aria-hidden="true"></div>
+        <a class="donate-home-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a>
+      </div>`;
+
+    host.append(spotlight);
+    const image = spotlight.querySelector('.donate-home-spotlight-frame > img');
+    if (image) image.addEventListener('error', () => spotlight.remove(), { once:true });
   }
 
   function videoCard(video) {
@@ -4491,7 +4523,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const query = normalizeText(input.value);
       const sections = Array.from(host.querySelectorAll('.video-rail-section'));
       const billieSpotlight = host.querySelector('.billie-home-spotlight');
+      const donateSpotlight = host.querySelector('.donate-home-spotlight');
       if (billieSpotlight) billieSpotlight.hidden = currentView !== 'home' || Boolean(query);
+      if (donateSpotlight) donateSpotlight.hidden = currentView !== 'home' || Boolean(query);
       let visibleTotal = 0;
 
       sections.forEach(section => {
@@ -8666,6 +8700,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     page.setAttribute('aria-hidden','true');
     document.title='Billie Eilish TV';
   }
+
+  document.addEventListener('click',function(event){
+    var link=event.target&&event.target.closest?event.target.closest('[data-open-donate="true"]'):null;
+    if(!link)return;
+    event.preventDefault();
+    if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/ong');
+    else location.assign('/ong');
+  });
 
   if(home)home.addEventListener('click',function(){
     closeNotificationPopup();
