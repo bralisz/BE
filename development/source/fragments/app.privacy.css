@@ -5878,3 +5878,121 @@ body.legal-page-active #dynamicSections{
 .settings-language-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .settings-language-option{min-height:92px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;padding:18px;border:1px solid rgba(255,255,255,.13);border-radius:16px;color:#fff;background:rgba(255,255,255,.035);text-align:left;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease,box-shadow .18s ease}
 .settings-language-option strong{font-size:15px;line-height:1.25}.settings-language-option span{color:var(--ice-faint);font-size:12px}.settings-language-option:hover{transform:translateY(-1px);border-color:rgba(92,158,255,.48);background:rgba(65,130,235,.09)}.settings-language-option.active{border-color:#5a9cff;background:rgba(45,127,249,.15);box-shadow:0 0 0 3px rgba(45,127,249,.12)}.settings-language-option:focus-visible{outline:3px solid rgba(74,155,255,.32);outline-offset:3px}.settings-language-note{display:block;margin-top:16px!important;line-height:1.55}@media(max-width:760px){.settings-language-options{grid-template-columns:1fr}.settings-language-option{min-height:76px}}
+
+
+/* Troca de idioma: skeleton próprio das Configurações, sem tela vazia. */
+.settings-loading-skeleton{
+  display:none;
+  position:absolute;
+  inset:0;
+  min-height:100%;
+  overflow:auto;
+  padding:14px clamp(22px,4vw,72px) 54px;
+  background:#030405;
+  color:#fff;
+}
+html.settings-language-loading .site-loading-skeleton{display:none!important}
+html.settings-language-loading .settings-loading-skeleton{display:block!important}
+.settings-skeleton-top{
+  height:82px;
+  display:grid;
+  grid-template-columns:1fr minmax(430px,520px) 1fr;
+  align-items:center;
+  gap:24px;
+}
+.settings-skeleton-brand,
+.settings-skeleton-avatar{
+  display:block;
+  width:54px;
+  height:54px;
+  border-radius:50%;
+}
+.settings-skeleton-brand{justify-self:start}
+.settings-skeleton-avatar{justify-self:end}
+.settings-skeleton-nav{
+  height:62px;
+  display:flex;
+  align-items:center;
+  justify-content:space-evenly;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:#0d0f10;
+}
+.settings-skeleton-nav i{
+  display:block;
+  width:72px;
+  height:34px;
+  border-radius:999px;
+  background:rgba(255,255,255,.055);
+}
+.settings-skeleton-nav i:first-child{background:rgba(255,255,255,.1)}
+.settings-skeleton-nav i:last-child{width:34px;border-radius:50%}
+.settings-skeleton-main{
+  width:min(1180px,100%);
+  margin:34px auto 0;
+}
+.settings-skeleton-title-block{display:grid;gap:12px;margin-bottom:30px}
+.settings-skeleton-title-block i:first-child{width:210px;height:38px;border-radius:10px}
+.settings-skeleton-title-block i:last-child{width:min(440px,72%);height:14px;border-radius:999px}
+.settings-skeleton-layout{
+  display:grid;
+  grid-template-columns:230px minmax(0,1fr);
+  gap:28px;
+  align-items:start;
+}
+.settings-skeleton-sidebar{
+  display:grid;
+  gap:10px;
+  padding:14px;
+  border:1px solid rgba(255,255,255,.065);
+  border-radius:22px;
+  background:#080a0c;
+}
+.settings-skeleton-sidebar i{height:48px;border-radius:13px}
+.settings-skeleton-sidebar i.is-active{background:#182433;border-color:rgba(83,151,255,.22)}
+.settings-skeleton-content{
+  min-height:420px;
+  padding:28px;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:24px;
+  background:#080a0c;
+}
+.settings-skeleton-content-heading{display:grid;gap:11px;margin-bottom:24px}
+.settings-skeleton-content-heading i:first-child{width:150px;height:34px;border-radius:9px}
+.settings-skeleton-content-heading i:last-child{width:min(520px,84%);height:14px;border-radius:999px}
+.settings-skeleton-panel{
+  padding:24px;
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:20px;
+  background:#0d1013;
+}
+.settings-skeleton-language-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.settings-skeleton-language-cards i{height:92px;border-radius:16px}
+.settings-skeleton-note{display:block;width:min(520px,86%);height:13px;margin-top:18px;border-radius:999px}
+
+@media(max-width:760px){
+  .settings-loading-skeleton{padding:0 20px 36px}
+  .settings-skeleton-top{
+    height:92px;
+    grid-template-columns:54px 1fr 54px;
+    gap:14px;
+  }
+  .settings-skeleton-nav{display:none}
+  .settings-skeleton-main{margin-top:18px}
+  .settings-skeleton-title-block{margin-bottom:22px}
+  .settings-skeleton-title-block i:first-child{width:170px;height:34px}
+  .settings-skeleton-layout{grid-template-columns:1fr;gap:18px}
+  .settings-skeleton-sidebar{
+    display:flex;
+    gap:9px;
+    overflow:hidden;
+    padding:10px;
+    border-radius:18px;
+  }
+  .settings-skeleton-sidebar i{flex:0 0 108px;height:42px}
+  .settings-skeleton-content{min-height:460px;padding:20px;border-radius:21px}
+  .settings-skeleton-panel{padding:18px}
+  .settings-skeleton-language-cards{grid-template-columns:1fr}
+  .settings-skeleton-language-cards i{height:76px}
+}

@@ -46,6 +46,20 @@
 <script>
 (function(){
   try{
+    var startedAt=Number(sessionStorage.getItem('beLanguageSwitchLoading')||0);
+    var returnTab=String(sessionStorage.getItem('beSettingsReturnTab')||'');
+    var fresh=startedAt>0&&(Date.now()-startedAt)<45000;
+    if(fresh&&returnTab==='language')document.documentElement.classList.add('settings-language-loading');
+    else{
+      sessionStorage.removeItem('beLanguageSwitchLoading');
+      if(returnTab==='language')sessionStorage.removeItem('beSettingsReturnTab');
+    }
+  }catch(_){ }
+})();
+</script>
+<script>
+(function(){
+  try{
     var callback=new URLSearchParams(location.search||'').get('auth_callback');
     var remembered=sessionStorage.getItem('beOAuthDestination')||'';
     var path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'')).replace(/\/+$/,'')||'/';
@@ -79,10 +93,10 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-password-avatar-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-language-skeleton-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260806-password-avatar-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260806-avatar-recovery-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260806-language-skeleton-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -107,6 +121,42 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
       <div class="site-skeleton-heading skeleton-shimmer"></div>
       <div class="site-skeleton-cards"><i class="site-skeleton-card skeleton-shimmer"></i><i class="site-skeleton-card skeleton-shimmer"></i><i class="site-skeleton-card skeleton-shimmer"></i><i class="site-skeleton-card skeleton-shimmer"></i></div>
     </section>
+  </div>
+  <div class="settings-loading-skeleton" aria-hidden="true">
+    <header class="settings-skeleton-top">
+      <span class="settings-skeleton-brand skeleton-shimmer"></span>
+      <span class="settings-skeleton-nav skeleton-shimmer"><i></i><i></i><i></i><i></i></span>
+      <span class="settings-skeleton-avatar skeleton-shimmer"></span>
+    </header>
+    <main class="settings-skeleton-main">
+      <div class="settings-skeleton-title-block">
+        <i class="skeleton-shimmer"></i>
+        <i class="skeleton-shimmer"></i>
+      </div>
+      <div class="settings-skeleton-layout">
+        <aside class="settings-skeleton-sidebar">
+          <i class="skeleton-shimmer"></i>
+          <i class="skeleton-shimmer"></i>
+          <i class="skeleton-shimmer"></i>
+          <i class="skeleton-shimmer is-active"></i>
+          <i class="skeleton-shimmer"></i>
+        </aside>
+        <section class="settings-skeleton-content">
+          <div class="settings-skeleton-content-heading">
+            <i class="skeleton-shimmer"></i>
+            <i class="skeleton-shimmer"></i>
+          </div>
+          <div class="settings-skeleton-panel">
+            <div class="settings-skeleton-language-cards">
+              <i class="skeleton-shimmer"></i>
+              <i class="skeleton-shimmer"></i>
+              <i class="skeleton-shimmer"></i>
+            </div>
+            <i class="settings-skeleton-note skeleton-shimmer"></i>
+          </div>
+        </section>
+      </div>
+    </main>
   </div>
 </div>
 <section id="authGate" aria-label="Entrar ou criar conta">

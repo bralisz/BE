@@ -5768,7 +5768,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var onboardingShownFor='';
     var avatarPickerReturnView='';
     var bannerPickerReturnView='';
-    var settingsActiveTab='profile';
+    var settingsActiveTab=(function(){
+      var allowed=['profile','connections','data','language','session'];
+      try{
+        var pending=String(sessionStorage.getItem('beSettingsReturnTab')||'');
+        if(allowed.indexOf(pending)>=0)return pending;
+        var stateTab=history.state&&String(history.state.settingsTab||'');
+        if(allowed.indexOf(stateTab)>=0)return stateTab;
+      }catch(_){ }
+      return 'profile';
+    })();
     var settingsSaveConfirm=document.getElementById('settingsSaveConfirm');
     var settingsSaveCancel=document.getElementById('settingsSaveCancel');
     var settingsSaveApprove=document.getElementById('settingsSaveApprove');
@@ -6610,6 +6619,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         };
       });
       activateSettingsTab(settingsActiveTab,false);
+      if(settingsActiveTab==='language'){
+        try{sessionStorage.removeItem('beSettingsReturnTab');}catch(_){ }
+      }
       var activeLanguage=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br');
       settingsPageBody.querySelectorAll('[data-settings-language]').forEach(function(button){
         var selected=button.getAttribute('data-settings-language')===activeLanguage;
@@ -6618,9 +6630,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         button.onclick=function(){
           var next=button.getAttribute('data-settings-language');
           if(next===activeLanguage)return;
-          button.disabled=true;
-          if(window.BETVLocale&&typeof window.BETVLocale.switchTo==='function')window.BETVLocale.switchTo(next);
-          else location.assign('/'+next+(window.BETVLocalePath&&window.BETVLocalePath()!=='/'?window.BETVLocalePath():'')+(location.search||''));
+          settingsActiveTab='language';
+          settingsPageBody.querySelectorAll('[data-settings-language]').forEach(function(option){option.disabled=true;});
+          try{
+            sessionStorage.setItem('beSettingsReturnTab','language');
+            sessionStorage.setItem('beLanguageSwitchLoading',String(Date.now()));
+          }catch(_){ }
+          document.documentElement.classList.add('settings-language-loading','site-loading-active');
+          document.body.classList.add('site-loading-active');
+          var loading=document.getElementById('authLoading');
+          if(loading){loading.hidden=false;loading.removeAttribute('hidden');}
+          var navigate=function(){
+            if(window.BETVLocale&&typeof window.BETVLocale.switchTo==='function')window.BETVLocale.switchTo(next);
+            else location.assign('/'+next+'/config'+(location.search||''));
+          };
+          (window.requestAnimationFrame||window.setTimeout)(function(){
+            (window.requestAnimationFrame||window.setTimeout)(navigate,16);
+          },16);
         };
       });
       document.getElementById('settingsChooseAvatar').onclick=function(){openAvatarPicker();};
@@ -7032,7 +7058,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
-  function hideSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=true;setSiteLoading(false);}
+  function hideSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('settings-language-loading');try{sessionStorage.removeItem('beLanguageSwitchLoading');}catch(_){ }setSiteLoading(false);}
   function showSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
   window.addEventListener('be:content-ready',function(){
     // O catálogo pode terminar de carregar antes da autenticação. Só remove o
