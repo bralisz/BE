@@ -417,8 +417,7 @@
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
-    const sourceRevision = String(record.updatedAt || record.updated_at || '');
-    return !localized || typeof localized !== 'object' || (sourceRevision && String(localized.sourceUpdatedAt || '') !== sourceRevision);
+    return !localized || typeof localized !== 'object';
   }
 
   async function ensureTranslatedRecords(collection, records) {

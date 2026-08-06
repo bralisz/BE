@@ -133,21 +133,49 @@
       <div class="card">
         <div class="code" aria-hidden="true">404</div>
         <h1 id="error-title">Essa página saiu do roteiro.</h1>
-        <p>O endereço pode ter mudado, sido removido ou nunca ter existido. Volte ao início para continuar explorando o site.</p>
+        <p id="error-description">O endereço pode ter mudado, sido removido ou nunca ter existido. Volte ao início para continuar explorando o site.</p>
         <div class="actions">
-          <a class="button primary" href="/">
+          <a class="button primary" id="error-home" href="/">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/></svg>
-            Voltar ao início
+            <span id="error-home-label">Voltar ao início</span>
           </a>
-          <button class="button" type="button" onclick="history.length > 1 ? history.back() : location.assign('/')">
+          <button class="button" id="error-back" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-            Página anterior
+            <span id="error-back-label">Página anterior</span>
           </button>
         </div>
       </div>
     </section>
 
   </main>
+  <script>
+    (function(){
+      var first=String(location.pathname.split('/')[1]||'').toLowerCase();
+      var slug=['pt-br','en-us','es'].includes(first)?first:'';
+      if(!slug){
+        try{slug=String(localStorage.getItem('betvPreferredLocale')||'').toLowerCase();}catch(_){slug='';}
+      }
+      if(!['pt-br','en-us','es'].includes(slug)){
+        var lang=String(navigator.language||'').toLowerCase();
+        slug=lang.indexOf('es')===0?'es':lang.indexOf('en')===0?'en-us':'pt-br';
+      }
+      var copy={
+        'pt-br':{lang:'pt-BR',title:'Essa página saiu do roteiro.',description:'O endereço pode ter mudado, sido removido ou nunca ter existido. Volte ao início para continuar explorando o site.',home:'Voltar ao início',back:'Página anterior'},
+        'en-us':{lang:'en-US',title:'This page left the script.',description:'The address may have changed, been removed, or never existed. Return home to keep exploring the site.',home:'Back to home',back:'Previous page'},
+        'es':{lang:'es',title:'Esta página se salió del guion.',description:'La dirección puede haber cambiado, haber sido eliminada o no haber existido nunca. Vuelve al inicio para seguir explorando el sitio.',home:'Volver al inicio',back:'Página anterior'}
+      }[slug];
+      document.documentElement.lang=copy.lang;
+      document.getElementById('error-title').textContent=copy.title;
+      document.getElementById('error-description').textContent=copy.description;
+      document.getElementById('error-home-label').textContent=copy.home;
+      document.getElementById('error-back-label').textContent=copy.back;
+      var prefix='/'+slug;
+      document.getElementById('error-home').href=prefix;
+      document.querySelector('.brand').href=prefix;
+      document.querySelector('.brand').setAttribute('aria-label',copy.home);
+      document.getElementById('error-back').onclick=function(){history.length>1?history.back():location.assign(prefix);};
+    })();
+  </script>
   <script defer src="/assets/js/lazy-loading.js?v=1"></script>
 </body>
 </html>

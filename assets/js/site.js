@@ -523,8 +523,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
-    const sourceRevision = String(record.updatedAt || record.updated_at || '');
-    return !localized || typeof localized !== 'object' || (sourceRevision && String(localized.sourceUpdatedAt || '') !== sourceRevision);
+    return !localized || typeof localized !== 'object';
   }
 
   async function ensureTranslatedRecords(collection, records) {
@@ -2210,6 +2209,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           duration: source.duration || source.videoDuration || source.runtime || item.duration,
           year: source.year || item.year,
           logoUrl: source.logoUrl || item.logoUrl || '',
+          sectionId: source.sectionId || '',
+          sectionName: source.sectionName || '',
           collection,
           category: 'destaque'
         };
@@ -2227,6 +2228,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const image = item.bannerUrl || item.imageUrl || item.thumbnailUrl || '';
       const url = item.contentUrl || item.videoUrl || item.link || '#';
       const title = item.title || 'Destaque';
+      const preserveTitle = preservesOriginalMusicTitle(item);
       const duration = item.duration || item.videoDuration || item.runtime || '';
       const year = item.year || '';
       const meta = [
@@ -2236,7 +2238,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ].join('');
       return `<div class="f-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
         <div class="f-info">
-          <div class="f-logo">${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
+          <div class="f-logo${preserveTitle ? ' notranslate' : ''}"${preserveTitle ? ' translate="no"' : ''}>${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
           <div class="f-meta">${meta}</div>
           <div class="f-desc be-markdown">${markdownToHtml(item.description || '')}</div>
           <div class="f-actions">
@@ -2251,7 +2253,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-image-url="${safeAssetUrl(item.imageUrl || '')}"
               data-banner-url="${safeAssetUrl(item.bannerUrl || item.imageUrl || '')}"
               data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
-              data-collection="${escapeHtml(item.collection || 'videos')}">
+              data-collection="${escapeHtml(item.collection || 'videos')}"
+              data-section-id="${escapeHtml(String(item.sectionId || ''))}"
+              data-section-name="${escapeHtml(String(item.sectionName || ''))}"
+              data-preserve-title="${preserveTitle ? 'true' : 'false'}">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
             </button>
             <button class="f-fav" type="button" data-favorite-id="${escapeHtml(String(`${item.collection || 'videos'}:${item.sourceId || item.contentId || item.videoId || item.id || title}`))}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
@@ -2360,6 +2365,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const collection = item.collection || (['films','movies'].includes(view) ? 'movies' : view === 'series' ? 'series' : 'videos');
     const title = item.title || item.name || 'Conteúdo';
+    const preserveTitle = preservesOriginalMusicTitle(item);
     const thumbnail = item.thumbnailUrl || item.imageUrl || item.bannerUrl || '';
     const background = ['movies', 'series'].includes(collection)
       ? thumbnail
@@ -2376,7 +2382,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     host.innerHTML = `<div class="f-slide active" data-index="0">
       <div class="f-info">
-        <div class="f-logo">${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
+        <div class="f-logo${preserveTitle ? ' notranslate' : ''}"${preserveTitle ? ' translate="no"' : ''}>${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
         <div class="f-meta">${meta}</div>
         <div class="f-desc be-markdown">${markdownToHtml(item.description || '')}</div>
         <div class="f-actions">
@@ -2391,7 +2397,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             data-image-url="${safeAssetUrl(thumbnail)}"
             data-banner-url="${safeAssetUrl(background)}"
             data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
-            data-collection="${escapeHtml(collection)}">
+            data-collection="${escapeHtml(collection)}"
+            data-section-id="${escapeHtml(String(item.sectionId || ''))}"
+            data-section-name="${escapeHtml(String(item.sectionName || ''))}"
+            data-preserve-title="${preserveTitle ? 'true' : 'false'}">
             <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
           </button>
           <button class="f-fav" type="button" data-favorite-id="${escapeHtml(`${collection}:${item.id || publicId}`)}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
@@ -2680,6 +2689,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (image) image.addEventListener('error', () => spotlight.remove(), { once:true });
   }
 
+  const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a'
+  ]);
+  function preservesOriginalMusicTitle(data) {
+    if (String(data?.collection || 'videos').toLowerCase() !== 'videos') return false;
+    const sectionId = String(data?.sectionId || '').trim();
+    const sectionName = String(data?.sectionName || data?.sourceSectionTitle || '').trim().toLowerCase();
+    return MUSIC_TITLE_SECTION_IDS_FRONTEND.has(sectionId) || ['live performances & tv','videoclipes'].includes(sectionName);
+  }
+
   function videoCard(video) {
     const image = video.thumbnailUrl || video.imageUrl || video.bannerUrl || '';
     const contentHref = video.videoUrl || video.contentUrl || video.link || '#';
@@ -2696,7 +2716,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
     const routeHref = detailRoutePath(itemId);
-    return `<a class="video-card" href="${safeUrl(routeHref)}" aria-label="${escapeHtml(title)}"
+    const preserveTitle = preservesOriginalMusicTitle({ ...video, collection });
+    return `<a class="video-card${preserveTitle ? ' notranslate' : ''}" ${preserveTitle ? 'translate="no"' : ''} href="${safeUrl(routeHref)}" aria-label="${escapeHtml(title)}"
       data-item-id="${escapeHtml(String(itemId))}"
       data-record-id="${escapeHtml(String(recordId))}"
       data-open-detail="true"
@@ -2710,7 +2731,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-logo-url="${safeAssetUrl(logo)}"
       data-title-search="${escapeHtml(normalizeText(title))}"
       data-category="${escapeHtml(normalizeText(category))}"
-      data-collection="${escapeHtml(normalizeText(collection))}">
+      data-collection="${escapeHtml(normalizeText(collection))}"
+      data-section-id="${escapeHtml(String(video.sectionId || ''))}"
+      data-section-name="${escapeHtml(String(video.sectionName || ''))}"
+      data-preserve-title="${preserveTitle ? 'true' : 'false'}">
       <img class="video-card-thumbnail" src="${safeAssetUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
       ${logo && logo !== '#' ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
     </a>`;
@@ -3137,7 +3161,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const title = data.title || 'Conteúdo';
     const contentHref = data.contentUrl || '#';
     const routeHref = detailRoutePath(data.itemId || numericPublicId(data.recordId || title));
-    return `<a class="detail-reco-card" href="${safeUrl(routeHref)}" data-open-detail="true"
+    const preserveTitle = data.preserveTitle === true || String(data.preserveTitle || '').toLowerCase() === 'true' || preservesOriginalMusicTitle(data);
+    return `<a class="detail-reco-card${preserveTitle ? ' notranslate' : ''}" ${preserveTitle ? 'translate="no"' : ''} href="${safeUrl(routeHref)}" data-open-detail="true"
       data-item-id="${escapeHtml(String(data.itemId || numericPublicId(data.recordId || title)))}"
       data-record-id="${escapeHtml(String(data.recordId || ''))}"
       data-title="${escapeHtml(title)}"
@@ -3152,6 +3177,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-collection="${escapeHtml(data.collection || '')}"
       data-source-section-key="${escapeHtml(data.sourceSectionKey || '')}"
       data-source-section-title="${escapeHtml(data.sourceSectionTitle || '')}"
+      data-section-id="${escapeHtml(String(data.sectionId || ''))}"
+      data-section-name="${escapeHtml(String(data.sectionName || data.sourceSectionTitle || ''))}"
+      data-preserve-title="${preserveTitle ? 'true' : 'false'}"
       aria-label="Abrir ${escapeHtml(title)}">
       <span class="detail-reco-thumb">${image && image !== '#' ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">` : '<span class="ph ph-wide" style="height:100%"></span>'}</span>
       <span class="detail-reco-name">${escapeHtml(title)}</span>
@@ -4047,6 +4075,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!section || !bg || !logo || !meta || !desc || !play || !list) return;
 
     const title = data.title || 'Conteúdo';
+    const preserveTitle = data.preserveTitle === true || String(data.preserveTitle || '').toLowerCase() === 'true' || preservesOriginalMusicTitle(data);
     const description = data.description || 'Descrição indisponível no momento.';
     const year = data.year || '';
     const duration = data.duration || '';
@@ -4066,6 +4095,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ? `<img decoding="async" src="${safeAssetUrl(bannerUrl)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">`
       : '<div class="ph ph-wide" style="height:100%"></div>';
 
+    logo.classList.toggle('notranslate', preserveTitle);
+    if (preserveTitle) logo.setAttribute('translate', 'no'); else logo.removeAttribute('translate');
     if (logoUrl && logoUrl !== '#') {
       logo.innerHTML = `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
     } else if (['movies', 'series'].includes(String(data.collection || '').toLowerCase())) {
@@ -4104,6 +4135,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     play.dataset.bannerUrl = bannerUrl;
     play.dataset.logoUrl = logoUrl;
     play.dataset.collection = collection || 'videos';
+    play.dataset.preserveTitle = preserveTitle ? 'true' : 'false';
+    play.dataset.sectionId = String(data.sectionId || '');
+    play.dataset.sectionName = String(data.sectionName || data.sourceSectionTitle || '');
     if (play.dataset.analyticsBound !== 'true') {
       play.dataset.analyticsBound = 'true';
       play.addEventListener('click', () => {
@@ -4124,6 +4158,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     list.dataset.bannerUrl = bannerUrl;
     list.dataset.logoUrl = logoUrl;
     list.dataset.collection = collection || 'videos';
+    list.dataset.preserveTitle = preserveTitle ? 'true' : 'false';
+    list.dataset.sectionId = String(data.sectionId || '');
+    list.dataset.sectionName = String(data.sectionName || data.sourceSectionTitle || '');
     syncDetailListButton(list, itemId);
     if (list.dataset.clickBound !== 'true') {
       list.dataset.clickBound = 'true';
@@ -4392,6 +4429,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       bannerUrl:String(data?.bannerUrl || data?.imageUrl || data?.thumbnailUrl || ''),
       logoUrl:String(data?.logoUrl || ''),
       collection,
+      sectionId:String(data?.sectionId || ''),
+      sectionName:String(data?.sectionName || data?.sourceSectionTitle || ''),
+      preserveTitle:data?.preserveTitle === true || String(data?.preserveTitle || '').toLowerCase() === 'true' || preservesOriginalMusicTitle(data),
       savedAt:String(data?.savedAt || new Date().toISOString())
     };
   }
@@ -4416,7 +4456,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       imageUrl:dataset.imageUrl || element.dataset?.imageUrl || '',
       bannerUrl:dataset.bannerUrl || element.dataset?.bannerUrl || '',
       logoUrl:dataset.logoUrl || element.dataset?.logoUrl || '',
-      collection:dataset.collection || element.dataset?.collection || 'videos'
+      collection:dataset.collection || element.dataset?.collection || 'videos',
+      sectionId:dataset.sectionId || element.dataset?.sectionId || '',
+      sectionName:dataset.sectionName || dataset.sourceSectionTitle || element.dataset?.sectionName || '',
+      preserveTitle:dataset.preserveTitle || element.dataset?.preserveTitle || ''
     });
   }
 
@@ -6416,7 +6459,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var identities=user&&user.raw&&Array.isArray(user.raw.identities)?user.raw.identities:[];
       var providers=user&&user.raw&&user.raw.app_metadata&&Array.isArray(user.raw.app_metadata.providers)?user.raw.app_metadata.providers:[];
       var discordConnected=providers.indexOf('discord')>=0||identities.some(function(identity){return String(identity.provider||'').toLowerCase()==='discord';});
-      var settingsTabs=['profile','connections','data','session'];
+      var settingsTabs=['profile','connections','data','language','session'];
       if(settingsActiveTab==='account')settingsActiveTab='session';
       if(settingsTabs.indexOf(settingsActiveTab)<0)settingsActiveTab='profile';
       settingsPageBody.innerHTML=''
@@ -6425,12 +6468,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         +    '<button type="button" data-settings-tab="profile"'+(settingsActiveTab==='profile'?' class="active" aria-current="page"':'')+'>Perfil</button>'
         +    '<button type="button" data-settings-tab="connections"'+(settingsActiveTab==='connections'?' class="active" aria-current="page"':'')+'>Conexões</button>'
         +    '<button type="button" data-settings-tab="data"'+(settingsActiveTab==='data'?' class="active" aria-current="page"':'')+'>Meus Dados</button>'
+        +    '<button type="button" data-settings-tab="language"'+(settingsActiveTab==='language'?' class="active" aria-current="page"':'')+'>Idioma</button>'
         +    '<button type="button" data-settings-tab="session"'+(settingsActiveTab==='session'?' class="active" aria-current="page"':'')+'>Conta e Sessão</button>'
         +  '</nav>'
         +  '<main class="settings-page-content">'
         +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner e o avatar do seu perfil.</p><div class="settings-panel-card"><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></div></section>'
         +    '<section class="settings-section-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões</h1><p class="settings-panel-lead">Gerencie serviços conectados à sua conta.</p><div class="settings-panel-card"><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div></section>'
         +    '<section class="settings-section-panel settings-data-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Meus Dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-data-actions settings-data-actions-outside"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><a class="settings-data-privacy-button" href="/privacy">Ver Termos de Privacidade</a></div><div class="settings-status settings-data-status" id="settingsExportStatus"></div></section>'
+        +    '<section class="settings-section-panel settings-language-panel" data-settings-panel="language"'+(settingsActiveTab==='language'?'':' hidden')+'><h1>Idioma</h1><p class="settings-panel-lead">Escolha o idioma usado em todas as áreas públicas do site.</p><div class="settings-panel-card"><div class="settings-language-options" role="radiogroup" aria-label="Idioma do site"><button class="settings-language-option" type="button" data-settings-language="pt-br" role="radio"><strong>Português (Brasil)</strong><span>Português</span></button><button class="settings-language-option" type="button" data-settings-language="en-us" role="radio"><strong>English (United States)</strong><span>Inglês</span></button><button class="settings-language-option" type="button" data-settings-language="es" role="radio"><strong>Español</strong><span>Espanhol</span></button></div><p class="settings-muted settings-language-note">A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.</p></div></section>'
         +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div><div class="settings-session-section"><h1>Sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></div></section>'
         +  '</main>'
         +'</div>';
@@ -6469,6 +6514,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         };
       });
       activateSettingsTab(settingsActiveTab,false);
+      var activeLanguage=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br');
+      settingsPageBody.querySelectorAll('[data-settings-language]').forEach(function(button){
+        var selected=button.getAttribute('data-settings-language')===activeLanguage;
+        button.classList.toggle('active',selected);
+        button.setAttribute('aria-checked',selected?'true':'false');
+        button.onclick=function(){
+          var next=button.getAttribute('data-settings-language');
+          if(next===activeLanguage)return;
+          button.disabled=true;
+          if(window.BETVLocale&&typeof window.BETVLocale.switchTo==='function')window.BETVLocale.switchTo(next);
+          else location.assign('/'+next+(window.BETVLocalePath&&window.BETVLocalePath()!=='/'?window.BETVLocalePath():'')+(location.search||''));
+        };
+      });
       document.getElementById('settingsChooseAvatar').onclick=function(){openAvatarPicker();};
       document.getElementById('settingsChooseBanner').onclick=function(){openBannerPicker();};
       document.getElementById('settingsConnectDiscord').onclick=async function(){
@@ -8773,10 +8831,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var currencySymbol=donationCurrencySymbol();
       var amountPlaceholder=(minimumCents/100).toLocaleString(DONATION_LOCALE,{minimumFractionDigits:2,maximumFractionDigits:2});
       return '<article class="donate-ngo-card" data-ngo-card>'+ 
-        '<button class="donate-ngo-toggle" type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="'+esc(i18nText('Conhecer {name}',{name:title}))+'" data-ngo-title="'+esc(title)+'">'+
+        '<button class="donate-ngo-toggle" data-i18n-ignore type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="'+esc(i18nText('Conhecer {name}',{name:title}))+'" data-ngo-title="'+esc(title)+'">'+
           (image?'<img loading="lazy" decoding="async" src="'+esc(image)+'" alt="'+esc(i18nText('Banner da {name}',{name:title}))+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
         '</button>'+ 
-        '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3 class="donate-ngo-name">'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
+        '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3 class="donate-ngo-name notranslate" translate="no">'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
           '<div class="donate-ngo-donation" data-donation-box data-ngo-reference="'+esc(ngoReference)+'" data-minimum-donation-cents="'+esc(minimumCents)+'" data-currency="'+esc(DONATION_CURRENCY)+'">'+
             '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">'+esc(i18nText('Qual valor você deseja doar?'))+'</label>'+
             '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">'+esc(currencySymbol)+'</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="'+esc(amountPlaceholder)+'" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+

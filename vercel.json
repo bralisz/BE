@@ -5,6 +5,126 @@
       "destination": "/api/media?mode=supabase-runtime"
     },
     {
+      "source": "/pt-br/terms",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/terms/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/privacy",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/privacy/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/cookies",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/cookies/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/dmca",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/dmca/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/terms",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/terms/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/privacy",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/privacy/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/cookies",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/cookies/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/dmca",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/dmca/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/terms",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/terms/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/privacy",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/privacy/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/cookies",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/cookies/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/dmca",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/dmca/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/:path*",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/:path*",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/:path*",
+      "destination": "/api/site-page"
+    },
+    {
       "source": "/",
       "destination": "/api/site-page"
     },
@@ -344,6 +464,16 @@
     }
   },
   "redirects": [
+    {
+      "source": "/us",
+      "destination": "/en-us",
+      "permanent": true
+    },
+    {
+      "source": "/us/:path*",
+      "destination": "/en-us/:path*",
+      "permanent": true
+    },
     {
       "source": "/:path*",
       "has": [

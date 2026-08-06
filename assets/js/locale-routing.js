@@ -195,6 +195,15 @@
       if(SUPPORTED.indexOf(clean)<0)return false;
       try{localStorage.setItem(LOCALE_STORAGE_KEY,clean);}catch(_){ }
       return true;
+    },
+    switchTo:function(slug){
+      var clean=String(slug||'').toLowerCase();
+      if(SUPPORTED.indexOf(clean)<0)return false;
+      try{localStorage.setItem(LOCALE_STORAGE_KEY,clean);}catch(_){ }
+      var logical=currentLogicalPath();
+      var destination='/'+clean+(logical==='/'?'':logical)+(location.search||'')+(location.hash||'');
+      location.assign(destination);
+      return true;
     }
   });
 
