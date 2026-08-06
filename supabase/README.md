@@ -24,3 +24,7 @@ Nunca renomeie migrations que já foram aplicadas. Cada arquivo deve possuir uma
 ## Checkout de doações
 
 A função `functions/create-donation-checkout` exige o segredo `STRIPE_SECRET_KEY` configurado no painel do Supabase. O valor mínimo é lido novamente do banco no servidor; o valor exibido no navegador não é considerado confiável.
+
+### Visão administrativa de doações
+
+A função `get_admin_donation_overview` só pode ser executada por usuários autenticados com função de administrador. Ela lista checkouts iniciados, usuário, ONG, valor escolhido, mínimo aplicado e indicadores agregados. Os valores exibidos não significam pagamento concluído até a Stripe confirmar a transação.

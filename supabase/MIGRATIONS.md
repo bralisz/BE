@@ -21,3 +21,10 @@ A migration `20260804164611_cross_device_user_preferences.sql` cria a tabela pri
 
 - `20260806033000_enable_public_ong_page_banner.sql`: libera somente o banner principal configurado no dashboard para a página `/ong`.
 - `20260806053117_secure_dynamic_ong_donations.sql`: adiciona o valor mínimo individual por ONG, valida o formato no banco e cria o registro privado usado pela Edge Function de checkout.
+
+## `20260806055200_admin_donation_overview.sql`
+
+- Preserva nome do usuário, @ e nome da ONG no registro do checkout.
+- Adiciona status e campo futuro de confirmação de pagamento.
+- Cria a função administrativa `get_admin_donation_overview`.
+- Entrega histórico pesquisável e indicadores de valor, usuários e ONGs.

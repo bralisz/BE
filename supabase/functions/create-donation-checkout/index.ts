@@ -115,6 +115,18 @@ Deno.serve(async (req: Request) => {
   const user = userResult?.user;
   if (userError || !user) return json(req, 401, { code: "unauthorized", error: "Sua sessão expirou. Entre novamente." });
 
+  const { data: profileRow } = await adminClient
+    .from("profiles")
+    .select("display_name,username")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const userDisplayName = safeText(
+    profileRow?.display_name || user.user_metadata?.full_name || user.user_metadata?.name || "Usuário",
+    120,
+  ) || "Usuário";
+  const userUsername = safeText(profileRow?.username || "", 80);
+
   const { data: ngoRow, error: ngoError } = await adminClient
     .from("content_items")
     .select("id,data")
@@ -209,6 +221,10 @@ Deno.serve(async (req: Request) => {
     minimum_cents: minimumDonationCents,
     stripe_session_id: stripeSessionId,
     request_id: requestId,
+    user_display_name: userDisplayName,
+    user_username: userUsername,
+    ngo_title: ngoTitle,
+    status: "checkout_created",
   });
 
   if (logError && logError.code !== "23505") {

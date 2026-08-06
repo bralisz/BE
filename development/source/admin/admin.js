@@ -363,48 +363,226 @@
     return db.count(name);
   }
 
+
   async function dashboard() {
     const content = $('#adminContent');
     content.classList.remove('admin-editor-active');
     content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando visão geral…</div>';
 
-    const names = ['featured','sections','videos','movies','series','shows','news','users'];
+    const names = ['featured','sections','videos','movies','series','news'];
     const counts = {};
-    const [videos, recent] = await Promise.all([
-      db.list('videos').catch(() => []),
-      db.list('admin_logs', { orderBy: 'createdAt', direction: 'desc', limit: 8 }).catch(() => [])
+    const loadDonationOverview = async (searchValue = null) => {
+      const client = beBackend && beBackend.client;
+      if (!client || typeof client.rpc !== 'function') return {};
+      const { data, error } = await client.rpc('get_admin_donation_overview', {
+        p_search: searchValue ? String(searchValue).trim() : null,
+        p_limit: 250
+      });
+      if (error) throw error;
+      return data && typeof data === 'object' ? data : {};
+    };
+
+    const [recent, donationOverview] = await Promise.all([
+      db.list('admin_logs', { orderBy: 'createdAt', direction: 'desc', limit: 8 }).catch(() => []),
+      loadDonationOverview().catch(error => {
+        console.warn('Não foi possível carregar os dados de doação:', error?.message || error);
+        return {};
+      })
     ]);
-    await Promise.all(names.map(async name => { counts[name] = name === 'videos' ? videos.length : await countCollection(name).catch(() => 0); }));
+    await Promise.all(names.map(async name => {
+      counts[name] = await countCollection(name).catch(() => 0);
+    }));
 
-    const metricValue = (video, keys) => {
-      for (const key of keys) {
-        const value = Number(video[key]);
-        if (Number.isFinite(value)) return value;
+    let rows = Array.isArray(donationOverview.rows) ? donationOverview.rows : [];
+    const insights = donationOverview.insights && typeof donationOverview.insights === 'object'
+      ? donationOverview.insights
+      : {};
+
+    const numberOr = (value, fallback = 0) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+    const money = cents => (numberOr(cents, 0) / 100).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    });
+    const statusText = status => ({
+      checkout_created: 'Checkout criado',
+      paid: 'Pago',
+      canceled: 'Cancelado',
+      expired: 'Expirado',
+      payment_failed: 'Falhou'
+    }[String(status || '')] || 'Checkout criado');
+    const statusClass = status => {
+      const normalized = String(status || 'checkout_created').replace(/[^a-z_]/g, '');
+      return normalized || 'checkout_created';
+    };
+    const normalizeSearch = value => String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+    const logHtml = recent.length
+      ? recent.map(item => `<div class="activity-item"><span></span><div><strong>${esc(item.summary || item.action || 'Atividade registrada')}</strong><small>${formatDateTime(item.createdAt)}</small></div></div>`).join('')
+      : '<div class="empty">Nenhuma atividade registrada.</div>';
+
+    const topNgo = insights.topNgo && typeof insights.topNgo === 'object' ? insights.topNgo : null;
+    const highestDonation = insights.highestDonation && typeof insights.highestDonation === 'object'
+      ? insights.highestDonation
+      : null;
+
+    const insightCard = (label, value, detail, icon) => `
+      <article class="donation-insight-card">
+        <div class="donation-insight-label"><i>${icon}</i><span>${esc(label)}</span></div>
+        <strong>${esc(value)}</strong>
+        <small>${esc(detail)}</small>
+      </article>`;
+
+    content.innerHTML = `
+      <section class="dashboard-hero">
+        <div class="dashboard-copy">
+          <h1>Painel de conteúdo</h1>
+          <p>Gerencie todas as áreas do site com facilidade.<br>Crie, edite, organize e publique conteúdos.</p>
+          <div class="dashboard-stats">
+            <article><i>▤</i><div><strong>${counts.news || 0}</strong><span>Álbuns cadastrados</span></div></article>
+            <article><i>▣</i><div><strong>${counts.videos || 0}</strong><span>Vídeos cadastrados</span></div></article>
+            <article><i>◉</i><div><strong>${(counts.featured || 0) + (counts.sections || 0)}</strong><span>Destaques e seções</span></div></article>
+          </div>
+        </div>
+      </section>
+      <section class="dashboard-workspace">
+        <div class="dashboard-side-column">
+          <aside class="dashboard-side">
+            <h2>Conteúdo</h2>
+            <button class="a-btn primary side-new" id="dashboardNewContent">＋ Novo conteúdo</button>
+            ${CONTENT_CATEGORIES.map((item, index) => `<button class="side-link ${index === 0 ? 'active' : ''}" data-route="contents/${item[0]}">${item[1]}<span>${counts[item[0]] || 0}</span></button>`).join('')}
+          </aside>
+          <aside class="activity-log">
+            <h2>Log de atividade</h2>
+            <div class="activity-list">${logHtml}</div>
+          </aside>
+        </div>
+        <div class="dashboard-panel donation-dashboard-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Apoios a ONGs</h2>
+              <p>Checkouts de doação iniciados pelos usuários, ordenados do mais recente para o mais antigo.</p>
+            </div>
+            <button class="a-btn" data-route="ongs">Gerenciar ONGs</button>
+          </div>
+
+          <div class="donation-log-toolbar">
+            <label class="donation-search-field">
+              <span>Pesquisar no histórico</span>
+              <input class="a-input" id="donationLogSearch" type="search" autocomplete="off" placeholder="Usuário, @, ONG, valor ou status">
+            </label>
+            <small id="donationLogCount">${rows.length.toLocaleString('pt-BR')} registro${rows.length === 1 ? '' : 's'}</small>
+          </div>
+
+          <div class="donation-table-wrap">
+            <table class="donation-table">
+              <thead>
+                <tr>
+                  <th>Usuário</th>
+                  <th>ONG escolhida</th>
+                  <th>Valor</th>
+                  <th>Mínimo</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody id="donationLogBody"></tbody>
+            </table>
+          </div>
+          <p class="donation-log-note">O histórico registra checkouts criados. O valor só deve ser tratado como recebido após a confirmação do pagamento na Stripe.</p>
+
+          <div class="donation-insights-heading">
+            <div>
+              <h3>Insights de apoio</h3>
+              <p>Indicadores calculados com os valores escolhidos nos checkouts.</p>
+            </div>
+          </div>
+          <div class="donation-insights-grid">
+            ${insightCard('Valor total selecionado', money(insights.totalAmountCents), `${numberOr(insights.totalCheckouts).toLocaleString('pt-BR')} checkouts criados`, 'R$')}
+            ${insightCard('Média por checkout', money(insights.averageAmountCents), 'média dos valores escolhidos', '↗')}
+            ${insightCard('Usuários únicos', numberOr(insights.uniqueSupporters).toLocaleString('pt-BR'), 'pessoas que abriram um checkout', '♙')}
+            ${insightCard('Últimos 7 dias', numberOr(insights.last7Days).toLocaleString('pt-BR'), 'checkouts iniciados nesse período', '◷')}
+            ${insightCard(
+              'ONG mais escolhida',
+              topNgo ? (topNgo.title || 'ONG') : 'Sem dados',
+              topNgo ? `${numberOr(topNgo.checkoutCount).toLocaleString('pt-BR')} escolhas · ${money(topNgo.amountCents)}` : 'aparecerá após o primeiro checkout',
+              '♡'
+            )}
+            ${insightCard(
+              'Maior valor escolhido',
+              highestDonation ? money(highestDonation.amountCents) : money(0),
+              highestDonation
+                ? `${highestDonation.userDisplayName || highestDonation.username || 'Usuário'} · ${highestDonation.ngoTitle || 'ONG'}`
+                : 'aparecerá após o primeiro checkout',
+              '◆'
+            )}
+          </div>
+        </div>
+      </section>`;
+
+    const renderDonationRows = filterValue => {
+      const needle = normalizeSearch(filterValue);
+      const filtered = needle
+        ? rows.filter(row => normalizeSearch([
+            row.userDisplayName,
+            row.username && `@${row.username}`,
+            row.ngoTitle,
+            money(row.amountCents),
+            money(row.minimumCents),
+            statusText(row.status)
+          ].join(' ')).includes(needle))
+        : rows;
+
+      const body = $('#donationLogBody');
+      const count = $('#donationLogCount');
+      if (count) count.textContent = `${filtered.length.toLocaleString('pt-BR')} registro${filtered.length === 1 ? '' : 's'}`;
+      if (!body) return;
+
+      if (!filtered.length) {
+        body.innerHTML = `<tr><td colspan="6"><div class="donation-empty">${needle ? 'Nenhum registro corresponde à pesquisa.' : 'Nenhum checkout de doação foi criado ainda.'}</div></td></tr>`;
+        return;
       }
-      return 0;
-    };
-    const metricLeader = keys => videos.reduce((best, video) => {
-      const value = metricValue(video, keys);
-      return !best || value > best.value ? { video, value } : best;
-    }, null);
-    const clicked = metricLeader(['clicks','clickCount','clicksCount','totalClicks']);
-    const saved = metricLeader(['saves','saveCount','savedCount','favorites','favoriteCount']);
-    const viewed = metricLeader(['views','viewCount','viewsCount','totalViews']);
-    const totalInteractions = videos.reduce((sum, video) => sum +
-      metricValue(video, ['clicks','clickCount','clicksCount','totalClicks']) +
-      metricValue(video, ['saves','saveCount','savedCount','favorites','favoriteCount']) +
-      metricValue(video, ['views','viewCount','viewsCount','totalViews']), 0);
 
-    const analyticsCard = (label, leader, icon) => {
-      const video = leader && leader.video;
-      const title = video ? (video.title || video.name || 'Vídeo sem título') : 'Nenhum vídeo';
-      const image = video && (video.imageUrl || video.thumbnailUrl || video.bannerUrl || '');
-      const value = leader ? leader.value : 0;
-      return `<article class="analytics-card"><div class="analytics-label"><i>${icon}</i><span>${label}</span></div><div class="analytics-video">${image ? `<img loading="lazy" decoding="async" src="${esc(image)}" alt="">` : '<div class="analytics-placeholder">▣</div>'}<div><strong>${esc(title)}</strong><small>${value.toLocaleString('pt-BR')} pessoas</small></div></div></article>`;
+      body.innerHTML = filtered.map(row => {
+        const displayName = row.userDisplayName || (row.username ? `@${row.username}` : `Usuário ${String(row.userId || '').slice(0, 8)}`);
+        const handle = row.username ? `@${row.username}` : '';
+        return `<tr>
+          <td><div class="donation-user-cell"><strong>${esc(displayName)}</strong>${handle && displayName !== handle ? `<small>${esc(handle)}</small>` : ''}</div></td>
+          <td><strong class="donation-ngo-cell">${esc(row.ngoTitle || 'ONG removida')}</strong></td>
+          <td><strong class="donation-money">${esc(money(row.amountCents))}</strong></td>
+          <td>${esc(money(row.minimumCents))}</td>
+          <td><span class="donation-status ${esc(statusClass(row.status))}">${esc(statusText(row.status))}</span></td>
+          <td><time datetime="${esc(row.createdAt || '')}">${esc(formatDateTime(row.createdAt))}</time></td>
+        </tr>`;
+      }).join('');
     };
-    const logHtml = recent.length ? recent.map(item => `<div class="activity-item"><span></span><div><strong>${esc(item.summary || item.action || 'Atividade registrada')}</strong><small>${formatDateTime(item.createdAt)}</small></div></div>`).join('') : '<div class="empty">Nenhuma atividade registrada.</div>';
 
-    content.innerHTML = `<section class="dashboard-hero"><div class="dashboard-copy"><h1>Painel de conteúdo</h1><p>Gerencie todas as áreas do site com facilidade.<br>Crie, edite, organize e publique conteúdos.</p><div class="dashboard-stats"><article><i>▤</i><div><strong>${counts.news || 0}</strong><span>Álbuns cadastrados</span></div></article><article><i>▣</i><div><strong>${counts.videos || 0}</strong><span>Vídeos cadastrados</span></div></article><article><i>◉</i><div><strong>${(counts.featured || 0) + (counts.sections || 0)}</strong><span>Destaques e seções</span></div></article></div></div></section><section class="dashboard-workspace"><div class="dashboard-side-column"><aside class="dashboard-side"><h2>Conteúdo</h2><button class="a-btn primary side-new" id="dashboardNewContent">＋ Novo conteúdo</button>${CONTENT_CATEGORIES.map((item, index) => `<button class="side-link ${index === 0 ? 'active' : ''}" data-route="contents/${item[0]}">${item[1]}<span>${counts[item[0]] || 0}</span></button>`).join('')}</aside><aside class="activity-log"><h2>Log de atividade</h2><div class="activity-list">${logHtml}</div></aside></div><div class="dashboard-panel"><div class="panel-head"><div><h2>Visão geral do conteúdo</h2><p>Veja os principais dados de acesso e engajamento dos vídeos.</p></div><button class="a-btn" data-route="contents">Ver conteúdos</button></div><div class="content-summary analytics-grid">${analyticsCard('Vídeo mais clicado', clicked, '↗')}${analyticsCard('Vídeo mais salvo', saved, '♡')}${analyticsCard('Vídeo mais visto', viewed, '◉')}<article class="analytics-card simple"><div class="analytics-label"><i>♙</i><span>Quantidade de usuários</span></div><strong class="analytics-number">${counts.users || 0}</strong><small>usuários cadastrados</small></article><article class="analytics-card simple"><div class="analytics-label"><i>▣</i><span>Total de vídeos vinculados</span></div><strong class="analytics-number">${counts.videos || 0}</strong><small>vídeos disponíveis no site</small></article><article class="analytics-card simple"><div class="analytics-label"><i>⌁</i><span>Total de interações</span></div><strong class="analytics-number">${totalInteractions.toLocaleString('pt-BR')}</strong><small>cliques, salvamentos e visualizações</small></article></div></div></section>`;
+    renderDonationRows('');
+    const search = $('#donationLogSearch');
+    if (search) {
+      let searchTimer = 0;
+      search.addEventListener('input', () => {
+        const query = search.value;
+        renderDonationRows(query);
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(async () => {
+          try {
+            const remote = await loadDonationOverview(query);
+            rows = Array.isArray(remote.rows) ? remote.rows : [];
+            if (search.value === query) renderDonationRows(query);
+          } catch (error) {
+            console.warn('Não foi possível pesquisar o histórico de doações:', error?.message || error);
+          }
+        }, 280);
+      });
+    }
+
     $('#dashboardNewContent').onclick = chooseContentCategory;
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
     await maybeResumePendingContentEditor();
@@ -1469,4 +1647,53 @@
       console.error('Falha ao iniciar o backend:', error);
     }
   });
+})();
+
+/* Painel de histórico e insights de doações. */
+(()=>{
+  'use strict';
+  if(document.getElementById('be-admin-donation-overview-style')) return;
+  const style=document.createElement('style');
+  style.id='be-admin-donation-overview-style';
+  style.textContent=`
+    .donation-dashboard-panel{display:grid;gap:20px}
+    .donation-log-toolbar{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:2px 0 0}
+    .donation-search-field{display:grid;gap:8px;width:min(520px,100%)}
+    .donation-search-field>span{color:var(--a-muted);font-size:12px;font-weight:750}
+    .donation-search-field .a-input{max-width:none}
+    .donation-log-toolbar>small{padding-bottom:12px;color:var(--a-muted);white-space:nowrap}
+    .donation-table-wrap{overflow:auto;border:1px solid var(--a-line);border-radius:18px;background:rgba(2,8,19,.36)}
+    .donation-table{width:100%;min-width:900px;border-collapse:collapse}
+    .donation-table th,.donation-table td{padding:14px 16px;border-bottom:1px solid var(--a-line);text-align:left;vertical-align:middle;font-size:13px}
+    .donation-table th{position:sticky;top:0;z-index:1;color:var(--a-muted);font-size:11px;letter-spacing:.035em;text-transform:uppercase;background:#0b1526}
+    .donation-table tbody tr:last-child td{border-bottom:0}
+    .donation-table tbody tr:hover{background:rgba(61,140,255,.045)}
+    .donation-user-cell{display:grid;gap:4px;min-width:150px}
+    .donation-user-cell strong,.donation-ngo-cell{color:#f5f8ff}
+    .donation-user-cell small{color:#6fa9ff}
+    .donation-money{color:#8ee6bd;font-size:14px}
+    .donation-status{display:inline-flex;align-items:center;min-height:26px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:850;white-space:nowrap;background:rgba(91,154,255,.12);color:#9fc4ff}
+    .donation-status.paid{background:rgba(67,209,158,.14);color:#8be7c3}
+    .donation-status.canceled,.donation-status.expired{background:rgba(255,255,255,.07);color:#aab6c6}
+    .donation-status.payment_failed{background:rgba(255,107,122,.13);color:#ffadb6}
+    .donation-empty{padding:46px 18px;text-align:center;color:var(--a-muted)}
+    .donation-log-note{margin:-7px 0 0;color:var(--a-muted);font-size:11px;line-height:1.55}
+    .donation-insights-heading{display:flex;align-items:end;justify-content:space-between;gap:18px;padding-top:8px;border-top:1px solid var(--a-line)}
+    .donation-insights-heading h3{margin:18px 0 4px;font-size:18px}
+    .donation-insights-heading p{margin:0;color:var(--a-muted);font-size:12px}
+    .donation-insights-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+    .donation-insight-card{min-width:0;min-height:146px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;border:1px solid var(--a-line);border-radius:18px;background:linear-gradient(145deg,rgba(17,31,53,.85),rgba(7,15,29,.72))}
+    .donation-insight-label{display:flex;align-items:center;gap:9px;color:var(--a-muted);font-size:11px}
+    .donation-insight-label i{width:30px;height:30px;display:grid;place-items:center;border-radius:10px;background:rgba(61,140,255,.10);color:#79afff;font-style:normal;font-weight:850}
+    .donation-insight-card>strong{display:block;overflow:hidden;color:#f4f8ff;font-size:clamp(22px,2.2vw,30px);line-height:1.12;text-overflow:ellipsis;white-space:nowrap}
+    .donation-insight-card>small{color:var(--a-muted);line-height:1.45}
+    @media(max-width:1100px){.donation-insights-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:700px){
+      .donation-log-toolbar{align-items:stretch;flex-direction:column}
+      .donation-log-toolbar>small{padding:0}
+      .donation-insights-grid{grid-template-columns:1fr}
+      .donation-insight-card{min-height:126px}
+    }
+  `;
+  document.head.appendChild(style);
 })();

@@ -9885,3 +9885,35 @@ body.donate-page-active > footer > .footer-card{width:min(100%,1390px)!important
     right:-48px!important;
   }
 }
+
+/* /ong: controles laterais acompanham o scroll e avatar sem faixa inferior. */
+body.donate-page-active .donate-page-header{
+  position:fixed!important;
+  inset:0 0 auto!important;
+  pointer-events:none!important;
+}
+body.donate-page-active .donate-page-header>.donate-page-home,
+body.donate-page-active .donate-page-header>.donate-page-header-actions,
+body.donate-page-active .donate-notification-dropdown{
+  pointer-events:auto!important;
+}
+body.donate-page-active .donate-page-avatar{
+  overflow:hidden!important;
+  line-height:0!important;
+  vertical-align:top!important;
+  isolation:isolate!important;
+}
+body.donate-page-active .donate-page-avatar::before,
+body.donate-page-active .donate-page-avatar::after{
+  display:none!important;
+  content:none!important;
+}
+body.donate-page-active .donate-page-avatar img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  margin:0!important;
+  object-fit:cover!important;
+  border-radius:50%!important;
+  transform:translateZ(0);
+}
