@@ -17,6 +17,12 @@
   var loading=null;
   var supportersLoaded=false;
   var supportersLoading=null;
+  var supporterKeys=Object.create(null);
+  var supportersOffset=0;
+  var supportersHasMore=true;
+  var supportersObserver=null;
+  var supportersSentinel=null;
+  var supportersScrollTicking=false;
   var ngoRecordCount=0;
   var visibleNgoCount=0;
   var notificationItems=[];
@@ -37,7 +43,8 @@
   var CHECKOUT_FUNCTION_NAME='create-donation-checkout';
   var DEFAULT_MINIMUM_DONATION_CENTS=500;
   var NGO_BATCH_SIZE=12;
-  var SUPPORTERS_LIMIT=48;
+  var SUPPORTERS_INITIAL_LIMIT=48;
+  var SUPPORTERS_BATCH_SIZE=10;
   var ngoMobileMedia=window.matchMedia?window.matchMedia('(max-width:760px)'):null;
 
   function cleanPath(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
@@ -284,44 +291,43 @@
     return (parts.slice(0,2).map(function(part){return part.charAt(0);}).join('')||'A').toUpperCase();
   }
 
-  function renderSupporters(items){
-    if(!supportersSection||!supportersList||!supportersStatus)return;
-    var records=(Array.isArray(items)?items:[]).filter(function(item){
-      return String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim();
-    }).sort(function(a,b){
-      var aTime=new Date(a&&(a.supported_at||a.supportedAt)||0).getTime();
-      var bTime=new Date(b&&(b.supported_at||b.supportedAt)||0).getTime();
-      return (Number.isFinite(bTime)?bTime:0)-(Number.isFinite(aTime)?aTime:0);
-    });
-    supportersSection.hidden=false;
-    if(!records.length){
-      supportersList.innerHTML='';
-      supportersStatus.hidden=false;
-      supportersStatus.textContent='Nenhum apoiador para exibir ainda.';
-      return;
-    }
-    supportersStatus.hidden=true;
-    supportersList.innerHTML=records.map(function(item){
-      var displayName=String(item.display_name||item.displayName||item.user_display_name||'Apoiador').trim()||'Apoiador';
-      var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
-      var banner=imageUrl(item.banner_url||item.bannerUrl||'');
-      var avatarUrl=imageUrl(item.avatar_url||item.avatarUrl||'');
-      var initials=supporterInitials(displayName);
-      var route='/@'+encodeURIComponent(username);
-      return '<a class="donate-supporter-card" href="'+esc(route)+'" data-supporter-profile aria-label="Abrir perfil de '+esc(displayName)+'">'+
-        '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+
-        '<span class="donate-supporter-shade" aria-hidden="true"></span>'+
-        '<span class="donate-supporter-content">'+
-          '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'">'+(avatarUrl?'<img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatarUrl)+'" alt="Avatar de '+esc(displayName)+'">':'<span aria-hidden="true">'+esc(initials)+'</span>')+'</span>'+
-          '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong><small>@'+esc(username)+'</small></span>'+
-        '</span>'+
-      '</a>';
-    }).join('');
+  function supporterKey(item){
+    var id=String(item&&(item.user_id||item.userId)||'').trim();
+    if(id)return 'id:'+id;
+    var username=String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim().toLowerCase();
+    return username?'username:'+username:'';
+  }
 
-    supportersList.querySelectorAll('.donate-supporter-banner-image').forEach(function(image){
+  function supporterTime(item){
+    var value=new Date(item&&(item.supported_at||item.supportedAt)||0).getTime();
+    return Number.isFinite(value)?value:0;
+  }
+
+  function supporterMarkup(item){
+    var displayName=String(item.display_name||item.displayName||item.user_display_name||'Apoiador').trim()||'Apoiador';
+    var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
+    var banner=imageUrl(item.banner_url||item.bannerUrl||'');
+    var avatarUrl=imageUrl(item.avatar_url||item.avatarUrl||'');
+    var initials=supporterInitials(displayName);
+    var route='/@'+encodeURIComponent(username);
+    return '<a class="donate-supporter-card" href="'+esc(route)+'" data-supporter-profile aria-label="Abrir perfil de '+esc(displayName)+'">'+
+      '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
+      '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
+      '<span class="donate-supporter-content">'+
+        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'">'+(avatarUrl?'<img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatarUrl)+'" alt="Avatar de '+esc(displayName)+'">':'<span aria-hidden="true">'+esc(initials)+'</span>')+'</span>'+ 
+        '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong><small>@'+esc(username)+'</small></span>'+ 
+      '</span>'+ 
+    '</a>';
+  }
+
+  function bindSupporterImageFallbacks(){
+    if(!supportersList)return;
+    supportersList.querySelectorAll('.donate-supporter-banner-image:not([data-error-bound])').forEach(function(image){
+      image.setAttribute('data-error-bound','true');
       image.addEventListener('error',function(){image.remove();},{once:true});
     });
-    supportersList.querySelectorAll('.donate-supporter-avatar-image').forEach(function(image){
+    supportersList.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){
+      image.setAttribute('data-error-bound','true');
       image.addEventListener('error',function(){
         var avatarWrap=image.closest('.donate-supporter-avatar');
         if(!avatarWrap)return;
@@ -330,27 +336,158 @@
     });
   }
 
+  function ensureSupportersSentinel(){
+    if(!supportersSection||!supportersList)return null;
+    if(supportersSentinel&&supportersSentinel.isConnected)return supportersSentinel;
+    supportersSentinel=document.createElement('div');
+    supportersSentinel.className='donate-supporters-sentinel';
+    supportersSentinel.setAttribute('role','status');
+    supportersSentinel.setAttribute('aria-live','polite');
+    supportersSentinel.hidden=false;
+    supportersList.insertAdjacentElement('afterend',supportersSentinel);
+    return supportersSentinel;
+  }
+
+  function setSupportersLoader(message,visible){
+    var sentinel=ensureSupportersSentinel();
+    if(!sentinel)return;
+    sentinel.textContent=visible?String(message||'Carregando mais apoiadores…'):'';
+    sentinel.hidden=!visible&&!supportersHasMore;
+    sentinel.classList.toggle('is-loading',Boolean(visible));
+  }
+
+  function disconnectSupportersObserver(){
+    if(supportersObserver){supportersObserver.disconnect();supportersObserver=null;}
+  }
+
+  function resetSupportersPagination(clearList){
+    disconnectSupportersObserver();
+    supporterKeys=Object.create(null);
+    supportersOffset=0;
+    supportersHasMore=true;
+    if(clearList&&supportersList)supportersList.innerHTML='';
+    setSupportersLoader('',false);
+  }
+
+  function renderSupporters(items,append){
+    if(!supportersSection||!supportersList||!supportersStatus)return 0;
+    var records=(Array.isArray(items)?items:[]).filter(function(item){
+      return String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim();
+    }).sort(function(a,b){
+      var timeDifference=supporterTime(b)-supporterTime(a);
+      if(timeDifference)return timeDifference;
+      return supporterKey(a).localeCompare(supporterKey(b));
+    });
+
+    supportersSection.hidden=false;
+    if(!append){
+      supporterKeys=Object.create(null);
+      supportersList.innerHTML='';
+    }
+
+    var fresh=records.filter(function(item){
+      var key=supporterKey(item);
+      if(!key||supporterKeys[key])return false;
+      supporterKeys[key]=true;
+      return true;
+    });
+
+    if(!fresh.length&&!append){
+      supportersStatus.hidden=false;
+      supportersStatus.textContent='Nenhum apoiador para exibir ainda.';
+      return 0;
+    }
+
+    if(fresh.length){
+      supportersStatus.hidden=true;
+      supportersList.insertAdjacentHTML('beforeend',fresh.map(supporterMarkup).join(''));
+      bindSupporterImageFallbacks();
+    }
+    return fresh.length;
+  }
+
+  async function fetchSupporters(limit,offset){
+    var client=window.beBackend&&window.beBackend.client;
+    if(!client||typeof client.rpc!=='function')throw new Error('supporters_rpc_unavailable');
+    var result=await client.rpc('get_public_donation_supporters',{
+      p_limit:limit,
+      p_offset:offset
+    });
+    if(result&&result.error)throw result.error;
+    return Array.isArray(result&&result.data)?result.data:[];
+  }
+
+  function observeSupportersEnd(){
+    if(!supportersLoaded||!supportersHasMore||!isRoute()||page.hidden)return;
+    var sentinel=ensureSupportersSentinel();
+    if(!sentinel)return;
+    sentinel.hidden=false;
+    if('IntersectionObserver' in window){
+      if(!supportersObserver){
+        supportersObserver=new IntersectionObserver(function(entries){
+          if(entries.some(function(entry){return entry.isIntersecting;}))loadMoreSupporters();
+        },{root:null,rootMargin:'520px 0px',threshold:0});
+      }
+      supportersObserver.observe(sentinel);
+    }else handleSupportersScroll();
+  }
+
+  function handleSupportersScroll(){
+    if('IntersectionObserver' in window||supportersScrollTicking||!supportersLoaded||!supportersHasMore||supportersLoading||!isRoute()||page.hidden)return;
+    supportersScrollTicking=true;
+    window.requestAnimationFrame(function(){
+      supportersScrollTicking=false;
+      var sentinel=ensureSupportersSentinel();
+      if(!sentinel)return;
+      if(sentinel.getBoundingClientRect().top<=window.innerHeight+520)loadMoreSupporters();
+    });
+  }
+
   async function loadSupporters(force){
     if(!supportersSection||!supportersList||!supportersStatus)return [];
-    if(supportersLoaded&&!force)return [];
+    if(supportersLoaded&&!force){observeSupportersEnd();return [];}
     if(supportersLoading)return supportersLoading;
+    if(force){supportersLoaded=false;resetSupportersPagination(true);}
     supportersSection.hidden=false;
     supportersStatus.hidden=false;
     supportersStatus.textContent='Carregando apoiadores…';
     supportersLoading=(async function(){
       try{
-        var client=window.beBackend&&window.beBackend.client;
-        if(!client||typeof client.rpc!=='function')throw new Error('supporters_rpc_unavailable');
-        var result=await client.rpc('get_public_donation_supporters',{p_limit:SUPPORTERS_LIMIT});
-        if(result&&result.error)throw result.error;
-        renderSupporters(result&&result.data);
+        var records=await fetchSupporters(SUPPORTERS_INITIAL_LIMIT,0);
+        renderSupporters(records,false);
+        supportersOffset=records.length;
+        supportersHasMore=records.length===SUPPORTERS_INITIAL_LIMIT;
         supportersLoaded=true;
-        return result&&result.data||[];
+        setSupportersLoader('',false);
+        if(supportersHasMore)observeSupportersEnd();
+        return records;
       }catch(error){
         console.warn('Não foi possível carregar os apoiadores:',error);
         supportersSection.hidden=true;
         return [];
       }finally{
+        supportersLoading=null;
+      }
+    })();
+    return supportersLoading;
+  }
+
+  async function loadMoreSupporters(){
+    if(!supportersLoaded||!supportersHasMore||supportersLoading||!isRoute()||page.hidden)return [];
+    setSupportersLoader('Carregando mais apoiadores…',true);
+    supportersLoading=(async function(){
+      try{
+        var records=await fetchSupporters(SUPPORTERS_BATCH_SIZE,supportersOffset);
+        supportersOffset+=records.length;
+        renderSupporters(records,true);
+        supportersHasMore=records.length===SUPPORTERS_BATCH_SIZE;
+        if(!supportersHasMore)disconnectSupportersObserver();
+        return records;
+      }catch(error){
+        console.warn('Não foi possível carregar mais apoiadores:',error);
+        return [];
+      }finally{
+        setSupportersLoader('',false);
         supportersLoading=null;
       }
     })();
@@ -488,11 +625,13 @@
     syncAvatar();
     syncUnread();
     load(false);
+    if(supportersLoaded)observeSupportersEnd();
     document.title='Apoie uma ONG — Billie Eilish TV';
   }
 
   function close(){
     closeNotificationPopup();
+    disconnectSupportersObserver();
     document.body.classList.remove('donate-page-active');
     page.hidden=true;
     page.setAttribute('aria-hidden','true');
@@ -560,6 +699,7 @@
   var originalAvatar=document.getElementById('publicUserPhoto');
   if(originalAvatar&&window.MutationObserver)new MutationObserver(syncAvatar).observe(originalAvatar,{attributes:true,attributeFilter:['src','hidden']});
 
+  if(!('IntersectionObserver' in window))window.addEventListener('scroll',handleSupportersScroll,false);
   window.addEventListener('be:open-donate-page',function(){open();});
   window.addEventListener('be:close-donate-page',function(){close();});
   window.addEventListener('be:profile-avatar-changed',syncAvatar);
@@ -567,6 +707,7 @@
   window.addEventListener('be:content-ready',function(){
     notificationLoaded=false;
     supportersLoaded=false;
+    resetSupportersPagination(true);
     if(isRoute()){
       load(true);
       if(notificationPopup&&notificationPopup.classList.contains('open'))loadNotificationPreview(true);

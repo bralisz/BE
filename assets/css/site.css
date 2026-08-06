@@ -10036,6 +10036,30 @@ body.donate-page-active .donate-page-avatar>svg:not([hidden]){
   background:rgba(255,255,255,.025);
 }
 .donate-supporters-status[hidden]{display:none!important}
+
+.donate-supporters-sentinel{
+  display:grid;
+  grid-template-columns:auto auto;
+  place-content:center;
+  align-items:center;
+  gap:9px;
+  min-height:1px;
+  margin-top:1px;
+  color:rgba(255,255,255,.58);
+  font:650 13px/1.35 var(--font-body);
+}
+.donate-supporters-sentinel[hidden]{display:none!important}
+.donate-supporters-sentinel.is-loading{min-height:34px;margin-top:14px}
+.donate-supporters-sentinel.is-loading::before{
+  width:14px;
+  height:14px;
+  border:2px solid rgba(255,255,255,.2);
+  border-top-color:rgba(255,255,255,.82);
+  border-radius:50%;
+  content:'';
+  animation:donate-supporters-spin .75s linear infinite;
+}
+@keyframes donate-supporters-spin{to{transform:rotate(360deg)}}
 .donate-supporters-list{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));

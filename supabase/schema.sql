@@ -787,7 +787,8 @@ on conflict (id) do nothing;
 
 -- Apoiadores públicos: somente usuários com doação confirmada, sem valores ou dados privados.
 create or replace function public.get_public_donation_supporters(
-  p_limit integer default 48
+  p_limit integer default 48,
+  p_offset integer default 0
 )
 returns table (
   user_id uuid,
@@ -842,11 +843,12 @@ as $$
     and p.username is not null
     and trim(p.username::text) <> ''
   order by ls.supported_at desc, p.id
-  limit greatest(1, least(coalesce(p_limit, 48), 100));
+  limit greatest(1, least(coalesce(p_limit, 48), 100))
+  offset greatest(0, least(coalesce(p_offset, 0), 1000000));
 $$;
 
-revoke all on function public.get_public_donation_supporters(integer) from public;
-grant execute on function public.get_public_donation_supporters(integer) to anon, authenticated;
+revoke all on function public.get_public_donation_supporters(integer, integer) from public;
+grant execute on function public.get_public_donation_supporters(integer, integer) to anon, authenticated;
 
 
 notify pgrst, 'reload schema';

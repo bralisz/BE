@@ -40,3 +40,9 @@ A migration `20260804164611_cross_device_user_preferences.sql` cria a tabela pri
 - Mantém a lista ordenada pela data mais recente do apoio.
 - Futuros apoiadores com pagamentos confirmados aparecem antes dos anteriores.
 
+## `20260806074500_paginate_public_donation_supporters.sql`
+
+- Mantém o carregamento inicial de 48 apoiadores.
+- Adiciona paginação por deslocamento para buscar mais 10 perfis por vez.
+- Preserva a ordem do apoio mais recente e evita exposição de valores ou dados de pagamento.
+
