@@ -9,6 +9,22 @@
   var checking = false;
   var updateStarted = false;
   var intervalId = 0;
+  var UPDATE_COPY = {
+    'pt-br': { available:'Atualização disponível', ready:'Uma nova versão do site está pronta.', action:'Atualizar', updating:'Atualizando o site', syncing:'Limpando o cache sem remover sua conta ou preferências.' },
+    'en-us': { available:'Update available', ready:'A new version of the site is ready.', action:'Update', updating:'Updating the site', syncing:'Clearing the cache without removing your account or preferences.' },
+    'es': { available:'Actualización disponible', ready:'Hay una nueva versión del sitio lista.', action:'Actualizar', updating:'Actualizando el sitio', syncing:'Limpiando la caché sin eliminar tu cuenta ni tus preferencias.' }
+  };
+
+  function updateLocaleSlug() {
+    var configured = String(window.BETVLocale && window.BETVLocale.slug || '').toLowerCase();
+    if (UPDATE_COPY[configured]) return configured;
+    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es)(?:\/|$)/);
+    return match && UPDATE_COPY[match[1]] ? match[1] : 'pt-br';
+  }
+
+  function updateCopy() {
+    return UPDATE_COPY[updateLocaleSlug()] || UPDATE_COPY['pt-br'];
+  }
 
   function cleanUpdateParameter() {
     try {
@@ -23,13 +39,16 @@
   function createPopup() {
     if (popup) return popup;
 
+    var copy = updateCopy();
     var element = document.createElement('aside');
     element.className = 'betv-update-popup';
     element.id = 'betvUpdatePopup';
     element.hidden = true;
     element.setAttribute('role', 'status');
     element.setAttribute('aria-live', 'polite');
-    element.setAttribute('aria-label', 'Atualização disponível');
+    element.setAttribute('aria-label', copy.available);
+    element.setAttribute('translate', 'no');
+    element.setAttribute('data-i18n-ignore', '');
     element.innerHTML = [
       '<div class="betv-update-icon" aria-hidden="true">',
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
@@ -38,10 +57,10 @@
       '</svg>',
       '</div>',
       '<div class="betv-update-copy">',
-      '<strong>Atualização disponível</strong>',
-      '<span>Uma nova versão do site está pronta.</span>',
+      '<strong>'+copy.available+'</strong>',
+      '<span>'+copy.ready+'</span>',
       '</div>',
-      '<button class="betv-update-action" type="button">Atualizar</button>'
+      '<button class="betv-update-action" type="button">'+copy.action+'</button>'
     ].join('');
 
     element.querySelector('.betv-update-action').addEventListener('click', applyUpdate);
@@ -117,12 +136,13 @@
     if (updateStarted) return;
     updateStarted = true;
 
+    var copy = updateCopy();
     var element = createPopup();
     var button = element.querySelector('.betv-update-action');
     var subtitle = element.querySelector('.betv-update-copy span');
     button.disabled = true;
-    button.textContent = 'Atualizando…';
-    subtitle.textContent = 'Sincronizando a versão mais recente.';
+    button.textContent = copy.updating;
+    subtitle.textContent = copy.syncing;
 
     clearBrowserCaches().finally(function () {
       try {

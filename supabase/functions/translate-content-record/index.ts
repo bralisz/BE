@@ -7,8 +7,8 @@ const PUBLIC_SETTINGS = new Set(["site","billie-eilish","ong"]);
 const TARGETS: Record<string,string> = {"en-us":"en",es:"es"};
 const FIELDS = ["title","name","description","subtitle","body","summary","buttonLabel","buttonText","actionLabel","ctaLabel","label","text","manualBio","kicker","footerText","sectionName","siteName"];
 const DURATION_FIELDS = ["duration","runtime","videoDuration"];
-const MUSIC_SECTION_IDS = new Set(["14386598-4978-403a-8548-db0ee582e291","18db9515-179c-4bad-9646-1fcda63df14a"]);
-const MUSIC_SECTION_NAMES = new Set(["live performances & tv","videoclipes"]);
+const MUSIC_SECTION_IDS = new Set(["14386598-4978-403a-8548-db0ee582e291","18db9515-179c-4bad-9646-1fcda63df14a","e995b960-503c-4d67-8d7c-87cbd6eda6a2","76295393-0c1d-483f-a48c-eea38f1057df"]);
+const MUSIC_SECTION_NAMES = new Set(["live performances & tv","videoclipes","concert","concierto","behind the scenes","detrás de escena","detras de escena"]);
 const GOOGLE_JSON = "https://translate.googleapis.com/translate_a/single";
 const GOOGLE_MOBILE = "https://translate.google.com/m";
 const MAX_RECORDS = 50;
@@ -72,7 +72,7 @@ ${item.source}`).join("\n");
   return result;
 }
 function active(value:unknown){return value!==false&&String(value??"true").toLowerCase()!=="false";}
-function preserveTitle(collection:string,data:Record<string,unknown>){if(collection!=="videos")return false;return MUSIC_SECTION_IDS.has(text(data.sectionId,120))||MUSIC_SECTION_NAMES.has(text(data.sectionName,160).toLowerCase());}
+function preserveTitle(collection:string,data:Record<string,unknown>){if(collection!=="videos")return false;const sectionName=text(data.sectionName||data.sourceSectionTitle,160).toLowerCase();return MUSIC_SECTION_IDS.has(text(data.sectionId,120))||MUSIC_SECTION_NAMES.has(sectionName);}
 function duration(value:unknown,locale:string){const raw=text(value,120);if(!raw)return raw;const h=raw.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i);const m=raw.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);if(!h&&!m)return raw;return [h?(locale==="en-us"?`${Number(h[1])} hr`:`${Number(h[1])} h`):"",m?`${Number(m[1])} min`:""].filter(Boolean).join(" ");}
 function sourceSignature(data:Record<string,unknown>){const source:Record<string,unknown>={};for(const field of [...FIELDS,...DURATION_FIELDS])if(Object.prototype.hasOwnProperty.call(data,field))source[field]=data[field];const serialized=JSON.stringify(source);let hash=2166136261;for(let i=0;i<serialized.length;i++){hash^=serialized.charCodeAt(i);hash=Math.imul(hash,16777619);}return `src-${(hash>>>0).toString(16)}`;}
 
@@ -117,7 +117,7 @@ Deno.serve(async(req:Request)=>{
     for(const row of rows as any[]){
       const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);const keepTitle=collection==="ongs"||preserveTitle(collection,data);
       for(const locale of locales){
-        const existing=translations[locale];if(!force&&existing&&existing.sourceUpdatedAt===signature){responseRecords.push({id:row.id,locale,translation:existing,cached:true});continue;}
+        const existing=translations[locale];if(!force&&existing&&existing.sourceUpdatedAt===signature){const cached={...existing};if(keepTitle){delete cached.title;delete cached.name;translations[locale]=cached;}responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
         const fields=FIELDS.filter(field=>!(keepTitle&&(field==="title"||field==="name"))).filter(field=>typeof data[field]==="string"&&text(data[field])&&!/^https?:\/\//i.test(text(data[field])));
         total+=fields.reduce((sum,field)=>sum+text(data[field]).length,0);if(total>MAX_CHARS)return reply(req,413,{error:"Conteúdo excede o limite por solicitação."});
         const values=await translateValues(fields.map(field=>text(data[field])),TARGETS[locale]);
