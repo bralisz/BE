@@ -642,37 +642,48 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return !localized || typeof localized !== 'object';
   }
 
+  const pendingTranslationBatches = new Set();
+
+  function requestMissingTranslationsInBackground(collection, records, slug) {
+    if (!records.length || !supabaseClient?.functions?.invoke) return;
+    const ids = records.map(record => String(record.id || '')).filter(Boolean);
+    if (!ids.length) return;
+    const key = `${String(collection || '')}:${slug}:${ids.join(',')}`;
+    if (pendingTranslationBatches.has(key)) return;
+    pendingTranslationBatches.add(key);
+
+    window.setTimeout(async () => {
+      try {
+        for (let offset = 0; offset < ids.length; offset += 20) {
+          const batchIds = ids.slice(offset, offset + 20);
+          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+            body: { collection: String(collection), ids: batchIds, locales: [slug] }
+          });
+          if (result?.error) {
+            console.warn('Tradução automática indisponível; o conteúdo original foi mantido:', result.error.message || result.error);
+            break;
+          }
+        }
+      } catch (error) {
+        console.warn('Tradução automática indisponível; o conteúdo original foi mantido:', error?.message || error);
+      } finally {
+        pendingTranslationBatches.delete(key);
+      }
+    }, 0);
+  }
+
   async function ensureTranslatedRecords(collection, records) {
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
-    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(record => localizeContentRecord(record, collection));
+
+    // Nunca bloqueia a exibição dos vídeos esperando a tradução automática.
+    // Traduções já salvas são aplicadas imediatamente; as ausentes são geradas
+    // em segundo plano e ficam disponíveis na próxima atualização da página.
+    if (slug !== 'pt-br' && TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) {
+      const missing = values.filter(record => recordNeedsTranslation(record, slug));
+      requestMissingTranslationsInBackground(collection, missing, slug);
     }
-    const missing = values.filter(record => recordNeedsTranslation(record, slug));
-    if (missing.length) {
-      try {
-        const translatedById = new Map();
-        for (let offset = 0; offset < missing.length; offset += 20) {
-          const batch = missing.slice(offset, offset + 20);
-          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-            body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
-          });
-          if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
-            console.warn('Um lote de tradução não foi concluído:', result?.error?.message || 'resposta inválida');
-            continue;
-          }
-          result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
-        }
-        values.forEach(record => {
-          const translation = translatedById.get(String(record.id));
-          if (!translation || typeof translation !== 'object') return;
-          if (!record.translations || typeof record.translations !== 'object') record.translations = {};
-          record.translations[slug] = translation;
-        });
-      } catch (error) {
-        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
-      }
-    }
+
     return values.map(record => localizeContentRecord(record, collection));
   }
 
@@ -2272,20 +2283,40 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.beRenderMarkdown = markdownToHtml;
   window.beMarkdownPlainText = markdownToPlainText;
 
+  async function runHomeContentStep(label, task) {
+    try {
+      await task();
+      return true;
+    } catch (error) {
+      console.warn(`${label} indisponível:`, error?.message || error);
+      return false;
+    }
+  }
+
   window.addEventListener('load', async () => {
     setupHomeNavigation();
     setupDetailControls();
     try {
       if (!window.beBackend) return;
       await window.beBackend.ready;
-      await applySiteSettings();
-      await renderFeatured();
-      await renderVideoCatalog();
+
+      // Uma falha em configurações ou destaques não pode impedir o catálogo.
+      await runHomeContentStep('Configurações do site', applySiteSettings);
+      await runHomeContentStep('Destaques', renderFeatured);
+      const catalogLoaded = await runHomeContentStep('Catálogo de vídeos', renderVideoCatalog);
+
+      // Tenta novamente uma vez em caso de oscilação temporária da API.
+      if (!catalogLoaded) {
+        window.setTimeout(() => {
+          runHomeContentStep('Nova tentativa do catálogo de vídeos', renderVideoCatalog);
+        }, 1200);
+      }
+
       setupHomeNavigation();
       setupDetailControls();
-      await openContentDetailFromRoute();
+      await runHomeContentStep('Detalhes do conteúdo', openContentDetailFromRoute);
     } catch (error) {
-      console.warn('Conteúdo dinâmico indisponível:', error.message);
+      console.warn('Inicialização do conteúdo indisponível:', error?.message || error);
     } finally {
       window.__beContentReady = true;
       window.dispatchEvent(new Event('be:content-ready'));
