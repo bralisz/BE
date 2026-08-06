@@ -87,6 +87,73 @@
     image.setAttribute('data-avatar-fallback', DEFAULT_AVATAR);
     return resolved;
   };
+
+  function meaningfulAvatar(value) {
+    const raw = String(value || '').trim();
+    if (!raw || raw === '#') return '';
+    try {
+      const resolved = new URL(raw, location.origin);
+      const fallback = new URL(DEFAULT_AVATAR, location.origin);
+      if (resolved.href === fallback.href) return '';
+    } catch (_) {
+      if (raw === DEFAULT_AVATAR || raw.endsWith(DEFAULT_AVATAR)) return '';
+    }
+    return raw;
+  }
+
+  function avatarFromEvent(event) {
+    const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+    return meaningfulAvatar(detail.avatarUrl || (detail.profile && detail.profile.avatarUrl) || '');
+  }
+
+  function currentAvatarAccount() {
+    return window.beBackend && window.beBackend.auth ? window.beBackend.auth.currentUser : null;
+  }
+
+  function avatarFromAccount(account) {
+    if (!account) return '';
+    const metadata = account.raw && (account.raw.user_metadata || account.raw.raw_user_meta_data) || {};
+    const cached = (() => {
+      try { return account.uid ? localStorage.getItem('beSelectedAvatar:' + account.uid) : ''; }
+      catch (_) { return ''; }
+    })();
+    return meaningfulAvatar(
+      account.profile && account.profile.avatarUrl ||
+      account.photoURL ||
+      metadata.profile_avatar_url ||
+      cached ||
+      ''
+    );
+  }
+
+  window.BETVReadSelectedAvatar = function BETVReadSelectedAvatar(event) {
+    const eventAvatar = avatarFromEvent(event);
+    if (eventAvatar) return eventAvatar;
+    const accountAvatar = avatarFromAccount(currentAvatarAccount());
+    if (accountAvatar) return accountAvatar;
+    const source = document.getElementById('publicUserPhoto');
+    return meaningfulAvatar(source && !source.hidden ? source.getAttribute('src') : '');
+  };
+
+  window.BETVLoadSelectedAvatar = async function BETVLoadSelectedAvatar(event) {
+    const eventAvatar = avatarFromEvent(event);
+    if (eventAvatar) return eventAvatar;
+    try {
+      if (window.beBackend && window.beBackend.ready) await window.beBackend.ready;
+      const account = currentAvatarAccount();
+      if (!account) return '';
+      let avatar = avatarFromAccount(account);
+      if (avatar) return avatar;
+      if (window.beBackend && window.beBackend.profiles && typeof window.beBackend.profiles.ensure === 'function') {
+        const profile = await window.beBackend.profiles.ensure(account);
+        avatar = meaningfulAvatar(profile && profile.avatarUrl);
+        if (avatar) return avatar;
+      }
+      return avatarFromAccount(currentAvatarAccount());
+    } catch (_) {
+      return window.BETVReadSelectedAvatar(event);
+    }
+  };
   document.addEventListener('error', function (event) {
     const image = event.target;
     if (!(image instanceof HTMLImageElement) || !image.hasAttribute('data-avatar-fallback')) return;
@@ -5768,7 +5835,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var onboardingShownFor='';
     var avatarPickerReturnView='';
     var bannerPickerReturnView='';
-    var settingsActiveTab='profile';
+    var SETTINGS_TAB_SESSION_KEY='beSettingsActiveTab';
+    var settingsActiveTab=(function(){
+      var remembered='';
+      try{remembered=String(history.state&&history.state.settingsTab||sessionStorage.getItem(SETTINGS_TAB_SESSION_KEY)||'');}catch(_){ }
+      return ['profile','connections','data','language','session','account'].indexOf(remembered)>=0?remembered:'profile';
+    })();
     var settingsSaveConfirm=document.getElementById('settingsSaveConfirm');
     var settingsSaveCancel=document.getElementById('settingsSaveCancel');
     var settingsSaveApprove=document.getElementById('settingsSaveApprove');
@@ -6578,6 +6650,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       function activateSettingsTab(tab,moveToTop){
         if(settingsTabs.indexOf(tab)<0)tab='profile';
         settingsActiveTab=tab;
+        try{sessionStorage.setItem(SETTINGS_TAB_SESSION_KEY,tab);}catch(_){ }
         settingsPageBody.querySelectorAll('[data-settings-tab]').forEach(function(button){
           var active=button.getAttribute('data-settings-tab')===tab;
           button.classList.toggle('active',active);
@@ -6898,6 +6971,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
       // Fecha as configurações e troca primeiro a rota para a Home. Isso evita
       // que o clique no logo crie uma entrada extra de /config no histórico.
+      try{sessionStorage.removeItem(SETTINGS_TAB_SESSION_KEY);}catch(_){ }
+      settingsActiveTab='profile';
       closePublicPages(false);
       if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.replace==='function'){
         window.BETVPublicRoutes.replace('/');
@@ -7226,7 +7301,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else if(isDonateRoute())showDonateRoute();
     else if(isSupportRoute())showSupportRoute();
     else if(isBillieRoute())showBillieRoute();
-    else if(isConfigRoute())enterConfig();
+    else if(isConfigRoute()){enterConfig();hideSiteSkeleton();}
     else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}
     else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}
     else enterHome();
@@ -8498,11 +8573,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!raw)return '';
     return window.beMediaUrl?window.beMediaUrl(raw):raw;
   }
-  function syncAvatar(){
-    var source=document.getElementById('publicUserPhoto');
-    var url=source&&!source.hidden?String(source.currentSrc||source.src||'').trim():'';
+  var avatarSyncVersion=0;
+  function applyBillieAvatar(url){
+    if(!avatarImage||!avatarFallback)return;
     if(window.BETVApplyAvatar)window.BETVApplyAvatar(avatarImage,url);else{avatarImage.src=url||window.BETV_DEFAULT_AVATAR;avatarImage.hidden=false;}
     avatarFallback.hidden=true;
+  }
+  function syncAvatar(event){
+    var version=++avatarSyncVersion;
+    var immediate=window.BETVReadSelectedAvatar?window.BETVReadSelectedAvatar(event):'';
+    applyBillieAvatar(immediate);
+    if(!window.BETVLoadSelectedAvatar)return;
+    Promise.resolve(window.BETVLoadSelectedAvatar(event)).then(function(url){
+      if(version!==avatarSyncVersion||!isBillieRoute())return;
+      applyBillieAvatar(url);
+    }).catch(function(){});
   }
   function syncUnread(){
     var source=document.getElementById('notificationUnreadDot');
@@ -8826,6 +8911,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('be:open-billie-page',openPage);
   window.addEventListener('be:close-billie-page',closePage);
   window.addEventListener('be:profile-avatar-changed',syncAvatar);
+  window.addEventListener('be:profile-device-synced',syncAvatar);
+  if(window.beBackend&&window.beBackend.auth&&typeof window.beBackend.auth.onChange==='function')window.beBackend.auth.onChange(function(){if(isBillieRoute())syncAvatar();});
   window.addEventListener('be:content-ready',function(){if(isBillieRoute())renderRoute();});
   window.addEventListener('popstate',renderRoute);
   window.addEventListener('hashchange',renderRoute);
