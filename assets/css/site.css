@@ -9130,7 +9130,7 @@ body.billie-page-active #dynamicSections{display:none!important}
 
 /* Página Billie Eilish com conteúdo manual ou sincronizado pela Wikipédia. */
 .billie-biography-grid{align-items:start}
-.billie-portrait-column{position:relative;top:auto;display:grid;gap:18px;align-self:start}
+.billie-portrait-column{position:-webkit-sticky;position:sticky;top:116px;display:grid;gap:18px;align-self:start;height:max-content}
 .billie-wikipedia-loading{min-height:84px;display:flex;align-items:center;gap:13px;margin:0 0 22px;padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:17px;background:rgba(255,255,255,.025)}
 .billie-wikipedia-loading[hidden]{display:none!important}.billie-wikipedia-loading span{width:22px;height:22px;border:2px solid rgba(255,255,255,.18);border-top-color:#3b94ff;border-radius:50%;animation:billieWikiSpin .8s linear infinite}.billie-wikipedia-loading p{margin:0;color:rgba(235,241,250,.72);font-size:14px}
 @keyframes billieWikiSpin{to{transform:rotate(360deg)}}
