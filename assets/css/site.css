@@ -10155,3 +10155,69 @@ body.donate-page-active .donate-page-avatar>svg:not([hidden]){
   }
 }
 
+
+/* Avatares dos cabeçalhos: mesmas dimensões usadas na Home. */
+body.billie-page-active .billie-page-avatar,
+body.donate-page-active .donate-page-avatar,
+.notification-page-avatar,
+.legal-avatar-button:not(.is-login){
+  width:54px!important;
+  height:54px!important;
+  min-width:54px!important;
+  min-height:54px!important;
+  flex:0 0 54px!important;
+  padding:3px!important;
+  box-sizing:border-box!important;
+  border-radius:50%!important;
+  overflow:hidden!important;
+  display:grid!important;
+  place-items:center!important;
+  line-height:0!important;
+}
+body.billie-page-active .billie-page-avatar>img,
+body.donate-page-active .donate-page-avatar>img,
+.notification-page-avatar>img,
+.legal-avatar-button:not(.is-login)>img{
+  width:100%!important;
+  height:100%!important;
+  margin:0!important;
+  display:block!important;
+  object-fit:cover!important;
+  border-radius:50%!important;
+}
+body.billie-page-active .billie-page-avatar>svg,
+body.donate-page-active .donate-page-avatar>svg{
+  width:17px!important;
+  height:17px!important;
+}
+
+@media (max-width:760px){
+  body.billie-page-active .billie-page-avatar,
+  body.donate-page-active .donate-page-avatar,
+  .notification-page-avatar,
+  .legal-avatar-button:not(.is-login){
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    flex:0 0 46px!important;
+  }
+  body.billie-page-active .billie-page-avatar>svg,
+  body.donate-page-active .donate-page-avatar>svg{
+    width:23px!important;
+    height:23px!important;
+  }
+}
+
+@media (max-width:390px){
+  body.billie-page-active .billie-page-avatar,
+  body.donate-page-active .donate-page-avatar,
+  .notification-page-avatar,
+  .legal-avatar-button:not(.is-login){
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+    flex:0 0 42px!important;
+  }
+}
