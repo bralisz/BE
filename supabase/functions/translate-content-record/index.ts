@@ -2,13 +2,14 @@ import "jsr:@supabase/functions-js@2.4.4/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const SITE_ORIGIN = "https://billieilishtv.site";
-const PUBLIC_COLLECTIONS = new Set(["contents","featured","movies","notifications","ongs","sections","series","videos"]);
+const PUBLIC_COLLECTIONS = new Set(["contents","featured","movies","news","notifications","ongs","sections","series","videos"]);
 const PUBLIC_SETTINGS = new Set(["site","billie-eilish","ong"]);
 const TARGETS: Record<string,string> = {"en-us":"en",es:"es"};
 const FIELDS = ["title","name","description","subtitle","body","summary","buttonLabel","buttonText","actionLabel","ctaLabel","label","text","manualBio","kicker","footerText","sectionName","siteName"];
 const DURATION_FIELDS = ["duration","runtime","videoDuration"];
 const MUSIC_SECTION_IDS = new Set(["14386598-4978-403a-8548-db0ee582e291","18db9515-179c-4bad-9646-1fcda63df14a"]);
 const MUSIC_SECTION_NAMES = new Set(["live performances & tv","videoclipes"]);
+const MUSIC_TITLE_PATTERN = /(^|[\s._/?:=&-])(music|musica|música|song|faixa|track|album|álbum|videoclipe|live performances)(?=$|[\s._/?:=&-])/i;
 const GOOGLE_JSON = "https://translate.googleapis.com/translate_a/single";
 const GOOGLE_MOBILE = "https://translate.google.com/m";
 const MAX_RECORDS = 50;
@@ -72,7 +73,16 @@ ${item.source}`).join("\n");
   return result;
 }
 function active(value:unknown){return value!==false&&String(value??"true").toLowerCase()!=="false";}
-function preserveTitle(collection:string,data:Record<string,unknown>){if(collection!=="videos")return false;return MUSIC_SECTION_IDS.has(text(data.sectionId,120))||MUSIC_SECTION_NAMES.has(text(data.sectionName,160).toLowerCase());}
+function preserveTitle(collection:string,data:Record<string,unknown>,locale:string){
+  const sectionId=text(data.sectionId,120),sectionName=text(data.sectionName||data.sourceSectionTitle,160).toLowerCase();
+  const exactMusic=collection==="videos"&&(MUSIC_SECTION_IDS.has(sectionId)||MUSIC_SECTION_NAMES.has(sectionName));
+  if(exactMusic)return true;
+  if(locale!=="es")return false;
+  if(collection==="movies"||collection==="news")return true;
+  if(collection==="sections"&&text(data.title||data.name,200).toLowerCase()==="vanity fair")return true;
+  const metadata=[data.sectionName,data.sourceSectionTitle,data.category,data.type,data.contentType,data.itemType].map(value=>text(value,180)).filter(Boolean).join(" ");
+  return ["videos","contents","featured","news"].includes(collection)&&MUSIC_TITLE_PATTERN.test(metadata);
+}
 function duration(value:unknown,locale:string){const raw=text(value,120);if(!raw)return raw;const h=raw.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i);const m=raw.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);if(!h&&!m)return raw;return [h?(locale==="en-us"?`${Number(h[1])} hr`:`${Number(h[1])} h`):"",m?`${Number(m[1])} min`:""].filter(Boolean).join(" ");}
 function sourceSignature(data:Record<string,unknown>){const source:Record<string,unknown>={};for(const field of [...FIELDS,...DURATION_FIELDS])if(Object.prototype.hasOwnProperty.call(data,field))source[field]=data[field];const serialized=JSON.stringify(source);let hash=2166136261;for(let i=0;i<serialized.length;i++){hash^=serialized.charCodeAt(i);hash=Math.imul(hash,16777619);}return `src-${(hash>>>0).toString(16)}`;}
 
@@ -115,9 +125,10 @@ Deno.serve(async(req:Request)=>{
   let total=0;const responseRecords:Record<string,unknown>[]=[];
   try{
     for(const row of rows as any[]){
-      const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);const keepTitle=collection==="ongs"||preserveTitle(collection,data);
+      const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);
       for(const locale of locales){
-        const existing=translations[locale];if(!force&&existing&&existing.sourceUpdatedAt===signature){responseRecords.push({id:row.id,locale,translation:existing,cached:true});continue;}
+        const keepTitle=collection==="ongs"||preserveTitle(collection,data,locale);
+        const existing=translations[locale];if(!force&&existing&&existing.sourceUpdatedAt===signature){const cached={...existing};if(keepTitle){delete cached.title;delete cached.name;}translations[locale]=cached;responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
         const fields=FIELDS.filter(field=>!(keepTitle&&(field==="title"||field==="name"))).filter(field=>typeof data[field]==="string"&&text(data[field])&&!/^https?:\/\//i.test(text(data[field])));
         total+=fields.reduce((sum,field)=>sum+text(data[field]).length,0);if(total>MAX_CHARS)return reply(req,413,{error:"Conteúdo excede o limite por solicitação."});
         const values=await translateValues(fields.map(field=>text(data[field])),TARGETS[locale]);
