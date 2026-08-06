@@ -12,6 +12,11 @@ const TRANSLATABLE_FIELDS = [
   "title", "name", "description", "subtitle", "body", "summary", "buttonLabel", "buttonText",
   "actionLabel", "ctaLabel", "label", "text", "manualBio", "kicker", "footerText", "sectionName", "siteName",
 ] as const;
+const MUSIC_TITLE_SECTION_IDS = new Set([
+  "14386598-4978-403a-8548-db0ee582e291", // Live Performances & TV
+  "18db9515-179c-4bad-9646-1fcda63df14a", // Videoclipes
+]);
+const MUSIC_TITLE_SECTION_NAMES = new Set(["live performances & tv", "videoclipes"]);
 const MAX_RECORDS = 50;
 const MAX_TOTAL_CHARACTERS = 30_000;
 const GOOGLE_MOBILE_TRANSLATE_URL = "https://translate.google.com/m";
@@ -262,9 +267,18 @@ function sourceRevision(row: Record<string, unknown>, data: Record<string, unkno
   return safeString(data.updatedAt || row.updated_at || row.created_at || new Date().toISOString(), 80);
 }
 
-function stringsToTranslate(data: Record<string, unknown>): Array<{ field: string; value: string }> {
+function keepsOriginalMusicTitle(collection: string, data: Record<string, unknown>): boolean {
+  if (collection !== "videos") return false;
+  const sectionId = safeString(data.sectionId, 120);
+  const sectionName = safeString(data.sectionName, 160).toLowerCase();
+  return MUSIC_TITLE_SECTION_IDS.has(sectionId) || MUSIC_TITLE_SECTION_NAMES.has(sectionName);
+}
+
+function stringsToTranslate(collection: string, data: Record<string, unknown>): Array<{ field: string; value: string }> {
   const values: Array<{ field: string; value: string }> = [];
+  const preserveMusicTitle = keepsOriginalMusicTitle(collection, data);
   for (const field of TRANSLATABLE_FIELDS) {
+    if (preserveMusicTitle && (field === "title" || field === "name")) continue;
     const value = typeof data[field] === "string" ? String(data[field]).trim() : "";
     if (!value || /^https?:\/\//i.test(value) || value.length > 8_000) continue;
     values.push({ field, value });
@@ -358,7 +372,7 @@ Deno.serve(async (req: Request) => {
       translations: data.translations && typeof data.translations === "object"
         ? { ...(data.translations as Record<string, unknown>) }
         : {},
-      fields: stringsToTranslate(data),
+      fields: stringsToTranslate(collection, data),
       dirty: false,
     };
   });
