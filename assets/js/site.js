@@ -6988,9 +6988,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       authReady=true;
       if(authFlowBusy)return;
       if(user&&!(await enforceAccountAccess(user)))return;
-      if(isNotificationsRoute()){hideSiteSkeleton();showNotificationsRoute();return;}
-      if(isDonateRoute()){hideSiteSkeleton();showDonateRoute();return;}
-      if(isSupportRoute()){hideSiteSkeleton();showSupportRoute();return;}
       if(isLegalRoute()){hideSiteSkeleton();showLegalRoute();return;}
       if(!user){
         // Mantém o skeleton acima do catálogo até a ausência de sessão ser
@@ -7024,15 +7021,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     function handlePublicRoute(){
       if(location.hash.startsWith('#/admin'))return;
-      if(isNotificationsRoute()){showNotificationsRoute();return;}
-      if(isDonateRoute()){showDonateRoute();return;}
-      if(isSupportRoute()){showSupportRoute();return;}
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
+      if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
+      if(isNotificationsRoute()){if(auth.currentUser)showNotificationsRoute();else showLogin();return;}
+      if(isDonateRoute()){if(auth.currentUser)showDonateRoute();else showLogin();return;}
+      if(isSupportRoute()){if(auth.currentUser)showSupportRoute();else showLogin();return;}
       if(isBillieRoute()){if(auth.currentUser)showBillieRoute();else showLogin();return;}
       if(isLoginRoute()){if(auth.currentUser)enterHome();else showLogin();return;}
       if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}
-      if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
       if(isVideoRoute()){if(auth.currentUser){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else showLogin();return;}
       if(auth.currentUser)enterHome(true);else showLogin();
     }
@@ -7044,7 +7041,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function startAuthentication(){
-    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){hideSiteSkeleton();if(isNotificationsRoute())showNotificationsRoute();else if(isDonateRoute())showDonateRoute();else if(isSupportRoute())showSupportRoute();else if(isLegalRoute())showLegalRoute();else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}console.error('Falha ao iniciar autenticação:',error);}
+    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){hideSiteSkeleton();if(isLegalRoute())showLegalRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}console.error('Falha ao iniciar autenticação:',error);}
   }
 
   document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode('email');startAuthentication()});
