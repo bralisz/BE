@@ -8109,6 +8109,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var wikipediaLoading=document.getElementById('billieWikipediaLoading');
   var wikipediaError=document.getElementById('billieWikipediaError');
   var wikipediaAttribution=document.getElementById('billieWikipediaAttribution');
+  var siteFilmography=document.getElementById('billieSiteFilmography');
+  var siteFilmographyBody=document.getElementById('billieSiteFilmographyBody');
   if(!page)return;
 
   var DEFAULTS={
@@ -8200,7 +8202,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return parsed.protocol==='https:'?parsed.href:'';
     }catch(_){return '';}
   }
-  function normalizeWikipediaHtml(rawHtml,includeReferences){
+  function normalizedSectionLabel(value){
+    return String(value||'').trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/\[[^\]]*\]/g,'')
+      .replace(/[^a-z0-9]+/g,' ')
+      .replace(/\s+/g,' ')
+      .trim();
+  }
+  function removeWikipediaSection(parser,heading){
+    var level=Number(String(heading.tagName||'H2').slice(1))||2;
+    var cursor=heading.nextSibling;
+    while(cursor){
+      if(cursor.nodeType===1&&/^H[2-4]$/.test(cursor.tagName)){
+        var nextLevel=Number(cursor.tagName.slice(1))||2;
+        if(nextLevel<=level)break;
+      }
+      var next=cursor.nextSibling;
+      cursor.remove();
+      cursor=next;
+    }
+    heading.remove();
+  }
+  function normalizeWikipediaHtml(rawHtml){
     var doc=new DOMParser().parseFromString('<div id="billieWikiRoot">'+String(rawHtml||'')+'</div>','text/html');
     var root=doc.getElementById('billieWikiRoot');
     var parser=root&&root.querySelector('.mw-parser-output')||root;
@@ -8208,17 +8232,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var infoboxImage=parser.querySelector('table.infobox img, .infobox img');
     var imageUrl=infoboxImage?absoluteWikipediaUrl(infoboxImage.getAttribute('src')||infoboxImage.getAttribute('data-src')||''):'';
     parser.querySelectorAll('script,style,link,meta,noscript,iframe,object,embed,form,input,button,textarea,select,video,audio,canvas,svg,table.infobox,.infobox,.mw-editsection,.shortdescription,.hatnote,.metadata,.ambox,.navbox,.vertical-navbox,.authority-control,.catlinks,.sistersitebox,.portal,.mw-empty-elt,.noprint,.nomobile,.thumb,figure,.gallery').forEach(function(node){node.remove();});
-    /* Mantém a leitura limpa: remove chamadas de nota e seções editoriais da fonte. */
-    parser.querySelectorAll('sup,.reference,.mw-ref,.reflist,ol.references').forEach(function(node){node.remove();});
-    var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas'];
-    Array.from(parser.querySelectorAll('h2')).forEach(function(heading){
-      var label=String(heading.textContent||'').trim().toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-        .replace(/\s+/g,' ');
-      if(!blocked.includes(label))return;
-      var cursor=heading.nextSibling;
-      while(cursor&&!(cursor.nodeType===1&&cursor.tagName==='H2')){var next=cursor.nextSibling;cursor.remove();cursor=next;}
-      heading.remove();
+    /* Estas remoções são permanentes e são reaplicadas em toda atualização da Wikipédia. */
+    parser.querySelectorAll('sup,.reference,.mw-ref,.reflist,ol.references,[role="note"],a[href^="#cite_note"]').forEach(function(node){node.remove();});
+    var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia'];
+    Array.from(parser.querySelectorAll('h2,h3,h4')).forEach(function(heading){
+      if(!heading.isConnected)return;
+      var label=normalizedSectionLabel(heading.textContent);
+      if(blocked.some(function(item){return label===item||label.startsWith(item+' ');}))removeWikipediaSection(parser,heading);
     });
     var allowed=new Set(['DIV','P','H2','H3','H4','UL','OL','LI','STRONG','B','EM','I','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','CAPTION','BLOCKQUOTE','SMALL','BR','SPAN','DL','DT','DD']);
     Array.from(parser.querySelectorAll('*')).forEach(function(element){
@@ -8242,6 +8262,52 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     parser.querySelectorAll('h2,h3,h4').forEach(function(heading){heading.textContent=String(heading.textContent||'').replace(/\s*\[editar.*$/i,'').trim();});
     return {html:parser.innerHTML.trim(),imageUrl:imageUrl};
   }
+  function numericBillieMovieId(value){
+    var source=String(value||'filme').trim();
+    if(/^\d{8}$/.test(source))return source;
+    var hash=2166136261;
+    for(var index=0;index<source.length;index+=1){hash^=source.charCodeAt(index);hash=Math.imul(hash,16777619);}
+    return String(10000000+((hash>>>0)%90000000));
+  }
+  function compactMovieInformation(movie){
+    var parts=[];
+    var duration=String(movie.duration||movie.runtime||'').trim();
+    var description=String(movie.description||'').trim();
+    if(duration)parts.push(duration);
+    if(description)parts.push(description);
+    return parts.join(' · ')||'Disponível no catálogo do BETV.';
+  }
+  function renderSiteFilmography(movies){
+    if(!siteFilmography||!siteFilmographyBody)return;
+    var visible=(Array.isArray(movies)?movies:[]).filter(function(movie){return movie&&movie.active!==false&&String(movie.title||'').trim();});
+    if(!visible.length){siteFilmography.hidden=true;siteFilmographyBody.innerHTML='';return;}
+    siteFilmographyBody.innerHTML=visible.map(function(movie){
+      var titleValue=String(movie.title||'Filme').trim();
+      var itemId=numericBillieMovieId(movie.publicId||movie.id||titleValue);
+      var href='/'+encodeURIComponent(itemId);
+      var yearValue=String(movie.year||'—').trim()||'—';
+      var categoryValue=String(movie.category||movie.type||'Filme').trim()||'Filme';
+      var information=compactMovieInformation(movie);
+      return '<tr>'+
+        '<td data-label="Ano">'+escapeText(yearValue)+'</td>'+
+        '<td data-label="Título"><a href="'+href+'" data-billie-movie-link="true">'+escapeText(titleValue)+'</a></td>'+
+        '<td data-label="Categoria">'+escapeText(categoryValue)+'</td>'+
+        '<td data-label="Informações">'+escapeText(information)+'</td>'+
+      '</tr>';
+    }).join('');
+    siteFilmography.hidden=false;
+  }
+  async function loadSiteFilmography(token){
+    try{
+      var data=window.beBackend&&beBackend.data;
+      if(!data||typeof data.list!=='function')throw new Error('Catálogo indisponível.');
+      var movies=await data.list('movies',{orderBy:'order',direction:'asc'});
+      if(token!==loadToken)return;
+      renderSiteFilmography(movies);
+    }catch(_){
+      if(token===loadToken)renderSiteFilmography([]);
+    }
+  }
   function formatRevision(value){
     if(!value)return '';
     var date=new Date(value);
@@ -8257,7 +8323,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var payload=await response.json().catch(function(){return {};});
       if(!response.ok||!payload||!payload.html)throw new Error(payload.error||'Não foi possível carregar as informações.');
       if(token!==loadToken)return;
-      var cleaned=normalizeWikipediaHtml(payload.html,false);
+      var cleaned=normalizeWikipediaHtml(payload.html);
       if(!cleaned.html)throw new Error('Não foi possível preparar o conteúdo para exibição.');
       wikipediaContent.innerHTML=cleaned.html;
       wikipediaContent.hidden=false;
@@ -8286,6 +8352,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }catch(error){console.warn('Não foi possível carregar as configurações da página Billie Eilish:',error);}
     if(token!==loadToken)return;
     renderBase(settings);
+    loadSiteFilmography(token);
     if(String(settings.sourceMode||'manual').toLowerCase()==='wikipedia')loadWikipedia(settings,token);
   }
   function openPage(){
@@ -8318,6 +8385,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     event.preventDefault();
     if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/billie-eilish');
     else location.assign('/billie-eilish');
+  });
+  page.addEventListener('click',function(event){
+    var movieLink=event.target&&event.target.closest?event.target.closest('[data-billie-movie-link="true"]'):null;
+    if(!movieLink)return;
+    event.preventDefault();
+    var destination=movieLink.getAttribute('href')||'/';
+    if(window.BETVPublicRoutes)window.BETVPublicRoutes.go(destination);
+    else location.assign(destination);
   });
   if(homeButton)homeButton.addEventListener('click',function(){if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/');else location.assign('/');});
   if(notificationButton)notificationButton.addEventListener('click',function(){if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/atualizacoes');else location.assign('/atualizacoes');});
