@@ -769,14 +769,65 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return hash.startsWith('#/admin') || callback === 'admin';
   }
 
+  function flattenPublicRpcRows(payload) {
+    const rows = Array.isArray(payload) ? payload : (payload ? [payload] : []);
+    return rows.map(row => {
+      if (!row || typeof row !== 'object') return null;
+      if (row.data && typeof row.data === 'object' && !Array.isArray(row.data)) {
+        return {
+          id: row.id,
+          ...row.data,
+          createdAt: row.data.createdAt || row.created_at || '',
+          updatedAt: row.data.updatedAt || row.updated_at || ''
+        };
+      }
+      return row;
+    }).filter(Boolean);
+  }
+
+  async function readPublicDataFromSupabase(name, id = '') {
+    if (!supabaseClient || typeof supabaseClient.rpc !== 'function') {
+      throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+    }
+    if (String(name) === 'settings') {
+      if (!id) return [];
+      const { data, error } = await supabaseClient.rpc('get_public_site_setting', { p_id: String(id) });
+      if (error) throw error;
+      const values = flattenPublicRpcRows(data);
+      return values[0] || null;
+    }
+    const { data, error } = await supabaseClient.rpc('get_public_content_items', {
+      p_collection: String(name || ''),
+      p_id: id ? String(id) : null
+    });
+    if (error) throw error;
+    const values = flattenPublicRpcRows(data);
+    return id ? (values[0] || null) : values;
+  }
+
   async function readPublicData(name, id = '') {
     const params = new URLSearchParams({ name: String(name || '') });
     if (id) params.set('id', String(id));
-    const response = await fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-    return response.json();
+    try {
+      const requestOptions = {
+        method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
+      };
+      if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+        requestOptions.signal = AbortSignal.timeout(10000);
+      }
+      const response = await fetch(`/api/public-data?${params.toString()}`, requestOptions);
+      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+      return await response.json();
+    } catch (apiError) {
+      // Em previews ou durante uma implantação, a rota /api pode ficar alguns
+      // segundos indisponível. O RPC público possui os mesmos campos seguros e
+      // mantém o catálogo visível sem depender dessa rota intermediária.
+      try {
+        return await readPublicDataFromSupabase(name, id);
+      } catch (rpcError) {
+        throw backendError('public_data_unavailable', 'Conteúdo público indisponível.', rpcError || apiError);
+      }
+    }
   }
 
   const supabaseData = {
@@ -2327,6 +2378,30 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   });
 
+  let catalogRecoveryPromise = null;
+  function catalogIsVisible() {
+    const host = document.getElementById('dynamicSections');
+    return Boolean(host && (host.querySelector('.video-card') || host.querySelector('.video-rail-section')));
+  }
+  function recoverVideoCatalog(delay = 0) {
+    window.setTimeout(() => {
+      if (catalogIsVisible() || !window.beBackend) return;
+      if (document.body.classList.contains('login-mode') || document.body.classList.contains('admin-mode')) return;
+      if (catalogRecoveryPromise) return;
+      catalogRecoveryPromise = Promise.resolve(window.beBackend.ready)
+        .then(() => renderVideoCatalog())
+        .catch(error => console.warn('Recuperação do catálogo indisponível:', error?.message || error))
+        .finally(() => { catalogRecoveryPromise = null; });
+    }, Math.max(0, Number(delay) || 0));
+  }
+  window.addEventListener('be:home-entered', () => recoverVideoCatalog(0));
+  window.addEventListener('be:close-notifications', () => recoverVideoCatalog(0));
+  window.addEventListener('online', () => recoverVideoCatalog(150));
+  window.addEventListener('pageshow', () => recoverVideoCatalog(150));
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) recoverVideoCatalog(150);
+  });
+
   function normalizedFooterLink(value, network = 'website') {
     let raw = String(value || '').trim();
     if (!raw) return '';
@@ -2615,21 +2690,91 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     setupContentDetailInteractions(host);
   }
 
+  async function loadCatalogList(collection) {
+    try {
+      const rows = await beBackend.data.list(collection, { orderBy: 'order', direction: 'asc' });
+      return { collection, ok: true, rows: Array.isArray(rows) ? rows : [] };
+    } catch (error) {
+      console.warn(`Coleção ${collection} indisponível no catálogo:`, error?.message || error);
+      return { collection, ok: false, rows: [], error };
+    }
+  }
+
+  function fallbackVideoSections(videos) {
+    const groups = new Map();
+    (Array.isArray(videos) ? videos : []).forEach((video, index) => {
+      const sectionId = String(video?.sectionId || '').trim();
+      const sectionName = String(video?.sectionName || video?.category || video?.type || '').trim();
+      const normalizedName = normalizeText(sectionName || 'Vídeos');
+      const key = sectionId || normalizedName || `videos-${index}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          id: sectionId || `fallback-${numericPublicId(key)}`,
+          title: sectionName || 'Vídeos',
+          category: normalizedName || 'videos',
+          order: groups.size + 1,
+          itemLimit: 12,
+          active: true,
+          fallbackSection: true
+        });
+      }
+    });
+    return Array.from(groups.values());
+  }
+
+  function catalogStatusHost(main, message) {
+    const old = document.getElementById('dynamicSections');
+    if (old && old.querySelector('.video-card')) return old;
+    const host = old || document.createElement('section');
+    host.id = 'dynamicSections';
+    host.className = 'video-catalog';
+    host.setAttribute('aria-label', 'Categorias de conteúdos');
+    host.innerHTML = `<div class="home-filter-empty show" role="status"><strong>${escapeHtml(message || 'O catálogo não pôde ser carregado agora.')}</strong><span>Atualize a página para tentar novamente.</span></div>`;
+    if (!old) main.insertAdjacentElement('afterend', host);
+    return host;
+  }
+
   async function renderVideoCatalog() {
     const main = document.querySelector('main');
-    if (!main) return;
+    if (!main) return false;
 
-    const sections = (await beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }))
-      .filter(section => section.active !== false);
-    const [videoRows, movieRows, seriesRows, featuredRows] = await Promise.all([
-      beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('series', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => [])
+    const previousCatalog = document.getElementById('dynamicSections');
+    const results = await Promise.all([
+      loadCatalogList('sections'),
+      loadCatalogList('videos'),
+      loadCatalogList('movies'),
+      loadCatalogList('series'),
+      loadCatalogList('featured')
     ]);
-    const allVideos = videoRows.filter(video => video.active !== false);
-    const allMovies = movieRows.filter(movie => movie.active !== false);
-    const allSeries = seriesRows.filter(series => series.active !== false);
+    const byCollection = new Map(results.map(result => [result.collection, result]));
+    const sectionResult = byCollection.get('sections') || { ok: false, rows: [] };
+    const videoResult = byCollection.get('videos') || { ok: false, rows: [] };
+    const movieResult = byCollection.get('movies') || { ok: false, rows: [] };
+    const seriesResult = byCollection.get('series') || { ok: false, rows: [] };
+    const featuredResult = byCollection.get('featured') || { ok: false, rows: [] };
+
+    let sections = sectionResult.rows.filter(section => section && section.active !== false);
+    const allVideos = videoResult.rows.filter(video => video && video.active !== false);
+    const allMovies = movieResult.rows.filter(movie => movie && movie.active !== false);
+    const allSeries = seriesResult.rows.filter(series => series && series.active !== false);
+    const featuredRows = featuredResult.rows.filter(Boolean);
+    if (!sections.length && allVideos.length) sections = fallbackVideoSections(allVideos);
+
+    const contentRequestsFailed = !videoResult.ok && !movieResult.ok && !seriesResult.ok && !featuredResult.ok;
+    const everyRequestFailed = contentRequestsFailed && !sectionResult.ok;
+
+    // Não apaga um catálogo que já estava funcionando por causa de uma oscilação
+    // momentânea na API. Em uma falha total, mantém o último catálogo renderizado.
+    if (everyRequestFailed || (contentRequestsFailed && !allVideos.length && !allMovies.length && !allSeries.length)) {
+      if (previousCatalog && previousCatalog.querySelector('.video-card')) return true;
+      catalogStatusHost(main, 'Não foi possível carregar os vídeos neste momento.');
+      return false;
+    }
+
+    // Se as seções falharem, os próprios vídeos ainda formam os trilhos usando
+    // sectionId/sectionName. Assim uma única coleção nunca derruba toda a Home.
+    if (!sections.length && allVideos.length) sections = fallbackVideoSections(allVideos);
+
     randomFeaturedPools.videos = allVideos.map(item => ({ ...item, collection: 'videos' }));
     randomFeaturedPools.movies = allMovies.map(item => ({ ...item, collection: 'movies' }));
     randomFeaturedPools.series = allSeries.map(item => ({ ...item, collection: 'series' }));
@@ -2673,10 +2818,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         };
       })
       .filter(Boolean);
-    if (!sections.length && !featuredContents.length) return;
-
-    const old = document.getElementById('dynamicSections');
-    if (old) old.remove();
 
     const host = document.createElement('section');
     host.id = 'dynamicSections';
@@ -2821,12 +2962,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setupRail(block);
     }
 
-    await addBillieHomeSpotlight(host);
-    await addDonateHomeSpotlight(host);
-    main.insertAdjacentElement('afterend', host);
+    // Insere o catálogo antes dos blocos opcionais. Assim uma falha no banner da
+    // Billie ou da ONG nunca deixa a Home completamente vazia.
+    if (previousCatalog) previousCatalog.replaceWith(host);
+    else main.insertAdjacentElement('afterend', host);
+
     setupContentDetailInteractions(host);
     setupSectionTitleInteractions(host);
     window.dispatchEvent(new Event('be:catalog-ready'));
+
+    await Promise.allSettled([
+      addBillieHomeSpotlight(host),
+      addDonateHomeSpotlight(host)
+    ]);
+    window.dispatchEvent(new Event('be:catalog-ready'));
+    return true;
   }
 
   async function addBillieHomeSpotlight(host) {
@@ -8342,6 +8492,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(pageHome)pageHome.addEventListener('click',function(){closePage(true);});
   if(pageAvatar)pageAvatar.addEventListener('click',openProfileFromPage);
   if(pageClose)pageClose.addEventListener('click',function(){closePage(true);});
+
+  // A barra superior continua visível na página de notificações. Ao clicar no
+  // logo, Filmes ou Vídeos, encerra a rota de notificações antes de aplicar o
+  // filtro do catálogo; sem isso o body mantinha notification-page-active e
+  // escondia todos os trilhos, resultando na tela preta mostrada pelo usuário.
+  document.addEventListener('click',function(event){
+    var homeTarget=event.target&&event.target.closest?event.target.closest('#logoBtn,button[data-home-view],a[data-home-view]'):null;
+    if(homeTarget&&document.body.classList.contains('notification-page-active'))closePage(true);
+  },true);
+  window.addEventListener('be:home-entered',function(){
+    if(document.body.classList.contains('notification-page-active')||!page.hidden)closePage(false);
+  });
 
   document.addEventListener('click',function(event){
     var desktopTrigger=event.target&&event.target.closest?event.target.closest('#notificationButton'):null;
