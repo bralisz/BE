@@ -8480,12 +8480,41 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var notificationViewAll=document.getElementById('donateNotificationViewAll');
   var avatar=document.getElementById('donatePageAvatar');
 
+  var STRIPE_DONATION_URL='https://donate.stripe.com/8x214n1y21UrcjA7ac4c800';
+  var MINIMUM_DONATION_CENTS=500;
+
   function cleanPath(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
   function isRoute(){var path=cleanPath().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/ong'||hash==='#ong'||hash==='#/ong';}
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];});}
-  function supportUrl(value){try{var url=new URL(String(value||'').trim(),location.origin);return url.protocol==='https:'?url.href:'';}catch(_){return '';}}
   function imageUrl(value){var raw=String(value||'').trim();if(!raw)return '';var resolved=typeof window.beMediaUrl==='function'?window.beMediaUrl(raw):raw;return resolved&&resolved!=='#'?resolved:'';}
   function active(item){return item&&item.active!==false&&String(item.active).toLowerCase()!=='false';}
+  function donationSlug(value){return String(value||'ong').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'ong';}
+  function parseDonationCents(value){
+    var raw=String(value||'').trim().replace(/^r\$\s*/i,'').replace(/\s+/g,'').replace(/[^0-9.,]/g,'');
+    if(!raw)return NaN;
+    var comma=raw.lastIndexOf(','),dot=raw.lastIndexOf('.'),decimal=Math.max(comma,dot);
+    var normalized;
+    if(decimal>=0){
+      var integer=raw.slice(0,decimal).replace(/[.,]/g,'')||'0';
+      var fraction=raw.slice(decimal+1).replace(/[.,]/g,'').slice(0,2);
+      normalized=integer+'.'+fraction;
+    }else normalized=raw;
+    var amount=Number(normalized);
+    return Number.isFinite(amount)?Math.round(amount*100):NaN;
+  }
+  function formatDonationCents(cents){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100);}
+  function buildDonationUrl(ngo,cents){
+    var url=new URL(STRIPE_DONATION_URL);
+    var slug=donationSlug(ngo);
+    url.searchParams.set('locale','pt-BR');
+    url.searchParams.set('utm_source','betv');
+    url.searchParams.set('utm_medium','ong');
+    url.searchParams.set('utm_campaign','apoie_uma_ong');
+    url.searchParams.set('utm_content',slug+'_'+String(cents));
+    url.searchParams.set('client_reference_id','ong-'+slug+'-'+String(cents));
+    url.searchParams.set('__prefilled_amount',String(cents));
+    return url.href;
+  }
 
   function applyPageBanner(settings){
     var banner=imageUrl(settings&&settings.bannerUrl||'');
@@ -8519,14 +8548,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var title=String(item.title||item.name||'ONG').trim();
       var description=String(item.description||'Conheça a atuação desta organização e escolha apoiar esta causa.').trim();
       var image=imageUrl(item.imageUrl||item.bannerUrl||item.thumbnailUrl||'');
-      var href=supportUrl(item.contentUrl||item.link||'');
       var id='donate-ngo-'+String(item.id||index).replace(/[^a-z0-9_-]/gi,'-');
+      var amountId=id+'-amount',hintId=id+'-amount-hint',errorId=id+'-amount-error';
+      var ngoReference=donationSlug(item.id||title);
       return '<article class="donate-ngo-card" data-ngo-card>'+ 
         '<button class="donate-ngo-toggle" type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="Conhecer '+esc(title)+'" data-ngo-title="'+esc(title)+'">'+
           (image?'<img loading="lazy" decoding="async" src="'+esc(image)+'" alt="Banner da '+esc(title)+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
         '</button>'+ 
         '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3>'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
-          (href?'<a class="donate-ngo-support-button" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer" aria-label="Apoiar '+esc(title)+'">Apoie</a>':'<span class="donate-ngo-support-button" aria-disabled="true">Link em breve</span>')+
+          '<div class="donate-ngo-donation" data-donation-box data-ngo-reference="'+esc(ngoReference)+'">'+
+            '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">Qual valor você deseja doar?</label>'+
+            '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">R$</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="5,00" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
+            '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">Valor mínimo: R$ 5,00</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
+            '<a class="donate-ngo-support-button" data-stripe-donation aria-disabled="true" tabindex="-1" rel="noopener noreferrer">Doar</a>'+
+          '</div>'+
         '</div></div></div></article>';
     }).join('');
 
@@ -8557,6 +8592,56 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         card.classList.toggle('is-open',opening);
         button.setAttribute('aria-expanded',String(opening));
       });
+
+      var donationBox=card.querySelector('[data-donation-box]');
+      var amountInput=donationBox&&donationBox.querySelector('.donate-ngo-amount-input');
+      var amountField=donationBox&&donationBox.querySelector('[data-donation-field]');
+      var amountError=donationBox&&donationBox.querySelector('.donate-ngo-amount-error');
+      var donationLink=donationBox&&donationBox.querySelector('[data-stripe-donation]');
+      if(!donationBox||!amountInput||!amountField||!amountError||!donationLink)return;
+
+      function updateDonationLink(showError){
+        var value=amountInput.value.trim();
+        var cents=parseDonationCents(value);
+        var valid=Number.isFinite(cents)&&cents>=MINIMUM_DONATION_CENTS;
+        var tooLow=value!==''&&Number.isFinite(cents)&&cents<MINIMUM_DONATION_CENTS;
+        var invalid=value!==''&&!Number.isFinite(cents);
+        amountField.classList.toggle('is-invalid',showError&&(tooLow||invalid));
+        amountInput.setAttribute('aria-invalid',String(showError&&(tooLow||invalid)));
+        amountError.hidden=!(showError&&(tooLow||invalid));
+        amountError.textContent=tooLow?'O valor mínimo para doar é R$ 5,00.':(invalid?'Digite um valor válido.':'');
+        if(!valid){
+          donationLink.removeAttribute('href');
+          donationLink.removeAttribute('target');
+          donationLink.setAttribute('aria-disabled','true');
+          donationLink.setAttribute('tabindex','-1');
+          donationLink.textContent='Doar';
+          return false;
+        }
+        donationLink.href=buildDonationUrl(donationBox.getAttribute('data-ngo-reference'),cents);
+        donationLink.target='_blank';
+        donationLink.setAttribute('aria-disabled','false');
+        donationLink.setAttribute('tabindex','0');
+        donationLink.textContent='Doar '+formatDonationCents(cents);
+        return true;
+      }
+
+      amountInput.addEventListener('input',function(){updateDonationLink(true);});
+      amountInput.addEventListener('blur',function(){
+        var cents=parseDonationCents(amountInput.value);
+        if(Number.isFinite(cents))amountInput.value=(cents/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+        updateDonationLink(true);
+      });
+      amountInput.addEventListener('keydown',function(event){
+        if(event.key==='Enter'){
+          event.preventDefault();
+          if(updateDonationLink(true))donationLink.click();
+        }
+      });
+      donationLink.addEventListener('click',function(event){
+        if(!updateDonationLink(true)){event.preventDefault();amountInput.focus();}
+      });
+      updateDonationLink(false);
     });
   }
 
