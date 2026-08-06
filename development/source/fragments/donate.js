@@ -48,11 +48,10 @@
       var href=supportUrl(item.contentUrl||item.link||'');
       var id='donate-ngo-'+String(item.id||index).replace(/[^a-z0-9_-]/gi,'-');
       return '<article class="donate-ngo-card" data-ngo-card>'+
-        '<button class="donate-ngo-toggle" type="button" aria-expanded="false" aria-controls="'+esc(id)+'">'+
+        '<button class="donate-ngo-toggle" type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="Conhecer '+esc(title)+'" data-ngo-title="'+esc(title)+'">'+
           (image?'<img loading="lazy" decoding="async" src="'+esc(image)+'" alt="Banner da '+esc(title)+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
-          '<span class="donate-ngo-banner-copy"><strong>'+esc(title)+'</strong><span>Conhecer <svg class="donate-ngo-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></span>'+ 
         '</button>'+ 
-        '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><div class="donate-ngo-description">'+esc(description)+'</div>'+
+        '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3>'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+
           (href?'<a class="donate-ngo-support-button" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer" aria-label="Apoiar '+esc(title)+'">Apoie</a>':'<span class="donate-ngo-support-button" aria-disabled="true">Link em breve</span>')+
         '</div></div></div></article>';
     }).join('');
@@ -60,11 +59,11 @@
       image.addEventListener('error',function(){
         var button=image.closest('.donate-ngo-toggle');
         if(!button)return;
-        var label=button.querySelector('.donate-ngo-banner-copy strong');
+        var title=button.getAttribute('data-ngo-title')||'ONG';
         var placeholder=document.createElement('span');
         placeholder.className='donate-ngo-placeholder';
         placeholder.setAttribute('aria-hidden','true');
-        placeholder.textContent=String(label?label.textContent:'ONG').trim().slice(0,2).toUpperCase();
+        placeholder.textContent=String(title).trim().slice(0,2).toUpperCase();
         image.replaceWith(placeholder);
       },{once:true});
     });
