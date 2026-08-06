@@ -28,3 +28,22 @@ A função `functions/create-donation-checkout` exige o segredo `STRIPE_SECRET_K
 ### Visão administrativa de doações
 
 A função `get_admin_donation_overview` só pode ser executada por usuários autenticados com função de administrador. Ela lista checkouts iniciados, usuário, ONG, valor escolhido, mínimo aplicado e indicadores agregados. Os valores exibidos não significam pagamento concluído até a Stripe confirmar a transação.
+
+## Tradução automática
+
+A função autenticada `functions/translate-content-record` traduz os campos textuais salvos em português para `en-us` e `es`. Ela usa no Supabase/Deno o mesmo método do `deep-translator`: consulta a versão móvel do Google Tradutor e extrai o resultado da página, sem exigir chave da API Google Cloud.
+
+As traduções ficam persistidas no JSON `translations` do próprio conteúdo, evitando repetir a tradução em cada acesso. Não é necessário configurar `GOOGLE_TRANSLATE_API_KEY`.
+
+Ao criar ou editar um conteúdo no painel, o site solicita automaticamente as duas traduções. O processamento possui divisão de textos longos, tentativas limitadas e pequenas pausas para reduzir bloqueios. Se o serviço estiver temporariamente indisponível ou limitar requisições, o conteúdo original em português continua sendo exibido como fallback.
+
+Esse método depende da página pública do Google Tradutor e, por isso, pode sofrer limitação temporária ou mudanças externas. A implementação foi adaptada da estratégia `GoogleTranslator` do projeto `deep-translator` e sua atribuição está em `functions/translate-content-record/THIRD_PARTY_NOTICES.md`.
+
+## Doações regionais
+
+Cada ONG possui dois mínimos independentes no painel:
+
+- `minimumDonationCents`: mínimo em BRL;
+- `minimumDonationUsdCents`: mínimo em USD.
+
+O navegador seleciona BRL para dispositivos identificados como estando na região Brasil e USD para as demais regiões. A moeda, o mínimo e o valor são validados novamente pela Edge Function antes da criação do Checkout da Stripe.
