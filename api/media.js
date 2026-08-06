@@ -8,6 +8,11 @@ const DEFAULT_SUPABASE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const ALLOWED_COLLECTIONS = new Set(['contents', 'featured', 'gallery', 'movies', 'notifications', 'sections', 'series', 'videos']);
 const ALLOWED_MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl', 'shareImage', 'portraitUrl']);
 
+const SUPABASE_RUNTIME_SOURCES = [
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js',
+  'https://unpkg.com/@supabase/supabase-js@2.112.0/dist/umd/supabase.js'
+];
+
 const ALLOWED_HOSTS = new Set([
   'cdn.discordapp.com',
   'cdn.theplaylist.net',
@@ -40,6 +45,27 @@ const ALLOWED_SUFFIXES = [
   '.pinimg.com', '.themoviedb.org', '.theplaylist.net', '.tmdb.org',
   '.wikimedia.org', '.wp.com', '.ytimg.com'
 ];
+
+async function serveSupabaseRuntime(req, res) {
+  for (const url of SUPABASE_RUNTIME_SOURCES) {
+    try {
+      const response = await fetch(url, { headers: { 'User-Agent': 'BETV/1.0' } });
+      if (!response.ok) continue;
+      const body = await response.text();
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      if (req.method === 'HEAD') return res.status(200).end();
+      return res.status(200).send(body);
+    } catch (_) {
+      // Tenta a próxima origem.
+    }
+  }
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  return res.status(502).send("console.error('Não foi possível carregar a biblioteca de autenticação.');");
+}
 
 function decodeBase64Url(value) {
   const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
@@ -177,6 +203,8 @@ module.exports = async function mediaProxy(req, res) {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).end();
   }
+  const mode = Array.isArray(req.query?.mode) ? req.query.mode[0] : req.query?.mode;
+  if (mode === 'supabase-runtime') return serveSupabaseRuntime(req, res);
   try {
     const token = Array.isArray(req.query?.u) ? req.query.u[0] : req.query?.u;
     const collection = Array.isArray(req.query?.c) ? req.query.c[0] : req.query?.c;
