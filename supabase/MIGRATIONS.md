@@ -34,3 +34,9 @@ A migration `20260804164611_cross_device_user_preferences.sql` cria a tabela pri
 - Cria a lista pública de apoiadores baseada somente em doações com status `paid`.
 - Expõe apenas nome, @, avatar, banner e data do apoio; valores e dados de pagamento continuam privados.
 - Remove usuários banidos ou sem perfil público completo da seção de apoiadores.
+## `20260806073000_add_bralis_as_supporter.sql`
+
+- Inclui o perfil público `@bralis` como apoiador inicial.
+- Mantém a lista ordenada pela data mais recente do apoio.
+- Futuros apoiadores com pagamentos confirmados aparecem antes dos anteriores.
+

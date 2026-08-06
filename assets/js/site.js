@@ -8742,6 +8742,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!supportersSection||!supportersList||!supportersStatus)return;
     var records=(Array.isArray(items)?items:[]).filter(function(item){
       return String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim();
+    }).sort(function(a,b){
+      var aTime=new Date(a&&(a.supported_at||a.supportedAt)||0).getTime();
+      var bTime=new Date(b&&(b.supported_at||b.supportedAt)||0).getTime();
+      return (Number.isFinite(bTime)?bTime:0)-(Number.isFinite(aTime)?aTime:0);
     });
     supportersSection.hidden=false;
     if(!records.length){

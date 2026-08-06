@@ -802,13 +802,31 @@ stable
 security definer
 set search_path = ''
 as $$
-  with latest_paid as (
+  with manual_supporters(username, supported_at) as (
+    values ('bralis'::text, timestamptz '2026-08-06 07:29:00+00')
+  ),
+  support_events as (
     select
       d.user_id,
-      max(coalesce(d.paid_at, d.created_at)) as supported_at
+      coalesce(d.paid_at, d.created_at) as supported_at
     from public.donation_checkout_requests d
     where d.status = 'paid'
-    group by d.user_id
+
+    union all
+
+    select
+      p.id as user_id,
+      ms.supported_at
+    from manual_supporters ms
+    join public.profiles p
+      on lower(trim(p.username::text)) = lower(ms.username)
+  ),
+  latest_support as (
+    select
+      se.user_id,
+      max(se.supported_at) as supported_at
+    from support_events se
+    group by se.user_id
   )
   select
     p.id as user_id,
@@ -816,14 +834,14 @@ as $$
     p.username::text as username,
     p.avatar_url,
     p.banner_url,
-    lp.supported_at
-  from latest_paid lp
-  join public.profiles p on p.id = lp.user_id
+    ls.supported_at
+  from latest_support ls
+  join public.profiles p on p.id = ls.user_id
   where p.banned = false
     and p.profile_complete = true
     and p.username is not null
     and trim(p.username::text) <> ''
-  order by lp.supported_at desc, p.id
+  order by ls.supported_at desc, p.id
   limit greatest(1, least(coalesce(p_limit, 48), 100));
 $$;
 
