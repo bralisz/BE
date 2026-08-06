@@ -8218,18 +8218,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       .trim();
   }
   function removeWikipediaSection(parser,heading){
+    /*
+      A Wikipédia passou a envolver alguns títulos em .mw-heading.
+      A remoção precisa começar pelo contêiner inteiro; caso contrário,
+      a lista de "Ligações externas" permanece solta na página.
+    */
+    var sectionStart=heading.closest&&heading.closest('.mw-heading')||heading;
     var level=Number(String(heading.tagName||'H2').slice(1))||2;
-    var cursor=heading.nextSibling;
+    var cursor=sectionStart.nextSibling;
     while(cursor){
-      if(cursor.nodeType===1&&/^H[2-4]$/.test(cursor.tagName)){
-        var nextLevel=Number(cursor.tagName.slice(1))||2;
-        if(nextLevel<=level)break;
+      if(cursor.nodeType===1){
+        var nextHeading=cursor.matches&&cursor.matches('h2,h3,h4')
+          ? cursor
+          : cursor.querySelector&&cursor.querySelector(':scope > h2,:scope > h3,:scope > h4');
+        if(nextHeading){
+          var nextLevel=Number(String(nextHeading.tagName||'H2').slice(1))||2;
+          if(nextLevel<=level)break;
+        }
       }
       var next=cursor.nextSibling;
       cursor.remove();
       cursor=next;
     }
-    heading.remove();
+    sectionStart.remove();
   }
   function normalizeWikipediaHtml(rawHtml){
     var doc=new DOMParser().parseFromString('<div id="billieWikiRoot">'+String(rawHtml||'')+'</div>','text/html');
@@ -8248,6 +8259,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!heading.isConnected)return;
       var label=normalizedSectionLabel(heading.textContent);
       if(blocked.some(function(item){return label===item||label.startsWith(item+' ');}))removeWikipediaSection(parser,heading);
+    });
+    /*
+      Remove também uma eventual lista órfã de ligações externas.
+      Isso cobre Commons, Wikinotícias, página oficial, Facebook, X,
+      Instagram e YouTube, sem afetar links citados dentro da biografia.
+    */
+    Array.from(parser.querySelectorAll('ul,ol')).forEach(function(list){
+      if(!list.isConnected)return;
+      var labels=Array.from(list.querySelectorAll(':scope > li')).map(function(item){
+        return normalizedSectionLabel(item.textContent);
+      }).filter(Boolean);
+      if(!labels.length)return;
+      var externalLabels=['commons','wikinoticias','pagina oficial','billie eilish no facebook','billie eilish no x','billie eilish no instagram','canal de billie eilish no youtube'];
+      var matches=labels.filter(function(label){
+        return externalLabels.some(function(item){return label===item||label.startsWith(item+' ');});
+      }).length;
+      if(matches>=2&&matches>=Math.ceil(labels.length*.5))list.remove();
     });
     var allowed=new Set(['DIV','P','H2','H3','H4','UL','OL','LI','STRONG','B','EM','I','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','CAPTION','BLOCKQUOTE','SMALL','BR','SPAN','DL','DT','DD']);
     Array.from(parser.querySelectorAll('*')).forEach(function(element){
@@ -8293,7 +8321,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       manualText.hidden=true;
       wikipediaAttribution.hidden=false;
       /* A atualização do texto nunca substitui a foto padrão definida pelo site. */
-      document.title=(settings.title||payload.title||'Billie Eilish')+' — BETV';
+      document.title='Billie Eilish TV';
     }catch(error){
       if(token!==loadToken)return;
       wikipediaError.textContent='As informações não puderam ser carregadas agora. Exibindo o texto salvo no site.';
@@ -8322,7 +8350,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.classList.add('billie-page-active');
     page.hidden=false;page.setAttribute('aria-hidden','false');
     syncAvatar();syncUnread();
-    document.title='Billie Eilish — BETV';
+    document.title='Billie Eilish TV';
     window.scrollTo({top:0,left:0,behavior:'auto'});
     loadSettings();
   }
@@ -8330,7 +8358,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     loadToken+=1;
     document.body.classList.remove('billie-page-active');
     page.hidden=true;page.setAttribute('aria-hidden','true');
-    if(document.title.endsWith(' — BETV'))document.title='Billie Eilish TV';
+    document.title='Billie Eilish TV';
   }
   function renderRoute(){
     if(isBillieRoute()){
