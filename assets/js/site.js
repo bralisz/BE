@@ -515,21 +515,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
       return values.map(localizeContentRecord);
     }
-    const missing = values.filter(record => recordNeedsTranslation(record, slug)).slice(0, 50);
+    const missing = values.filter(record => recordNeedsTranslation(record, slug));
     if (missing.length) {
       try {
-        const { data: payload, error } = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-          body: { collection: String(collection), ids: missing.map(record => String(record.id)), locales: [slug] }
+        const batches = [];
+        for (let offset = 0; offset < missing.length; offset += 50) batches.push(missing.slice(offset, offset + 50));
+        const results = await Promise.all(batches.map(batch => supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+          body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
+        })));
+        const translatedById = new Map();
+        results.forEach(result => {
+          if (result?.error || !result?.data || !Array.isArray(result.data.records)) return;
+          result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
         });
-        if (!error && payload && Array.isArray(payload.records)) {
-          const translatedById = new Map(payload.records.map(item => [String(item.id), item.translation || {}]));
-          values.forEach(record => {
-            const translation = translatedById.get(String(record.id));
-            if (!translation || typeof translation !== 'object') return;
-            if (!record.translations || typeof record.translations !== 'object') record.translations = {};
-            record.translations[slug] = translation;
-          });
-        }
+        values.forEach(record => {
+          const translation = translatedById.get(String(record.id));
+          if (!translation || typeof translation !== 'object') return;
+          if (!record.translations || typeof record.translations !== 'object') record.translations = {};
+          record.translations[slug] = translation;
+        });
       } catch (error) {
         console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
       }
@@ -631,7 +635,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         let items = [];
         if (!usesProtectedAdminData() && name !== 'users' && name !== 'admin_logs') {
           const publicItems = await readPublicData(name);
-          return sortAndFilter(Array.isArray(publicItems) ? publicItems : [], options);
+          const translatedItems = await ensureTranslatedRecords(name, Array.isArray(publicItems) ? publicItems : []);
+          return sortAndFilter(translatedItems, options);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*');
@@ -662,7 +667,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async get(name, id) {
       try {
         if (!usesProtectedAdminData() && name !== 'users' && name !== 'admin_logs') {
-          return await readPublicData(name, id);
+          const publicValue = await readPublicData(name, id);
+          if (!publicValue) return null;
+          const translated = await ensureTranslatedRecords(name, [publicValue]);
+          return translated[0] || localizeContentRecord(publicValue);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();

@@ -120,7 +120,7 @@
       return;
     }
     try{
-      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev=20260806-i18n-currency-v1',{credentials:'same-origin',cache:'force-cache'});
+      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev=20260806-i18n-content-v2',{credentials:'same-origin',cache:'force-cache'});
       if(response.ok){
         var payload=await response.json();
         if(payload&&typeof payload==='object')map=payload;

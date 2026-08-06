@@ -5,11 +5,12 @@ const SITE_ORIGIN = "https://billieilishtv.site";
 const PUBLIC_COLLECTIONS = new Set([
   "contents", "featured", "movies", "notifications", "ongs", "sections", "series", "videos",
 ]);
+const PUBLIC_SETTING_IDS = new Set(["site", "billie-eilish", "ong"]);
 const ADMIN_COLLECTIONS = new Set([...PUBLIC_COLLECTIONS, "settings"]);
 const LOCALE_TARGETS: Record<string, string> = { "en-us": "en", es: "es" };
 const TRANSLATABLE_FIELDS = [
-  "title", "name", "description", "subtitle", "body", "summary", "buttonLabel", "label", "text",
-  "manualBio", "kicker", "footerText",
+  "title", "name", "description", "subtitle", "body", "summary", "buttonLabel", "buttonText",
+  "actionLabel", "ctaLabel", "label", "text", "manualBio", "kicker", "footerText", "sectionName", "siteName",
 ] as const;
 const MAX_RECORDS = 50;
 const MAX_TOTAL_CHARACTERS = 30_000;
@@ -105,7 +106,11 @@ function splitForGoogleWeb(text: string): string[] {
   let remaining = text;
   while (remaining.length > GOOGLE_WEB_CHUNK_SIZE) {
     const window = remaining.slice(0, GOOGLE_WEB_CHUNK_SIZE + 1);
-    const candidates = [window.lastIndexOf("\n\n"), window.lastIndexOf("\n"), window.lastIndexOf(". "), window.lastIndexOf("! "), window.lastIndexOf("? "), window.lastIndexOf("; "), window.lastIndexOf(", "), window.lastIndexOf(" ")];
+    const candidates = [
+      window.lastIndexOf("\n\n"), window.lastIndexOf("\n"), window.lastIndexOf(". "),
+      window.lastIndexOf("! "), window.lastIndexOf("? "), window.lastIndexOf("; "),
+      window.lastIndexOf(", "), window.lastIndexOf(" "),
+    ];
     const preferred = Math.max(...candidates);
     const cut = preferred >= Math.floor(GOOGLE_WEB_CHUNK_SIZE * 0.55) ? preferred + 1 : GOOGLE_WEB_CHUNK_SIZE;
     chunks.push(remaining.slice(0, cut));
@@ -136,7 +141,7 @@ async function translateGoogleWebChunk(text: string, target: string): Promise<st
         headers: {
           "Accept": "text/html,application/xhtml+xml",
           "Accept-Language": target === "es" ? "es,pt;q=0.8,en;q=0.6" : "en,pt;q=0.8",
-          "User-Agent": "Mozilla/5.0 (compatible; BETV-Translator/1.0; +https://billieilishtv.site)",
+          "User-Agent": "Mozilla/5.0 (compatible; BETV-Translator/1.1; +https://billieilishtv.site)",
         },
       });
       if (response.status === 429) {
@@ -158,19 +163,95 @@ async function translateGoogleWebChunk(text: string, target: string): Promise<st
   throw new Error("translation_provider_failed");
 }
 
-async function deepTranslatorGoogle(values: string[], target: string): Promise<string[]> {
-  const output: string[] = [];
-  for (const value of values) {
-    const sourceChunks = splitForGoogleWeb(value);
-    const translatedChunks: string[] = [];
-    for (const chunk of sourceChunks) {
-      translatedChunks.push(await translateGoogleWebChunk(chunk, target));
-      if (sourceChunks.length > 1) await sleep(120);
-    }
-    output.push(translatedChunks.join("").trim());
-    if (values.length > 1) await sleep(80);
+type TranslationPiece = {
+  valueIndex: number;
+  partIndex: number;
+  marker: string;
+  source: string;
+};
+
+function markerFor(valueIndex: number, partIndex: number): string {
+  return `⟦${valueIndex.toString(36)}:${partIndex.toString(36)}⟧`;
+}
+
+function parseMarkedResult(result: string): Map<string, string> {
+  const parsed = new Map<string, string>();
+  const matches = Array.from(result.matchAll(/⟦\s*([0-9a-z]+)\s*[:：]\s*([0-9a-z]+)\s*⟧/gi));
+  for (let index = 0; index < matches.length; index += 1) {
+    const match = matches[index];
+    const start = (match.index || 0) + match[0].length;
+    const end = index + 1 < matches.length ? (matches[index + 1].index || result.length) : result.length;
+    const key = `${parseInt(match[1], 36)}:${parseInt(match[2], 36)}`;
+    parsed.set(key, result.slice(start, end).trim());
   }
-  return output;
+  return parsed;
+}
+
+function joinTranslatedParts(parts: string[]): string {
+  return parts.reduce((result, part) => {
+    const clean = String(part || "").trim();
+    if (!clean) return result;
+    if (!result) return clean;
+    const needsSpace = !/[\s([{\-—/]$/.test(result) && !/^[,.;:!?)}\]%-]/.test(clean);
+    return result + (needsSpace ? " " : "") + clean;
+  }, "");
+}
+
+async function deepTranslatorGoogle(values: string[], target: string): Promise<string[]> {
+  if (!values.length) return [];
+
+  const pieces: TranslationPiece[] = [];
+  values.forEach((value, valueIndex) => {
+    splitForGoogleWeb(value).forEach((source, partIndex) => {
+      pieces.push({ valueIndex, partIndex, marker: markerFor(valueIndex, partIndex), source });
+    });
+  });
+
+  const groups: TranslationPiece[][] = [];
+  let current: TranslationPiece[] = [];
+  let currentLength = 0;
+  for (const piece of pieces) {
+    const length = piece.marker.length + piece.source.length + 3;
+    if (current.length && currentLength + length > GOOGLE_WEB_CHUNK_SIZE) {
+      groups.push(current);
+      current = [];
+      currentLength = 0;
+    }
+    current.push(piece);
+    currentLength += length;
+  }
+  if (current.length) groups.push(current);
+
+  const translatedByPiece = new Map<string, string>();
+  for (const group of groups) {
+    const source = group.map((piece) => `${piece.marker}\n${piece.source}`).join("\n");
+    const translated = await translateGoogleWebChunk(source, target);
+    const parsed = parseMarkedResult(translated);
+    const complete = group.every((piece) => parsed.has(`${piece.valueIndex}:${piece.partIndex}`));
+
+    if (complete) {
+      group.forEach((piece) => {
+        translatedByPiece.set(`${piece.valueIndex}:${piece.partIndex}`, parsed.get(`${piece.valueIndex}:${piece.partIndex}`) || "");
+      });
+    } else {
+      for (const piece of group) {
+        translatedByPiece.set(
+          `${piece.valueIndex}:${piece.partIndex}`,
+          await translateGoogleWebChunk(piece.source, target),
+        );
+        await sleep(80);
+      }
+    }
+    await sleep(100);
+  }
+
+  return values.map((_, valueIndex) => {
+    const translatedParts = pieces
+      .filter((piece) => piece.valueIndex === valueIndex)
+      .sort((a, b) => a.partIndex - b.partIndex)
+      .map((piece) => translatedByPiece.get(`${piece.valueIndex}:${piece.partIndex}`) || piece.source);
+    return joinTranslatedParts(translatedParts);
+  });
 }
 
 function activeValue(value: unknown): boolean {
@@ -190,6 +271,21 @@ function stringsToTranslate(data: Record<string, unknown>): Array<{ field: strin
   }
   return values;
 }
+
+type PreparedRow = {
+  row: Record<string, unknown>;
+  data: Record<string, unknown>;
+  revision: string;
+  translations: Record<string, unknown>;
+  fields: Array<{ field: string; value: string }>;
+  dirty: boolean;
+};
+
+type TranslationJob = {
+  preparedIndex: number;
+  field: string;
+  value: string;
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(req) });
@@ -233,13 +329,18 @@ Deno.serve(async (req: Request) => {
       isAdmin = adminResult === true;
     }
   }
-  if (!isAdmin && (!PUBLIC_COLLECTIONS.has(collection) || forceRequested)) {
-    return json(req, 403, { code: "forbidden", error: "Acesso administrativo necessário." });
+
+  if (!isAdmin) {
+    const publicSettingsRequest = collection === "settings" && ids.every((id) => PUBLIC_SETTING_IDS.has(id));
+    if (forceRequested || (!PUBLIC_COLLECTIONS.has(collection) && !publicSettingsRequest)) {
+      return json(req, 403, { code: "forbidden", error: "Acesso administrativo necessário." });
+    }
   }
 
   let rows: Array<Record<string, unknown>> = [];
   if (collection === "settings") {
-    const { data, error } = await adminClient.from("site_settings").select("id,data,created_at,updated_at").in("id", ids);
+    const allowedIds = isAdmin ? ids : ids.filter((id) => PUBLIC_SETTING_IDS.has(id));
+    const { data, error } = await adminClient.from("site_settings").select("id,data,created_at,updated_at").in("id", allowedIds);
     if (error) return json(req, 500, { code: "database_error", error: "Não foi possível carregar as configurações." });
     rows = (data || []) as Array<Record<string, unknown>>;
   } else {
@@ -248,46 +349,80 @@ Deno.serve(async (req: Request) => {
     rows = ((data || []) as Array<Record<string, unknown>>).filter((row) => isAdmin || activeValue((row.data as Record<string, unknown> | undefined)?.active));
   }
 
-  let totalCharacters = 0;
-  const records: Array<Record<string, unknown>> = [];
-  try {
-    for (const row of rows) {
-      const data = row.data && typeof row.data === "object" ? { ...(row.data as Record<string, unknown>) } : {};
-      const revision = sourceRevision(row, data);
-      const translations = data.translations && typeof data.translations === "object"
+  const prepared: PreparedRow[] = rows.map((row) => {
+    const data = row.data && typeof row.data === "object" ? { ...(row.data as Record<string, unknown>) } : {};
+    return {
+      row,
+      data,
+      revision: sourceRevision(row, data),
+      translations: data.translations && typeof data.translations === "object"
         ? { ...(data.translations as Record<string, unknown>) }
-        : {};
-      const fields = stringsToTranslate(data);
+        : {},
+      fields: stringsToTranslate(data),
+      dirty: false,
+    };
+  });
 
-      for (const locale of locales) {
-        const existing = translations[locale] && typeof translations[locale] === "object"
-          ? translations[locale] as Record<string, unknown>
-          : null;
-        if (!forceRequested && existing && String(existing.sourceUpdatedAt || "") === revision) {
-          records.push({ id: row.id, locale, translation: existing, cached: true });
-          continue;
-        }
-        const characters = fields.reduce((sum, item) => sum + item.value.length, 0);
-        totalCharacters += characters;
-        if (totalCharacters > MAX_TOTAL_CHARACTERS) {
-          return json(req, 413, { code: "translation_too_large", error: "O conteúdo excede o limite de tradução por solicitação." });
-        }
-        const translatedValues = fields.length
-          ? await deepTranslatorGoogle(fields.map((item) => item.value), LOCALE_TARGETS[locale])
-          : [];
-        const translation: Record<string, unknown> = {
-          sourceUpdatedAt: revision,
-          translatedAt: new Date().toISOString(),
-          provider: "deep-translator-google-web",
-        };
-        fields.forEach((item, index) => { translation[item.field] = translatedValues[index] || item.value; });
-        translations[locale] = translation;
-        records.push({ id: row.id, locale, translation, cached: false });
+  const records: Array<Record<string, unknown>> = [];
+  const jobsByLocale = new Map<string, TranslationJob[]>();
+  const newTranslations = new Map<string, Record<string, unknown>>();
+  let totalCharacters = 0;
+
+  for (let preparedIndex = 0; preparedIndex < prepared.length; preparedIndex += 1) {
+    const item = prepared[preparedIndex];
+    for (const locale of locales) {
+      const existing = item.translations[locale] && typeof item.translations[locale] === "object"
+        ? item.translations[locale] as Record<string, unknown>
+        : null;
+      if (!forceRequested && existing && String(existing.sourceUpdatedAt || "") === item.revision) {
+        records.push({ id: item.row.id, locale, translation: existing, cached: true });
+        continue;
       }
 
-      data.translations = translations;
+      const translation: Record<string, unknown> = {
+        sourceUpdatedAt: item.revision,
+        translatedAt: new Date().toISOString(),
+        provider: "deep-translator-google-web",
+      };
+      newTranslations.set(`${preparedIndex}:${locale}`, translation);
+      item.dirty = true;
+
+      const jobs = jobsByLocale.get(locale) || [];
+      item.fields.forEach((field) => {
+        totalCharacters += field.value.length;
+        jobs.push({ preparedIndex, field: field.field, value: field.value });
+      });
+      jobsByLocale.set(locale, jobs);
+    }
+  }
+
+  if (totalCharacters > MAX_TOTAL_CHARACTERS) {
+    return json(req, 413, { code: "translation_too_large", error: "O conteúdo excede o limite de tradução por solicitação." });
+  }
+
+  try {
+    for (const locale of locales) {
+      const jobs = jobsByLocale.get(locale) || [];
+      if (!jobs.length) continue;
+      const translatedValues = await deepTranslatorGoogle(jobs.map((job) => job.value), LOCALE_TARGETS[locale]);
+      jobs.forEach((job, index) => {
+        const translation = newTranslations.get(`${job.preparedIndex}:${locale}`);
+        if (translation) translation[job.field] = translatedValues[index] || job.value;
+      });
+    }
+
+    for (let preparedIndex = 0; preparedIndex < prepared.length; preparedIndex += 1) {
+      const item = prepared[preparedIndex];
+      for (const locale of locales) {
+        const translation = newTranslations.get(`${preparedIndex}:${locale}`);
+        if (!translation) continue;
+        item.translations[locale] = translation;
+        records.push({ id: item.row.id, locale, translation, cached: false });
+      }
+      if (!item.dirty) continue;
+      item.data.translations = item.translations;
       const table = collection === "settings" ? "site_settings" : "content_items";
-      const { error: updateError } = await adminClient.from(table).update({ data }).eq("id", row.id);
+      const { error: updateError } = await adminClient.from(table).update({ data: item.data }).eq("id", item.row.id);
       if (updateError) {
         console.error("Failed to persist translation:", updateError.code);
         return json(req, 500, { code: "translation_save_failed", error: "A tradução foi criada, mas não pôde ser salva." });
@@ -303,7 +438,7 @@ Deno.serve(async (req: Request) => {
 
   return json(req, 200, {
     records,
-    translatedRecords: rows.length,
+    translatedRecords: prepared.length,
     locales,
     provider: "deep-translator-google-web",
   });

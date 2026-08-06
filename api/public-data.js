@@ -62,7 +62,7 @@ function safeLink(value, allowLocal = true) {
 
 function sanitizeTranslations(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-  const allowedFields = new Set(['title','name','description','subtitle','body','summary','buttonLabel','label','text','manualBio','kicker','footerText','sourceUpdatedAt','translatedAt','provider']);
+  const allowedFields = new Set(['title','name','description','subtitle','body','summary','buttonLabel','buttonText','actionLabel','ctaLabel','label','text','manualBio','kicker','footerText','sectionName','siteName','sourceUpdatedAt','translatedAt','provider']);
   const result = {};
   for (const locale of ['en-us','es']) {
     const source = value[locale];
