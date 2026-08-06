@@ -2518,10 +2518,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       <div class="billie-home-spotlight-frame">
         <img src="${defaultBanner}" alt="Billie Eilish" loading="lazy" decoding="async">
         <div class="billie-home-spotlight-overlay" aria-hidden="true"></div>
-        <div class="billie-home-spotlight-copy">
-          <span>Além dos conteúdos</span>
-          <strong>Conheça a artista por trás da história.</strong>
-        </div>
         <a class="billie-home-spotlight-button" href="/billie-eilish" data-open-billie="true">
           Conheça a Billie Eilish
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
@@ -8122,7 +8118,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     portraitUrl:'',
     bannerUrl:'',
     manualBio:'Billie Eilish Pirate Baird O’Connell nasceu em Los Angeles, em 18 de dezembro de 2001. Cantora e compositora, começou a criar músicas em casa ao lado do irmão e principal colaborador, FINNEAS.\n\nEla ganhou projeção internacional com Ocean Eyes e construiu uma identidade artística reconhecida pelos vocais intimistas, pela produção detalhista e por uma estética visual muito própria.\n\nEntre os projetos que marcam sua discografia estão WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?, Happier Than Ever e HIT ME HARD AND SOFT.',
-    includeReferences:true,
+    includeReferences:false,
     instagram:'https://www.instagram.com/billieeilish/',
     xUrl:'https://x.com/billieeilish',
     youtube:'https://www.youtube.com/@BillieEilish',
@@ -8212,18 +8208,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var infoboxImage=parser.querySelector('table.infobox img, .infobox img');
     var imageUrl=infoboxImage?absoluteWikipediaUrl(infoboxImage.getAttribute('src')||infoboxImage.getAttribute('data-src')||''):'';
     parser.querySelectorAll('script,style,link,meta,noscript,iframe,object,embed,form,input,button,textarea,select,video,audio,canvas,svg,table.infobox,.infobox,.mw-editsection,.shortdescription,.hatnote,.metadata,.ambox,.navbox,.vertical-navbox,.authority-control,.catlinks,.sistersitebox,.portal,.mw-empty-elt,.noprint,.nomobile,.thumb,figure,.gallery').forEach(function(node){node.remove();});
-    if(!includeReferences){
-      parser.querySelectorAll('sup.reference,.reflist,ol.references').forEach(function(node){node.remove();});
-      var blocked=['referências','referencias','ligações externas','ligacoes externas','ver também','ver tambem'];
-      Array.from(parser.querySelectorAll('h2')).forEach(function(heading){
-        var label=String(heading.textContent||'').trim().toLowerCase();
-        if(!blocked.includes(label))return;
-        var cursor=heading.nextSibling;
-        while(cursor&&!(cursor.nodeType===1&&cursor.tagName==='H2')){var next=cursor.nextSibling;cursor.remove();cursor=next;}
-        heading.remove();
-      });
-    }
-    var allowed=new Set(['DIV','P','H2','H3','H4','UL','OL','LI','STRONG','B','EM','I','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','CAPTION','BLOCKQUOTE','SMALL','BR','SPAN','SUP','DL','DT','DD']);
+    /* Mantém a leitura limpa: remove chamadas de nota e seções editoriais da fonte. */
+    parser.querySelectorAll('sup,.reference,.mw-ref,.reflist,ol.references').forEach(function(node){node.remove();});
+    var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas'];
+    Array.from(parser.querySelectorAll('h2')).forEach(function(heading){
+      var label=String(heading.textContent||'').trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/\s+/g,' ');
+      if(!blocked.includes(label))return;
+      var cursor=heading.nextSibling;
+      while(cursor&&!(cursor.nodeType===1&&cursor.tagName==='H2')){var next=cursor.nextSibling;cursor.remove();cursor=next;}
+      heading.remove();
+    });
+    var allowed=new Set(['DIV','P','H2','H3','H4','UL','OL','LI','STRONG','B','EM','I','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','CAPTION','BLOCKQUOTE','SMALL','BR','SPAN','DL','DT','DD']);
     Array.from(parser.querySelectorAll('*')).forEach(function(element){
       if(!allowed.has(element.tagName)){
         if(['IMG','SOURCE'].includes(element.tagName)){element.remove();return;}
@@ -8258,10 +8255,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try{
       var response=await fetch('/api/billie-wikipedia',{method:'GET',cache:'no-cache',credentials:'same-origin'});
       var payload=await response.json().catch(function(){return {};});
-      if(!response.ok||!payload||!payload.html)throw new Error(payload.error||'Não foi possível carregar as informações automáticas.');
+      if(!response.ok||!payload||!payload.html)throw new Error(payload.error||'Não foi possível carregar as informações.');
       if(token!==loadToken)return;
-      var cleaned=normalizeWikipediaHtml(payload.html,settings.includeReferences===true||String(settings.includeReferences)==='true');
-      if(!cleaned.html)throw new Error('A fonte automática não retornou conteúdo utilizável.');
+      var cleaned=normalizeWikipediaHtml(payload.html,false);
+      if(!cleaned.html)throw new Error('Não foi possível preparar o conteúdo para exibição.');
       wikipediaContent.innerHTML=cleaned.html;
       wikipediaContent.hidden=false;
       manualText.hidden=true;
@@ -8270,7 +8267,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       document.title=(settings.title||payload.title||'Billie Eilish')+' — BETV';
     }catch(error){
       if(token!==loadToken)return;
-      wikipediaError.textContent='As informações automáticas não puderam ser carregadas agora. Exibindo o texto salvo no site.';
+      wikipediaError.textContent='As informações não puderam ser carregadas agora. Exibindo o texto salvo no site.';
       wikipediaError.hidden=false;
       renderManual(settings);
     }finally{
