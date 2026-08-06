@@ -9232,3 +9232,129 @@ body.billie-page-active .billie-wikipedia-attribution a{
   color:rgba(238,242,248,.72);
 }
 
+/* ==========================================================================
+   Billie Eilish — layout mobile compacto
+   Mantém a moldura e a hierarquia do desktop sem deixar a foto ocupar
+   praticamente toda a primeira tela em celulares.
+   ========================================================================== */
+@media (max-width:900px){
+  body.billie-page-active .billie-page-content{
+    width:100%;
+    padding:106px 20px 68px;
+  }
+  body.billie-page-active .billie-biography-grid{
+    grid-template-columns:minmax(0,1fr);
+    gap:30px;
+    align-items:start;
+  }
+  body.billie-page-active .billie-portrait-column{
+    position:relative;
+    top:auto;
+    width:100%;
+    max-width:none;
+    margin:0;
+  }
+  body.billie-page-active .billie-portrait-frame{
+    width:min(72vw,370px);
+    max-width:370px;
+    margin:0 auto;
+  }
+  body.billie-page-active .billie-biography-copy{
+    width:100%;
+    max-width:720px;
+    margin:0 auto;
+  }
+}
+
+@media (max-width:760px){
+  body.billie-page-active .billie-page-header{
+    height:76px;
+    padding:0 14px;
+  }
+  body.billie-page-active .billie-page-header-actions{
+    gap:8px;
+  }
+  body.billie-page-active .billie-page-home,
+  body.billie-page-active .billie-page-notifications,
+  body.billie-page-active .billie-page-avatar{
+    width:44px;
+    height:44px;
+    flex-basis:44px;
+  }
+  body.billie-page-active .billie-page-content{
+    padding:92px 18px 58px;
+  }
+  body.billie-page-active .billie-biography-grid{
+    gap:27px;
+  }
+  body.billie-page-active .billie-portrait-frame{
+    width:min(82vw,340px);
+    max-width:340px;
+    padding:3px;
+    border-radius:27px;
+  }
+  body.billie-page-active .billie-portrait-inner{
+    aspect-ratio:4/5;
+    border-radius:23px;
+  }
+  body.billie-page-active .billie-portrait-inner img{
+    object-position:52% center;
+  }
+  body.billie-page-active .billie-page-kicker{
+    margin:0 0 10px;
+    font-size:11px;
+    letter-spacing:.11em;
+  }
+  body.billie-page-active .billie-biography-copy h1{
+    margin:0 0 20px;
+    font-size:clamp(42px,13.5vw,58px);
+    line-height:.97;
+    letter-spacing:-.055em;
+  }
+  body.billie-page-active .billie-biography-text,
+  body.billie-page-active .billie-wikipedia-content{
+    font-size:15.5px;
+    line-height:1.65;
+  }
+  body.billie-page-active .billie-wikipedia-content>p:first-child{
+    font-size:16px;
+  }
+  body.billie-page-active .billie-wikipedia-content h2{
+    margin:32px 0 14px;
+    font-size:clamp(26px,8vw,34px);
+  }
+  body.billie-page-active .billie-wikipedia-content h3{
+    margin:25px 0 11px;
+    font-size:clamp(21px,6vw,27px);
+  }
+  body.billie-page-active .billie-social-section{
+    margin-top:28px;
+    padding-top:22px;
+  }
+  body.billie-page-active .billie-wikipedia-attribution{
+    margin-top:28px;
+    border-radius:16px;
+  }
+}
+
+@media (max-width:430px){
+  body.billie-page-active .billie-page-content{
+    padding-right:16px;
+    padding-left:16px;
+  }
+  body.billie-page-active .billie-portrait-frame{
+    width:min(84vw,310px);
+    max-width:310px;
+    border-radius:25px;
+  }
+  body.billie-page-active .billie-portrait-inner{
+    border-radius:21px;
+  }
+  body.billie-page-active .billie-biography-grid{
+    gap:24px;
+  }
+  body.billie-page-active .billie-biography-copy h1{
+    font-size:clamp(40px,13vw,52px);
+  }
+}
+
