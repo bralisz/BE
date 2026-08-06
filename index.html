@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Billie Eilish TV</title>
+<title translate="no" class="notranslate" data-i18n-ignore>Billie Eilish TV</title>
 <meta name="description" content="Todo o conteúdo da Billie Eilish em um só lugar.">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="pt_BR">
@@ -29,13 +29,13 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#050816">
-<script src="/assets/js/locale-routing.js?rev=20260806-password-avatar-v1"></script>
+<script src="/assets/js/locale-routing.js?rev=20260806-faq-title-i18n-v2"></script>
 <script>
 (function(){
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260806-donate-faq-v1';
+    var href='/assets/i18n/'+slug+'.json?rev=20260806-faq-title-i18n-v2';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -79,10 +79,10 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-password-avatar-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-faq-title-i18n-v2">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260806-password-avatar-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260806-route-avatar-v3"></script>
+<script defer src="/assets/js/i18n.js?rev=20260806-faq-title-i18n-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260806-faq-title-i18n-v2"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -677,8 +677,8 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
         <div class="billie-wikipedia-error" id="billieWikipediaError" hidden role="status"></div>
         <div class="billie-biography-text" id="billieBiographyText">
           <p>Billie Eilish Pirate Baird O’Connell nasceu em Los Angeles, em 18 de dezembro de 2001. Cantora e compositora, começou a criar músicas em casa ao lado do irmão e principal colaborador, FINNEAS.</p>
-          <p>Ela ganhou projeção internacional com <em>Ocean Eyes</em> e construiu uma identidade artística reconhecida pelos vocais intimistas, pela produção detalhista e por uma estética visual muito própria.</p>
-          <p>Entre os projetos que marcam sua discografia estão <em>WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?</em>, <em>Happier Than Ever</em> e <em>HIT ME HARD AND SOFT</em>.</p>
+          <p>Ela ganhou projeção internacional com <em translate="no" class="notranslate" data-i18n-ignore>Ocean Eyes</em> e construiu uma identidade artística reconhecida pelos vocais intimistas, pela produção detalhista e por uma estética visual muito própria.</p>
+          <p>Entre os projetos que marcam sua discografia estão <em translate="no" class="notranslate" data-i18n-ignore>WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?</em>, <em translate="no" class="notranslate" data-i18n-ignore>Happier Than Ever</em> e <em translate="no" class="notranslate" data-i18n-ignore>HIT ME HARD AND SOFT</em>.</p>
         </div>
         <div class="billie-wikipedia-content notranslate" id="billieWikipediaContent" translate="no" hidden></div>
         <section class="billie-social-section" aria-labelledby="billieSocialTitle">
@@ -833,45 +833,47 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
           <summary><span>O BETV é um site oficial da Billie Eilish?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Não. O BETV é um projeto independente, não comercial e criado por fãs, sem vínculo oficial com Billie Eilish, sua equipe ou seus parceiros.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
+        <h3 class="support-faq-group-title" data-faq-group-title>Doações para ONGs</h3>
+        <details class="support-faq-item">
           <summary><span>Como funcionam as doações para ONGs no BETV?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Na página Apoie uma ONG, escolha a organização, informe um valor e conclua o pagamento no checkout seguro. Depois da confirmação, 95% do valor é destinado ao repasse à ONG escolhida e 5% fica com o BETV para ajudar a manter o site.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
+        <details class="support-faq-item">
           <summary><span>Quanto da minha doação fica com o BETV?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>O BETV retém 5% do valor da doação para custos de hospedagem, banco de dados, segurança, manutenção e desenvolvimento. Os 95% restantes são destinados ao repasse à ONG selecionada. Taxas do processador de pagamento podem ser descontadas separadamente.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
+        <details class="support-faq-item">
           <summary><span>Quando a ONG recebe o valor doado?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>O repasse pode ser agrupado e não é necessariamente imediato. Antes do envio, o pagamento precisa ser confirmado e pode passar por verificações de fraude, estorno ou contestação.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
+        <details class="support-faq-item">
           <summary><span>As doações podem ser canceladas depois do pagamento?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Não. Depois que o pagamento é confirmado, a doação é definitiva e não pode ser cancelada nem devolvida. Antes de concluir, confira a ONG, a moeda e o valor escolhidos. Exceções só serão aplicadas quando forem exigidas pela legislação.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
+        <details class="support-faq-item">
           <summary><span>A doação gera recibo ou dedução fiscal?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>O comprovante do checkout confirma o pagamento, mas não representa automaticamente um recibo fiscal nem garante dedução tributária. Isso depende da legislação aplicável e de eventual documento emitido pela própria ONG.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
+        <details class="support-faq-item">
           <summary><span>O pagamento da doação é seguro?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>O BETV não recebe os dados completos do cartão. O pagamento é processado por um provedor especializado, que aplica seus próprios controles de segurança e prevenção de fraude.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
+        <details class="support-faq-item">
           <summary><span>Quais moedas e formas de pagamento são aceitas?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>O site usa real para usuários no Brasil e dólar americano para outras regiões. As formas disponíveis são exibidas no checkout e podem variar conforme o país, o dispositivo e o provedor de pagamento.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
+        <details class="support-faq-item">
           <summary><span>Por que meu pagamento foi recusado?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>A recusa pode ocorrer por limite, dados incorretos, bloqueio do banco, verificação antifraude ou indisponibilidade do método escolhido. Confira os dados, tente outro método ou consulte sua instituição financeira.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
+        <h3 class="support-faq-group-title" data-faq-group-title>Idioma e traduções</h3>
+        <details class="support-faq-item">
           <summary><span>Como altero o idioma do site?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
           <div class="support-faq-answer"><p>Abra Configurações e procure a seção Idioma. Escolha Português, English ou Español. O site reabrirá a página atual no idioma selecionado e salvará a preferência neste dispositivo.</p></div>
         </details>
-        <details class="support-faq-item" data-search-only="true" hidden>
-          <summary><span>Por que uma tradução pode parecer incorreta?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
-          <div class="support-faq-answer"><p>Parte do conteúdo é traduzida automaticamente. Nomes próprios, títulos oficiais e expressões podem exigir revisão. Envie o texto e a página pelo suporte para que a tradução seja corrigida.</p></div>
+        <details class="support-faq-item">
+          <summary><span>Por que uma parte do site não está traduzida ou está traduzida incorretamente?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
+          <div class="support-faq-answer"><p>O BETV foi criado com foco principal em português. As versões em inglês e espanhol estão em expansão, então algumas partes podem ficar sem tradução ou apresentar erros. Se encontrar uma tradução ausente ou incorreta, envie a página, o idioma e o trecho pelo suporte para que possamos corrigir.</p></div>
         </details>
         <details class="support-faq-item" data-search-only="true" hidden>
           <summary><span>Como denuncio um conteúdo ou peço uma correção?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
@@ -971,11 +973,7 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
         <p>Podemos corrigir, atualizar, reorganizar, suspender ou encerrar recursos para manutenção, segurança, cumprimento legal ou melhoria do projeto. Não garantimos funcionamento ininterrupto, ausência total de erros ou preservação permanente de todo conteúdo.</p>
         <h2>6. Limitação responsável</h2>
         <p>O site é fornecido no estado em que se encontra. Dentro dos limites permitidos pela legislação aplicável, o BETV não se responsabiliza por perdas indiretas decorrentes de interrupções, links externos, incompatibilidades técnicas ou uso indevido da plataforma. Nada nestes termos limita direitos que não possam ser afastados por lei.</p>
-        <h2>7. Doações e apoio a ONGs</h2>
-        <p>Na área Apoie uma ONG, você escolhe uma organização e informa o valor que deseja doar. O pagamento é processado por um provedor especializado. Após a confirmação, 95% do valor da doação é destinado ao repasse à ONG selecionada e 5% é retido pelo BETV para ajudar a manter hospedagem, banco de dados, segurança, manutenção e desenvolvimento do site.</p>
-        <p>Taxas, tributos, conversão cambial, estornos ou outros custos cobrados pelo processador de pagamento podem ser descontados separadamente e reduzir o valor líquido disponível para repasse. Os repasses podem ser agrupados e não são necessariamente imediatos.</p>
-        <p>As doações são voluntárias. Um comprovante do pagamento não representa, por si só, recibo fiscal ou garantia de dedução tributária. Depois da confirmação, a doação é definitiva, não pode ser cancelada e não possui devolução, salvo quando a legislação exigir o contrário. Antes do pagamento, confira a ONG, a moeda e o valor escolhidos.</p>
-        <h2>8. Contato</h2>
+        <h2>7. Contato</h2>
         <p>Dúvidas, denúncias ou solicitações podem ser encaminhadas pela área de <a href="/suporte">Suporte</a>.</p>
       </article>
       <article class="legal-article" data-legal-page="privacy" hidden>

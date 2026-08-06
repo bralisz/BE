@@ -562,8 +562,41 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
 
-  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','news','notifications','ongs','sections','series','settings','videos']);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
+  const ORIGINAL_MUSIC_TITLE_SECTION_IDS = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a'
+  ]);
+  const ORIGINAL_MUSIC_TITLE_SECTION_NAMES = new Set(['live performances & tv','videoclipes']);
+
+  function normalizedTitleContext(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  }
+
+  function isMusicTitleRecord(record) {
+    const sectionId = String(record?.sectionId || '').trim();
+    const context = [record?.sectionName, record?.sourceSectionTitle, record?.category, record?.type, record?.contentType]
+      .map(normalizedTitleContext)
+      .filter(Boolean)
+      .join(' ');
+    return ORIGINAL_MUSIC_TITLE_SECTION_IDS.has(sectionId)
+      || ORIGINAL_MUSIC_TITLE_SECTION_NAMES.has(normalizedTitleContext(record?.sectionName || record?.sourceSectionTitle))
+      || /(^|\s)(music|musica|song|faixa|track|album|videoclipe|live performances)(\s|$)/.test(context);
+  }
+
+  function shouldPreserveOriginalTitle(collection, record, requestedSlug = activeLocaleSlug()) {
+    const name = String(collection || record?.collection || '').trim().toLowerCase();
+    const slug = String(requestedSlug || 'pt-br').toLowerCase();
+    if (name === 'videos' && isMusicTitleRecord(record)) return true;
+    if (slug !== 'es') return false;
+    if (name === 'movies' || name === 'news') return true;
+    if (name === 'sections') {
+      const title = normalizedTitleContext(record?.title || record?.name);
+      return title === 'vanity fair';
+    }
+    return false;
+  }
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
@@ -585,13 +618,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function localizeContentRecord(record) {
+  function localizeContentRecord(record, collection = '') {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
+    if (shouldPreserveOriginalTitle(collection, record, slug)) {
+      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
+      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
+    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
@@ -609,7 +646,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
     if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(localizeContentRecord);
+      return values.map(record => localizeContentRecord(record, collection));
     }
     const missing = values.filter(record => recordNeedsTranslation(record, slug));
     if (missing.length) {
@@ -636,7 +673,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
       }
     }
-    return values.map(localizeContentRecord);
+    return values.map(record => localizeContentRecord(record, collection));
   }
 
   function queueRecordTranslation(collection, id) {
@@ -768,7 +805,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const publicValue = await readPublicData(name, id);
           if (!publicValue) return null;
           const translated = await ensureTranslatedRecords(name, [publicValue]);
-          return translated[0] || localizeContentRecord(publicValue);
+          return translated[0] || localizeContentRecord(publicValue, name);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -781,7 +818,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value);
+          return translated[0] || localizeContentRecord(value, name);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -793,7 +830,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value);
+        return translated[0] || localizeContentRecord(value, name);
       } catch (error) {
         throw mapAuthError(error);
       }
@@ -2724,8 +2761,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       block.dataset.hasVideos = String(allSectionContents.some(item => (item.collection || 'videos') === 'videos'));
       block.dataset.hasMovies = String(allSectionContents.some(item => item.collection === 'movies'));
       block.dataset.hasSeries = String(allSectionContents.some(item => item.collection === 'series'));
+      const preserveSectionTitle = shouldPreserveOriginalTitle('sections', section, activeLocaleSlug());
       block.innerHTML = `
-        <a class="video-rail-title" href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
+        <a class="video-rail-title${preserveSectionTitle ? ' notranslate' : ''}" ${preserveSectionTitle ? 'translate="no" data-i18n-ignore' : ''} href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
           <span>${escapeHtml(section.title || 'Seção')}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </a>
@@ -2814,15 +2852,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (image) image.addEventListener('error', () => spotlight.remove(), { once:true });
   }
 
-  const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
-    '14386598-4978-403a-8548-db0ee582e291',
-    '18db9515-179c-4bad-9646-1fcda63df14a'
-  ]);
   function preservesOriginalMusicTitle(data) {
-    if (String(data?.collection || 'videos').toLowerCase() !== 'videos') return false;
-    const sectionId = String(data?.sectionId || '').trim();
-    const sectionName = String(data?.sectionName || data?.sourceSectionTitle || '').trim().toLowerCase();
-    return MUSIC_TITLE_SECTION_IDS_FRONTEND.has(sectionId) || ['live performances & tv','videoclipes'].includes(sectionName);
+    return shouldPreserveOriginalTitle(String(data?.collection || 'videos'), data, activeLocaleSlug());
   }
 
   function videoCard(video) {
@@ -7595,6 +7626,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },50);
   }
 
+  if(legalPage)legalPage.addEventListener('click',function(event){
+    var link=event.target&&event.target.closest?event.target.closest('[data-legal-link]'):null;
+    if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+    var route=String(link.getAttribute('data-legal-link')||'').trim();
+    if(!route)return;
+    event.preventDefault();
+    if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/'+route);
+    else{
+      var target=window.BETVLocaleURL?window.BETVLocaleURL('/'+route):('/'+route);
+      history.pushState({beRoute:route},'',target);
+      renderLegalRoute();
+    }
+  });
   if(legalHomeButton)legalHomeButton.addEventListener('click',goHome);
   if(legalAvatarButton)legalAvatarButton.addEventListener('click',openProfile);
   if(cookieAccept)cookieAccept.addEventListener('click',acceptCookies);
@@ -7662,6 +7706,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(!page||!input||!faqList)return;
 
   var faqItems=Array.prototype.slice.call(faqList.querySelectorAll('.support-faq-item'));
+  var faqGroupTitles=Array.prototype.slice.call(faqList.querySelectorAll('[data-faq-group-title]'));
 
   function normalize(value){
     return String(value||'')
@@ -7788,6 +7833,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function filterFaq(){
     var query=normalize(input.value);
     var visible=0;
+    faqGroupTitles.forEach(function(title){title.hidden=Boolean(query);});
     faqItems.forEach(function(item){
       var searchOnly=item.getAttribute('data-search-only')==='true';
       var match=query?normalize(item.textContent).indexOf(query)!==-1:!searchOnly;
@@ -9542,7 +9588,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     syncUnread();
     load(false);
     if(supportersLoaded)observeSupportersEnd();
-    document.title='Apoie uma ONG — Billie Eilish TV';
+    document.title='Billie Eilish TV';
   }
 
   function close(){

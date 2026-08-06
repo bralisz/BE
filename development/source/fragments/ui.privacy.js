@@ -1022,6 +1022,19 @@
     },50);
   }
 
+  if(legalPage)legalPage.addEventListener('click',function(event){
+    var link=event.target&&event.target.closest?event.target.closest('[data-legal-link]'):null;
+    if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+    var route=String(link.getAttribute('data-legal-link')||'').trim();
+    if(!route)return;
+    event.preventDefault();
+    if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/'+route);
+    else{
+      var target=window.BETVLocaleURL?window.BETVLocaleURL('/'+route):('/'+route);
+      history.pushState({beRoute:route},'',target);
+      renderLegalRoute();
+    }
+  });
   if(legalHomeButton)legalHomeButton.addEventListener('click',goHome);
   if(legalAvatarButton)legalAvatarButton.addEventListener('click',openProfile);
   if(cookieAccept)cookieAccept.addEventListener('click',acceptCookies);

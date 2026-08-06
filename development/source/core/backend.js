@@ -377,8 +377,38 @@
 
 
 
-  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','news','notifications','ongs','sections','series','settings','videos']);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
+  const ORIGINAL_MUSIC_TITLE_SECTION_IDS = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a'
+  ]);
+  const ORIGINAL_MUSIC_TITLE_SECTION_NAMES = new Set(['live performances & tv','videoclipes']);
+
+  function normalizedTitleContext(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  }
+
+  function isMusicTitleRecord(record) {
+    const sectionId = String(record?.sectionId || '').trim();
+    const context = [record?.sectionName, record?.sourceSectionTitle, record?.category, record?.type, record?.contentType]
+      .map(normalizedTitleContext)
+      .filter(Boolean)
+      .join(' ');
+    return ORIGINAL_MUSIC_TITLE_SECTION_IDS.has(sectionId)
+      || ORIGINAL_MUSIC_TITLE_SECTION_NAMES.has(normalizedTitleContext(record?.sectionName || record?.sourceSectionTitle))
+      || /(^|\s)(music|musica|song|faixa|track|album|videoclipe|live performances)(\s|$)/.test(context);
+  }
+
+  function shouldPreserveOriginalTitle(collection, record, requestedSlug = activeLocaleSlug()) {
+    const name = String(collection || record?.collection || '').trim().toLowerCase();
+    const slug = String(requestedSlug || 'pt-br').toLowerCase();
+    if (name === 'videos' && isMusicTitleRecord(record)) return true;
+    if (slug !== 'es') return false;
+    if (name === 'movies' || name === 'news') return true;
+    if (name === 'sections') return normalizedTitleContext(record?.title || record?.name) === 'vanity fair';
+    return false;
+  }
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
@@ -400,13 +430,17 @@
     return parts.join(' ');
   }
 
-  function localizeContentRecord(record) {
+  function localizeContentRecord(record, collection = '') {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
+    if (shouldPreserveOriginalTitle(collection, record, slug)) {
+      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
+      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
+    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
@@ -424,7 +458,7 @@
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
     if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(localizeContentRecord);
+      return values.map(record => localizeContentRecord(record, collection));
     }
     const missing = values.filter(record => recordNeedsTranslation(record, slug));
     if (missing.length) {
@@ -451,7 +485,7 @@
         console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
       }
     }
-    return values.map(localizeContentRecord);
+    return values.map(record => localizeContentRecord(record, collection));
   }
 
   function queueRecordTranslation(collection, id) {
@@ -569,7 +603,7 @@
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value);
+          return translated[0] || localizeContentRecord(value, name);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -581,7 +615,7 @@
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value);
+        return translated[0] || localizeContentRecord(value, name);
       } catch (error) {
         throw mapAuthError(error);
       }

@@ -1895,8 +1895,9 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       block.dataset.hasVideos = String(allSectionContents.some(item => (item.collection || 'videos') === 'videos'));
       block.dataset.hasMovies = String(allSectionContents.some(item => item.collection === 'movies'));
       block.dataset.hasSeries = String(allSectionContents.some(item => item.collection === 'series'));
+      const preserveSectionTitle = shouldPreserveOriginalTitle('sections', section, activeLocaleSlug());
       block.innerHTML = `
-        <a class="video-rail-title" href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
+        <a class="video-rail-title${preserveSectionTitle ? ' notranslate' : ''}" ${preserveSectionTitle ? 'translate="no" data-i18n-ignore' : ''} href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
           <span>${escapeHtml(section.title || 'Seção')}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </a>

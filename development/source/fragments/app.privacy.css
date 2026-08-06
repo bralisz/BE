@@ -3663,6 +3663,19 @@ body.support-page-active .home-nav-link[data-public-action="support"]{display:in
   letter-spacing:-.025em;
 }
 .support-faq-list{border-top:1px solid rgba(255,255,255,.14)}
+.support-faq-group-title{
+  margin:32px 0 0;
+  padding:0 1px 12px;
+  border-bottom:1px solid rgba(255,255,255,.14);
+  color:#8e8e93;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.08em;
+  line-height:1.4;
+  text-transform:uppercase;
+}
+.support-faq-group-title:first-child{margin-top:0}
+.support-faq-group-title[hidden]{display:none!important}
 .support-faq-item{
   margin:0;
   border-bottom:1px solid rgba(255,255,255,.14);
