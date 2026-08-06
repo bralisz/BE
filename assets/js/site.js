@@ -8480,8 +8480,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var notificationViewAll=document.getElementById('donateNotificationViewAll');
   var avatar=document.getElementById('donatePageAvatar');
 
-  var STRIPE_DONATION_URL='https://donate.stripe.com/8x214n1y21UrcjA7ac4c800';
-  var MINIMUM_DONATION_CENTS=500;
+  var CHECKOUT_FUNCTION_NAME='create-donation-checkout';
+  var DEFAULT_MINIMUM_DONATION_CENTS=500;
 
   function cleanPath(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
   function isRoute(){var path=cleanPath().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/ong'||hash==='#ong'||hash==='#/ong';}
@@ -8503,17 +8503,47 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return Number.isFinite(amount)?Math.round(amount*100):NaN;
   }
   function formatDonationCents(cents){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100);}
-  function buildDonationUrl(ngo,cents){
-    var url=new URL(STRIPE_DONATION_URL);
-    var slug=donationSlug(ngo);
-    url.searchParams.set('locale','pt-BR');
-    url.searchParams.set('utm_source','betv');
-    url.searchParams.set('utm_medium','ong');
-    url.searchParams.set('utm_campaign','apoie_uma_ong');
-    url.searchParams.set('utm_content',slug+'_'+String(cents));
-    url.searchParams.set('client_reference_id','ong-'+slug+'-'+String(cents));
-    url.searchParams.set('__prefilled_amount',String(cents));
-    return url.href;
+  function minimumDonationCents(value){
+    var cents=Number(value);
+    return Number.isInteger(cents)&&cents>=100&&cents<=100000000?cents:DEFAULT_MINIMUM_DONATION_CENTS;
+  }
+  function donationRequestId(){
+    if(window.crypto&&typeof window.crypto.randomUUID==='function')return window.crypto.randomUUID();
+    if(window.crypto&&typeof window.crypto.getRandomValues==='function'){
+      var bytes=new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      bytes[6]=(bytes[6]&15)|64;
+      bytes[8]=(bytes[8]&63)|128;
+      var hex=Array.prototype.map.call(bytes,function(value){return value.toString(16).padStart(2,'0');}).join('');
+      return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
+    }
+    throw new Error('O navegador não conseguiu gerar uma identificação segura para o pagamento.');
+  }
+  function checkoutErrorMessage(error,data){
+    var code=String(data&&data.code||'');
+    if(code==='below_minimum')return 'O valor mínimo desta ONG é '+formatDonationCents(Number(data.minimumDonationCents)||DEFAULT_MINIMUM_DONATION_CENTS)+'.';
+    if(code==='rate_limited')return 'Muitas tentativas seguidas. Aguarde um minuto e tente novamente.';
+    if(code==='stripe_not_configured')return 'O checkout ainda não foi configurado no servidor.';
+    if(code==='ngo_not_found')return 'Esta ONG não está mais disponível.';
+    return String(data&&data.error||error&&error.message||'Não foi possível abrir o checkout agora.');
+  }
+  async function createDonationCheckout(ngoId,cents,requestId){
+    var client=window.beBackend&&window.beBackend.client;
+    if(!client||!client.functions||typeof client.functions.invoke!=='function')throw new Error('O checkout seguro não está disponível.');
+    var result=await client.functions.invoke(CHECKOUT_FUNCTION_NAME,{body:{ngoId:String(ngoId||''),amountCents:cents,requestId:requestId}});
+    var data=result&&result.data&&typeof result.data==='object'?result.data:null;
+    if(result&&result.error){
+      try{if(result.error.context&&typeof result.error.context.json==='function')data=await result.error.context.json();}catch(_){ }
+      var failure=new Error(checkoutErrorMessage(result.error,data));
+      failure.data=data;
+      throw failure;
+    }
+    var url=String(data&&data.url||'');
+    try{
+      var parsed=new URL(url);
+      if(parsed.protocol!=='https:'||!/(^|\.)stripe\.com$/i.test(parsed.hostname))throw new Error('invalid_checkout_url');
+    }catch(_){throw new Error('A Stripe não retornou um checkout válido.');}
+    return url;
   }
 
   function applyPageBanner(settings){
@@ -8550,17 +8580,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var image=imageUrl(item.imageUrl||item.bannerUrl||item.thumbnailUrl||'');
       var id='donate-ngo-'+String(item.id||index).replace(/[^a-z0-9_-]/gi,'-');
       var amountId=id+'-amount',hintId=id+'-amount-hint',errorId=id+'-amount-error';
-      var ngoReference=donationSlug(item.id||title);
+      var ngoReference=String(item.id||donationSlug(title));
+      var minimumCents=minimumDonationCents(item.minimumDonationCents);
+      var minimumLabel=formatDonationCents(minimumCents);
       return '<article class="donate-ngo-card" data-ngo-card>'+ 
         '<button class="donate-ngo-toggle" type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="Conhecer '+esc(title)+'" data-ngo-title="'+esc(title)+'">'+
           (image?'<img loading="lazy" decoding="async" src="'+esc(image)+'" alt="Banner da '+esc(title)+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
         '</button>'+ 
         '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3 class="donate-ngo-name">'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
-          '<div class="donate-ngo-donation" data-donation-box data-ngo-reference="'+esc(ngoReference)+'">'+
+          '<div class="donate-ngo-donation" data-donation-box data-ngo-reference="'+esc(ngoReference)+'" data-minimum-donation-cents="'+esc(minimumCents)+'">'+
             '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">Qual valor você deseja doar?</label>'+
-            '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">R$</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="5,00" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
-            '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">Valor mínimo: R$ 5,00</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
-            '<a class="donate-ngo-support-button" data-stripe-donation aria-disabled="true" tabindex="-1" rel="noopener noreferrer">Doar</a>'+
+            '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">R$</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="'+esc((minimumCents/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}))+'" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
+            '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">Valor mínimo: '+esc(minimumLabel)+'</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
+            '<button class="donate-ngo-support-button" type="button" data-stripe-donation aria-disabled="true" disabled>Doar</button>'+
           '</div>'+
         '</div></div></div></article>';
     }).join('');
@@ -8600,48 +8632,65 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var donationLink=donationBox&&donationBox.querySelector('[data-stripe-donation]');
       if(!donationBox||!amountInput||!amountField||!amountError||!donationLink)return;
 
-      function updateDonationLink(showError){
-        var value=amountInput.value.trim();
-        var cents=parseDonationCents(value);
-        var valid=Number.isFinite(cents)&&cents>=MINIMUM_DONATION_CENTS;
-        var tooLow=value!==''&&Number.isFinite(cents)&&cents<MINIMUM_DONATION_CENTS;
-        var invalid=value!==''&&!Number.isFinite(cents);
-        amountField.classList.toggle('is-invalid',showError&&(tooLow||invalid));
-        amountInput.setAttribute('aria-invalid',String(showError&&(tooLow||invalid)));
-        amountError.hidden=!(showError&&(tooLow||invalid));
-        amountError.textContent=tooLow?'O valor mínimo para doar é R$ 5,00.':(invalid?'Digite um valor válido.':'');
-        if(!valid){
-          donationLink.removeAttribute('href');
-          donationLink.removeAttribute('target');
-          donationLink.setAttribute('aria-disabled','true');
-          donationLink.setAttribute('tabindex','-1');
-          donationLink.textContent='Doar';
-          return false;
-        }
-        donationLink.href=buildDonationUrl(donationBox.getAttribute('data-ngo-reference'),cents);
-        donationLink.target='_blank';
-        donationLink.setAttribute('aria-disabled','false');
-        donationLink.setAttribute('tabindex','0');
-        donationLink.textContent='Doar '+formatDonationCents(cents);
-        return true;
+      var minimumCents=minimumDonationCents(donationBox.getAttribute('data-minimum-donation-cents'));
+      var checkoutBusy=false;
+
+      function setCheckoutBusy(busy){
+        checkoutBusy=busy;
+        donationLink.classList.toggle('is-loading',busy);
+        donationLink.setAttribute('aria-busy',String(busy));
+        donationLink.disabled=busy||donationLink.getAttribute('aria-disabled')==='true';
+        if(busy)donationLink.textContent='Abrindo checkout…';
       }
 
-      amountInput.addEventListener('input',function(){updateDonationLink(true);});
+      function updateDonationButton(showError){
+        var value=amountInput.value.trim();
+        var cents=parseDonationCents(value);
+        var valid=Number.isFinite(cents)&&Number.isInteger(cents)&&cents>=minimumCents&&cents<=100000000;
+        var tooLow=value!==''&&Number.isFinite(cents)&&cents<minimumCents;
+        var tooHigh=value!==''&&Number.isFinite(cents)&&cents>100000000;
+        var invalid=value!==''&&!Number.isFinite(cents);
+        var hasError=showError&&(tooLow||tooHigh||invalid);
+        amountField.classList.toggle('is-invalid',hasError);
+        amountInput.setAttribute('aria-invalid',String(hasError));
+        amountError.hidden=!hasError;
+        amountError.textContent=tooLow?'O valor mínimo desta ONG é '+formatDonationCents(minimumCents)+'.':(tooHigh?'O valor informado é muito alto.':(invalid?'Digite um valor válido.':''));
+        donationLink.setAttribute('aria-disabled',valid?'false':'true');
+        donationLink.disabled=!valid||checkoutBusy;
+        if(!checkoutBusy)donationLink.textContent=valid?'Doar '+formatDonationCents(cents):'Doar';
+        return valid?cents:false;
+      }
+
+      amountInput.addEventListener('input',function(){updateDonationButton(true);});
       amountInput.addEventListener('blur',function(){
         var cents=parseDonationCents(amountInput.value);
         if(Number.isFinite(cents))amountInput.value=(cents/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-        updateDonationLink(true);
+        updateDonationButton(true);
       });
       amountInput.addEventListener('keydown',function(event){
         if(event.key==='Enter'){
           event.preventDefault();
-          if(updateDonationLink(true))donationLink.click();
+          if(updateDonationButton(true))donationLink.click();
         }
       });
-      donationLink.addEventListener('click',function(event){
-        if(!updateDonationLink(true)){event.preventDefault();amountInput.focus();}
+      donationLink.addEventListener('click',async function(){
+        var cents=updateDonationButton(true);
+        if(!cents||checkoutBusy){if(!cents)amountInput.focus();return;}
+        amountError.hidden=true;
+        setCheckoutBusy(true);
+        try{
+          var requestId=donationRequestId();
+          var checkoutUrl=await createDonationCheckout(donationBox.getAttribute('data-ngo-reference'),cents,requestId);
+          location.assign(checkoutUrl);
+        }catch(error){
+          amountField.classList.add('is-invalid');
+          amountError.hidden=false;
+          amountError.textContent=checkoutErrorMessage(error,error&&error.data);
+          setCheckoutBusy(false);
+          updateDonationButton(false);
+        }
       });
-      updateDonationLink(false);
+      updateDonationButton(false);
     });
   }
 

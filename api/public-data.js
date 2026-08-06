@@ -8,7 +8,7 @@ const ALLOWED_COLLECTIONS = new Set([
 const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
-  'mediaType', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
+  'mediaType', 'minimumDonationCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
   'sourceCollection', 'thumbnailUrl', 'title', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
 ]);
@@ -78,6 +78,12 @@ function sanitizeItem(collection, row) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? 4000 : 500);
   }
   source.active = source.active !== false && String(source.active).toLowerCase() !== 'false';
+  if (collection === 'ongs') {
+    const minimumDonationCents = Number(source.minimumDonationCents);
+    source.minimumDonationCents = Number.isInteger(minimumDonationCents) && minimumDonationCents >= 100 && minimumDonationCents <= 100000000
+      ? minimumDonationCents
+      : 500;
+  }
   return {
     id: safeText(row.id, 100),
     ...source,

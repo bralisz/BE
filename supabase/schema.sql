@@ -50,6 +50,37 @@ create index if not exists content_items_collection_idx on public.content_items(
 create index if not exists content_items_order_idx on public.content_items(collection, ((data ->> 'order')::numeric));
 create index if not exists content_items_active_idx on public.content_items(collection, (data ->> 'active'));
 
+update public.content_items
+set data = jsonb_set(
+  data,
+  '{minimumDonationCents}',
+  to_jsonb(
+    case
+      when coalesce(data ->> 'minimumDonationCents', '') ~ '^[0-9]+$'
+       and (data ->> 'minimumDonationCents')::numeric between 100 and 100000000
+        then (data ->> 'minimumDonationCents')::integer
+      else 500
+    end
+  ),
+  true
+),
+updated_at = now()
+where collection = 'ongs';
+
+alter table public.content_items
+  drop constraint if exists content_items_ong_minimum_donation_check;
+alter table public.content_items
+  add constraint content_items_ong_minimum_donation_check
+  check (
+    collection <> 'ongs'
+    or (
+      data ? 'minimumDonationCents'
+      and jsonb_typeof(data -> 'minimumDonationCents') = 'number'
+      and coalesce(data ->> 'minimumDonationCents', '') ~ '^[0-9]+$'
+      and (data ->> 'minimumDonationCents')::numeric between 100 and 100000000
+    )
+  );
+
 create table if not exists public.site_settings (
   id text primary key,
   data jsonb not null default '{}'::jsonb,
@@ -66,6 +97,23 @@ create table if not exists public.admin_logs (
   admin_uid uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+create table if not exists public.donation_checkout_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  ngo_id text not null,
+  amount_cents integer not null check (amount_cents between 100 and 100000000),
+  minimum_cents integer not null check (minimum_cents between 100 and 100000000),
+  stripe_session_id text unique,
+  request_id uuid not null,
+  created_at timestamptz not null default now(),
+  unique (user_id, request_id)
+);
+
+create index if not exists donation_checkout_requests_user_created_idx
+  on public.donation_checkout_requests(user_id, created_at desc);
+create index if not exists donation_checkout_requests_ngo_created_idx
+  on public.donation_checkout_requests(ngo_id, created_at desc);
 
 create or replace function public.is_admin()
 returns boolean
@@ -406,6 +454,7 @@ alter table public.user_preferences enable row level security;
 alter table public.content_items enable row level security;
 alter table public.site_settings enable row level security;
 alter table public.admin_logs enable row level security;
+alter table public.donation_checkout_requests enable row level security;
 
 -- Apaga qualquer política antiga/conflitante somente da tabela profiles.
 do $$
@@ -625,6 +674,7 @@ as $$
       'link', c.data -> 'link',
       'logoUrl', c.data -> 'logoUrl',
       'mediaType', c.data -> 'mediaType',
+      'minimumDonationCents', case when c.collection = 'ongs' then c.data -> 'minimumDonationCents' else null end,
       'order', c.data -> 'order',
       'publicId', c.data -> 'publicId',
       'runtime', c.data -> 'runtime',
@@ -724,6 +774,8 @@ values
 on conflict (id) do nothing;
 
 notify pgrst, 'reload schema';
+revoke all on table public.donation_checkout_requests from public, anon, authenticated;
+
 commit;
 
 -- Scale concurrent users: private Broadcast per account instead of Postgres Changes.
