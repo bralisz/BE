@@ -65,7 +65,23 @@
 <style>
 html.admin-route-boot{background:#05070b!important}
 html.admin-route-boot body{visibility:hidden!important;background:#05070b!important}
+html.config-route-boot{background:#050607!important}
+html.config-route-boot body{visibility:hidden!important;background:#050607!important}
 </style>
+<script>
+(function(){
+  try{
+    var path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';
+    var hash=String(location.hash||'').toLowerCase();
+    var requested=path.toLowerCase()==='/config'||hash==='#config'||hash==='#/config';
+    if(!requested)return;
+    document.documentElement.classList.add('config-route-boot');
+    window.__beConfigBootTimer=window.setTimeout(function(){
+      document.documentElement.classList.remove('config-route-boot');
+    },10000);
+  }catch(_){ }
+})();
+</script>
 <script>
 (function(){
   try{
@@ -82,7 +98,7 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260806-password-avatar-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260806-password-avatar-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260806-config-avatar-v3"></script>
+<script defer src="/assets/js/site.js?rev=20260806-config-paint-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">

@@ -44,6 +44,93 @@
   }
 })();
 
+;(function(){
+  'use strict';
+
+  var root=document.documentElement;
+  var releaseVersion=0;
+
+  function configRouteActive(){
+    try{
+      var path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';
+      var hash=String(location.hash||'').toLowerCase();
+      return path.toLowerCase()==='/config'||hash==='#config'||hash==='#/config';
+    }catch(_){return false;}
+  }
+
+  function clearConfigBootTimer(){
+    if(!window.__beConfigBootTimer)return;
+    window.clearTimeout(window.__beConfigBootTimer);
+    window.__beConfigBootTimer=0;
+  }
+
+  function revealConfigPage(){
+    clearConfigBootTimer();
+    root.classList.remove('config-route-boot');
+  }
+
+  function afterTwoFrames(){
+    return new Promise(function(resolve){
+      window.requestAnimationFrame(function(){
+        window.requestAnimationFrame(resolve);
+      });
+    });
+  }
+
+  function waitForConfigImages(container){
+    if(!container||!container.querySelectorAll)return Promise.resolve();
+    var images=Array.prototype.slice.call(container.querySelectorAll('img'));
+    if(!images.length)return Promise.resolve();
+
+    return Promise.allSettled(images.map(function(image){
+      if(image.complete)return Promise.resolve();
+      return new Promise(function(resolve){
+        var settled=false;
+        function finish(){
+          if(settled)return;
+          settled=true;
+          image.removeEventListener('load',finish);
+          image.removeEventListener('error',finish);
+          resolve();
+        }
+        image.addEventListener('load',finish,{once:true});
+        image.addEventListener('error',finish,{once:true});
+        window.setTimeout(finish,1800);
+      });
+    }));
+  }
+
+  function waitForConfigFonts(){
+    if(!document.fonts||!document.fonts.ready)return Promise.resolve();
+    return Promise.race([
+      Promise.resolve(document.fonts.ready).catch(function(){}),
+      new Promise(function(resolve){window.setTimeout(resolve,900);})
+    ]);
+  }
+
+  window.BETVReleaseConfigPaint=function BETVReleaseConfigPaint(options){
+    var settings=options&&typeof options==='object'?options:{};
+    var version=++releaseVersion;
+
+    if(!root.classList.contains('config-route-boot'))return Promise.resolve();
+    if(settings.immediate||!configRouteActive()){
+      revealConfigPage();
+      return Promise.resolve();
+    }
+
+    var container=settings.container||document.getElementById('settingsPage');
+    var readiness=Promise.all([waitForConfigImages(container),waitForConfigFonts()]);
+    var timeout=new Promise(function(resolve){window.setTimeout(resolve,2300);});
+
+    return Promise.race([readiness,timeout])
+      .then(afterTwoFrames)
+      .catch(function(){})
+      .finally(function(){
+        if(version===releaseVersion)revealConfigPage();
+      });
+  };
+})();
+
 (() => {
   'use strict';
   function encodeBase64Url(value) {
@@ -6891,6 +6978,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       toggleDropdown(false);profilePage.hidden=true;settingsPage.hidden=false;
       document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');
       try{renderSettingsPage();}catch(error){console.error('Falha ao renderizar configurações:',error);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
+      if(window.BETVReleaseConfigPaint){
+        settingsPage.setAttribute('aria-busy','true');
+        Promise.resolve(window.BETVReleaseConfigPaint({container:settingsPage})).finally(function(){settingsPage.removeAttribute('aria-busy');});
+      }
       if(updateRoute!==false&&!isConfigRoute())pushPublicRoute('/config');
       window.scrollTo({top:0,behavior:'auto'});
     }
@@ -7184,7 +7275,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function showDonateRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','support-page-active','section-catalog-active');document.body.classList.add('donate-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-donate-page'));window.scrollTo(0,0);}
   function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','billie-page-active','donate-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
   function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','donate-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
-  function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(!isLoginRoute()||location.hash)replaceRoute('/login');}
+  function showLogin(){if(window.BETVReleaseConfigPaint)window.BETVReleaseConfigPaint({immediate:true});document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(!isLoginRoute()||location.hash)replaceRoute('/login');}
   function showPasswordRecovery(message,type){
     document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');
     document.body.classList.add('login-mode');
