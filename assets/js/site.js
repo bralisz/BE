@@ -87,6 +87,50 @@
     image.setAttribute('data-avatar-fallback', DEFAULT_AVATAR);
     return resolved;
   };
+
+  function isDefaultAvatarValue(value) {
+    const raw = String(value || '').trim();
+    if (!raw || raw === '#') return true;
+    try {
+      return new URL(raw, location.origin).pathname === DEFAULT_AVATAR;
+    } catch (_) {
+      return raw.split(/[?#]/)[0] === DEFAULT_AVATAR;
+    }
+  }
+
+  window.BETVReadSelectedAvatar = function BETVReadSelectedAvatar(event) {
+    const detail = event && event.detail && typeof event.detail === 'object' ? event.detail : {};
+    const account = window.beBackend && window.beBackend.auth ? window.beBackend.auth.currentUser : null;
+    const source = document.getElementById('publicUserPhoto');
+    const candidates = [
+      detail.avatarUrl,
+      detail.profile && detail.profile.avatarUrl,
+      account && account.profile && account.profile.avatarUrl,
+      account && account.photoURL,
+      source && !source.hidden ? (source.getAttribute('src') || source.currentSrc || source.src) : ''
+    ];
+    for (const candidate of candidates) {
+      const normalized = String(candidate || '').trim();
+      if (normalized && !isDefaultAvatarValue(normalized)) return normalized;
+    }
+    return '';
+  };
+
+  window.BETVLoadSelectedAvatar = async function BETVLoadSelectedAvatar(event) {
+    const immediate = window.BETVReadSelectedAvatar(event);
+    const backend = window.beBackend;
+    const account = backend && backend.auth ? backend.auth.currentUser : null;
+    if (!account || !account.uid || !backend.profiles || typeof backend.profiles.ensure !== 'function') return immediate;
+    try {
+      const profile = await backend.profiles.ensure(account);
+      const current = backend.auth && backend.auth.currentUser;
+      if (!current || current.uid !== account.uid) return '';
+      const selected = profile && profile.avatarUrl ? String(profile.avatarUrl).trim() : '';
+      return selected && !isDefaultAvatarValue(selected) ? selected : immediate;
+    } catch (_) {
+      return immediate;
+    }
+  };
   document.addEventListener('error', function (event) {
     const image = event.target;
     if (!(image instanceof HTMLImageElement) || !image.hasAttribute('data-avatar-fallback')) return;
@@ -8498,11 +8542,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!raw)return '';
     return window.beMediaUrl?window.beMediaUrl(raw):raw;
   }
-  function syncAvatar(){
-    var source=document.getElementById('publicUserPhoto');
-    var url=source&&!source.hidden?String(source.currentSrc||source.src||'').trim():'';
+  var avatarSyncVersion=0;
+  function applyBillieAvatar(url){
     if(window.BETVApplyAvatar)window.BETVApplyAvatar(avatarImage,url);else{avatarImage.src=url||window.BETV_DEFAULT_AVATAR;avatarImage.hidden=false;}
     avatarFallback.hidden=true;
+  }
+  function syncAvatar(event){
+    var version=++avatarSyncVersion;
+    var immediate=window.BETVReadSelectedAvatar?window.BETVReadSelectedAvatar(event):'';
+    applyBillieAvatar(immediate);
+    if(!window.BETVLoadSelectedAvatar)return;
+    Promise.resolve(window.BETVLoadSelectedAvatar(event)).then(function(url){
+      if(version!==avatarSyncVersion||!isBillieRoute())return;
+      applyBillieAvatar(url);
+    }).catch(function(){});
   }
   function syncUnread(){
     var source=document.getElementById('notificationUnreadDot');
@@ -8970,14 +9023,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     hero.classList.add('has-banner');
   }
 
-  function syncAvatar(){
-    var source=document.getElementById('publicUserPhoto');
+  var avatarSyncVersion=0;
+  function applyDonateAvatar(url){
     var image=document.getElementById('donatePageAvatarImage');
     var fallback=document.getElementById('donatePageAvatarFallback');
     if(!image||!fallback)return;
-    var src=source&&!source.hidden?String(source.currentSrc||source.src||'').trim():'';
-    if(window.BETVApplyAvatar)window.BETVApplyAvatar(image,src);else{image.src=src||window.BETV_DEFAULT_AVATAR;image.hidden=false;}
+    if(window.BETVApplyAvatar)window.BETVApplyAvatar(image,url);else{image.src=url||window.BETV_DEFAULT_AVATAR;image.hidden=false;}
     fallback.hidden=true;
+  }
+  function syncAvatar(event){
+    var version=++avatarSyncVersion;
+    var immediate=window.BETVReadSelectedAvatar?window.BETVReadSelectedAvatar(event):'';
+    applyDonateAvatar(immediate);
+    if(!window.BETVLoadSelectedAvatar)return;
+    Promise.resolve(window.BETVLoadSelectedAvatar(event)).then(function(url){
+      if(version!==avatarSyncVersion||!isRoute())return;
+      applyDonateAvatar(url);
+    }).catch(function(){});
   }
 
   function syncUnread(){
