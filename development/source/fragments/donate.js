@@ -134,23 +134,14 @@
     hero.classList.add('has-banner');
   }
 
-  var avatarSyncVersion=0;
-  function applyDonateAvatar(url){
+  function syncAvatar(){
+    var source=document.getElementById('publicUserPhoto');
     var image=document.getElementById('donatePageAvatarImage');
     var fallback=document.getElementById('donatePageAvatarFallback');
     if(!image||!fallback)return;
-    if(window.BETVApplyAvatar)window.BETVApplyAvatar(image,url);else{image.src=url||window.BETV_DEFAULT_AVATAR;image.hidden=false;}
-    fallback.hidden=true;
-  }
-  function syncAvatar(event){
-    var version=++avatarSyncVersion;
-    var immediate=window.BETVReadSelectedAvatar?window.BETVReadSelectedAvatar(event):'';
-    applyDonateAvatar(immediate);
-    if(!window.BETVLoadSelectedAvatar)return;
-    Promise.resolve(window.BETVLoadSelectedAvatar(event)).then(function(url){
-      if(version!==avatarSyncVersion||!isRoute())return;
-      applyDonateAvatar(url);
-    }).catch(function(){});
+    var src=source&&!source.hidden?String(source.currentSrc||source.src||'').trim():'';
+    if(src){image.src=src;image.hidden=false;fallback.hidden=true;}
+    else{image.removeAttribute('src');image.hidden=true;fallback.hidden=false;}
   }
 
   function syncUnread(){
@@ -653,7 +644,7 @@
     syncUnread();
     load(false);
     if(supportersLoaded)observeSupportersEnd();
-    document.title='Billie Eilish TV';
+    document.title='Apoie uma ONG — Billie Eilish TV';
   }
 
   function close(){

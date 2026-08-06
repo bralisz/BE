@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = Object.freeze({
-  "en-us": Object.freeze({
+  'en-us': Object.freeze({
   "Entrar": "Sign in",
   "Terms & Conditions": "Terms & Conditions",
   "Privacy Policy": "Privacy Policy",
@@ -108,6 +108,8 @@ module.exports = Object.freeze({
   "A recusa pode ocorrer por limite, dados incorretos, bloqueio do banco, verificação antifraude ou indisponibilidade do método escolhido. Confira os dados, tente outro método ou consulte sua instituição financeira.": "A payment may be declined because of limits, incorrect details, a bank block, fraud checks, or an unavailable method. Check the information, try another method, or contact your financial institution.",
   "Como altero o idioma do site?": "How do I change the site language?",
   "Abra Configurações e procure a seção Idioma. Escolha Português, English ou Español. O site reabrirá a página atual no idioma selecionado e salvará a preferência neste dispositivo.": "Open Settings and find the Language section. Choose Português, English, or Español. The site will reopen the current page in the selected language and save the preference on this device.",
+  "Por que uma tradução pode parecer incorreta?": "Why might a translation seem incorrect?",
+  "Parte do conteúdo é traduzida automaticamente. Nomes próprios, títulos oficiais e expressões podem exigir revisão. Envie o texto e a página pelo suporte para que a tradução seja corrigida.": "Some content is translated automatically. Proper names, official titles, and expressions may require review. Send the text and page through support so the translation can be corrected.",
   "Como denuncio um conteúdo ou peço uma correção?": "How do I report content or request a correction?",
   "Abra a central de suporte e informe o título do conteúdo, o link da página e uma descrição clara do problema. Para traduções, inclua também o idioma e o trecho incorreto.": "Open the support center and provide the content title, page link, and a clear description of the issue. For translations, also include the language and the incorrect passage.",
   "Meu perfil público mostra e-mail ou dados privados?": "Does my public profile show my email or private data?",
@@ -128,13 +130,9 @@ module.exports = Object.freeze({
   "Repita a nova senha": "Repeat the new password",
   "Use pelo menos 6 caracteres e inclua um número ou caractere especial.": "Use at least 6 characters and include a number or special character.",
   "Salvar nova senha": "Save new password",
-  "Voltar para o login": "Back to sign in",
-  "Doações para ONGs": "NGO donations",
-  "Idioma e traduções": "Language and translations",
-  "Por que uma parte do site não está traduzida ou está traduzida incorretamente?": "Why is part of the site untranslated or translated incorrectly?",
-  "O BETV foi criado com foco principal em português. As versões em inglês e espanhol estão em expansão, então algumas partes podem ficar sem tradução ou apresentar erros. Se encontrar uma tradução ausente ou incorreta, envie a página, o idioma e o trecho pelo suporte para que possamos corrigir.": "BETV was created primarily in Portuguese. The English and Spanish versions are still expanding, so some parts may be untranslated or contain errors. If you find a missing or incorrect translation, send the page, language, and affected text to support so we can correct it."
+  "Voltar para o login": "Back to sign in"
 }),
-  "es": Object.freeze({
+  es: Object.freeze({
   "Entrar": "Iniciar sesión",
   "Terms & Conditions": "Términos y condiciones",
   "Privacy Policy": "Política de privacidad",
@@ -241,6 +239,8 @@ module.exports = Object.freeze({
   "A recusa pode ocorrer por limite, dados incorretos, bloqueio do banco, verificação antifraude ou indisponibilidade do método escolhido. Confira os dados, tente outro método ou consulte sua instituição financeira.": "El rechazo puede deberse a límites, datos incorrectos, bloqueo del banco, verificación antifraude o falta de disponibilidad del método elegido. Revisa los datos, prueba otro método o consulta a tu entidad financiera.",
   "Como altero o idioma do site?": "¿Cómo cambio el idioma del sitio?",
   "Abra Configurações e procure a seção Idioma. Escolha Português, English ou Español. O site reabrirá a página atual no idioma selecionado e salvará a preferência neste dispositivo.": "Abre Configuración y busca la sección Idioma. Elige Português, English o Español. El sitio volverá a abrir la página actual en el idioma seleccionado y guardará la preferencia en este dispositivo.",
+  "Por que uma tradução pode parecer incorreta?": "¿Por qué una traducción puede parecer incorrecta?",
+  "Parte do conteúdo é traduzida automaticamente. Nomes próprios, títulos oficiais e expressões podem exigir revisão. Envie o texto e a página pelo suporte para que a tradução seja corrigida.": "Parte del contenido se traduce automáticamente. Los nombres propios, títulos oficiales y expresiones pueden requerir revisión. Envía el texto y la página mediante soporte para que se corrija la traducción.",
   "Como denuncio um conteúdo ou peço uma correção?": "¿Cómo denuncio contenido o solicito una corrección?",
   "Abra a central de suporte e informe o título do conteúdo, o link da página e uma descrição clara do problema. Para traduções, inclua também o idioma e o trecho incorreto.": "Abre el centro de soporte e indica el título del contenido, el enlace de la página y una descripción clara del problema. Para traducciones, incluye también el idioma y el fragmento incorrecto.",
   "Meu perfil público mostra e-mail ou dados privados?": "¿Mi perfil público muestra correo electrónico o datos privados?",
@@ -261,10 +261,6 @@ module.exports = Object.freeze({
   "Repita a nova senha": "Repite la nueva contraseña",
   "Use pelo menos 6 caracteres e inclua um número ou caractere especial.": "Usa al menos 6 caracteres e incluye un número o un carácter especial.",
   "Salvar nova senha": "Guardar nueva contraseña",
-  "Voltar para o login": "Volver al inicio de sesión",
-  "Doações para ONGs": "Donaciones a ONG",
-  "Idioma e traduções": "Idioma y traducciones",
-  "Por que uma parte do site não está traduzida ou está traduzida incorretamente?": "¿Por qué una parte del sitio no está traducida o está traducida incorrectamente?",
-  "O BETV foi criado com foco principal em português. As versões em inglês e espanhol estão em expansão, então algumas partes podem ficar sem tradução ou apresentar erros. Se encontrar uma tradução ausente ou incorreta, envie a página, o idioma e o trecho pelo suporte para que possamos corrigir.": "BETV fue creado principalmente en portugués. Las versiones en inglés y español siguen ampliándose, por lo que algunas partes pueden estar sin traducir o contener errores. Si encuentras una traducción ausente o incorrecta, envía al soporte la página, el idioma y el fragmento afectado para que podamos corregirlo."
+  "Voltar para o login": "Volver al inicio de sesión"
 })
 });

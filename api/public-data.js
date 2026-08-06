@@ -6,7 +6,7 @@ const ALLOWED_COLLECTIONS = new Set([
   'contents', 'featured', 'gallery', 'movies', 'notifications', 'ongs', 'sections', 'series', 'videos'
 ]);
 const PUBLIC_ITEM_FIELDS = new Set([
-  'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentIds', 'contentUrl',
+  'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
   'mediaType', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
   'sourceCollection', 'thumbnailUrl', 'title', 'translations', 'type', 'videoDuration', 'videoId',

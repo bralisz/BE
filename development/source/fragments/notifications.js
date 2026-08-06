@@ -417,8 +417,8 @@
     openPage(detail.id||routeInfo().id,false);
   });
   window.addEventListener('be:close-notifications',function(){closePage(false);});
-  window.addEventListener('be:content-ready',function(){window.setTimeout(function(){loadNotifications(true);},0);});
-  window.addEventListener('be:auth-changed',function(){syncPageAvatar();if(window.__beContentReady)loadNotifications(true);});
+  window.addEventListener('be:content-ready',function(){loadNotifications(true);});
+  window.addEventListener('be:auth-changed',function(){syncPageAvatar();loadNotifications(true);});
   window.addEventListener('be:profile-avatar-changed',syncPageAvatar);
   window.addEventListener('be:content-ready',syncPageAvatar);
   window.addEventListener('hashchange',function(){
@@ -433,7 +433,7 @@
   });
 
   syncPageAvatar();
+  loadNotifications(false);
   var initial=routeInfo();
   if(initial.active)openPage(initial.id,false);
-  else if(window.__beContentReady)window.setTimeout(function(){loadNotifications(false);},0);
 })();
