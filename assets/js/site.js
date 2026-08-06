@@ -7626,6 +7626,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },50);
   }
 
+  if(legalPage)legalPage.addEventListener('click',function(event){
+    if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+    var link=event.target&&event.target.closest?event.target.closest('[data-legal-link]'):null;
+    if(!link||!legalPage.contains(link)||link.hasAttribute('download')||String(link.getAttribute('target')||'').toLowerCase()==='_blank')return;
+    var route=String(link.getAttribute('data-legal-link')||'').toLowerCase();
+    if(legalRoutes.indexOf(route)<0)return;
+    event.preventDefault();
+    if(routeName()===route){renderLegalRoute();return;}
+    if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){
+      window.BETVPublicRoutes.go('/'+route);
+      return;
+    }
+    var target=window.BETVLocaleURL?window.BETVLocaleURL('/'+route):'/'+route;
+    history.pushState({beRoute:'legal',legalRoute:route},'',target);
+    renderLegalRoute();
+  });
+
   if(legalHomeButton)legalHomeButton.addEventListener('click',goHome);
   if(legalAvatarButton)legalAvatarButton.addEventListener('click',openProfile);
   if(cookieAccept)cookieAccept.addEventListener('click',acceptCookies);
