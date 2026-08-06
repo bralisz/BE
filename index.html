@@ -65,9 +65,9 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-ong-visual-v4">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-ong-interactions-v5">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/site.js?rev=20260806-ong-dashboard-banner-v3"></script>
+<script defer src="/assets/js/site.js?rev=20260806-ong-interactions-v4"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -237,7 +237,6 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
       <button class="dd-item" data-public-action="profile">Perfil</button>
       <button class="dd-item" data-public-action="settings">Configurações</button>
       <button class="dd-item support-site-action" data-public-action="donate">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.35-9.5-9.1C.82 7.9 3.1 4 7.2 4c2.1 0 3.75 1.15 4.8 2.55C13.05 5.15 14.7 4 16.8 4c4.1 0 6.38 3.9 4.7 7.9C19.5 16.65 12 21 12 21Z" fill="currentColor"/></svg>
         <span>Apoie uma ONG</span>
       </button>
       <div class="dd-divider"></div>
@@ -667,10 +666,23 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg>
     </button>
     <div class="donate-page-header-actions">
-      <button class="donate-page-notifications" id="donatePageNotifications" type="button" aria-label="Abrir notificações" title="Notificações">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-        <span class="donate-page-unread-dot" id="donatePageUnreadDot" hidden></span>
-      </button>
+      <div class="donate-notification-wrap">
+        <button class="donate-page-notifications" id="donatePageNotifications" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Abrir notificações" title="Notificações">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+          <span class="donate-page-unread-dot" id="donatePageUnreadDot" hidden></span>
+        </button>
+        <div class="notification-dropdown donate-notification-dropdown" id="donateNotificationDropdown" aria-label="Notificações recentes">
+          <div class="notification-dropdown-header">
+            <strong>Notificações</strong>
+            <div class="notification-header-actions">
+              <button class="notification-mark-all" id="donateNotificationMarkAll" type="button">Ler todos</button>
+              <button class="notification-header-close" id="donateNotificationClose" type="button" aria-label="Fechar notificações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+            </div>
+          </div>
+          <div class="notification-preview-list" id="donateNotificationPreviewList"><div class="notification-preview-empty">Carregando…</div></div>
+          <button class="notification-view-all" id="donateNotificationViewAll" type="button">Ver todas as notificações</button>
+        </div>
+      </div>
       <button class="donate-page-avatar" id="donatePageAvatar" type="button" aria-label="Abrir perfil" title="Perfil">
         <img id="donatePageAvatarImage" alt="Foto do usuário" hidden>
         <svg id="donatePageAvatarFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
@@ -681,7 +693,7 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   <main class="donate-page-content">
     <section class="donate-intro" aria-labelledby="donatePageTitle">
       <h1 id="donatePageTitle">Apoie uma ONG</h1>
-      <p>Ao apoiar o BETV, parte do valor será destinada à ONG que você escolher. Assim, você ajuda o site a continuar crescendo e também fortalece uma causa importante.</p>
+      <p>Ao apoiar o site, parte do valor será destinada à ONG que você escolher assim, você ajuda o site a continuar crescendo e também fortalece uma causa importante.</p>
     </section>
     <section class="donate-ngos-section" aria-label="ONGs disponíveis para apoio">
       <div class="donate-ngo-status" id="donatePageStatus" role="status" aria-live="polite">Carregando ONGs…</div>

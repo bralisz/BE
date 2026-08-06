@@ -2,24 +2,26 @@
 .user-dropdown .support-site-action{
   display:flex;
   align-items:center;
-  gap:10px;
+  justify-content:center;
+  gap:0;
   margin:6px 8px 4px;
   width:calc(100% - 16px);
-  border:1px solid rgba(255,232,91,.82);
+  border:1px solid rgba(255,255,255,.88);
   border-radius:12px;
-  color:#11130b;
-  background:linear-gradient(135deg,#fff36d 0%,#d8ff49 55%,#8eff7a 100%);
-  box-shadow:0 8px 24px rgba(213,255,70,.22),inset 0 1px 0 rgba(255,255,255,.7);
+  color:#080808;
+  background:#fff;
+  box-shadow:none;
   font-weight:800;
 }
 .user-dropdown .support-site-action:hover,
 .user-dropdown .support-site-action:focus-visible{
-  color:#070807;
-  background:linear-gradient(135deg,#fff891 0%,#e2ff70 52%,#a3ff92 100%);
+  color:#080808;
+  background:#f2f2f7;
+  border-color:#fff;
   transform:none;
-  box-shadow:0 10px 30px rgba(213,255,70,.34),0 0 0 3px rgba(225,255,93,.14);
+  box-shadow:none;
 }
-.user-dropdown .support-site-action svg{width:18px;height:18px;flex:0 0 auto;filter:drop-shadow(0 1px 0 rgba(255,255,255,.4))}
+.user-dropdown .support-site-action svg{display:none!important}
 #donatePage[hidden]{display:none!important}
 body.donate-page-active{
   min-height:100vh;
@@ -56,6 +58,12 @@ body.donate-page-active > footer > .footer-card{width:min(100%,1390px)!important
   background:linear-gradient(180deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.34) 54%,transparent 100%);
 }
 .donate-page-header-actions{display:flex;align-items:center;gap:11px}
+.donate-notification-wrap{position:relative;display:flex;align-items:center}
+.donate-notification-dropdown{
+  top:calc(100% + 12px);
+  right:-59px;
+  z-index:80;
+}
 .donate-page-home,.donate-page-notifications,.donate-page-avatar{
   position:relative;
   display:grid;
