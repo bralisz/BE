@@ -9917,3 +9917,46 @@ body.donate-page-active .donate-page-avatar img{
   border-radius:50%!important;
   transform:translateZ(0);
 }
+
+
+/* /ong: mantém somente um avatar visível e elimina o ícone duplicado atrás da foto. */
+body.donate-page-active .topbar-wrap,
+body.donate-page-active .home-user-menu,
+body.donate-page-active .home-notification-menu{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+body.donate-page-active .donate-page-avatar{
+  position:relative!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:3px!important;
+  overflow:hidden!important;
+  font-size:0!important;
+  line-height:0!important;
+}
+body.donate-page-active .donate-page-avatar>img,
+body.donate-page-active .donate-page-avatar>svg{
+  grid-area:1/1!important;
+}
+body.donate-page-active .donate-page-avatar>img[hidden],
+body.donate-page-active .donate-page-avatar>svg[hidden]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+}
+body.donate-page-active .donate-page-avatar>img:not([hidden]){
+  position:absolute!important;
+  inset:3px!important;
+  width:calc(100% - 6px)!important;
+  height:calc(100% - 6px)!important;
+  z-index:2!important;
+}
+body.donate-page-active .donate-page-avatar>img:not([hidden])~svg{
+  display:none!important;
+}
+body.donate-page-active .donate-page-avatar>svg:not([hidden]){
+  position:relative!important;
+  z-index:1!important;
+}
