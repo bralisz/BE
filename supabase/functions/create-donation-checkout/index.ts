@@ -1,8 +1,8 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js@2.4.4/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const SITE_ORIGIN = "https://billieilishtv.site";
-const MINIMUM_FALLBACK_CENTS = 500;
+const DEFAULT_MINIMUM_CENTS: Record<string, number> = { brl: 500, usd: 100 };
 const MAXIMUM_DONATION_CENTS = 100_000_000;
 const RATE_LIMIT_PER_MINUTE = 6;
 
@@ -40,11 +40,15 @@ function json(req: Request, status: number, payload: Record<string, unknown>): R
   });
 }
 
-function normalizeMinimum(value: unknown): number {
+function normalizeCurrency(value: unknown): "brl" | "usd" {
+  return String(value || "").toLowerCase() === "usd" ? "usd" : "brl";
+}
+
+function normalizeMinimum(value: unknown, currency: "brl" | "usd"): number {
   const cents = Number(value);
   return Number.isInteger(cents) && cents >= 100 && cents <= MAXIMUM_DONATION_CENTS
     ? cents
-    : MINIMUM_FALLBACK_CENTS;
+    : DEFAULT_MINIMUM_CENTS[currency];
 }
 
 function activeValue(value: unknown): boolean {
@@ -57,6 +61,41 @@ function safeText(value: unknown, maxLength: number): string {
 
 function validRequestId(value: unknown): value is string {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value ?? ""));
+}
+
+function localeInfo(value: unknown): { slug: "pt-br" | "en-us" | "es"; stripe: string; language: "pt" | "en" | "es" } {
+  const locale = String(value || "").toLowerCase();
+  if (locale.startsWith("es")) return { slug: "es", stripe: "es", language: "es" };
+  if (locale.startsWith("en")) return { slug: "en-us", stripe: "en", language: "en" };
+  return { slug: "pt-br", stripe: "pt-BR", language: "pt" };
+}
+
+function localizedNgoText(data: Record<string, unknown>, locale: ReturnType<typeof localeInfo>): { title: string; product: string; description: string } {
+  const translations = data.translations && typeof data.translations === "object" ? data.translations as Record<string, unknown> : {};
+  const translated = translations[locale.slug] && typeof translations[locale.slug] === "object"
+    ? translations[locale.slug] as Record<string, unknown>
+    : {};
+  const title = safeText(translated.title || translated.name || data.title || data.name || "ONG", 80) || "ONG";
+  if (locale.language === "en") return {
+    title,
+    product: `BETV Donation — ${title}`,
+    description: "Part of the amount will be directed to the NGO selected on BETV.",
+  };
+  if (locale.language === "es") return {
+    title,
+    product: `Donación BETV — ${title}`,
+    description: "Parte del importe se destinará a la ONG seleccionada en BETV.",
+  };
+  return {
+    title,
+    product: `Doação BETV — ${title}`,
+    description: "Parte do valor será destinada à ONG selecionada no BETV.",
+  };
+}
+
+function safeReturnPath(value: unknown, locale: ReturnType<typeof localeInfo>): string {
+  const raw = String(value || "").split(/[?#]/)[0].replace(/\/+$/g, "") || `/${locale.slug}/ong`;
+  return /^\/(?:pt-br|en-us|es)\/ong$/i.test(raw) ? raw.toLowerCase() : `/${locale.slug}/ong`;
 }
 
 Deno.serve(async (req: Request) => {
@@ -84,24 +123,20 @@ Deno.serve(async (req: Request) => {
   }
 
   let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return json(req, 400, { code: "invalid_json", error: "Dados inválidos." });
-  }
+  try { body = await req.json(); }
+  catch { return json(req, 400, { code: "invalid_json", error: "Dados inválidos." }); }
 
   const ngoId = safeText(body.ngoId, 100);
   const amountCents = Number(body.amountCents);
   const requestId = String(body.requestId || "");
-  if (!ngoId || !/^[a-z0-9-]{8,100}$/i.test(ngoId)) {
-    return json(req, 400, { code: "invalid_ngo", error: "ONG inválida." });
-  }
+  const currency = normalizeCurrency(body.currency);
+  const locale = localeInfo(body.locale);
+  const returnPath = safeReturnPath(body.returnPath, locale);
+  if (!ngoId || !/^[a-z0-9-]{8,100}$/i.test(ngoId)) return json(req, 400, { code: "invalid_ngo", error: "ONG inválida." });
   if (!Number.isInteger(amountCents) || amountCents < 100 || amountCents > MAXIMUM_DONATION_CENTS) {
     return json(req, 400, { code: "invalid_amount", error: "Informe um valor válido." });
   }
-  if (!validRequestId(requestId)) {
-    return json(req, 400, { code: "invalid_request", error: "Não foi possível validar a tentativa de pagamento." });
-  }
+  if (!validRequestId(requestId)) return json(req, 400, { code: "invalid_request", error: "Não foi possível validar a tentativa de pagamento." });
 
   const userClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authorization } },
@@ -115,65 +150,42 @@ Deno.serve(async (req: Request) => {
   const user = userResult?.user;
   if (userError || !user) return json(req, 401, { code: "unauthorized", error: "Sua sessão expirou. Entre novamente." });
 
-  const { data: profileRow } = await adminClient
-    .from("profiles")
-    .select("display_name,username")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const userDisplayName = safeText(
-    profileRow?.display_name || user.user_metadata?.full_name || user.user_metadata?.name || "Usuário",
-    120,
-  ) || "Usuário";
+  const { data: profileRow } = await adminClient.from("profiles").select("display_name,username").eq("id", user.id).maybeSingle();
+  const userDisplayName = safeText(profileRow?.display_name || user.user_metadata?.full_name || user.user_metadata?.name || "Usuário", 120) || "Usuário";
   const userUsername = safeText(profileRow?.username || "", 80);
 
-  const { data: ngoRow, error: ngoError } = await adminClient
-    .from("content_items")
-    .select("id,data")
-    .eq("collection", "ongs")
-    .eq("id", ngoId)
-    .maybeSingle();
-
+  const { data: ngoRow, error: ngoError } = await adminClient.from("content_items").select("id,data").eq("collection", "ongs").eq("id", ngoId).maybeSingle();
   if (ngoError) {
     console.error("Failed to load NGO for donation checkout:", ngoError.code);
     return json(req, 500, { code: "ngo_lookup_failed", error: "Não foi possível validar a ONG agora." });
   }
-  if (!ngoRow || !activeValue(ngoRow.data?.active)) {
-    return json(req, 404, { code: "ngo_not_found", error: "Esta ONG não está disponível." });
-  }
+  if (!ngoRow || !activeValue(ngoRow.data?.active)) return json(req, 404, { code: "ngo_not_found", error: "Esta ONG não está disponível." });
 
-  const minimumDonationCents = normalizeMinimum(ngoRow.data?.minimumDonationCents);
+  const minimumSource = currency === "usd" ? ngoRow.data?.minimumDonationUsdCents : ngoRow.data?.minimumDonationCents;
+  const minimumDonationCents = normalizeMinimum(minimumSource, currency);
   if (amountCents < minimumDonationCents) {
     return json(req, 400, {
       code: "below_minimum",
       error: "O valor está abaixo do mínimo configurado para esta ONG.",
       minimumDonationCents,
+      currency: currency.toUpperCase(),
     });
   }
 
   const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
-  const { count: recentCount, error: rateError } = await adminClient
-    .from("donation_checkout_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("created_at", oneMinuteAgo);
+  const { count: recentCount, error: rateError } = await adminClient.from("donation_checkout_requests").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", oneMinuteAgo);
+  if (rateError) return json(req, 503, { code: "rate_limit_unavailable", error: "Tente novamente em instantes." });
+  if ((recentCount || 0) >= RATE_LIMIT_PER_MINUTE) return json(req, 429, { code: "rate_limited", error: "Muitas tentativas seguidas. Aguarde um minuto." });
 
-  if (rateError) {
-    console.error("Donation checkout rate-limit lookup failed:", rateError.code);
-    return json(req, 503, { code: "rate_limit_unavailable", error: "Tente novamente em instantes." });
-  }
-  if ((recentCount || 0) >= RATE_LIMIT_PER_MINUTE) {
-    return json(req, 429, { code: "rate_limited", error: "Muitas tentativas seguidas. Aguarde um minuto." });
-  }
-
-  const ngoTitle = safeText(ngoRow.data?.title || ngoRow.data?.name || "ONG", 80) || "ONG";
-  const successUrl = `${SITE_ORIGIN}/ong?doacao=sucesso&session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${SITE_ORIGIN}/ong?doacao=cancelada`;
+  const ngoText = localizedNgoText(ngoRow.data || {}, locale);
+  const successUrl = `${SITE_ORIGIN}${returnPath}?doacao=sucesso&session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${SITE_ORIGIN}${returnPath}?doacao=cancelada`;
   const metadata = {
     purpose: "ong_donation",
     ngo_id: ngoId,
-    ngo_name: ngoTitle,
+    ngo_name: ngoText.title,
     user_id: user.id,
+    currency,
     minimum_donation_cents: String(minimumDonationCents),
     selected_amount_cents: String(amountCents),
   };
@@ -182,13 +194,13 @@ Deno.serve(async (req: Request) => {
   stripeBody.set("mode", "payment");
   stripeBody.set("success_url", successUrl);
   stripeBody.set("cancel_url", cancelUrl);
-  stripeBody.set("locale", "pt-BR");
+  stripeBody.set("locale", locale.stripe);
   stripeBody.set("submit_type", "donate");
   stripeBody.set("client_reference_id", `${user.id}:${ngoId}`.slice(0, 200));
-  stripeBody.set("line_items[0][price_data][currency]", "brl");
+  stripeBody.set("line_items[0][price_data][currency]", currency);
   stripeBody.set("line_items[0][price_data][unit_amount]", String(amountCents));
-  stripeBody.set("line_items[0][price_data][product_data][name]", `Doação BETV — ${ngoTitle}`.slice(0, 127));
-  stripeBody.set("line_items[0][price_data][product_data][description]", "Parte do valor será destinada à ONG selecionada no BETV.");
+  stripeBody.set("line_items[0][price_data][product_data][name]", ngoText.product.slice(0, 127));
+  stripeBody.set("line_items[0][price_data][product_data][description]", ngoText.description);
   stripeBody.set("line_items[0][quantity]", "1");
   if (user.email) stripeBody.set("customer_email", user.email);
   for (const [key, value] of Object.entries(metadata)) {
@@ -219,21 +231,21 @@ Deno.serve(async (req: Request) => {
     ngo_id: ngoId,
     amount_cents: amountCents,
     minimum_cents: minimumDonationCents,
+    currency,
     stripe_session_id: stripeSessionId,
     request_id: requestId,
     user_display_name: userDisplayName,
     user_username: userUsername,
-    ngo_title: ngoTitle,
+    ngo_title: ngoText.title,
     status: "checkout_created",
   });
-
-  if (logError && logError.code !== "23505") {
-    console.error("Failed to record donation checkout request:", logError.code);
-  }
+  if (logError && logError.code !== "23505") console.error("Failed to record donation checkout request:", logError.code);
 
   return json(req, 200, {
     url: stripePayload.url,
     sessionId: stripeSessionId,
     minimumDonationCents,
+    currency: currency.toUpperCase(),
+    locale: locale.slug,
   });
 });

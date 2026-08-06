@@ -8,6 +8,12 @@ const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX'
 const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
 const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
 const SETTINGS_CACHE_TTL_MS = 60000;
+const LOCALE_PREFIXES = Object.freeze({
+  'pt-br': { locale: 'pt-BR', ogLocale: 'pt_BR', slug: 'pt-br' },
+  'en-us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
+  'us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
+  'es': { locale: 'es', ogLocale: 'es_ES', slug: 'es' }
+});
 let cachedTemplate = '';
 let settingsCache = { value: {}, expiresAt: 0, promise: null };
 
@@ -123,17 +129,78 @@ async function loadSettings() {
   return settingsCache.promise;
 }
 
-function injectSocialMetadata(html, settings, origin) {
+function normalizedRequestPath(req) {
+  const candidates = [
+    req && req.headers && req.headers['x-vercel-original-path'],
+    req && req.headers && req.headers['x-original-url'],
+    req && req.headers && req.headers['x-rewrite-url'],
+    req && req.url
+  ];
+  for (const candidate of candidates) {
+    const raw = String(candidate || '').split('?')[0].trim();
+    if (!raw || raw.startsWith('/api/site-page')) continue;
+    try {
+      const parsed = new URL(raw, OFFICIAL_SITE_ORIGIN);
+      return parsed.pathname || '/';
+    } catch (_) {}
+  }
+  return '/';
+}
+
+function routeLocaleInfo(req) {
+  const requestPath = normalizedRequestPath(req).replace(/\/{2,}/g, '/').replace(/\/+$/, '') || '/';
+  const first = String(requestPath.split('/')[1] || '').toLowerCase();
+  const config = LOCALE_PREFIXES[first] || LOCALE_PREFIXES['pt-br'];
+  const hasPrefix = Boolean(LOCALE_PREFIXES[first]);
+  const logicalPath = hasPrefix
+    ? (requestPath.replace(new RegExp(`^/${first}(?=/|$)`, 'i'), '') || '/')
+    : requestPath;
+  const prefix = hasPrefix ? `/${config.slug}` : '';
+  const publicPath = prefix + (logicalPath === '/' ? '' : logicalPath);
+  return {
+    locale: config.locale,
+    ogLocale: config.ogLocale,
+    prefix,
+    logicalPath: logicalPath || '/',
+    publicPath: publicPath || '/',
+    slug: config.slug
+  };
+}
+
+function injectLocaleDocument(html, routeInfo) {
+  return html.replace(/<html\s+lang=["'][^"']+["']/i, `<html lang="${attr(routeInfo.locale)}"`);
+}
+
+function injectSocialMetadata(html, settings, origin, routeInfo) {
   const title = 'Billie Eilish TV';
+  const defaults = {
+    'pt-br': {
+      description: 'Todo o conteúdo da Billie Eilish em um só lugar.',
+      imageAlt: 'Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar'
+    },
+    'en-us': {
+      description: 'All Billie Eilish content in one place.',
+      imageAlt: 'Billie Eilish TV — all Billie Eilish content in one place'
+    },
+    es: {
+      description: 'Todo el contenido de Billie Eilish en un solo lugar.',
+      imageAlt: 'Billie Eilish TV — todo el contenido de Billie Eilish en un solo lugar'
+    }
+  };
+  const fallback = defaults[routeInfo.slug] || defaults['pt-br'];
+  const localizedSettings = settings.translations && typeof settings.translations === 'object'
+    ? settings.translations[routeInfo.slug]
+    : null;
   const description = String(
-    settings.description ||
-    'Todo o conteúdo da Billie Eilish em um só lugar.'
+    (localizedSettings && localizedSettings.description) ||
+    (routeInfo.slug === 'pt-br' && settings.description) ||
+    fallback.description
   ).trim();
-  const socialDescription = 'Todo o conteúdo da Billie Eilish em um só lugar.';
+  const socialDescription = description;
   // O preview social do site é fixo e não pode ser substituído pelas configurações do painel.
   const image = FIXED_SHARE_IMAGE_URL;
-  const canonical = `${origin}/`;
-  const imageAlt = 'Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar';
+  const canonical = `${origin}${routeInfo.publicPath === '/' ? '/' : routeInfo.publicPath}`;
+  const imageAlt = fallback.imageAlt;
 
   html = html
     .replace(/\s*<meta\s+(?:property=["']og:[^>]+|name=["']twitter:[^>]+)[^>]*>/gi, '')
@@ -143,7 +210,7 @@ function injectSocialMetadata(html, settings, origin) {
   const metadata = `
 <meta name="description" content="${attr(description)}">
 <meta property="og:type" content="website">
-<meta property="og:locale" content="pt_BR">
+<meta property="og:locale" content="${attr(routeInfo.ogLocale)}">
 <meta property="og:site_name" content="${attr(title)}">
 <meta property="og:title" content="${attr(title)}">
 <meta property="og:description" content="${attr(socialDescription)}">
@@ -173,11 +240,14 @@ module.exports = async function sitePage(req, res) {
   try {
     const origin = publicOrigin(req);
     const settings = await loadSettings();
-    const html = injectDeploymentVersion(injectSocialMetadata(readTemplate(), settings, origin));
+    const routeInfo = routeLocaleInfo(req);
+    const html = injectDeploymentVersion(
+      injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo)
+    );
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=600');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    const requestPath = String(req.url || '').split('?')[0];
+    const requestPath = routeInfo.logicalPath;
     if (requestPath === '/login' || requestPath === '/login/' || requestPath.startsWith('/oauth/consent')) {
       res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
     }

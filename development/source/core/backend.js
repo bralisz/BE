@@ -375,6 +375,74 @@
     return row;
   }
 
+
+
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
+  const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
+
+  function activeLocaleSlug() {
+    if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
+    const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+    return ['en-us','es'].includes(slug) ? slug : 'pt-br';
+  }
+
+  function localizeContentRecord(record) {
+    if (!record || typeof record !== 'object') return record;
+    const slug = activeLocaleSlug();
+    if (slug === 'pt-br') return record;
+    const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
+    const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
+    return localized && typeof localized === 'object' ? { ...record, ...localized } : record;
+  }
+
+  function recordNeedsTranslation(record, slug) {
+    if (!record || !record.id || slug === 'pt-br') return false;
+    const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
+    const localized = translations[slug];
+    const sourceRevision = String(record.updatedAt || record.updated_at || '');
+    return !localized || typeof localized !== 'object' || (sourceRevision && String(localized.sourceUpdatedAt || '') !== sourceRevision);
+  }
+
+  async function ensureTranslatedRecords(collection, records) {
+    const slug = activeLocaleSlug();
+    const values = Array.isArray(records) ? records : [];
+    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
+      return values.map(localizeContentRecord);
+    }
+    const missing = values.filter(record => recordNeedsTranslation(record, slug)).slice(0, 50);
+    if (missing.length) {
+      try {
+        const { data: payload, error } = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+          body: { collection: String(collection), ids: missing.map(record => String(record.id)), locales: [slug] }
+        });
+        if (!error && payload && Array.isArray(payload.records)) {
+          const translatedById = new Map(payload.records.map(item => [String(item.id), item.translation || {}]));
+          values.forEach(record => {
+            const translation = translatedById.get(String(record.id));
+            if (!translation || typeof translation !== 'object') return;
+            if (!record.translations || typeof record.translations !== 'object') record.translations = {};
+            record.translations[slug] = translation;
+          });
+        }
+      } catch (error) {
+        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
+      }
+    }
+    return values.map(localizeContentRecord);
+  }
+
+  function queueRecordTranslation(collection, id) {
+    if (!currentUser || currentUser.role !== 'admin' || !supabaseClient?.functions?.invoke) return;
+    if (collection !== 'settings' && !TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) return;
+    window.setTimeout(() => {
+      supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+        body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es'], force: true }
+      }).then(result => {
+        if (result?.error) console.warn('Não foi possível atualizar as traduções automáticas:', result.error.message || result.error);
+      }).catch(error => console.warn('Não foi possível atualizar as traduções automáticas:', error?.message || error));
+    }, 0);
+  }
+
   function sortAndFilter(items, options = {}) {
     let result = items.slice();
     const filters = Array.isArray(options.filters) ? options.filters : [];
@@ -459,6 +527,7 @@
           if (error) throw error;
           items = (data || []).map(row => ({ id: row.id, ...(row.data || {}), createdAt: row.data?.createdAt || row.created_at, updatedAt: row.data?.updatedAt || row.updated_at }));
         }
+        items = await ensureTranslatedRecords(name, items);
         return sortAndFilter(items, options);
       } catch (error) {
         throw mapAuthError(error);
@@ -474,7 +543,10 @@
         if (name === 'settings') {
           const { data, error } = await supabaseClient.from('site_settings').select('*').eq('id', id).maybeSingle();
           if (error) throw error;
-          return data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
+          const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
+          if (!value) return null;
+          const translated = await ensureTranslatedRecords(name, [value]);
+          return translated[0] || localizeContentRecord(value);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -483,7 +555,10 @@
         }
         const { data, error } = await supabaseClient.from('content_items').select('id,data,created_at,updated_at').eq('collection', name).eq('id', id).maybeSingle();
         if (error) throw error;
-        return data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
+        const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
+        if (!value) return null;
+        const translated = await ensureTranslatedRecords(name, [value]);
+        return translated[0] || localizeContentRecord(value);
       } catch (error) {
         throw mapAuthError(error);
       }
@@ -504,6 +579,7 @@
           const { data: rows, error } = await supabaseClient.from('site_settings').upsert({ id, data: merged, updated_at: now() }, { onConflict: 'id' }).select('*');
           if (error) throw error;
           const row = rows && rows[0];
+          if (row) queueRecordTranslation('settings', row.id);
           return row ? { id: row.id, ...(row.data || {}), createdAt: row.created_at, updatedAt: row.updated_at } : null;
         }
         if (name === 'admin_logs') {
@@ -523,6 +599,7 @@
         const { data: rows, error } = await supabaseClient.from('content_items').upsert(payload, { onConflict: 'id' }).select('id,data,created_at,updated_at');
         if (error) throw error;
         const row = rows && rows[0];
+        if (row) queueRecordTranslation(name, row.id);
         return row ? { id: row.id, ...(row.data || {}), createdAt: row.data?.createdAt || row.created_at, updatedAt: row.data?.updatedAt || row.updated_at } : null;
       } catch (error) {
         throw mapAuthError(error);
@@ -544,6 +621,7 @@
         const { data: rows, error } = await supabaseClient.from('content_items').insert(payload).select('id,data,created_at,updated_at');
         if (error) throw error;
         const row = rows && rows[0];
+        if (row) queueRecordTranslation(name, row.id);
         return row ? { id: row.id, ...(row.data || {}), createdAt: row.data?.createdAt || row.created_at, updatedAt: row.data?.updatedAt || row.updated_at } : null;
       } catch (error) {
         throw mapAuthError(error);

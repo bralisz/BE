@@ -481,6 +481,74 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return row;
   }
 
+
+
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
+  const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
+
+  function activeLocaleSlug() {
+    if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
+    const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+    return ['en-us','es'].includes(slug) ? slug : 'pt-br';
+  }
+
+  function localizeContentRecord(record) {
+    if (!record || typeof record !== 'object') return record;
+    const slug = activeLocaleSlug();
+    if (slug === 'pt-br') return record;
+    const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
+    const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
+    return localized && typeof localized === 'object' ? { ...record, ...localized } : record;
+  }
+
+  function recordNeedsTranslation(record, slug) {
+    if (!record || !record.id || slug === 'pt-br') return false;
+    const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
+    const localized = translations[slug];
+    const sourceRevision = String(record.updatedAt || record.updated_at || '');
+    return !localized || typeof localized !== 'object' || (sourceRevision && String(localized.sourceUpdatedAt || '') !== sourceRevision);
+  }
+
+  async function ensureTranslatedRecords(collection, records) {
+    const slug = activeLocaleSlug();
+    const values = Array.isArray(records) ? records : [];
+    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
+      return values.map(localizeContentRecord);
+    }
+    const missing = values.filter(record => recordNeedsTranslation(record, slug)).slice(0, 50);
+    if (missing.length) {
+      try {
+        const { data: payload, error } = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+          body: { collection: String(collection), ids: missing.map(record => String(record.id)), locales: [slug] }
+        });
+        if (!error && payload && Array.isArray(payload.records)) {
+          const translatedById = new Map(payload.records.map(item => [String(item.id), item.translation || {}]));
+          values.forEach(record => {
+            const translation = translatedById.get(String(record.id));
+            if (!translation || typeof translation !== 'object') return;
+            if (!record.translations || typeof record.translations !== 'object') record.translations = {};
+            record.translations[slug] = translation;
+          });
+        }
+      } catch (error) {
+        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
+      }
+    }
+    return values.map(localizeContentRecord);
+  }
+
+  function queueRecordTranslation(collection, id) {
+    if (!currentUser || currentUser.role !== 'admin' || !supabaseClient?.functions?.invoke) return;
+    if (collection !== 'settings' && !TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) return;
+    window.setTimeout(() => {
+      supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+        body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es'], force: true }
+      }).then(result => {
+        if (result?.error) console.warn('Não foi possível atualizar as traduções automáticas:', result.error.message || result.error);
+      }).catch(error => console.warn('Não foi possível atualizar as traduções automáticas:', error?.message || error));
+    }, 0);
+  }
+
   function sortAndFilter(items, options = {}) {
     let result = items.slice();
     const filters = Array.isArray(options.filters) ? options.filters : [];
@@ -585,6 +653,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           if (error) throw error;
           items = (data || []).map(row => ({ id: row.id, ...(row.data || {}), createdAt: row.data?.createdAt || row.created_at, updatedAt: row.data?.updatedAt || row.updated_at }));
         }
+        items = await ensureTranslatedRecords(name, items);
         return sortAndFilter(items, options);
       } catch (error) {
         throw mapAuthError(error);
@@ -603,7 +672,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (name === 'settings') {
           const { data, error } = await supabaseClient.from('site_settings').select('*').eq('id', id).maybeSingle();
           if (error) throw error;
-          return data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
+          const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
+          if (!value) return null;
+          const translated = await ensureTranslatedRecords(name, [value]);
+          return translated[0] || localizeContentRecord(value);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -612,7 +684,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
         const { data, error } = await supabaseClient.from('content_items').select('id,data,created_at,updated_at').eq('collection', name).eq('id', id).maybeSingle();
         if (error) throw error;
-        return data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
+        const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
+        if (!value) return null;
+        const translated = await ensureTranslatedRecords(name, [value]);
+        return translated[0] || localizeContentRecord(value);
       } catch (error) {
         throw mapAuthError(error);
       }
@@ -633,6 +708,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const { data: rows, error } = await supabaseClient.from('site_settings').upsert({ id, data: merged, updated_at: now() }, { onConflict: 'id' }).select('*');
           if (error) throw error;
           const row = rows && rows[0];
+          if (row) queueRecordTranslation('settings', row.id);
           return row ? { id: row.id, ...(row.data || {}), createdAt: row.created_at, updatedAt: row.updated_at } : null;
         }
         if (name === 'admin_logs') {
@@ -652,6 +728,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const { data: rows, error } = await supabaseClient.from('content_items').upsert(payload, { onConflict: 'id' }).select('id,data,created_at,updated_at');
         if (error) throw error;
         const row = rows && rows[0];
+        if (row) queueRecordTranslation(name, row.id);
         return row ? { id: row.id, ...(row.data || {}), createdAt: row.data?.createdAt || row.created_at, updatedAt: row.data?.updatedAt || row.updated_at } : null;
       } catch (error) {
         throw mapAuthError(error);
@@ -673,6 +750,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const { data: rows, error } = await supabaseClient.from('content_items').insert(payload).select('id,data,created_at,updated_at');
         if (error) throw error;
         const row = rows && rows[0];
+        if (row) queueRecordTranslation(name, row.id);
         return row ? { id: row.id, ...(row.data || {}), createdAt: row.data?.createdAt || row.created_at, updatedAt: row.data?.updatedAt || row.updated_at } : null;
       } catch (error) {
         throw mapAuthError(error);
@@ -2605,8 +2683,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function cleanPathname() {
-    try { return decodeURIComponent(String(location.pathname || '/')).replace(/\/+$/, '') || '/'; }
-    catch (_) { return String(location.pathname || '/').replace(/\/+$/, '') || '/'; }
+    try { return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname || '/'))).replace(/\/+$/, '') || '/'; }
+    catch (_) { return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname || '/')).replace(/\/+$/, '') || '/'; }
   }
 
   function detailRouteId() {
@@ -5171,7 +5249,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isAdminRoute(){
     var callback=new URLSearchParams(location.search||'').get('auth_callback');
     var remembered='';
-    var path=String(location.pathname||'').replace(/\/+$/,'')||'/';
+    var path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'')).replace(/\/+$/,'')||'/';
     try{remembered=sessionStorage.getItem('beOAuthDestination')||'';}catch(_){ }
     return String(location.hash||'').startsWith('#/admin')||path==='/admin'||callback==='admin'||remembered==='admin';
   }
@@ -5313,7 +5391,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     history.pushState({beRoute:'config'},'', '/config'+(location.search||''));
     window.dispatchEvent(new CustomEvent('be:open-config'));
     window.setTimeout(function(){
-      if(!document.body.classList.contains('settings-page-active'))location.assign('/config');
+      if(!document.body.classList.contains('settings-page-active'))location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/config'):'/config');
     },180);
   }
   async function activateProfile(account){
@@ -5322,7 +5400,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     history.pushState({beRoute:'profile'},'',path+(location.search||''));
     window.dispatchEvent(new CustomEvent('be:open-profile-route'));
     window.setTimeout(function(){
-      if(!document.body.classList.contains('profile-page-active'))location.assign(path);
+      if(!document.body.classList.contains('profile-page-active'))location.assign(window.BETVLocaleURL?window.BETVLocaleURL(path):path);
     },180);
   }
   document.addEventListener('click',function(event){
@@ -5858,7 +5936,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var date=new Date(source);
       return String(date.getFullYear()||new Date().getFullYear());
     }
-    function cleanPathname(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
+    function cleanPathname(){try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}}
     function isConfigRoute(){var path=cleanPathname().toLowerCase();var hash=location.hash.toLowerCase();return path==='/config'||hash==='#config'||hash==='#/config';}
     function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
     function profileRouteUsername(){
@@ -6413,7 +6491,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           }catch(_){ }
           closePublicPages(false);
           window.alert('Conta excluída com sucesso. Você foi desconectado do site.');
-          window.location.replace('/');
+          window.location.replace(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');
         }catch(error){
           msg.textContent='Não foi possível excluir: '+(error&&error.message?error.message:'Tente novamente.');
           msg.className='settings-status err';
@@ -6609,7 +6687,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profilePageLogout.setAttribute('aria-busy','true');
       try{
         await auth.signOut();
-        location.replace('/login');
+        location.replace(window.BETVLocaleURL?window.BETVLocaleURL('/login'):'/login');
       }catch(error){
         profilePageLogout.disabled=false;
         profilePageLogout.removeAttribute('aria-busy');
@@ -6619,7 +6697,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     function openProfile(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}openPublicProfile(true,(currentProfile&&currentProfile.username)||'');}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){if(auth.currentUser)openSettingsPage(true);else window.BETVPublicRoutes.go('/login');});if(profilePageNotifications)profilePageNotifications.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();window.dispatchEvent(new CustomEvent('be:open-notifications',{detail:{}}));});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}closePublicPages(true);var home=document.getElementById('logoBtn');if(home)home.click();else location.assign('/');});bindProfileFavorites();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){if(auth.currentUser)openSettingsPage(true);else window.BETVPublicRoutes.go('/login');});if(profilePageNotifications)profilePageNotifications.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();window.dispatchEvent(new CustomEvent('be:open-notifications',{detail:{}}));});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}closePublicPages(true);var home=document.getElementById('logoBtn');if(home)home.click();else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');});bindProfileFavorites();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
       if(event){event.preventDefault();event.stopPropagation();}
 
       // Fecha as configurações e troca primeiro a rota para a Home. Isso evita
@@ -6818,7 +6896,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function callbackParams(){var query=new URLSearchParams(location.search||''),raw=String(location.hash||'').replace(/^#/,''),nested=raw.indexOf('#'),payload=nested>=0?raw.slice(nested+1):raw,hash=new URLSearchParams(payload);return {query:query,hash:hash};}
   function hasAuthCallback(){var p=callbackParams();return Boolean(p.query.get('code')||p.query.get('error')||p.query.get('error_code')||p.query.get('auth_callback')||p.hash.get('access_token')||p.hash.get('refresh_token')||p.hash.get('error')||p.hash.get('error_code'));}
   function authCallbackError(){var p=callbackParams();return p.query.get('error_description')||p.hash.get('error_description')||p.query.get('error')||p.hash.get('error')||'';}
-  function cleanPathname(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
+  function cleanPathname(){try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}}
   function replaceRoute(route){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});if(String(route||'').startsWith('/')){url.pathname=route;url.hash='';}else{url.pathname='/';url.hash=route||'';}history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
   function isConfigRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/config'||hash==='#config'||hash==='#/config';}
   function isLoginRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/login'||hash==='#login'||hash==='#/login';}
@@ -7102,7 +7180,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function routeName(){
     var path='';
-    try{path=decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){path=String(location.pathname||'/').replace(/\/+$/,'')||'/';}
+    try{path=decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}
     var value=path.replace(/^\//,'').toLowerCase();
     if(legalRoutes.indexOf(value)>=0)return value;
     value=String(location.hash||'').replace(/^#\/?/,'').split(/[?&]/)[0].toLowerCase();
@@ -7142,7 +7220,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var account=window.beBackend&&beBackend.auth?beBackend.auth.currentUser:null;
     if(!account)return false;
     var path='/' ;
-    try{path=decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){path=String(location.pathname||'/').replace(/\/+$/,'')||'/';}
+    try{path=decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}
     if(path!=='/'||location.hash)return false;
     return !document.body.classList.contains('login-mode')&&
       !document.body.classList.contains('profile-page-active')&&
@@ -7268,10 +7346,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
     var target='/config'+(location.search||'');
-    try{history.pushState({beRoute:'config'},'',target);}catch(_){location.assign('/config');}
+    try{history.pushState({beRoute:'config'},'',target);}catch(_){location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/config'):'/config');}
     window.dispatchEvent(new CustomEvent('be:open-config'));
     window.setTimeout(function(){
-      if(!document.body.classList.contains('settings-page-active'))location.assign(target);
+      if(!document.body.classList.contains('settings-page-active'))location.assign(window.BETVLocaleURL?window.BETVLocaleURL(target):target);
     },220);
   }
   document.addEventListener('click',openProfileSettings,true);
@@ -7309,8 +7387,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function cleanPath(){
-    try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}
-    catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}
+    try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}
+    catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}
   }
 
   function hasLegacySupportUrl(){
@@ -7558,8 +7636,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function cleanPath(){
-    try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}
-    catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}
+    try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}
+    catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}
   }
 
   function routeInfo(){
@@ -8169,8 +8247,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var loadToken=0;
 
   function cleanPath(){
-    try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}
-    catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}
+    try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}
+    catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}
   }
   function isBillieRoute(){
     var path=cleanPath().toLowerCase();
@@ -8418,7 +8496,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!link)return;
     event.preventDefault();
     if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/billie-eilish');
-    else location.assign('/billie-eilish');
+    else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/billie-eilish'):'/billie-eilish');
   });
   page.addEventListener('click',function(event){
     var movieLink=event.target&&event.target.closest?event.target.closest('[data-billie-movie-link="true"]'):null;
@@ -8426,10 +8504,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     event.preventDefault();
     var destination=movieLink.getAttribute('href')||'/';
     if(window.BETVPublicRoutes)window.BETVPublicRoutes.go(destination);
-    else location.assign(destination);
+    else location.assign(window.BETVLocaleURL?window.BETVLocaleURL(destination):destination);
   });
-  if(homeButton)homeButton.addEventListener('click',function(){if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/');else location.assign('/');});
-  if(notificationButton)notificationButton.addEventListener('click',function(){if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/atualizacoes');else location.assign('/atualizacoes');});
+  if(homeButton)homeButton.addEventListener('click',function(){if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/');else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');});
+  if(notificationButton)notificationButton.addEventListener('click',function(){if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/atualizacoes');else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/atualizacoes'):'/atualizacoes');});
   if(avatarButton)avatarButton.addEventListener('click',function(){
     window.dispatchEvent(new CustomEvent('be:close-billie-page'));
     var profileAction=document.querySelector('#userDropdown [data-public-action="profile"]');
@@ -8495,20 +8573,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var avatar=document.getElementById('donatePageAvatar');
 
   var CHECKOUT_FUNCTION_NAME='create-donation-checkout';
-  var DEFAULT_MINIMUM_DONATION_CENTS=500;
+  var DONATION_LOCALE=String(window.BETVLocale&&window.BETVLocale.locale||navigator.language||'pt-BR');
+  var DONATION_CURRENCY=String(window.BETVRegional&&window.BETVRegional.currency||'BRL').toUpperCase()==='USD'?'USD':'BRL';
+  var DEFAULT_MINIMUM_DONATION_CENTS={BRL:500,USD:100};
   var NGO_BATCH_SIZE=12;
   var SUPPORTERS_INITIAL_LIMIT=48;
   var SUPPORTERS_BATCH_SIZE=10;
   var ngoMobileMedia=window.matchMedia?window.matchMedia('(max-width:760px)'):null;
 
-  function cleanPath(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
+  function cleanPath(){try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}}
   function isRoute(){var path=cleanPath().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/ong'||hash==='#ong'||hash==='#/ong';}
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];});}
   function imageUrl(value){var raw=String(value||'').trim();if(!raw)return '';var resolved=typeof window.beMediaUrl==='function'?window.beMediaUrl(raw):raw;return resolved&&resolved!=='#'?resolved:'';}
   function active(item){return item&&item.active!==false&&String(item.active).toLowerCase()!=='false';}
   function donationSlug(value){return String(value||'ong').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'ong';}
+  function i18nText(source,variables){
+    if(window.BETVI18n&&typeof window.BETVI18n.t==='function')return window.BETVI18n.t(source,variables||{});
+    return String(source||'').replace(/\{([a-zA-Z0-9_]+)\}/g,function(match,key){return variables&&Object.prototype.hasOwnProperty.call(variables,key)?String(variables[key]):match;});
+  }
   function parseDonationCents(value){
-    var raw=String(value||'').trim().replace(/^r\$\s*/i,'').replace(/\s+/g,'').replace(/[^0-9.,]/g,'');
+    var raw=String(value||'').trim().replace(/\s+/g,'').replace(/[^0-9.,]/g,'');
     if(!raw)return NaN;
     var comma=raw.lastIndexOf(','),dot=raw.lastIndexOf('.'),decimal=Math.max(comma,dot);
     var normalized;
@@ -8520,10 +8604,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var amount=Number(normalized);
     return Number.isFinite(amount)?Math.round(amount*100):NaN;
   }
-  function formatDonationCents(cents){return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100);}
-  function minimumDonationCents(value){
-    var cents=Number(value);
-    return Number.isInteger(cents)&&cents>=100&&cents<=100000000?cents:DEFAULT_MINIMUM_DONATION_CENTS;
+  function formatDonationCents(cents,currency){
+    return new Intl.NumberFormat(DONATION_LOCALE,{style:'currency',currency:currency||DONATION_CURRENCY}).format(Number(cents||0)/100);
+  }
+  function donationCurrencySymbol(){
+    try{
+      var part=new Intl.NumberFormat(DONATION_LOCALE,{style:'currency',currency:DONATION_CURRENCY,currencyDisplay:'narrowSymbol'}).formatToParts(0).find(function(item){return item.type==='currency';});
+      return part&&part.value?part.value:(DONATION_CURRENCY==='USD'?'$':'R$');
+    }catch(_){return DONATION_CURRENCY==='USD'?'$':'R$';}
+  }
+  function minimumDonationCents(item){
+    var source=item&&typeof item==='object'?(DONATION_CURRENCY==='USD'?item.minimumDonationUsdCents:item.minimumDonationCents):item;
+    var cents=Number(source);
+    return Number.isInteger(cents)&&cents>=100&&cents<=100000000?cents:DEFAULT_MINIMUM_DONATION_CENTS[DONATION_CURRENCY];
   }
   function donationRequestId(){
     if(window.crypto&&typeof window.crypto.randomUUID==='function')return window.crypto.randomUUID();
@@ -8535,20 +8628,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var hex=Array.prototype.map.call(bytes,function(value){return value.toString(16).padStart(2,'0');}).join('');
       return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
     }
-    throw new Error('O navegador não conseguiu gerar uma identificação segura para o pagamento.');
+    throw new Error(i18nText('O navegador não conseguiu gerar uma identificação segura para o pagamento.'));
   }
   function checkoutErrorMessage(error,data){
     var code=String(data&&data.code||'');
-    if(code==='below_minimum')return 'O valor mínimo desta ONG é '+formatDonationCents(Number(data.minimumDonationCents)||DEFAULT_MINIMUM_DONATION_CENTS)+'.';
-    if(code==='rate_limited')return 'Muitas tentativas seguidas. Aguarde um minuto e tente novamente.';
-    if(code==='stripe_not_configured')return 'O checkout ainda não foi configurado no servidor.';
-    if(code==='ngo_not_found')return 'Esta ONG não está mais disponível.';
-    return String(data&&data.error||error&&error.message||'Não foi possível abrir o checkout agora.');
+    var responseCurrency=String(data&&data.currency||DONATION_CURRENCY).toUpperCase()==='USD'?'USD':'BRL';
+    if(code==='below_minimum')return i18nText('O valor mínimo desta ONG é {amount}.',{amount:formatDonationCents(Number(data.minimumDonationCents)||DEFAULT_MINIMUM_DONATION_CENTS[responseCurrency],responseCurrency)});
+    if(code==='rate_limited')return i18nText('Muitas tentativas seguidas. Aguarde um minuto e tente novamente.');
+    if(code==='stripe_not_configured')return i18nText('O checkout ainda não foi configurado no servidor.');
+    if(code==='ngo_not_found')return i18nText('Esta ONG não está mais disponível.');
+    return String(data&&data.error||error&&error.message||i18nText('Não foi possível abrir o checkout agora.'));
   }
   async function createDonationCheckout(ngoId,cents,requestId){
     var client=window.beBackend&&window.beBackend.client;
-    if(!client||!client.functions||typeof client.functions.invoke!=='function')throw new Error('O checkout seguro não está disponível.');
-    var result=await client.functions.invoke(CHECKOUT_FUNCTION_NAME,{body:{ngoId:String(ngoId||''),amountCents:cents,requestId:requestId}});
+    if(!client||!client.functions||typeof client.functions.invoke!=='function')throw new Error(i18nText('O checkout seguro não está disponível.'));
+    var result=await client.functions.invoke(CHECKOUT_FUNCTION_NAME,{body:{ngoId:String(ngoId||''),amountCents:cents,requestId:requestId,currency:DONATION_CURRENCY,locale:DONATION_LOCALE,returnPath:String(window.BETVLocale&&window.BETVLocale.prefix||'')+'/ong'}});
     var data=result&&result.data&&typeof result.data==='object'?result.data:null;
     if(result&&result.error){
       try{if(result.error.context&&typeof result.error.context.json==='function')data=await result.error.context.json();}catch(_){ }
@@ -8560,7 +8654,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try{
       var parsed=new URL(url);
       if(parsed.protocol!=='https:'||!/(^|\.)stripe\.com$/i.test(parsed.hostname))throw new Error('invalid_checkout_url');
-    }catch(_){throw new Error('A Stripe não retornou um checkout válido.');}
+    }catch(_){throw new Error(i18nText('A Stripe não retornou um checkout válido.'));}
     return url;
   }
 
@@ -8617,27 +8711,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var records=(Array.isArray(items)?items:[]).filter(active).sort(function(a,b){return (Number(a.order)||0)-(Number(b.order)||0);});
     ngoRecordCount=records.length;
     visibleNgoCount=Math.min(NGO_BATCH_SIZE,ngoRecordCount);
-    if(!records.length){list.innerHTML='';status.hidden=false;status.textContent='Nenhuma ONG foi publicada ainda.';updateShowMoreButton();return;}
+    if(!records.length){list.innerHTML='';status.hidden=false;status.textContent=i18nText('Nenhuma ONG foi publicada ainda.');updateShowMoreButton();return;}
     status.hidden=true;
     list.innerHTML=records.map(function(item,index){
       var title=String(item.title||item.name||'ONG').trim();
-      var description=String(item.description||'Conheça a atuação desta organização e escolha apoiar esta causa.').trim();
+      var description=String(item.description||i18nText('Conheça a atuação desta organização e escolha apoiar esta causa.')).trim();
       var image=imageUrl(item.imageUrl||item.bannerUrl||item.thumbnailUrl||'');
       var id='donate-ngo-'+String(item.id||index).replace(/[^a-z0-9_-]/gi,'-');
       var amountId=id+'-amount',hintId=id+'-amount-hint',errorId=id+'-amount-error';
       var ngoReference=String(item.id||donationSlug(title));
-      var minimumCents=minimumDonationCents(item.minimumDonationCents);
+      var minimumCents=minimumDonationCents(item);
       var minimumLabel=formatDonationCents(minimumCents);
+      var currencySymbol=donationCurrencySymbol();
+      var amountPlaceholder=(minimumCents/100).toLocaleString(DONATION_LOCALE,{minimumFractionDigits:2,maximumFractionDigits:2});
       return '<article class="donate-ngo-card" data-ngo-card>'+ 
-        '<button class="donate-ngo-toggle" type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="Conhecer '+esc(title)+'" data-ngo-title="'+esc(title)+'">'+
-          (image?'<img loading="lazy" decoding="async" src="'+esc(image)+'" alt="Banner da '+esc(title)+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
+        '<button class="donate-ngo-toggle" type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="'+esc(i18nText('Conhecer {name}',{name:title}))+'" data-ngo-title="'+esc(title)+'">'+
+          (image?'<img loading="lazy" decoding="async" src="'+esc(image)+'" alt="'+esc(i18nText('Banner da {name}',{name:title}))+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
         '</button>'+ 
         '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3 class="donate-ngo-name">'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
-          '<div class="donate-ngo-donation" data-donation-box data-ngo-reference="'+esc(ngoReference)+'" data-minimum-donation-cents="'+esc(minimumCents)+'">'+
-            '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">Qual valor você deseja doar?</label>'+
-            '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">R$</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="'+esc((minimumCents/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}))+'" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
-            '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">Valor mínimo: '+esc(minimumLabel)+'</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
-            '<button class="donate-ngo-support-button" type="button" data-stripe-donation aria-disabled="true" disabled>Doar</button>'+
+          '<div class="donate-ngo-donation" data-donation-box data-ngo-reference="'+esc(ngoReference)+'" data-minimum-donation-cents="'+esc(minimumCents)+'" data-currency="'+esc(DONATION_CURRENCY)+'">'+
+            '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">'+esc(i18nText('Qual valor você deseja doar?'))+'</label>'+
+            '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">'+esc(currencySymbol)+'</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="'+esc(amountPlaceholder)+'" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
+            '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">'+esc(i18nText('Valor mínimo: {amount}',{amount:minimumLabel}))+'</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
+            '<button class="donate-ngo-support-button" type="button" data-stripe-donation aria-disabled="true" disabled>'+esc(i18nText('Doar'))+'</button>'+
           '</div>'+
         '</div></div></div></article>';
     }).join('');
@@ -8686,7 +8782,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         donationLink.classList.toggle('is-loading',busy);
         donationLink.setAttribute('aria-busy',String(busy));
         donationLink.disabled=busy||donationLink.getAttribute('aria-disabled')==='true';
-        if(busy)donationLink.textContent='Abrindo checkout…';
+        if(busy)donationLink.textContent=i18nText('Abrindo checkout…');
       }
 
       function updateDonationButton(showError){
@@ -8700,17 +8796,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         amountField.classList.toggle('is-invalid',hasError);
         amountInput.setAttribute('aria-invalid',String(hasError));
         amountError.hidden=!hasError;
-        amountError.textContent=tooLow?'O valor mínimo desta ONG é '+formatDonationCents(minimumCents)+'.':(tooHigh?'O valor informado é muito alto.':(invalid?'Digite um valor válido.':''));
+        amountError.textContent=tooLow?i18nText('O valor mínimo desta ONG é {amount}.',{amount:formatDonationCents(minimumCents)}):(tooHigh?i18nText('O valor informado é muito alto.'):(invalid?i18nText('Digite um valor válido.'):''));
         donationLink.setAttribute('aria-disabled',valid?'false':'true');
         donationLink.disabled=!valid||checkoutBusy;
-        if(!checkoutBusy)donationLink.textContent=valid?'Doar '+formatDonationCents(cents):'Doar';
+        if(!checkoutBusy)donationLink.textContent=valid?i18nText('Doar {amount}',{amount:formatDonationCents(cents)}):i18nText('Doar');
         return valid?cents:false;
       }
 
       amountInput.addEventListener('input',function(){updateDonationButton(true);});
       amountInput.addEventListener('blur',function(){
         var cents=parseDonationCents(amountInput.value);
-        if(Number.isFinite(cents))amountInput.value=(cents/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if(Number.isFinite(cents))amountInput.value=(cents/100).toLocaleString(DONATION_LOCALE,{minimumFractionDigits:2,maximumFractionDigits:2});
         updateDonationButton(true);
       });
       amountInput.addEventListener('keydown',function(event){
@@ -8758,17 +8854,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function supporterMarkup(item){
-    var displayName=String(item.display_name||item.displayName||item.user_display_name||'Apoiador').trim()||'Apoiador';
+    var displayName=String(item.display_name||item.displayName||item.user_display_name||i18nText('Apoiador')).trim()||i18nText('Apoiador');
     var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
     var banner=imageUrl(item.banner_url||item.bannerUrl||'');
     var avatarUrl=imageUrl(item.avatar_url||item.avatarUrl||'');
     var initials=supporterInitials(displayName);
     var route='/@'+encodeURIComponent(username);
-    return '<a class="donate-supporter-card" href="'+esc(route)+'" data-supporter-profile aria-label="Abrir perfil de '+esc(displayName)+'">'+
+    return '<a class="donate-supporter-card" href="'+esc(route)+'" data-supporter-profile aria-label="'+esc(i18nText('Abrir perfil de {name}',{name:displayName}))+'">'+
       '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
       '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
       '<span class="donate-supporter-content">'+
-        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'">'+(avatarUrl?'<img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatarUrl)+'" alt="Avatar de '+esc(displayName)+'">':'<span aria-hidden="true">'+esc(initials)+'</span>')+'</span>'+ 
+        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'">'+(avatarUrl?'<img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatarUrl)+'" alt="'+esc(i18nText('Avatar de {name}',{name:displayName}))+'">':'<span aria-hidden="true">'+esc(initials)+'</span>')+'</span>'+ 
         '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong><small>@'+esc(username)+'</small></span>'+ 
       '</span>'+ 
     '</a>';
@@ -9041,7 +9137,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     closeNotificationPopup();
     var route='/atualizacoes'+(id?'/'+encodeURIComponent(id):'');
     if(window.BETVPublicRoutes)window.BETVPublicRoutes.go(route);
-    else location.href=route;
+    else location.href=window.BETVLocaleURL?window.BETVLocaleURL(route):route;
   }
 
   async function load(force){
@@ -9097,13 +9193,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!link)return;
     event.preventDefault();
     if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/ong');
-    else location.assign('/ong');
+    else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/ong'):'/ong');
   });
 
   if(home)home.addEventListener('click',function(){
     closeNotificationPopup();
     if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/');
-    else location.href='/';
+    else location.href=window.BETVLocaleURL?window.BETVLocaleURL('/'):'/';
   });
 
   if(showMoreButton)showMoreButton.addEventListener('click',showNextNgoBatch);
@@ -9132,7 +9228,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var account=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
     if(!account){
       if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');
-      else location.href='/login';
+      else location.href=window.BETVLocaleURL?window.BETVLocaleURL('/login'):'/login';
       return;
     }
     close();

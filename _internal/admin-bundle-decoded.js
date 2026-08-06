@@ -516,9 +516,9 @@ document.head.appendChild(s);
       const parsed = Number(value);
       return Number.isFinite(parsed) ? parsed : fallback;
     };
-    const money = cents => (numberOr(cents, 0) / 100).toLocaleString('pt-BR', {
+    const money = (cents, currency = 'BRL') => (numberOr(cents, 0) / 100).toLocaleString(currency === 'USD' ? 'en-US' : 'pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: String(currency || 'BRL').toUpperCase() === 'USD' ? 'USD' : 'BRL'
     });
     const statusText = status => ({
       checkout_created: 'Criado',
@@ -545,6 +545,10 @@ document.head.appendChild(s);
     const highestDonation = insights.highestDonation && typeof insights.highestDonation === 'object'
       ? insights.highestDonation
       : null;
+    const currencyInsights = insights.byCurrency && typeof insights.byCurrency === 'object' ? insights.byCurrency : {};
+    const brlInsights = currencyInsights.BRL && typeof currencyInsights.BRL === 'object' ? currencyInsights.BRL : {};
+    const usdInsights = currencyInsights.USD && typeof currencyInsights.USD === 'object' ? currencyInsights.USD : {};
+    const dualMoney = field => `${money(brlInsights[field], 'BRL')} · ${money(usdInsights[field], 'USD')}`;
 
     const insightCard = (label, value, detail, icon) => `
       <article class="donation-insight-card">
@@ -618,19 +622,19 @@ document.head.appendChild(s);
             </div>
           </div>
           <div class="donation-insights-grid">
-            ${insightCard('Valor total selecionado', money(insights.totalAmountCents), `${numberOr(insights.totalCheckouts).toLocaleString('pt-BR')} checkouts criados`, 'R$')}
-            ${insightCard('Média por checkout', money(insights.averageAmountCents), 'média dos valores escolhidos', '↗')}
+            ${insightCard('Valor total selecionado', dualMoney('totalAmountCents'), `${numberOr(insights.totalCheckouts).toLocaleString('pt-BR')} checkouts criados`, '¤')}
+            ${insightCard('Média por checkout', dualMoney('averageAmountCents'), 'médias separadas por moeda', '↗')}
             ${insightCard('Usuários únicos', numberOr(insights.uniqueSupporters).toLocaleString('pt-BR'), 'pessoas que abriram um checkout', '♙')}
             ${insightCard('Últimos 7 dias', numberOr(insights.last7Days).toLocaleString('pt-BR'), 'checkouts iniciados nesse período', '◷')}
             ${insightCard(
               'ONG mais escolhida',
               topNgo ? (topNgo.title || 'ONG') : 'Sem dados',
-              topNgo ? `${numberOr(topNgo.checkoutCount).toLocaleString('pt-BR')} escolhas · ${money(topNgo.amountCents)}` : 'aparecerá após o primeiro checkout',
+              topNgo ? `${numberOr(topNgo.checkoutCount).toLocaleString('pt-BR')} escolhas` : 'aparecerá após o primeiro checkout',
               '♡'
             )}
             ${insightCard(
               'Maior valor escolhido',
-              highestDonation ? money(highestDonation.amountCents) : money(0),
+              highestDonation ? money(highestDonation.amountCents, highestDonation.currency) : money(0, 'BRL'),
               highestDonation
                 ? `${highestDonation.userDisplayName || highestDonation.username || 'Usuário'} · ${highestDonation.ngoTitle || 'ONG'}`
                 : 'aparecerá após o primeiro checkout',
@@ -647,8 +651,8 @@ document.head.appendChild(s);
             row.userDisplayName,
             row.username && `@${row.username}`,
             row.ngoTitle,
-            money(row.amountCents),
-            money(row.minimumCents),
+            money(row.amountCents, row.currency),
+            money(row.minimumCents, row.currency),
             statusText(row.status)
           ].join(' ')).includes(needle))
         : rows;
@@ -669,8 +673,8 @@ document.head.appendChild(s);
         return `<tr>
           <td><div class="donation-user-cell"><strong>${esc(displayName)}</strong>${handle && displayName !== handle ? `<small>${esc(handle)}</small>` : ''}</div></td>
           <td><strong class="donation-ngo-cell">${esc(row.ngoTitle || 'ONG removida')}</strong></td>
-          <td><strong class="donation-money">${esc(money(row.amountCents))}</strong></td>
-          <td>${esc(money(row.minimumCents))}</td>
+          <td><strong class="donation-money">${esc(money(row.amountCents, row.currency))}</strong></td>
+          <td>${esc(money(row.minimumCents, row.currency))}</td>
           <td><span class="donation-status ${esc(statusClass(row.status))}">${esc(statusText(row.status))}</span></td>
           <td><time datetime="${esc(row.createdAt || '')}">${esc(formatDateTime(row.createdAt))}</time></td>
         </tr>`;
@@ -1143,7 +1147,7 @@ document.head.appendChild(s);
       if (!rows.length) {
         $('#list').innerHTML = '<div class="empty">Nenhum item encontrado.</div>';
       } else if (name === 'ongs') {
-        $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>ONG</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => { const minimum = Number.isInteger(Number(item.minimumDonationCents)) && Number(item.minimumDonationCents) >= 100 ? Number(item.minimumDonationCents) : 500; return `<tr><td><strong>${esc(item.title || item.name || item.id)}</strong><br><small style="color:var(--a-muted)">Mínimo: ${esc(new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(minimum/100))} · ${esc(item.id)}</small></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></td></tr>`; }).join('')}</tbody></table></div>`;
+        $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>ONG</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => { const minimum = Number.isInteger(Number(item.minimumDonationCents)) && Number(item.minimumDonationCents) >= 100 ? Number(item.minimumDonationCents) : 500; const minimumUsd = Number.isInteger(Number(item.minimumDonationUsdCents)) && Number(item.minimumDonationUsdCents) >= 100 ? Number(item.minimumDonationUsdCents) : 100; return `<tr><td><strong>${esc(item.title || item.name || item.id)}</strong><br><small style="color:var(--a-muted)">Mínimos: ${esc(new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(minimum/100))} · ${esc(new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(minimumUsd/100))} · ${esc(item.id)}</small></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></td></tr>`; }).join('')}</tbody></table></div>`;
       } else {
         $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.displayName || item.email || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}${name === 'videos' ? `<br>Link: /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id))}` : ''}</small></td><td>${esc(item.type || name)}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions">${name === 'users' ? '' : `<button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button>`}</div></td></tr>`).join('')}</tbody></table></div>`;
       }
@@ -1167,7 +1171,11 @@ document.head.appendChild(s);
         ? Number(item.minimumDonationCents)
         : 500;
       const minimumDonationReais = (minimumDonationCents / 100).toFixed(2);
-      return `<div class="form-grid"><div class="field full"><label>Nome da ONG *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}" placeholder="Ex.: UNICEF"></div><div class="field full"><label>Descrição da ONG *</label><textarea class="a-textarea" rows="7" maxlength="4000" name="description" required placeholder="Explique a causa, o trabalho realizado e como o apoio ajuda.">${esc(item.description || '')}</textarea></div><div class="field full"><label>Valor mínimo da doação (R$) *</label><input class="a-input" type="number" min="1" max="1000000" step="0.01" inputmode="decimal" name="minimumDonation" required value="${esc(minimumDonationReais)}" placeholder="5,00"><small>Este mínimo será validado novamente no servidor antes de o checkout da Stripe ser criado.</small></div>${imageField('Banner da ONG *', 'imageUrl', item.imageUrl || item.bannerUrl || '')}</div>`;
+      const minimumDonationUsdCents = Number.isInteger(Number(item.minimumDonationUsdCents)) && Number(item.minimumDonationUsdCents) >= 100
+        ? Number(item.minimumDonationUsdCents)
+        : 100;
+      const minimumDonationDollars = (minimumDonationUsdCents / 100).toFixed(2);
+      return `<div class="form-grid"><div class="field full"><label>Nome da ONG *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}" placeholder="Ex.: UNICEF"></div><div class="field full"><label>Descrição da ONG *</label><textarea class="a-textarea" rows="7" maxlength="4000" name="description" required placeholder="Explique a causa, o trabalho realizado e como o apoio ajuda.">${esc(item.description || '')}</textarea></div><div class="field"><label>Valor mínimo no Brasil (R$) *</label><input class="a-input" type="number" min="1" max="1000000" step="0.01" inputmode="decimal" name="minimumDonation" required value="${esc(minimumDonationReais)}" placeholder="5,00"></div><div class="field"><label>Valor mínimo internacional (US$) *</label><input class="a-input" type="number" min="1" max="1000000" step="0.01" inputmode="decimal" name="minimumDonationUsd" required value="${esc(minimumDonationDollars)}" placeholder="1.00"></div><div class="field full"><small>O site escolhe BRL para dispositivos da região Brasil e USD para as demais regiões. Os dois mínimos são validados novamente no servidor.</small></div>${imageField('Banner da ONG *', 'imageUrl', item.imageUrl || item.bannerUrl || '')}</div>`;
     }
     const showMedia = !['sections','users'].includes(name);
     const sections = context.sections || [];
@@ -1705,13 +1713,19 @@ document.head.appendChild(s);
           data.title = String(data.title || '').trim();
           data.description = String(data.description || '').trim();
           const minimumDonation = Number(String(data.minimumDonation || '').replace(',', '.'));
+          const minimumDonationUsd = Number(String(data.minimumDonationUsd || '').replace(',', '.'));
           if (!data.title || !data.description) throw new Error('Preencha o nome e a descrição da ONG.');
           if (!String(data.imageUrl || '').trim()) throw new Error('Adicione o banner da ONG.');
           if (!Number.isFinite(minimumDonation) || minimumDonation < 1 || minimumDonation > 1000000) {
             throw new Error('Informe um valor mínimo entre R$ 1,00 e R$ 1.000.000,00.');
           }
+          if (!Number.isFinite(minimumDonationUsd) || minimumDonationUsd < 1 || minimumDonationUsd > 1000000) {
+            throw new Error('Informe um valor mínimo entre US$ 1.00 e US$ 1,000,000.00.');
+          }
           data.minimumDonationCents = Math.round(minimumDonation * 100);
+          data.minimumDonationUsdCents = Math.round(minimumDonationUsd * 100);
           delete data.minimumDonation;
+          delete data.minimumDonationUsd;
           data.type = 'ong';
           data.bannerUrl = String(data.imageUrl || '').trim();
           data.active = 'true';

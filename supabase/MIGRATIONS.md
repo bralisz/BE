@@ -46,3 +46,16 @@ A migration `20260804164611_cross_device_user_preferences.sql` cria a tabela pri
 - Adiciona paginação por deslocamento para buscar mais 10 perfis por vez.
 - Preserva a ordem do apoio mais recente e evita exposição de valores ou dados de pagamento.
 
+
+## `20260806082500_i18n_and_regional_donations.sql`
+
+- Adiciona traduções persistidas em inglês (`en-us`) e espanhol (`es`) aos conteúdos públicos.
+- Adiciona mínimo internacional em dólar para cada ONG.
+- Registra a moeda (`brl` ou `usd`) em cada checkout.
+- Mantém os mínimos e a moeda validados no PostgreSQL e no Edge Function.
+- Expõe somente traduções e campos públicos pelas funções de leitura.
+
+## `20260806084000_admin_donation_currency.sql`
+
+- Inclui a moeda em cada linha do histórico administrativo de doações.
+- Separa totais e médias por BRL e USD para não somar moedas diferentes.

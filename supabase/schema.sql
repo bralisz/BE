@@ -67,6 +67,23 @@ set data = jsonb_set(
 updated_at = now()
 where collection = 'ongs';
 
+update public.content_items
+set data = jsonb_set(
+  data,
+  '{minimumDonationUsdCents}',
+  to_jsonb(
+    case
+      when coalesce(data ->> 'minimumDonationUsdCents', '') ~ '^[0-9]+$'
+       and (data ->> 'minimumDonationUsdCents')::numeric between 100 and 100000000
+        then (data ->> 'minimumDonationUsdCents')::integer
+      else 100
+    end
+  ),
+  true
+),
+updated_at = now()
+where collection = 'ongs';
+
 alter table public.content_items
   drop constraint if exists content_items_ong_minimum_donation_check;
 alter table public.content_items
@@ -78,6 +95,10 @@ alter table public.content_items
       and jsonb_typeof(data -> 'minimumDonationCents') = 'number'
       and coalesce(data ->> 'minimumDonationCents', '') ~ '^[0-9]+$'
       and (data ->> 'minimumDonationCents')::numeric between 100 and 100000000
+      and data ? 'minimumDonationUsdCents'
+      and jsonb_typeof(data -> 'minimumDonationUsdCents') = 'number'
+      and coalesce(data ->> 'minimumDonationUsdCents', '') ~ '^[0-9]+$'
+      and (data ->> 'minimumDonationUsdCents')::numeric between 100 and 100000000
     )
   );
 
@@ -104,6 +125,7 @@ create table if not exists public.donation_checkout_requests (
   ngo_id text not null,
   amount_cents integer not null check (amount_cents between 100 and 100000000),
   minimum_cents integer not null check (minimum_cents between 100 and 100000000),
+  currency text not null default 'brl' check (currency in ('brl','usd')),
   stripe_session_id text unique,
   request_id uuid not null,
   user_display_name text not null default '',
@@ -124,6 +146,8 @@ create index if not exists donation_checkout_requests_created_idx
   on public.donation_checkout_requests(created_at desc);
 create index if not exists donation_checkout_requests_status_created_idx
   on public.donation_checkout_requests(status, created_at desc);
+create index if not exists donation_checkout_requests_currency_created_idx
+  on public.donation_checkout_requests(currency, created_at desc);
 
 create or replace function public.is_admin()
 returns boolean
@@ -629,7 +653,8 @@ as $$
       'youtube', s.data -> 'youtube',
       'website', s.data -> 'website',
       'discordUrl', s.data -> 'discordUrl',
-      'shareImage', s.data -> 'shareImage'
+      'shareImage', s.data -> 'shareImage',
+      'translations', s.data -> 'translations'
     ))
     when 'ong' then jsonb_strip_nulls(jsonb_build_object(
       'bannerUrl', s.data -> 'bannerUrl'
@@ -646,7 +671,8 @@ as $$
       'xUrl', s.data -> 'xUrl',
       'youtube', s.data -> 'youtube',
       'spotify', s.data -> 'spotify',
-      'website', s.data -> 'website'
+      'website', s.data -> 'website',
+      'translations', s.data -> 'translations'
     ))
     else null
   end
@@ -694,6 +720,7 @@ as $$
       'sourceCollection', c.data -> 'sourceCollection',
       'thumbnailUrl', c.data -> 'thumbnailUrl',
       'title', c.data -> 'title',
+      'translations', c.data -> 'translations',
       'type', c.data -> 'type',
       'videoDuration', c.data -> 'videoDuration',
       'videoId', c.data -> 'videoId',
@@ -1044,6 +1071,143 @@ begin
       'averageAmountCents', (select coalesce(round(avg(amount_cents)), 0) from enriched),
       'uniqueSupporters', (select count(distinct user_id) from enriched),
       'last7Days', (select count(*) from enriched where created_at >= now() - interval '7 days'),
+      'topNgo', (select payload from top_ngo),
+      'highestDonation', (select payload from highest)
+    )
+  )
+  into v_result;
+
+  return coalesce(v_result, jsonb_build_object('rows', '[]'::jsonb, 'insights', '{}'::jsonb));
+end;
+$$;
+
+revoke all on function public.get_admin_donation_overview(text, integer) from public, anon;
+grant execute on function public.get_admin_donation_overview(text, integer) to authenticated;
+
+notify pgrst, 'reload schema';
+
+
+-- Definição final com valores administrativos separados por moeda.
+create or replace function public.get_admin_donation_overview(
+  p_search text default null,
+  p_limit integer default 250
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_search text := lower(trim(coalesce(p_search, '')));
+  v_limit integer := greatest(1, least(coalesce(p_limit, 250), 500));
+  v_result jsonb;
+begin
+  if auth.uid() is null or not private.is_admin() then
+    raise exception 'administrator access required' using errcode = '42501';
+  end if;
+
+  with enriched as (
+    select
+      d.id,
+      d.user_id,
+      d.ngo_id,
+      d.amount_cents,
+      d.minimum_cents,
+      upper(coalesce(nullif(d.currency, ''), 'brl')) as currency,
+      d.status,
+      d.stripe_session_id,
+      d.created_at,
+      d.paid_at,
+      coalesce(nullif(d.user_display_name, ''), nullif(p.display_name, ''), 'Usuário') as user_display_name,
+      coalesce(nullif(d.user_username, ''), p.username::text, '') as user_username,
+      coalesce(nullif(d.ngo_title, ''), nullif(c.data ->> 'title', ''), 'ONG removida') as ngo_title
+    from public.donation_checkout_requests d
+    left join public.profiles p on p.id = d.user_id
+    left join public.content_items c
+      on c.collection = 'ongs'
+     and c.id::text = d.ngo_id
+  ),
+  filtered as (
+    select *
+    from enriched
+    where v_search = ''
+       or lower(user_display_name) like '%' || v_search || '%'
+       or lower(user_username) like '%' || v_search || '%'
+       or lower(ngo_title) like '%' || v_search || '%'
+       or lower(status) like '%' || v_search || '%'
+       or lower(currency) like '%' || v_search || '%'
+       or (
+         regexp_replace(v_search, '[^0-9]', '', 'g') <> ''
+         and amount_cents::text like '%' || regexp_replace(v_search, '[^0-9]', '', 'g') || '%'
+       )
+    order by created_at desc
+    limit v_limit
+  ),
+  currency_totals as (
+    select
+      currency,
+      count(*) as checkout_count,
+      coalesce(sum(amount_cents), 0) as total_amount_cents,
+      coalesce(round(avg(amount_cents)), 0) as average_amount_cents
+    from enriched
+    group by currency
+  ),
+  top_ngo as (
+    select jsonb_build_object(
+      'ngoId', ngo_id,
+      'title', max(ngo_title),
+      'checkoutCount', count(*)
+    ) as payload
+    from enriched
+    group by ngo_id
+    order by count(*) desc, max(ngo_title)
+    limit 1
+  ),
+  highest as (
+    select jsonb_build_object(
+      'amountCents', amount_cents,
+      'currency', currency,
+      'userDisplayName', user_display_name,
+      'username', user_username,
+      'ngoTitle', ngo_title,
+      'createdAt', created_at
+    ) as payload
+    from enriched
+    order by amount_cents desc, created_at desc
+    limit 1
+  )
+  select jsonb_build_object(
+    'rows',
+      coalesce((
+        select jsonb_agg(jsonb_build_object(
+          'id', id,
+          'userId', user_id,
+          'userDisplayName', user_display_name,
+          'username', user_username,
+          'ngoId', ngo_id,
+          'ngoTitle', ngo_title,
+          'amountCents', amount_cents,
+          'minimumCents', minimum_cents,
+          'currency', currency,
+          'status', status,
+          'stripeSessionId', stripe_session_id,
+          'createdAt', created_at,
+          'paidAt', paid_at
+        ) order by created_at desc)
+        from filtered
+      ), '[]'::jsonb),
+    'insights', jsonb_build_object(
+      'totalCheckouts', (select count(*) from enriched),
+      'uniqueSupporters', (select count(distinct user_id) from enriched),
+      'last7Days', (select count(*) from enriched where created_at >= now() - interval '7 days'),
+      'byCurrency', coalesce((
+        select jsonb_object_agg(currency, jsonb_build_object(
+          'totalCheckouts', checkout_count,
+          'totalAmountCents', total_amount_cents,
+          'averageAmountCents', average_amount_cents
+        )) from currency_totals
+      ), '{}'::jsonb),
       'topNgo', (select payload from top_ngo),
       'highestDonation', (select payload from highest)
     )

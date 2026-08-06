@@ -8,19 +8,20 @@ const ALLOWED_COLLECTIONS = new Set([
 const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
-  'mediaType', 'minimumDonationCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
-  'sourceCollection', 'thumbnailUrl', 'title', 'type', 'videoDuration', 'videoId',
+  'mediaType', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
+  'sourceCollection', 'thumbnailUrl', 'title', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
 ]);
 const MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl']);
 const SITE_SETTING_FIELDS = new Set([
   'description', 'discordUrl', 'footerText', 'instagram', 'primaryColor',
+  'translations',
   'shareImage', 'siteName', 'website', 'xUrl', 'youtube'
 ]);
-const ONG_SETTING_FIELDS = new Set(['bannerUrl']);
+const ONG_SETTING_FIELDS = new Set(['bannerUrl', 'translations']);
 const BILLIE_SETTING_FIELDS = new Set([
   'bannerUrl', 'includeReferences', 'instagram', 'kicker', 'manualBio', 'portraitUrl',
-  'sourceMode', 'spotify', 'title', 'website', 'xUrl', 'youtube'
+  'sourceMode', 'spotify', 'title', 'translations', 'website', 'xUrl', 'youtube'
 ]);
 
 function config() {
@@ -58,6 +59,24 @@ function safeLink(value, allowLocal = true) {
   }
 }
 
+
+function sanitizeTranslations(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const allowedFields = new Set(['title','name','description','subtitle','body','summary','buttonLabel','label','text','manualBio','kicker','footerText','sourceUpdatedAt','translatedAt','provider']);
+  const result = {};
+  for (const locale of ['en-us','es']) {
+    const source = value[locale];
+    if (!source || typeof source !== 'object' || Array.isArray(source)) continue;
+    const translation = {};
+    for (const field of allowedFields) {
+      if (!Object.prototype.hasOwnProperty.call(source, field)) continue;
+      translation[field] = safeText(source[field], ['description','body','manualBio'].includes(field) ? 20000 : 1000);
+    }
+    result[locale] = translation;
+  }
+  return result;
+}
+
 function sanitizeItem(collection, row) {
   if (!row) return null;
   const raw = row.data && typeof row.data === 'object' ? row.data : {};
@@ -77,12 +96,17 @@ function sanitizeItem(collection, row) {
   for (const field of ['title', 'type', 'category', 'description', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? 4000 : 500);
   }
+  if (Object.prototype.hasOwnProperty.call(source, 'translations')) source.translations = sanitizeTranslations(source.translations);
   source.active = source.active !== false && String(source.active).toLowerCase() !== 'false';
   if (collection === 'ongs') {
     const minimumDonationCents = Number(source.minimumDonationCents);
     source.minimumDonationCents = Number.isInteger(minimumDonationCents) && minimumDonationCents >= 100 && minimumDonationCents <= 100000000
       ? minimumDonationCents
       : 500;
+    const minimumDonationUsdCents = Number(source.minimumDonationUsdCents);
+    source.minimumDonationUsdCents = Number.isInteger(minimumDonationUsdCents) && minimumDonationUsdCents >= 100 && minimumDonationUsdCents <= 100000000
+      ? minimumDonationUsdCents
+      : 100;
   }
   return {
     id: safeText(row.id, 100),
@@ -100,6 +124,7 @@ function sanitizeSettings(id, raw) {
   for (const field of allowed) {
     if (Object.prototype.hasOwnProperty.call(raw, field)) source[field] = raw[field];
   }
+  if (Object.prototype.hasOwnProperty.call(source, 'translations')) source.translations = sanitizeTranslations(source.translations);
   if (id === 'ong') {
     source.bannerUrl = mediaReference('settings', id, 'bannerUrl', source.bannerUrl);
   } else if (id === 'billie-eilish') {
