@@ -78,7 +78,11 @@ function sanitizeTranslations(value) {
 }
 
 function sanitizeItem(collection, row) {
-  if (!row) return null;
+  const wrapped = row && typeof row === 'object'
+    ? (row.get_public_content_items || row.item || row)
+    : null;
+  if (!wrapped || typeof wrapped !== 'object') return null;
+  row = wrapped;
   const raw = row.data && typeof row.data === 'object' ? row.data : {};
   const source = {};
   for (const field of PUBLIC_ITEM_FIELDS) {
@@ -225,7 +229,11 @@ module.exports = async function publicData(req, res) {
     const rows = await fetchRows(name, id);
     const payload = id ? (rows[0] || null) : rows;
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=600');
+    // Nunca mantém uma resposta vazia em cache: um vazio transitório fazia a Home
+    // interpretar que não existiam seções e ocultar todo o catálogo.
+    res.setHeader('Cache-Control', rows.length
+      ? 'public, max-age=0, s-maxage=20, stale-while-revalidate=120'
+      : 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     if (req.method === 'HEAD') return res.status(200).end();

@@ -562,8 +562,41 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
 
-  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','news','notifications','ongs','sections','series','settings','videos']);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
+  const ORIGINAL_MUSIC_TITLE_SECTION_IDS = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a'
+  ]);
+  const ORIGINAL_MUSIC_TITLE_SECTION_NAMES = new Set(['live performances & tv','videoclipes']);
+
+  function normalizedTitleContext(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  }
+
+  function isMusicTitleRecord(record) {
+    const sectionId = String(record?.sectionId || '').trim();
+    const context = [record?.sectionName, record?.sourceSectionTitle, record?.category, record?.type, record?.contentType]
+      .map(normalizedTitleContext)
+      .filter(Boolean)
+      .join(' ');
+    return ORIGINAL_MUSIC_TITLE_SECTION_IDS.has(sectionId)
+      || ORIGINAL_MUSIC_TITLE_SECTION_NAMES.has(normalizedTitleContext(record?.sectionName || record?.sourceSectionTitle))
+      || /(^|\s)(music|musica|song|faixa|track|album|videoclipe|live performances)(\s|$)/.test(context);
+  }
+
+  function shouldPreserveOriginalTitle(collection, record, requestedSlug = activeLocaleSlug()) {
+    const name = String(collection || record?.collection || '').trim().toLowerCase();
+    const slug = String(requestedSlug || 'pt-br').toLowerCase();
+    if (name === 'videos' && isMusicTitleRecord(record)) return true;
+    if (slug !== 'es') return false;
+    if (name === 'movies' || name === 'news') return true;
+    if (name === 'sections') {
+      const title = normalizedTitleContext(record?.title || record?.name);
+      return title === 'vanity fair';
+    }
+    return false;
+  }
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
@@ -585,13 +618,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function localizeContentRecord(record) {
+  function localizeContentRecord(record, collection = '') {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
+    if (shouldPreserveOriginalTitle(collection, record, slug)) {
+      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
+      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
+    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
@@ -605,42 +642,57 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return !localized || typeof localized !== 'object';
   }
 
+  const pendingTranslationBatches = new Set();
+
+  function requestMissingTranslationsInBackground(collection, records, slug) {
+    if (!records.length || !supabaseClient?.functions?.invoke) return;
+    // O trigger do Supabase traduz notificações após a publicação.
+    if (String(collection || '').toLowerCase() === 'notifications') return;
+    const ids = records.map(record => String(record.id || '')).filter(Boolean);
+    if (!ids.length) return;
+    const key = `${String(collection || '')}:${slug}:${ids.join(',')}`;
+    if (pendingTranslationBatches.has(key)) return;
+    pendingTranslationBatches.add(key);
+
+    window.setTimeout(async () => {
+      try {
+        for (let offset = 0; offset < ids.length; offset += 20) {
+          const batchIds = ids.slice(offset, offset + 20);
+          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+            body: { collection: String(collection), ids: batchIds, locales: [slug] }
+          });
+          if (result?.error) {
+            console.warn('Tradução automática indisponível; o conteúdo original foi mantido:', result.error.message || result.error);
+            break;
+          }
+        }
+      } catch (error) {
+        console.warn('Tradução automática indisponível; o conteúdo original foi mantido:', error?.message || error);
+      } finally {
+        pendingTranslationBatches.delete(key);
+      }
+    }, 0);
+  }
+
   async function ensureTranslatedRecords(collection, records) {
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
-    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(localizeContentRecord);
+
+    // Nunca bloqueia a exibição dos vídeos esperando a tradução automática.
+    // Traduções já salvas são aplicadas imediatamente; as ausentes são geradas
+    // em segundo plano e ficam disponíveis na próxima atualização da página.
+    if (slug !== 'pt-br' && TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) {
+      const missing = values.filter(record => recordNeedsTranslation(record, slug));
+      requestMissingTranslationsInBackground(collection, missing, slug);
     }
-    const missing = values.filter(record => recordNeedsTranslation(record, slug));
-    if (missing.length) {
-      try {
-        const translatedById = new Map();
-        for (let offset = 0; offset < missing.length; offset += 20) {
-          const batch = missing.slice(offset, offset + 20);
-          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-            body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
-          });
-          if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
-            console.warn('Um lote de tradução não foi concluído:', result?.error?.message || 'resposta inválida');
-            continue;
-          }
-          result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
-        }
-        values.forEach(record => {
-          const translation = translatedById.get(String(record.id));
-          if (!translation || typeof translation !== 'object') return;
-          if (!record.translations || typeof record.translations !== 'object') record.translations = {};
-          record.translations[slug] = translation;
-        });
-      } catch (error) {
-        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
-      }
-    }
-    return values.map(localizeContentRecord);
+
+    return values.map(record => localizeContentRecord(record, collection));
   }
 
   function queueRecordTranslation(collection, id) {
     if (!currentUser || currentUser.role !== 'admin' || !supabaseClient?.functions?.invoke) return;
+    // O trigger do banco já traduz notificações; evita chamada duplicada e 403.
+    if (String(collection || '').toLowerCase() === 'notifications') return;
     if (collection !== 'settings' && !TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) return;
     window.setTimeout(() => {
       supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
@@ -768,7 +820,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const publicValue = await readPublicData(name, id);
           if (!publicValue) return null;
           const translated = await ensureTranslatedRecords(name, [publicValue]);
-          return translated[0] || localizeContentRecord(publicValue);
+          return translated[0] || localizeContentRecord(publicValue, name);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -781,7 +833,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value);
+          return translated[0] || localizeContentRecord(value, name);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -793,7 +845,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value);
+        return translated[0] || localizeContentRecord(value, name);
       } catch (error) {
         throw mapAuthError(error);
       }
@@ -2235,20 +2287,40 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.beRenderMarkdown = markdownToHtml;
   window.beMarkdownPlainText = markdownToPlainText;
 
+  async function runHomeContentStep(label, task) {
+    try {
+      const result = await task();
+      return result !== false;
+    } catch (error) {
+      console.warn(`${label} indisponível:`, error?.message || error);
+      return false;
+    }
+  }
+
   window.addEventListener('load', async () => {
     setupHomeNavigation();
     setupDetailControls();
     try {
       if (!window.beBackend) return;
       await window.beBackend.ready;
-      await applySiteSettings();
-      await renderFeatured();
-      await renderVideoCatalog();
+
+      // Uma falha em configurações ou destaques não pode impedir o catálogo.
+      await runHomeContentStep('Configurações do site', applySiteSettings);
+      await runHomeContentStep('Destaques', renderFeatured);
+      const catalogLoaded = await runHomeContentStep('Catálogo de vídeos', renderVideoCatalog);
+
+      // Tenta novamente uma vez em caso de oscilação temporária da API.
+      if (!catalogLoaded) {
+        window.setTimeout(() => {
+          runHomeContentStep('Nova tentativa do catálogo de vídeos', renderVideoCatalog);
+        }, 1200);
+      }
+
       setupHomeNavigation();
       setupDetailControls();
-      await openContentDetailFromRoute();
+      await runHomeContentStep('Detalhes do conteúdo', openContentDetailFromRoute);
     } catch (error) {
-      console.warn('Conteúdo dinâmico indisponível:', error.message);
+      console.warn('Inicialização do conteúdo indisponível:', error?.message || error);
     } finally {
       window.__beContentReady = true;
       window.dispatchEvent(new Event('be:content-ready'));
@@ -2543,34 +2615,182 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     setupContentDetailInteractions(host);
   }
 
+  function unwrapPublicCatalogRow(row) {
+    if (!row || typeof row !== 'object') return null;
+    const wrapped = row.get_public_content_items || row.item || row;
+    if (!wrapped || typeof wrapped !== 'object') return null;
+    if (wrapped.data && typeof wrapped.data === 'object' && !Array.isArray(wrapped.data)) {
+      return {
+        id: wrapped.id,
+        ...wrapped.data,
+        createdAt: wrapped.data.createdAt || wrapped.created_at || wrapped.createdAt || '',
+        updatedAt: wrapped.data.updatedAt || wrapped.updated_at || wrapped.updatedAt || ''
+      };
+    }
+    return { ...wrapped };
+  }
+
+  function normalizePublicCatalogRows(payload) {
+    const rows = Array.isArray(payload)
+      ? payload
+      : (Array.isArray(payload?.data) ? payload.data : []);
+    return rows.map(unwrapPublicCatalogRow).filter(Boolean);
+  }
+
+  async function fetchCatalogJson(url, options = {}, timeoutMs = 12000) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timeout = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : 0;
+    try {
+      const response = await fetch(url, { ...options, signal: controller?.signal });
+      if (!response.ok) throw new Error(`catalog_http_${response.status}`);
+      return await response.json();
+    } finally {
+      if (timeout) window.clearTimeout(timeout);
+    }
+  }
+
+  async function loadCatalogCollection(name, options = {}) {
+    const requireItems = options.requireItems === true;
+    let firstResult = [];
+
+    try {
+      const rows = await beBackend.data.list(name, { orderBy: 'order', direction: 'asc' });
+      firstResult = Array.isArray(rows) ? rows : [];
+      if (firstResult.length || !requireItems) return firstResult;
+    } catch (error) {
+      console.warn(`Falha na fonte principal do catálogo (${name}):`, error?.message || error);
+    }
+
+    try {
+      const params = new URLSearchParams({ name: String(name), _: String(Date.now()) });
+      const payload = await fetchCatalogJson(`/api/public-data?${params.toString()}`, {
+        method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
+      });
+      const rows = normalizePublicCatalogRows(payload);
+      if (rows.length || !requireItems) return await ensureTranslatedRecords(name, rows);
+    } catch (error) {
+      console.warn(`Falha no endpoint público do catálogo (${name}):`, error?.message || error);
+    }
+
+    const client = window.beBackend?.client;
+    if (client?.rpc) {
+      try {
+        const { data, error } = await client.rpc('get_public_content_items', {
+          p_collection: String(name), p_id: null
+        });
+        if (error) throw error;
+        const rows = normalizePublicCatalogRows(data);
+        if (rows.length || !requireItems) return await ensureTranslatedRecords(name, rows);
+      } catch (error) {
+        console.warn(`Falha no RPC do catálogo (${name}):`, error?.message || error);
+      }
+    }
+
+    try {
+      const config = window.BE_SUPABASE_CONFIG || {};
+      const baseUrl = String(config.url || '').replace(/\/$/, '');
+      const key = String(config.publishableKey || '').trim();
+      if (baseUrl && key) {
+        const payload = await fetchCatalogJson(`${baseUrl}/rest/v1/rpc/get_public_content_items`, {
+          method: 'POST',
+          cache: 'no-store',
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ p_collection: String(name), p_id: null })
+        });
+        const rows = normalizePublicCatalogRows(payload);
+        if (rows.length || !requireItems) return await ensureTranslatedRecords(name, rows);
+      }
+    } catch (error) {
+      console.warn(`Falha no acesso direto ao catálogo (${name}):`, error?.message || error);
+    }
+
+    return firstResult;
+  }
+
+  function syntheticSectionsFromVideos(videos) {
+    const groups = new Map();
+    (Array.isArray(videos) ? videos : []).forEach((item, index) => {
+      const sectionId = String(item?.sectionId || '').trim();
+      const sectionName = String(item?.sectionName || '').trim();
+      const category = String(item?.category || item?.type || '').trim();
+      const label = sectionName || category || 'Vídeos';
+      const normalized = normalizeText(label) || 'videos';
+      const key = sectionId || normalized;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          id: sectionId || `catalog-recovery-${numericPublicId(key)}`,
+          title: label,
+          category: category || normalized,
+          slug: normalized,
+          order: Number(item?.sectionOrder ?? item?.order ?? index),
+          itemLimit: 12,
+          active: true,
+          synthetic: true
+        });
+      }
+    });
+    return Array.from(groups.values()).sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+  }
+
+  function renderCatalogUnavailable(main, previousHost) {
+    if (previousHost && previousHost.querySelector('.video-card')) return;
+    const old = previousHost || document.getElementById('dynamicSections');
+    if (old) old.remove();
+    const host = document.createElement('section');
+    host.id = 'dynamicSections';
+    host.className = 'video-catalog catalog-load-error';
+    host.setAttribute('aria-label', 'Catálogo temporariamente indisponível');
+    host.innerHTML = `<section class="video-rail-section" data-home-view="default">
+      <div class="video-rail-empty" style="padding:28px 24px;text-align:center">
+        <strong style="display:block;margin-bottom:8px;color:#f5f5f7">Não foi possível carregar o catálogo.</strong>
+        <span style="display:block;margin-bottom:16px">A conexão com os vídeos falhou temporariamente.</span>
+        <button type="button" data-retry-video-catalog style="min-height:42px;padding:0 18px;border:0;border-radius:12px;cursor:pointer;font-weight:700">Tentar novamente</button>
+      </div>
+    </section>`;
+    main.insertAdjacentElement('afterend', host);
+    host.querySelector('[data-retry-video-catalog]')?.addEventListener('click', () => {
+      renderVideoCatalog().catch(error => console.warn('Nova tentativa do catálogo falhou:', error?.message || error));
+    });
+  }
+
   async function renderVideoCatalog() {
     const main = document.querySelector('main');
-    if (!main) return;
+    if (!main) return false;
+    const previousHost = document.getElementById('dynamicSections');
 
-    const sections = (await beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }))
-      .filter(section => section.active !== false);
-    const [videoRows, movieRows, seriesRows, featuredRows] = await Promise.all([
-      beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('series', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => [])
+    const [sectionRows, videoRows, movieRows, seriesRows, featuredRows] = await Promise.all([
+      loadCatalogCollection('sections', { requireItems: true }),
+      loadCatalogCollection('videos', { requireItems: true }),
+      loadCatalogCollection('movies'),
+      loadCatalogCollection('series'),
+      loadCatalogCollection('featured')
     ]);
-    const allVideos = videoRows.filter(video => video.active !== false);
-    const allMovies = movieRows.filter(movie => movie.active !== false);
-    const allSeries = seriesRows.filter(series => series.active !== false);
+
+    const allVideos = (Array.isArray(videoRows) ? videoRows : []).filter(video => video && video.active !== false);
+    const allMovies = (Array.isArray(movieRows) ? movieRows : []).filter(movie => movie && movie.active !== false);
+    const allSeries = (Array.isArray(seriesRows) ? seriesRows : []).filter(series => series && series.active !== false);
+    let sections = (Array.isArray(sectionRows) ? sectionRows : []).filter(section => section && section.active !== false);
+    if (!sections.length && allVideos.length) sections = syntheticSectionsFromVideos(allVideos);
+
     randomFeaturedPools.videos = allVideos.map(item => ({ ...item, collection: 'videos' }));
     randomFeaturedPools.movies = allMovies.map(item => ({ ...item, collection: 'movies' }));
     randomFeaturedPools.series = allSeries.map(item => ({ ...item, collection: 'series' }));
     randomFeaturedPools.films = [...randomFeaturedPools.movies, ...randomFeaturedPools.series];
     ensureRandomFeaturedSection();
+
     const sourceMaps = {
       videos: new Map(allVideos.map(item => [String(item.id), item])),
       movies: new Map(allMovies.map(item => [String(item.id), item])),
       series: new Map(allSeries.map(item => [String(item.id), item]))
     };
     const featuredSeen = new Set();
-    const featuredContents = featuredRows
-      .filter(item => item.active !== false && (item.contentId || item.videoId))
+    const featuredContents = (Array.isArray(featuredRows) ? featuredRows : [])
+      .filter(item => item && item.active !== false && (item.contentId || item.videoId))
       .map(item => {
         const collection = ['videos', 'movies', 'series'].includes(item.contentCollection || item.sourceCollection)
           ? (item.contentCollection || item.sourceCollection)
@@ -2601,10 +2821,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         };
       })
       .filter(Boolean);
-    if (!sections.length && !featuredContents.length) return;
 
-    const old = document.getElementById('dynamicSections');
-    if (old) old.remove();
+    if (!allVideos.length && !allMovies.length && !allSeries.length && !featuredContents.length) {
+      renderCatalogUnavailable(main, previousHost);
+      return false;
+    }
 
     const host = document.createElement('section');
     host.id = 'dynamicSections';
@@ -2636,7 +2857,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       host.append(featuredBlock);
       setupRail(featuredBlock);
     }
-
 
     const appendLibrarySection = (title, collection, items) => {
       const block = document.createElement('section');
@@ -2672,25 +2892,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const belongsToSection = (item, section, legacyIds, collection) => {
       if (item.sectionId && String(item.sectionId) === String(section.id)) return true;
       if (legacyIds.includes(String(item.id))) return true;
-
       const sectionKeys = new Set([
-        normalizeSectionValue(section.title),
-        normalizeSectionValue(section.category),
-        normalizeSectionValue(section.slug),
-        normalizeSectionValue(section.id)
+        normalizeSectionValue(section.title), normalizeSectionValue(section.category),
+        normalizeSectionValue(section.slug), normalizeSectionValue(section.id)
       ].filter(Boolean));
-      const itemKeys = [item.category, item.type, item.sectionName]
-        .map(normalizeSectionValue)
-        .filter(Boolean);
+      const itemKeys = [item.category, item.type, item.sectionName].map(normalizeSectionValue).filter(Boolean);
       if (itemKeys.some(value => sectionKeys.has(value))) return true;
-
-      // Compatibilidade com filmes e séries antigos que ainda não tinham sectionId.
-      if (!item.sectionId && collection === 'movies') {
-        return [...sectionKeys].some(value => ['filme', 'filmes', 'movie', 'movies'].includes(value));
-      }
-      if (!item.sectionId && collection === 'series') {
-        return [...sectionKeys].some(value => ['serie', 'series'].includes(value));
-      }
+      if (!item.sectionId && collection === 'movies') return [...sectionKeys].some(value => ['filme','filmes','movie','movies'].includes(value));
+      if (!item.sectionId && collection === 'series') return [...sectionKeys].some(value => ['serie','series'].includes(value));
       return false;
     };
 
@@ -2698,20 +2907,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const category = String(section.category || section.slug || section.id).trim().toLowerCase();
       const legacyIds = (Array.isArray(section.contentIds) ? section.contentIds : []).map(String);
       const limit = Math.max(1, Number(section.itemLimit || 12));
-
       let allSectionContents = [
         ...allVideos.filter(item => belongsToSection(item, section, legacyIds, 'videos')).map(item => ({ ...item, collection: 'videos' })),
         ...allMovies.filter(item => belongsToSection(item, section, legacyIds, 'movies')).map(item => ({ ...item, collection: 'movies' })),
         ...allSeries.filter(item => belongsToSection(item, section, legacyIds, 'series')).map(item => ({ ...item, collection: 'series' }))
-      ].sort((a, b) => {
-        const orderDifference = Number(a.order || 0) - Number(b.order || 0);
-        if (orderDifference) return orderDifference;
-        return String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR');
-      });
+      ].sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR'));
       let sectionContents = allSectionContents.slice(0, limit);
 
       if (!sectionContents.length && legacyIds.length) {
-        const reads = await Promise.all(legacyIds.map(id => beBackend.data.get('contents', id)));
+        const reads = await Promise.all(legacyIds.map(id => beBackend.data.get('contents', id).catch(() => null)));
         allSectionContents = reads.filter(item => item && item.active !== false).map(item => ({ ...item, collection: item.collection || 'videos' }));
         sectionContents = allSectionContents.slice(0, limit);
       }
@@ -2724,8 +2928,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       block.dataset.hasVideos = String(allSectionContents.some(item => (item.collection || 'videos') === 'videos'));
       block.dataset.hasMovies = String(allSectionContents.some(item => item.collection === 'movies'));
       block.dataset.hasSeries = String(allSectionContents.some(item => item.collection === 'series'));
+      const preserveSectionTitle = shouldPreserveOriginalTitle('sections', section, activeLocaleSlug());
       block.innerHTML = `
-        <a class="video-rail-title" href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
+        <a class="video-rail-title${preserveSectionTitle ? ' notranslate' : ''}" ${preserveSectionTitle ? 'translate="no" data-i18n-ignore' : ''} href="${safeUrl(section.link || '#')}" aria-label="Ver todos: ${escapeHtml(section.title || 'Seção')}">
           <span>${escapeHtml(section.title || 'Seção')}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </a>
@@ -2735,9 +2940,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           </button>
           <div class="video-rail" tabindex="0" aria-label="${escapeHtml(section.title || 'Conteúdos')}">
             ${sectionContents.length ? sectionContents.map(item => videoCard(item)).join('') : '<p class="video-rail-empty">Nenhum conteúdo publicado nesta seção.</p>'}
-            ${allSectionContents.length > sectionContents.length ? `<button class="video-rail-more" type="button" aria-label="Ver todos os conteúdos de ${escapeHtml(section.title || 'esta seção')}" title="Ver todos">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-            </button>` : ''}
+            ${allSectionContents.length > sectionContents.length ? `<button class="video-rail-more" type="button" aria-label="Ver todos os conteúdos de ${escapeHtml(section.title || 'esta seção')}" title="Ver todos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>` : ''}
           </div>
           <button class="video-rail-arrow next" type="button" aria-label="Ver mais conteúdos">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
@@ -2748,12 +2951,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setupRail(block);
     }
 
-    await addBillieHomeSpotlight(host);
-    await addDonateHomeSpotlight(host);
-    main.insertAdjacentElement('afterend', host);
+    addBillieHomeSpotlight(host).catch?.(() => {});
+    if (previousHost) previousHost.replaceWith(host);
+    else main.insertAdjacentElement('afterend', host);
+
     setupContentDetailInteractions(host);
     setupSectionTitleInteractions(host);
+    window.__beCatalogReady = true;
     window.dispatchEvent(new Event('be:catalog-ready'));
+
+    Promise.resolve(addDonateHomeSpotlight(host)).catch(error => {
+      console.warn('Banner de ONG indisponível:', error?.message || error);
+    });
+    return true;
   }
 
   async function addBillieHomeSpotlight(host) {
@@ -2814,15 +3024,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (image) image.addEventListener('error', () => spotlight.remove(), { once:true });
   }
 
-  const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
-    '14386598-4978-403a-8548-db0ee582e291',
-    '18db9515-179c-4bad-9646-1fcda63df14a'
-  ]);
   function preservesOriginalMusicTitle(data) {
-    if (String(data?.collection || 'videos').toLowerCase() !== 'videos') return false;
-    const sectionId = String(data?.sectionId || '').trim();
-    const sectionName = String(data?.sectionName || data?.sourceSectionTitle || '').trim().toLowerCase();
-    return MUSIC_TITLE_SECTION_IDS_FRONTEND.has(sectionId) || ['live performances & tv','videoclipes'].includes(sectionName);
+    return shouldPreserveOriginalTitle(String(data?.collection || 'videos'), data, activeLocaleSlug());
   }
 
   function videoCard(video) {
@@ -7595,6 +7798,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },50);
   }
 
+  if(legalPage)legalPage.addEventListener('click',function(event){
+    var link=event.target&&event.target.closest?event.target.closest('[data-legal-link]'):null;
+    if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+    var route=String(link.getAttribute('data-legal-link')||'').trim();
+    if(!route)return;
+    event.preventDefault();
+    if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/'+route);
+    else{
+      var target=window.BETVLocaleURL?window.BETVLocaleURL('/'+route):('/'+route);
+      history.pushState({beRoute:route},'',target);
+      renderLegalRoute();
+    }
+  });
   if(legalHomeButton)legalHomeButton.addEventListener('click',goHome);
   if(legalAvatarButton)legalAvatarButton.addEventListener('click',openProfile);
   if(cookieAccept)cookieAccept.addEventListener('click',acceptCookies);
@@ -7662,6 +7878,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(!page||!input||!faqList)return;
 
   var faqItems=Array.prototype.slice.call(faqList.querySelectorAll('.support-faq-item'));
+  var faqGroupTitles=Array.prototype.slice.call(faqList.querySelectorAll('[data-faq-group-title]'));
 
   function normalize(value){
     return String(value||'')
@@ -7788,6 +8005,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function filterFaq(){
     var query=normalize(input.value);
     var visible=0;
+    faqGroupTitles.forEach(function(title){title.hidden=Boolean(query);});
     faqItems.forEach(function(item){
       var searchOnly=item.getAttribute('data-search-only')==='true';
       var match=query?normalize(item.textContent).indexOf(query)!==-1:!searchOnly;
@@ -8295,8 +8513,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     openPage(detail.id||routeInfo().id,false);
   });
   window.addEventListener('be:close-notifications',function(){closePage(false);});
-  window.addEventListener('be:content-ready',function(){loadNotifications(true);});
-  window.addEventListener('be:auth-changed',function(){syncPageAvatar();loadNotifications(true);});
+  window.addEventListener('be:content-ready',function(){window.setTimeout(function(){loadNotifications(true);},0);});
+  window.addEventListener('be:auth-changed',function(){syncPageAvatar();if(window.__beContentReady)loadNotifications(true);});
   window.addEventListener('be:profile-avatar-changed',syncPageAvatar);
   window.addEventListener('be:content-ready',syncPageAvatar);
   window.addEventListener('hashchange',function(){
@@ -8311,9 +8529,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   });
 
   syncPageAvatar();
-  loadNotifications(false);
   var initial=routeInfo();
   if(initial.active)openPage(initial.id,false);
+  else if(window.__beContentReady)window.setTimeout(function(){loadNotifications(false);},0);
 })();
 
 ;/* module boundary */
@@ -9542,7 +9760,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     syncUnread();
     load(false);
     if(supportersLoaded)observeSupportersEnd();
-    document.title='Apoie uma ONG — Billie Eilish TV';
+    document.title='Billie Eilish TV';
   }
 
   function close(){
