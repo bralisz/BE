@@ -681,6 +681,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return ['en-us','es'].includes(slug) ? slug : 'pt-br';
   }
 
+  const ORIGINAL_TITLE_VIDEO_SECTION_IDS = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a',
+    'e995b960-503c-4d67-8d7c-87cbd6eda6a2'
+  ]);
+  const ORIGINAL_TITLE_VIDEO_SECTION_NAMES = new Set([
+    'live performances & tv',
+    'videoclipes',
+    'concert',
+    'concierto'
+  ]);
+
+  function shouldPreserveLocalizedVideoTitle(record, collectionOverride = '') {
+    if (!record || typeof record !== 'object') return false;
+    const collection = String(record.collection || collectionOverride || '').trim().toLowerCase();
+    if (collection !== 'videos') return false;
+    const sectionId = String(record.sectionId || '').trim();
+    const sectionName = String(record.sectionName || record.sourceSectionTitle || '').trim().toLowerCase();
+    const category = String(record.category || '').trim().toLowerCase();
+    return ORIGINAL_TITLE_VIDEO_SECTION_IDS.has(sectionId)
+      || ORIGINAL_TITLE_VIDEO_SECTION_NAMES.has(sectionName)
+      || category === 'concert'
+      || category === 'concierto';
+  }
+
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
     const raw = String(value || '').trim();
     const slug = String(requestedSlug || 'pt-br').toLowerCase();
@@ -695,13 +720,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function localizeContentRecord(record) {
+  function localizeContentRecord(record, collectionOverride = '') {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
+    if (slug === 'es' && shouldPreserveLocalizedVideoTitle(record, collectionOverride)) {
+      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
+      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
+    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
@@ -719,7 +748,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
     if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(localizeContentRecord);
+      return values.map(record => localizeContentRecord(record, collection));
     }
     const missing = values.filter(record => recordNeedsTranslation(record, slug));
     if (missing.length) {
@@ -746,7 +775,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
       }
     }
-    return values.map(localizeContentRecord);
+    return values.map(record => localizeContentRecord(record, collection));
   }
 
   function queueRecordTranslation(collection, id) {
@@ -878,7 +907,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const publicValue = await readPublicData(name, id);
           if (!publicValue) return null;
           const translated = await ensureTranslatedRecords(name, [publicValue]);
-          return translated[0] || localizeContentRecord(publicValue);
+          return translated[0] || localizeContentRecord(publicValue, name);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -891,7 +920,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value);
+          return translated[0] || localizeContentRecord(value, name);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -903,7 +932,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value);
+        return translated[0] || localizeContentRecord(value, name);
       } catch (error) {
         throw mapAuthError(error);
       }
@@ -2722,24 +2751,36 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     host.setAttribute('aria-label', 'Categorias de conteúdos');
 
     if (featuredContents.length) {
+      const featuredRecommendationTitle = activeLocaleSlug() === 'es'
+        ? 'Recomendación de un fan'
+        : (activeLocaleSlug() === 'en-us' ? 'Fan recommendation' : 'Recomendação de um fã');
+      const featuredViewAllLabel = activeLocaleSlug() === 'es'
+        ? 'Ver todo: Recomendación de un fan'
+        : (activeLocaleSlug() === 'en-us' ? 'View all: Fan recommendation' : 'Ver todos: Recomendação de um fã');
+      const featuredPreviousLabel = activeLocaleSlug() === 'es'
+        ? 'Ver recomendaciones anteriores'
+        : (activeLocaleSlug() === 'en-us' ? 'View previous recommendations' : 'Ver recomendações anteriores');
+      const featuredNextLabel = activeLocaleSlug() === 'es'
+        ? 'Ver más recomendaciones'
+        : (activeLocaleSlug() === 'en-us' ? 'View more recommendations' : 'Ver mais recomendações');
       const featuredBlock = document.createElement('section');
       featuredBlock.className = 'video-rail-section featured-video-rail';
       featuredBlock.dataset.category = 'destaque';
       featuredBlock.dataset.collection = 'mixed';
       featuredBlock.dataset.homeView = 'default';
       featuredBlock.innerHTML = `
-        <a class="video-rail-title" href="#" aria-label="Ver todos: Recomendação de um fã">
-          <span>Recomendação de um fã</span>
+        <a class="video-rail-title" href="#" aria-label="${escapeHtml(featuredViewAllLabel)}">
+          <span>${escapeHtml(featuredRecommendationTitle)}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </a>
         <div class="video-rail-shell">
-          <button class="video-rail-arrow prev" type="button" aria-label="Ver recomendações anteriores" hidden>
+          <button class="video-rail-arrow prev" type="button" aria-label="${escapeHtml(featuredPreviousLabel)}" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
           </button>
-          <div class="video-rail" tabindex="0" aria-label="Recomendação de um fã">
+          <div class="video-rail" tabindex="0" aria-label="${escapeHtml(featuredRecommendationTitle)}">
             ${featuredContents.map(item => videoCard(item)).join('')}
           </div>
-          <button class="video-rail-arrow next" type="button" aria-label="Ver mais recomendações">
+          <button class="video-rail-arrow next" type="button" aria-label="${escapeHtml(featuredNextLabel)}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
           </button>
         </div>`;
