@@ -407,12 +407,12 @@
       currency: 'BRL'
     });
     const statusText = status => ({
-      checkout_created: 'Checkout criado',
-      paid: 'Pago',
+      checkout_created: 'Criado',
+      paid: 'Concluído',
       canceled: 'Cancelado',
-      expired: 'Expirado',
-      payment_failed: 'Falhou'
-    }[String(status || '')] || 'Checkout criado');
+      expired: 'Cancelado',
+      payment_failed: 'Cancelado'
+    }[String(status || '')] || 'Criado');
     const statusClass = status => {
       const normalized = String(status || 'checkout_created').replace(/[^a-z_]/g, '');
       return normalized || 'checkout_created';
