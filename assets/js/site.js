@@ -8555,7 +8555,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         '<button class="donate-ngo-toggle" type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="Conhecer '+esc(title)+'" data-ngo-title="'+esc(title)+'">'+
           (image?'<img loading="lazy" decoding="async" src="'+esc(image)+'" alt="Banner da '+esc(title)+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
         '</button>'+ 
-        '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3>'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
+        '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3 class="donate-ngo-name">'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
           '<div class="donate-ngo-donation" data-donation-box data-ngo-reference="'+esc(ngoReference)+'">'+
             '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">Qual valor você deseja doar?</label>'+
             '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">R$</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="5,00" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+

@@ -71,7 +71,7 @@
         '<button class="donate-ngo-toggle" type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="Conhecer '+esc(title)+'" data-ngo-title="'+esc(title)+'">'+
           (image?'<img loading="lazy" decoding="async" src="'+esc(image)+'" alt="Banner da '+esc(title)+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
         '</button>'+ 
-        '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3>'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
+        '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3 class="donate-ngo-name">'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
           (href?'<a class="donate-ngo-support-button" href="'+esc(href)+'" target="_blank" rel="noopener noreferrer" aria-label="Apoiar '+esc(title)+'">Apoie</a>':'<span class="donate-ngo-support-button" aria-disabled="true">Link em breve</span>')+
         '</div></div></div></article>';
     }).join('');

@@ -714,7 +714,10 @@
       ? 'Defina o banner principal da página e cadastre as organizações que poderão ser apoiadas.'
       : 'Crie, edite, publique e organize os itens.';
     const addLabel = name === 'ongs' ? '+ Adicionar ONG' : '+ Adicionar';
-    content.innerHTML = `<div class="admin-title-row"><div><h1>${esc(label)}</h1><p>${esc(pageDescription)}</p></div>${name === 'users' ? '' : `<button class="a-btn primary" id="newItem">${addLabel}</button>`}</div>${ongBannerPanel}<div class="a-card"><div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por título…"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="empty">Carregando…</div></div></div>`;
+    const collectionToolbar = name === 'ongs'
+      ? '<div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por nome da ONG…"></div>'
+      : '<div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por título…"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div>';
+    content.innerHTML = `<div class="admin-title-row"><div><h1>${esc(label)}</h1><p>${esc(pageDescription)}</p></div>${name === 'users' ? '' : `<button class="a-btn primary" id="newItem">${addLabel}</button>`}</div>${ongBannerPanel}<div class="a-card">${collectionToolbar}<div id="list"><div class="empty">Carregando…</div></div></div>`;
     if ($('#newItem')) $('#newItem').onclick = () => openEditor(name);
     if (name === 'ongs') {
       setupImagePreviews(content);
@@ -739,14 +742,22 @@
     const items = await db.list(name, { orderBy: 'order', direction: 'asc' });
     const draw = () => {
       const search = $('#search').value.toLowerCase();
-      const status = $('#statusFilter').value;
+      const statusFilter = $('#statusFilter');
+      const status = statusFilter ? statusFilter.value : '';
       const rows = items.filter(item => (!search || String(item.title || item.name || item.displayName || item.email || '').toLowerCase().includes(search)) && (!status || String(item.active) === status));
-      $('#list').innerHTML = rows.length ? `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.displayName || item.email || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}${name === 'videos' ? `<br>Link: /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id))}` : ''}</small></td><td>${esc(item.type || name)}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions">${name === 'users' ? '' : `<button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button>`}</div></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Nenhum item encontrado.</div>';
+      if (!rows.length) {
+        $('#list').innerHTML = '<div class="empty">Nenhum item encontrado.</div>';
+      } else if (name === 'ongs') {
+        $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>ONG</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}</small></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></td></tr>`).join('')}</tbody></table></div>`;
+      } else {
+        $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.displayName || item.email || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}${name === 'videos' ? `<br>Link: /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id))}` : ''}</small></td><td>${esc(item.type || name)}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions">${name === 'users' ? '' : `<button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button>`}</div></td></tr>`).join('')}</tbody></table></div>`;
+      }
       document.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => openEditor(name, items.find(item => item.id === button.dataset.edit)));
       document.querySelectorAll('[data-del]').forEach(button => button.onclick = () => confirmDelete(name, button.dataset.del));
     };
     $('#search').oninput = draw;
-    $('#statusFilter').onchange = draw;
+    const statusFilter = $('#statusFilter');
+    if (statusFilter) statusFilter.onchange = draw;
     draw();
   }
 
@@ -757,7 +768,7 @@
 
   function editorFields(name, item = {}, context = {}) {
     if (name === 'ongs') {
-      return `<div class="form-grid"><div class="field full"><label>Nome da ONG *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}" placeholder="Ex.: UNICEF"></div><div class="field full"><label>Descrição da ONG *</label><textarea class="a-textarea" rows="7" maxlength="4000" name="description" required placeholder="Explique a causa, o trabalho realizado e como o apoio ajuda.">${esc(item.description || '')}</textarea></div>${imageField('Banner da ONG *', 'imageUrl', item.imageUrl || item.bannerUrl || '')}<div class="field full"><label>Link do botão Apoie *</label><input class="a-input" type="url" name="contentUrl" required value="${esc(item.contentUrl || item.link || '')}" placeholder="https://..."><small>O visitante será direcionado para este endereço ao tocar em Apoie.</small></div><div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div><div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div></div>`;
+      return `<div class="form-grid"><div class="field full"><label>Nome da ONG *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}" placeholder="Ex.: UNICEF"></div><div class="field full"><label>Descrição da ONG *</label><textarea class="a-textarea" rows="7" maxlength="4000" name="description" required placeholder="Explique a causa, o trabalho realizado e como o apoio ajuda.">${esc(item.description || '')}</textarea></div>${imageField('Banner da ONG *', 'imageUrl', item.imageUrl || item.bannerUrl || '')}</div>`;
     }
     const showMedia = !['sections','users'].includes(name);
     const sections = context.sections || [];
@@ -1294,15 +1305,12 @@
           data.description = String(data.description || '').trim();
           if (!data.title || !data.description) throw new Error('Preencha o nome e a descrição da ONG.');
           if (!String(data.imageUrl || '').trim()) throw new Error('Adicione o banner da ONG.');
-          try {
-            const supportLink = new URL(String(data.contentUrl || '').trim());
-            if (supportLink.protocol !== 'https:') throw new Error('protocol');
-            data.contentUrl = supportLink.href;
-          } catch (_) {
-            throw new Error('Use um link https:// válido para o botão Apoie.');
-          }
           data.type = 'ong';
           data.bannerUrl = String(data.imageUrl || '').trim();
+          data.active = 'true';
+          data.order = Number(item?.order) || 0;
+          delete data.contentUrl;
+          delete data.link;
         }
         if (['movies','series'].includes(name) && !String(data.logoUrl || '').trim()) {
           throw new Error('Adicione a logo do título. Filmes e séries usam a logo no lugar do texto do cabeçalho.');

@@ -254,3 +254,116 @@ body.donate-page-active > footer > .footer-card{width:min(100%,1390px)!important
 @media (prefers-reduced-motion:reduce){
   .donate-page-home,.donate-page-notifications,.donate-page-avatar,.donate-ngo-card,.donate-ngo-toggle,.donate-ngo-toggle img,.donate-ngo-details,.donate-ngo-details-content,.donate-ngo-support-button{transition:none!important}
 }
+
+/* Cabeçalho da página /ong alinhado pixel a pixel com a Home. */
+.donate-page-avatar{
+  padding:3px!important;
+}
+.donate-page-avatar img{
+  width:100%!important;
+  height:100%!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+}
+.donate-ngo-name{
+  display:block;
+  margin:0 0 10px;
+  color:#fff;
+  font-size:22px;
+  font-weight:850;
+  line-height:1.12;
+  letter-spacing:-.035em;
+}
+@media (min-width:761px){
+  body.donate-page-active .donate-page-header{
+    min-height:0!important;
+    padding:21px 22px 28px!important;
+  }
+  body.donate-page-active .donate-page-header-actions{
+    gap:12px!important;
+  }
+  body.donate-page-active .donate-page-home,
+  body.donate-page-active .donate-page-notifications,
+  body.donate-page-active .donate-page-avatar{
+    width:54px!important;
+    height:54px!important;
+    min-width:54px!important;
+    min-height:54px!important;
+    flex:0 0 54px!important;
+  }
+  body.donate-page-active .donate-page-notifications svg{
+    width:18px!important;
+    height:18px!important;
+  }
+  body.donate-page-active .donate-page-avatar svg{
+    width:17px!important;
+    height:17px!important;
+  }
+}
+@media (max-width:760px){
+  body.donate-page-active .donate-page-header{
+    position:fixed!important;
+    inset:0 0 auto!important;
+    min-height:calc(68px + env(safe-area-inset-top))!important;
+    padding:calc(10px + env(safe-area-inset-top)) 14px 10px!important;
+    align-items:center!important;
+  }
+  body.donate-page-active .donate-page-header-actions{
+    gap:8px!important;
+  }
+  body.donate-page-active .donate-page-home,
+  body.donate-page-active .donate-page-avatar{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    flex:0 0 46px!important;
+  }
+  body.donate-page-active .donate-page-notifications{
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+    flex:0 0 38px!important;
+  }
+  body.donate-page-active .donate-page-home svg{
+    width:22px!important;
+    height:22px!important;
+  }
+  body.donate-page-active .donate-page-notifications svg{
+    width:18px!important;
+    height:18px!important;
+  }
+  body.donate-page-active .donate-page-avatar svg{
+    width:23px!important;
+    height:23px!important;
+    opacity:.72;
+  }
+  body.donate-page-active .donate-notification-dropdown{
+    right:-54px!important;
+  }
+}
+@media (max-width:390px){
+  body.donate-page-active .donate-page-header{
+    padding-right:10px!important;
+    padding-left:10px!important;
+  }
+  body.donate-page-active .donate-page-home,
+  body.donate-page-active .donate-page-avatar{
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+    flex-basis:42px!important;
+  }
+  body.donate-page-active .donate-page-notifications{
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+    flex-basis:36px!important;
+  }
+  body.donate-page-active .donate-notification-dropdown{
+    right:-48px!important;
+  }
+}
