@@ -454,42 +454,55 @@
     return !localized || typeof localized !== 'object';
   }
 
+  const pendingTranslationBatches = new Set();
+
+  function requestMissingTranslationsInBackground(collection, records, slug) {
+    if (!records.length || !supabaseClient?.functions?.invoke) return;
+    if (String(collection || '').toLowerCase() === 'notifications') return;
+    const ids = records.map(record => String(record.id || '')).filter(Boolean);
+    if (!ids.length) return;
+    const key = `${String(collection || '')}:${slug}:${ids.join(',')}`;
+    if (pendingTranslationBatches.has(key)) return;
+    pendingTranslationBatches.add(key);
+
+    window.setTimeout(async () => {
+      try {
+        for (let offset = 0; offset < ids.length; offset += 20) {
+          const batchIds = ids.slice(offset, offset + 20);
+          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+            body: { collection: String(collection), ids: batchIds, locales: [slug] }
+          });
+          if (result?.error) {
+            console.warn('Tradução automática indisponível; o conteúdo original foi mantido:', result.error.message || result.error);
+            break;
+          }
+        }
+      } catch (error) {
+        console.warn('Tradução automática indisponível; o conteúdo original foi mantido:', error?.message || error);
+      } finally {
+        pendingTranslationBatches.delete(key);
+      }
+    }, 0);
+  }
+
   async function ensureTranslatedRecords(collection, records) {
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
-    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(record => localizeContentRecord(record, collection));
+
+    // A Home nunca espera a tradução automática para exibir o catálogo.
+    // Notificações são traduzidas pelo trigger do Supabase depois da publicação.
+    if (slug !== 'pt-br' && TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) {
+      const missing = values.filter(record => recordNeedsTranslation(record, slug));
+      requestMissingTranslationsInBackground(collection, missing, slug);
     }
-    const missing = values.filter(record => recordNeedsTranslation(record, slug));
-    if (missing.length) {
-      try {
-        const translatedById = new Map();
-        for (let offset = 0; offset < missing.length; offset += 20) {
-          const batch = missing.slice(offset, offset + 20);
-          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-            body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
-          });
-          if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
-            console.warn('Um lote de tradução não foi concluído:', result?.error?.message || 'resposta inválida');
-            continue;
-          }
-          result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
-        }
-        values.forEach(record => {
-          const translation = translatedById.get(String(record.id));
-          if (!translation || typeof translation !== 'object') return;
-          if (!record.translations || typeof record.translations !== 'object') record.translations = {};
-          record.translations[slug] = translation;
-        });
-      } catch (error) {
-        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
-      }
-    }
+
     return values.map(record => localizeContentRecord(record, collection));
   }
 
   function queueRecordTranslation(collection, id) {
     if (!currentUser || currentUser.role !== 'admin' || !supabaseClient?.functions?.invoke) return;
+    // O trigger do banco já traduz notificações; evita chamada duplicada e 403.
+    if (String(collection || '').toLowerCase() === 'notifications') return;
     if (collection !== 'settings' && !TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) return;
     window.setTimeout(() => {
       supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {

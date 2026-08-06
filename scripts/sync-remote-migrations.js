@@ -39,7 +39,9 @@ const expected = new Set([
   '20260806174524_preserve_music_video_titles.sql',
   '20260806175116_translation_worker_table_grants.sql',
   '20260806182129_automatic_content_translation_jobs.sql',
-  '20260806182205_fix_translation_job_permissions.sql'
+  '20260806182205_fix_translation_job_permissions.sql',
+  '20260806195000_fix_avatar_selection_detection.sql',
+  '20260806202546_preserve_spanish_official_titles.sql'
 ]);
 
 if (!fs.existsSync(migrationsDirectory)) {

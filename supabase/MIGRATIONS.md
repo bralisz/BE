@@ -40,6 +40,8 @@ As versões abaixo devem permanecer no repositório para evitar o aviso **Remote
 - `20260806175116` — `translation_worker_table_grants`
 - `20260806182129` — `automatic_content_translation_jobs`
 - `20260806182205` — `fix_translation_job_permissions`
+- `20260806195000` — `fix_avatar_selection_detection`
+- `20260806202546` — `preserve_spanish_official_titles`
 
 Não renomeie, remova ou reutilize versões que já foram aplicadas no projeto remoto.
 As migrations marcadas como `noop` são registros históricos intencionais e precisam continuar no diretório local.
