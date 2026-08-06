@@ -8199,7 +8199,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       portrait.src=DEFAULT_PORTRAIT;
     }
     renderSocial(currentSettings);
-    renderManual(currentSettings);
+    if(String(currentSettings.sourceMode||'manual').toLowerCase()==='wikipedia'){
+      manualText.hidden=true;
+      wikipediaContent.hidden=true;
+      wikipediaContent.innerHTML='';
+      wikipediaAttribution.hidden=true;
+    }else{
+      renderManual(currentSettings);
+    }
   }
   function absoluteWikipediaUrl(value){
     var raw=String(value||'').trim();
