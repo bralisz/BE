@@ -2510,7 +2510,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function addBillieHomeSpotlight(host) {
     if (!host || host.querySelector('.billie-home-spotlight')) return;
-    const defaultBanner = '/assets/images/pages/billie-home-default.jpg';
+    const defaultBanner = '/assets/images/pages/billie-home-banner-default.webp';
     const spotlight = document.createElement('section');
     spotlight.className = 'billie-home-spotlight';
     spotlight.setAttribute('aria-label', 'Conheça Billie Eilish');
@@ -2533,13 +2533,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     image.addEventListener('error', () => {
       if (!image.src.endsWith(defaultBanner)) image.src = defaultBanner;
     });
-    try {
-      const settings = await beBackend.data.get('settings', 'billie-eilish');
-      const customBanner = String(settings?.bannerUrl || '').trim();
-      if (customBanner) image.src = window.beMediaUrl ? window.beMediaUrl(customBanner) : customBanner;
-    } catch (_) {
-      // O banner padrão continua disponível caso a configuração remota falhe.
-    }
   }
 
   function videoCard(video) {
