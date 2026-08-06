@@ -241,7 +241,7 @@
     const update = () => {
       const account = window.beBackend?.auth?.currentUser;
       const src = sourcePhoto && !sourcePhoto.hidden ? sourcePhoto.getAttribute('src') : '';
-      const profileAvatar = account?.profile?.avatarId && account?.profile?.avatarUrl ? account.profile.avatarUrl : '';
+      const profileAvatar = account?.profile?.avatarUrl ? String(account.profile.avatarUrl) : '';
       const safeSrc = String(src || profileAvatar || '').replace(/"/g, '&quot;');
       const avatarMarkup = safeSrc ? `<img loading="lazy" decoding="async" src="${safeSrc}" alt="Avatar">` : icon('user');
       headerAvatar.innerHTML = avatarMarkup;

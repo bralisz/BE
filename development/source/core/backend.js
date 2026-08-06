@@ -157,7 +157,7 @@
       id: raw.id || raw.uid,
       email: raw.email || '',
       displayName: metadata.display_name || metadata.full_name || raw.displayName || raw.display_name || '',
-      photoURL: (metadata.profile_avatar_id && metadata.profile_avatar_url) ? metadata.profile_avatar_url : '',
+      photoURL: metadata.profile_avatar_url ? String(metadata.profile_avatar_url) : '',
       providerPhotoURL: metadata.avatar_url || raw.photoURL || raw.avatar_url || '',
       emailVerified: Boolean(raw.email_confirmed_at || raw.emailVerified || MODE === 'local'),
       role: trustedAdminClaim || raw.role === 'admin' ? 'admin' : 'member',
@@ -725,7 +725,7 @@
         return {
           displayName: String(profile.displayName || 'Usuário'),
           username: normalized,
-          avatarUrl: profile.avatarId && profile.avatarUrl ? String(profile.avatarUrl) : '',
+          avatarUrl: profile.avatarUrl ? String(profile.avatarUrl) : '',
           bannerUrl: profile.bannerId && profile.bannerUrl ? String(profile.bannerUrl) : '',
           createdAt: String(profile.createdAt || ''),
           favorites: Array.isArray(preferenceData.profileTopFavorites) ? clone(preferenceData.profileTopFavorites).slice(0, 4) : [],
@@ -763,9 +763,9 @@
         const ensurePromise = (async () => {
           const metadata = user.raw?.user_metadata || user.raw?.raw_user_meta_data || {};
           const metadataUsername = normalizeUsername(metadata.username || '');
-          const metadataAvatarUrl = String(metadata.profile_avatar_id || '').trim()
-            ? String(metadata.profile_avatar_url || '').trim()
-            : '';
+          // profile_avatar_url só é gravado quando a pessoa escolhe um avatar no site.
+          // Contas antigas podem ter a URL válida e ainda não possuir profile_avatar_id.
+          const metadataAvatarUrl = String(metadata.profile_avatar_url || '').trim();
           const profileArgs = {
             p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
             p_username: metadataUsername || null,
@@ -790,13 +790,32 @@
           if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
           const profile = profileFromRow(row);
           const cachedAvatarUrl = readProfileAvatarCache(user.uid);
+          const storedAvatarUrl = String(profile.avatarUrl || '').trim();
+          const storedAvatarId = String(profile.avatarId || '').trim();
           const fallbackMetadataAvatarUrl = String(metadata.profile_avatar_url || '').trim();
           const metadataAvatarId = String(metadata.profile_avatar_id || '').trim();
-          if (!(profile.avatarId && profile.avatarUrl)) {
-            profile.avatarUrl = fallbackMetadataAvatarUrl || cachedAvatarUrl || '';
-            profile.avatarId = metadataAvatarId || (profile.avatarUrl ? 'saved-selection' : '');
-          }
+          const recoveredAvatarUrl = storedAvatarUrl || fallbackMetadataAvatarUrl || cachedAvatarUrl || '';
+          const recoveredAvatarId = storedAvatarId || metadataAvatarId || (recoveredAvatarUrl ? 'saved-selection' : '');
+          profile.avatarUrl = recoveredAvatarUrl;
+          profile.avatarId = recoveredAvatarId;
           if (profile.avatarUrl) writeProfileAvatarCache(user.uid, profile.avatarUrl);
+
+          // Repara contas antigas que tinham avatar_url, mas ficaram sem avatar_id.
+          // Antes, esse caso apagava a URL em memória e exibia o avatar padrão.
+          if (profile.avatarUrl && (!storedAvatarId || storedAvatarUrl !== profile.avatarUrl)) {
+            try {
+              const { data: repairedRows, error: repairError } = await supabaseClient
+                .from('profiles')
+                .update({ avatar_url: profile.avatarUrl, avatar_id: profile.avatarId, updated_at: now() })
+                .eq('id', userId)
+                .select('*');
+              if (repairError) throw repairError;
+              const repaired = repairedRows && repairedRows[0] ? profileFromRow(repairedRows[0]) : null;
+              if (repaired) Object.assign(profile, repaired);
+            } catch (repairError) {
+              console.warn('Não foi possível reparar o identificador do avatar antigo:', repairError?.message || repairError);
+            }
+          }
           const cachedBanner = readProfileBannerCache(user.uid);
           const metadataBannerUrl = String(metadata.profile_banner_url || metadata.banner_url || '').trim();
           const metadataBannerId = String(metadata.profile_banner_id || metadata.banner_id || '').trim();
@@ -823,8 +842,8 @@
         displayName: existing?.displayName || user.displayName || '',
         username: existing?.username || '',
         bio: existing?.bio || '',
-        avatarUrl: existing?.avatarId ? (existing?.avatarUrl || '') : '',
-        avatarId: existing?.avatarId || '',
+        avatarUrl: existing?.avatarUrl || '',
+        avatarId: existing?.avatarId || (existing?.avatarUrl ? 'saved-selection' : ''),
         bannerUrl: existing?.bannerUrl || '',
         bannerId: existing?.bannerId || '',
         role: existing?.role || 'member',
@@ -874,7 +893,8 @@
     async setAvatar(userId, avatarUrl, avatarId) {
       const normalizedUrl = String(avatarUrl || '').trim();
       const normalizedId = String(avatarId || '').trim();
-      const savedProfile = await this.update(userId, { avatarUrl: normalizedUrl, avatarId: normalizedId });
+      const effectiveAvatarId = normalizedId || (normalizedUrl ? 'saved-selection' : '');
+      const savedProfile = await this.update(userId, { avatarUrl: normalizedUrl, avatarId: effectiveAvatarId });
 
       // Mantém o avatar escolhido sincronizado com a conta autenticada. O campo
       // profile_avatar_url identifica que esta é uma escolha do usuário, e não
@@ -885,7 +905,7 @@
             data: {
               avatar_url: normalizedUrl,
               profile_avatar_url: normalizedUrl,
-              profile_avatar_id: normalizedId
+              profile_avatar_id: effectiveAvatarId
             }
           });
           if (error) throw error;
@@ -902,7 +922,7 @@
 
       try {
         window.dispatchEvent(new CustomEvent('be:profile-avatar-changed', {
-          detail: { userId, avatarUrl: normalizedUrl, avatarId: normalizedId, profile: savedProfile }
+          detail: { userId, avatarUrl: normalizedUrl, avatarId: effectiveAvatarId, profile: savedProfile }
         }));
       } catch (_) {}
 

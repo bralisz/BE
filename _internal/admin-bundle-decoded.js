@@ -91,7 +91,7 @@ document.head.appendChild(s);
       return {
         ...account,
         displayName: profile.displayName || profile.username || account.displayName || '',
-        photoURL: (profile.avatarId && profile.avatarUrl) ? profile.avatarUrl : '',
+        photoURL: profile.avatarUrl ? String(profile.avatarUrl) : '',
         profile
       };
     } catch (error) {
@@ -107,7 +107,7 @@ document.head.appendChild(s);
     if (!raw) return '';
     return window.beMediaUrl ? window.beMediaUrl(raw) : raw;
   };
-  const selectedProfileAvatar = profile => profile && profile.avatarId && profile.avatarUrl ? String(profile.avatarUrl) : '';
+  const selectedProfileAvatar = profile => profile && profile.avatarUrl ? String(profile.avatarUrl) : '';
   const userProfileIsBanned = profile => Boolean(profile && (profile.banned === true || String(profile.banned || '').toLowerCase() === 'true' || (profile.bannedUntil && new Date(profile.bannedUntil).getTime() > Date.now())));
   const adminHashRoute = () => location.hash.startsWith('#/admin');
   const adminCallback = () => {

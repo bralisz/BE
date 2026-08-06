@@ -219,7 +219,11 @@ set search_path = ''
 as $$
 declare
   v_username public.citext;
+  v_avatar_url text;
+  v_avatar_id text;
 begin
+  v_avatar_url := trim(coalesce(new.raw_user_meta_data ->> 'profile_avatar_url', ''));
+  v_avatar_id := trim(coalesce(new.raw_user_meta_data ->> 'profile_avatar_id', ''));
   v_username := nullif(lower(trim(coalesce(new.raw_user_meta_data ->> 'username', ''))), '')::public.citext;
 
   if v_username is not null and exists (
@@ -236,8 +240,8 @@ begin
     coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'full_name', ''),
     v_username,
-    case when nullif(new.raw_user_meta_data ->> 'profile_avatar_id', '') is not null then coalesce(new.raw_user_meta_data ->> 'profile_avatar_url', '') else '' end,
-    coalesce(new.raw_user_meta_data ->> 'profile_avatar_id', ''),
+    case when v_avatar_url <> '' then v_avatar_url else '' end,
+    case when v_avatar_url <> '' then coalesce(nullif(v_avatar_id, ''), 'saved-selection') else '' end,
     case when lower(coalesce(new.raw_app_meta_data ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     true,
     coalesce(new.created_at, now()),
@@ -252,16 +256,14 @@ begin
     end,
     username = coalesce(excluded.username, p.username),
     avatar_url = case
-      when nullif(new.raw_user_meta_data ->> 'profile_avatar_id', '') is not null
-       and nullif(new.raw_user_meta_data ->> 'profile_avatar_url', '') is not null
-        then new.raw_user_meta_data ->> 'profile_avatar_url'
-      when nullif(p.avatar_id, '') is not null then p.avatar_url
+      when v_avatar_url <> '' then v_avatar_url
+      when nullif(trim(coalesce(p.avatar_url, '')), '') is not null then p.avatar_url
       else ''
     end,
     avatar_id = case
-      when nullif(new.raw_user_meta_data ->> 'profile_avatar_id', '') is not null
-        then new.raw_user_meta_data ->> 'profile_avatar_id'
-      when nullif(p.avatar_id, '') is not null then p.avatar_id
+      when v_avatar_url <> '' then coalesce(nullif(v_avatar_id, ''), 'saved-selection')
+      when nullif(trim(coalesce(p.avatar_id, '')), '') is not null then p.avatar_id
+      when nullif(trim(coalesce(p.avatar_url, '')), '') is not null then 'saved-selection'
       else ''
     end,
     role = excluded.role,
@@ -294,30 +296,45 @@ declare
   v_uid uuid := auth.uid();
   v_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
   v_username public.citext := nullif(lower(trim(coalesce(p_username, ''))), '')::public.citext;
+  v_metadata_avatar_url text := '';
+  v_metadata_avatar_id text := '';
+  v_avatar_url text := '';
+  v_avatar_id text := '';
 begin
   if v_uid is null then
     raise exception 'authentication required' using errcode = '42501';
   end if;
 
+  select
+    trim(coalesce(u.raw_user_meta_data ->> 'profile_avatar_url', '')),
+    trim(coalesce(u.raw_user_meta_data ->> 'profile_avatar_id', ''))
+  into v_metadata_avatar_url, v_metadata_avatar_id
+  from auth.users as u
+  where u.id = v_uid;
+
+  v_avatar_url := coalesce(nullif(trim(coalesce(p_avatar_url, '')), ''), nullif(v_metadata_avatar_url, ''), '');
+  v_avatar_id := case
+    when v_avatar_url <> '' then coalesce(nullif(v_metadata_avatar_id, ''), 'saved-selection')
+    else ''
+  end;
+
   if v_username is not null and exists (
     select 1 from public.profiles p where p.username = v_username and p.id <> v_uid
   ) then
-    -- Metadados antigos podem apontar para um @ que já foi usado por outra
-    -- conta. Ignorar esse valor mantém o login funcionando sem sobrescrever o
-    -- perfil existente.
     v_username := null;
   end if;
 
   return query
   insert into public.profiles as p (
-    id, email, display_name, username, avatar_url, role,
+    id, email, display_name, username, avatar_url, avatar_id, role,
     profile_complete, created_at, updated_at, last_login_at
   ) values (
     v_uid,
     v_email,
     coalesce(trim(p_display_name), ''),
     v_username,
-    coalesce(trim(p_avatar_url), ''),
+    v_avatar_url,
+    v_avatar_id,
     case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     true,
     now(),
@@ -332,8 +349,14 @@ begin
     end,
     username = coalesce(v_username, p.username),
     avatar_url = case
-      when nullif(trim(coalesce(p.avatar_id, '')), '') is not null then p.avatar_url
-      when nullif(trim(coalesce(p_avatar_url, '')), '') is not null then trim(p_avatar_url)
+      when nullif(trim(coalesce(p.avatar_url, '')), '') is not null then p.avatar_url
+      when v_avatar_url <> '' then v_avatar_url
+      else ''
+    end,
+    avatar_id = case
+      when nullif(trim(coalesce(p.avatar_id, '')), '') is not null then p.avatar_id
+      when nullif(trim(coalesce(p.avatar_url, '')), '') is not null then 'saved-selection'
+      when v_avatar_url <> '' then v_avatar_id
       else ''
     end,
     role = case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
@@ -371,17 +394,48 @@ on conflict (id) do update set
     else p.display_name
   end,
   avatar_url = case
-    when nullif(p.avatar_id, '') is not null then p.avatar_url
+    when nullif(trim(coalesce(p.avatar_url, '')), '') is not null then p.avatar_url
     when nullif(excluded.avatar_id, '') is not null then excluded.avatar_url
     else ''
   end,
   avatar_id = case
     when nullif(p.avatar_id, '') is not null then p.avatar_id
+    when nullif(trim(coalesce(p.avatar_url, '')), '') is not null then 'saved-selection'
     when nullif(excluded.avatar_id, '') is not null then excluded.avatar_id
     else ''
   end,
   role = excluded.role,
   updated_at = now();
+
+-- Repara instalações atualizadas nas quais a escolha do avatar ficou sem id.
+update public.profiles as p
+set
+  avatar_url = trim(u.raw_user_meta_data ->> 'profile_avatar_url'),
+  avatar_id = coalesce(nullif(trim(u.raw_user_meta_data ->> 'profile_avatar_id'), ''), 'saved-selection'),
+  updated_at = now()
+from auth.users as u
+where u.id = p.id
+  and nullif(trim(coalesce(p.avatar_url, '')), '') is null
+  and nullif(trim(coalesce(u.raw_user_meta_data ->> 'profile_avatar_url', '')), '') is not null;
+
+update public.profiles as p
+set
+  avatar_id = coalesce(
+    nullif(trim(u.raw_user_meta_data ->> 'profile_avatar_id'), ''),
+    (
+      select ci.id::text
+      from public.content_items as ci
+      where ci.collection = 'gallery'
+        and nullif(trim(coalesce(ci.data ->> 'imageUrl', '')), '') = trim(p.avatar_url)
+      limit 1
+    ),
+    'saved-selection'
+  ),
+  updated_at = now()
+from auth.users as u
+where u.id = p.id
+  and nullif(trim(coalesce(p.avatar_url, '')), '') is not null
+  and nullif(trim(coalesce(p.avatar_id, '')), '') is null;
 
 -- Retorna somente os campos que fazem parte do perfil público. A função não
 -- expõe e-mail, UUID, papel da conta, estado de moderação, datas de login ou o
@@ -409,7 +463,7 @@ as $$
       p.id,
       p.display_name,
       p.username::text as username,
-      case when nullif(trim(p.avatar_id), '') is not null then p.avatar_url else '' end as avatar_url,
+      case when nullif(trim(coalesce(p.avatar_url, '')), '') is not null then p.avatar_url else '' end as avatar_url,
       case when nullif(trim(p.banner_id), '') is not null then p.banner_url else '' end as banner_url,
       p.created_at,
       coalesce(up.data, '{}'::jsonb) as preferences

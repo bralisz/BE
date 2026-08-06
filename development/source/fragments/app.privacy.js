@@ -182,7 +182,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       id: raw.id || raw.uid,
       email: raw.email || '',
       displayName: metadata.display_name || metadata.full_name || raw.displayName || raw.display_name || '',
-      photoURL: (metadata.profile_avatar_id && metadata.profile_avatar_url) ? metadata.profile_avatar_url : '',
+      photoURL: metadata.profile_avatar_url ? String(metadata.profile_avatar_url) : '',
       providerPhotoURL: metadata.avatar_url || raw.photoURL || raw.avatar_url || '',
       emailVerified: Boolean(raw.email_confirmed_at || raw.emailVerified || MODE === 'local'),
       role: trustedAdminClaim || raw.role === 'admin' ? 'admin' : 'member',
@@ -664,7 +664,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
             .eq('id', user.uid)
             .maybeSingle();
           if (existingProfileError) console.warn('Não foi possível consultar o avatar salvo:', existingProfileError.message);
-          savedAvatar = String(existingProfile?.avatar_id || '').trim() ? String(existingProfile?.avatar_url || '').trim() : '';
+          savedAvatar = String(existingProfile?.avatar_url || '').trim();
         } catch (avatarLookupError) {
           console.warn('Não foi possível consultar o avatar salvo:', avatarLookupError?.message || avatarLookupError);
         }
@@ -696,13 +696,29 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         if (!row) throw backendError('profile/not-created', 'Não foi possível criar ou carregar o perfil.');
         const profile = profileFromRow(row);
         const cachedAvatarUrl = readProfileAvatarCache(user.uid);
+        const storedAvatarUrl = String(profile.avatarUrl || '').trim();
+        const storedAvatarId = String(profile.avatarId || '').trim();
         const metadataAvatarUrl = String(metadata.profile_avatar_url || '').trim();
         const metadataAvatarId = String(metadata.profile_avatar_id || '').trim();
-        if (!(profile.avatarId && profile.avatarUrl)) {
-          profile.avatarUrl = metadataAvatarUrl || cachedAvatarUrl || '';
-          profile.avatarId = metadataAvatarId || (profile.avatarUrl ? 'saved-selection' : '');
-        }
+        const recoveredAvatarUrl = storedAvatarUrl || metadataAvatarUrl || cachedAvatarUrl || '';
+        const recoveredAvatarId = storedAvatarId || metadataAvatarId || (recoveredAvatarUrl ? 'saved-selection' : '');
+        profile.avatarUrl = recoveredAvatarUrl;
+        profile.avatarId = recoveredAvatarId;
         if (profile.avatarUrl) writeProfileAvatarCache(user.uid, profile.avatarUrl);
+        if (profile.avatarUrl && (!storedAvatarId || storedAvatarUrl !== profile.avatarUrl)) {
+          try {
+            const { data: repairedRows, error: repairError } = await supabaseClient
+              .from('profiles')
+              .update({ avatar_url: profile.avatarUrl, avatar_id: profile.avatarId, updated_at: now() })
+              .eq('id', user.uid)
+              .select('*');
+            if (repairError) throw repairError;
+            const repaired = repairedRows && repairedRows[0] ? profileFromRow(repairedRows[0]) : null;
+            if (repaired) Object.assign(profile, repaired);
+          } catch (repairError) {
+            console.warn('Não foi possível reparar o identificador do avatar antigo:', repairError?.message || repairError);
+          }
+        }
         const cachedBanner = readProfileBannerCache(user.uid);
         const metadataBannerUrl = String(metadata.profile_banner_url || metadata.banner_url || '').trim();
         const metadataBannerId = String(metadata.profile_banner_id || metadata.banner_id || '').trim();
@@ -722,8 +738,8 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         displayName: existing?.displayName || user.displayName || '',
         username: existing?.username || '',
         bio: existing?.bio || '',
-        avatarUrl: existing?.avatarId ? (existing?.avatarUrl || '') : '',
-        avatarId: existing?.avatarId || '',
+        avatarUrl: existing?.avatarUrl || '',
+        avatarId: existing?.avatarId || (existing?.avatarUrl ? 'saved-selection' : ''),
         bannerUrl: existing?.bannerUrl || '',
         bannerId: existing?.bannerId || '',
         role: existing?.role || 'member',
@@ -770,6 +786,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     async setAvatar(userId, avatarUrl, avatarId) {
       const normalizedUrl = String(avatarUrl || '').trim();
       const normalizedId = String(avatarId || '').trim();
+      const effectiveAvatarId = normalizedId || (normalizedUrl ? 'saved-selection' : '');
       const previousProfile = currentUser?.profile || {};
       let savedProfile = null;
       let databaseError = null;
@@ -777,7 +794,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       writeProfileAvatarCache(userId, normalizedUrl);
 
       try {
-        savedProfile = await this.update(userId, { avatarUrl: normalizedUrl, avatarId: normalizedId });
+        savedProfile = await this.update(userId, { avatarUrl: normalizedUrl, avatarId: effectiveAvatarId });
       } catch (error) {
         databaseError = error;
         console.warn('Avatar salvo por compatibilidade; o perfil remoto não aceitou a atualização:', error?.message || error);
@@ -793,7 +810,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
               ...existingMetadata,
               avatar_url: normalizedUrl,
               profile_avatar_url: normalizedUrl,
-              profile_avatar_id: normalizedId
+              profile_avatar_id: effectiveAvatarId
             }
           });
           if (error) throw error;
@@ -809,7 +826,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
           uid: userId,
           id: userId,
           avatarUrl: normalizedUrl,
-          avatarId: normalizedId || (normalizedUrl ? 'saved-selection' : ''),
+          avatarId: effectiveAvatarId,
           updatedAt: now()
         };
       }
@@ -823,7 +840,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
           detail: {
             userId,
             avatarUrl: normalizedUrl,
-            avatarId: normalizedId,
+            avatarId: effectiveAvatarId,
             profile: savedProfile,
             compatibilityFallback: Boolean(databaseError)
           }
@@ -2965,7 +2982,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     const update = () => {
       const account = window.beBackend?.auth?.currentUser;
       const src = sourcePhoto && !sourcePhoto.hidden ? sourcePhoto.getAttribute('src') : '';
-      const profileAvatar = account?.profile?.avatarId && account?.profile?.avatarUrl ? account.profile.avatarUrl : '';
+      const profileAvatar = account?.profile?.avatarUrl ? String(account.profile.avatarUrl) : '';
       const safeSrc = String(src || profileAvatar || '').replace(/"/g, '&quot;');
       const avatarMarkup = safeSrc ? `<img loading="lazy" decoding="async" src="${safeSrc}" alt="Avatar">` : icon('user');
       headerAvatar.innerHTML = avatarMarkup;

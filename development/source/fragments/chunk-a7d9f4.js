@@ -30,7 +30,7 @@ document.head.appendChild(s);
       return {
         ...account,
         displayName: profile.displayName || profile.username || account.displayName || '',
-        photoURL: (profile.avatarId && profile.avatarUrl) ? profile.avatarUrl : '',
+        photoURL: profile.avatarUrl ? String(profile.avatarUrl) : '',
         profile
       };
     } catch (error) {
@@ -41,7 +41,7 @@ document.head.appendChild(s);
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
-  const selectedProfileAvatar = profile => profile && profile.avatarId && profile.avatarUrl ? String(profile.avatarUrl) : '';
+  const selectedProfileAvatar = profile => profile && profile.avatarUrl ? String(profile.avatarUrl) : '';
   const adminHashRoute = () => location.hash.startsWith('#/admin');
   const adminCallback = () => {
     const queryDestination = new URLSearchParams(location.search || '').get('auth_callback');
