@@ -31,17 +31,13 @@ A função `get_admin_donation_overview` só pode ser executada por usuários au
 
 ## Tradução automática
 
-A função autenticada `functions/translate-content-record` traduz, com o Google Cloud Translation, os campos textuais salvos em português para `en-us` e `es`. As traduções ficam persistidas no JSON `translations` do próprio conteúdo, evitando novas chamadas ao provedor em cada acesso.
+A função autenticada `functions/translate-content-record` traduz os campos textuais salvos em português para `en-us` e `es`. Ela usa no Supabase/Deno o mesmo método do `deep-translator`: consulta a versão móvel do Google Tradutor e extrai o resultado da página, sem exigir chave da API Google Cloud.
 
-Configure no projeto Supabase o segredo abaixo antes de usar a tradução automática:
+As traduções ficam persistidas no JSON `translations` do próprio conteúdo, evitando repetir a tradução em cada acesso. Não é necessário configurar `GOOGLE_TRANSLATE_API_KEY`.
 
-```text
-GOOGLE_TRANSLATE_API_KEY=<chave da API Cloud Translation>
-```
+Ao criar ou editar um conteúdo no painel, o site solicita automaticamente as duas traduções. O processamento possui divisão de textos longos, tentativas limitadas e pequenas pausas para reduzir bloqueios. Se o serviço estiver temporariamente indisponível ou limitar requisições, o conteúdo original em português continua sendo exibido como fallback.
 
-O segredo deve ficar somente no Edge Function. Nunca coloque essa chave em `index.html`, JavaScript público ou variáveis enviadas ao navegador.
-
-Ao criar ou editar um conteúdo no painel, o site solicita automaticamente as duas traduções. Se a tradução estiver temporariamente indisponível, o conteúdo original em português continua sendo exibido como fallback.
+Esse método depende da página pública do Google Tradutor e, por isso, pode sofrer limitação temporária ou mudanças externas. A implementação foi adaptada da estratégia `GoogleTranslator` do projeto `deep-translator` e sua atribuição está em `functions/translate-content-record/THIRD_PARTY_NOTICES.md`.
 
 ## Doações regionais
 
