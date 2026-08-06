@@ -17,3 +17,6 @@ A migration `20260804164611_cross_device_user_preferences.sql` cria a tabela pri
 
 - `20260804170608_scale_concurrent_users.sql`: troca a sincronização privada para Broadcast, une canais por usuário e otimiza as políticas de perfil para picos de acesso.
 - `20260804181700_public_profile_view.sql`: cria a leitura pública restrita por `@`, expondo somente apresentação, favoritos e vídeos salvos.
+- `20260806024500_enable_public_ongs.sql`: libera a coleção pública de ONGs para a página `/ong`.
+
+- `20260806033000_enable_public_ong_page_banner.sql`: libera somente o banner principal configurado no dashboard para a página `/ong`.

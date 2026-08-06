@@ -572,6 +572,9 @@ as $$
       'discordUrl', s.data -> 'discordUrl',
       'shareImage', s.data -> 'shareImage'
     ))
+    when 'ong' then jsonb_strip_nulls(jsonb_build_object(
+      'bannerUrl', s.data -> 'bannerUrl'
+    ))
     when 'billie-eilish' then jsonb_strip_nulls(jsonb_build_object(
       'sourceMode', s.data -> 'sourceMode',
       'title', s.data -> 'title',
@@ -590,7 +593,7 @@ as $$
   end
   from public.site_settings s
   where s.id = p_id
-    and s.id in ('site', 'billie-eilish')
+    and s.id in ('site', 'billie-eilish', 'ong')
   limit 1;
 $$;
 
@@ -642,7 +645,7 @@ as $$
   )
   from public.content_items c
   where c.collection = lower(trim(p_collection))
-    and c.collection in ('contents','featured','gallery','movies','notifications','sections','series','videos')
+    and c.collection in ('contents','featured','gallery','movies','notifications','ongs','sections','series','videos')
     and coalesce(lower(c.data ->> 'active'), 'true') = 'true'
     and (p_id is null or c.id::text = p_id)
   order by

@@ -121,6 +121,22 @@
       "destination": "/api/site-page"
     },
     {
+      "source": "/apoie",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/apoie/",
+      "destination": "/404.html"
+    },
+    {
+      "source": "/ong",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/ong/",
+      "destination": "/api/site-page"
+    },
+    {
       "source": "/:videoId",
       "destination": "/api/site-page"
     }

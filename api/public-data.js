@@ -3,7 +3,7 @@
 const DEFAULT_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const ALLOWED_COLLECTIONS = new Set([
-  'contents', 'featured', 'gallery', 'movies', 'notifications', 'sections', 'series', 'videos'
+  'contents', 'featured', 'gallery', 'movies', 'notifications', 'ongs', 'sections', 'series', 'videos'
 ]);
 const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
@@ -17,6 +17,7 @@ const SITE_SETTING_FIELDS = new Set([
   'description', 'discordUrl', 'footerText', 'instagram', 'primaryColor',
   'shareImage', 'siteName', 'website', 'xUrl', 'youtube'
 ]);
+const ONG_SETTING_FIELDS = new Set(['bannerUrl']);
 const BILLIE_SETTING_FIELDS = new Set([
   'bannerUrl', 'includeReferences', 'instagram', 'kicker', 'manualBio', 'portraitUrl',
   'sourceMode', 'spotify', 'title', 'website', 'xUrl', 'youtube'
@@ -87,13 +88,15 @@ function sanitizeItem(collection, row) {
 
 function sanitizeSettings(id, raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const allowed = id === 'billie-eilish' ? BILLIE_SETTING_FIELDS : id === 'site' ? SITE_SETTING_FIELDS : null;
+  const allowed = id === 'billie-eilish' ? BILLIE_SETTING_FIELDS : id === 'site' ? SITE_SETTING_FIELDS : id === 'ong' ? ONG_SETTING_FIELDS : null;
   if (!allowed) return null;
   const source = { id };
   for (const field of allowed) {
     if (Object.prototype.hasOwnProperty.call(raw, field)) source[field] = raw[field];
   }
-  if (id === 'billie-eilish') {
+  if (id === 'ong') {
+    source.bannerUrl = mediaReference('settings', id, 'bannerUrl', source.bannerUrl);
+  } else if (id === 'billie-eilish') {
     source.sourceMode = source.sourceMode === 'wikipedia' ? 'wikipedia' : 'manual';
     source.includeReferences = source.includeReferences === true || String(source.includeReferences) === 'true';
     source.title = safeText(source.title, 100);
@@ -153,7 +156,7 @@ async function fetchLegacyRows(name, id) {
 
 async function fetchRows(name, id) {
   if (name === 'settings') {
-    if (!id || !['site', 'billie-eilish'].includes(id)) throw new Error('invalid_setting');
+    if (!id || !['site', 'billie-eilish', 'ong'].includes(id)) throw new Error('invalid_setting');
     try {
       const payload = await callRpc('get_public_site_setting', { p_id: id });
       const value = Array.isArray(payload) ? payload[0] : payload;

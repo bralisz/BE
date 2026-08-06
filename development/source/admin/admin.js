@@ -1,8 +1,8 @@
 (() => {
   'use strict';
 
-  const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','users'];
-  const LABELS = {dashboard:'Visão geral',support:'Suporte',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
+  const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','ongs','users'];
+  const LABELS = {dashboard:'Visão geral',support:'Suporte',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',ongs:'Apoie uma ONG',users:'Usuários',settings:'Configurações'};
   const LOCAL_ADMIN_EMAIL = 'admin@local.invalid';
   const CONTENT_CATEGORIES = [
     ['videos','Vídeos','▣'],
@@ -306,7 +306,7 @@
       clearInterval(adminLoginBgTimer);
       adminLoginBgTimer = null;
     }
-    const routes = ['dashboard','support','billie','sections','contents','gallery','users','settings'];
+    const routes = ['dashboard','support','billie','sections','contents','gallery','ongs','users','settings'];
     const activeAvatar = selectedProfileAvatar(user.profile) || String(user.photoURL || '');
     const accountAvatar = activeAvatar
       ? `<img loading="lazy" decoding="async" src="${esc(activeAvatar)}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`
@@ -706,8 +706,36 @@
   async function collectionPage(name) {
     const content = $('#adminContent');
     const label = LABELS[name] || name;
-    content.innerHTML = `<div class="admin-title-row"><div><h1>${esc(label)}</h1><p>Crie, edite, publique e organize os itens.</p></div>${name === 'users' ? '' : '<button class="a-btn primary" id="newItem">+ Adicionar</button>'}</div><div class="a-card"><div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por título…"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="empty">Carregando…</div></div></div>`;
+    const ongSettings = name === 'ongs' ? (await db.get('settings', 'ong') || {}) : {};
+    const ongBannerPanel = name === 'ongs'
+      ? `<div class="a-card" style="margin-bottom:18px"><form id="ongPageSettingsForm"><div class="settings-section-heading"><strong>Banner principal da página /ong</strong><small>Nenhuma imagem padrão será usada. Enquanto este campo estiver vazio, a página exibirá apenas o fundo escuro.</small></div><div class="form-grid" style="margin-top:18px">${imageField('Banner principal', 'bannerUrl', ongSettings.bannerUrl || '')}</div><div class="modal-actions"><button class="a-btn primary" type="submit">Salvar banner da página</button></div></form></div>`
+      : '';
+    const pageDescription = name === 'ongs'
+      ? 'Defina o banner principal da página e cadastre as organizações que poderão ser apoiadas.'
+      : 'Crie, edite, publique e organize os itens.';
+    const addLabel = name === 'ongs' ? '+ Adicionar ONG' : '+ Adicionar';
+    content.innerHTML = `<div class="admin-title-row"><div><h1>${esc(label)}</h1><p>${esc(pageDescription)}</p></div>${name === 'users' ? '' : `<button class="a-btn primary" id="newItem">${addLabel}</button>`}</div>${ongBannerPanel}<div class="a-card"><div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por título…"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="empty">Carregando…</div></div></div>`;
     if ($('#newItem')) $('#newItem').onclick = () => openEditor(name);
+    if (name === 'ongs') {
+      setupImagePreviews(content);
+      const form = $('#ongPageSettingsForm');
+      form.onsubmit = async event => {
+        event.preventDefault();
+        const button = event.submitter;
+        if (button) { button.disabled = true; button.textContent = 'Salvando…'; }
+        try {
+          const bannerUrl = String(new FormData(event.currentTarget).get('bannerUrl') || '').trim();
+          if (bannerUrl && !(/^https:\/\//i.test(bannerUrl) || /^\/?assets\//i.test(bannerUrl))) throw new Error('Use uma URL https:// ou um caminho /assets/... para o banner.');
+          await db.set('settings', 'ong', { bannerUrl, updatedAt: now(), updatedBy: user.uid || '' }, { merge: true });
+          await logAction('ong_page_banner_updated', 'settings', 'ong', bannerUrl ? 'Banner da página /ong atualizado' : 'Banner da página /ong removido');
+          toast(bannerUrl ? 'Banner da página salvo.' : 'Banner removido. A página ficará sem imagem principal.');
+        } catch (error) {
+          toast(error.message, 'err');
+        } finally {
+          if (button) { button.disabled = false; button.textContent = 'Salvar banner da página'; }
+        }
+      };
+    }
     const items = await db.list(name, { orderBy: 'order', direction: 'asc' });
     const draw = () => {
       const search = $('#search').value.toLowerCase();
@@ -728,6 +756,9 @@
   }
 
   function editorFields(name, item = {}, context = {}) {
+    if (name === 'ongs') {
+      return `<div class="form-grid"><div class="field full"><label>Nome da ONG *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}" placeholder="Ex.: UNICEF"></div><div class="field full"><label>Descrição da ONG *</label><textarea class="a-textarea" rows="7" maxlength="4000" name="description" required placeholder="Explique a causa, o trabalho realizado e como o apoio ajuda.">${esc(item.description || '')}</textarea></div>${imageField('Banner da ONG *', 'imageUrl', item.imageUrl || item.bannerUrl || '')}<div class="field full"><label>Link do botão Apoie *</label><input class="a-input" type="url" name="contentUrl" required value="${esc(item.contentUrl || item.link || '')}" placeholder="https://..."><small>O visitante será direcionado para este endereço ao tocar em Apoie.</small></div><div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div><div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div></div>`;
+    }
     const showMedia = !['sections','users'].includes(name);
     const sections = context.sections || [];
     const sectionLinkedContent = ['videos','movies','series'].includes(name);
@@ -1258,6 +1289,21 @@
             : data.category.trim().toLowerCase().replace(/\s+/g, '-');
         }
         if (name === 'gallery') data.itemType = data.itemType === 'banner' ? 'banner' : 'avatar';
+        if (name === 'ongs') {
+          data.title = String(data.title || '').trim();
+          data.description = String(data.description || '').trim();
+          if (!data.title || !data.description) throw new Error('Preencha o nome e a descrição da ONG.');
+          if (!String(data.imageUrl || '').trim()) throw new Error('Adicione o banner da ONG.');
+          try {
+            const supportLink = new URL(String(data.contentUrl || '').trim());
+            if (supportLink.protocol !== 'https:') throw new Error('protocol');
+            data.contentUrl = supportLink.href;
+          } catch (_) {
+            throw new Error('Use um link https:// válido para o botão Apoie.');
+          }
+          data.type = 'ong';
+          data.bannerUrl = String(data.imageUrl || '').trim();
+        }
         if (['movies','series'].includes(name) && !String(data.logoUrl || '').trim()) {
           throw new Error('Adicione a logo do título. Filmes e séries usam a logo no lugar do texto do cabeçalho.');
         }

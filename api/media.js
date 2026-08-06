@@ -5,7 +5,7 @@ const MAX_REDIRECTS = 3;
 const REQUEST_TIMEOUT_MS = 12000;
 const DEFAULT_SUPABASE_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const ALLOWED_COLLECTIONS = new Set(['contents', 'featured', 'gallery', 'movies', 'notifications', 'sections', 'series', 'videos']);
+const ALLOWED_COLLECTIONS = new Set(['contents', 'featured', 'gallery', 'movies', 'notifications', 'ongs', 'sections', 'series', 'videos']);
 const ALLOWED_MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl', 'shareImage', 'portraitUrl']);
 
 const SUPABASE_RUNTIME_SOURCES = [
@@ -95,7 +95,7 @@ async function storedMediaSource(collection, id, field) {
   let endpoint = '';
   let body = null;
   if (name === 'settings') {
-    if (!['site', 'billie-eilish'].includes(itemId)) throw new Error('invalid_reference');
+    if (!['site', 'billie-eilish', 'ong'].includes(itemId)) throw new Error('invalid_reference');
     endpoint = `${url}/rest/v1/rpc/get_public_site_setting`;
     body = { p_id: itemId };
   } else {
