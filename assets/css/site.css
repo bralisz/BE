@@ -9617,3 +9617,43 @@ body.donate-page-active > footer > .footer-card{width:min(100%,1390px)!important
 @media (prefers-reduced-motion:reduce){
   .donate-page-home,.donate-page-notifications,.donate-page-avatar,.donate-ngo-card,.donate-ngo-toggle,.donate-ngo-toggle img,.donate-ngo-details,.donate-ngo-details-content,.donate-ngo-support-button{transition:none!important}
 }
+
+/* Sincronização global do avatar no desktop — mesma posição usada na Home. */
+@media (min-width:761px){
+  .donate-page-header{
+    min-height:0!important;
+    padding:21px 22px 28px!important;
+  }
+  .donate-page-header-actions{gap:12px!important}
+  .donate-page-home,
+  .donate-page-notifications,
+  .donate-page-avatar{
+    width:54px!important;
+    height:54px!important;
+    flex:0 0 54px!important;
+  }
+  .donate-notification-dropdown{right:-66px!important}
+
+  .billie-page-header{
+    height:96px!important;
+    padding-right:22px!important;
+    padding-left:22px!important;
+  }
+  .billie-page-header-actions{gap:12px!important}
+  .billie-page-notifications,
+  .billie-page-avatar{
+    width:54px!important;
+    height:54px!important;
+    flex-basis:54px!important;
+  }
+
+  .legal-page-header{
+    height:96px!important;
+    padding-right:22px!important;
+    padding-left:22px!important;
+  }
+  .legal-avatar-button:not(.is-login){
+    width:54px!important;
+    height:54px!important;
+  }
+}
