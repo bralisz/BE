@@ -492,13 +492,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return ['en-us','es'].includes(slug) ? slug : 'pt-br';
   }
 
+  function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
+    const raw = String(value || '').trim();
+    const slug = String(requestedSlug || 'pt-br').toLowerCase();
+    if (!raw || slug === 'pt-br') return raw;
+    const normalized = raw.toLowerCase().replace(/,/g, ' ');
+    const hoursMatch = normalized.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i);
+    const minutesMatch = normalized.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);
+    if (!hoursMatch && !minutesMatch) return raw;
+    const parts = [];
+    if (hoursMatch) parts.push(slug === 'en-us' ? `${Number(hoursMatch[1])} hr` : `${Number(hoursMatch[1])} h`);
+    if (minutesMatch) parts.push(`${Number(minutesMatch[1])} min`);
+    return parts.join(' ');
+  }
+
   function localizeContentRecord(record) {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
-    return localized && typeof localized === 'object' ? { ...record, ...localized } : record;
+    const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
+    ['duration','runtime','videoDuration'].forEach(field => {
+      if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
+    });
+    return result;
   }
 
   function recordNeedsTranslation(record, slug) {
@@ -518,16 +536,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const missing = values.filter(record => recordNeedsTranslation(record, slug));
     if (missing.length) {
       try {
-        const batches = [];
-        for (let offset = 0; offset < missing.length; offset += 50) batches.push(missing.slice(offset, offset + 50));
-        const results = await Promise.all(batches.map(batch => supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-          body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
-        })));
         const translatedById = new Map();
-        results.forEach(result => {
-          if (result?.error || !result?.data || !Array.isArray(result.data.records)) return;
+        for (let offset = 0; offset < missing.length; offset += 20) {
+          const batch = missing.slice(offset, offset + 20);
+          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+            body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
+          });
+          if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
+            console.warn('Um lote de tradução não foi concluído:', result?.error?.message || 'resposta inválida');
+            continue;
+          }
           result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
-        });
+        }
         values.forEach(record => {
           const translation = translatedById.get(String(record.id));
           if (!translation || typeof translation !== 'object') return;
@@ -1961,6 +1981,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const randomFeaturedPools = { videos: [], films: [], movies: [], series: [] };
   const lastRandomFeaturedId = { videos: '', films: '', movies: '', series: '' };
 
+
+  function localizedUiText(source, variables = {}) {
+    if (window.BETVI18n && typeof window.BETVI18n.t === 'function') return window.BETVI18n.t(source, variables);
+    return String(source || '').replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => Object.prototype.hasOwnProperty.call(variables, key) ? String(variables[key]) : _);
+  }
+
   function markdownInline(value) {
     let source = String(value ?? '');
     const tokens = [];
@@ -2601,13 +2627,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const defaultBanner = '/assets/images/pages/billie-home-banner-default.webp';
     const spotlight = document.createElement('section');
     spotlight.className = 'billie-home-spotlight';
-    spotlight.setAttribute('aria-label', 'Conheça Billie Eilish');
+    spotlight.setAttribute('aria-label', localizedUiText('Conheça Billie Eilish'));
     spotlight.innerHTML = `
       <div class="billie-home-spotlight-frame">
         <img src="${defaultBanner}" alt="Billie Eilish" loading="lazy" decoding="async">
         <div class="billie-home-spotlight-overlay" aria-hidden="true"></div>
         <a class="billie-home-spotlight-button" href="/billie-eilish" data-open-billie="true">
-          Conheça a Billie Eilish
+          ${escapeHtml(localizedUiText('Conheça a Billie Eilish'))}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </a>
       </div>`;
@@ -5562,6 +5588,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profileFavoritesSection=document.getElementById('profileFavoritesSection');
     var profileFavoritesContent=document.getElementById('profileFavoritesContent');
     var profileFavoritesEdit=document.getElementById('profileFavoritesEdit');
+    function localizedProfileText(source){
+      return window.BETVI18n&&typeof window.BETVI18n.t==='function'?window.BETVI18n.t(source):source;
+    }
+    function syncProfileLanguage(){
+      if(profileFavoritesEdit)profileFavoritesEdit.textContent=localizedProfileText('Editar favoritos');
+    }
+    syncProfileLanguage();
+    window.addEventListener('be:i18n-ready',syncProfileLanguage);
     var profileFavoritesPicker=document.getElementById('profileFavoritesPicker');
     var profileFavoritesPickerBody=document.getElementById('profileFavoritesPickerBody');
     var profileFavoritesPickerClose=document.getElementById('profileFavoritesPickerClose');
@@ -7296,6 +7330,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
     });
     syncLegalAvatar();
+    if(window.BETVI18n&&window.BETVI18n.ready){
+      window.BETVI18n.ready.then(function(){if(legalPage)window.BETVI18n.apply(legalPage);}).catch(function(){});
+    }else if(window.BETVI18n&&typeof window.BETVI18n.apply==='function'&&legalPage){
+      window.BETVI18n.apply(legalPage);
+    }
     document.title='Billie Eilish TV';
     window.scrollTo(0,0);
     return true;
@@ -7327,6 +7366,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('be:open-legal-route',renderLegalRoute);
   window.addEventListener('be:profile-avatar-changed',syncLegalAvatar);
   if(window.beBackend&&beBackend.ready){beBackend.ready.then(function(){if(beBackend.auth&&beBackend.auth.onChange)beBackend.auth.onChange(function(){syncLegalAvatar();window.setTimeout(showCookieNotice,80);});syncLegalAvatar();window.setTimeout(showCookieNotice,80);}).catch(function(){syncLegalAvatar();showCookieNotice();});}
+  window.addEventListener('be:i18n-ready',function(){renderLegalRoute();showCookieNotice();});
   window.addEventListener('be:home-entered',function(){window.setTimeout(showCookieNotice,80);});
   window.addEventListener('be:open-config',showCookieNotice);
   window.addEventListener('be:open-profile-route',showCookieNotice);

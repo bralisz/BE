@@ -11,14 +11,17 @@ const LOCALE_TARGETS: Record<string, string> = { "en-us": "en", es: "es" };
 const TRANSLATABLE_FIELDS = [
   "title", "name", "description", "subtitle", "body", "summary", "buttonLabel", "buttonText",
   "actionLabel", "ctaLabel", "label", "text", "manualBio", "kicker", "footerText", "sectionName", "siteName",
+  "duration", "runtime", "videoDuration",
 ] as const;
 const MUSIC_TITLE_SECTION_IDS = new Set([
   "14386598-4978-403a-8548-db0ee582e291", // Live Performances & TV
   "18db9515-179c-4bad-9646-1fcda63df14a", // Videoclipes
 ]);
 const MUSIC_TITLE_SECTION_NAMES = new Set(["live performances & tv", "videoclipes"]);
+const DURATION_FIELDS = new Set(["duration", "runtime", "videoDuration"]);
 const MAX_RECORDS = 50;
 const MAX_TOTAL_CHARACTERS = 30_000;
+const GOOGLE_JSON_TRANSLATE_URL = "https://translate.googleapis.com/translate_a/single";
 const GOOGLE_MOBILE_TRANSLATE_URL = "https://translate.google.com/m";
 const GOOGLE_WEB_CHUNK_SIZE = 1_800;
 const GOOGLE_WEB_MAX_ATTEMPTS = 3;
@@ -131,6 +134,40 @@ function sleep(ms: number): Promise<void> {
 
 async function translateGoogleWebChunk(text: string, target: string): Promise<string> {
   if (!text.trim()) return text;
+
+  // Endpoint JSON público usado como primeira tentativa. Não exige chave e
+  // evita depender do HTML da página móvel, que muda com mais frequência.
+  try {
+    const jsonUrl = new URL(GOOGLE_JSON_TRANSLATE_URL);
+    jsonUrl.searchParams.set("client", "gtx");
+    jsonUrl.searchParams.set("sl", "pt");
+    jsonUrl.searchParams.set("tl", target);
+    jsonUrl.searchParams.set("dt", "t");
+    jsonUrl.searchParams.set("q", text);
+    const response = await fetch(jsonUrl, {
+      method: "GET",
+      redirect: "follow",
+      signal: AbortSignal.timeout(15_000),
+      headers: {
+        "Accept": "application/json,text/plain,*/*",
+        "Accept-Language": target === "es" ? "es,pt;q=0.8,en;q=0.6" : "en,pt;q=0.8",
+        "User-Agent": "Mozilla/5.0 (compatible; BETV-Translator/1.2; +https://billieilishtv.site)",
+      },
+    });
+    if (response.ok) {
+      const payload = await response.json().catch(() => null) as unknown;
+      if (Array.isArray(payload) && Array.isArray(payload[0])) {
+        const translated = (payload[0] as unknown[])
+          .map((part) => Array.isArray(part) ? String(part[0] || "") : "")
+          .join("")
+          .trim();
+        if (translated) return translated;
+      }
+    }
+  } catch (_) {
+    // Continua para o método da página móvel, equivalente ao deep-translator.
+  }
+
   const url = new URL(GOOGLE_MOBILE_TRANSLATE_URL);
   url.searchParams.set("sl", "pt");
   url.searchParams.set("tl", target);
@@ -274,11 +311,25 @@ function keepsOriginalMusicTitle(collection: string, data: Record<string, unknow
   return MUSIC_TITLE_SECTION_IDS.has(sectionId) || MUSIC_TITLE_SECTION_NAMES.has(sectionName);
 }
 
+function localizedDuration(value: unknown, locale: string): string {
+  const raw = safeString(value, 120);
+  if (!raw) return raw;
+  const normalized = raw.toLowerCase().replace(/,/g, " ");
+  const hours = normalized.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i);
+  const minutes = normalized.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);
+  if (!hours && !minutes) return raw;
+  const parts: string[] = [];
+  if (hours) parts.push(locale === "en-us" ? `${Number(hours[1])} hr` : `${Number(hours[1])} h`);
+  if (minutes) parts.push(`${Number(minutes[1])} min`);
+  return parts.join(" ");
+}
+
 function stringsToTranslate(collection: string, data: Record<string, unknown>): Array<{ field: string; value: string }> {
   const values: Array<{ field: string; value: string }> = [];
   const preserveMusicTitle = keepsOriginalMusicTitle(collection, data);
   for (const field of TRANSLATABLE_FIELDS) {
     if (preserveMusicTitle && (field === "title" || field === "name")) continue;
+    if (DURATION_FIELDS.has(field)) continue;
     const value = typeof data[field] === "string" ? String(data[field]).trim() : "";
     if (!value || /^https?:\/\//i.test(value) || value.length > 8_000) continue;
     values.push({ field, value });
@@ -398,6 +449,11 @@ Deno.serve(async (req: Request) => {
         translatedAt: new Date().toISOString(),
         provider: "deep-translator-google-web",
       };
+      DURATION_FIELDS.forEach((field) => {
+        if (typeof item.data[field] === "string" && String(item.data[field]).trim()) {
+          translation[field] = localizedDuration(item.data[field], locale);
+        }
+      });
       newTranslations.set(`${preparedIndex}:${locale}`, translation);
       item.dirty = true;
 

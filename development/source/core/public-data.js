@@ -5,6 +5,12 @@
   const randomFeaturedPools = { videos: [], films: [], movies: [], series: [] };
   const lastRandomFeaturedId = { videos: '', films: '', movies: '', series: '' };
 
+
+  function localizedUiText(source, variables = {}) {
+    if (window.BETVI18n && typeof window.BETVI18n.t === 'function') return window.BETVI18n.t(source, variables);
+    return String(source || '').replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => Object.prototype.hasOwnProperty.call(variables, key) ? String(variables[key]) : _);
+  }
+
   window.addEventListener('load', async () => {
     setupHomeNavigation();
     setupDetailControls();
@@ -541,8 +547,8 @@
   }
 
   function cleanPathname() {
-    try { return decodeURIComponent(String(location.pathname || '/')).replace(/\/+$/, '') || '/'; }
-    catch (_) { return String(location.pathname || '/').replace(/\/+$/, '') || '/'; }
+    try { return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname || '/'))).replace(/\/+$/, '') || '/'; }
+    catch (_) { return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname || '/')).replace(/\/+$/, '') || '/'; }
   }
 
   function detailRouteId() {

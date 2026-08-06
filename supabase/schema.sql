@@ -1222,3 +1222,7 @@ revoke all on function public.get_admin_donation_overview(text, integer) from pu
 grant execute on function public.get_admin_donation_overview(text, integer) to authenticated;
 
 notify pgrst, 'reload schema';
+
+
+-- Acesso interno da Edge Function de tradução automática.
+grant select, update on public.content_items, public.site_settings to service_role;

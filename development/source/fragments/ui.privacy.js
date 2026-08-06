@@ -210,7 +210,7 @@
       var date=new Date(source);
       return String(date.getFullYear()||new Date().getFullYear());
     }
-    function cleanPathname(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
+    function cleanPathname(){try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}}
     function isConfigRoute(){var path=cleanPathname().toLowerCase();var hash=location.hash.toLowerCase();return path==='/config'||hash==='#config'||hash==='#/config';}
     function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
     function profileRoutePath(){
@@ -343,7 +343,7 @@
           }catch(_){ }
           closePublicPages(false);
           window.alert('Conta excluída com sucesso. Você foi desconectado do site.');
-          window.location.replace('/');
+          window.location.replace(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');
         }catch(error){
           msg.textContent='Não foi possível excluir: '+(error&&error.message?error.message:'Tente novamente.');
           msg.className='settings-status err';
@@ -634,7 +634,7 @@
   function callbackParams(){var query=new URLSearchParams(location.search||''),raw=String(location.hash||'').replace(/^#/,''),nested=raw.indexOf('#'),payload=nested>=0?raw.slice(nested+1):raw,hash=new URLSearchParams(payload);return {query:query,hash:hash};}
   function hasAuthCallback(){var p=callbackParams();return Boolean(p.query.get('code')||p.query.get('error')||p.query.get('error_code')||p.query.get('auth_callback')||p.hash.get('access_token')||p.hash.get('refresh_token')||p.hash.get('error')||p.hash.get('error_code'));}
   function authCallbackError(){var p=callbackParams();return p.query.get('error_description')||p.hash.get('error_description')||p.query.get('error')||p.hash.get('error')||'';}
-  function cleanPathname(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
+  function cleanPathname(){try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}}
   function replaceRoute(route){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});if(String(route||'').startsWith('/')){url.pathname=route;url.hash='';}else{url.pathname='/';url.hash=route||'';}history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
   function isConfigRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/config'||hash==='#config'||hash==='#/config';}
   function isLoginRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/login'||hash==='#login'||hash==='#/login';}
@@ -903,7 +903,7 @@
 
   function routeName(){
     var path='';
-    try{path=decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){path=String(location.pathname||'/').replace(/\/+$/,'')||'/';}
+    try{path=decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}
     var value=path.replace(/^\//,'').toLowerCase();
     if(legalRoutes.indexOf(value)>=0)return value;
     value=String(location.hash||'').replace(/^#\/?/,'').split(/[?&]/)[0].toLowerCase();
@@ -994,6 +994,11 @@
       if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
     });
     syncLegalAvatar();
+    if(window.BETVI18n&&window.BETVI18n.ready){
+      window.BETVI18n.ready.then(function(){if(legalPage)window.BETVI18n.apply(legalPage);}).catch(function(){});
+    }else if(window.BETVI18n&&typeof window.BETVI18n.apply==='function'&&legalPage){
+      window.BETVI18n.apply(legalPage);
+    }
     document.title='Billie Eilish TV';
     window.scrollTo(0,0);
     return true;
@@ -1025,6 +1030,7 @@
   window.addEventListener('be:open-legal-route',renderLegalRoute);
   window.addEventListener('be:profile-avatar-changed',syncLegalAvatar);
   if(window.beBackend&&beBackend.ready){beBackend.ready.then(function(){if(beBackend.auth&&beBackend.auth.onChange)beBackend.auth.onChange(syncLegalAvatar);syncLegalAvatar();}).catch(syncLegalAvatar);}
+  window.addEventListener('be:i18n-ready',function(){renderLegalRoute();showCookieNotice();});
   document.addEventListener('DOMContentLoaded',function(){renderLegalRoute();showCookieNotice();});
   if(document.readyState!=='loading'){renderLegalRoute();showCookieNotice();}
 })();
@@ -1045,10 +1051,10 @@
       return;
     }
     var target='/config'+(location.search||'');
-    try{history.pushState({beRoute:'config'},'',target);}catch(_){location.assign('/config');}
+    try{history.pushState({beRoute:'config'},'',target);}catch(_){location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/config'):'/config');}
     window.dispatchEvent(new CustomEvent('be:open-config'));
     window.setTimeout(function(){
-      if(!document.body.classList.contains('settings-page-active'))location.assign(target);
+      if(!document.body.classList.contains('settings-page-active'))location.assign(window.BETVLocaleURL?window.BETVLocaleURL(target):target);
     },220);
   }
   document.addEventListener('click',openProfileSettings,true);
