@@ -2,6 +2,12 @@
 <html lang="pt-BR" class="site-loading-active">
 <head>
 <meta charset="UTF-8">
+<script>
+(function(){
+  window.__beSiteSkeletonStartedAt=Date.now();
+  window.__beSiteSkeletonMinimumMs=5000;
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Billie Eilish TV</title>
 <meta name="description" content="Todo o conteúdo da Billie Eilish em um só lugar.">
@@ -76,6 +82,7 @@ html.config-route-boot body{visibility:hidden!important;background:#050607!impor
     var requested=path.toLowerCase()==='/config'||hash==='#config'||hash==='#/config';
     if(!requested)return;
     document.documentElement.classList.add('config-route-boot');
+    window.__beConfigBootStartedAt=Date.now();
     window.__beConfigBootTimer=window.setTimeout(function(){
       document.documentElement.classList.remove('config-route-boot');
     },10000);
@@ -97,8 +104,8 @@ html.config-route-boot body{visibility:hidden!important;background:#050607!impor
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260806-password-avatar-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260806-section-update-favorites-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260806-section-update-favorites-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260806-skeleton-5s-hmhas-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260806-skeleton-5s-hmhas-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">

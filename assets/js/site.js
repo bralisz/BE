@@ -49,6 +49,8 @@
 
   var root=document.documentElement;
   var releaseVersion=0;
+  var CONFIG_SKELETON_MIN_MS=5000;
+  var configBootStartedAt=Number(window.__beConfigBootStartedAt||Date.now());
 
   function configRouteActive(){
     try{
@@ -121,8 +123,10 @@
     var container=settings.container||document.getElementById('settingsPage');
     var readiness=Promise.all([waitForConfigImages(container),waitForConfigFonts()]);
     var timeout=new Promise(function(resolve){window.setTimeout(resolve,2300);});
+    var elapsed=Math.max(0,Date.now()-configBootStartedAt);
+    var minimumDelay=new Promise(function(resolve){window.setTimeout(resolve,Math.max(0,CONFIG_SKELETON_MIN_MS-elapsed));});
 
-    return Promise.race([readiness,timeout])
+    return Promise.all([Promise.race([readiness,timeout]),minimumDelay])
       .then(afterTwoFrames)
       .catch(function(){})
       .finally(function(){
@@ -7201,9 +7205,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(location.hash.startsWith('#/admin')||initialCallbackDestination==='admin') return;
 
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
+  var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||5000);
+  var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
+  var initialSkeletonPending=true,siteSkeletonHideTimer=0;
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
-  function hideSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=true;setSiteLoading(false);}
-  function showSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
+  function releaseSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=true;setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;}
+  function hideSiteSkeleton(){
+    if(initialSkeletonPending){
+      var remaining=Math.max(0,SITE_SKELETON_MIN_MS-(Date.now()-siteSkeletonStartedAt));
+      if(remaining>0){window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=window.setTimeout(releaseSiteSkeleton,remaining);return;}
+    }
+    releaseSiteSkeleton();
+  }
+  function showSiteSkeleton(){window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=0;var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
   window.addEventListener('be:content-ready',function(){
     // O catálogo pode terminar de carregar antes da autenticação. Só remove o
     // bloqueio visual quando uma sessão válida já foi confirmada; visitantes

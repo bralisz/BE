@@ -28,6 +28,17 @@ function text(value:unknown,max=8000){return String(value??"").trim().slice(0,ma
 function decode(value:string){return value.replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/&nbsp;/gi," ").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&amp;/gi,"&");}
 function htmlResult(html:string){for(const re of [/<div[^>]*class=["'][^"']*\bresult-container\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,/<div[^>]*class=["'][^"']*\bt0\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i]){const m=html.match(re);if(m){const out=decode(m[1].replace(/<br\s*\/?\s*>/gi,"\n").replace(/<[^>]+>/g,"")).trim();if(out)return out;}}return "";}
 function sleep(ms:number){return new Promise(r=>setTimeout(r,ms));}
+const OFFICIAL_HMHAS_TITLE = "Hit Me Hard and Soft";
+function preserveOfficialAlbumTitle(value:string,source:string,target:string){
+  if(target!=="es"||!/hit me hard and soft/i.test(source))return value;
+  const sourceTrimmed=source.trim();
+  if(/^hit me hard and soft(?:\s*:\s*the tour)?$/i.test(sourceTrimmed))return sourceTrimmed.replace(/^hit me hard and soft/i,OFFICIAL_HMHAS_TITLE);
+  return value
+    .replace(/p[eé]game\s+(?:fuerte|duro)\s+y\s+suave/gi,OFFICIAL_HMHAS_TITLE)
+    .replace(/golp[eé]ame\s+(?:fuerte|duro)\s+y\s+suave/gi,OFFICIAL_HMHAS_TITLE)
+    .replace(/g[eé]lame\s+duro\s+y\s+suave/gi,OFFICIAL_HMHAS_TITLE)
+    .replace(/hit me hard and soft/gi,OFFICIAL_HMHAS_TITLE);
+}
 function chunks(value:string){const out:string[]=[];let rest=value;while(rest.length>1800){const sample=rest.slice(0,1801);const cut=Math.max(sample.lastIndexOf("\n"),sample.lastIndexOf(". "),sample.lastIndexOf(" "));const size=cut>950?cut+1:1800;out.push(rest.slice(0,size));rest=rest.slice(size);}if(rest)out.push(rest);return out;}
 async function translateChunk(source:string,target:string){
   if(!source.trim())return source;
@@ -68,7 +79,7 @@ ${item.source}`).join("\n");
     }
     await sleep(60);
   }
-  values.forEach((_,index)=>{result[index]=pieces.filter(piece=>piece.index===index).sort((a,b)=>a.part-b.part).map(piece=>translated.get(`${piece.index}:${piece.part}`)||piece.source).join("").trim();});
+  values.forEach((source,index)=>{const output=pieces.filter(piece=>piece.index===index).sort((a,b)=>a.part-b.part).map(piece=>translated.get(`${piece.index}:${piece.part}`)||piece.source).join("").trim();result[index]=preserveOfficialAlbumTitle(output,source,target);});
   return result;
 }
 function active(value:unknown){return value!==false&&String(value??"true").toLowerCase()!=="false";}
