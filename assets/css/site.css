@@ -8766,8 +8766,8 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
   width:100%;
   height:100%;
   object-fit:cover;
-  object-position:center 34%;
-  filter:saturate(.9) contrast(1.04) brightness(.78);
+  object-position:center center;
+  filter:saturate(.92) contrast(1.03) brightness(.76);
   transform:scale(1.01);
 }
 .billie-home-spotlight-overlay{
@@ -9150,8 +9150,48 @@ body.billie-page-active #dynamicSections{display:none!important}
 .billie-wikipedia-content table{width:100%;margin:22px 0;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.02);font-size:13px;line-height:1.5}
 .billie-wikipedia-content th,.billie-wikipedia-content td{padding:11px 12px;border-right:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top;text-align:left}.billie-wikipedia-content th{color:#fff;background:rgba(49,126,229,.09)}.billie-wikipedia-content tr:last-child>*{border-bottom:0}.billie-wikipedia-content tr>*:last-child{border-right:0}
 .billie-wikipedia-content dl{margin:18px 0}.billie-wikipedia-content dt{color:#fff;font-weight:750}.billie-wikipedia-content dd{margin:4px 0 12px 18px}
-.billie-wikipedia-attribution{display:none!important;margin:34px 0 0;padding:0;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.025);color:rgba(213,224,240,.58);font-size:11px;line-height:1.6}
-.billie-wikipedia-attribution[hidden]{display:none!important}.billie-wikipedia-attribution summary{padding:14px 17px;color:rgba(224,233,247,.68);font-weight:700;cursor:pointer;list-style-position:inside}.billie-wikipedia-attribution p{margin:0;padding:0 17px 16px}.billie-wikipedia-attribution a{color:#70aff8;text-decoration:none}.billie-wikipedia-attribution a:hover{text-decoration:underline}
+.billie-wikipedia-attribution{
+  margin:36px 0 0;
+  padding:0;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:18px;
+  background:rgba(255,255,255,.025);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+  color:rgba(218,225,236,.62);
+  font-size:12px;
+  line-height:1.65;
+}
+.billie-wikipedia-attribution[hidden]{display:none!important}
+.billie-wikipedia-attribution summary{
+  min-height:52px;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:0 18px;
+  color:rgba(236,240,247,.78);
+  font-weight:720;
+  cursor:pointer;
+  list-style:none;
+  user-select:none;
+  transition:background .2s ease,color .2s ease;
+}
+.billie-wikipedia-attribution summary::-webkit-details-marker{display:none}
+.billie-wikipedia-attribution summary::before{
+  content:"";
+  width:8px;
+  height:8px;
+  flex:0 0 8px;
+  border-right:1.7px solid currentColor;
+  border-bottom:1.7px solid currentColor;
+  transform:rotate(-45deg);
+  transition:transform .22s ease;
+}
+.billie-wikipedia-attribution[open] summary::before{transform:rotate(45deg) translate(-1px,-1px)}
+.billie-wikipedia-attribution summary:hover{background:rgba(255,255,255,.035);color:#fff}
+.billie-wikipedia-attribution p{margin:0;padding:0 18px 18px 37px}
+.billie-wikipedia-attribution a{color:rgba(238,242,248,.78);text-decoration:none;border-bottom:1px solid rgba(255,255,255,.2)}
+.billie-wikipedia-attribution a:hover{color:#fff;border-bottom-color:rgba(255,255,255,.55)}
 @media(max-width:900px){.billie-portrait-column{position:relative;top:auto;max-width:620px;width:100%;margin:0 auto}.billie-wikipedia-content table{display:block;overflow-x:auto;white-space:normal}}
 @media(max-width:760px){.billie-wikipedia-content h2{margin-top:34px}.billie-wikipedia-content table{font-size:12px}.billie-wikipedia-content th,.billie-wikipedia-content td{padding:9px 10px}}
 

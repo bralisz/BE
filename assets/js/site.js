@@ -2510,7 +2510,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function addBillieHomeSpotlight(host) {
     if (!host || host.querySelector('.billie-home-spotlight')) return;
-    const defaultBanner = '/assets/images/auth/login-admin-banner.jpg';
+    const defaultBanner = '/assets/images/pages/billie-home-default.jpg';
     const spotlight = document.createElement('section');
     spotlight.className = 'billie-home-spotlight';
     spotlight.setAttribute('aria-label', 'Conheça Billie Eilish');
@@ -8248,6 +8248,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     parser.querySelectorAll('script,style,link,meta,noscript,iframe,object,embed,form,input,button,textarea,select,video,audio,canvas,svg,table.infobox,.infobox,.mw-editsection,.shortdescription,.hatnote,.metadata,.ambox,.navbox,.vertical-navbox,.authority-control,.catlinks,.sistersitebox,.portal,.mw-empty-elt,.noprint,.nomobile,.thumb,figure,.gallery').forEach(function(node){node.remove();});
     /* Estas remoções são permanentes e são reaplicadas em toda atualização da Wikipédia. */
     parser.querySelectorAll('sup,.reference,.mw-ref,.reflist,ol.references,[role="note"],a[href^="#cite_note"]').forEach(function(node){node.remove();});
+    /* As tabelas da filmografia da Wikipédia não fazem parte do layout do BETV. */
+    parser.querySelectorAll('table').forEach(function(node){node.remove();});
     var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia'];
     Array.from(parser.querySelectorAll('h2,h3,h4')).forEach(function(heading){
       if(!heading.isConnected)return;
