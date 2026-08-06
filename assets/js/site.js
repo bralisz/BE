@@ -672,7 +672,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
 
-  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','news','notifications','ongs','sections','series','settings','videos']);
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
 
   function activeLocaleSlug() {
@@ -680,53 +680,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
     return ['en-us','es'].includes(slug) ? slug : 'pt-br';
   }
-
-  const ORIGINAL_TITLE_MUSIC_SECTION_IDS = new Set([
-    '14386598-4978-403a-8548-db0ee582e291',
-    '18db9515-179c-4bad-9646-1fcda63df14a'
-  ]);
-  const ORIGINAL_TITLE_MUSIC_SECTION_NAMES = new Set(['live performances & tv','videoclipes']);
-  const ORIGINAL_TITLE_MUSIC_PATTERN = /(^|[\s._/?:=&-])(music|musica|música|song|faixa|track|album|álbum|videoclipe|live performances)(?=$|[\s._/?:=&-])/i;
-
-  function isMusicOrAlbumRecord(record) {
-    if (!record || typeof record !== 'object') return false;
-    if (record.preserveTitle === true || String(record.preserveTitle || '').toLowerCase() === 'true') return true;
-    const collection = String(record.collection || '').trim().toLowerCase();
-    if (collection === 'news') return true;
-    const sectionId = String(record.sectionId || '').trim();
-    const sectionName = String(record.sectionName || record.sourceSectionTitle || '').trim().toLowerCase();
-    if (ORIGINAL_TITLE_MUSIC_SECTION_IDS.has(sectionId) || ORIGINAL_TITLE_MUSIC_SECTION_NAMES.has(sectionName)) return true;
-    const metadata = [record.sectionName, record.sourceSectionTitle, record.category, record.type, record.contentType, record.itemType]
-      .map(value => String(value || '').trim())
-      .filter(Boolean)
-      .join(' ');
-    return ['videos','contents','featured','news'].includes(collection) && ORIGINAL_TITLE_MUSIC_PATTERN.test(metadata);
-  }
-
-  function shouldKeepOriginalRecordTitle(record, requestedSlug = activeLocaleSlug()) {
-    const slug = String(requestedSlug || 'pt-br').toLowerCase();
-    if (slug !== 'es' || !record || typeof record !== 'object') return false;
-    const collection = String(record.collection || '').trim().toLowerCase();
-    if (collection === 'movies' || isMusicOrAlbumRecord(record)) return true;
-    if (collection === 'sections') {
-      const title = String(record.title || record.name || '').trim().toLowerCase();
-      return title === 'vanity fair';
-    }
-    return false;
-  }
-
-  function protectOriginalRecordTitle(record, requestedSlug = activeLocaleSlug()) {
-    if (!shouldKeepOriginalRecordTitle(record, requestedSlug)) return;
-    const protectedTexts = window.BETVProtectedI18nTexts instanceof Set
-      ? window.BETVProtectedI18nTexts
-      : (window.BETVProtectedI18nTexts = new Set());
-    ['title','name'].forEach(field => {
-      const value = String(record[field] || '').replace(/\s+/g, ' ').trim();
-      if (value) protectedTexts.add(value);
-    });
-  }
-
-  window.BETVShouldKeepOriginalTitle = shouldKeepOriginalRecordTitle;
 
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
     const raw = String(value || '').trim();
@@ -742,20 +695,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function localizeContentRecord(record, collectionOverride = '') {
+  function localizeContentRecord(record) {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
-    const recordContext = record.collection || !collectionOverride ? record : { ...record, collection:collectionOverride };
-    const keepOriginalTitle = shouldKeepOriginalRecordTitle(recordContext, slug);
-    if (keepOriginalTitle) protectOriginalRecordTitle(recordContext, slug);
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
-    if (keepOriginalTitle) {
-      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
-      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
-    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
@@ -773,7 +719,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
     if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(record => localizeContentRecord(record, collection));
+      return values.map(localizeContentRecord);
     }
     const missing = values.filter(record => recordNeedsTranslation(record, slug));
     if (missing.length) {
@@ -800,7 +746,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
       }
     }
-    return values.map(record => localizeContentRecord(record, collection));
+    return values.map(localizeContentRecord);
   }
 
   function queueRecordTranslation(collection, id) {
@@ -932,7 +878,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const publicValue = await readPublicData(name, id);
           if (!publicValue) return null;
           const translated = await ensureTranslatedRecords(name, [publicValue]);
-          return translated[0] || localizeContentRecord(publicValue, name);
+          return translated[0] || localizeContentRecord(publicValue);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -945,7 +891,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value, name);
+          return translated[0] || localizeContentRecord(value);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -957,7 +903,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value, name);
+        return translated[0] || localizeContentRecord(value);
       } catch (error) {
         throw mapAuthError(error);
       }
@@ -2978,10 +2924,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (image) image.addEventListener('error', () => spotlight.remove(), { once:true });
   }
 
+  const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a'
+  ]);
   function preservesOriginalMusicTitle(data) {
-    const preserve = isMusicOrAlbumRecord(data);
-    if (preserve && activeLocaleSlug() === 'es') protectOriginalRecordTitle(data, 'es');
-    return preserve;
+    if (String(data?.collection || 'videos').toLowerCase() !== 'videos') return false;
+    const sectionId = String(data?.sectionId || '').trim();
+    const sectionName = String(data?.sectionName || data?.sourceSectionTitle || '').trim().toLowerCase();
+    return MUSIC_TITLE_SECTION_IDS_FRONTEND.has(sectionId) || ['live performances & tv','videoclipes'].includes(sectionName);
   }
 
   function videoCard(video) {
@@ -6440,15 +6391,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         imageUrl:String(item&&(item.imageUrl||item.thumbnailUrl||item.bannerUrl)||''),
         bannerUrl:String(item&&(item.bannerUrl||item.imageUrl||item.thumbnailUrl)||''),
         logoUrl:String(item&&item.logoUrl||''),
-        collection:String(item&&item.collection||'videos').toLowerCase(),
-        sectionId:String(item&&item.sectionId||''),
-        sectionName:String(item&&(item.sectionName||item.sourceSectionTitle)||''),
-        sourceSectionTitle:String(item&&item.sourceSectionTitle||''),
-        category:String(item&&item.category||''),
-        type:String(item&&item.type||''),
-        contentType:String(item&&item.contentType||''),
-        itemType:String(item&&item.itemType||''),
-        preserveTitle:item&&item.preserveTitle === true || String(item&&item.preserveTitle||'').toLowerCase()==='true'
+        collection:String(item&&item.collection||'videos').toLowerCase()
       };
     }
     function profileFavoritesStorageKey(){
@@ -6486,21 +6429,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function profileCatalogContents(){
       var source=[];
       try{source=typeof window.beGetCatalogContents==='function'?window.beGetCatalogContents():[];}catch(error){console.warn('Não foi possível carregar o catálogo para favoritos:',error);}
-      var catalog=[];
+      var result=[];
       source.map(normalizeProfileFavorite).forEach(function(item){
         var identity=profileFavoriteIdentity(item);
-        if(identity&&!catalog.some(function(current){return profileFavoriteIdentity(current)===identity;}))catalog.push(item);
+        if(identity&&!result.some(function(current){return profileFavoriteIdentity(current)===identity;}))result.push(item);
       });
-      var selected=[];
-      var selectedIdentities=new Set();
-      profileFavoritesItems.map(normalizeProfileFavorite).slice(0,4).forEach(function(item){
+      profileFavoritesItems.forEach(function(item){
         var identity=profileFavoriteIdentity(item);
-        if(!identity||selectedIdentities.has(identity))return;
-        selectedIdentities.add(identity);
-        var catalogItem=catalog.find(function(current){return profileFavoriteIdentity(current)===identity;});
-        selected.push(catalogItem||item);
+        if(identity&&!result.some(function(current){return profileFavoriteIdentity(current)===identity;}))result.unshift(item);
       });
-      return selected.concat(catalog.filter(function(item){return !selectedIdentities.has(profileFavoriteIdentity(item));}));
+      return result;
     }
     function renderProfileFavorites(){
       if(!profileFavoritesSection||!profileFavoritesContent)return;
@@ -6520,7 +6458,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       profileFavoritesContent.innerHTML='<div class="profile-favorites-ranking">'+profileFavoritesItems.map(function(item,index){
         var image=profileFavoriteImage(item);
-        var preserveTitle=preservesOriginalMusicTitle(item);
         var rank=String(index+1);
         var gradientId='profileFavoriteRankGradient'+rank;
         var clipId='profileFavoriteRankClip'+rank;
@@ -6531,7 +6468,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           +'<span class="profile-favorite-rank" aria-hidden="true">'+rankSvg+'</span>'
           +'<span class="profile-favorite-poster">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
           +'<span class="profile-favorite-type">'+profileFavoriteCollectionLabel(item)+'</span>'
-          +'<span class="profile-favorite-title'+(preserveTitle?' notranslate':'')+'"'+(preserveTitle?' translate="no"':'')+'>'+escapePublic(item.title||'Conteúdo')+'</span></span>'
+          +'<span class="profile-favorite-title">'+escapePublic(item.title||'Conteúdo')+'</span></span>'
           +'</button>';
       }).join('')+'</div>';
     }
@@ -6547,14 +6484,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(!query)return true;
         return [item.title,item.year,item.duration,profileFavoriteCollectionLabel(item)].join(' ').toLocaleLowerCase('pt-BR').indexOf(query)>=0;
       });
-      filtered.sort(function(a,b){
-        var aIndex=profileFavoritesDraft.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(a);});
-        var bIndex=profileFavoritesDraft.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(b);});
-        if(aIndex>=0&&bIndex>=0)return aIndex-bIndex;
-        if(aIndex>=0)return -1;
-        if(bIndex>=0)return 1;
-        return profileFavoritesCatalog.indexOf(a)-profileFavoritesCatalog.indexOf(b);
-      });
       if(!filtered.length){
         profileFavoritesPickerBody.innerHTML='<div class="profile-favorites-picker-empty"><strong>Nenhum conteúdo encontrado</strong><span>Pesquise usando outro nome ou uma parte do título.</span></div>';
       }else{
@@ -6564,11 +6493,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           var selectedIndex=profileFavoritesDraft.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(item);});
           var selected=selectedIndex>=0;
           var image=profileFavoriteImage(item);
-          var preserveTitle=preservesOriginalMusicTitle(item);
           return '<button class="profile-favorites-option'+(selected?' selected':'')+'" type="button" data-profile-favorite-option="'+catalogIndex+'" data-no-content-open="true" aria-pressed="'+String(selected)+'">'
             +'<span class="profile-favorites-option-media">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
             +'<span class="profile-favorites-option-order">'+(selected?selectedIndex+1:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>')+'</span></span>'
-            +'<span class="profile-favorites-option-copy"><strong class="'+(preserveTitle?'notranslate':'')+'"'+(preserveTitle?' translate="no"':'')+'>'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
+            +'<span class="profile-favorites-option-copy"><strong>'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
             +'</button>';
         }).join('')+'</div><p class="profile-favorites-search-hint"><strong>Não achou o vídeo que queria?</strong><span>Pesquise pelo nome na barra acima.</span></p>';
       }
