@@ -66,7 +66,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com';
+  select exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin');
 $$;
 
 alter function public.is_admin() owner to postgres;
@@ -136,7 +136,7 @@ begin
     v_username,
     case when nullif(new.raw_user_meta_data ->> 'profile_avatar_id', '') is not null then coalesce(new.raw_user_meta_data ->> 'profile_avatar_url', '') else '' end,
     coalesce(new.raw_user_meta_data ->> 'profile_avatar_id', ''),
-    case when lower(coalesce(new.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    case when lower(coalesce(new.raw_app_meta_data ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     true,
     coalesce(new.created_at, now()),
     now(),
@@ -207,7 +207,7 @@ begin
     coalesce(trim(p_display_name), ''),
     v_username,
     coalesce(trim(p_avatar_url), ''),
-    case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     true,
     now(),
     now(),
@@ -225,7 +225,7 @@ begin
       when nullif(trim(coalesce(p_avatar_url, '')), '') is not null then trim(p_avatar_url)
       else ''
     end,
-    role = case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    role = case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     profile_complete = true,
     updated_at = now(),
     last_login_at = now()
@@ -258,7 +258,7 @@ with check (
     (select auth.uid()) = id
     and lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
     and role = case
-      when lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com' then 'admin'
+      when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin'
       else 'member'
     end
   )
@@ -275,7 +275,7 @@ with check (
     (select auth.uid()) = id
     and lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
     and role = case
-      when lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com' then 'admin'
+      when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin'
       else 'member'
     end
   )

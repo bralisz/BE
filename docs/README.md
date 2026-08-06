@@ -1,10 +1,5 @@
-# Documentação visual e arquivo histórico
+# Documentação do projeto
 
-Esta pasta guarda materiais de referência que ajudam a acompanhar a evolução do projeto.
+Esta pasta reúne notas técnicas e relatórios de manutenção que não fazem parte do site publicado.
 
-## Conteúdo
-
-- `screenshots/`: capturas das interfaces de login e cadastro usadas para conferência visual;
-- `archive/`: versões antigas, prévias e arquivos de teste mantidos apenas para consulta.
-
-Os itens em `archive/` não devem ser usados como fonte principal do site e não substituem os arquivos atuais da raiz, de `assets/` ou de `supabase/`.
+Os arquivos em `docs/` são excluídos do deploy pela `.vercelignore`. Não coloque chaves privadas, senhas ou credenciais administrativas nem mesmo nesta pasta.

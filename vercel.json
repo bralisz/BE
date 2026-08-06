@@ -109,6 +109,14 @@
       "destination": "/404.html"
     },
     {
+      "source": "/billie-eilish",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/billie-eilish/",
+      "destination": "/api/site-page"
+    },
+    {
       "source": "/:videoId",
       "destination": "/api/site-page"
     }

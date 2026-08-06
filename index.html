@@ -65,9 +65,9 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260805-drive-audio-wait-v5">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260805-billie-banner-security-v3">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/site.js?rev=20260805-drive-audio-wait-v5"></script>
+<script defer src="/assets/js/site.js?rev=20260805-billie-banner-security-v3"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -586,6 +586,72 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   </div>
   <button class="ios-ban-toast-close" id="accountBanToastClose" type="button" aria-label="Fechar aviso">×</button>
 </div>
+<section class="billie-page-shell" id="billiePage" hidden aria-label="Quem é Billie Eilish" aria-hidden="true">
+  <header class="billie-page-header" aria-label="Navegação da página Billie Eilish">
+    <button class="billie-page-home" id="billiePageHome" type="button" aria-label="Voltar para a Home" title="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>
+    </button>
+    <div class="billie-page-header-actions">
+      <button class="billie-page-notifications" id="billiePageNotifications" type="button" aria-label="Abrir notificações" title="Notificações">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+        <span class="billie-page-unread-dot" id="billiePageUnreadDot" hidden></span>
+      </button>
+      <button class="billie-page-avatar" id="billiePageAvatar" type="button" aria-label="Abrir perfil" title="Perfil">
+        <img id="billiePageAvatarImage" alt="Foto do usuário" hidden>
+        <svg id="billiePageAvatarFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
+      </button>
+    </div>
+  </header>
+  <main class="billie-page-content">
+    <div class="billie-biography-grid">
+      <aside class="billie-portrait-column">
+        <figure class="billie-portrait-frame">
+          <div class="billie-portrait-inner">
+            <img id="billiePagePortrait" src="/assets/images/auth/login-bg-5.webp" alt="Billie Eilish" loading="eager" decoding="async">
+          </div>
+        </figure>
+      </aside>
+      <article class="billie-biography-copy">
+        <p class="billie-page-kicker" id="billiePageKicker">Conheça a artista</p>
+        <h1 id="billiePageTitle">Billie Eilish</h1>
+        <div class="billie-wikipedia-loading" id="billieWikipediaLoading" hidden role="status" aria-live="polite">
+          <span aria-hidden="true"></span><p>Atualizando as informações…</p>
+        </div>
+        <div class="billie-wikipedia-error" id="billieWikipediaError" hidden role="status"></div>
+        <div class="billie-biography-text" id="billieBiographyText">
+          <p>Billie Eilish Pirate Baird O’Connell nasceu em Los Angeles, em 18 de dezembro de 2001. Cantora e compositora, começou a criar músicas em casa ao lado do irmão e principal colaborador, FINNEAS.</p>
+          <p>Ela ganhou projeção internacional com <em>Ocean Eyes</em> e construiu uma identidade artística reconhecida pelos vocais intimistas, pela produção detalhista e por uma estética visual muito própria.</p>
+          <p>Entre os projetos que marcam sua discografia estão <em>WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?</em>, <em>Happier Than Ever</em> e <em>HIT ME HARD AND SOFT</em>.</p>
+        </div>
+        <div class="billie-wikipedia-content" id="billieWikipediaContent" hidden></div>
+        <section class="billie-social-section" aria-labelledby="billieSocialTitle">
+          <h2 id="billieSocialTitle">Redes sociais</h2>
+          <nav class="billie-social-links" id="billieSocialLinks" aria-label="Redes oficiais de Billie Eilish">
+            <a class="billie-social-link" data-billie-social="instagram" href="https://www.instagram.com/billieeilish/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de Billie Eilish" title="Instagram">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><path d="M17.5 6.5h.01"></path></svg>
+            </a>
+            <a class="billie-social-link is-x" data-billie-social="xUrl" href="https://x.com/billieeilish" target="_blank" rel="noopener noreferrer" aria-label="X de Billie Eilish" title="X">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.4L6.47 22H3.36l7.26-8.3L2.97 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.84h1.72L8.43 4.05H6.58L17.8 19.84Z"></path></svg>
+            </a>
+            <a class="billie-social-link is-youtube" data-billie-social="youtube" href="https://www.youtube.com/@BillieEilish" target="_blank" rel="noopener noreferrer" aria-label="YouTube de Billie Eilish" title="YouTube">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.6 7.2a2.8 2.8 0 0 0-2-2C17.8 4.7 12 4.7 12 4.7s-5.8 0-7.6.5a2.8 2.8 0 0 0-2 2A29 29 0 0 0 2 12a29 29 0 0 0 .4 4.8 2.8 2.8 0 0 0 2 2c1.8.5 7.6.5 7.6.5s5.8 0 7.6-.5a2.8 2.8 0 0 0 2-2A29 29 0 0 0 22 12a29 29 0 0 0-.4-4.8ZM10 15.2V8.8l5.5 3.2-5.5 3.2Z"></path></svg>
+            </a>
+            <a class="billie-social-link is-spotify" data-billie-social="spotify" href="https://open.spotify.com/artist/6qqNVTkY8uBg9cP3Jd7DAH" target="_blank" rel="noopener noreferrer" aria-label="Spotify de Billie Eilish" title="Spotify">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4.58 14.42a.75.75 0 0 1-1.03.25c-2.82-1.72-6.37-2.11-10.55-1.16a.75.75 0 1 1-.33-1.46c4.58-1.04 8.51-.59 11.66 1.33.35.21.46.68.25 1.04Zm1.47-3.27a.94.94 0 0 1-1.29.31c-3.22-1.98-8.13-2.55-11.94-1.4a.94.94 0 1 1-.54-1.8c4.36-1.31 9.77-.68 13.46 1.59.44.27.58.85.31 1.3Zm.13-3.41C14.32 7.45 7.95 7.24 4.27 8.35a1.13 1.13 0 1 1-.65-2.16c4.22-1.27 11.28-1.02 15.71 1.61a1.13 1.13 0 0 1-1.15 1.94Z"></path></svg>
+            </a>
+            <a class="billie-social-link is-website" data-billie-social="website" href="https://www.billieeilish.com/" target="_blank" rel="noopener noreferrer" aria-label="Site oficial de Billie Eilish" title="Site oficial">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg>
+            </a>
+          </nav>
+        </section>
+        <details class="billie-wikipedia-attribution" id="billieWikipediaAttribution" hidden>
+          <summary>Fontes e créditos</summary>
+          <p>Parte do conteúdo automático é adaptada da <a href="https://pt.wikipedia.org/wiki/Billie_Eilish" target="_blank" rel="noopener noreferrer">Wikipédia em português</a> e disponibilizada sob a licença <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.</p>
+        </details>
+      </article>
+    </div>
+  </main>
+</section>
 <section class="support-page-shell" id="supportPage" hidden aria-label="Central de suporte do BETV">
   <div class="support-page-inner">
     <header class="support-hero">

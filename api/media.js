@@ -6,7 +6,7 @@ const REQUEST_TIMEOUT_MS = 12000;
 const DEFAULT_SUPABASE_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const ALLOWED_COLLECTIONS = new Set(['contents', 'featured', 'gallery', 'movies', 'notifications', 'sections', 'series', 'videos']);
-const ALLOWED_MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl', 'shareImage']);
+const ALLOWED_MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl', 'shareImage', 'portraitUrl']);
 
 const ALLOWED_HOSTS = new Set([
   'cdn.discordapp.com',
@@ -60,20 +60,45 @@ async function storedMediaSource(collection, id, field) {
   const mediaField = String(field || '').trim();
   if (!itemId || itemId.length > 100 || !ALLOWED_MEDIA_FIELDS.has(mediaField)) throw new Error('invalid_reference');
   const { url, key } = supabaseConfig();
-  const headers = { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json' };
-  let endpoint;
+  const headers = {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  };
+  let endpoint = '';
+  let body = null;
   if (name === 'settings') {
-    const params = new URLSearchParams({ select: 'data', id: `eq.${itemId}`, limit: '1' });
-    endpoint = `${url}/rest/v1/site_settings?${params.toString()}`;
+    if (!['site', 'billie-eilish'].includes(itemId)) throw new Error('invalid_reference');
+    endpoint = `${url}/rest/v1/rpc/get_public_site_setting`;
+    body = { p_id: itemId };
   } else {
     if (!ALLOWED_COLLECTIONS.has(name)) throw new Error('invalid_reference');
-    const params = new URLSearchParams({ select: 'data', collection: `eq.${name}`, id: `eq.${itemId}`, limit: '1' });
-    endpoint = `${url}/rest/v1/content_items?${params.toString()}`;
+    endpoint = `${url}/rest/v1/rpc/get_public_content_items`;
+    body = { p_collection: name, p_id: itemId };
   }
-  const response = await fetch(endpoint, { headers, cache: 'no-store' });
-  if (!response.ok) throw new Error('source_unavailable');
-  const rows = await response.json();
-  const source = Array.isArray(rows) ? rows[0]?.data?.[mediaField] : '';
+  let source = '';
+  try {
+    const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body), cache: 'no-store' });
+    if (!response.ok) throw new Error('rpc_unavailable');
+    const payload = await response.json();
+    const record = Array.isArray(payload) ? payload[0] : payload;
+    source = name === 'settings' ? record?.[mediaField] : record?.data?.[mediaField];
+  } catch (_) {
+    // Compatibilidade temporária para publicar o código antes da migration de segurança.
+    let legacyEndpoint = '';
+    if (name === 'settings') {
+      const params = new URLSearchParams({ select: 'data', id: `eq.${itemId}`, limit: '1' });
+      legacyEndpoint = `${url}/rest/v1/site_settings?${params.toString()}`;
+    } else {
+      const params = new URLSearchParams({ select: 'data', collection: `eq.${name}`, id: `eq.${itemId}`, limit: '1' });
+      legacyEndpoint = `${url}/rest/v1/content_items?${params.toString()}`;
+    }
+    const legacyResponse = await fetch(legacyEndpoint, { headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json' }, cache: 'no-store' });
+    if (!legacyResponse.ok) throw new Error('source_unavailable');
+    const rows = await legacyResponse.json();
+    source = Array.isArray(rows) ? rows[0]?.data?.[mediaField] : '';
+  }
   if (!source) throw new Error('source_unavailable');
   return String(source);
 }

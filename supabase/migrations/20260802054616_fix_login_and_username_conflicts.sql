@@ -53,7 +53,7 @@ begin
     coalesce(trim(p_display_name), ''),
     v_username,
     coalesce(trim(p_avatar_url), ''),
-    case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     true,
     now(),
     now(),
@@ -70,7 +70,7 @@ begin
       when nullif(trim(coalesce(p_avatar_url, '')), '') is not null then trim(p_avatar_url)
       else p.avatar_url
     end,
-    role = case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    role = case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     profile_complete = true,
     updated_at = now(),
     last_login_at = now()

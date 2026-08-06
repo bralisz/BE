@@ -74,11 +74,16 @@ stable
 security definer
 set search_path = ''
 as $$
-  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com';
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'admin'
+  );
 $$;
 
-revoke all on function public.is_admin() from public;
-grant execute on function public.is_admin() to anon, authenticated;
+revoke all on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
 
 
 -- Permite ao primeiro passo da tela de acesso decidir entre entrar e criar
@@ -151,7 +156,7 @@ begin
     v_username,
     case when nullif(new.raw_user_meta_data ->> 'profile_avatar_id', '') is not null then coalesce(new.raw_user_meta_data ->> 'profile_avatar_url', '') else '' end,
     coalesce(new.raw_user_meta_data ->> 'profile_avatar_id', ''),
-    case when lower(coalesce(new.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    case when lower(coalesce(new.raw_app_meta_data ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     true,
     coalesce(new.created_at, now()),
     now(),
@@ -231,7 +236,7 @@ begin
     coalesce(trim(p_display_name), ''),
     v_username,
     coalesce(trim(p_avatar_url), ''),
-    case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     true,
     now(),
     now(),
@@ -249,7 +254,7 @@ begin
       when nullif(trim(coalesce(p_avatar_url, '')), '') is not null then trim(p_avatar_url)
       else ''
     end,
-    role = case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    role = case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     profile_complete = true,
     updated_at = now(),
     last_login_at = now()
@@ -272,7 +277,7 @@ select
   coalesce(u.raw_user_meta_data ->> 'display_name', u.raw_user_meta_data ->> 'full_name', ''),
   case when nullif(u.raw_user_meta_data ->> 'profile_avatar_id', '') is not null then coalesce(u.raw_user_meta_data ->> 'profile_avatar_url', '') else '' end,
   coalesce(u.raw_user_meta_data ->> 'profile_avatar_id', ''),
-  case when lower(coalesce(u.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+  case when lower(coalesce(u.raw_app_meta_data ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
   true,
   coalesce(u.created_at, now()),
   now()
@@ -432,7 +437,7 @@ with check (
     (select auth.uid()) = id
     and lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
     and role = case
-      when lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com' then 'admin'
+      when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin'
       else 'member'
     end
   )
@@ -449,7 +454,7 @@ with check (
     (select auth.uid()) = id
     and lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
     and role = case
-      when lower(coalesce(auth.jwt() ->> 'email', '')) = 'bralisofc@gmail.com' then 'admin'
+      when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin'
       else 'member'
     end
   )
@@ -483,10 +488,11 @@ using ((select auth.uid()) = user_id);
 
 -- Recria as políticas das outras tabelas sem alterar seus dados.
 drop policy if exists "content read published" on public.content_items;
-create policy "content read published"
+drop policy if exists "content admin read" on public.content_items;
+create policy "content admin read"
 on public.content_items for select
-to anon, authenticated
-using (public.is_admin() or coalesce(lower(data ->> 'active'), 'true') = 'true');
+to authenticated
+using (public.is_admin());
 
 drop policy if exists "content admin insert" on public.content_items;
 create policy "content admin insert"
@@ -508,10 +514,11 @@ to authenticated
 using (public.is_admin());
 
 drop policy if exists "settings public read" on public.site_settings;
-create policy "settings public read"
+drop policy if exists "settings admin read" on public.site_settings;
+create policy "settings admin read"
 on public.site_settings for select
-to anon, authenticated
-using (true);
+to authenticated
+using (public.is_admin());
 
 drop policy if exists "settings admin insert" on public.site_settings;
 create policy "settings admin insert"
@@ -544,7 +551,121 @@ on public.admin_logs for insert
 to authenticated
 with check (public.is_admin());
 
-grant select on public.content_items, public.site_settings to anon, authenticated;
+revoke select on public.content_items, public.site_settings from anon;
+create or replace function public.get_public_site_setting(p_id text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case s.id
+    when 'site' then jsonb_strip_nulls(jsonb_build_object(
+      'siteName', s.data -> 'siteName',
+      'description', s.data -> 'description',
+      'primaryColor', s.data -> 'primaryColor',
+      'footerText', s.data -> 'footerText',
+      'instagram', s.data -> 'instagram',
+      'xUrl', s.data -> 'xUrl',
+      'youtube', s.data -> 'youtube',
+      'website', s.data -> 'website',
+      'discordUrl', s.data -> 'discordUrl',
+      'shareImage', s.data -> 'shareImage'
+    ))
+    when 'billie-eilish' then jsonb_strip_nulls(jsonb_build_object(
+      'sourceMode', s.data -> 'sourceMode',
+      'title', s.data -> 'title',
+      'kicker', s.data -> 'kicker',
+      'portraitUrl', s.data -> 'portraitUrl',
+      'bannerUrl', s.data -> 'bannerUrl',
+      'manualBio', s.data -> 'manualBio',
+      'includeReferences', s.data -> 'includeReferences',
+      'instagram', s.data -> 'instagram',
+      'xUrl', s.data -> 'xUrl',
+      'youtube', s.data -> 'youtube',
+      'spotify', s.data -> 'spotify',
+      'website', s.data -> 'website'
+    ))
+    else null
+  end
+  from public.site_settings s
+  where s.id = p_id
+    and s.id in ('site', 'billie-eilish')
+  limit 1;
+$$;
+
+revoke all on function public.get_public_site_setting(text) from public;
+grant execute on function public.get_public_site_setting(text) to anon, authenticated;
+
+-- O catálogo público passa por uma função com lista explícita de campos.
+create or replace function public.get_public_content_items(p_collection text, p_id text default null)
+returns setof jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select jsonb_build_object(
+    'id', c.id::text,
+    'data', jsonb_strip_nulls(jsonb_build_object(
+      'active', c.data -> 'active',
+      'bannerUrl', c.data -> 'bannerUrl',
+      'category', c.data -> 'category',
+      'contentCollection', c.data -> 'contentCollection',
+      'contentId', c.data -> 'contentId',
+      'contentUrl', c.data -> 'contentUrl',
+      'description', c.data -> 'description',
+      'duration', c.data -> 'duration',
+      'imageUrl', c.data -> 'imageUrl',
+      'itemLimit', c.data -> 'itemLimit',
+      'itemType', c.data -> 'itemType',
+      'link', c.data -> 'link',
+      'logoUrl', c.data -> 'logoUrl',
+      'mediaType', c.data -> 'mediaType',
+      'order', c.data -> 'order',
+      'publicId', c.data -> 'publicId',
+      'runtime', c.data -> 'runtime',
+      'sectionId', c.data -> 'sectionId',
+      'sectionName', c.data -> 'sectionName',
+      'slug', c.data -> 'slug',
+      'sourceCollection', c.data -> 'sourceCollection',
+      'thumbnailUrl', c.data -> 'thumbnailUrl',
+      'title', c.data -> 'title',
+      'type', c.data -> 'type',
+      'videoDuration', c.data -> 'videoDuration',
+      'videoId', c.data -> 'videoId',
+      'videoUrl', c.data -> 'videoUrl',
+      'year', c.data -> 'year'
+    )),
+    'created_at', c.created_at,
+    'updated_at', c.updated_at
+  )
+  from public.content_items c
+  where c.collection = lower(trim(p_collection))
+    and c.collection in ('contents','featured','gallery','movies','notifications','sections','series','videos')
+    and coalesce(lower(c.data ->> 'active'), 'true') = 'true'
+    and (p_id is null or c.id::text = p_id)
+  order by
+    case when coalesce(c.data ->> 'order', '') ~ '^-?[0-9]+(?:\.[0-9]+)?$' then (c.data ->> 'order')::numeric else 0 end,
+    c.created_at;
+$$;
+
+revoke all on function public.get_public_content_items(text, text) from public;
+grant execute on function public.get_public_content_items(text, text) to anon, authenticated;
+
+update public.content_items
+set data = data - 'createdBy' - 'updatedBy' - 'adminEmail' - 'email',
+    created_by = null,
+    updated_by = null
+where data ?| array['createdBy','updatedBy','adminEmail','email']
+   or created_by is not null
+   or updated_by is not null;
+
+update public.site_settings
+set data = data - 'createdBy' - 'updatedBy' - 'adminEmail' - 'email'
+where data ?| array['createdBy','updatedBy','adminEmail','email'];
+
+grant select on public.content_items, public.site_settings to authenticated;
 grant insert, update, delete on public.content_items, public.site_settings to authenticated;
 
 -- Permite que o usuário autenticado exclua somente a própria conta.

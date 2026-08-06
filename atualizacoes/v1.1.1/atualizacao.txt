@@ -1,0 +1,9 @@
+Página Conheça a Billie Eilish: banner editável e proteção de dados
+
+O painel administrativo agora permite informar por link a imagem usada no banner compacto “Conheça a Billie Eilish” da Home. Ao deixar o campo vazio, o site mantém automaticamente a imagem padrão.
+
+A página dedicada recebeu textos de carregamento mais discretos e os créditos obrigatórios do conteúdo automático foram reunidos em uma área recolhida chamada “Fontes e créditos”, sem ocupar o conteúdo principal.
+
+Esta versão também reforça a privacidade do catálogo e das configurações. O site público passa a receber somente campos autorizados, sem e-mails administrativos, identificadores internos, registros de edição ou o JSON completo do banco.
+
+Arquivos internos e históricos não são enviados como páginas públicas no deploy, e os backups antigos com configuração administrativa foram removidos.

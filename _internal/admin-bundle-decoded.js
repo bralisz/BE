@@ -72,7 +72,7 @@ document.head.appendChild(s);
   'use strict';
 
   const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','users','notifications'];
-  const LABELS = {dashboard:'Visão geral',notifications:'Notificações',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
+  const LABELS = {dashboard:'Visão geral',notifications:'Notificações',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
   const LOCAL_ADMIN_EMAIL = 'admin@local.invalid';
   const CONTENT_CATEGORIES = [
     ['videos','Vídeos','▣'],
@@ -435,7 +435,7 @@ document.head.appendChild(s);
       adminLoginBgTimer = null;
     }
     setAdminDocumentScroll(true);
-    const routes = ['dashboard','notifications','sections','contents','gallery','users','settings'];
+    const routes = ['dashboard','notifications','billie','sections','contents','gallery','users','settings'];
     const activeAvatar = selectedProfileAvatar(user.profile) || String(user.photoURL || '');
     const accountAvatar = activeAvatar
       ? `<img loading="lazy" decoding="async" src="${esc(media(activeAvatar))}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`
@@ -464,6 +464,7 @@ document.head.appendChild(s);
     if (current === 'dashboard') return dashboard();
     if (current === 'support') { go('notifications'); return; }
     if (current === 'notifications') return notificationsPage();
+    if (current === 'billie') return billieSettingsPage();
     if (current === 'settings') return settingsPage();
     if (current === 'gallery') return galleryPage();
     if (current === 'users') return usersPage();
@@ -1551,10 +1552,10 @@ document.head.appendChild(s);
         }
         data.active = data.active === 'true';
         data.updatedAt = now();
-        data.updatedBy = user.email;
+        data.updatedBy = user.uid || '';
         if (!item) {
           data.createdAt = now();
-          data.createdBy = user.email;
+          data.createdBy = user.uid || '';
         }
         if (name === 'featured' && data.active) {
           const active = (await db.list('featured')).filter(entry => entry.active !== false);
@@ -1677,6 +1678,78 @@ document.head.appendChild(s);
       } catch (error) {
         saveButton.disabled = false;
         toast(error.message || 'Não foi possível salvar a notificação.', 'err');
+      }
+    };
+  }
+
+  async function billieSettingsPage() {
+    const content = $('#adminContent');
+    content.classList.remove('admin-editor-active');
+    const defaults = {
+      sourceMode: 'wikipedia',
+      title: 'Billie Eilish',
+      kicker: 'Conheça a artista',
+      portraitUrl: '',
+      bannerUrl: '',
+      manualBio: 'Billie Eilish Pirate Baird O’Connell nasceu em Los Angeles, em 18 de dezembro de 2001. Cantora e compositora, começou a criar músicas em casa ao lado do irmão e principal colaborador, FINNEAS.\n\nEla ganhou projeção internacional com Ocean Eyes e construiu uma identidade artística reconhecida pelos vocais intimistas, pela produção detalhista e por uma estética visual muito própria.\n\nEntre os projetos que marcam sua discografia estão WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?, Happier Than Ever e HIT ME HARD AND SOFT.',
+      includeReferences: true,
+      instagram: 'https://www.instagram.com/billieeilish/',
+      xUrl: 'https://x.com/billieeilish',
+      youtube: 'https://www.youtube.com/@BillieEilish',
+      spotify: 'https://open.spotify.com/artist/6qqNVTkY8uBg9cP3Jd7DAH',
+      website: 'https://www.billieeilish.com/'
+    };
+    const saved = await db.get('settings', 'billie-eilish').catch(() => null) || {};
+    const settings = { ...defaults, ...saved };
+    content.innerHTML = `<div class="admin-title-row"><div><span class="dashboard-kicker">Página especial</span><h1>Conheça a Billie Eilish</h1><p>Edite a foto, o texto e as redes sociais. No modo Wikipédia, as principais seções são consultadas automaticamente na versão em português.</p></div><a class="a-btn" href="/billie-eilish" target="_blank" rel="noopener noreferrer">Abrir página</a></div><section class="billie-admin-layout"><article class="a-card billie-admin-form-card"><form id="billieSettingsForm" class="billie-admin-form"><div class="billie-admin-source"><label class="field"><span>Fonte das informações</span><select class="a-select" name="sourceMode"><option value="manual" ${settings.sourceMode !== 'wikipedia' ? 'selected' : ''}>Texto manual do painel</option><option value="wikipedia" ${settings.sourceMode === 'wikipedia' ? 'selected' : ''}>Atualização automática pela Wikipédia</option></select><small>O modo Wikipédia consulta a página Billie Eilish em português e mantém um texto manual como reserva.</small></label><button class="a-btn" type="button" id="billieWikipediaTest">Buscar na Wikipédia agora</button></div><div class="billie-admin-sync-result" id="billieWikipediaResult" hidden></div><div class="form-grid"><label class="field"><span>Chamada acima do título</span><input class="a-input" name="kicker" maxlength="80" value="${esc(settings.kicker)}"></label><label class="field"><span>Título</span><input class="a-input" name="title" maxlength="100" value="${esc(settings.title)}"></label><label class="field full"><span>URL do banner compacto da Home</span><input class="a-input" name="bannerUrl" value="${esc(settings.bannerUrl || '')}" placeholder="https://... ou /assets/..."><small>Deixe em branco para manter o banner padrão. Use uma imagem horizontal publicada em /assets ou um link HTTPS de um host aceito pelo proxy, como Imgur, Discord CDN ou Wikimedia.</small></label><label class="field full"><span>URL da foto</span><input class="a-input" name="portraitUrl" value="${esc(settings.portraitUrl || '')}" placeholder="Deixe em branco para usar a foto automática"><small>Você pode usar um link HTTPS. No modo automático, o campo vazio usa a imagem principal disponível.</small></label><label class="field full"><span>Biografia manual / texto de reserva</span><textarea class="a-textarea billie-admin-bio" name="manualBio" rows="12" maxlength="20000">${esc(settings.manualBio)}</textarea><small>Separe os parágrafos com uma linha em branco.</small></label><label class="billie-admin-switch field full"><span><strong>Incluir Referências, Ver também e Ligações externas</strong><small>Desativado deixa a página mais limpa; as demais seções do artigo continuam disponíveis.</small></span><input type="checkbox" name="includeReferences" ${settings.includeReferences === true || String(settings.includeReferences) === 'true' ? 'checked' : ''}></label></div><div class="billie-admin-social-heading"><strong>Redes oficiais</strong><small>Os ícones somem da página quando o campo correspondente fica vazio.</small></div><div class="form-grid"><label class="field"><span>Instagram</span><input class="a-input" type="url" name="instagram" value="${esc(settings.instagram)}"></label><label class="field"><span>X / Twitter</span><input class="a-input" type="url" name="xUrl" value="${esc(settings.xUrl)}"></label><label class="field"><span>YouTube</span><input class="a-input" type="url" name="youtube" value="${esc(settings.youtube)}"></label><label class="field"><span>Spotify</span><input class="a-input" type="url" name="spotify" value="${esc(settings.spotify)}"></label><label class="field full"><span>Site oficial</span><input class="a-input" type="url" name="website" value="${esc(settings.website)}"></label></div><div class="modal-actions"><button class="a-btn primary" id="billieSettingsSave" type="submit">Salvar página</button></div></form></article><aside class="a-card billie-admin-preview-card"><span class="dashboard-kicker">Prévia rápida</span><div class="billie-admin-preview-banner">${settings.bannerUrl ? `<img src="${esc(media(settings.bannerUrl))}" alt="">` : '<span>Banner padrão da Home</span>'}</div><div class="billie-admin-preview-image">${settings.portraitUrl ? `<img src="${esc(media(settings.portraitUrl))}" alt="">` : '<span>Foto automática</span>'}</div><strong>${esc(settings.title || 'Billie Eilish')}</strong><p>${esc(settings.kicker || 'Conheça a artista')}</p><small>${settings.sourceMode === 'wikipedia' ? 'A página pública buscará as seções atuais da Wikipédia.' : 'A página pública usará o texto salvo manualmente.'}</small></aside></section>`;
+
+    const form = $('#billieSettingsForm');
+    const testButton = $('#billieWikipediaTest');
+    const result = $('#billieWikipediaResult');
+    const saveButton = $('#billieSettingsSave');
+    testButton.onclick = async () => {
+      testButton.disabled = true;
+      testButton.textContent = 'Consultando…';
+      result.hidden = true;
+      try {
+        const response = await fetch('/api/billie-wikipedia', { cache: 'no-cache', credentials: 'same-origin' });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.html) throw new Error(payload.error || 'A Wikipédia não respondeu.');
+        const updated = payload.revisionTimestamp ? formatDateTime(payload.revisionTimestamp) : 'data não informada';
+        result.className = 'billie-admin-sync-result ok';
+        result.innerHTML = `<strong>Conexão funcionando</strong><span>${esc(payload.title || 'Billie Eilish')} · ${Number(payload.sections?.length || 0)} seções · revisão de ${esc(updated)}</span>`;
+        result.hidden = false;
+      } catch (error) {
+        result.className = 'billie-admin-sync-result err';
+        result.innerHTML = `<strong>Não foi possível sincronizar</strong><span>${esc(error.message || 'Tente novamente mais tarde.')}</span>`;
+        result.hidden = false;
+      } finally {
+        testButton.disabled = false;
+        testButton.textContent = 'Buscar na Wikipédia agora';
+      }
+    };
+    form.onsubmit = async event => {
+      event.preventDefault();
+      saveButton.disabled = true;
+      saveButton.textContent = 'Salvando…';
+      try {
+        const data = Object.fromEntries(new FormData(form).entries());
+        for (const key of ['bannerUrl', 'portraitUrl']) {
+          data[key] = String(data[key] || '').trim();
+          if (data[key] && !validImageSource(data[key])) throw new Error('Use uma imagem HTTPS ou um arquivo publicado em /assets.');
+        }
+        data.sourceMode = data.sourceMode === 'wikipedia' ? 'wikipedia' : 'manual';
+        data.includeReferences = form.elements.namedItem('includeReferences').checked;
+        data.updatedAt = now();
+        data.updatedBy = user.uid || '';
+        await db.set('settings', 'billie-eilish', data, { merge: true });
+        await logAction('billie_page_updated', 'settings', 'billie-eilish', 'Página Conheça a Billie Eilish alterada');
+        toast('Página da Billie Eilish salva.');
+        await billieSettingsPage();
+      } catch (error) {
+        saveButton.disabled = false;
+        saveButton.textContent = 'Salvar página';
+        toast(error.message || 'Não foi possível salvar a página.', 'err');
       }
     };
   }
@@ -2025,6 +2098,27 @@ document.head.appendChild(s);
         grid-template-columns:repeat(2,minmax(0,1fr))!important;
       }
     }
+  `;
+  document.head.appendChild(style);
+})();
+
+
+/* Editor administrativo da página Conheça a Billie Eilish. */
+(()=>{
+  'use strict';
+  const style=document.createElement('style');
+  style.id='be-admin-billie-page-editor';
+  style.textContent=`
+    body.admin-mode .admin-nav{grid-template-columns:repeat(8,minmax(105px,1fr))}
+    .billie-admin-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.55fr);gap:18px;align-items:start}
+    .billie-admin-form-card{padding:24px}.billie-admin-form{display:grid;gap:24px}.billie-admin-source{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end;padding:18px;border:1px solid rgba(87,154,255,.15);border-radius:18px;background:rgba(45,119,226,.055)}
+    .billie-admin-source .field span,.billie-admin-form .field>span{color:var(--a-muted);font-size:12px;font-weight:700}.billie-admin-source small,.billie-admin-form .field small{color:var(--a-muted);font-size:11px;line-height:1.5}
+    .billie-admin-bio{min-height:270px;resize:vertical;line-height:1.65}.billie-admin-switch{min-height:66px;padding:13px 15px;display:flex!important;grid-column:1/-1;grid-template-columns:none!important;align-items:center;justify-content:space-between;gap:18px;border:1px solid var(--a-line);border-radius:15px;background:rgba(255,255,255,.025)}.billie-admin-switch span{display:grid;gap:3px}.billie-admin-switch input{width:20px;height:20px;accent-color:var(--a-blue)}
+    .billie-admin-social-heading{display:grid;gap:4px;padding-top:4px;border-top:1px solid var(--a-line)}.billie-admin-social-heading strong{padding-top:22px}.billie-admin-social-heading small{color:var(--a-muted);font-size:12px}
+    .billie-admin-preview-card{position:sticky;top:92px;padding:22px;display:grid;gap:10px}.billie-admin-preview-banner{aspect-ratio:16/5;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(81,157,255,.2);border-radius:14px;background:rgba(255,255,255,.025);color:var(--a-muted);font-size:11px}.billie-admin-preview-banner img{width:100%;height:100%;object-fit:cover}.billie-admin-preview-image{aspect-ratio:4/5;margin:5px 0 8px;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(81,157,255,.2);border-radius:20px;background:linear-gradient(145deg,rgba(49,146,255,.14),rgba(255,255,255,.025));color:var(--a-muted);font-size:12px}.billie-admin-preview-image img{width:100%;height:100%;object-fit:cover}.billie-admin-preview-card>strong{font-size:24px}.billie-admin-preview-card>p{margin:0;color:#62a6ff;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}.billie-admin-preview-card>small{color:var(--a-muted);line-height:1.55}
+    .billie-admin-sync-result{display:grid;gap:4px;padding:14px 16px;border-radius:14px;font-size:12px}.billie-admin-sync-result.ok{border:1px solid rgba(67,209,158,.28);background:rgba(67,209,158,.07);color:#9becce}.billie-admin-sync-result.err{border:1px solid rgba(255,107,122,.28);background:rgba(255,107,122,.07);color:#ffb4bd}.billie-admin-sync-result span{opacity:.82}
+    @media(max-width:1180px){body.admin-mode .admin-nav{grid-template-columns:repeat(4,minmax(125px,1fr))}.billie-admin-layout{grid-template-columns:1fr}.billie-admin-preview-card{position:relative;top:auto}}
+    @media(max-width:760px){.billie-admin-source{grid-template-columns:1fr}.billie-admin-source .a-btn{width:100%}.billie-admin-form-card{padding:18px}}
   `;
   document.head.appendChild(style);
 })();

@@ -2,7 +2,7 @@
   'use strict';
 
   const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','users'];
-  const LABELS = {dashboard:'Visão geral',support:'Suporte',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
+  const LABELS = {dashboard:'Visão geral',support:'Suporte',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Configurações'};
   const LOCAL_ADMIN_EMAIL = 'admin@local.invalid';
   const CONTENT_CATEGORIES = [
     ['videos','Vídeos','▣'],
@@ -306,7 +306,7 @@
       clearInterval(adminLoginBgTimer);
       adminLoginBgTimer = null;
     }
-    const routes = ['dashboard','support','sections','contents','gallery','users','settings'];
+    const routes = ['dashboard','support','billie','sections','contents','gallery','users','settings'];
     const activeAvatar = selectedProfileAvatar(user.profile) || String(user.photoURL || '');
     const accountAvatar = activeAvatar
       ? `<img loading="lazy" decoding="async" src="${esc(activeAvatar)}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`
@@ -351,6 +351,7 @@
     const current = route();
     if (current === 'dashboard') return dashboard();
     if (current === 'settings') return settingsPage();
+    if (current === 'billie') return billieSettingsPage();
     if (current === 'gallery') return galleryPage();
     if (current === 'users') return usersPage();
     if (current === 'featured') return contentsPage('featured');
@@ -1312,10 +1313,10 @@
         }
         data.active = data.active === 'true';
         data.updatedAt = now();
-        data.updatedBy = user.email;
+        data.updatedBy = user.uid || '';
         if (!item) {
           data.createdAt = now();
-          data.createdBy = user.email;
+          data.createdBy = user.uid || '';
         }
         if (name === 'featured' && data.active) {
           const active = (await db.list('featured')).filter(entry => entry.active !== false);
@@ -1352,6 +1353,13 @@
     };
   }
 
+  async function billieSettingsPage() {
+    const content = $('#adminContent');
+    const settings = await db.get('settings', 'billie-eilish') || {};
+    content.innerHTML = `<div class="admin-title-row"><div><h1>Billie Eilish</h1><p>Editor completo disponível na versão protegida do painel.</p></div></div><div class="a-card"><p>Fonte atual: <strong>${esc(settings.sourceMode || 'manual')}</strong></p><p>Banner da Home: <strong>${settings.bannerUrl ? 'personalizado' : 'padrão'}</strong></p><button class="a-btn" data-route="settings">Abrir configurações gerais</button></div>`;
+    content.querySelector('[data-route]')?.addEventListener('click', event => go(event.currentTarget.dataset.route));
+  }
+
   async function settingsPage() {
     const content = $('#adminContent');
     const settings = await db.get('settings', 'site') || {};
@@ -1361,7 +1369,7 @@
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.currentTarget).entries());
       data.updatedAt = now();
-      data.updatedBy = user.email;
+      data.updatedBy = user.uid || '';
       await db.set('settings', 'site', data, { merge: true });
       await logAction('settings_updated', 'settings', 'site', 'Configurações do site alteradas');
       toast('Configurações salvas.');

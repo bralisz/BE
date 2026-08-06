@@ -16,6 +16,7 @@
     if(name==='config')return '/config';
     if(['terms','privacy','cookies','dmca'].indexOf(name)!==-1)return '/'+name;
     if(name==='suporte'||name==='support')return '/suporte';
+    if(name==='billie'||name==='billie-eilish'||name==='quem-e-billie')return '/billie-eilish';
     if(name==='video'&&parts[1])return '/'+encodeURIComponent(parts[1]);
     if((name==='perfil'||name==='profile')&&parts[1])return '/'+String(parts[1]).replace(/^@?/, '@');
     if(['atualizacoes','atualizações','notificacoes','notificações','updates','notifications'].indexOf(name)!==-1){
@@ -2500,10 +2501,49 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setupRail(block);
     }
 
+    await addBillieHomeSpotlight(host);
     main.insertAdjacentElement('afterend', host);
     setupContentDetailInteractions(host);
     setupSectionTitleInteractions(host);
     window.dispatchEvent(new Event('be:catalog-ready'));
+  }
+
+  async function addBillieHomeSpotlight(host) {
+    if (!host || host.querySelector('.billie-home-spotlight')) return;
+    const defaultBanner = '/assets/images/auth/login-admin-banner.jpg';
+    const spotlight = document.createElement('section');
+    spotlight.className = 'billie-home-spotlight';
+    spotlight.setAttribute('aria-label', 'Conheça Billie Eilish');
+    spotlight.innerHTML = `
+      <div class="billie-home-spotlight-frame">
+        <img src="${defaultBanner}" alt="Billie Eilish" loading="lazy" decoding="async">
+        <div class="billie-home-spotlight-overlay" aria-hidden="true"></div>
+        <div class="billie-home-spotlight-copy">
+          <span>Além dos conteúdos</span>
+          <strong>Conheça a artista por trás da história.</strong>
+        </div>
+        <a class="billie-home-spotlight-button" href="/billie-eilish" data-open-billie="true">
+          Conheça a Billie Eilish
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </a>
+      </div>`;
+    const homeSections = Array.from(host.querySelectorAll('.video-rail-section[data-home-view="default"]'));
+    const anchor = homeSections[4] || homeSections[homeSections.length - 1];
+    if (anchor) anchor.insertAdjacentElement('afterend', spotlight);
+    else host.append(spotlight);
+
+    const image = spotlight.querySelector('.billie-home-spotlight-frame > img');
+    if (!image) return;
+    image.addEventListener('error', () => {
+      if (!image.src.endsWith(defaultBanner)) image.src = defaultBanner;
+    });
+    try {
+      const settings = await beBackend.data.get('settings', 'billie-eilish');
+      const customBanner = String(settings?.bannerUrl || '').trim();
+      if (customBanner) image.src = window.beMediaUrl ? window.beMediaUrl(customBanner) : customBanner;
+    } catch (_) {
+      // O banner padrão continua disponível caso a configuração remota falhe.
+    }
   }
 
   function videoCard(video) {
@@ -3194,7 +3234,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-fullscreen" id="drivePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
             <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 5H5v5M5 5l6 6M14 19h5v-5M19 19l-6-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M4 9h4a1 1 0 0 0 1-1V4M20 9h-4a1 1 0 0 1-1-1V4M4 15h4a1 1 0 0 1 1 1v4M20 15h-4a1 1 0 0 0-1 1v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -4385,7 +4425,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (document.body.classList.contains('section-catalog-active') || document.body.classList.contains('detail-page-active')) return;
       if (document.body.classList.contains('profile-page-active') || document.body.classList.contains('settings-page-active') ||
           document.body.classList.contains('support-page-active') || document.body.classList.contains('notification-page-active') ||
-          document.body.classList.contains('legal-page-active') || document.body.classList.contains('login-mode')) return;
+          document.body.classList.contains('legal-page-active') || document.body.classList.contains('billie-page-active') || document.body.classList.contains('login-mode')) return;
       try {
         history.replaceState({
           ...(history.state || {}),
@@ -4460,6 +4500,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!host) return;
       const query = normalizeText(input.value);
       const sections = Array.from(host.querySelectorAll('.video-rail-section'));
+      const billieSpotlight = host.querySelector('.billie-home-spotlight');
+      if (billieSpotlight) billieSpotlight.hidden = currentView !== 'home' || Boolean(query);
       let visibleTotal = 0;
 
       sections.forEach(section => {
@@ -6761,12 +6803,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca)$/i.test(String(location.hash||''));}
   function isNotificationsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:atualizacoes|notificacoes)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:atualizacoes|notificacoes|updates|notifications)(?:\/|$)/i.test(hash);}
   function isSupportRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/suporte'||hash==='#suporte'||hash==='#/suporte'||hash==='#support'||hash==='#/support';}
-  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
-  function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
-  function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
-  function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(!isLoginRoute()||location.hash)replaceRoute('/login');}
-  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
-  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
+  function isBillieRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/billie-eilish'||path==='/billie'||hash==='#billie-eilish'||hash==='#/billie-eilish'||hash==='#billie'||hash==='#/billie';}
+  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active','billie-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
+  function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
+  function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','billie-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
+  function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
+  function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(!isLoginRoute()||location.hash)replaceRoute('/login');}
+  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
+  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
     var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep')};
@@ -6871,6 +6915,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     setStatus('');
     if(isNotificationsRoute())showNotificationsRoute();
     else if(isSupportRoute())showSupportRoute();
+    else if(isBillieRoute())showBillieRoute();
     else if(isConfigRoute())enterConfig();
     else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}
     else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}
@@ -6989,6 +7034,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(isSupportRoute()){showSupportRoute();return;}
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
+      if(isBillieRoute()){if(auth.currentUser)showBillieRoute();else showLogin();return;}
       if(isLoginRoute()){if(auth.currentUser)enterHome();else showLogin();return;}
       if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}
       if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
@@ -8045,3 +8091,256 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }, { once: true });
 })();
 
+
+
+;/* Página dedicada: Quem é Billie Eilish. */
+(function(){
+  'use strict';
+  if(String(location.hash||'').startsWith('#/admin'))return;
+
+  var page=document.getElementById('billiePage');
+  var homeButton=document.getElementById('billiePageHome');
+  var notificationButton=document.getElementById('billiePageNotifications');
+  var avatarButton=document.getElementById('billiePageAvatar');
+  var avatarImage=document.getElementById('billiePageAvatarImage');
+  var avatarFallback=document.getElementById('billiePageAvatarFallback');
+  var unreadDot=document.getElementById('billiePageUnreadDot');
+  var portrait=document.getElementById('billiePagePortrait');
+  var kicker=document.getElementById('billiePageKicker');
+  var title=document.getElementById('billiePageTitle');
+  var manualText=document.getElementById('billieBiographyText');
+  var wikipediaContent=document.getElementById('billieWikipediaContent');
+  var wikipediaLoading=document.getElementById('billieWikipediaLoading');
+  var wikipediaError=document.getElementById('billieWikipediaError');
+  var wikipediaAttribution=document.getElementById('billieWikipediaAttribution');
+  if(!page)return;
+
+  var DEFAULTS={
+    sourceMode:'wikipedia',
+    title:'Billie Eilish',
+    kicker:'Conheça a artista',
+    portraitUrl:'',
+    bannerUrl:'',
+    manualBio:'Billie Eilish Pirate Baird O’Connell nasceu em Los Angeles, em 18 de dezembro de 2001. Cantora e compositora, começou a criar músicas em casa ao lado do irmão e principal colaborador, FINNEAS.\n\nEla ganhou projeção internacional com Ocean Eyes e construiu uma identidade artística reconhecida pelos vocais intimistas, pela produção detalhista e por uma estética visual muito própria.\n\nEntre os projetos que marcam sua discografia estão WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?, Happier Than Ever e HIT ME HARD AND SOFT.',
+    includeReferences:true,
+    instagram:'https://www.instagram.com/billieeilish/',
+    xUrl:'https://x.com/billieeilish',
+    youtube:'https://www.youtube.com/@BillieEilish',
+    spotify:'https://open.spotify.com/artist/6qqNVTkY8uBg9cP3Jd7DAH',
+    website:'https://www.billieeilish.com/'
+  };
+  var currentSettings={...DEFAULTS};
+  var loadToken=0;
+
+  function cleanPath(){
+    try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}
+    catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}
+  }
+  function isBillieRoute(){
+    var path=cleanPath().toLowerCase();
+    var hash=String(location.hash||'').toLowerCase();
+    return path==='/billie-eilish'||path==='/billie'||hash==='#billie-eilish'||hash==='#/billie-eilish'||hash==='#billie'||hash==='#/billie';
+  }
+  function mediaUrl(value){
+    var raw=String(value||'').trim();
+    if(!raw)return '';
+    return window.beMediaUrl?window.beMediaUrl(raw):raw;
+  }
+  function syncAvatar(){
+    var source=document.getElementById('publicUserPhoto');
+    var url=source&&!source.hidden?String(source.currentSrc||source.src||'').trim():'';
+    if(url){avatarImage.src=url;avatarImage.hidden=false;avatarFallback.hidden=true;}
+    else{avatarImage.removeAttribute('src');avatarImage.hidden=true;avatarFallback.hidden=false;}
+  }
+  function syncUnread(){
+    var source=document.getElementById('notificationUnreadDot');
+    if(unreadDot)unreadDot.hidden=!source||source.hidden;
+  }
+  function paragraphs(value){
+    return String(value||'').split(/\n\s*\n/g).map(function(entry){return entry.trim();}).filter(Boolean);
+  }
+  function escapeText(value){
+    return String(value||'').replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];});
+  }
+  function renderManual(settings){
+    var items=paragraphs(settings.manualBio||DEFAULTS.manualBio);
+    manualText.innerHTML=items.map(function(item){return '<p>'+escapeText(item)+'</p>';}).join('');
+    manualText.hidden=false;
+    wikipediaContent.hidden=true;
+    wikipediaContent.innerHTML='';
+    wikipediaAttribution.hidden=true;
+  }
+  function safeBillieExternalUrl(value){
+    var raw=String(value||'').trim();
+    if(!raw)return '';
+    try{
+      var parsed=new URL(raw);
+      return parsed.protocol==='https:'?parsed.href:'';
+    }catch(_){return '';}
+  }
+  function renderSocial(settings){
+    page.querySelectorAll('[data-billie-social]').forEach(function(link){
+      var key=link.getAttribute('data-billie-social');
+      var url=safeBillieExternalUrl(settings[key]);
+      link.hidden=!url;
+      if(url)link.href=url;
+      else link.removeAttribute('href');
+    });
+  }
+  function renderBase(settings){
+    currentSettings={...DEFAULTS,...(settings||{})};
+    kicker.textContent=currentSettings.kicker||DEFAULTS.kicker;
+    title.textContent=currentSettings.title||DEFAULTS.title;
+    if(currentSettings.portraitUrl){portrait.src=mediaUrl(currentSettings.portraitUrl);portrait.dataset.adminOverride='true';}
+    else{portrait.dataset.adminOverride='false';portrait.src=mediaUrl(DEFAULTS.portraitUrl);}
+    renderSocial(currentSettings);
+    renderManual(currentSettings);
+  }
+  function absoluteWikipediaUrl(value){
+    var raw=String(value||'').trim();
+    if(!raw)return '';
+    try{
+      var parsed=new URL(raw,'https://pt.wikipedia.org');
+      return parsed.protocol==='https:'?parsed.href:'';
+    }catch(_){return '';}
+  }
+  function normalizeWikipediaHtml(rawHtml,includeReferences){
+    var doc=new DOMParser().parseFromString('<div id="billieWikiRoot">'+String(rawHtml||'')+'</div>','text/html');
+    var root=doc.getElementById('billieWikiRoot');
+    var parser=root&&root.querySelector('.mw-parser-output')||root;
+    if(!parser)return {html:'',imageUrl:''};
+    var infoboxImage=parser.querySelector('table.infobox img, .infobox img');
+    var imageUrl=infoboxImage?absoluteWikipediaUrl(infoboxImage.getAttribute('src')||infoboxImage.getAttribute('data-src')||''):'';
+    parser.querySelectorAll('script,style,link,meta,noscript,iframe,object,embed,form,input,button,textarea,select,video,audio,canvas,svg,table.infobox,.infobox,.mw-editsection,.shortdescription,.hatnote,.metadata,.ambox,.navbox,.vertical-navbox,.authority-control,.catlinks,.sistersitebox,.portal,.mw-empty-elt,.noprint,.nomobile,.thumb,figure,.gallery').forEach(function(node){node.remove();});
+    if(!includeReferences){
+      parser.querySelectorAll('sup.reference,.reflist,ol.references').forEach(function(node){node.remove();});
+      var blocked=['referências','referencias','ligações externas','ligacoes externas','ver também','ver tambem'];
+      Array.from(parser.querySelectorAll('h2')).forEach(function(heading){
+        var label=String(heading.textContent||'').trim().toLowerCase();
+        if(!blocked.includes(label))return;
+        var cursor=heading.nextSibling;
+        while(cursor&&!(cursor.nodeType===1&&cursor.tagName==='H2')){var next=cursor.nextSibling;cursor.remove();cursor=next;}
+        heading.remove();
+      });
+    }
+    var allowed=new Set(['DIV','P','H2','H3','H4','UL','OL','LI','STRONG','B','EM','I','A','TABLE','THEAD','TBODY','TFOOT','TR','TH','TD','CAPTION','BLOCKQUOTE','SMALL','BR','SPAN','SUP','DL','DT','DD']);
+    Array.from(parser.querySelectorAll('*')).forEach(function(element){
+      if(!allowed.has(element.tagName)){
+        if(['IMG','SOURCE'].includes(element.tagName)){element.remove();return;}
+        element.replaceWith.apply(element,Array.from(element.childNodes));
+        return;
+      }
+      Array.from(element.attributes).forEach(function(attribute){
+        var name=attribute.name.toLowerCase();
+        if(element.tagName==='A'&&name==='href')return;
+        if(['colspan','rowspan','scope'].includes(name)&&['TH','TD'].includes(element.tagName))return;
+        element.removeAttribute(attribute.name);
+      });
+      if(element.tagName==='A'){
+        var href=absoluteWikipediaUrl(element.getAttribute('href'));
+        if(!href){element.removeAttribute('href');return;}
+        element.href=href;element.target='_blank';element.rel='noopener noreferrer';
+      }
+    });
+    parser.querySelectorAll('h2,h3,h4').forEach(function(heading){heading.textContent=String(heading.textContent||'').replace(/\s*\[editar.*$/i,'').trim();});
+    return {html:parser.innerHTML.trim(),imageUrl:imageUrl};
+  }
+  function formatRevision(value){
+    if(!value)return '';
+    var date=new Date(value);
+    if(Number.isNaN(date.getTime()))return '';
+    return date.toLocaleString('pt-BR',{dateStyle:'medium',timeStyle:'short'});
+  }
+  async function loadWikipedia(settings,token){
+    wikipediaLoading.hidden=false;
+    wikipediaError.hidden=true;
+    wikipediaError.textContent='';
+    try{
+      var response=await fetch('/api/billie-wikipedia',{method:'GET',cache:'no-cache',credentials:'same-origin'});
+      var payload=await response.json().catch(function(){return {};});
+      if(!response.ok||!payload||!payload.html)throw new Error(payload.error||'Não foi possível carregar as informações automáticas.');
+      if(token!==loadToken)return;
+      var cleaned=normalizeWikipediaHtml(payload.html,settings.includeReferences===true||String(settings.includeReferences)==='true');
+      if(!cleaned.html)throw new Error('A fonte automática não retornou conteúdo utilizável.');
+      wikipediaContent.innerHTML=cleaned.html;
+      wikipediaContent.hidden=false;
+      manualText.hidden=true;
+      wikipediaAttribution.hidden=false;
+      if((!settings.portraitUrl||portrait.dataset.adminOverride==='false')&&payload.imageUrl){portrait.src=mediaUrl(payload.imageUrl);}
+      document.title=(settings.title||payload.title||'Billie Eilish')+' — BETV';
+    }catch(error){
+      if(token!==loadToken)return;
+      wikipediaError.textContent='As informações automáticas não puderam ser carregadas agora. Exibindo o texto salvo no site.';
+      wikipediaError.hidden=false;
+      renderManual(settings);
+    }finally{
+      if(token===loadToken)wikipediaLoading.hidden=true;
+    }
+  }
+  async function loadSettings(){
+    var token=++loadToken;
+    var settings={...DEFAULTS};
+    try{
+      var data=window.beBackend&&beBackend.data;
+      if(data&&typeof data.get==='function'){
+        var saved=await data.get('settings','billie-eilish');
+        if(saved)settings={...settings,...saved};
+      }
+    }catch(error){console.warn('Não foi possível carregar as configurações da página Billie Eilish:',error);}
+    if(token!==loadToken)return;
+    renderBase(settings);
+    if(String(settings.sourceMode||'manual').toLowerCase()==='wikipedia')loadWikipedia(settings,token);
+  }
+  function openPage(){
+    document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active');
+    document.body.classList.add('billie-page-active');
+    page.hidden=false;page.setAttribute('aria-hidden','false');
+    syncAvatar();syncUnread();
+    document.title='Billie Eilish — BETV';
+    window.scrollTo({top:0,left:0,behavior:'auto'});
+    loadSettings();
+  }
+  function closePage(){
+    loadToken+=1;
+    document.body.classList.remove('billie-page-active');
+    page.hidden=true;page.setAttribute('aria-hidden','true');
+    if(document.title.endsWith(' — BETV'))document.title='Billie Eilish TV';
+  }
+  function renderRoute(){
+    if(isBillieRoute()){
+      var auth=window.beBackend&&beBackend.auth;
+      if(auth&&auth.currentUser)openPage();
+      return;
+    }
+    closePage();
+  }
+
+  document.addEventListener('click',function(event){
+    var link=event.target&&event.target.closest?event.target.closest('[data-open-billie]'):null;
+    if(!link)return;
+    event.preventDefault();
+    if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/billie-eilish');
+    else location.assign('/billie-eilish');
+  });
+  if(homeButton)homeButton.addEventListener('click',function(){if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/');else location.assign('/');});
+  if(notificationButton)notificationButton.addEventListener('click',function(){if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/atualizacoes');else location.assign('/atualizacoes');});
+  if(avatarButton)avatarButton.addEventListener('click',function(){
+    window.dispatchEvent(new CustomEvent('be:close-billie-page'));
+    var profileAction=document.querySelector('#userDropdown [data-public-action="profile"]');
+    if(profileAction){profileAction.click();return;}
+    if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');
+  });
+
+  var sourceAvatar=document.getElementById('publicUserPhoto');
+  var sourceDot=document.getElementById('notificationUnreadDot');
+  if(window.MutationObserver&&sourceAvatar)new MutationObserver(syncAvatar).observe(sourceAvatar,{attributes:true,attributeFilter:['src','hidden']});
+  if(window.MutationObserver&&sourceDot)new MutationObserver(syncUnread).observe(sourceDot,{attributes:true,attributeFilter:['hidden']});
+  window.addEventListener('be:open-billie-page',openPage);
+  window.addEventListener('be:close-billie-page',closePage);
+  window.addEventListener('be:profile-avatar-changed',syncAvatar);
+  window.addEventListener('be:content-ready',function(){if(isBillieRoute())renderRoute();});
+  window.addEventListener('popstate',renderRoute);
+  window.addEventListener('hashchange',renderRoute);
+  document.addEventListener('DOMContentLoaded',renderRoute);
+  if(document.readyState!=='loading')renderRoute();
+})();

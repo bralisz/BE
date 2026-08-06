@@ -8733,3 +8733,422 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
   }
 }
 
+
+/* ========================================================================== 
+   Conheça Billie Eilish: banner compacto da Home e página dedicada
+   ========================================================================== */
+.billie-home-spotlight{
+  width:100%;
+  margin:18px 0 42px;
+  padding:0 var(--be-content-gutter,clamp(20px,4vw,58px));
+}
+.billie-home-spotlight[hidden]{display:none!important}
+.billie-home-spotlight-frame{
+  position:relative;
+  width:min(100%,var(--be-content-max,1680px));
+  height:clamp(170px,17vw,238px);
+  margin:0 auto;
+  overflow:hidden;
+  isolation:isolate;
+  border:1px solid transparent;
+  border-radius:26px;
+  background:
+    linear-gradient(#080b11,#080b11) padding-box,
+    linear-gradient(112deg,rgba(51,145,255,.8),rgba(255,255,255,.1) 46%,rgba(21,103,222,.58)) border-box;
+  box-shadow:0 24px 64px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.025);
+}
+.billie-home-spotlight-frame::after{
+  content:"";
+  position:absolute;
+  inset:8px;
+  z-index:3;
+  pointer-events:none;
+  border:1px solid rgba(121,189,255,.17);
+  border-radius:19px;
+}
+.billie-home-spotlight-frame>img{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center 37%;
+  filter:saturate(.9) contrast(1.04) brightness(.78);
+  transform:scale(1.01);
+}
+.billie-home-spotlight-overlay{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  background:
+    linear-gradient(90deg,rgba(2,6,15,.84) 0%,rgba(2,7,17,.46) 42%,rgba(2,7,17,.16) 70%,rgba(2,7,17,.44) 100%),
+    linear-gradient(0deg,rgba(2,6,13,.66),transparent 64%);
+}
+.billie-home-spotlight-copy{
+  position:absolute;
+  left:clamp(26px,4.2vw,64px);
+  top:50%;
+  z-index:4;
+  max-width:min(500px,58%);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  transform:translateY(-50%);
+}
+.billie-home-spotlight-copy span{
+  color:#77b7ff;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.billie-home-spotlight-copy strong{
+  color:#fff;
+  font-size:clamp(22px,2.55vw,38px);
+  font-weight:740;
+  line-height:1.06;
+  letter-spacing:-.035em;
+  text-wrap:balance;
+}
+.billie-home-spotlight-button{
+  position:absolute;
+  right:clamp(24px,3.6vw,54px);
+  bottom:clamp(22px,3vw,38px);
+  z-index:5;
+  min-height:46px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  padding:0 18px;
+  border:1px solid rgba(151,202,255,.28);
+  border-radius:13px;
+  background:linear-gradient(135deg,#2387ff,#1261d7);
+  box-shadow:0 12px 30px rgba(13,91,211,.3);
+  color:#fff;
+  font-size:13px;
+  font-weight:800;
+  line-height:1;
+  text-decoration:none;
+  transition:transform .2s ease,filter .2s ease,box-shadow .2s ease;
+}
+.billie-home-spotlight-button:hover{
+  transform:translateY(-2px);
+  filter:brightness(1.08);
+  box-shadow:0 16px 36px rgba(13,91,211,.4);
+}
+.billie-home-spotlight-button:focus-visible{
+  outline:3px solid rgba(112,180,255,.45);
+  outline-offset:3px;
+}
+.billie-home-spotlight-button svg{width:17px;height:17px;flex:0 0 auto}
+
+.billie-page-shell{
+  display:none;
+  position:relative;
+  z-index:2;
+  width:100%;
+  min-height:100svh;
+  background:#05070b;
+  color:#f7f9ff;
+}
+.billie-page-shell[hidden]{display:none!important}
+body.billie-page-active{
+  min-height:100svh;
+  overflow-x:hidden!important;
+  background:#05070b!important;
+}
+body.billie-page-active > :not(#billiePage):not(footer):not(.cookie-notice):not(script):not(style){display:none!important}
+body.billie-page-active > #billiePage{display:block!important}
+body.billie-page-active > footer{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:28px var(--be-content-gutter,clamp(20px,4vw,58px)) 34px!important;
+  background:#05070b!important;
+}
+body.billie-page-active > footer > .footer-card{
+  width:min(100%,var(--be-content-max,1680px))!important;
+  margin:0 auto!important;
+}
+.billie-page-header{
+  position:fixed;
+  inset:0 0 auto;
+  z-index:80;
+  height:96px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 clamp(20px,3.1vw,48px);
+  background:linear-gradient(180deg,rgba(5,7,11,.98) 0%,rgba(5,7,11,.82) 66%,transparent 100%);
+  pointer-events:none;
+}
+.billie-page-header>*{pointer-events:auto}
+.billie-page-header-actions{display:flex;align-items:center;gap:12px}
+.billie-page-home,
+.billie-page-notifications,
+.billie-page-avatar{
+  position:relative;
+  width:52px;
+  height:52px;
+  flex:0 0 52px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:50%;
+  background:rgba(15,19,28,.76);
+  box-shadow:0 12px 34px rgba(0,0,0,.26);
+  color:#fff;
+  cursor:pointer;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  transition:border-color .2s ease,background .2s ease,transform .2s ease;
+}
+.billie-page-home:hover,
+.billie-page-notifications:hover,
+.billie-page-avatar:hover{
+  border-color:rgba(84,161,255,.55);
+  background:rgba(31,46,69,.88);
+  transform:translateY(-1px);
+}
+.billie-page-home:focus-visible,
+.billie-page-notifications:focus-visible,
+.billie-page-avatar:focus-visible{outline:3px solid rgba(74,155,255,.36);outline-offset:3px}
+.billie-page-home svg,
+.billie-page-notifications svg,
+.billie-page-avatar>svg{width:21px;height:21px}
+.billie-page-avatar img{width:100%;height:100%;display:block;object-fit:cover}
+.billie-page-avatar img[hidden],
+.billie-page-avatar svg[hidden]{display:none!important}
+.billie-page-unread-dot{
+  position:absolute;
+  top:5px;
+  right:5px;
+  width:9px;
+  height:9px;
+  border:2px solid #0d1119;
+  border-radius:50%;
+  background:#2587ff;
+  box-shadow:0 0 10px rgba(37,135,255,.9);
+}
+.billie-page-unread-dot[hidden]{display:none!important}
+.billie-page-content{
+  width:min(100%,1420px);
+  min-height:calc(100svh - 80px);
+  margin:0 auto;
+  padding:146px clamp(24px,4.5vw,72px) 96px;
+}
+.billie-biography-grid{
+  display:grid;
+  grid-template-columns:minmax(300px,.82fr) minmax(0,1.18fr);
+  gap:clamp(42px,6vw,96px);
+  align-items:center;
+}
+.billie-portrait-frame{
+  position:relative;
+  width:100%;
+  max-width:520px;
+  margin:0;
+  padding:1px;
+  border-radius:30px;
+  background:linear-gradient(145deg,rgba(49,146,255,.84),rgba(255,255,255,.1) 46%,rgba(29,101,211,.58));
+  box-shadow:0 34px 80px rgba(0,0,0,.4),0 0 50px rgba(22,103,214,.09);
+}
+.billie-portrait-frame::after{
+  content:"";
+  position:absolute;
+  inset:9px;
+  z-index:2;
+  pointer-events:none;
+  border:1px solid rgba(134,194,255,.18);
+  border-radius:21px;
+}
+.billie-portrait-inner{
+  position:relative;
+  overflow:hidden;
+  aspect-ratio:4/5;
+  border-radius:29px;
+  background:#0a0d14;
+}
+.billie-portrait-inner::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(0deg,rgba(3,5,9,.32),transparent 48%);
+  pointer-events:none;
+}
+.billie-portrait-inner img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+  object-position:55% center;
+  filter:saturate(.9) contrast(1.03);
+}
+.billie-biography-copy{max-width:760px}
+.billie-page-kicker{
+  margin:0 0 13px;
+  color:#3c98ff;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.billie-biography-copy h1{
+  margin:0 0 28px;
+  color:#fff;
+  font-size:clamp(48px,6.8vw,88px);
+  font-weight:760;
+  line-height:.95;
+  letter-spacing:-.065em;
+}
+.billie-biography-text{
+  display:flex;
+  flex-direction:column;
+  gap:17px;
+  color:rgba(235,241,250,.75);
+  font-size:clamp(16px,1.25vw,19px);
+  line-height:1.72;
+}
+.billie-biography-text p{margin:0}
+.billie-biography-text em{color:#fff;font-style:normal;font-weight:650}
+.billie-social-section{
+  margin-top:38px;
+  padding-top:30px;
+  border-top:1px solid rgba(255,255,255,.1);
+}
+.billie-social-section h2{
+  margin:0 0 18px;
+  color:#fff;
+  font-size:17px;
+  font-weight:750;
+  letter-spacing:-.015em;
+}
+.billie-social-links{display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+.billie-social-link{
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:50%;
+  background:rgba(255,255,255,.035);
+  color:rgba(255,255,255,.82);
+  text-decoration:none;
+  transition:transform .2s ease,border-color .2s ease,background .2s ease,color .2s ease;
+}
+.billie-social-link:hover{
+  transform:translateY(-2px);
+  border-color:rgba(75,156,255,.55);
+  background:rgba(35,111,215,.14);
+  color:#fff;
+}
+.billie-social-link:focus-visible{outline:3px solid rgba(74,155,255,.35);outline-offset:3px}
+.billie-social-link svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.billie-social-link.is-x svg,
+.billie-social-link.is-youtube svg,
+.billie-social-link.is-spotify svg{fill:currentColor;stroke:none}
+
+@media(max-width:900px){
+  .billie-home-spotlight-copy{max-width:56%}
+  .billie-biography-grid{grid-template-columns:1fr;gap:48px;align-items:start}
+  .billie-portrait-frame{max-width:620px;margin:0 auto}
+  .billie-biography-copy{max-width:760px;margin:0 auto}
+  .billie-biography-copy h1{font-size:clamp(46px,10vw,76px)}
+}
+@media(max-width:760px){
+  .billie-home-spotlight{margin:12px 0 34px;padding:0 18px}
+  .billie-home-spotlight-frame{height:192px;border-radius:21px}
+  .billie-home-spotlight-frame::after{inset:6px;border-radius:16px}
+  .billie-home-spotlight-frame>img{object-position:56% center}
+  .billie-home-spotlight-overlay{background:linear-gradient(90deg,rgba(2,6,15,.8),rgba(2,7,17,.26)),linear-gradient(0deg,rgba(2,6,13,.75),transparent 75%)}
+  .billie-home-spotlight-copy{left:24px;right:24px;top:25px;max-width:74%;transform:none}
+  .billie-home-spotlight-copy span{font-size:10px}
+  .billie-home-spotlight-copy strong{font-size:24px}
+  .billie-home-spotlight-button{right:20px;bottom:18px;min-height:42px;padding:0 14px;font-size:12px;border-radius:12px}
+  .billie-page-header{height:82px;padding:0 16px}
+  .billie-page-header-actions{gap:9px}
+  .billie-page-home,.billie-page-notifications,.billie-page-avatar{width:44px;height:44px;flex-basis:44px}
+  .billie-page-home svg,.billie-page-notifications svg,.billie-page-avatar>svg{width:19px;height:19px}
+  .billie-page-content{padding:112px 18px 72px}
+  .billie-biography-grid{gap:36px}
+  .billie-portrait-frame{max-width:520px;border-radius:24px}
+  .billie-portrait-inner{border-radius:23px;aspect-ratio:4/4.7}
+  .billie-portrait-frame::after{inset:7px;border-radius:17px}
+  .billie-biography-copy h1{margin-bottom:22px;font-size:clamp(43px,14vw,64px)}
+  .billie-biography-text{gap:15px;font-size:16px;line-height:1.65}
+  .billie-social-section{margin-top:30px;padding-top:24px}
+  .billie-social-link{width:42px;height:42px}
+  body.billie-page-active > footer{padding:20px 18px 28px!important}
+}
+@media(max-width:430px){
+  .billie-home-spotlight-frame{height:180px}
+  .billie-home-spotlight-copy{max-width:78%}
+  .billie-home-spotlight-copy strong{font-size:21px;line-height:1.08}
+  .billie-home-spotlight-button{max-width:calc(100% - 40px);white-space:nowrap}
+}
+
+/* A página dedicada sempre deve ficar acima das grades dinâmicas. */
+body.billie-page-active #dynamicSections{display:none!important}
+
+
+/* Player v2: ícone diagonal e remoção garantida de todos os controles próprios no fullscreen. */
+.drive-player-top-controls .drive-player-fullscreen .fullscreen-enter path{stroke-width:1.9!important}
+.drive-player-shell:fullscreen,
+.drive-player-shell:-webkit-full-screen{
+  --drive-player-actionbar-height:0px!important;
+  width:100vw!important;
+  height:100vh!important;
+  background:#000!important;
+}
+.drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-shell:fullscreen .drive-player-center-controls,
+.drive-player-shell:fullscreen .drive-player-bottom-controls,
+.drive-player-shell:-webkit-full-screen .drive-player-top-controls,
+.drive-player-shell:-webkit-full-screen .drive-player-center-controls,
+.drive-player-shell:-webkit-full-screen .drive-player-bottom-controls{
+  display:none!important;
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+.drive-player-shell:fullscreen .drive-player-video,
+.drive-player-shell:-webkit-full-screen .drive-player-video{height:100%!important}
+.drive-player-shell:fullscreen .drive-player-frame-shell,
+.drive-player-shell:-webkit-full-screen .drive-player-frame-shell{inset:0!important}
+.drive-player-shell:fullscreen .drive-player-loading,
+.drive-player-shell:fullscreen::after,
+.drive-player-shell:-webkit-full-screen .drive-player-loading,
+.drive-player-shell:-webkit-full-screen::after{bottom:0!important}
+.drive-player-overlay.is-browser-fullscreen .drive-player-bottom-controls{display:none!important}
+.drive-player-overlay.is-browser-fullscreen .drive-player-frame-shell{inset:0!important}
+
+/* Página Billie Eilish com conteúdo manual ou sincronizado pela Wikipédia. */
+.billie-biography-grid{align-items:start}
+.billie-portrait-column{position:sticky;top:126px;display:grid;gap:18px;align-self:start}
+.billie-wikipedia-loading{min-height:84px;display:flex;align-items:center;gap:13px;margin:0 0 22px;padding:18px;border:1px solid rgba(255,255,255,.08);border-radius:17px;background:rgba(255,255,255,.025)}
+.billie-wikipedia-loading[hidden]{display:none!important}.billie-wikipedia-loading span{width:22px;height:22px;border:2px solid rgba(255,255,255,.18);border-top-color:#3b94ff;border-radius:50%;animation:billieWikiSpin .8s linear infinite}.billie-wikipedia-loading p{margin:0;color:rgba(235,241,250,.72);font-size:14px}
+@keyframes billieWikiSpin{to{transform:rotate(360deg)}}
+.billie-wikipedia-error{margin:0 0 22px;padding:14px 16px;border:1px solid rgba(255,183,76,.2);border-radius:15px;background:rgba(255,155,38,.07);color:#ffd49a;font-size:13px;line-height:1.5}
+.billie-wikipedia-error[hidden]{display:none!important}
+.billie-wikipedia-content{display:block;color:rgba(235,241,250,.76);font-size:clamp(15.5px,1.1vw,18px);line-height:1.74}
+.billie-wikipedia-content[hidden]{display:none!important}
+.billie-wikipedia-content>p:first-child{font-size:clamp(17px,1.25vw,20px);color:rgba(245,248,255,.88)}
+.billie-wikipedia-content p{margin:0 0 16px}
+.billie-wikipedia-content h2{margin:42px 0 17px;padding-top:4px;color:#fff;font-size:clamp(27px,3vw,40px);line-height:1.08;letter-spacing:-.035em}
+.billie-wikipedia-content h3{margin:30px 0 13px;color:#f8faff;font-size:clamp(20px,2vw,28px);line-height:1.2;letter-spacing:-.02em}
+.billie-wikipedia-content h4{margin:24px 0 10px;color:#f5f8ff;font-size:18px}
+.billie-wikipedia-content ul,.billie-wikipedia-content ol{margin:0 0 18px;padding-left:24px}.billie-wikipedia-content li{margin:6px 0}
+.billie-wikipedia-content a{color:#55a5ff;text-decoration:none;border-bottom:1px solid rgba(85,165,255,.28)}.billie-wikipedia-content a:hover{color:#8bc1ff;border-bottom-color:currentColor}
+.billie-wikipedia-content strong,.billie-wikipedia-content b{color:#fff}
+.billie-wikipedia-content blockquote{margin:20px 0;padding:15px 18px;border-left:3px solid #2e88f2;background:rgba(46,136,242,.06);border-radius:0 14px 14px 0}
+.billie-wikipedia-content table{width:100%;margin:22px 0;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.02);font-size:13px;line-height:1.5}
+.billie-wikipedia-content th,.billie-wikipedia-content td{padding:11px 12px;border-right:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top;text-align:left}.billie-wikipedia-content th{color:#fff;background:rgba(49,126,229,.09)}.billie-wikipedia-content tr:last-child>*{border-bottom:0}.billie-wikipedia-content tr>*:last-child{border-right:0}
+.billie-wikipedia-content dl{margin:18px 0}.billie-wikipedia-content dt{color:#fff;font-weight:750}.billie-wikipedia-content dd{margin:4px 0 12px 18px}
+.billie-wikipedia-attribution{margin:34px 0 0;padding:0;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(255,255,255,.025);color:rgba(213,224,240,.58);font-size:11px;line-height:1.6}
+.billie-wikipedia-attribution[hidden]{display:none!important}.billie-wikipedia-attribution summary{padding:14px 17px;color:rgba(224,233,247,.68);font-weight:700;cursor:pointer;list-style-position:inside}.billie-wikipedia-attribution p{margin:0;padding:0 17px 16px}.billie-wikipedia-attribution a{color:#70aff8;text-decoration:none}.billie-wikipedia-attribution a:hover{text-decoration:underline}
+@media(max-width:900px){.billie-portrait-column{position:relative;top:auto;max-width:620px;width:100%;margin:0 auto}.billie-wikipedia-content table{display:block;overflow-x:auto;white-space:normal}}
+@media(max-width:760px){.billie-wikipedia-content h2{margin-top:34px}.billie-wikipedia-content table{font-size:12px}.billie-wikipedia-content th,.billie-wikipedia-content td{padding:9px 10px}}

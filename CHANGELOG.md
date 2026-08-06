@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.1.1 — 5 de agosto de 2026
+
+### Página Billie Eilish
+
+- Banner compacto da Home configurável por link no painel administrativo.
+- Prévia do banner e da foto no editor.
+- Mensagens públicas de atualização simplificadas.
+- Créditos obrigatórios reunidos em uma seção discreta e recolhida.
+
+### Privacidade e segurança
+
+- O catálogo e as configurações públicas agora são lidos por funções com campos permitidos explicitamente.
+- O JSON bruto de `content_items` e `site_settings` deixa de ficar acessível para visitantes.
+- E-mails e metadados administrativos antigos são removidos dos registros.
+- URLs públicas passam por validação e imagens externas continuam protegidas pelo proxy de mídia.
+- Arquivos internos, fontes de desenvolvimento, migrations e documentação técnica deixam de ser publicados como rotas estáticas.
+- Backups antigos com configuração administrativa foram removidos do pacote.
+
 ## 1.1.0 — 4 de agosto de 2026
 
 ### Perfis públicos compartilháveis

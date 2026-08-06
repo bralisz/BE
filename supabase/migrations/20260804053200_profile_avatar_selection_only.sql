@@ -33,7 +33,7 @@ begin
     v_username,
     case when nullif(new.raw_user_meta_data ->> 'profile_avatar_id', '') is not null then coalesce(new.raw_user_meta_data ->> 'profile_avatar_url', '') else '' end,
     coalesce(new.raw_user_meta_data ->> 'profile_avatar_id', ''),
-    case when lower(coalesce(new.email, '')) = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    case when lower(coalesce(new.raw_app_meta_data ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     true,
     coalesce(new.created_at, now()),
     now(),
@@ -96,7 +96,7 @@ begin
   ) values (
     v_uid, v_email, coalesce(trim(p_display_name), ''), v_username,
     coalesce(trim(p_avatar_url), ''),
-    case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     true, now(), now(), now()
   )
   on conflict (id) do update set
@@ -108,7 +108,7 @@ begin
       when nullif(trim(coalesce(p_avatar_url, '')), '') is not null then trim(p_avatar_url)
       else ''
     end,
-    role = case when v_email = 'bralisofc@gmail.com' then 'admin' else 'member' end,
+    role = case when lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '')) = 'admin' then 'admin' else 'member' end,
     profile_complete = true,
     updated_at = now(),
     last_login_at = now()
