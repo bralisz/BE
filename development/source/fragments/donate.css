@@ -596,35 +596,3 @@ body.donate-page-active .donate-page-avatar img{
   }
 }
 
-/* /ong: todos os controles do topo mantêm o mesmo tamanho visual. */
-body.donate-page-active{
-  --donate-top-control-size:54px;
-  --donate-top-icon-size:21px;
-}
-body.donate-page-active .donate-page-home,
-body.donate-page-active .donate-page-notifications,
-body.donate-page-active .donate-page-avatar{
-  width:var(--donate-top-control-size)!important;
-  height:var(--donate-top-control-size)!important;
-  min-width:var(--donate-top-control-size)!important;
-  min-height:var(--donate-top-control-size)!important;
-  flex:0 0 var(--donate-top-control-size)!important;
-}
-body.donate-page-active .donate-page-home svg,
-body.donate-page-active .donate-page-notifications svg,
-body.donate-page-active .donate-page-avatar svg{
-  width:var(--donate-top-icon-size)!important;
-  height:var(--donate-top-icon-size)!important;
-}
-@media (max-width:760px){
-  body.donate-page-active{
-    --donate-top-control-size:46px;
-    --donate-top-icon-size:21px;
-  }
-}
-@media (max-width:390px){
-  body.donate-page-active{
-    --donate-top-control-size:42px;
-    --donate-top-icon-size:20px;
-  }
-}

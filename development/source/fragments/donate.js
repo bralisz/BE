@@ -7,10 +7,18 @@
   var hero=document.getElementById('donateHero');
   var list=document.getElementById('donateNgoList');
   var status=document.getElementById('donatePageStatus');
+  var showMoreButton=document.getElementById('donateNgoShowMore');
+  var supportersSection=document.getElementById('donateSupportersSection');
+  var supportersList=document.getElementById('donateSupportersList');
+  var supportersStatus=document.getElementById('donateSupportersStatus');
   if(!page||!hero||!list||!status)return;
 
   var loaded=false;
   var loading=null;
+  var supportersLoaded=false;
+  var supportersLoading=null;
+  var ngoRecordCount=0;
+  var visibleNgoCount=0;
   var notificationItems=[];
   var notificationLoaded=false;
   var notificationLoading=null;
@@ -28,6 +36,9 @@
 
   var CHECKOUT_FUNCTION_NAME='create-donation-checkout';
   var DEFAULT_MINIMUM_DONATION_CENTS=500;
+  var NGO_BATCH_SIZE=12;
+  var SUPPORTERS_LIMIT=48;
+  var ngoMobileMedia=window.matchMedia?window.matchMedia('(max-width:760px)'):null;
 
   function cleanPath(){try{return decodeURIComponent(String(location.pathname||'/')).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
   function isRoute(){var path=cleanPath().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/ong'||hash==='#ong'||hash==='#/ong';}
@@ -116,9 +127,36 @@
     if(dot)dot.hidden=!source||source.hidden;
   }
 
+  function isMobileNgoCarousel(){
+    return ngoMobileMedia?ngoMobileMedia.matches:window.innerWidth<=760;
+  }
+
+  function updateShowMoreButton(){
+    if(!showMoreButton)return;
+    var hasMore=!isMobileNgoCarousel()&&visibleNgoCount<ngoRecordCount;
+    showMoreButton.hidden=!hasMore;
+    showMoreButton.setAttribute('aria-hidden',String(!hasMore));
+  }
+
+  function syncNgoVisibility(){
+    var showAll=isMobileNgoCarousel();
+    list.querySelectorAll('[data-ngo-card]').forEach(function(card,index){
+      card.hidden=!showAll&&index>=visibleNgoCount;
+    });
+    updateShowMoreButton();
+  }
+
+  function showNextNgoBatch(){
+    if(isMobileNgoCarousel()||visibleNgoCount>=ngoRecordCount)return;
+    visibleNgoCount=Math.min(visibleNgoCount+NGO_BATCH_SIZE,ngoRecordCount);
+    syncNgoVisibility();
+  }
+
   function render(items){
     var records=(Array.isArray(items)?items:[]).filter(active).sort(function(a,b){return (Number(a.order)||0)-(Number(b.order)||0);});
-    if(!records.length){list.innerHTML='';status.hidden=false;status.textContent='Nenhuma ONG foi publicada ainda.';return;}
+    ngoRecordCount=records.length;
+    visibleNgoCount=Math.min(NGO_BATCH_SIZE,ngoRecordCount);
+    if(!records.length){list.innerHTML='';status.hidden=false;status.textContent='Nenhuma ONG foi publicada ainda.';updateShowMoreButton();return;}
     status.hidden=true;
     list.innerHTML=records.map(function(item,index){
       var title=String(item.title||item.name||'ONG').trim();
@@ -142,6 +180,7 @@
           '</div>'+
         '</div></div></div></article>';
     }).join('');
+    syncNgoVisibility();
 
     list.querySelectorAll('.donate-ngo-toggle img').forEach(function(image){
       image.addEventListener('error',function(){
@@ -238,6 +277,80 @@
       });
       updateDonationButton(false);
     });
+  }
+
+  function supporterInitials(value){
+    var parts=String(value||'Apoiador').trim().split(/\s+/).filter(Boolean);
+    return (parts.slice(0,2).map(function(part){return part.charAt(0);}).join('')||'A').toUpperCase();
+  }
+
+  function renderSupporters(items){
+    if(!supportersSection||!supportersList||!supportersStatus)return;
+    var records=(Array.isArray(items)?items:[]).filter(function(item){
+      return String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim();
+    });
+    supportersSection.hidden=false;
+    if(!records.length){
+      supportersList.innerHTML='';
+      supportersStatus.hidden=false;
+      supportersStatus.textContent='Nenhum apoiador para exibir ainda.';
+      return;
+    }
+    supportersStatus.hidden=true;
+    supportersList.innerHTML=records.map(function(item){
+      var displayName=String(item.display_name||item.displayName||item.user_display_name||'Apoiador').trim()||'Apoiador';
+      var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
+      var banner=imageUrl(item.banner_url||item.bannerUrl||'');
+      var avatarUrl=imageUrl(item.avatar_url||item.avatarUrl||'');
+      var initials=supporterInitials(displayName);
+      var route='/@'+encodeURIComponent(username);
+      return '<a class="donate-supporter-card" href="'+esc(route)+'" data-supporter-profile aria-label="Abrir perfil de '+esc(displayName)+'">'+
+        '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+
+        '<span class="donate-supporter-shade" aria-hidden="true"></span>'+
+        '<span class="donate-supporter-content">'+
+          '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'">'+(avatarUrl?'<img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatarUrl)+'" alt="Avatar de '+esc(displayName)+'">':'<span aria-hidden="true">'+esc(initials)+'</span>')+'</span>'+
+          '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong><small>@'+esc(username)+'</small></span>'+
+        '</span>'+
+      '</a>';
+    }).join('');
+
+    supportersList.querySelectorAll('.donate-supporter-banner-image').forEach(function(image){
+      image.addEventListener('error',function(){image.remove();},{once:true});
+    });
+    supportersList.querySelectorAll('.donate-supporter-avatar-image').forEach(function(image){
+      image.addEventListener('error',function(){
+        var avatarWrap=image.closest('.donate-supporter-avatar');
+        if(!avatarWrap)return;
+        avatarWrap.innerHTML='<span aria-hidden="true">'+esc(avatarWrap.getAttribute('data-initials')||'A')+'</span>';
+      },{once:true});
+    });
+  }
+
+  async function loadSupporters(force){
+    if(!supportersSection||!supportersList||!supportersStatus)return [];
+    if(supportersLoaded&&!force)return [];
+    if(supportersLoading)return supportersLoading;
+    supportersSection.hidden=false;
+    supportersStatus.hidden=false;
+    supportersStatus.textContent='Carregando apoiadores…';
+    supportersLoading=(async function(){
+      try{
+        var client=window.beBackend&&window.beBackend.client;
+        if(!client||typeof client.rpc!=='function')throw new Error('supporters_rpc_unavailable');
+        var result=await client.rpc('get_public_donation_supporters',{p_limit:SUPPORTERS_LIMIT});
+        if(result&&result.error)throw result.error;
+        renderSupporters(result&&result.data);
+        supportersLoaded=true;
+        return result&&result.data||[];
+      }catch(error){
+        console.warn('Não foi possível carregar os apoiadores:',error);
+        supportersSection.hidden=true;
+        return [];
+      }finally{
+        supportersLoading=null;
+      }
+    })();
+    return supportersLoading;
   }
 
   function notificationTime(item){
@@ -351,6 +464,7 @@
         applyPageBanner(results[1]);
         render(results[0]);
         loaded=true;
+        loadSupporters(force);
       }catch(error){
         console.warn('Não foi possível carregar as ONGs:',error);
         list.innerHTML='';
@@ -395,6 +509,17 @@
     else location.href='/';
   });
 
+  if(showMoreButton)showMoreButton.addEventListener('click',showNextNgoBatch);
+  if(ngoMobileMedia){
+    if(typeof ngoMobileMedia.addEventListener==='function')ngoMobileMedia.addEventListener('change',syncNgoVisibility);
+    else if(typeof ngoMobileMedia.addListener==='function')ngoMobileMedia.addListener(syncNgoVisibility);
+  }
+  if(supportersList)supportersList.addEventListener('click',function(event){
+    var link=event.target&&event.target.closest?event.target.closest('[data-supporter-profile]'):null;
+    if(!link||!window.BETVPublicRoutes)return;
+    event.preventDefault();
+    window.BETVPublicRoutes.go(link.getAttribute('href')||'/');
+  });
   if(notificationButton)notificationButton.addEventListener('click',toggleNotificationPopup);
   if(notificationClose)notificationClose.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();closeNotificationPopup();});
   if(notificationMarkAll)notificationMarkAll.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();markNotificationsRead();});
@@ -437,6 +562,7 @@
   window.addEventListener('be:profile-device-synced',syncAvatar);
   window.addEventListener('be:content-ready',function(){
     notificationLoaded=false;
+    supportersLoaded=false;
     if(isRoute()){
       load(true);
       if(notificationPopup&&notificationPopup.classList.contains('open'))loadNotificationPreview(true);

@@ -28,3 +28,9 @@ A migration `20260804164611_cross_device_user_preferences.sql` cria a tabela pri
 - Adiciona status e campo futuro de confirmação de pagamento.
 - Cria a função administrativa `get_admin_donation_overview`.
 - Entrega histórico pesquisável e indicadores de valor, usuários e ONGs.
+
+## `20260806070000_public_donation_supporters.sql`
+
+- Cria a lista pública de apoiadores baseada somente em doações com status `paid`.
+- Expõe apenas nome, @, avatar, banner e data do apoio; valores e dados de pagamento continuam privados.
+- Remove usuários banidos ou sem perfil público completo da seção de apoiadores.

@@ -65,9 +65,9 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-site-insights-avatar-fix-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-ong-mobile-carousel-v2">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/site.js?rev=20260806-ong-donation-admin-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260806-ong-mobile-carousel-v2"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -698,6 +698,14 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
     <section class="donate-ngos-section" aria-label="ONGs disponíveis para apoio">
       <div class="donate-ngo-status" id="donatePageStatus" role="status" aria-live="polite">Carregando ONGs…</div>
       <div class="donate-ngo-list" id="donateNgoList"></div>
+      <div class="donate-ngo-show-more-wrap">
+        <button class="donate-ngo-show-more" id="donateNgoShowMore" type="button" hidden aria-hidden="true">Ver mais</button>
+      </div>
+    </section>
+    <section class="donate-supporters-section" id="donateSupportersSection" aria-labelledby="donateSupportersTitle" hidden>
+      <h2 id="donateSupportersTitle">Apoiadores</h2>
+      <div class="donate-supporters-status" id="donateSupportersStatus" role="status" aria-live="polite">Carregando apoiadores…</div>
+      <div class="donate-supporters-list" id="donateSupportersList"></div>
     </section>
   </main>
 </section>
