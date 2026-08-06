@@ -8351,6 +8351,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   };
   var currentSettings={...DEFAULTS};
   var loadToken=0;
+  var wikipediaOrigin='https://pt.wikipedia.org';
 
   function cleanPath(){
     try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}
@@ -8429,11 +8430,51 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderManual(currentSettings);
     }
   }
-  function absoluteWikipediaUrl(value){
+  function currentLocaleSlug(){
+    var value=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
+    return value==='en-us'||value==='es'?value:'pt-br';
+  }
+  function wikipediaLocaleCopy(){
+    var slug=currentLocaleSlug();
+    if(slug==='en-us')return {
+      loadingError:'The information could not be loaded right now. The biography saved on the site is being shown instead.',
+      prepareError:'The Wikipedia article could not be prepared for display.',
+      requestError:'The Wikipedia article could not be loaded.',
+      summary:'Sources and credits',
+      prefix:'Content adapted from',
+      sourceLabel:'English Wikipedia',
+      suffix:'available under the',
+      licenseSuffix:'license.',
+      licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/deed.en'
+    };
+    if(slug==='es')return {
+      loadingError:'La información no se pudo cargar en este momento. Se muestra en su lugar la biografía guardada en el sitio.',
+      prepareError:'No se pudo preparar el artículo de Wikipedia para mostrarlo.',
+      requestError:'No se pudo cargar el artículo de Wikipedia.',
+      summary:'Fuentes y créditos',
+      prefix:'Contenido adaptado de',
+      sourceLabel:'Wikipedia en español',
+      suffix:'disponible bajo la',
+      licenseSuffix:'licencia.',
+      licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/deed.es'
+    };
+    return {
+      loadingError:'As informações não puderam ser carregadas agora. Exibindo o texto salvo no site.',
+      prepareError:'Não foi possível preparar o conteúdo para exibição.',
+      requestError:'Não foi possível carregar as informações.',
+      summary:'Fontes e créditos',
+      prefix:'Conteúdo adaptado da',
+      sourceLabel:'Wikipédia em português',
+      suffix:'disponível sob a',
+      licenseSuffix:'licença.',
+      licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/deed.pt-br'
+    };
+  }
+  function absoluteWikipediaUrl(value,baseOrigin){
     var raw=String(value||'').trim();
     if(!raw)return '';
     try{
-      var parsed=new URL(raw,'https://pt.wikipedia.org');
+      var parsed=new URL(raw,baseOrigin||wikipediaOrigin||'https://pt.wikipedia.org');
       return parsed.protocol==='https:'?parsed.href:'';
     }catch(_){return '';}
   }
@@ -8470,19 +8511,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     sectionStart.remove();
   }
-  function normalizeWikipediaHtml(rawHtml){
+  function normalizeWikipediaHtml(rawHtml,baseOrigin){
     var doc=new DOMParser().parseFromString('<div id="billieWikiRoot">'+String(rawHtml||'')+'</div>','text/html');
     var root=doc.getElementById('billieWikiRoot');
     var parser=root&&root.querySelector('.mw-parser-output')||root;
     if(!parser)return {html:'',imageUrl:''};
     var infoboxImage=parser.querySelector('table.infobox img, .infobox img');
-    var imageUrl=infoboxImage?absoluteWikipediaUrl(infoboxImage.getAttribute('src')||infoboxImage.getAttribute('data-src')||''):'';
+    var imageUrl=infoboxImage?absoluteWikipediaUrl(infoboxImage.getAttribute('src')||infoboxImage.getAttribute('data-src')||'',baseOrigin):'';
     parser.querySelectorAll('script,style,link,meta,noscript,iframe,object,embed,form,input,button,textarea,select,video,audio,canvas,svg,table.infobox,.infobox,.mw-editsection,.shortdescription,.hatnote,.metadata,.ambox,.navbox,.vertical-navbox,.authority-control,.catlinks,.sistersitebox,.portal,.mw-empty-elt,.noprint,.nomobile,.thumb,figure,.gallery').forEach(function(node){node.remove();});
     /* Estas remoções são permanentes e são reaplicadas em toda atualização da Wikipédia. */
     parser.querySelectorAll('sup,.reference,.mw-ref,.reflist,ol.references,[role="note"],a[href^="#cite_note"]').forEach(function(node){node.remove();});
     /* As tabelas da filmografia da Wikipédia não fazem parte do layout do BETV. */
     parser.querySelectorAll('table').forEach(function(node){node.remove();});
-    var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia'];
+    var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia','awards and nominations','see also','references','external links','filmography','premios y nominaciones','vease tambien','enlaces externos','filmografia'];
     Array.from(parser.querySelectorAll('h2,h3,h4')).forEach(function(heading){
       if(!heading.isConnected)return;
       var label=normalizedSectionLabel(heading.textContent);
@@ -8499,7 +8540,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return normalizedSectionLabel(item.textContent);
       }).filter(Boolean);
       if(!labels.length)return;
-      var externalLabels=['commons','wikinoticias','pagina oficial','billie eilish no facebook','billie eilish no x','billie eilish no instagram','canal de billie eilish no youtube'];
+      var externalLabels=['commons','wikinoticias','wikinews','pagina oficial','official website','sitio web oficial','billie eilish no facebook','billie eilish on facebook','billie eilish en facebook','billie eilish no x','billie eilish on x','billie eilish en x','billie eilish no instagram','billie eilish on instagram','billie eilish en instagram','canal de billie eilish no youtube','billie eilish youtube channel','canal de billie eilish en youtube'];
       var matches=labels.filter(function(label){
         return externalLabels.some(function(item){return label===item||label.startsWith(item+' ');});
       }).length;
@@ -8519,7 +8560,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         element.removeAttribute(attribute.name);
       });
       if(element.tagName==='A'){
-        var href=absoluteWikipediaUrl(element.getAttribute('href'));
+        var href=absoluteWikipediaUrl(element.getAttribute('href'),baseOrigin);
         if(!href){element.removeAttribute('href');return;}
         element.href=href;element.target='_blank';element.rel='noopener noreferrer';
       }
@@ -8531,28 +8572,54 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!value)return '';
     var date=new Date(value);
     if(Number.isNaN(date.getTime()))return '';
-    return date.toLocaleString('pt-BR',{dateStyle:'medium',timeStyle:'short'});
+    var locale=window.BETVLocale&&window.BETVLocale.locale||'pt-BR';
+    return date.toLocaleString(locale,{dateStyle:'medium',timeStyle:'short'});
+  }
+  function renderWikipediaAttribution(payload){
+    if(!wikipediaAttribution)return;
+    var copy=wikipediaLocaleCopy();
+    var summary=wikipediaAttribution.querySelector('summary');
+    var paragraph=wikipediaAttribution.querySelector('p');
+    if(summary)summary.textContent=copy.summary;
+    if(!paragraph)return;
+    paragraph.textContent='';
+    paragraph.append(document.createTextNode(copy.prefix+' '));
+    var source=document.createElement('a');
+    source.href=absoluteWikipediaUrl(payload&&payload.sourceUrl,wikipediaOrigin)||wikipediaOrigin+'/wiki/Billie_Eilish';
+    source.target='_blank';source.rel='noopener noreferrer';
+    source.textContent=String(payload&&payload.sourceLabel||copy.sourceLabel);
+    paragraph.append(source,document.createTextNode(', '+copy.suffix+' '));
+    var license=document.createElement('a');
+    license.href=copy.licenseUrl;license.target='_blank';license.rel='noopener noreferrer';license.textContent='CC BY-SA 4.0';
+    paragraph.append(license,document.createTextNode(' '+copy.licenseSuffix));
   }
   async function loadWikipedia(settings,token){
+    var copy=wikipediaLocaleCopy();
+    var localeSlug=currentLocaleSlug();
     wikipediaLoading.hidden=false;
     wikipediaError.hidden=true;
     wikipediaError.textContent='';
+    wikipediaContent.setAttribute('translate','no');
+    wikipediaContent.classList.add('notranslate');
     try{
-      var response=await fetch('/api/billie-wikipedia',{method:'GET',cache:'no-cache',credentials:'same-origin'});
+      var endpoint='/api/billie-wikipedia?lang='+encodeURIComponent(localeSlug);
+      var response=await fetch(endpoint,{method:'GET',cache:'default',credentials:'same-origin'});
       var payload=await response.json().catch(function(){return {};});
-      if(!response.ok||!payload||!payload.html)throw new Error(payload.error||'Não foi possível carregar as informações.');
+      if(!response.ok||!payload||!payload.html)throw new Error(payload.error||copy.requestError);
       if(token!==loadToken)return;
-      var cleaned=normalizeWikipediaHtml(payload.html);
-      if(!cleaned.html)throw new Error('Não foi possível preparar o conteúdo para exibição.');
+      wikipediaOrigin=String(payload.wikipediaOrigin||({'en-us':'https://en.wikipedia.org','es':'https://es.wikipedia.org'}[localeSlug])||'https://pt.wikipedia.org');
+      var cleaned=normalizeWikipediaHtml(payload.html,wikipediaOrigin);
+      if(!cleaned.html)throw new Error(copy.prepareError);
       wikipediaContent.innerHTML=cleaned.html;
       wikipediaContent.hidden=false;
       manualText.hidden=true;
+      renderWikipediaAttribution(payload);
       wikipediaAttribution.hidden=false;
       /* A atualização do texto nunca substitui a foto padrão definida pelo site. */
       document.title='Billie Eilish TV';
     }catch(error){
       if(token!==loadToken)return;
-      wikipediaError.textContent='As informações não puderam ser carregadas agora. Exibindo o texto salvo no site.';
+      wikipediaError.textContent=copy.loadingError;
       wikipediaError.hidden=false;
       renderManual(settings);
     }finally{

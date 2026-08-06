@@ -29,7 +29,20 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#050816">
-<script src="/assets/js/locale-routing.js?rev=20260806-i18n-complete-v4"></script>
+<script src="/assets/js/locale-routing.js?rev=20260806-wikipedia-localized-v1"></script>
+<script>
+(function(){
+  try{
+    var slug=window.BETVLocale&&window.BETVLocale.slug;
+    if(slug!=='en-us'&&slug!=='es')return;
+    var href='/assets/i18n/'+slug+'.json?rev=20260806-wikipedia-localized-v1';
+    if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
+    var preload=document.createElement('link');
+    preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
+    document.head.appendChild(preload);
+  }catch(_){ }
+})();
+</script>
 <script>
 (function(){
   try{
@@ -68,8 +81,8 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260806-avatar-sync-v2">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260806-i18n-complete-v4"></script>
-<script defer src="/assets/js/site.js?rev=20260806-i18n-complete-v4"></script>
+<script defer src="/assets/js/i18n.js?rev=20260806-wikipedia-localized-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260806-wikipedia-localized-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -630,7 +643,7 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
           <p>Ela ganhou projeção internacional com <em>Ocean Eyes</em> e construiu uma identidade artística reconhecida pelos vocais intimistas, pela produção detalhista e por uma estética visual muito própria.</p>
           <p>Entre os projetos que marcam sua discografia estão <em>WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?</em>, <em>Happier Than Ever</em> e <em>HIT ME HARD AND SOFT</em>.</p>
         </div>
-        <div class="billie-wikipedia-content" id="billieWikipediaContent" hidden></div>
+        <div class="billie-wikipedia-content notranslate" id="billieWikipediaContent" translate="no" hidden></div>
         <section class="billie-social-section" aria-labelledby="billieSocialTitle">
           <h2 id="billieSocialTitle">Redes sociais</h2>
           <nav class="billie-social-links" id="billieSocialLinks" aria-label="Redes oficiais de Billie Eilish">

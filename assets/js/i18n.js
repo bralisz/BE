@@ -18,7 +18,7 @@
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v4';
-  var STATIC_REV='20260806-i18n-complete-v4';
+  var STATIC_REV='20260806-wikipedia-localized-v1';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
@@ -207,7 +207,7 @@
     }
     loadDynamicCache();
     try{
-      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV),{credentials:'same-origin',cache:'no-cache'});
+      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV),{credentials:'same-origin',cache:'force-cache'});
       if(response.ok){
         var payload=await response.json();
         if(payload&&typeof payload==='object')Object.keys(payload).forEach(function(key){map[key]=payload[key];});

@@ -3,11 +3,13 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const LEGAL_TRANSLATIONS = require('./legal-translations');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
 const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
 const SETTINGS_CACHE_TTL_MS = 60000;
+const I18N_REV = '20260806-wikipedia-localized-v1';
 const LOCALE_PREFIXES = Object.freeze({
   'pt-br': { locale: 'pt-BR', ogLocale: 'pt_BR', slug: 'pt-br' },
   'en-us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
@@ -171,6 +173,49 @@ function injectLocaleDocument(html, routeInfo) {
   return html.replace(/<html\s+lang=["'][^"']+["']/i, `<html lang="${attr(routeInfo.locale)}"`);
 }
 
+function decodeHtmlText(value) {
+  return String(value || '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&amp;/gi, '&');
+}
+
+function escapeHtmlText(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function localizeStaticText(html, routeInfo) {
+  const translations = LEGAL_TRANSLATIONS[routeInfo.slug];
+  if (!translations) return html;
+  return html.replace(/>([^<>]+)</g, (match, rawText) => {
+    const leading = (rawText.match(/^\s*/) || [''])[0];
+    const trailing = (rawText.match(/\s*$/) || [''])[0];
+    const normalized = decodeHtmlText(rawText).replace(/\s+/g, ' ').trim();
+    const translated = translations[normalized];
+    if (!translated || translated === normalized) return match;
+    return `>${leading}${escapeHtmlText(translated)}${trailing}<`;
+  });
+}
+
+function injectLocalePreload(html, routeInfo) {
+  if (routeInfo.slug === 'pt-br') return html;
+  const href = `/assets/i18n/${routeInfo.slug}.json?rev=${I18N_REV}`;
+  const preload = `<link rel="preload" href="${attr(href)}" as="fetch" fetchpriority="high" data-betv-i18n-preload="${attr(routeInfo.slug)}">`;
+  return html.replace('</head>', `${preload}
+</head>`);
+}
+
+function isLegalRouteInfo(routeInfo) {
+  const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
+  return ['/terms', '/privacy', '/cookies', '/dmca'].includes(logical);
+}
+
 function injectSocialMetadata(html, settings, origin, routeInfo) {
   const title = 'Billie Eilish TV';
   const defaults = {
@@ -239,13 +284,27 @@ module.exports = async function sitePage(req, res) {
 
   try {
     const origin = publicOrigin(req);
-    const settings = await loadSettings();
     const routeInfo = routeLocaleInfo(req);
+    const legalRequest = isLegalRouteInfo(routeInfo);
+    // Páginas legais são totalmente estáticas e localizadas no servidor.
+    // Não aguardam o Supabase, reduzindo o tempo de resposta em cache frio.
+    const settings = legalRequest ? (settingsCache.value || {}) : await loadSettings();
     const html = injectDeploymentVersion(
-      injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo)
+      injectLocalePreload(
+        localizeStaticText(
+          injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo),
+          routeInfo
+        ),
+        routeInfo
+      )
     );
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=600');
+    res.setHeader(
+      'Cache-Control',
+      legalRequest
+        ? 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400'
+        : 'public, max-age=0, s-maxage=60, stale-while-revalidate=600'
+    );
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const requestPath = routeInfo.logicalPath;
     if (requestPath === '/login' || requestPath === '/login/' || requestPath.startsWith('/oauth/consent')) {

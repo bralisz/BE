@@ -1,9 +1,27 @@
-
 'use strict';
 
 const PAGE_TITLE = 'Billie_Eilish';
-const WIKIPEDIA_ORIGIN = 'https://pt.wikipedia.org';
 const USER_AGENT = 'BETV/1.1 (+https://billieilishtv.site; contato: billieilishtv@gmail.com)';
+const WIKIPEDIA_SITES = Object.freeze({
+  'pt-br': Object.freeze({
+    slug: 'pt-br',
+    language: 'pt-BR',
+    origin: 'https://pt.wikipedia.org',
+    sourceLabel: 'Wikipédia em português'
+  }),
+  'en-us': Object.freeze({
+    slug: 'en-us',
+    language: 'en-US',
+    origin: 'https://en.wikipedia.org',
+    sourceLabel: 'English Wikipedia'
+  }),
+  es: Object.freeze({
+    slug: 'es',
+    language: 'es',
+    origin: 'https://es.wikipedia.org',
+    sourceLabel: 'Wikipedia en español'
+  })
+});
 
 function safeJson(response) {
   return response.text().then(text => {
@@ -12,8 +30,19 @@ function safeJson(response) {
   });
 }
 
-function apiUrl(parameters) {
-  const url = new URL('/w/api.php', WIKIPEDIA_ORIGIN);
+function requestedLocale(req) {
+  let value = '';
+  try {
+    value = String(req.query && req.query.lang || new URL(req.url || '/', 'https://billieilishtv.site').searchParams.get('lang') || '');
+  } catch (_) {}
+  value = value.trim().toLowerCase().replace('_', '-');
+  if (value === 'en' || value === 'en-us' || value === 'us') return WIKIPEDIA_SITES['en-us'];
+  if (value === 'es' || value.startsWith('es-')) return WIKIPEDIA_SITES.es;
+  return WIKIPEDIA_SITES['pt-br'];
+}
+
+function apiUrl(origin, parameters) {
+  const url = new URL('/w/api.php', origin);
   Object.entries(parameters).forEach(([key, value]) => url.searchParams.set(key, value));
   return url;
 }
@@ -33,27 +62,41 @@ function cleanHtml(value) {
     .replace(/javascript\s*:/gi, '');
 }
 
+function localizedError(locale) {
+  if (locale.slug === 'en-us') return 'Wikipedia did not return the requested article.';
+  if (locale.slug === 'es') return 'Wikipedia no devolvió el artículo solicitado.';
+  return 'A Wikipédia não retornou o artigo solicitado.';
+}
+
 module.exports = async function billieWikipedia(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).json({ error: 'Método não permitido.' });
   }
 
+  const locale = requestedLocale(req);
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400');
+  res.setHeader('Content-Language', locale.language);
+  res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=86400, stale-while-revalidate=604800');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
   try {
-    const parseRequest = fetch(apiUrl({
+    const requestHeaders = {
+      'User-Agent': USER_AGENT,
+      Accept: 'application/json',
+      'Accept-Language': locale.language
+    };
+    const parseRequest = fetch(apiUrl(locale.origin, {
       action: 'parse',
       page: PAGE_TITLE,
       prop: 'text|sections|displaytitle|revid',
       redirects: '1',
       format: 'json',
-      formatversion: '2'
-    }), { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } });
+      formatversion: '2',
+      uselang: locale.language.split('-')[0]
+    }), { headers: requestHeaders });
 
-    const infoRequest = fetch(apiUrl({
+    const infoRequest = fetch(apiUrl(locale.origin, {
       action: 'query',
       titles: PAGE_TITLE,
       prop: 'pageimages|revisions|info',
@@ -62,19 +105,20 @@ module.exports = async function billieWikipedia(req, res) {
       inprop: 'url',
       redirects: '1',
       format: 'json',
-      formatversion: '2'
-    }), { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } });
+      formatversion: '2',
+      uselang: locale.language.split('-')[0]
+    }), { headers: requestHeaders });
 
     const [parseResponse, infoResponse] = await Promise.all([parseRequest, infoRequest]);
     const [parsePayload, infoPayload] = await Promise.all([safeJson(parseResponse), safeJson(infoResponse)]);
     if (!parseResponse.ok || !parsePayload || !parsePayload.parse || !parsePayload.parse.text) {
-      throw new Error('A Wikipédia não retornou o artigo solicitado.');
+      throw new Error(localizedError(locale));
     }
 
     const article = parsePayload.parse;
     const page = pageFromQuery(infoPayload) || {};
     const revision = Array.isArray(page.revisions) ? page.revisions[0] || {} : {};
-    const sourceUrl = page.fullurl || `${WIKIPEDIA_ORIGIN}/wiki/Billie_Eilish`;
+    const sourceUrl = page.fullurl || `${locale.origin}/wiki/Billie_Eilish`;
     const payload = {
       title: String(article.title || 'Billie Eilish'),
       displayTitle: String(article.displaytitle || article.title || 'Billie Eilish'),
@@ -89,6 +133,10 @@ module.exports = async function billieWikipedia(req, res) {
       revisionId: Number(revision.revid || article.revid || 0) || null,
       revisionTimestamp: String(revision.timestamp || ''),
       sourceUrl,
+      sourceLabel: locale.sourceLabel,
+      wikipediaOrigin: locale.origin,
+      locale: locale.slug,
+      language: locale.language,
       license: 'CC BY-SA 4.0',
       fetchedAt: new Date().toISOString()
     };
@@ -97,6 +145,6 @@ module.exports = async function billieWikipedia(req, res) {
     return res.status(200).json(payload);
   } catch (error) {
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(502).json({ error: error && error.message ? error.message : 'Não foi possível consultar a Wikipédia.' });
+    return res.status(502).json({ error: error && error.message ? error.message : localizedError(locale) });
   }
 };
