@@ -9,7 +9,7 @@ const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX'
 const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
 const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
 const SETTINGS_CACHE_TTL_MS = 60000;
-const I18N_REV = '20260806-donate-faq-v1';
+const I18N_REV = '20260806-password-avatar-v1';
 const LOCALE_PREFIXES = Object.freeze({
   'pt-br': { locale: 'pt-BR', ogLocale: 'pt_BR', slug: 'pt-br' },
   'en-us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
@@ -286,9 +286,10 @@ module.exports = async function sitePage(req, res) {
     const origin = publicOrigin(req);
     const routeInfo = routeLocaleInfo(req);
     const legalRequest = isLegalRouteInfo(routeInfo);
+    const recoveryRequest = routeInfo.logicalPath === '/reset-password' || routeInfo.logicalPath === '/reset-password/';
     // Páginas legais são totalmente estáticas e localizadas no servidor.
     // Não aguardam o Supabase, reduzindo o tempo de resposta em cache frio.
-    const settings = legalRequest ? (settingsCache.value || {}) : await loadSettings();
+    const settings = (legalRequest || recoveryRequest) ? (settingsCache.value || {}) : await loadSettings();
     const html = injectDeploymentVersion(
       injectLocalePreload(
         localizeStaticText(
@@ -301,13 +302,15 @@ module.exports = async function sitePage(req, res) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader(
       'Cache-Control',
-      legalRequest
-        ? 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400'
-        : 'public, max-age=0, s-maxage=60, stale-while-revalidate=600'
+      recoveryRequest
+        ? 'no-store, max-age=0'
+        : legalRequest
+          ? 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400'
+          : 'public, max-age=0, s-maxage=60, stale-while-revalidate=600'
     );
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const requestPath = routeInfo.logicalPath;
-    if (requestPath === '/login' || requestPath === '/login/' || requestPath.startsWith('/oauth/consent')) {
+    if (requestPath === '/login' || requestPath === '/login/' || requestPath === '/reset-password' || requestPath === '/reset-password/' || requestPath.startsWith('/oauth/consent')) {
       res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
     }
     if (req.method === 'HEAD') return res.status(200).end();

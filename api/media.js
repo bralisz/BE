@@ -53,7 +53,7 @@ async function serveSupabaseRuntime(req, res) {
       if (!response.ok) continue;
       const body = await response.text();
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       if (req.method === 'HEAD') return res.status(200).end();
       return res.status(200).send(body);
@@ -221,7 +221,7 @@ module.exports = async function mediaProxy(req, res) {
     }
     const { bytes, contentType } = await fetchImage(source);
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     res.setHeader('Vary', 'Accept');

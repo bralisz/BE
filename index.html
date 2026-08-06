@@ -29,7 +29,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#050816">
-<script src="/assets/js/locale-routing.js?rev=20260806-donate-faq-v1"></script>
+<script src="/assets/js/locale-routing.js?rev=20260806-password-avatar-v1"></script>
 <script>
 (function(){
   try{
@@ -79,10 +79,10 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-avatar-sync-v2">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-password-avatar-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260806-donate-faq-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260806-donate-faq-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260806-password-avatar-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260806-password-avatar-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -194,6 +194,25 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
           </form>
           <p class="auth-switch-note">Já possui uma conta? <button class="auth-inline-link" id="switchToPassword" type="button">Entrar</button></p>
         </section>
+        <section class="auth-step password-recovery-step" id="passwordRecoveryStep" aria-labelledby="passwordRecoveryTitle" hidden>
+          <header class="auth-step-header">
+            <h2 id="passwordRecoveryTitle">Crie uma nova senha</h2>
+            <p id="passwordRecoveryDescription">Escolha uma senha nova para voltar a acessar sua conta.</p>
+          </header>
+          <form class="auth-form" id="passwordRecoveryForm">
+            <div class="auth-field">
+              <label for="recoveryNewPassword">Nova senha</label>
+              <input id="recoveryNewPassword" name="password" type="password" autocomplete="new-password" minlength="6" pattern="(?=.*[0-9!@#$%^&amp;*._-]).{6,}" required placeholder="Digite a nova senha">
+            </div>
+            <div class="auth-field">
+              <label for="recoveryConfirmPassword">Confirmar nova senha</label>
+              <input id="recoveryConfirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" required placeholder="Repita a nova senha">
+            </div>
+            <div class="auth-help">Use pelo menos 6 caracteres e inclua um número ou caractere especial.</div>
+            <button class="auth-primary" type="submit">Salvar nova senha</button>
+          </form>
+          <p class="auth-switch-note"><button class="auth-inline-link" id="recoveryBackToLogin" type="button">Voltar para o login</button></p>
+        </section>
         <div class="auth-status" id="authStatus" aria-live="polite"></div>
       </section>
       <p class="login-trust-note"><span>Projeto independente e não oficial, feito por fãs.</span><span class="login-trust-links"><a href="/privacy">Privacidade</a><span aria-hidden="true">·</span><a href="/terms">Termos</a></span></p>
@@ -244,8 +263,26 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   </div>
   <div class="user-menu-wrap home-user-menu">
     <button class="user-chip" id="userChip" aria-haspopup="true" aria-expanded="false" aria-label="Conta">
-      <span class="avatar"><img loading="lazy" decoding="async" id="publicUserPhoto" alt="Foto do usuário" hidden><svg id="publicUserFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg></span>
+      <span class="avatar"><img loading="eager" decoding="async" fetchpriority="high" id="publicUserPhoto" src="/assets/images/profile/default-avatar.png" alt="Foto do usuário" data-avatar-fallback="/assets/images/profile/default-avatar.png"><svg id="publicUserFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" hidden><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg></span>
+
     </button>
+      <script>
+        (function(){
+          var image=document.getElementById('publicUserPhoto');
+          if(!image)return;
+          try{
+            var uid=localStorage.getItem('beSessionUid')||'';
+            var raw=uid?String(localStorage.getItem('beSelectedAvatar:'+uid)||'').trim():'';
+            if(!raw)return;
+            var source=raw;
+            if(/^https:\/\//i.test(raw)){
+              var token=btoa(unescape(encodeURIComponent(raw))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');
+              source='/api/media?u='+token;
+            }
+            image.src=source;
+          }catch(_){ }
+        })();
+      </script>
     <div class="user-dropdown user-dropdown-right" id="userDropdown">
       <div class="dd-header" id="ddUsername" hidden aria-hidden="true"></div>
       <button id="publicDashboardLink" type="button" hidden aria-hidden="true" tabindex="-1" style="display:none!important"></button>
@@ -616,8 +653,8 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
       </button>
       <button class="billie-page-avatar" id="billiePageAvatar" type="button" aria-label="Abrir perfil" title="Perfil">
         <span class="betv-header-avatar-inner" aria-hidden="true">
-          <img id="billiePageAvatarImage" alt="" hidden>
-          <svg id="billiePageAvatarFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
+          <img id="billiePageAvatarImage" src="/assets/images/profile/default-avatar.png" alt="Foto do usuário" data-avatar-fallback="/assets/images/profile/default-avatar.png">
+          <svg id="billiePageAvatarFallback" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
         </span>
       </button>
     </div>
@@ -702,8 +739,8 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
       </div>
       <button class="donate-page-avatar" id="donatePageAvatar" type="button" aria-label="Abrir perfil" title="Perfil">
         <span class="betv-header-avatar-inner" aria-hidden="true">
-          <img id="donatePageAvatarImage" alt="" hidden>
-          <svg id="donatePageAvatarFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
+          <img id="donatePageAvatarImage" src="/assets/images/profile/default-avatar.png" alt="Foto do usuário" data-avatar-fallback="/assets/images/profile/default-avatar.png">
+          <svg id="donatePageAvatarFallback" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
         </span>
       </button>
     </div>
@@ -809,8 +846,8 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
           <div class="support-faq-answer"><p>O repasse pode ser agrupado e não é necessariamente imediato. Antes do envio, o pagamento precisa ser confirmado e pode passar por verificações de fraude, estorno ou contestação.</p></div>
         </details>
         <details class="support-faq-item" data-search-only="true" hidden>
-          <summary><span>Posso cancelar ou pedir reembolso de uma doação?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
-          <div class="support-faq-answer"><p>Entre em contato com o suporte o quanto antes. O pedido será analisado conforme o estado do pagamento, a possibilidade técnica de estorno e se o valor já foi repassado à ONG. Algumas taxas do processador podem não ser reembolsáveis.</p></div>
+          <summary><span>As doações podem ser canceladas depois do pagamento?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
+          <div class="support-faq-answer"><p>Não. Depois que o pagamento é confirmado, a doação é definitiva e não pode ser cancelada nem devolvida. Antes de concluir, confira a ONG, a moeda e o valor escolhidos. Exceções só serão aplicadas quando forem exigidas pela legislação.</p></div>
         </details>
         <details class="support-faq-item" data-search-only="true" hidden>
           <summary><span>A doação gera recibo ou dedução fiscal?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
@@ -885,8 +922,8 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   <header class="notification-page-header">
     <div class="notification-page-leading">
       <button class="notification-page-avatar" id="notificationPageAvatar" type="button" aria-label="Abrir perfil">
-        <img loading="lazy" decoding="async" id="notificationPageAvatarImage" alt="Avatar do usuário" hidden>
-        <span id="notificationPageAvatarFallback" aria-hidden="true">M</span>
+        <img loading="eager" decoding="async" id="notificationPageAvatarImage" src="/assets/images/profile/default-avatar.png" alt="Avatar do usuário" data-avatar-fallback="/assets/images/profile/default-avatar.png">
+        <span id="notificationPageAvatarFallback" aria-hidden="true" hidden>M</span>
       </button>
       <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/assets/images/brand/logo.png?v=3" alt="BETV"></button>
     </div>
@@ -937,7 +974,7 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
         <h2>7. Doações e apoio a ONGs</h2>
         <p>Na área Apoie uma ONG, você escolhe uma organização e informa o valor que deseja doar. O pagamento é processado por um provedor especializado. Após a confirmação, 95% do valor da doação é destinado ao repasse à ONG selecionada e 5% é retido pelo BETV para ajudar a manter hospedagem, banco de dados, segurança, manutenção e desenvolvimento do site.</p>
         <p>Taxas, tributos, conversão cambial, estornos ou outros custos cobrados pelo processador de pagamento podem ser descontados separadamente e reduzir o valor líquido disponível para repasse. Os repasses podem ser agrupados e não são necessariamente imediatos.</p>
-        <p>As doações são voluntárias. Um comprovante do pagamento não representa, por si só, recibo fiscal ou garantia de dedução tributária. Solicitações de cancelamento ou reembolso serão analisadas conforme o estado do pagamento, a possibilidade técnica de estorno e se o valor já foi repassado à ONG.</p>
+        <p>As doações são voluntárias. Um comprovante do pagamento não representa, por si só, recibo fiscal ou garantia de dedução tributária. Depois da confirmação, a doação é definitiva, não pode ser cancelada e não possui devolução, salvo quando a legislação exigir o contrário. Antes do pagamento, confira a ONG, a moeda e o valor escolhidos.</p>
         <h2>8. Contato</h2>
         <p>Dúvidas, denúncias ou solicitações podem ser encaminhadas pela área de <a href="/suporte">Suporte</a>.</p>
       </article>

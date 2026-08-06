@@ -60,6 +60,41 @@
     const token = encodeBase64Url(raw);
     return token ? `/api/media?u=${token}` : '#';
   };
+
+  const DEFAULT_AVATAR = '/assets/images/profile/default-avatar.png';
+  window.BETV_DEFAULT_AVATAR = DEFAULT_AVATAR;
+  window.BETVResolveAvatar = function BETVResolveAvatar(value) {
+    const raw = String(value || '').trim();
+    if (!raw || raw === '#') return DEFAULT_AVATAR;
+    const resolved = window.beMediaUrl ? window.beMediaUrl(raw) : raw;
+    return resolved && resolved !== '#' ? resolved : DEFAULT_AVATAR;
+  };
+  window.BETVApplyAvatar = function BETVApplyAvatar(image, value) {
+    if (!image) return DEFAULT_AVATAR;
+    const resolved = window.BETVResolveAvatar(value);
+    let current = '';
+    let target = '';
+    try {
+      current = image.getAttribute('src') ? new URL(image.getAttribute('src'), location.origin).href : '';
+      target = new URL(resolved, location.origin).href;
+    } catch (_) {
+      current = String(image.getAttribute('src') || '');
+      target = resolved;
+    }
+    if (current !== target) image.setAttribute('src', resolved);
+    image.hidden = false;
+    image.removeAttribute('hidden');
+    image.setAttribute('data-avatar-fallback', DEFAULT_AVATAR);
+    return resolved;
+  };
+  document.addEventListener('error', function (event) {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement) || !image.hasAttribute('data-avatar-fallback')) return;
+    const fallback = image.getAttribute('data-avatar-fallback') || DEFAULT_AVATAR;
+    if (String(image.getAttribute('src') || '').endsWith(fallback)) return;
+    image.setAttribute('src', fallback);
+    image.hidden = false;
+  }, true);
 })();
 
 ;
@@ -1464,6 +1499,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async sendPasswordReset() {
       throw backendError('backend/not-configured', 'O envio de e-mail será ativado quando o Supabase estiver conectado.');
     },
+    async updatePassword(password) {
+      if (!currentUser) throw backendError('auth/not-authenticated', 'O link de redefinição não possui uma sessão válida.');
+      if (String(password || '').length < 6) throw backendError('auth/weak-password', 'Use uma senha com pelo menos 6 caracteres.');
+      const database = loadLocalDatabase();
+      const email = String(currentUser.email || '').toLowerCase();
+      const account = database.accounts[email];
+      if (!account) throw backendError('auth/user-not-found', 'Conta não encontrada.');
+      const salt = uid();
+      account.salt = salt;
+      account.passwordHash = await hashPassword(password, salt);
+      saveLocalDatabase(database);
+      return { user: currentUser };
+    },
     async resendSignupConfirmation() {
       throw backendError('backend/not-configured', 'A confirmação por e-mail será ativada quando o Supabase estiver conectado.');
     },
@@ -1627,9 +1675,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return currentUser ? { ...currentUser } : null;
     },
     async sendPasswordReset(email) {
-      const redirectTo = `${location.origin}/?password_recovery=1`;
+      const locale = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+      const safeLocale = ['pt-br', 'en-us', 'es'].includes(locale) ? locale : 'pt-br';
+      const redirectTo = `${location.origin}/${safeLocale}/reset-password`;
       const { error } = await supabaseClient.auth.resetPasswordForEmail(String(email || '').trim().toLowerCase(), { redirectTo });
       if (error) throw mapAuthError(error);
+    },
+    async updatePassword(password) {
+      const { data: result, error } = await supabaseClient.auth.updateUser({ password: String(password || '') });
+      if (error) throw mapAuthError(error);
+      currentUser = normalizeUser(result.user) || currentUser;
+      notify();
+      return { user: currentUser };
     },
     async resendSignupConfirmation(email) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -1866,6 +1923,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       // emitido durante o retorno do Discord/Google. Eventos vazios nunca apagam
       // uma sessão já confirmada; apenas SIGNED_OUT encerra a conta.
       supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          try { sessionStorage.setItem('bePasswordRecoveryActive', '1'); } catch (_) {}
+          window.dispatchEvent(new CustomEvent('be:password-recovery', { detail: { active: true } }));
+        }
         const eventUser = normalizeUser(session?.user || null);
         if (session?.access_token && supabaseClient?.realtime?.setAuth) {
           Promise.resolve(supabaseClient.realtime.setAuth(session.access_token)).catch(() => {});
@@ -5021,7 +5082,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bar.className = 'mobile-app-bar';
     bar.id = 'mobileAppBar';
     bar.innerHTML = `
-      <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar">${icon('user')}</span></button>
+      <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar"><img loading="eager" decoding="async" src="/assets/images/profile/default-avatar.png" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="Avatar"></span></button>
       <div class="mobile-header-actions">
         <button class="mobile-notification-button" id="mobileNotificationButton" type="button" aria-label="Abrir notificações" aria-expanded="false">${icon('bell')}<span class="notification-unread-dot" id="mobileNotificationUnreadDot" hidden></span></button>
         <div class="mobile-search-control" id="mobileSearchControl">
@@ -5048,7 +5109,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     drawer.innerHTML = `
       <div class="mobile-drawer-top">
         <button class="mobile-drawer-profile" id="mobileDrawerProfile" type="button" aria-label="Abrir perfil">
-          <span class="mobile-drawer-avatar" id="mobileDrawerAvatar">${icon('user')}</span>
+          <span class="mobile-drawer-avatar" id="mobileDrawerAvatar"><img loading="eager" decoding="async" src="/assets/images/profile/default-avatar.png" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="Avatar"></span>
           <span class="mobile-drawer-user"><strong id="mobileDrawerName">Visitante</strong><span id="mobileDrawerUsername">Entrar ou criar conta</span></span>
         </button>
         <button class="mobile-drawer-close" id="mobileDrawerClose" type="button" aria-label="Fechar menu">${icon('close')}</button>
@@ -5137,11 +5198,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const account = window.beBackend?.auth?.currentUser;
       const src = sourcePhoto && !sourcePhoto.hidden ? sourcePhoto.getAttribute('src') : '';
       const profileAvatar = account?.profile?.avatarId && account?.profile?.avatarUrl ? account.profile.avatarUrl : '';
-      const shownSrc = window.beMediaUrl ? window.beMediaUrl(src || profileAvatar || '') : (src || profileAvatar || '');
-      const safeSrc = String(shownSrc || '').replace(/"/g, '&quot;');
-      const avatarMarkup = safeSrc ? `<img loading="lazy" decoding="async" src="${safeSrc}" alt="Avatar">` : icon('user');
-      headerAvatar.innerHTML = avatarMarkup;
-      drawerAvatar.innerHTML = avatarMarkup;
+      const shownSrc = window.BETVResolveAvatar ? window.BETVResolveAvatar(src || profileAvatar) : (src || profileAvatar || window.BETV_DEFAULT_AVATAR);
+      [headerAvatar, drawerAvatar].forEach(container => {
+        let image = container.querySelector('img');
+        if (!image) {
+          container.innerHTML = '';
+          image = document.createElement('img');
+          image.loading = 'eager';
+          image.decoding = 'async';
+          image.alt = 'Avatar';
+          image.setAttribute('data-avatar-fallback', window.BETV_DEFAULT_AVATAR || '"+DEFAULT+"');
+          container.appendChild(image);
+        }
+        if (window.BETVApplyAvatar) window.BETVApplyAvatar(image, shownSrc);
+        else if (image.getAttribute('src') !== shownSrc) image.setAttribute('src', shownSrc);
+      });
 
       if (!account) {
         drawerName.textContent = 'Visitante';
@@ -5701,10 +5772,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     function escapePublic(value){return String(value||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     function avatarCacheKey(user){return 'beSelectedAvatar:'+(user&&user.uid?user.uid:'guest');}
-    function selectedProfileAvatar(profile){return profile&&profile.avatarId&&profile.avatarUrl?String(profile.avatarUrl):'';}
-    function setMainAvatar(url){var shown=String(url||'').trim();if(shown){photo.src=window.beMediaUrl?window.beMediaUrl(shown):shown;photo.hidden=false;fallback.hidden=true;}else{photo.removeAttribute('src');photo.hidden=true;fallback.hidden=false;}updateOnboardingAvatar();}
-    function fallbackAvatarSvg(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>';}
-    function updateOnboardingAvatar(){if(!onboardingAvatarPreview)return;var shown=selectedAvatar||selectedProfileAvatar(currentProfile)||'';onboardingAvatarPreview.innerHTML=shown?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(shown):shown)+'" alt="Foto do perfil">':fallbackAvatarSvg();}
+    function selectedProfileAvatar(profile){return profile&&profile.avatarUrl?String(profile.avatarUrl):'';}
+    function setMainAvatar(url){var shown=String(url||'').trim();if(window.BETVApplyAvatar)window.BETVApplyAvatar(photo,shown);else{photo.src=shown||window.BETV_DEFAULT_AVATAR;photo.hidden=false;}fallback.hidden=true;updateOnboardingAvatar();}
+    function fallbackAvatarSvg(){return '<img loading="eager" decoding="async" src="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" alt="Sem foto de perfil">';}
+    function updateOnboardingAvatar(){if(!onboardingAvatarPreview)return;var shown=selectedAvatar||selectedProfileAvatar(currentProfile)||window.BETV_DEFAULT_AVATAR;onboardingAvatarPreview.innerHTML='<img loading="eager" decoding="async" src="'+escapePublic(window.BETVResolveAvatar?window.BETVResolveAvatar(shown):shown)+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" alt="Foto do perfil">';}
     function syncBodyScroll(){var locked=!avatarPicker.hidden||!bannerPicker.hidden||!profileModal.hidden||!profileOnboarding.hidden||(settingsSaveConfirm&&!settingsSaveConfirm.hidden);document.body.style.overflow=locked?'hidden':'';}
     function keepSettingsOpen(){
       if(!auth.currentUser)return;
@@ -6015,7 +6086,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
 
-    function profileFallbackAvatar(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>';}
+    function profileFallbackAvatar(){return '<img loading="eager" decoding="async" src="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" alt="Sem foto de perfil">';}
     function publicProfileYear(profile){
       var source=profile&&profile.createdAt?profile.createdAt:beBackend.now();
       var date=new Date(source);
@@ -6093,10 +6164,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(profilePageHome){profilePageHome.title=guest?'Entrar':'Home';profilePageHome.setAttribute('aria-label',guest?'Ir para o login':'Voltar para a Home');}
     }
     function setProfilePageAvatar(url){
-      var avatar=String(url||'').trim();
-      if(!avatar){profilePageAvatar.innerHTML='';profilePageAvatar.hidden=true;profilePageAvatar.setAttribute('aria-hidden','true');}
-      else{profilePageAvatar.hidden=false;profilePageAvatar.removeAttribute('hidden');profilePageAvatar.setAttribute('aria-hidden','false');profilePageAvatar.innerHTML='<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar do perfil">';}
-      var info=profilePage&&profilePage.querySelector('.profile-page-info');if(info)info.classList.toggle('without-avatar',!avatar);
+      var avatar=String(url||'').trim()||window.BETV_DEFAULT_AVATAR;
+      profilePageAvatar.hidden=false;profilePageAvatar.removeAttribute('hidden');profilePageAvatar.setAttribute('aria-hidden','false');
+      profilePageAvatar.innerHTML='<img loading="eager" decoding="async" src="'+escapePublic(window.BETVResolveAvatar?window.BETVResolveAvatar(avatar):avatar)+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'"+DEFAULT+"')+'" alt="Avatar do perfil">';
+      var info=profilePage&&profilePage.querySelector('.profile-page-info');if(info)info.classList.remove('without-avatar');
     }
     function renderProfileState(title,handle,message){
       profilePageName.textContent=title;
@@ -6730,7 +6801,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var user=auth.currentUser;
       if(!user){profileBody.innerHTML='<div class="profile-login-required"><h3>Entre para acessar seu perfil</h3><p>Use seu e-mail e senha para continuar.</p><button class="profile-btn primary" id="profileLogin" type="button">Entrar com e-mail</button></div>';document.getElementById('profileLogin').onclick=function(){closeProfile();window.BETVPublicRoutes.go('/login');document.body.classList.add('login-mode');};return;}
       var avatar=selectedProfileAvatar(currentProfile);
-      profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview">'+(avatar?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar do perfil">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>')+'</div><div><h3>'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher foto</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
+      profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview"><img loading="eager" decoding="async" src="'+escapePublic(window.BETVResolveAvatar?window.BETVResolveAvatar(avatar):avatar||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="Avatar do perfil"></div><div><h3>'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher foto</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
       document.getElementById('profileChooseAvatar').onclick=function(){closeProfile();openAvatarPicker();};document.getElementById('profileCancel').onclick=closeProfile;
       var bio=document.getElementById('profileBio'),count=document.getElementById('profileBioCount');function updateCount(){count.textContent=bio.value.length;}bio.addEventListener('input',updateCount);updateCount();
       document.getElementById('profileForm').addEventListener('submit',async function(e){e.preventDefault();var form=e.currentTarget,msg=document.getElementById('profileMessage'),submit=form.querySelector('[type="submit"]');var displayName=form.displayName.value.trim(),handle=beBackend.normalizeUsername(form.username.value),bioText=form.bio.value.trim();form.username.value=handle;if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='profile-message err';return;}submit.disabled=true;msg.textContent='Salvando…';msg.className='profile-message';try{var payload={displayName:displayName,username:handle,bio:bioText,updatedAt:beBackend.now()};currentProfile=await beBackend.profiles.update(user.uid,payload);await auth.updateCurrentUser({displayName:displayName});username.textContent=handle?'@'+handle:(displayName||'Usuário');msg.textContent='Perfil salvo com sucesso.';msg.className='profile-message ok';setTimeout(closeProfile,700);}catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso. Escolha outro.':'Não foi possível salvar: '+error.message;msg.className='profile-message err';}finally{submit.disabled=false;}});
@@ -7000,6 +7071,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function replaceRoute(route){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});if(String(route||'').startsWith('/')){url.pathname=route;url.hash='';}else{url.pathname='/';url.hash=route||'';}history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
   function isConfigRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/config'||hash==='#config'||hash==='#/config';}
   function isLoginRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/login'||hash==='#login'||hash==='#/login';}
+  function isPasswordRecoveryRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/reset-password'||hash==='#reset-password'||hash==='#/reset-password'||sessionStorage.getItem('bePasswordRecoveryActive')==='1';}
   function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
   function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
   function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca)$/i.test(String(location.hash||''));}
@@ -7013,11 +7085,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','billie-page-active','donate-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
   function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','donate-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
   function showLogin(){document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(!isLoginRoute()||location.hash)replaceRoute('/login');}
+  function showPasswordRecovery(message,type){
+    document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');
+    document.body.classList.add('login-mode');
+    setMode('recovery');
+    if(message)setStatus(message,type||'');
+    hideSiteSkeleton();
+  }
   function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
   function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
-    var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep')};
+    var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep'),recovery:q('passwordRecoveryStep')};
     Object.keys(steps).forEach(function(key){if(steps[key])steps[key].hidden=key!==mode;});
     q('authGate').dataset.authStep=mode;
     if(selectedAuthEmail){
@@ -7029,7 +7108,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     setStatus('');
     window.requestAnimationFrame(function(){
-      var target=mode==='email'?q('authEmail'):mode==='password'?q('loginPassword'):q('signupName');
+      var target=mode==='email'?q('authEmail'):mode==='password'?q('loginPassword'):mode==='recovery'?q('recoveryNewPassword'):q('signupName');
       if(target)target.focus({preventScroll:true});
     });
   }
@@ -7117,6 +7196,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
     if(!(await enforceAccountAccess(user)))return null;
     setStatus('');
+    if(isPasswordRecoveryRoute()){showPasswordRecovery();return user;}
     if(isNotificationsRoute())showNotificationsRoute();
     else if(isDonateRoute())showDonateRoute();
     else if(isSupportRoute())showSupportRoute();
@@ -7169,6 +7249,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{await auth.sendPasswordReset(email);setStatus('Enviamos um link de redefinição para seu e-mail.','ok')}catch(err){setStatus(friendly(err),'error')}
     };
 
+    q('recoveryBackToLogin').onclick=async function(){
+      sessionStorage.removeItem('bePasswordRecoveryActive');
+      try{if(auth.currentUser)await auth.signOut();}catch(_){ }
+      showLogin();setMode('email');setStatus('');
+    };
+    q('passwordRecoveryForm').addEventListener('submit',async function(e){
+      e.preventDefault();
+      var form=e.currentTarget,button=e.submitter||form.querySelector('[type="submit"]'),password=form.elements.namedItem('password').value,confirmation=form.elements.namedItem('confirmPassword').value;
+      if(password!==confirmation){setStatus('As senhas não coincidem.','error');form.elements.namedItem('confirmPassword').focus();return;}
+      if(!validAuthPassword(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
+      if(!auth.currentUser){setStatus('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');return;}
+      if(authFlowBusy)return;
+      authFlowBusy=true;if(button)button.disabled=true;setStatus('Salvando sua nova senha…');
+      try{
+        if(typeof auth.updatePassword!=='function')throw new Error('A redefinição de senha não está disponível.');
+        await auth.updatePassword(password);
+        sessionStorage.removeItem('bePasswordRecoveryActive');
+        form.reset();
+        try{await auth.signOut();}catch(_){ }
+        showLogin();setMode('email');setStatus('Senha alterada com sucesso. Entre novamente com a nova senha.','ok');
+      }catch(err){showPasswordRecovery(friendly(err),'error');}
+      finally{authFlowBusy=false;if(button)button.disabled=false;}
+    });
+    window.addEventListener('be:password-recovery',function(){showPasswordRecovery();});
+
     q('loginForm').addEventListener('submit',async function(e){
       e.preventDefault();
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
@@ -7218,6 +7323,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(isProfileRoute()&&!callbackFailure){
           enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));hideSiteSkeleton();return;
         }
+        if(isPasswordRecoveryRoute()){
+          showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');
+          return;
+        }
         showLogin();selectedAuthEmail='';setMode('email');
         if(callbackFailure)setStatus('O Discord não concluiu o login: '+decodeURIComponent(String(callbackFailure).replace(/\+/g,' ')),'error');
         else if(callbackActive)setStatus('O retorno do Discord chegou, mas a sessão não foi criada. Confira as URLs de redirecionamento do Supabase e do Discord.','error');
@@ -7235,6 +7344,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(location.hash.startsWith('#/admin'))return;
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
+      if(isPasswordRecoveryRoute()){if(auth.currentUser)showPasswordRecovery();else showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');return;}
       if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
       if(isNotificationsRoute()){if(auth.currentUser)showNotificationsRoute();else showLogin();return;}
       if(isDonateRoute()){if(auth.currentUser)showDonateRoute();else showLogin();return;}
@@ -7256,7 +7366,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){hideSiteSkeleton();if(isLegalRoute())showLegalRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}console.error('Falha ao iniciar autenticação:',error);}
   }
 
-  document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode('email');startAuthentication()});
+  document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode(isPasswordRecoveryRoute()?'recovery':'email');startAuthentication()});
 })();
 
 ;
@@ -7869,20 +7979,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var account=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
     var source=document.getElementById('publicUserPhoto');
     var src=source&&!source.hidden?String(source.getAttribute('src')||''):'';
-    if(account&&src){
-      pageAvatarImage.src=window.beMediaUrl?window.beMediaUrl(src):src;
-      pageAvatarImage.hidden=false;
+    if(account){
+      if(window.BETVApplyAvatar)window.BETVApplyAvatar(pageAvatarImage,src);else{pageAvatarImage.src=src||window.BETV_DEFAULT_AVATAR;pageAvatarImage.hidden=false;}
       pageAvatarFallback.hidden=true;
       pageAvatar.setAttribute('aria-label','Abrir perfil');
       return;
     }
-    pageAvatarImage.hidden=true;
-    pageAvatarImage.removeAttribute('src');
-    var name=document.getElementById('ddUsername');
-    var label=account?(name?String(name.textContent||'').replace(/^@/,'').trim():'')||account.displayName||account.email||'M':'M';
-    pageAvatarFallback.textContent=(String(label).charAt(0)||'M').toUpperCase();
-    pageAvatarFallback.hidden=false;
-    pageAvatar.setAttribute('aria-label',account?'Abrir perfil':'Entrar na plataforma');
+    if(window.BETVApplyAvatar)window.BETVApplyAvatar(pageAvatarImage,'');
+    pageAvatarFallback.hidden=true;
+    pageAvatar.setAttribute('aria-label','Entrar na plataforma');
   }
 
   function openProfileFromPage(){
@@ -8371,8 +8476,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function syncAvatar(){
     var source=document.getElementById('publicUserPhoto');
     var url=source&&!source.hidden?String(source.currentSrc||source.src||'').trim():'';
-    if(url){avatarImage.src=url;avatarImage.hidden=false;avatarFallback.hidden=true;}
-    else{avatarImage.removeAttribute('src');avatarImage.hidden=true;avatarFallback.hidden=false;}
+    if(window.BETVApplyAvatar)window.BETVApplyAvatar(avatarImage,url);else{avatarImage.src=url||window.BETV_DEFAULT_AVATAR;avatarImage.hidden=false;}
+    avatarFallback.hidden=true;
   }
   function syncUnread(){
     var source=document.getElementById('notificationUnreadDot');
@@ -8846,8 +8951,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var fallback=document.getElementById('donatePageAvatarFallback');
     if(!image||!fallback)return;
     var src=source&&!source.hidden?String(source.currentSrc||source.src||'').trim():'';
-    if(src){image.src=src;image.hidden=false;fallback.hidden=true;}
-    else{image.removeAttribute('src');image.hidden=true;fallback.hidden=false;}
+    if(window.BETVApplyAvatar)window.BETVApplyAvatar(image,src);else{image.src=src||window.BETV_DEFAULT_AVATAR;image.hidden=false;}
+    fallback.hidden=true;
   }
 
   function syncUnread(){
@@ -9031,14 +9136,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var displayName=String(item.display_name||item.displayName||item.user_display_name||i18nText('Apoiador')).trim()||i18nText('Apoiador');
     var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
     var banner=imageUrl(item.banner_url||item.bannerUrl||'');
-    var avatarUrl=imageUrl(item.avatar_url||item.avatarUrl||'');
+    var avatarUrl=imageUrl(item.avatar_url||item.avatarUrl||window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');
     var initials=supporterInitials(displayName);
     var route='/@'+encodeURIComponent(username);
     return '<a class="donate-supporter-card" href="'+esc(route)+'" data-supporter-profile aria-label="'+esc(i18nText('Abrir perfil de {name}',{name:displayName}))+'">'+
       '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
       '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
       '<span class="donate-supporter-content">'+
-        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'">'+(avatarUrl?'<img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatarUrl)+'" alt="'+esc(i18nText('Avatar de {name}',{name:displayName}))+'">':'<span aria-hidden="true">'+esc(initials)+'</span>')+'</span>'+ 
+        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'"><img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatarUrl||window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="'+esc(i18nText('Avatar de {name}',{name:displayName}))+'"></span>'+ 
         '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong><small>@'+esc(username)+'</small></span>'+ 
       '</span>'+ 
     '</a>';
@@ -9053,10 +9158,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     supportersList.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){
       image.setAttribute('data-error-bound','true');
       image.addEventListener('error',function(){
-        var avatarWrap=image.closest('.donate-supporter-avatar');
-        if(!avatarWrap)return;
-        avatarWrap.innerHTML='<span aria-hidden="true">'+esc(avatarWrap.getAttribute('data-initials')||'A')+'</span>';
-      },{once:true});
+        if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')){
+          image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');
+        }
+      });
     });
   }
 

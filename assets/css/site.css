@@ -10669,3 +10669,27 @@ body.donate-page-active .donate-page-avatar>.betv-header-avatar-inner>img:not([h
   visibility:hidden!important;
   opacity:0!important;
 }
+
+/* Redefinição de senha e avatares persistentes. */
+#authGate[data-auth-step="recovery"] .discord-connect-button{display:none!important}
+.password-recovery-step .auth-help{margin-top:-3px;color:rgba(255,255,255,.58);font-size:12px;line-height:1.5}
+.password-recovery-step .auth-switch-note{text-align:center}
+#publicUserFallback[hidden],
+#billiePageAvatarFallback[hidden],
+#donatePageAvatarFallback[hidden],
+#notificationPageAvatarFallback[hidden]{display:none!important}
+#publicUserPhoto,
+#billiePageAvatarImage,
+#donatePageAvatarImage,
+#notificationPageAvatarImage,
+.mobile-profile-button img,
+.mobile-drawer-avatar img,
+.profile-page-avatar img,
+.settings-avatar-preview img,
+.profile-avatar-preview img,
+.onboarding-avatar-preview img{
+  object-fit:cover!important;
+  object-position:center!important;
+  opacity:1!important;
+  visibility:visible!important;
+}

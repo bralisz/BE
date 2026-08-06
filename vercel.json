@@ -101,6 +101,38 @@
       "destination": "/api/site-page"
     },
     {
+      "source": "/pt-br/reset-password",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/reset-password/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/reset-password",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/reset-password/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/reset-password",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/reset-password/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/reset-password/",
+      "destination": "/api/site-page"
+    },
+    {
       "source": "/pt-br",
       "destination": "/api/site-page"
     },
@@ -262,6 +294,142 @@
     }
   ],
   "headers": [
+    {
+      "source": "/reset-password/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/es/reset-password/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/en-us/reset-password/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/pt-br/reset-password/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/reset-password",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/es/reset-password",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/en-us/reset-password",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/pt-br/reset-password",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
     {
       "source": "/auth/callback",
       "headers": [
@@ -467,7 +635,7 @@
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000"
+          "value": "public, max-age=31536000, s-maxage=31536000, immutable"
         },
         {
           "key": "X-Content-Type-Options",
