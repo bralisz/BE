@@ -8109,10 +8109,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var wikipediaLoading=document.getElementById('billieWikipediaLoading');
   var wikipediaError=document.getElementById('billieWikipediaError');
   var wikipediaAttribution=document.getElementById('billieWikipediaAttribution');
-  var siteFilmography=document.getElementById('billieSiteFilmography');
-  var siteFilmographyBody=document.getElementById('billieSiteFilmographyBody');
   if(!page)return;
 
+  var DEFAULT_PORTRAIT='/assets/images/auth/login-bg-5.webp';
+  if(portrait){
+    portrait.addEventListener('error',function(){
+      var fallback=new URL(DEFAULT_PORTRAIT,location.origin).href;
+      if(String(portrait.src||'')!==fallback){
+        portrait.dataset.adminOverride='false';
+        portrait.src=DEFAULT_PORTRAIT;
+      }
+    });
+  }
   var DEFAULTS={
     sourceMode:'wikipedia',
     title:'Billie Eilish',
@@ -8189,8 +8197,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     currentSettings={...DEFAULTS,...(settings||{})};
     kicker.textContent=currentSettings.kicker||DEFAULTS.kicker;
     title.textContent=currentSettings.title||DEFAULTS.title;
-    if(currentSettings.portraitUrl){portrait.src=mediaUrl(currentSettings.portraitUrl);portrait.dataset.adminOverride='true';}
-    else{portrait.dataset.adminOverride='false';portrait.src=mediaUrl(DEFAULTS.portraitUrl);}
+    var customPortrait=String(currentSettings.portraitUrl||'').trim();
+    if(customPortrait){
+      portrait.src=mediaUrl(customPortrait);
+      portrait.dataset.adminOverride='true';
+    }else{
+      portrait.dataset.adminOverride='false';
+      portrait.src=DEFAULT_PORTRAIT;
+    }
     renderSocial(currentSettings);
     renderManual(currentSettings);
   }
@@ -8262,52 +8276,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     parser.querySelectorAll('h2,h3,h4').forEach(function(heading){heading.textContent=String(heading.textContent||'').replace(/\s*\[editar.*$/i,'').trim();});
     return {html:parser.innerHTML.trim(),imageUrl:imageUrl};
   }
-  function numericBillieMovieId(value){
-    var source=String(value||'filme').trim();
-    if(/^\d{8}$/.test(source))return source;
-    var hash=2166136261;
-    for(var index=0;index<source.length;index+=1){hash^=source.charCodeAt(index);hash=Math.imul(hash,16777619);}
-    return String(10000000+((hash>>>0)%90000000));
-  }
-  function compactMovieInformation(movie){
-    var parts=[];
-    var duration=String(movie.duration||movie.runtime||'').trim();
-    var description=String(movie.description||'').trim();
-    if(duration)parts.push(duration);
-    if(description)parts.push(description);
-    return parts.join(' · ')||'Disponível no catálogo do BETV.';
-  }
-  function renderSiteFilmography(movies){
-    if(!siteFilmography||!siteFilmographyBody)return;
-    var visible=(Array.isArray(movies)?movies:[]).filter(function(movie){return movie&&movie.active!==false&&String(movie.title||'').trim();});
-    if(!visible.length){siteFilmography.hidden=true;siteFilmographyBody.innerHTML='';return;}
-    siteFilmographyBody.innerHTML=visible.map(function(movie){
-      var titleValue=String(movie.title||'Filme').trim();
-      var itemId=numericBillieMovieId(movie.publicId||movie.id||titleValue);
-      var href='/'+encodeURIComponent(itemId);
-      var yearValue=String(movie.year||'—').trim()||'—';
-      var categoryValue=String(movie.category||movie.type||'Filme').trim()||'Filme';
-      var information=compactMovieInformation(movie);
-      return '<tr>'+
-        '<td data-label="Ano">'+escapeText(yearValue)+'</td>'+
-        '<td data-label="Título"><a href="'+href+'" data-billie-movie-link="true">'+escapeText(titleValue)+'</a></td>'+
-        '<td data-label="Categoria">'+escapeText(categoryValue)+'</td>'+
-        '<td data-label="Informações">'+escapeText(information)+'</td>'+
-      '</tr>';
-    }).join('');
-    siteFilmography.hidden=false;
-  }
-  async function loadSiteFilmography(token){
-    try{
-      var data=window.beBackend&&beBackend.data;
-      if(!data||typeof data.list!=='function')throw new Error('Catálogo indisponível.');
-      var movies=await data.list('movies',{orderBy:'order',direction:'asc'});
-      if(token!==loadToken)return;
-      renderSiteFilmography(movies);
-    }catch(_){
-      if(token===loadToken)renderSiteFilmography([]);
-    }
-  }
   function formatRevision(value){
     if(!value)return '';
     var date=new Date(value);
@@ -8329,7 +8297,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       wikipediaContent.hidden=false;
       manualText.hidden=true;
       wikipediaAttribution.hidden=false;
-      if((!settings.portraitUrl||portrait.dataset.adminOverride==='false')&&payload.imageUrl){portrait.src=mediaUrl(payload.imageUrl);}
+      /* A atualização do texto nunca substitui a foto padrão definida pelo site. */
       document.title=(settings.title||payload.title||'Billie Eilish')+' — BETV';
     }catch(error){
       if(token!==loadToken)return;
@@ -8352,7 +8320,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }catch(error){console.warn('Não foi possível carregar as configurações da página Billie Eilish:',error);}
     if(token!==loadToken)return;
     renderBase(settings);
-    loadSiteFilmography(token);
     if(String(settings.sourceMode||'manual').toLowerCase()==='wikipedia')loadWikipedia(settings,token);
   }
   function openPage(){
