@@ -66,7 +66,7 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-i18n-currency-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-avatar-sync-v2">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260806-i18n-complete-v4"></script>
 <script defer src="/assets/js/site.js?rev=20260806-i18n-complete-v4"></script>
@@ -602,8 +602,10 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
         <span class="billie-page-unread-dot" id="billiePageUnreadDot" hidden></span>
       </button>
       <button class="billie-page-avatar" id="billiePageAvatar" type="button" aria-label="Abrir perfil" title="Perfil">
-        <img id="billiePageAvatarImage" alt="Foto do usuário" hidden>
-        <svg id="billiePageAvatarFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
+        <span class="betv-header-avatar-inner" aria-hidden="true">
+          <img id="billiePageAvatarImage" alt="" hidden>
+          <svg id="billiePageAvatarFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
+        </span>
       </button>
     </div>
   </header>
@@ -686,8 +688,10 @@ html.admin-route-boot body{visibility:hidden!important;background:#05070b!import
         </div>
       </div>
       <button class="donate-page-avatar" id="donatePageAvatar" type="button" aria-label="Abrir perfil" title="Perfil">
-        <img id="donatePageAvatarImage" alt="Foto do usuário" hidden>
-        <svg id="donatePageAvatarFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
+        <span class="betv-header-avatar-inner" aria-hidden="true">
+          <img id="donatePageAvatarImage" alt="" hidden>
+          <svg id="donatePageAvatarFallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
+        </span>
       </button>
     </div>
   </header>
