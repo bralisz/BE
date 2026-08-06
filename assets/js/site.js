@@ -8111,7 +8111,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var wikipediaAttribution=document.getElementById('billieWikipediaAttribution');
   if(!page)return;
 
-  var DEFAULT_PORTRAIT='/assets/images/auth/login-bg-5.webp';
+  var DEFAULT_PORTRAIT='/assets/images/pages/billie-portrait-default.webp';
   if(portrait){
     portrait.addEventListener('error',function(){
       var fallback=new URL(DEFAULT_PORTRAIT,location.origin).href;
