@@ -11238,3 +11238,52 @@ html.legal-route-boot .legal-home-button{
   display:none!important;
   visibility:hidden!important;
 }
+
+
+/* BETV logo refresh — 2026-08-07
+   Larger login branding, vertically aligned with Discord on desktop and mobile. */
+body.login-mode .login-topbar{
+  align-items:center!important;
+}
+body.login-mode .login-brand{
+  min-width:148px!important;
+  height:82px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  line-height:0!important;
+}
+body.login-mode .login-brand img{
+  width:148px!important;
+  height:auto!important;
+  max-width:none!important;
+  max-height:82px!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+  display:block!important;
+}
+@media (max-width:760px){
+  body.login-mode .login-topbar{
+    min-height:74px!important;
+    align-items:center!important;
+  }
+  body.login-mode .login-brand{
+    min-width:126px!important;
+    height:74px!important;
+  }
+  body.login-mode .login-brand img{
+    width:126px!important;
+    height:auto!important;
+    max-height:74px!important;
+  }
+}
+@media (max-width:380px){
+  body.login-mode .login-brand{min-width:116px!important;}
+  body.login-mode .login-brand img{width:116px!important;}
+}
+@media (min-width:761px){
+  .home-logo-pill .logo-mark{
+    width:66px!important;
+    height:44px!important;
+  }
+}
