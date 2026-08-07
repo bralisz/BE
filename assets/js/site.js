@@ -17,6 +17,7 @@
     if(['terms','privacy','cookies','dmca'].indexOf(name)!==-1)return '/'+name;
     if(name==='suporte'||name==='support')return '/suporte';
     if(['ong','ongs'].indexOf(name)!==-1)return '/ong';
+    if(['fas','fãs','fans'].indexOf(name)!==-1)return '/fãs';
     if(name==='billie'||name==='billie-eilish'||name==='quem-e-billie')return '/billie-eilish';
     if(name==='video'&&parts[1])return '/'+encodeURIComponent(parts[1]);
     if((name==='perfil'||name==='profile')&&parts[1])return '/'+String(parts[1]).replace(/^@?/, '@');
@@ -81,7 +82,7 @@
       settings.setAttribute('aria-hidden','false');
     }
     if(body){
-      body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','detail-page-active','section-catalog-active');
+      body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','detail-page-active','section-catalog-active');
       body.classList.add('settings-page-active');
     }
   }
@@ -7036,7 +7037,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       toggleDropdown(false);
       profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');
       settingsPage.hidden=true;settingsPage.setAttribute('hidden','');settingsPage.setAttribute('aria-hidden','true');settingsPage.dataset.renderReady='false';
-      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','detail-page-active');
+      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','detail-page-active');
       document.body.classList.add('settings-page-active');
       try{renderSettingsPage();}catch(error){console.error('Falha ao renderizar configurações:',error);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
       settingsPage.dataset.renderReady='true';
@@ -7345,21 +7346,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isSupportRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/suporte'||hash==='#suporte'||hash==='#/suporte'||hash==='#support'||hash==='#/support';}
   function isDonateRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/ong'||hash==='#ong'||hash==='#/ong';}
   function isBillieRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/billie-eilish'||path==='/billie'||hash==='#billie-eilish'||hash==='#/billie-eilish'||hash==='#billie'||hash==='#/billie';}
-  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
-  function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','donate-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
-  function showDonateRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','support-page-active','section-catalog-active');document.body.classList.add('donate-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-donate-page'));window.scrollTo(0,0);}
-  function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','billie-page-active','donate-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
-  function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','donate-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
-  function showLogin(){if(window.BETVReleaseConfigPaint)window.BETVReleaseConfigPaint({immediate:true});document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(!isLoginRoute()||location.hash)replaceRoute('/login');}
+  function isFansRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/fãs'||path==='/fas'||path==='/fans'||hash==='#fãs'||hash==='#/fãs'||hash==='#fas'||hash==='#/fas'||hash==='#fans'||hash==='#/fans';}
+  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
+  function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
+  function showDonateRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','support-page-active','fans-page-active','section-catalog-active');document.body.classList.add('donate-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-donate-page'));window.scrollTo(0,0);}
+  function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
+  function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','donate-page-active','fans-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
+  function showFansRoute(){if(window.matchMedia&&window.matchMedia('(max-width:900px)').matches){enterHome();return;}document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active');document.body.classList.add('fans-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-fans-page'));window.scrollTo(0,0);}
+  function showLogin(){if(window.BETVReleaseConfigPaint)window.BETVReleaseConfigPaint({immediate:true});document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(!isLoginRoute()||location.hash)replaceRoute('/login');}
   function showPasswordRecovery(message,type){
-    document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');
+    document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');
     document.body.classList.add('login-mode');
     setMode('recovery');
     if(message)setStatus(message,type||'');
     hideSiteSkeleton();
   }
-  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
-  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
+  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
+  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
     var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep'),recovery:q('passwordRecoveryStep')};
@@ -7467,6 +7470,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else if(isDonateRoute())showDonateRoute();
     else if(isSupportRoute())showSupportRoute();
     else if(isBillieRoute())showBillieRoute();
+    else if(isFansRoute())showFansRoute();
     else if(isConfigRoute()){enterConfig();hideSiteSkeleton();}
     else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}
     else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}
@@ -7616,6 +7620,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(isDonateRoute()){if(auth.currentUser)showDonateRoute();else showLogin();return;}
       if(isSupportRoute()){if(auth.currentUser)showSupportRoute();else showLogin();return;}
       if(isBillieRoute()){if(auth.currentUser)showBillieRoute();else showLogin();return;}
+      if(isFansRoute()){if(auth.currentUser)showFansRoute();else showLogin();return;}
       if(isLoginRoute()){if(auth.currentUser)enterHome();else showLogin();return;}
       if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}
       if(isVideoRoute()){if(auth.currentUser){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else showLogin();return;}
@@ -7704,6 +7709,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       !document.body.classList.contains('support-page-active')&&
       !document.body.classList.contains('notification-page-active')&&
       !document.body.classList.contains('legal-page-active')&&
+      !document.body.classList.contains('fans-page-active')&&
       !document.body.classList.contains('detail-page-active')&&
       !document.body.classList.contains('section-catalog-active');
   }
@@ -10024,4 +10030,129 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('popstate',function(){if(isRoute())open();else if(document.body.classList.contains('donate-page-active'))close();});
   window.addEventListener('hashchange',function(){if(isRoute())open();else if(document.body.classList.contains('donate-page-active'))close();});
   if(isRoute())open();
+})();
+
+
+/* Página desktop de fãs que apoiam o site. */
+(function(){
+  'use strict';
+  if(String(location.hash||'').startsWith('#/admin'))return;
+
+  var page=document.getElementById('fansPage');
+  var home=document.getElementById('fansPageHome');
+  var list=document.getElementById('fansPageList');
+  var status=document.getElementById('fansPageStatus');
+  var sentinel=document.getElementById('fansPageSentinel');
+  var footerLink=document.getElementById('footerFansLink');
+  var loaded=false;
+  var loading=null;
+  var offset=0;
+  var hasMore=true;
+  var observer=null;
+  var keys=Object.create(null);
+  var INITIAL_LIMIT=48;
+  var BATCH_LIMIT=12;
+
+  if(!page||!list||!status)return;
+
+  function mobile(){return Boolean(window.matchMedia&&window.matchMedia('(max-width:900px)').matches);}
+  function cleanPath(){try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}}
+  function isRoute(){var path=cleanPath().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/fãs'||path==='/fas'||path==='/fans'||hash==='#fãs'||hash==='#/fãs'||hash==='#fas'||hash==='#/fas'||hash==='#fans'||hash==='#/fans';}
+  function localized(path){return window.BETVLocaleURL?window.BETVLocaleURL(path):path;}
+  function t(source,variables){return window.BETVI18n&&typeof window.BETVI18n.t==='function'?window.BETVI18n.t(source,variables||{}):String(source||'').replace(/\{([a-zA-Z0-9_]+)\}/g,function(_,key){return variables&&Object.prototype.hasOwnProperty.call(variables,key)?variables[key]:_;});}
+  function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];});}
+  function mediaUrl(value){var raw=String(value||'').trim();return raw&&window.beMediaUrl?window.beMediaUrl(raw):raw;}
+  function initials(value){var parts=String(value||'Fã').trim().split(/\s+/).filter(Boolean);return (parts.slice(0,2).map(function(part){return part.charAt(0);}).join('')||'F').toUpperCase();}
+  function key(item){var id=String(item&&(item.user_id||item.userId)||'').trim();if(id)return'id:'+id;var username=String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim().toLowerCase();return username?'username:'+username:'';}
+  function time(item){var value=new Date(item&&(item.supported_at||item.supportedAt)||0).getTime();return Number.isFinite(value)?value:0;}
+  function markup(item){
+    var displayName=String(item.display_name||item.displayName||item.user_display_name||t('Apoiador')).trim()||t('Apoiador');
+    var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
+    var banner=mediaUrl(item.banner_url||item.bannerUrl||'');
+    var avatar=mediaUrl(item.avatar_url||item.avatarUrl||window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');
+    var route='/@'+encodeURIComponent(username);
+    return '<a class="donate-supporter-card" href="'+esc(localized(route))+'" data-fans-profile data-profile-route="'+esc(route)+'" aria-label="'+esc(t('Abrir perfil de {name}',{name:displayName}))+'">'+
+      '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
+      '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
+      '<span class="donate-supporter-content">'+
+        '<span class="donate-supporter-avatar" data-initials="'+esc(initials(displayName))+'"><img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatar)+'" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="'+esc(t('Avatar de {name}',{name:displayName}))+'"></span>'+ 
+        '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong><small>@'+esc(username)+'</small></span>'+ 
+      '</span>'+ 
+    '</a>';
+  }
+  function bindImages(){
+    list.querySelectorAll('.donate-supporter-banner-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){image.remove();},{once:true});});
+    list.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png'))image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');});});
+  }
+  function render(items,append){
+    var records=(Array.isArray(items)?items:[]).filter(function(item){return String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim();}).sort(function(a,b){return time(b)-time(a)||key(a).localeCompare(key(b));});
+    if(!append){keys=Object.create(null);list.innerHTML='';}
+    var fresh=records.filter(function(item){var itemKey=key(item);if(!itemKey||keys[itemKey])return false;keys[itemKey]=true;return true;});
+    if(!fresh.length&&!append){status.hidden=false;status.textContent=t('Nenhum fã para exibir ainda.');return 0;}
+    if(fresh.length){status.hidden=true;list.insertAdjacentHTML('beforeend',fresh.map(markup).join(''));bindImages();}
+    return fresh.length;
+  }
+  async function fetchBatch(limit,start){
+    if(!window.beBackend)throw new Error('backend_unavailable');
+    await window.beBackend.ready;
+    var client=window.beBackend.client;
+    if(!client||typeof client.rpc!=='function')throw new Error('supporters_rpc_unavailable');
+    var result=await client.rpc('get_public_donation_supporters',{p_limit:limit,p_offset:start});
+    if(result&&result.error)throw result.error;
+    return Array.isArray(result&&result.data)?result.data:[];
+  }
+  function setLoader(message,visible){if(!sentinel)return;sentinel.textContent=visible?String(message||t('Carregando mais fãs…')):'';sentinel.hidden=!visible;sentinel.classList.toggle('is-loading',Boolean(visible));}
+  function disconnect(){if(observer){observer.disconnect();observer=null;}}
+  function observe(){
+    disconnect();
+    if(!hasMore||!sentinel||page.hidden||!isRoute())return;
+    sentinel.hidden=false;
+    if('IntersectionObserver' in window){observer=new IntersectionObserver(function(entries){if(entries.some(function(entry){return entry.isIntersecting;}))loadMore();},{rootMargin:'420px 0px'});observer.observe(sentinel);}
+  }
+  async function load(force){
+    if(loading)return loading;
+    if(loaded&&!force){observe();return;}
+    if(force){offset=0;hasMore=true;keys=Object.create(null);list.innerHTML='';}
+    status.hidden=false;status.textContent=t('Carregando fãs…');
+    loading=(async function(){
+      try{var records=await fetchBatch(INITIAL_LIMIT,0);render(records,false);offset=records.length;hasMore=records.length===INITIAL_LIMIT;loaded=true;setLoader('',false);if(hasMore)observe();}
+      catch(error){console.warn('Não foi possível carregar os fãs que apoiam o site:',error);list.innerHTML='';status.hidden=false;status.textContent=t('Não foi possível carregar os fãs agora.');hasMore=false;}
+      finally{loading=null;}
+    })();
+    return loading;
+  }
+  async function loadMore(){
+    if(loading||!loaded||!hasMore||page.hidden||!isRoute())return;
+    setLoader(t('Carregando mais fãs…'),true);
+    loading=(async function(){
+      try{var records=await fetchBatch(BATCH_LIMIT,offset);offset+=records.length;render(records,true);hasMore=records.length===BATCH_LIMIT;if(hasMore)observe();else disconnect();}
+      catch(error){console.warn('Não foi possível carregar mais fãs:',error);hasMore=false;disconnect();}
+      finally{setLoader('',false);loading=null;}
+    })();
+    return loading;
+  }
+  function open(){
+    if(mobile()){close();goHome(true);return;}
+    document.body.classList.add('fans-page-active');
+    page.hidden=false;page.setAttribute('aria-hidden','false');
+    if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(page);
+    load(false);
+    document.title=t('Fãs que apoiam o site')+' — Billie Eilish TV';
+  }
+  function close(){disconnect();document.body.classList.remove('fans-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV';}
+  function navigate(path,replace){var target=localized(path);var url=new URL(target,location.origin);var state={beRoute:path};history[replace?'replaceState':'pushState'](state,'',url.pathname+(location.search||''));window.dispatchEvent(new PopStateEvent('popstate',{state:state}));}
+  function goHome(replace){navigate('/',Boolean(replace));}
+
+  if(footerLink){
+    footerLink.href=localized('/fãs');
+    footerLink.addEventListener('click',function(event){if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();if(mobile())return;navigate('/fãs',false);});
+  }
+  if(home)home.addEventListener('click',function(){goHome(false);});
+  list.addEventListener('click',function(event){var link=event.target&&event.target.closest?event.target.closest('[data-fans-profile]'):null;if(!link)return;event.preventDefault();navigate(link.getAttribute('data-profile-route')||'/',false);});
+  window.addEventListener('be:open-fans-page',open);
+  window.addEventListener('be:close-fans-page',close);
+  window.addEventListener('be:i18n-ready',function(){if(!page.hidden&&window.BETVI18n)window.BETVI18n.apply(page);if(footerLink&&window.BETVI18n)window.BETVI18n.apply(footerLink);});
+  window.addEventListener('popstate',function(){if(!isRoute()&&document.body.classList.contains('fans-page-active'))close();});
+  window.addEventListener('hashchange',function(){if(!isRoute()&&document.body.classList.contains('fans-page-active'))close();});
+  window.addEventListener('resize',function(){if(mobile()&&isRoute())goHome(true);});
 })();
