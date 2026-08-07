@@ -11051,6 +11051,7 @@ body.album-page-active .topbar-wrap{z-index:170}
 .album-page-cover-card.active{opacity:1;transform:translateY(-2px)}
 .album-page-cover-card.active>span{border-color:rgba(255,255,255,.9);box-shadow:0 14px 36px rgba(0,0,0,.38),0 0 0 3px rgba(70,142,255,.2)}
 .album-page-status{min-height:90px;display:grid;place-items:center;color:rgba(255,255,255,.62);text-align:center}
+.album-page-status[hidden]{display:none!important}
 .album-page-detail{margin-top:0;border-top:0;padding-top:22px}
 .album-page-detail[hidden]{display:none!important}
 .album-detail-hero{display:grid;grid-template-columns:170px minmax(0,1fr) auto;align-items:end;gap:26px;margin-bottom:32px}
@@ -11062,10 +11063,10 @@ body.album-page-active .topbar-wrap{z-index:170}
 .album-detail-copy>p{margin:9px 0 0;color:rgba(255,255,255,.66);line-height:1.48}
 .album-detail-copy>#albumDetailMeta{font-size:13px;font-weight:650}
 .album-detail-copy>#albumDetailDescription{max-width:780px;font-size:13px}
-.album-detail-player{align-self:end;width:58px;height:58px;display:grid;place-items:center;border-radius:50%;background:#fff;color:#080909;text-decoration:none;box-shadow:0 14px 32px rgba(0,0,0,.3);transition:transform .2s ease,background .2s ease}
+.album-detail-player{align-self:center;justify-self:end;width:58px;height:58px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.82);border-radius:50%;background:#fff;color:#080909;text-decoration:none;box-shadow:0 14px 32px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.08) inset;transition:transform .2s ease,background .2s ease,box-shadow .2s ease}
 .album-detail-player[hidden]{display:none!important}
-.album-detail-player svg{width:25px;height:25px;fill:currentColor;transform:translateX(2px)}
-@media(hover:hover){.album-detail-player:hover{transform:scale(1.07);background:#dceaff}}
+.album-detail-player svg{display:block;width:23px;height:23px;fill:currentColor;transform:translateX(1px)}
+@media(hover:hover){.album-detail-player:hover{transform:scale(1.07);background:#dceaff;box-shadow:0 16px 38px rgba(0,0,0,.38),0 0 0 4px rgba(130,174,240,.16)}}
 .album-track-heading,.album-track-list li{display:grid;grid-template-columns:44px minmax(0,1fr) 96px;align-items:center;gap:12px}
 .album-track-heading{min-height:42px;padding:0 14px;border-bottom:1px solid rgba(255,255,255,.11);color:rgba(255,255,255,.52);font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.08em}
 .album-track-heading svg{justify-self:end;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7}

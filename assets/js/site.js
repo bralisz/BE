@@ -5026,9 +5026,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const applyCatalogFilter = (refreshFeatured = false) => {
+      const rawQuery = String(input.value || '');
+      if (document.body.classList.contains('album-page-active')) {
+        window.dispatchEvent(new CustomEvent('be:album-search', { detail:{ query:rawQuery } }));
+        return;
+      }
       const host = document.getElementById('dynamicSections');
       if (!host) return;
-      const query = normalizeText(input.value);
+      const query = normalizeText(rawQuery);
       const sections = Array.from(host.querySelectorAll('.video-rail-section'));
       const billieSpotlight = host.querySelector('.billie-home-spotlight');
       const donateSpotlight = host.querySelector('.donate-home-spotlight');
@@ -5039,7 +5044,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       sections.forEach(section => {
         const sectionCategory = section.dataset.category || '';
         const sectionView = section.dataset.homeView || 'default';
-        const cards = Array.from(section.querySelectorAll('.video-card'));
+        const cards = Array.from(section.querySelectorAll('.video-card, .album-home-card'));
         let visibleInSection = 0;
         const libraryView = ['films','movies','series'].includes(currentView);
         const isFeaturedRail = normalizeText(sectionCategory) === 'destaque' || section.classList.contains('featured-video-rail');
@@ -5105,9 +5110,32 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && Boolean(query));
     };
 
+    const leaveAlbumsForCatalog = nextView => {
+      const path = (() => {
+        try {
+          return decodeURIComponent(String(window.BETVLocalePath ? window.BETVLocalePath() : (location.pathname || '/'))).replace(/\/+$/, '') || '/';
+        } catch (_) {
+          return String(location.pathname || '/').replace(/\/+$/, '') || '/';
+        }
+      })();
+      const albumRouteActive = document.body.classList.contains('album-page-active') || /^\/(?:albuns|álbuns|albums)(?:\/[^/]+)?$/i.test(path);
+      if (!albumRouteActive) return;
+
+      const rootPath = window.BETVLocaleURL ? window.BETVLocaleURL('/') : '/';
+      const state = { beRoute:'catalog', homeView:nextView || 'home', scrollY:0 };
+      try {
+        const url = new URL(rootPath, location.origin);
+        history.pushState(state, '', url.pathname + (location.search || ''));
+        window.dispatchEvent(new PopStateEvent('popstate', { state }));
+      } catch (_) {
+        location.assign(rootPath);
+      }
+    };
+
     viewButtons.forEach(button => {
       button.addEventListener('click', event => {
         const nextView = button.dataset.homeView || 'videos';
+        leaveAlbumsForCatalog(nextView);
         const historyMode = button.dataset.beHistoryMode || (event.isTrusted ? 'push' : 'none');
         delete button.dataset.beHistoryMode;
         if (historyMode === 'push') pushCatalogHistory(currentView, nextView, window.scrollY);
@@ -5140,6 +5168,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
 
     logo?.addEventListener('click', event => {
+      leaveAlbumsForCatalog('home');
       const historyMode = logo.dataset.beHistoryMode || (event.isTrusted ? 'push' : 'none');
       delete logo.dataset.beHistoryMode;
       if (historyMode === 'push') pushCatalogHistory(currentView, 'home', window.scrollY);
@@ -5165,6 +5194,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (event.key === 'Escape') {
         event.preventDefault();
         setSearchOpen(false);
+      } else if (event.key === 'Enter' && document.body.classList.contains('album-page-active')) {
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent('be:album-search-commit', { detail:{ query:String(input.value || '') } }));
       }
     });
     document.addEventListener('keydown', event => {
@@ -5465,6 +5497,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (event.key === 'Escape') {
           event.preventDefault();
           openMobileSearch(false);
+        } else if (event.key === 'Enter' && document.body.classList.contains('album-page-active')) {
+          event.preventDefault();
+          window.dispatchEvent(new CustomEvent('be:album-search-commit', { detail:{ query:String(searchInput.value || '') } }));
+          searchInput.blur();
         }
       });
     }
@@ -10285,6 +10321,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var records=[];
   var loaded=false;
   var loading=null;
+  var activeSearch='';
+  var currentAlbum=null;
   function esc(value){return String(value==null?'':value).replace(/[&<>\"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char];});}
   function t(value,vars){return window.BETVI18n&&typeof window.BETVI18n.t==='function'?window.BETVI18n.t(value,vars):String(value||'').replace(/\{(\w+)\}/g,function(_,key){return vars&&vars[key]!=null?vars[key]:_;});}
   function localized(path){return window.BETVLocaleURL?window.BETVLocaleURL(path):path;}
@@ -10296,6 +10334,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function href(value){var raw=String(value||'').trim();if(!raw)return '';try{var url=new URL(raw,location.origin);return url.protocol==='https:'?url.href:'';}catch(_){return '';}}
   function trackCountLabel(count){return count===1?t('1 música'):t('{count} músicas',{count:count});}
   function albumTypeLabel(value){return String(value||'').toLowerCase()==='single'?t('Single'):t('Álbum');}
+  function normalize(value){return String(value==null?'':value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+  function searchable(album){var albumTracks=Array.isArray(album&&album.tracks)?album.tracks:[];return normalize([album&&album.title,album&&album.type,album&&album.year,album&&album.description].concat(albumTracks.map(function(track){return track&&track.title;})).filter(Boolean).join(' '));}
+  function findBySearch(query){var normalized=normalize(query);if(!normalized)return null;return records.find(function(album){return searchable(album).includes(normalized);})||null;}
+  function setSearchContext(active){
+    var desktop=document.getElementById('homeSearchInput');
+    var mobileInput=document.getElementById('mobileSearchInput');
+    var placeholder=active?t('Pesquisar álbuns'):t('Pesquisar filmes e vídeos');
+    [desktop,mobileInput].forEach(function(field){if(!field)return;field.placeholder=placeholder;field.setAttribute('aria-label',placeholder);});
+  }
 
   function renderRail(selectedId){
     rail.innerHTML=records.map(function(album){
@@ -10309,6 +10356,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function renderSelected(album){
+    currentAlbum=album||null;
     if(!album){detail.hidden=true;status.hidden=false;status.textContent=t('Nenhum álbum ou single publicado.');return;}
     var albumTracks=(Array.isArray(album.tracks)?album.tracks:[]).slice().sort(function(a,b){return Number(a&&a.order||0)-Number(b&&b.order||0);});
     var albumTitle=String(album.title||'Álbum');
@@ -10332,10 +10380,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(page);
   }
 
+  function renderSearch(query){
+    activeSearch=String(query||'').trim();
+    if(!records.length){renderSelected(null);return;}
+    if(!activeSearch){renderSelected(records.find(function(album){return String(album.id)===String(routeId());})||records[0]);return;}
+    var match=findBySearch(activeSearch);
+    if(match){renderSelected(match);return;}
+    currentAlbum=null;detail.hidden=true;status.hidden=false;status.textContent=t('Nenhum álbum encontrado para “{query}”.',{query:activeSearch});
+  }
+
   async function load(force){
     if(loading)return loading;
-    if(loaded&&!force){renderSelected(records.find(function(album){return String(album.id)===String(routeId());})||records[0]);return;}
-    status.hidden=false;status.textContent=t('Carregando álbuns…');detail.hidden=true;
+    if(loaded&&!force){renderSearch(activeSearch);return;}
+    status.hidden=true;status.textContent='';detail.hidden=true;
     loading=(async function(){
       try{
         if(!window.beBackend)throw new Error('backend_unavailable');
@@ -10343,23 +10400,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var values=await window.beBackend.data.list('news',{orderBy:'order',direction:'asc'});
         records=(Array.isArray(values)?values:[]).filter(function(album){return album&&album.active!==false&&String(album.title||'').trim();}).sort(function(a,b){return Number(a.order||0)-Number(b.order||0)||String(a.title||'').localeCompare(String(b.title||''),'pt-BR');});
         loaded=true;
-        renderSelected(records.find(function(album){return String(album.id)===String(routeId());})||records[0]);
+        renderSearch(activeSearch);
       }catch(error){console.warn('Não foi possível carregar os álbuns:',error);records=[];status.hidden=false;status.textContent=t('Não foi possível carregar os álbuns agora.');detail.hidden=true;}
       finally{loading=null;}
     })();
     return loading;
   }
 
-  function open(){document.body.classList.add('album-page-active');page.hidden=false;page.setAttribute('aria-hidden','false');document.title='Billie Eilish TV';load(false);}
-  function close(){document.body.classList.remove('album-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV';}
+  function open(){document.body.classList.add('album-page-active');page.hidden=false;page.setAttribute('aria-hidden','false');document.title='Billie Eilish TV';setSearchContext(true);var field=document.getElementById('homeSearchInput');activeSearch=field?String(field.value||''):'';load(false);}
+  function close(){document.body.classList.remove('album-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV';activeSearch='';currentAlbum=null;setSearchContext(false);}
 
   if(back)back.addEventListener('click',function(){navigate('/',false);});
   rail.addEventListener('click',function(event){var link=event.target.closest('[data-album-id]');if(!link)return;event.preventDefault();navigate('/albuns/'+encodeURIComponent(link.dataset.albumId),false);});
   document.addEventListener('click',function(event){var link=event.target.closest('[data-album-route],[data-open-albums]');if(!link)return;if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();var path=link.getAttribute('data-album-route')||'/albuns';navigate(path,false);});
   window.addEventListener('be:open-album-page',open);
   window.addEventListener('be:close-album-page',close);
+  window.addEventListener('be:album-search',function(event){if(!isRoute()||page.hidden)return;renderSearch(event&&event.detail?event.detail.query:'');});
+  window.addEventListener('be:album-search-commit',function(event){if(!isRoute()||page.hidden)return;var query=event&&event.detail?event.detail.query:activeSearch;var match=findBySearch(query)||currentAlbum;if(match)navigate('/albuns/'+encodeURIComponent(String(match.id)),false);});
   window.addEventListener('be:content-ready',function(){loaded=false;if(isRoute())load(true);});
-  window.addEventListener('be:i18n-ready',function(){if(!page.hidden){if(window.BETVI18n)window.BETVI18n.apply(page);renderSelected(records.find(function(album){return String(album.id)===String(routeId());})||records[0]);}});
+  window.addEventListener('be:i18n-ready',function(){if(!page.hidden){if(window.BETVI18n)window.BETVI18n.apply(page);setSearchContext(true);renderSearch(activeSearch);}});
   window.addEventListener('popstate',function(){if(isRoute()){if(document.body.classList.contains('album-page-active'))load(false);}else if(document.body.classList.contains('album-page-active'))close();});
   window.addEventListener('hashchange',function(){if(isRoute()){if(document.body.classList.contains('album-page-active'))load(false);}else if(document.body.classList.contains('album-page-active'))close();});
 })();
