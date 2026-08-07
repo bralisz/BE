@@ -7773,13 +7773,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
-  var initialSkeletonPending=true,siteSkeletonHideTimer=0;
+  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false;
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
   function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
+  function donateVisualReady(){var donatePage=q('donatePage');return !isDonateRoute()||Boolean(donatePage&&donatePage.dataset&&donatePage.dataset.visualReady==='true');}
+  function waitForDonateVisualBeforeReveal(){
+    if(donateVisualWaitBound)return;
+    donateVisualWaitBound=true;
+    window.addEventListener('be:donate-visual-ready',function(){
+      donateVisualWaitBound=false;
+      if(isDonateRoute())hideSiteSkeleton();
+    },{once:true});
+  }
   function hideSiteSkeleton(){
+    if(isDonateRoute()&&!donateVisualReady()){waitForDonateVisualBeforeReveal();return;}
     if(initialSkeletonPending){
       var remaining=Math.max(0,SITE_SKELETON_MIN_MS-(Date.now()-siteSkeletonStartedAt));
-      if(remaining>0){window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=window.setTimeout(releaseSiteSkeleton,remaining);return;}
+      if(remaining>0){window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=window.setTimeout(hideSiteSkeleton,remaining);return;}
     }
     releaseSiteSkeleton();
   }
@@ -10010,6 +10020,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     hero.style.setProperty('--donate-hero-banner','url("'+safe+'")');
     hero.classList.add('has-banner');
   }
+  function preloadPageBanner(settings){
+    var banner=imageUrl(settings&&settings.bannerUrl||'');
+    if(!banner)return Promise.resolve();
+    return new Promise(function(resolve){
+      var settled=false,image=new Image(),timer=window.setTimeout(done,4500);
+      function done(){if(settled)return;settled=true;window.clearTimeout(timer);resolve();}
+      image.onload=done;
+      image.onerror=done;
+      image.src=banner;
+      if(image.complete)done();
+      else if(typeof image.decode==='function')image.decode().then(done).catch(function(){});
+    });
+  }
+  function signalDonateVisualReady(){
+    if(page.dataset.visualReady==='true')return;
+    page.dataset.visualReady='true';
+    window.requestAnimationFrame(function(){
+      window.requestAnimationFrame(function(){window.dispatchEvent(new CustomEvent('be:donate-visual-ready'));});
+    });
+  }
 
   var donateAvatarSyncVersion=0;
   function applyDonateAvatar(url){
@@ -10506,15 +10536,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           window.beBackend.data.list('ongs',{orderBy:'order',direction:'asc'}),
           window.beBackend.data.get('settings','ong').catch(function(){return null;})
         ]);
+        await preloadPageBanner(results[1]);
         applyPageBanner(results[1]);
         render(results[0]);
         loaded=true;
         loadSupporters(force);
+        signalDonateVisualReady();
       }catch(error){
         console.warn('Não foi possível carregar as ONGs:',error);
         list.innerHTML='';
         status.hidden=false;
         status.textContent='Não foi possível carregar as ONGs agora. Tente novamente em instantes.';
+        signalDonateVisualReady();
       }finally{
         loading=null;
       }
@@ -10528,7 +10561,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     page.setAttribute('aria-hidden','false');
     syncAvatar();
     syncUnread();
-    load(false);
+    if(loaded)signalDonateVisualReady();else load(false);
     if(supportersLoaded)observeSupportersEnd();
     document.title='Billie Eilish TV';
   }
