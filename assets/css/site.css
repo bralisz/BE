@@ -3239,6 +3239,17 @@
   .footer-legal-links{display:flex;align-items:center;flex-wrap:wrap;gap:8px 24px;margin-top:20px}
   .footer-legal-links a{color:rgba(255,255,255,.52);font-size:13px;line-height:1.4;text-decoration:none;transition:color .2s ease}
   .footer-legal-links a:hover,.footer-legal-links a:focus-visible{color:#fff}
+.footer-supporters-link{
+  display:inline-block;
+  margin-top:10px;
+  color:#3d9cff!important;
+  font-size:13px;
+  line-height:1.4;
+  font-weight:700;
+  text-decoration:none!important;
+  transition:color .18s ease,opacity .18s ease;
+}
+.footer-supporters-link:hover,.footer-supporters-link:focus-visible{color:#72b7ff!important;text-decoration:underline!important;text-underline-offset:3px}
   .footer-site-logo{display:none!important}
   .legal-page-shell{display:none;min-height:100vh;background:#050607;color:#f7f8fa;position:relative;z-index:500}
   body.legal-page-active{background:#050607!important;overflow-x:hidden}
@@ -11899,4 +11910,8 @@ body.site-loading-active.donate-page-active > #donatePage,
 body.site-loading-active.donate-page-active > footer{
   visibility:hidden!important;
   pointer-events:none!important;
+}
+
+@media(max-width:760px){
+  .footer-supporters-link{margin-top:9px;font-size:12px!important;font-weight:700!important;color:#2997ff!important}
 }
