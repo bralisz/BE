@@ -29,46 +29,10 @@
 <meta name="twitter:image" content="https://i.imgur.com/tnBMpHr.png">
 <meta name="twitter:image:alt" content="Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar">
 <link rel="canonical" href="https://billieilishtv.site/">
-<link id="betvFaviconAny" rel="icon" href="/assets/icons/favicon.ico?v=20260807-betv-logo-v4" sizes="any">
-<link id="betvFavicon32" rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png?v=20260807-betv-logo-v4">
-<link id="betvFavicon16" rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png?v=20260807-betv-logo-v4">
+<link rel="icon" href="/assets/icons/favicon-home-pc.ico?v=20260807-home-site-v1" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-home-pc-32x32.png?v=20260807-home-site-v1">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-home-pc-16x16.png?v=20260807-home-site-v1">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20260807-betv-logo-v4">
-<script>
-(function(){
-  'use strict';
-  var DEFAULT_ICON={
-    any:'/assets/icons/favicon.ico?v=20260807-betv-logo-v4',
-    i32:'/assets/icons/favicon-32x32.png?v=20260807-betv-logo-v4',
-    i16:'/assets/icons/favicon-16x16.png?v=20260807-betv-logo-v4'
-  };
-  var HOME_PC_ICON={
-    any:'/assets/icons/favicon-home-pc.ico?v=20260807-home-pc-v2',
-    i32:'/assets/icons/favicon-home-pc-32x32.png?v=20260807-home-pc-v2',
-    i16:'/assets/icons/favicon-home-pc-16x16.png?v=20260807-home-pc-v2'
-  };
-  function localizedPath(){
-    var raw=String(location.pathname||'/').replace(/\/+$/,'')||'/';
-    raw=raw.toLowerCase();
-    if(/^\/(?:pt-br|en-us|es)$/.test(raw))return '/';
-    return raw.replace(/^\/(?:pt-br|en-us|es)(?=\/)/,'')||'/';
-  }
-  function isDesktopHome(){
-    var desktop=!(window.matchMedia&&window.matchMedia('(max-width:760px)').matches);
-    return desktop&&localizedPath()==='/'&&!String(location.hash||'');
-  }
-  function setHref(id,href){var node=document.getElementById(id);if(node&&node.getAttribute('href')!==href)node.setAttribute('href',href);}
-  function sync(){
-    var icons=isDesktopHome()?HOME_PC_ICON:DEFAULT_ICON;
-    setHref('betvFaviconAny',icons.any);setHref('betvFavicon32',icons.i32);setHref('betvFavicon16',icons.i16);
-  }
-  window.BETVSyncTabIcon=sync;
-  sync();
-  window.addEventListener('popstate',sync);
-  window.addEventListener('hashchange',sync);
-  window.addEventListener('pageshow',sync);
-  if(window.matchMedia){var mq=window.matchMedia('(max-width:760px)');if(mq.addEventListener)mq.addEventListener('change',sync);else if(mq.addListener)mq.addListener(sync);}
-})();
-</script>
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#050816">
 <script src="/assets/js/locale-routing.js?rev=20260806-password-avatar-v1"></script>
