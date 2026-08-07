@@ -10102,7 +10102,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
       '<span class="donate-supporter-content">'+
         '<span class="donate-supporter-avatar" data-initials="'+esc(initials(displayName))+'">'+avatarMarkup+'</span>'+ 
-        '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong>'+(community?'':'<small>@'+esc(username)+'</small>')+'</span>'+ 
+        '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong>'+(community?'<small>'+esc(t('Comunidade'))+'</small>':'<small>@'+esc(username)+'</small>')+'</span>'+ 
       '</span>'+ 
     '</a>';
   }
