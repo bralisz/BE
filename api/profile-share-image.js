@@ -254,21 +254,13 @@ async function renderProfileImage(profile, origin) {
   ]);
 
   const displayName = truncate(profile && profile.displayName ? profile.displayName : 'Usuario', 32);
-  const username = truncate(profile && profile.username ? profile.username : 'usuario', 20);
   const nameSize = fitFontSize(displayName, 45, 700, 0.7, 29);
-  const nicknameSize = fitFontSize(username, 24, 430, 0.4, 16);
 
   const nameText = vectorText(displayName, 235, 153, {
     fontSize: nameSize,
     strokeWidth: Math.max(2.2, nameSize * 0.085),
     color: '#ffffff',
     letterSpacing: 0.7
-  });
-  const nicknameText = vectorText(username, 237, 190, {
-    fontSize: nicknameSize,
-    strokeWidth: Math.max(1.6, nicknameSize * 0.075),
-    color: '#b7bfce',
-    letterSpacing: 0.4
   });
   const favoritesText = vectorText('FAVORITOS', 71, 289, {
     fontSize: 19,
@@ -302,7 +294,6 @@ async function renderProfileImage(profile, origin) {
       <circle cx="140" cy="160" r="73" fill="#fff" fill-opacity="0.96"/>
       <circle cx="140" cy="160" r="69" fill="#070a10"/>
       ${nameText}
-      ${nicknameText}
       ${hasFavorites ? favoritesText : ''}
       ${footerText}
     </svg>`);
