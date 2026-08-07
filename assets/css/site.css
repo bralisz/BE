@@ -7053,8 +7053,36 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
 .login-trust-links{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:5px}
 .login-trust-note a{color:#8ebcff;text-decoration:none;font-weight:700}
 .login-trust-note a:hover{text-decoration:underline}
+
+/* Acesso público sem conta: botão secundário inspirado nos controles do iOS. */
+.auth-guest{
+  width:100%;
+  min-height:54px;
+  margin-top:12px;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:999px;
+  background:rgba(118,118,128,.24);
+  color:rgba(255,255,255,.92);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 8px 24px rgba(0,0,0,.13);
+  -webkit-backdrop-filter:blur(18px) saturate(130%);
+  backdrop-filter:blur(18px) saturate(130%);
+  font:750 15px var(--font-body);
+  letter-spacing:-.01em;
+  cursor:pointer;
+  transition:background .18s ease,border-color .18s ease,transform .18s ease,filter .18s ease;
+}
+.auth-guest:hover{
+  background:rgba(142,142,147,.31);
+  border-color:rgba(255,255,255,.18);
+  filter:brightness(1.04);
+}
+.auth-guest:active{transform:scale(.992);background:rgba(99,99,102,.34)}
+.auth-guest:focus-visible{outline:3px solid rgba(10,132,255,.38);outline-offset:3px}
+.login-trust-links{flex-wrap:wrap;column-gap:7px;row-gap:2px}
+.login-trust-note a{color:#0a84ff}
 @media(max-width:520px){
   .login-trust-note{padding:0 10px;font-size:10.5px}
+  .auth-guest{min-height:50px;margin-top:10px;font-size:14.5px}
 }
 
 

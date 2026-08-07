@@ -1,5 +1,10 @@
 ;(function(){
   'use strict';
+  window.BETVGuestAccess=window.BETVGuestAccess||{
+    key:'beGuestAccess',
+    isActive:function(){try{return localStorage.getItem(this.key)==='1';}catch(_){return false;}},
+    setActive:function(active){try{if(active)localStorage.setItem(this.key,'1');else localStorage.removeItem(this.key);}catch(_){ }return Boolean(active);}
+  };
   function cleanPath(value){
     try{return decodeURIComponent(String(value||'/')).replace(/\/+$/,'')||'/';}
     catch(_){return String(value||'/').replace(/\/+$/,'')||'/';}
@@ -6681,10 +6686,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     function updateProfileActionVisibility(){
       var guest=!auth.currentUser;
+      var browsingAsGuest=guest&&Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
       document.body.classList.toggle('profile-viewer-guest',guest);
       if(profilePageNotifications){profilePageNotifications.hidden=guest;profilePageNotifications.setAttribute('aria-hidden',guest?'true':'false');}
       if(profilePageMore){profilePageMore.hidden=guest;profilePageMore.setAttribute('aria-hidden',guest?'true':'false');}
-      if(profilePageHome){profilePageHome.title=guest?'Entrar':'Home';profilePageHome.setAttribute('aria-label',guest?'Ir para o login':'Voltar para a Home');}
+      if(profilePageHome){profilePageHome.title=guest&&!browsingAsGuest?'Entrar':'Home';profilePageHome.setAttribute('aria-label',guest&&!browsingAsGuest?'Ir para o login':'Voltar para a Home');}
     }
     function setProfilePageAvatar(url){
       var avatar=String(url||'').trim()||window.BETV_DEFAULT_AVATAR;
@@ -7640,7 +7646,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     function openProfile(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}openPublicProfile(true,(currentProfile&&currentProfile.username)||'');}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){if(auth.currentUser)openSettingsPage(true);else window.BETVPublicRoutes.go('/login');});if(profilePageNotifications)profilePageNotifications.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();window.dispatchEvent(new CustomEvent('be:open-notifications',{detail:{}}));});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}closePublicPages(true);var home=document.getElementById('logoBtn');if(home)home.click();else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){if(auth.currentUser)openSettingsPage(true);else window.BETVPublicRoutes.go('/login');});if(profilePageNotifications)profilePageNotifications.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();window.dispatchEvent(new CustomEvent('be:open-notifications',{detail:{}}));});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(){if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(true);var home=document.getElementById('logoBtn');if(home)home.click();else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
       if(event){event.preventDefault();event.stopPropagation();}
 
       // Fecha as configurações e troca primeiro a rota para a Home. Isso evita
@@ -7809,7 +7815,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     // O catálogo pode terminar de carregar antes da autenticação. Só remove o
     // bloqueio visual quando uma sessão válida já foi confirmada; visitantes
     // sem conta permanecem protegidos até a tela de login ser exibida.
-    if(authReady&&auth&&auth.currentUser)hideSiteSkeleton();
+    if(authReady&&auth&&(auth.currentUser||(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())))hideSiteSkeleton();
   });
 
   function q(id){return document.getElementById(id)}
@@ -7992,6 +7998,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function finishPublicLogin(user){
     user=await recoverAuthenticatedUser(user);
     if(!user){var sessionError=new Error('Não foi possível concluir a sessão de login. Tente entrar novamente.');sessionError.code='auth/session-missing';throw sessionError;}
+    if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);
     localStorage.setItem('beAuthExpected','1');
     localStorage.setItem('beSessionUid',user.uid);
     try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
@@ -8019,6 +8026,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(authFlowBusy)return;
       authFlowBusy=true;button.disabled=true;setStatus('');
       try{await auth.signInWithDiscord();}catch(err){setStatus(friendly(err),'error');authFlowBusy=false;button.disabled=false;}
+    };
+    var guestAccessButton=q('guestAccessButton');
+    if(guestAccessButton)guestAccessButton.onclick=function(){
+      if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(true);
+      localStorage.removeItem('beAuthExpected');
+      localStorage.removeItem('beSessionUid');
+      sessionStorage.removeItem('beOAuthDestination');
+      setStatus('');
+      enterHome();
+      hideSiteSkeleton();
+      window.dispatchEvent(new CustomEvent('be:guest-access'));
     };
 
     q('emailLookupForm').addEventListener('submit',async function(e){
@@ -8096,7 +8114,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{
         var result=await auth.signUp({email:email,password:password,name:name,username:'',remember:true});
         if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}
-        currentProfile=await beBackend.profiles.ensure(result.user);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();
+        currentProfile=await beBackend.profiles.ensure(result.user);if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();
       }catch(err){
         showLogin();
         if(err&&err.code==='auth/email-already-in-use')setMode('password',email);else setMode('signup',email);
@@ -8133,6 +8151,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');
           return;
         }
+        if(!callbackActive&&!callbackFailure&&window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){
+          if(isDonateRoute())showDonateRoute();
+          else if(isSupportRoute())showSupportRoute();
+          else if(isBillieRoute())showBillieRoute();
+          else if(isFansRoute())showFansRoute();
+          else if(isAlbumsRoute())showAlbumsRoute();
+          else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}
+          else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}
+          else enterHome(true);
+          hideSiteSkeleton();
+          return;
+        }
         showLogin();selectedAuthEmail='';setMode('email');
         if(callbackFailure)setStatus('O Discord não concluiu o login: '+decodeURIComponent(String(callbackFailure).replace(/\+/g,' ')),'error');
         else if(callbackActive)setStatus('O retorno do Discord chegou, mas a sessão não foi criada. Confira as URLs de redirecionamento do Supabase e do Discord.','error');
@@ -8150,18 +8180,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(location.hash.startsWith('#/admin'))return;
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
+      var guestActive=Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
       if(isPasswordRecoveryRoute()){if(auth.currentUser)showPasswordRecovery();else showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');return;}
       if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
       if(isNotificationsRoute()){if(auth.currentUser)showNotificationsRoute();else showLogin();return;}
-      if(isDonateRoute()){if(auth.currentUser)showDonateRoute();else showLogin();return;}
-      if(isSupportRoute()){if(auth.currentUser)showSupportRoute();else showLogin();return;}
-      if(isBillieRoute()){if(auth.currentUser)showBillieRoute();else showLogin();return;}
+      if(isDonateRoute()){if(auth.currentUser||guestActive)showDonateRoute();else showLogin();return;}
+      if(isSupportRoute()){if(auth.currentUser||guestActive)showSupportRoute();else showLogin();return;}
+      if(isBillieRoute()){if(auth.currentUser||guestActive)showBillieRoute();else showLogin();return;}
       if(isFansRoute()){showFansRoute();return;}
-      if(isAlbumsRoute()){if(auth.currentUser)showAlbumsRoute();else showLogin();return;}
+      if(isAlbumsRoute()){if(auth.currentUser||guestActive)showAlbumsRoute();else showLogin();return;}
       if(isLoginRoute()){if(auth.currentUser)enterHome();else showLogin();return;}
       if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}
-      if(isVideoRoute()){if(auth.currentUser){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else showLogin();return;}
-      if(auth.currentUser)enterHome(true);else showLogin();
+      if(isVideoRoute()){if(auth.currentUser||guestActive){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else showLogin();return;}
+      if(auth.currentUser||guestActive)enterHome(true);else showLogin();
     }
     window.addEventListener('hashchange',handlePublicRoute);
     window.addEventListener('popstate',handlePublicRoute);
@@ -8171,7 +8202,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function startAuthentication(){
-    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}console.error('Falha ao iniciar autenticação:',error);}
+    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){hideSiteSkeleton();if(isDonateRoute())showDonateRoute();else if(isSupportRoute())showSupportRoute();else if(isAlbumsRoute())showAlbumsRoute();else if(isBillieRoute())showBillieRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else enterHome(true);}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}console.error('Falha ao iniciar autenticação:',error);}
   }
 
   document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode(isPasswordRecoveryRoute()?'recovery':'email');startAuthentication()});

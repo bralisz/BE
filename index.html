@@ -135,10 +135,10 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-ong-mobile-reload-v3">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-guest-access-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260807-profile-albums-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260807-profile-socials-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260807-guest-access-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -203,6 +203,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
             </div>
             <button class="auth-primary" type="submit">Acessar a Plataforma</button>
           </form>
+          <button class="auth-guest" id="guestAccessButton" type="button">Acessar como convidado</button>
         </section>
         <section class="auth-step" id="passwordStep" aria-labelledby="passwordStepTitle" hidden>
           <header class="auth-step-header">
@@ -271,7 +272,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
         </section>
         <div class="auth-status" id="authStatus" aria-live="polite"></div>
       </section>
-      <p class="login-trust-note"><span>Projeto independente e não oficial, feito por fãs.</span><span class="login-trust-links"><a href="/privacy">Privacidade</a><span aria-hidden="true">·</span><a href="/terms">Termos</a></span><span class="login-trust-links"><a id="loginFansLink" href="/fãs" data-open-fans="true">Veja apoiadores do site</a></span></p>
+      <p class="login-trust-note"><span>Projeto independente e não oficial, feito por fãs.</span><span class="login-trust-links"><a href="/privacy">Privacidade</a><span aria-hidden="true">-</span><a href="/terms">Termos</a><span aria-hidden="true">-</span><a id="loginFansLink" href="/fãs" data-open-fans="true">Veja apoiadores do site</a></span></p>
     </div>
   </div>
   <div class="login-dots" id="loginDots" aria-hidden="true"></div>
