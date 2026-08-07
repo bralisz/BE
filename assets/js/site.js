@@ -66,12 +66,33 @@
     window.__beConfigBootTimer=0;
   }
 
+  function forceAtomicConfigLayout(){
+    var body=document.body;
+    var profile=document.getElementById('profilePage');
+    var settings=document.getElementById('settingsPage');
+    if(profile){
+      profile.hidden=true;
+      profile.setAttribute('hidden','');
+      profile.setAttribute('aria-hidden','true');
+    }
+    if(settings){
+      settings.hidden=false;
+      settings.removeAttribute('hidden');
+      settings.setAttribute('aria-hidden','false');
+    }
+    if(body){
+      body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','detail-page-active','section-catalog-active');
+      body.classList.add('settings-page-active');
+    }
+  }
+
   function revealConfigPage(){
     clearConfigBootTimer();
-    root.classList.remove('config-route-boot','site-loading-active');
-    if(document.body)document.body.classList.remove('site-loading-active');
+    forceAtomicConfigLayout();
     var loading=document.getElementById('authLoading');
     if(loading)loading.hidden=true;
+    root.classList.remove('config-route-boot','site-loading-active');
+    if(document.body)document.body.classList.remove('site-loading-active');
   }
 
   function afterTwoFrames(){
@@ -79,6 +100,20 @@
       window.requestAnimationFrame(function(){
         window.requestAnimationFrame(resolve);
       });
+    });
+  }
+
+  function waitForConfigMarkup(container){
+    if(!container)return Promise.resolve();
+    if(container.dataset&&container.dataset.renderReady==='true'&&container.querySelector('#settingsPageBody')&&container.querySelector('#settingsPageBody').children.length)return Promise.resolve();
+    return new Promise(function(resolve){
+      var started=Date.now();
+      (function inspect(){
+        var body=container.querySelector&&container.querySelector('#settingsPageBody');
+        if((container.dataset&&container.dataset.renderReady==='true')||body&&body.children.length){resolve();return;}
+        if(Date.now()-started>=3500){resolve();return;}
+        window.setTimeout(inspect,32);
+      })();
     });
   }
 
@@ -100,7 +135,7 @@
         }
         image.addEventListener('load',finish,{once:true});
         image.addEventListener('error',finish,{once:true});
-        window.setTimeout(finish,1800);
+        window.setTimeout(finish,1500);
       });
     }));
   }
@@ -124,13 +159,16 @@
     }
 
     var container=settings.container||document.getElementById('settingsPage');
-    var readiness=Promise.all([waitForConfigImages(container),waitForConfigFonts()]);
-    var timeout=new Promise(function(resolve){window.setTimeout(resolve,2300);});
+    var readiness=waitForConfigMarkup(container).then(function(){
+      forceAtomicConfigLayout();
+      return Promise.all([waitForConfigImages(container),waitForConfigFonts()]);
+    });
+    var timeout=new Promise(function(resolve){window.setTimeout(resolve,4000);});
     var elapsed=Math.max(0,Date.now()-configBootStartedAt);
     var minimumDelay=new Promise(function(resolve){window.setTimeout(resolve,Math.max(0,CONFIG_SKELETON_MIN_MS-elapsed));});
 
     return Promise.all([Promise.race([readiness,timeout]),minimumDelay])
-      .then(afterTwoFrames)
+      .then(function(){forceAtomicConfigLayout();return afterTwoFrames();})
       .catch(function(){})
       .finally(function(){
         if(version===releaseVersion)revealConfigPage();
@@ -5965,8 +6003,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function syncBodyScroll(){var locked=!avatarPicker.hidden||!bannerPicker.hidden||!profileModal.hidden||!profileOnboarding.hidden||(settingsSaveConfirm&&!settingsSaveConfirm.hidden);document.body.style.overflow=locked?'hidden':'';}
     function keepSettingsOpen(){
       if(!auth.currentUser)return;
-      profilePage.hidden=true;settingsPage.hidden=false;
-      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active');
+      profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');
+      settingsPage.hidden=false;settingsPage.removeAttribute('hidden');settingsPage.setAttribute('aria-hidden','false');
+      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','detail-page-active','section-catalog-active');
       document.body.classList.add('settings-page-active');
       if(!isConfigRoute())replacePublicRoute('/config');
     }
@@ -6322,6 +6361,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return {bannerUrl:bannerUrl,bannerId:bannerId};
     }
     function applyProfileBanner(bannerUrl){
+      if(isConfigRoute()||document.body.classList.contains('settings-page-active')){
+        if(profilePage){profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');}
+        return;
+      }
       var hero=profilePage&&profilePage.querySelector('.profile-page-hero');
       var url=String(bannerUrl||'').trim();
       if(!url){
@@ -6688,6 +6731,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     function renderProfilePage(){
+      if(isConfigRoute()||document.body.classList.contains('settings-page-active')){
+        if(profilePage){profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');}
+        return;
+      }
       updateProfileActionVisibility();
       var handle=profileRouteUsername()||beBackend.normalizeUsername((viewedProfile&&viewedProfile.username)||(currentProfile&&currentProfile.username)||'perfil');
       if(viewedProfileStatus==='loading'){renderProfileState('Carregando perfil',handle,'');return;}
@@ -6986,9 +7033,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.dispatchEvent(new CustomEvent('be:close-section-view'));
       document.body.classList.remove('section-catalog-active');
       closeNotificationMenus();
-      toggleDropdown(false);profilePage.hidden=true;settingsPage.hidden=false;
-      document.body.classList.remove('profile-page-active','login-mode');document.body.classList.add('settings-page-active');
+      toggleDropdown(false);
+      profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');
+      settingsPage.hidden=true;settingsPage.setAttribute('hidden','');settingsPage.setAttribute('aria-hidden','true');settingsPage.dataset.renderReady='false';
+      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','detail-page-active');
+      document.body.classList.add('settings-page-active');
       try{renderSettingsPage();}catch(error){console.error('Falha ao renderizar configurações:',error);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
+      settingsPage.dataset.renderReady='true';
+      settingsPage.hidden=false;settingsPage.removeAttribute('hidden');settingsPage.setAttribute('aria-hidden','false');
       if(window.BETVReleaseConfigPaint){
         settingsPage.setAttribute('aria-busy','true');
         Promise.resolve(window.BETVReleaseConfigPaint({container:settingsPage})).finally(function(){settingsPage.removeAttribute('aria-busy');});
@@ -7122,7 +7174,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       else currentProfile={...(currentProfile||{}),avatarUrl:detail.avatarUrl||'',avatarId:detail.avatarId||''};
       selectedAvatar=detail.avatarUrl||'';
       localStorage.setItem(avatarCacheKey(auth.currentUser),selectedAvatar);
-      setMainAvatar(selectedAvatar);updateOnboardingAvatar();renderProfilePage();if(document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();}
+      setMainAvatar(selectedAvatar);updateOnboardingAvatar();if(!document.body.classList.contains('settings-page-active')&&!isConfigRoute())renderProfilePage();if(document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();}
     });
     window.addEventListener('be:profile-banner-changed',function(event){
       var detail=event&&event.detail||{};
@@ -7133,8 +7185,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(latestUrl){
         try{localStorage.setItem('beProfileBanner:'+auth.currentUser.uid,JSON.stringify({bannerUrl:latestUrl,bannerId:latestId,updatedAt:beBackend.now()}));}catch(_){ }
       }
-      applyProfileBanner(latestUrl);
-      renderProfilePage();
+      if(!document.body.classList.contains('settings-page-active')&&!isConfigRoute()){
+        applyProfileBanner(latestUrl);
+        renderProfilePage();
+      }
       if(document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();}
     });
     document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(settingsSaveConfirm&&!settingsSaveConfirm.hidden){resolveSettingsConfirm(false);return;}closeAvatarPicker();closeBannerPicker();closeProfile();closeOnboarding(false);}});

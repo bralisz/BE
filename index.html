@@ -72,9 +72,12 @@
 html.admin-route-boot{background:#05070b!important}
 html.admin-route-boot body{visibility:hidden!important;background:#05070b!important}
 html.config-route-boot{background:#050607!important}
-html.config-route-boot body{background:#050607!important}
-html.config-route-boot body > :not(#authLoading):not(script):not(style){visibility:hidden!important}
-html.config-route-boot body > #authLoading{display:block!important;visibility:visible!important}
+html.config-route-boot body{background:#050607!important;overflow:hidden!important}
+html.config-route-boot body > :not(#authLoading):not(script):not(style){display:none!important;visibility:hidden!important}
+html.config-route-boot body > #authLoading{display:block!important;visibility:visible!important;opacity:1!important;z-index:2147483647!important}
+html.config-route-boot #authLoading[hidden]{display:block!important;visibility:visible!important;opacity:1!important}
+html.config-route-boot #authLoading .site-loading-skeleton{display:block!important;visibility:visible!important;opacity:1!important}
+html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.config-route-boot body.settings-page-active > #profilePage,html.config-route-boot body.settings-page-active > #settingsPage{display:none!important;visibility:hidden!important}
 </style>
 <script>
 (function(){
@@ -111,10 +114,10 @@ html.config-route-boot body > #authLoading{display:block!important;visibility:vi
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-password-avatar-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260806-config-atomic-v2">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260806-skeleton-2s-config-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260806-skeleton-2s-config-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260806-config-atomic-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260806-config-atomic-v2"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">

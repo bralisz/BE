@@ -3070,7 +3070,7 @@
     .profile-asset-head,.profile-asset-body{padding-left:18px;padding-right:18px}
   }
   body.settings-page-active main{min-height:100vh;background:#040506}
-  body.settings-page-active .settings-page-shell{
+  body.settings-page-active .settings-page-shell:not([hidden]){
     position:fixed!important;
     inset:0!important;
     z-index:40!important;
@@ -6386,10 +6386,10 @@ body.section-catalog-active #dynamicSections.section-view-mode > .film-library-s
 
 /* Configurações dedicadas — navegação inspirada nas páginas legais. */
 body.settings-page-active{background:#050607!important;overflow:hidden!important}
-body.settings-page-active > :not(#settingsPage):not(#avatarPicker):not(#bannerPicker):not(#settingsSaveConfirm):not(#settingsSaveToast):not(#accountBanToast):not(.betv-update-popup):not(script):not(style){display:none!important}
-body.settings-page-active > #settingsPage{display:block!important;width:100%;height:100dvh;min-height:100vh;overflow-y:auto!important;overflow-x:hidden!important;background:#050607!important;color:#f7f8fa;position:fixed!important;inset:0!important;z-index:500!important;padding:0!important}
-#settingsPage[hidden]{display:none!important}
-body.settings-page-active #settingsPage[hidden]{display:block!important}
+body.settings-page-active > :not(#settingsPage):not(#authLoading):not(#avatarPicker):not(#bannerPicker):not(#settingsSaveConfirm):not(#settingsSaveToast):not(#accountBanToast):not(.betv-update-popup):not(script):not(style){display:none!important}
+body.settings-page-active > #settingsPage:not([hidden]){display:block!important;width:100%;height:100dvh;min-height:100vh;overflow-y:auto!important;overflow-x:hidden!important;background:#050607!important;color:#f7f8fa;position:fixed!important;inset:0!important;z-index:500!important;padding:0!important}
+#settingsPage[hidden],body.settings-page-active #settingsPage[hidden]{display:none!important}
+body.settings-page-active #profilePage{display:none!important}
 body.settings-page-active .settings-wrap{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
 body.settings-page-active .settings-header{height:104px;margin:0!important;padding:20px clamp(22px,5vw,72px)!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:22px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:5;background:rgba(5,6,7,.88);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
 body.settings-page-active .settings-header h1{margin:0!important;font:800 24px/1 var(--font-display)!important;letter-spacing:-.035em!important}
