@@ -11322,3 +11322,29 @@ body.login-mode .login-brand img{
     max-width:68px!important;
   }
 }
+
+
+/* Fãs / Comunidades: apenas uma tag por card + cores por tipo */
+.donate-supporter-card.is-user .donate-supporter-avatar{
+  border-color:#39d98a!important;
+  box-shadow:0 0 0 1px rgba(57,217,138,.16),0 0 18px rgba(57,217,138,.12)!important;
+}
+.donate-supporter-card.is-creator .donate-supporter-avatar{
+  border-color:#3d8cff!important;
+  box-shadow:0 0 0 1px rgba(61,140,255,.18),0 0 18px rgba(61,140,255,.14)!important;
+}
+.donate-supporter-card.is-community .donate-supporter-avatar{
+  border-color:#fff!important;
+}
+.donate-supporter-tag.is-creator-tag{
+  border-color:#d2ad52!important;
+  background:#d7b65d!important;
+  color:#292929!important;
+  font-weight:750!important;
+  box-shadow:none!important;
+}
+.donate-supporter-tag.is-community-tag{
+  border-color:rgba(255,255,255,.18)!important;
+  background:rgba(15,18,24,.72)!important;
+  color:rgba(255,255,255,.84)!important;
+}
