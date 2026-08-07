@@ -2921,7 +2921,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function addBillieHomeSpotlight(host) {
     if (!host || host.querySelector('.billie-home-spotlight')) return;
-    if (window.matchMedia && window.matchMedia('(min-width: 761px)').matches) return;
     const defaultBanner = '/assets/images/pages/billie-home-banner-default.webp';
     const spotlight = document.createElement('section');
     spotlight.className = 'billie-home-spotlight';
