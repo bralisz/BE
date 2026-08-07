@@ -57,8 +57,25 @@ module.exports = async function protectedAdminRuntime(req, res) {
       },
       body: '{}'
     });
-    const allowed = await json(adminResponse);
-    if (!adminResponse.ok || allowed !== true) return res.status(404).end();
+    const rpcAllowed = await json(adminResponse);
+    let allowed = adminResponse.ok && rpcAllowed === true;
+
+    // Fallback seguro: em alguns deploys o RPC pode ficar temporariamente
+    // indisponível no schema cache do PostgREST. Confere a role do próprio
+    // usuário autenticado sem abrir o runtime para visitantes.
+    if (!allowed) {
+      const profileResponse = await fetch(`${url}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=role&limit=1`, {
+        headers: {
+          apikey: publishableKey,
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json'
+        }
+      });
+      const profile = await json(profileResponse);
+      allowed = profileResponse.ok && Array.isArray(profile) && profile[0] && String(profile[0].role || '').toLowerCase() === 'admin';
+    }
+
+    if (!allowed) return res.status(404).end();
 
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     if (req.method === 'HEAD') return res.status(200).end();

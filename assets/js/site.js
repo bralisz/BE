@@ -5805,8 +5805,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var currentAccount=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
       if(currentAccount&&window.beBackend&&typeof window.beBackend.isAdmin==='function'&&!window.beBackend.isAdmin(currentAccount)){showDenied();return;}
       var response=await fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'same-origin'});
+      if(response.status===404&&client&&client.auth&&typeof client.auth.refreshSession==='function'){
+        try{
+          var refreshed=await client.auth.refreshSession();
+          var refreshedToken=refreshed&&refreshed.data&&refreshed.data.session&&refreshed.data.session.access_token||'';
+          if(refreshedToken){
+            token=refreshedToken;
+            response=await fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'same-origin'});
+          }
+        }catch(_){ }
+      }
       if(!response.ok){
         if(response.status===401||response.status===403){showDenied();return;}
+        if(response.status===404){showLogin('Sua sessão administrativa precisa ser renovada. Entre novamente.');return;}
         throw new Error('O runtime protegido não respondeu corretamente (código '+response.status+').');
       }
       var source=await response.text();
