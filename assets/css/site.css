@@ -11434,3 +11434,12 @@ body.section-catalog-active.featured-section-catalog-active #dynamicSections.sec
 }
 .profile-saved-card.is-album .profile-saved-thumb img{object-fit:contain;background:#0b0d11}
 #profileLovedAlbumsPicker .profile-favorites-option-media{aspect-ratio:1}
+
+/* Perfil desktop: centraliza os 3 cards de "Álbuns que amo" no meio da seção. */
+@media (min-width:1051px){
+  body.profile-page-active .profile-loved-albums-section .profile-favorites-ranking{
+    grid-template-columns:repeat(3,minmax(0,365px))!important;
+    justify-content:center!important;
+    gap:clamp(18px,2vw,30px)!important;
+  }
+}
