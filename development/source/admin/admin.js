@@ -413,7 +413,7 @@ document.head.appendChild(s);
 
   async function renderLogin() {
     setAdminDocumentScroll(false);
-    document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="admin-login-topbar"><a class="admin-login-logo" href="/" aria-label="Voltar ao site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=4" alt="BE"></a></div><div class="login-card" aria-label="Acesso administrativo"><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span><span>Conectar via Google</span></button></div></div></div><div class="toast-area"></div>`;
+    document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="admin-login-topbar"><a class="admin-login-logo" href="/" aria-label="Voltar ao site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/login-logo.png?v=1" alt="BE TV"></a></div><div class="login-card" aria-label="Acesso administrativo"><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span><span>Conectar via Google</span></button></div></div></div><div class="toast-area"></div>`;
     startAdminLoginBackground();
     $('#googleLogin').onclick = loginWithGoogle;
     const savedError = sessionStorage.getItem('adminAuthError');
@@ -440,7 +440,7 @@ document.head.appendChild(s);
     const accountAvatar = activeAvatar
       ? `<img loading="lazy" decoding="async" src="${esc(media(activeAvatar))}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`
       : `<span aria-label="Sem foto de perfil">${esc((user.displayName || 'U').charAt(0).toUpperCase())}</span>`;
-    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=4" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><div class="admin-avatar-button" id="adminAccountAvatar" aria-label="Avatar do administrador">${accountAvatar}</div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
+    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/admin-logo.png?v=1" alt="BE TV"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><div class="admin-avatar-button" id="adminAccountAvatar" aria-label="Avatar do administrador">${accountAvatar}</div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
     const accountAvatarElement = $('#adminAccountAvatar');
     if (accountAvatarElement) {
@@ -2860,6 +2860,25 @@ document.head.appendChild(s);
     .album-admin-preview-tracks li span,.album-admin-preview-tracks li small{color:#8f9aac;font-size:10px}
     .album-admin-preview-tracks li strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
     @media(max-width:760px){.album-track-row{grid-template-columns:32px minmax(0,1fr) 86px 38px;gap:7px;padding:9px}.album-track-number{width:27px;height:27px}.album-track-remove{width:36px;height:40px}}
+  `;
+  document.head.appendChild(style);
+})();
+
+
+(()=>{
+  'use strict';
+  if(document.getElementById('be-admin-brand-20260807')) return;
+  const style=document.createElement('style');
+  style.id='be-admin-brand-20260807';
+  style.textContent=`
+    body.admin-mode .admin-logo-button{width:128px!important;min-width:128px!important;justify-content:flex-start!important}
+    body.admin-mode .admin-logo-button img{width:118px!important;height:46px!important;max-width:118px!important;object-fit:contain!important;object-position:left center!important}
+    body.admin-mode .admin-login-logo img{width:150px!important;height:78px!important;max-width:150px!important;object-fit:contain!important}
+    @media(max-width:760px){
+      body.admin-mode .admin-logo-button{width:104px!important;min-width:104px!important}
+      body.admin-mode .admin-logo-button img{width:96px!important;height:42px!important}
+      body.admin-mode .admin-login-logo img{width:126px!important;height:68px!important}
+    }
   `;
   document.head.appendChild(style);
 })();
