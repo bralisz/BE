@@ -2783,21 +2783,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     host.setAttribute('aria-label', 'Categorias de conteúdos');
 
     if (featuredContents.length) {
+      const recommendationTitle = localizedUiText('Recomendação de um fã');
       const featuredBlock = document.createElement('section');
       featuredBlock.className = 'video-rail-section featured-video-rail';
       featuredBlock.dataset.category = 'destaque';
       featuredBlock.dataset.collection = 'mixed';
       featuredBlock.dataset.homeView = 'default';
       featuredBlock.innerHTML = `
-        <a class="video-rail-title" href="#" aria-label="Ver todos: Recomendação de um fã">
-          <span>Recomendação de um fã</span>
+        <a class="video-rail-title" href="#" aria-label="${escapeHtml(recommendationTitle)}">
+          <span>${escapeHtml(recommendationTitle)}</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </a>
         <div class="video-rail-shell">
           <button class="video-rail-arrow prev" type="button" aria-label="Ver recomendações anteriores" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
           </button>
-          <div class="video-rail" tabindex="0" aria-label="Recomendação de um fã">
+          <div class="video-rail" tabindex="0" aria-label="${escapeHtml(recommendationTitle)}">
             ${featuredContents.map(item => videoCard(item)).join('')}
           </div>
           <button class="video-rail-arrow next" type="button" aria-label="Ver mais recomendações">
@@ -2931,6 +2932,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function addBillieHomeSpotlight(host) {
     if (!host || host.querySelector('.billie-home-spotlight')) return;
+    if (window.matchMedia && window.matchMedia('(min-width: 761px)').matches) return;
     const defaultBanner = '/assets/images/pages/billie-home-banner-default.webp';
     const spotlight = document.createElement('section');
     spotlight.className = 'billie-home-spotlight';
