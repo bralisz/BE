@@ -75,8 +75,7 @@ function sanitizeSocialLinks(value) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   return {
     x: safeText(source.x || source.twitter, 80),
-    instagram: safeText(source.instagram, 100),
-    discord: safeText(source.discord, 180)
+    instagram: safeText(source.instagram, 100)
   };
 }
 

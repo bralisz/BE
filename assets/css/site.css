@@ -11444,7 +11444,7 @@ body.section-catalog-active.featured-section-catalog-active #dynamicSections.sec
   }
 }
 
-/* Redes sociais do perfil — X, Instagram e Discord. */
+/* Redes sociais do perfil — X e Instagram. */
 body.profile-page-active .profile-page-socials[hidden]{display:none!important}
 body.profile-page-active .profile-page-socials{
   display:inline-flex;
@@ -11478,11 +11478,10 @@ body.profile-page-active .profile-page-social-link:focus-visible{
 body.profile-page-active .profile-page-social-link.is-static{cursor:default;opacity:.72}
 body.profile-page-active .profile-page-social-link.is-static:hover{transform:none;color:rgba(255,255,255,.78)}
 body.profile-page-active .profile-page-social-link svg{display:block;width:20px;height:20px}
-body.profile-page-active .profile-page-social-link.is-x svg,
-body.profile-page-active .profile-page-social-link.is-discord svg{fill:currentColor;stroke:none}
+body.profile-page-active .profile-page-social-link.is-x svg{fill:currentColor;stroke:none}
 body.profile-page-active .profile-page-social-link.is-instagram svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
-/* Campos de redes sociais dentro de Configurações > Conexões. */
+/* Conexões e redes sociais dentro da mesma área de Configurações. */
 .settings-connections-panel .settings-panel-card + .settings-panel-card{margin-top:18px}
 .settings-social-card{display:block}
 .settings-social-heading{margin:0 0 22px}
@@ -11493,7 +11492,7 @@ body.profile-page-active .profile-page-social-link.is-instagram svg{fill:none;st
 .settings-social-field label{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,.62);font-size:12px;font-weight:700;letter-spacing:.02em}
 .settings-social-brand{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 18px}
 .settings-social-brand svg{display:block;width:16px;height:16px}
-.settings-social-brand.is-x svg,.settings-social-brand.is-discord svg{fill:currentColor;stroke:none}
+.settings-social-brand.is-x svg{fill:currentColor;stroke:none}
 .settings-social-brand.is-instagram svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .settings-social-input-wrap{
   min-height:50px;
