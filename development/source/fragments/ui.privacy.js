@@ -811,7 +811,7 @@
     q('signupForm').addEventListener('submit',async function(e){
       e.preventDefault();
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),name=form.elements.namedItem('name').value.trim(),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
-      if(name.length<2){setStatus('Digite seu nome completo.','error');return;}
+      if(name.length<2){setStatus('Digite seu nome.','error');return;}
       if(!validAuthPassword(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');

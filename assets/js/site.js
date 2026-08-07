@@ -7688,7 +7688,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     q('signupForm').addEventListener('submit',async function(e){
       e.preventDefault();
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),name=form.elements.namedItem('name').value.trim(),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
-      if(name.length<2){setStatus('Digite seu nome completo.','error');return;}
+      if(name.length<2){setStatus('Digite seu nome.','error');return;}
       if(!validAuthPassword(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
@@ -10219,13 +10219,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];});}
   function mediaUrl(value){var raw=String(value||'').trim();return raw&&window.beMediaUrl?window.beMediaUrl(raw):raw;}
   function initials(value){var parts=String(value||'Fã').trim().split(/\s+/).filter(Boolean);return (parts.slice(0,2).map(function(part){return part.charAt(0);}).join('')||'F').toUpperCase();}
-  function typeOf(item){var raw=String(item&&(item.entry_type||item.entryType)||'user').toLowerCase();return raw==='community'||raw==='creator'?raw:'user';}
+  function typeOf(item){return String(item&&(item.entry_type||item.entryType)||'user').toLowerCase()==='community'?'community':'user';}
   function key(item){var type=typeOf(item),id=String(item&&(item.entry_id||item.entryId||item.user_id||item.userId)||'').trim();if(id)return type+':'+id;var username=String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim().toLowerCase();return username?'user:'+username:'';}
   function time(item){var value=new Date(item&&(item.supported_at||item.supportedAt)||0).getTime();return Number.isFinite(value)?value:0;}
   function markup(item){
     var type=typeOf(item);
-    var community=type==='community'||type==='creator';
-    var creator=type==='creator';
+    var community=type==='community';
     var displayName=String(item.display_name||item.displayName||(community?t('Comunidade'):t('Apoiador'))).trim()||(community?t('Comunidade'):t('Apoiador'));
     var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
     var banner=mediaUrl(item.banner_url||item.bannerUrl||'');
@@ -10237,18 +10236,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var avatarAlt=community?t('Ícone de {name}',{name:displayName}):t('Avatar de {name}',{name:displayName});
     var attributes=community?' target="_blank" rel="noopener noreferrer" data-fans-community':' data-fans-profile data-profile-route="'+esc(route)+'"';
     var avatarMarkup=avatar?'<img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatar)+'"'+(community?'':' data-avatar-fallback="/assets/images/profile/default-avatar.png"')+' alt="'+esc(avatarAlt)+'">':'<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(initials(displayName))+'</span>';
-    return '<a class="donate-supporter-card '+(creator?'is-creator':(community?'is-community':'is-user'))+'" href="'+esc(href)+'"'+attributes+' aria-label="'+esc(label)+'">'+
+    return '<a class="donate-supporter-card '+(community?'is-community':'is-user')+'" href="'+esc(href)+'"'+attributes+' aria-label="'+esc(label)+'">'+
       '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
       '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
       '<span class="donate-supporter-content">'+
         '<span class="donate-supporter-avatar" data-initials="'+esc(initials(displayName))+'">'+avatarMarkup+'</span>'+ 
-        '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong>'+(community?'<span class="donate-supporter-tags"><small class="donate-supporter-tag '+(creator?'is-creator-tag':'is-community-tag')+'">'+esc(creator?t('Criador de conteúdo'):t('Comunidade'))+'</small></span>':'<small>@'+esc(username)+'</small>')+'</span>'+ 
+        '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong>'+(community?'<span class="donate-supporter-tags"><small class="donate-supporter-tag">'+esc((String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase()==='es')?'Comunidad':'Community')+'</small><small class="donate-supporter-tag">'+esc((String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase()==='en-us')?'Content Creator':(String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase()==='es'?'Creador de contenido':'Criador de conteúdo'))+'</small></span>':'<small>@'+esc(username)+'</small>')+'</span>'+ 
       '</span>'+ 
     '</a>';
   }
   function bindImages(){
     list.querySelectorAll('.donate-supporter-banner-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){image.remove();},{once:true});});
-    list.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){var card=image.closest('.donate-supporter-card');if(card&&(card.classList.contains('is-community')||card.classList.contains('is-creator'))){var avatar=image.closest('.donate-supporter-avatar');if(avatar)avatar.innerHTML='<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(avatar.getAttribute('data-initials')||'C')+'</span>';return;}if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png'))image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');});});
+    list.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){var card=image.closest('.donate-supporter-card');if(card&&card.classList.contains('is-community')){var avatar=image.closest('.donate-supporter-avatar');if(avatar)avatar.innerHTML='<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(avatar.getAttribute('data-initials')||'C')+'</span>';return;}if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png'))image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');});});
   }
   function render(items,append){
     var records=(Array.isArray(items)?items:[]).filter(function(item){return typeOf(item)==='community'||String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim();}).sort(function(a,b){return Number(b.sort_order||b.sortOrder||0)-Number(a.sort_order||a.sortOrder||0)||time(b)-time(a)||key(a).localeCompare(key(b));});
