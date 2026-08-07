@@ -4470,7 +4470,7 @@ body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned
   height:9px;
 }
 
-body.support-page-active > :not(.topbar-wrap):not(.mobile-app-bar):not(.support-page-shell):not(.mobile-drawer):not(.mobile-drawer-backdrop):not(.betv-update-popup):not(script):not(style){
+body.support-page-active > :not(.topbar-wrap):not(.mobile-app-bar):not(.support-page-shell):not(footer):not(.mobile-footer-support-cta):not(.mobile-footer-fans-cta):not(.mobile-drawer):not(.mobile-drawer-backdrop):not(.betv-update-popup):not(script):not(style){
   display:none!important;
 }
 body.support-page-active > .support-page-shell{
@@ -10757,7 +10757,7 @@ body.fans-page-active{
   overflow-x:hidden!important;
   background:#050607!important;
 }
-body.fans-page-active > :not(#fansPage):not(footer):not(.betv-update-popup):not(script):not(style){display:none!important}
+body.fans-page-active > :not(#fansPage):not(footer):not(.mobile-footer-support-cta):not(.mobile-footer-fans-cta):not(.betv-update-popup):not(script):not(style){display:none!important}
 body.fans-page-active > #fansPage{display:block!important}
 body.fans-page-active > footer{
   display:block!important;
@@ -10902,5 +10902,63 @@ body.fans-page-active > footer > .footer-card{width:min(100%,1390px)!important;m
   .fans-page-list .donate-supporter-avatar{width:46px;height:46px;min-width:46px}
   .fans-page-list .donate-supporter-copy strong,
   .fans-page-list .donate-supporter-card.is-community .donate-supporter-copy strong{font-size:13px}
+}
+
+/* Rodapés das páginas Fãs e Suporte — organização exclusiva do mobile. */
+@media (max-width:760px){
+  body.fans-page-active > footer,
+  body.support-page-active > footer{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:34px 20px 22px!important;
+    background:#050607!important;
+  }
+  body.fans-page-active > footer > .footer-card,
+  body.support-page-active > footer > .footer-card{
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+  }
+
+  body.fans-page-active > .mobile-footer-support-cta,
+  body.support-page-active > .mobile-footer-fans-cta{
+    width:calc(100% - 40px)!important;
+    min-height:52px!important;
+    margin-left:20px!important;
+    margin-right:20px!important;
+    padding:0 24px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    border-radius:18px!important;
+    font:750 16px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif!important;
+    text-align:center!important;
+    text-decoration:none!important;
+    cursor:pointer!important;
+    -webkit-tap-highlight-color:transparent!important;
+    touch-action:manipulation!important;
+  }
+  body.fans-page-active > .mobile-footer-support-cta{
+    margin-top:0!important;
+    margin-bottom:max(30px,env(safe-area-inset-bottom))!important;
+    border:0!important;
+    background:#0a84ff!important;
+    color:#fff!important;
+    box-shadow:0 12px 30px rgba(10,132,255,.24)!important;
+  }
+  body.support-page-active > .mobile-footer-fans-cta{
+    margin-top:0!important;
+    margin-bottom:max(30px,env(safe-area-inset-bottom))!important;
+    border:1px solid rgba(255,255,255,.9)!important;
+    background:#fff!important;
+    color:#08090b!important;
+    box-shadow:0 12px 30px rgba(0,0,0,.22)!important;
+  }
+  body.fans-page-active > .mobile-footer-fans-cta,
+  body.support-page-active > .mobile-footer-support-cta{
+    display:none!important;
+  }
 }
 
