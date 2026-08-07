@@ -1,6 +1,26 @@
 {
   "rewrites": [
     {
+      "source": "/robots.txt",
+      "destination": "/api/robots"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/albuns",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/albuns/",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/albuns/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
       "source": "/api/runtime",
       "destination": "/api/media?mode=supabase-runtime"
     },
