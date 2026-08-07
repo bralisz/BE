@@ -10926,3 +10926,74 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('popstate',function(){if(isRoute()){if(document.body.classList.contains('album-page-active'))load(false);}else if(document.body.classList.contains('album-page-active'))close();});
   window.addEventListener('hashchange',function(){if(isRoute()){if(document.body.classList.contains('album-page-active'))load(false);}else if(document.body.classList.contains('album-page-active'))close();});
 })();
+
+
+/* Compartilhamento do perfil público. */
+;(function(){
+  'use strict';
+  var button=document.getElementById('profilePageShare');
+  if(!button)return;
+
+  function currentProfileUrl(){
+    try{
+      var url=new URL(window.location.href);
+      if(/^\/@[^/?#]+$/i.test(url.pathname)||/^\/(?:pt-br|en-us|es)\/@[^/?#]+$/i.test(url.pathname)){
+        url.search='';
+        url.hash='';
+      }
+      return url.toString();
+    }catch(_){return String(window.location.href||'');}
+  }
+
+  function copyText(text){
+    if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function(resolve,reject){
+      try{
+        var field=document.createElement('textarea');
+        field.value=text;
+        field.setAttribute('readonly','');
+        field.style.position='fixed';
+        field.style.opacity='0';
+        field.style.pointerEvents='none';
+        document.body.appendChild(field);
+        field.select();
+        var ok=document.execCommand('copy');
+        field.remove();
+        if(ok)resolve();else reject(new Error('copy_failed'));
+      }catch(error){reject(error);}
+    });
+  }
+
+  function showCopiedFeedback(){
+    var originalTitle=button.getAttribute('title')||'Compartilhar perfil';
+    button.setAttribute('title','Link copiado!');
+    button.setAttribute('aria-label','Link do perfil copiado');
+    button.classList.add('is-copied');
+    window.setTimeout(function(){
+      button.setAttribute('title',originalTitle);
+      button.setAttribute('aria-label','Compartilhar perfil');
+      button.classList.remove('is-copied');
+    },1800);
+  }
+
+  button.addEventListener('click',async function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    var url=currentProfileUrl();
+    var name=document.getElementById('profilePageName');
+    var title=(name&&String(name.textContent||'').trim())||'Perfil';
+    try{
+      if(navigator.share){
+        await navigator.share({title:title,url:url});
+        return;
+      }
+      await copyText(url);
+      showCopiedFeedback();
+    }catch(error){
+      if(error&&error.name==='AbortError')return;
+      try{await copyText(url);showCopiedFeedback();}catch(_){ }
+    }
+  });
+})();

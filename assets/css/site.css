@@ -11546,3 +11546,98 @@ body.profile-page-active .profile-page-social-link.is-instagram svg{fill:none;st
 
 /* Oculta o @ no cabeçalho do perfil; o username permanece somente na URL pública. */
 body.profile-page-active .profile-page-handle{display:none!important}
+
+
+/* Botão de compartilhar perfil ao lado de Home, notificações e menu. */
+.profile-page-share{display:none}
+body.profile-page-active .profile-page-share.is-copied{
+  border-color:rgba(255,255,255,.34)!important;
+  background:rgba(49,51,55,.94)!important;
+}
+
+@media(min-width:761px){
+  body.profile-page-active .profile-page-home,
+  body.profile-page-active .profile-page-notifications,
+  body.profile-page-active .profile-page-share,
+  body.profile-page-active .profile-page-more{
+    display:grid!important;
+    position:absolute!important;
+    top:auto!important;
+    bottom:22px!important;
+    left:auto!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    margin:0!important;
+    padding:0!important;
+    border:1px solid rgba(255,255,255,.14)!important;
+    border-radius:50%!important;
+    background:rgba(21,22,24,.82)!important;
+    color:#fff!important;
+    box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.055)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(120%)!important;
+    backdrop-filter:blur(14px) saturate(120%)!important;
+    place-items:center!important;
+    pointer-events:auto!important;
+    z-index:8!important;
+  }
+  body.profile-page-active .profile-page-home{right:calc(clamp(24px,3vw,46px) + 174px)!important}
+  body.profile-page-active .profile-page-notifications{right:calc(clamp(24px,3vw,46px) + 116px)!important}
+  body.profile-page-active .profile-page-share{right:calc(clamp(24px,3vw,46px) + 58px)!important}
+  body.profile-page-active .profile-page-more{right:clamp(24px,3vw,46px)!important}
+  body.profile-page-active .profile-page-home:hover,
+  body.profile-page-active .profile-page-notifications:hover,
+  body.profile-page-active .profile-page-share:hover,
+  body.profile-page-active .profile-page-more:hover{
+    background:rgba(42,43,46,.92)!important;
+    border-color:rgba(255,255,255,.26)!important;
+  }
+  body.profile-page-active .profile-page-home svg,
+  body.profile-page-active .profile-page-notifications svg,
+  body.profile-page-active .profile-page-share svg,
+  body.profile-page-active .profile-page-more svg{
+    display:block!important;
+    width:21px!important;
+    height:21px!important;
+    margin:auto!important;
+  }
+  body.profile-viewer-guest.profile-page-active .profile-page-home{
+    right:calc(clamp(24px,3vw,46px) + 58px)!important;
+  }
+  body.profile-viewer-guest.profile-page-active .profile-page-share{
+    right:clamp(24px,3vw,46px)!important;
+  }
+}
+
+@media(max-width:760px){
+  body.profile-page-active .profile-page-share{
+    display:grid!important;
+    position:absolute!important;
+    top:var(--profile-mobile-action-top,calc(22px + env(safe-area-inset-top)))!important;
+    right:calc(var(--profile-mobile-action-edge,16px) + (var(--profile-mobile-action-size,46px) + var(--profile-mobile-action-gap,10px)) * 2)!important;
+    left:auto!important;
+    width:var(--profile-mobile-action-size,46px)!important;
+    height:var(--profile-mobile-action-size,46px)!important;
+    min-width:var(--profile-mobile-action-size,46px)!important;
+    min-height:var(--profile-mobile-action-size,46px)!important;
+    margin:0!important;
+    padding:0!important;
+    border:1px solid rgba(255,255,255,.13)!important;
+    border-radius:50%!important;
+    background:rgba(25,25,26,.78)!important;
+    color:#fff!important;
+    box-shadow:0 10px 28px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.06)!important;
+    -webkit-backdrop-filter:blur(4px)!important;
+    backdrop-filter:blur(4px)!important;
+    place-items:center!important;
+    z-index:10021!important;
+  }
+  body.profile-page-active .profile-page-share svg{width:21px!important;height:21px!important;margin:auto!important}
+  body.profile-page-active .mobile-header-actions{
+    right:calc(var(--profile-mobile-action-edge,16px) + (var(--profile-mobile-action-size,46px) + var(--profile-mobile-action-gap,10px)) * 3)!important;
+  }
+  body.profile-viewer-guest.profile-page-active .profile-page-share{
+    right:var(--profile-mobile-action-edge,16px)!important;
+  }
+}
