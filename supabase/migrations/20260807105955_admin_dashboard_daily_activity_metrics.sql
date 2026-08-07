@@ -55,13 +55,13 @@ begin
   select count(*)::int into v_today_users
   from public.user_daily_activity where visit_date=v_today;
 
-  select coalesce(jsonb_agg(jsonb_build_object('date',d.day,'users',coalesce(a.cnt,0)) order by d.day),'[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('date',d.day_date,'users',coalesce(a.cnt,0)) order by d.day_date),'[]'::jsonb)
   into v_weekly
-  from (select generate_series(v_today-6,v_today,interval '1 day')::date day) d
+  from (select generate_series(v_today - 6, v_today, interval '1 day')::date as day_date) d
   left join (
     select visit_date,count(*)::int cnt from public.user_daily_activity
     where visit_date between v_today-6 and v_today group by visit_date
-  ) a on a.visit_date=d.day;
+  ) a on a.visit_date=d.day_date;
 
   select coalesce(jsonb_object_agg(collection,item),'{}'::jsonb) into v_top_saved
   from (
