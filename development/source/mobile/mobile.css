@@ -361,6 +361,19 @@
 
 /* Correção final: avatar e o contorno externo são círculos perfeitos. */
 @media (max-width:760px){
+  body:not(.login-mode):not(.admin-mode){
+    --mobile-header-h:80px;
+  }
+  body:not(.login-mode):not(.admin-mode) .mobile-profile-button{
+    width:60px;
+    height:60px;
+    min-width:60px;
+    min-height:60px;
+    flex:0 0 60px;
+  }
+}
+
+@media (max-width:760px){
   .mobile-profile-button,
   .mobile-profile-button > span,
   .mobile-drawer-avatar{
