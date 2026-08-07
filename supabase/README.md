@@ -27,7 +27,7 @@ A função `functions/create-donation-checkout` exige o segredo `STRIPE_SECRET_K
 
 ### Visão administrativa de doações
 
-A função `get_admin_donation_overview` só pode ser executada por usuários autenticados com função de administrador. Ela lista checkouts iniciados, usuário, ONG, valor escolhido, mínimo aplicado e indicadores agregados. Os valores exibidos não significam pagamento concluído até a Stripe confirmar a transação.
+A função `get_admin_donation_overview` só pode ser executada por usuários autenticados com função de administrador. Ela mantém no histórico todos os checkouts iniciados, incluindo criados e cancelados, mas calcula os indicadores agregados somente com pagamentos confirmados pela Stripe (`status = 'paid'`).
 
 ## Tradução automática
 

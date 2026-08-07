@@ -40,6 +40,22 @@ As versões abaixo devem permanecer no repositório para evitar o aviso **Remote
 - `20260806175116` — `translation_worker_table_grants`
 - `20260806182129` — `automatic_content_translation_jobs`
 - `20260806182205` — `fix_translation_job_permissions`
+- `20260806195000` — `fix_avatar_selection_detection`
+- `20260806202546` — `preserve_spanish_official_titles`
+- `20260806223500` — `keep_album_song_titles_original_in_spanish`
+- `20260806225000` — `restore_original_titles_in_spanish_translation`
+- `20260806225316` — `restore_original_titles_in_spanish_translation`
+- `20260806231019` — `preserve_concert_video_titles_in_spanish`
+- `20260806232521` — `sync_uploaded_snapshot_translation_rules`
+- `20260806233240` — `preserve_concert_and_behind_the_scenes_titles`
+- `20260806234000` — `preserve_concert_and_behind_the_scenes_titles`
+- `20260806234218` — `preserve_hit_me_hard_and_soft_title`
+- `20260806235500` — `preserve_hit_me_hard_and_soft_title`
+- `20260807003802` — `fan_community_wall`
+- `20260807004527` — `fan_wall_selected_profile_media`
+- `20260807004619` — `harden_fan_admin_rpc_grants`
+- `20260807004648` — `index_fan_admin_foreign_keys`
+- `20260807011544` — `count_only_paid_donations_in_admin_insights`
 
 Não renomeie, remova ou reutilize versões que já foram aplicadas no projeto remoto.
 As migrations marcadas como `noop` são registros históricos intencionais e precisam continuar no diretório local.
