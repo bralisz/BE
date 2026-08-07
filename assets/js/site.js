@@ -7396,7 +7396,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
   var initialSkeletonPending=true,siteSkeletonHideTimer=0;
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
-  function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;var loading=q('authLoading');if(loading)loading.hidden=true;setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;}
+  function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
   function hideSiteSkeleton(){
     if(initialSkeletonPending){
       var remaining=Math.max(0,SITE_SKELETON_MIN_MS-(Date.now()-siteSkeletonStartedAt));
@@ -7707,7 +7707,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       authReady=true;
       if(authFlowBusy)return;
       if(user&&!(await enforceAccountAccess(user)))return;
-      if(isLegalRoute()){hideSiteSkeleton();showLegalRoute();return;}
+      if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();return;}
       if(!user){
         // Mantém o skeleton acima do catálogo até a ausência de sessão ser
         // confirmada. Isso impede que a Home apareça por alguns instantes.
@@ -7767,7 +7767,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function startAuthentication(){
-    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){hideSiteSkeleton();if(isLegalRoute())showLegalRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}console.error('Falha ao iniciar autenticação:',error);}
+    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}console.error('Falha ao iniciar autenticação:',error);}
   }
 
   document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode(isPasswordRecoveryRoute()?'recovery':'email');startAuthentication()});

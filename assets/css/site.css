@@ -11219,3 +11219,22 @@ body.site-loading-active.legal-page-active > #legalPage{
     display:block!important;
   }
 }
+
+/* Boot atômico das páginas legais no recarregamento.
+   Não altera a duração global do skeleton: apenas impede que a página legal
+   e o botão Home apareçam antes do fim do carregamento já existente. */
+html.legal-route-boot body > :not(#authLoading):not(script):not(style){
+  display:none!important;
+  visibility:hidden!important;
+}
+html.legal-route-boot body > #authLoading{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+html.legal-route-boot #legalPage,
+html.legal-route-boot .legal-page-header,
+html.legal-route-boot .legal-home-button{
+  display:none!important;
+  visibility:hidden!important;
+}

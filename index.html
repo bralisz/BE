@@ -29,13 +29,61 @@
 <meta name="twitter:image" content="https://i.imgur.com/tnBMpHr.png">
 <meta name="twitter:image:alt" content="Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar">
 <link rel="canonical" href="https://billieilishtv.site/">
-<link rel="icon" href="/assets/icons/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
+<link id="betvFaviconAny" rel="icon" href="/assets/icons/favicon.ico?v=20260807-default-tab-v3" sizes="any">
+<link id="betvFavicon32" rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png?v=20260807-default-tab-v3">
+<link id="betvFavicon16" rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png?v=20260807-default-tab-v3">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20260807-default-tab-v3">
+<script>
+(function(){
+  'use strict';
+  var DEFAULT_ICON={
+    any:'/assets/icons/favicon.ico?v=20260807-default-tab-v3',
+    i32:'/assets/icons/favicon-32x32.png?v=20260807-default-tab-v3',
+    i16:'/assets/icons/favicon-16x16.png?v=20260807-default-tab-v3'
+  };
+  var HOME_PC_ICON={
+    any:'/assets/icons/favicon-home-pc.ico?v=20260807-home-pc-v1',
+    i32:'/assets/icons/favicon-home-pc-32x32.png?v=20260807-home-pc-v1',
+    i16:'/assets/icons/favicon-home-pc-16x16.png?v=20260807-home-pc-v1'
+  };
+  function localizedPath(){
+    var raw=String(location.pathname||'/').replace(/\/+$/,'')||'/';
+    raw=raw.toLowerCase();
+    if(/^\/(?:pt-br|en-us|es)$/.test(raw))return '/';
+    return raw.replace(/^\/(?:pt-br|en-us|es)(?=\/)/,'')||'/';
+  }
+  function isDesktopHome(){
+    var desktop=!(window.matchMedia&&window.matchMedia('(max-width:760px)').matches);
+    return desktop&&localizedPath()==='/'&&!String(location.hash||'');
+  }
+  function setHref(id,href){var node=document.getElementById(id);if(node&&node.getAttribute('href')!==href)node.setAttribute('href',href);}
+  function sync(){
+    var icons=isDesktopHome()?HOME_PC_ICON:DEFAULT_ICON;
+    setHref('betvFaviconAny',icons.any);setHref('betvFavicon32',icons.i32);setHref('betvFavicon16',icons.i16);
+  }
+  window.BETVSyncTabIcon=sync;
+  sync();
+  window.addEventListener('popstate',sync);
+  window.addEventListener('hashchange',sync);
+  window.addEventListener('pageshow',sync);
+  if(window.matchMedia){var mq=window.matchMedia('(max-width:760px)');if(mq.addEventListener)mq.addEventListener('change',sync);else if(mq.addListener)mq.addListener(sync);}
+})();
+</script>
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#050816">
 <script src="/assets/js/locale-routing.js?rev=20260806-password-avatar-v1"></script>
+<script>
+(function(){
+  try{
+    var path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';
+    var hash=String(location.hash||'').toLowerCase();
+    var legal=/^\/(?:terms|privacy|cookies|dmca)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca)$/i.test(hash);
+    if(!legal)return;
+    document.documentElement.classList.add('legal-route-boot');
+    window.__beLegalBootStartedAt=Date.now();
+  }catch(_){ }
+})();
+</script>
 <script>
 (function(){
   try{
@@ -78,6 +126,13 @@ html.config-route-boot body > #authLoading{display:block!important;visibility:vi
 html.config-route-boot #authLoading[hidden]{display:block!important;visibility:visible!important;opacity:1!important}
 html.config-route-boot #authLoading .site-loading-skeleton{display:block!important;visibility:visible!important;opacity:1!important}
 html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.config-route-boot body.settings-page-active > #profilePage,html.config-route-boot body.settings-page-active > #settingsPage{display:none!important;visibility:hidden!important}
+html.legal-route-boot{background:#030405!important}
+html.legal-route-boot body{background:#030405!important;overflow:hidden!important}
+html.legal-route-boot body > :not(#authLoading):not(script):not(style){display:none!important;visibility:hidden!important}
+html.legal-route-boot body > #authLoading{display:block!important;visibility:visible!important;opacity:1!important;z-index:2147483647!important}
+html.legal-route-boot #authLoading[hidden]{display:block!important;visibility:visible!important;opacity:1!important}
+html.legal-route-boot #authLoading .site-loading-skeleton{display:block!important;visibility:visible!important;opacity:1!important}
+html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.legal-route-boot .legal-home-button{display:none!important;visibility:hidden!important}
 @media (min-width:901px){.fans-page-intro{max-width:min(1320px,calc(100vw - 120px))}.fans-page-intro h1{white-space:nowrap;font-size:clamp(42px,4.8vw,76px)}}
 </style>
 <script>
@@ -115,10 +170,10 @@ html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.co
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-album-search-player-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-legal-reload-atomic-v3">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260807-ong-copy-v2"></script>
-<script defer src="/assets/js/site.js?rev=20260807-album-images-no-description-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260807-legal-reload-atomic-v3"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
