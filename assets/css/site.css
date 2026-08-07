@@ -11246,7 +11246,7 @@ body.login-mode .login-topbar{
   align-items:center!important;
 }
 body.login-mode .login-brand{
-  min-width:126px!important;
+  min-width:124px!important;
   height:74px!important;
   display:inline-flex!important;
   align-items:center!important;
@@ -11254,7 +11254,7 @@ body.login-mode .login-brand{
   line-height:0!important;
 }
 body.login-mode .login-brand img{
-  width:126px!important;
+  width:124px!important;
   height:auto!important;
   max-width:none!important;
   max-height:74px!important;
@@ -11268,18 +11268,18 @@ body.login-mode .login-brand img{
     align-items:center!important;
   }
   body.login-mode .login-brand{
-    min-width:126px!important;
+    min-width:124px!important;
     height:74px!important;
   }
   body.login-mode .login-brand img{
-    width:126px!important;
+    width:124px!important;
     height:auto!important;
     max-height:74px!important;
   }
 }
 @media (max-width:380px){
-  body.login-mode .login-brand{min-width:116px!important;}
-  body.login-mode .login-brand img{width:116px!important;}
+  body.login-mode .login-brand{min-width:114px!important;}
+  body.login-mode .login-brand img{width:114px!important;}
 }
 @media (min-width:761px){
   .home-logo-pill .logo-mark{
