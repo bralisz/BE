@@ -5,7 +5,7 @@ const MAX_REDIRECTS = 3;
 const REQUEST_TIMEOUT_MS = 12000;
 const DEFAULT_SUPABASE_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const ALLOWED_COLLECTIONS = new Set(['contents', 'featured', 'gallery', 'movies', 'notifications', 'ongs', 'sections', 'series', 'videos']);
+const ALLOWED_COLLECTIONS = new Set(['contents', 'featured', 'gallery', 'movies', 'news', 'notifications', 'ongs', 'sections', 'series', 'videos']);
 const ALLOWED_MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl', 'shareImage', 'portraitUrl']);
 
 const SUPABASE_RUNTIME_SOURCES = [
@@ -22,6 +22,7 @@ const ALLOWED_HOSTS = new Set([
   'encrypted-tbn0.gstatic.com',
   'fycextras.com',
   'i.imgur.com',
+  'i.scdn.co',
   'i.pinimg.com',
   'i.ytimg.com',
   'i0.wp.com',
@@ -42,7 +43,7 @@ const ALLOWED_SUFFIXES = [
   '.bamgrid.com', '.billboard.com', '.cloudfront.net', '.ctfassets.net',
   '.discordapp.com', '.googleusercontent.com', '.gstatic.com', '.hollywoodreporter.com',
   '.hotstar.com', '.imgur.com', '.media-amazon.com', '.nflxso.net',
-  '.pinimg.com', '.themoviedb.org', '.theplaylist.net', '.tmdb.org',
+  '.pinimg.com', '.scdn.co', '.spotifycdn.com', '.themoviedb.org', '.theplaylist.net', '.tmdb.org',
   '.wikimedia.org', '.wp.com', '.ytimg.com'
 ];
 
