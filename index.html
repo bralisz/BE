@@ -41,7 +41,7 @@
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260807-community-label-v1';
+    var href='/assets/i18n/'+slug+'.json?rev=20260807-ong-copy-v2';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -117,7 +117,7 @@ html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.co
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260807-album-search-player-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260807-albums-singles-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260807-ong-copy-v2"></script>
 <script defer src="/assets/js/site.js?rev=20260807-album-images-no-description-v2"></script>
 </head>
 <body class="site-loading-active">
