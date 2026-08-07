@@ -11543,3 +11543,6 @@ body.profile-page-active .profile-page-social-link.is-instagram svg{fill:none;st
   .settings-social-heading{margin-bottom:18px}
   .settings-social-actions .settings-button{width:100%;min-width:0}
 }
+
+/* Oculta o @ no cabeçalho do perfil; o username permanece somente na URL pública. */
+body.profile-page-active .profile-page-handle{display:none!important}
