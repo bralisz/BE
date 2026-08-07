@@ -2971,12 +2971,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="video-rail album-home-rail" tabindex="0" aria-label="${escapeHtml(localizedUiText('Álbuns & Singles'))}">
           ${records.map(album => {
             const title = String(album.title || 'Álbum').trim();
-            const image = album.imageUrl || album.thumbnailUrl || album.bannerUrl || '';
+            const image = directImageUrlValue(album.imageUrl || album.thumbnailUrl || album.bannerUrl || '');
             const type = String(album.type || 'Álbum');
             const year = String(album.year || '');
             const route = localizedRoute('/albuns/' + encodeURIComponent(String(album.id || '')));
             return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml('/albuns/' + encodeURIComponent(String(album.id || '')))}" aria-label="${escapeHtml(title)}">
-              <span class="album-home-cover">${image ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">` : '<i aria-hidden="true">♪</i>'}</span>
+              <span class="album-home-cover">${image ? `<img src="${directImageUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}</span>
               <strong class="notranslate" translate="no">${escapeHtml(title)}</strong>
               <small>${escapeHtml([localizedUiText(type), year].filter(Boolean).join(' • '))}</small>
             </a>`;
@@ -5257,6 +5257,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function safeAssetUrl(value) {
     return escapeHtml(safeAssetUrlValue(value));
+  }
+
+  function directImageUrlValue(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^\/(?!\/)/.test(raw)) return raw;
+    try {
+      const url = new URL(raw);
+      return url.protocol === 'https:' ? url.href : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function directImageUrl(value) {
+    return escapeHtml(directImageUrlValue(value));
   }
 
   function escapeHtml(value) {
@@ -10312,11 +10328,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var title=document.getElementById('albumDetailTitle');
   var type=document.getElementById('albumDetailType');
   var meta=document.getElementById('albumDetailMeta');
-  var description=document.getElementById('albumDetailDescription');
   var player=document.getElementById('albumDetailPlayer');
   var tracks=document.getElementById('albumTrackList');
   var back=document.getElementById('albumPageBack');
-  if(!page||!rail||!detail||!status||!cover||!title||!type||!meta||!description||!player||!tracks)return;
+  if(!page||!rail||!detail||!status||!cover||!title||!type||!meta||!player||!tracks)return;
 
   var records=[];
   var loaded=false;
@@ -10335,7 +10350,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function trackCountLabel(count){return count===1?t('1 música'):t('{count} músicas',{count:count});}
   function albumTypeLabel(value){return String(value||'').toLowerCase()==='single'?t('Single'):t('Álbum');}
   function normalize(value){return String(value==null?'':value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
-  function searchable(album){var albumTracks=Array.isArray(album&&album.tracks)?album.tracks:[];return normalize([album&&album.title,album&&album.type,album&&album.year,album&&album.description].concat(albumTracks.map(function(track){return track&&track.title;})).filter(Boolean).join(' '));}
+  function searchable(album){var albumTracks=Array.isArray(album&&album.tracks)?album.tracks:[];return normalize([album&&album.title,album&&album.type,album&&album.year].concat(albumTracks.map(function(track){return track&&track.title;})).filter(Boolean).join(' '));}
   function findBySearch(query){var normalized=normalize(query);if(!normalized)return null;return records.find(function(album){return searchable(album).includes(normalized);})||null;}
   function setSearchContext(active){
     var desktop=document.getElementById('homeSearchInput');
@@ -10350,7 +10365,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var albumTitle=String(album.title||'Álbum');
       var albumImage=image(album.imageUrl||album.thumbnailUrl||album.bannerUrl);
       return '<a class="album-page-cover-card'+(active?' active':'')+'" href="'+esc(localized('/albuns/'+encodeURIComponent(String(album.id))))+'" data-album-id="'+esc(String(album.id))+'" aria-current="'+(active?'true':'false')+'">'+
-        '<span>'+(albumImage?'<img src="'+esc(albumImage)+'" alt="'+esc(albumTitle)+'" loading="lazy" decoding="async">':'<i aria-hidden="true">♪</i>')+'</span>'+
+        '<span>'+(albumImage?'<img src="'+esc(albumImage)+'" alt="'+esc(albumTitle)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer">':'<i aria-hidden="true">♪</i>')+'</span>'+
         '<strong class="notranslate" translate="no">'+esc(albumTitle)+'</strong><small>'+esc([albumTypeLabel(album.type),String(album.year||'')].filter(Boolean).join(' • '))+'</small></a>';
     }).join('');
   }
@@ -10365,10 +10380,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     type.textContent=albumTypeLabel(album.type);
     title.textContent=albumTitle;
     meta.textContent=[String(album.year||''),trackCountLabel(albumTracks.length)].filter(Boolean).join(' • ');
-    description.textContent=String(album.description||'');
-    description.hidden=!description.textContent.trim();
     cover.src=albumImage||'/assets/images/profile/default-avatar.png';
     cover.alt=albumTitle;
+    cover.referrerPolicy='no-referrer';
     player.href=playerUrl||'#';
     player.hidden=!playerUrl;
     player.setAttribute('aria-label',t('Ouvir álbum'));

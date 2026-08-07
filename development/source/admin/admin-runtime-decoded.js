@@ -1242,9 +1242,11 @@ document.head.appendChild(s);
     draw();
   }
 
-  function imageField(label, name, value = '') {
+  function imageField(label, name, value = '', options = {}) {
     const safe = esc(value);
-    return `<div class="field full image-url-field"><label>${label}</label><div class="image-source-hint">Cole uma URL pública (https://...) ou use um arquivo publicado em <code>/assets/...</code>.</div><div class="image-input-row"><input class="a-input image-url-input" name="${name}" value="${safe}" placeholder="/assets/banners/exemplo.webp ou https://..."><button class="a-btn image-clear" type="button">Limpar</button></div><div class="image-validation" aria-live="polite"></div><div class="image-preview-wrap" ${value ? '' : 'hidden'}><img loading="lazy" decoding="async" class="preview image-live-preview" src="${esc(media(value))}" alt="Prévia de ${esc(label)}"></div></div>`;
+    const directMedia = options.directMedia === true;
+    const previewSource = directMedia ? String(value || '').trim() : media(value);
+    return `<div class="field full image-url-field"${directMedia ? ' data-direct-media="true"' : ''}><label>${label}</label><div class="image-source-hint">Cole uma URL pública (https://...) ou use um arquivo publicado em <code>/assets/...</code>.</div><div class="image-input-row"><input class="a-input image-url-input" name="${name}" value="${safe}" placeholder="/assets/banners/exemplo.webp ou https://..."><button class="a-btn image-clear" type="button">Limpar</button></div><div class="image-validation" aria-live="polite"></div><div class="image-preview-wrap" ${value ? '' : 'hidden'}><img loading="lazy" decoding="async" referrerpolicy="no-referrer" class="preview image-live-preview" src="${esc(previewSource)}" alt="Prévia de ${esc(label)}"></div></div>`;
   }
 
   function editorFields(name, item = {}, context = {}) {
@@ -1445,7 +1447,7 @@ document.head.appendChild(s);
           validation.classList.add('err');
           return;
         }
-        preview.src = media(value);
+        preview.src = field.dataset.directMedia === 'true' ? value : media(value);
         wrap.hidden = false;
         validation.textContent = value.startsWith('http') ? 'Imagem externa' : 'Imagem da pasta assets';
         validation.classList.add('ok');
@@ -1536,14 +1538,13 @@ document.head.appendChild(s);
           <div class="field full"><label>Nome oficial *</label><input class="a-input" name="title" required maxlength="160" value="${esc(item.title || '')}" placeholder="Ex.: HIT ME HARD AND SOFT"><small>Este texto não será traduzido no site.</small></div>
           <div class="field"><label>Tipo *</label><select class="a-select" name="type"><option value="Álbum" ${albumType === 'Álbum' ? 'selected' : ''}>Álbum</option><option value="Single" ${albumType === 'Single' ? 'selected' : ''}>Single</option></select></div>
           <div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}" inputmode="numeric" maxlength="4" placeholder="2024"></div>
-          <div class="field full"><label>Descrição</label><textarea class="a-textarea" rows="4" maxlength="1000" name="description" placeholder="Descrição opcional do lançamento">${esc(item.description || '')}</textarea><div class="field-counter"><span data-description-count>0</span>/1000</div></div>
         </div>
       </section>
 
       <section class="editor-field-group">
         <div class="editor-group-heading"><span>02</span><div><h3>Capa e player</h3><p>A capa aparece na home e o botão de reprodução abre o serviço escolhido.</p></div></div>
         <div class="form-grid modern-form-grid">
-          ${imageField('Capa do álbum ou single *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}
+          ${imageField('Capa do álbum ou single *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '', { directMedia: true })}
           <div class="field full"><label>Link do player *</label><input class="a-input" name="contentUrl" required value="${esc(item.contentUrl || item.link || '')}" placeholder="https://open.spotify.com/... ou outro serviço"><small>Use um link HTTPS para Spotify, Apple Music, YouTube Music ou outro player.</small></div>
         </div>
       </section>
@@ -1622,7 +1623,6 @@ document.head.appendChild(s);
           <div class="album-admin-preview-copy">
             <small>Álbuns &amp; Singles</small>
             <strong class="notranslate" translate="no" data-preview-logo>Nome do álbum</strong>
-            <p data-preview-description>A descrição aparecerá aqui conforme você digitar.</p>
             <div><span data-preview-year>Ano</span><b>•</b><span data-preview-duration>0 músicas</span></div>
           </div>
           <ol class="album-admin-preview-tracks" data-album-preview-tracks><li><span>1</span><strong>Nome da faixa</strong><small>0:00</small></li></ol>
@@ -1671,7 +1671,8 @@ document.head.appendChild(s);
 
     const fieldValue = name => String(form.elements[name]?.value || '').trim();
     const setPreviewImage = (element, value, fallback) => {
-      element.style.backgroundImage = value ? `url("${media(value).replace(/"/g, '%22')}")` : '';
+      const source = name === 'news' ? String(value || '').trim() : media(value);
+      element.style.backgroundImage = source ? `url("${source.replace(/"/g, '%22')}")` : '';
       element.classList.toggle('has-image', Boolean(value));
       if (fallback) {
         const child = element.querySelector('span');
@@ -1692,7 +1693,7 @@ document.head.appendChild(s);
       } else {
         previewLogo.textContent = title;
       }
-      previewDescription.textContent = descriptionText;
+      if (previewDescription) previewDescription.textContent = descriptionText;
       previewYear.textContent = year;
       previewDuration.textContent = duration;
       if (descriptionCount && description) descriptionCount.textContent = String(description.value.length);
@@ -1942,7 +1943,7 @@ document.head.appendChild(s);
 
         if (name === 'news') {
           data.title = String(data.title || '').trim();
-          data.description = String(data.description || '').trim();
+          data.description = '';
           data.type = String(data.type || '').toLowerCase() === 'single' ? 'Single' : 'Álbum';
           data.contentUrl = String(data.contentUrl || '').trim();
           data.year = String(data.year || '').trim();
