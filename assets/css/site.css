@@ -9431,7 +9431,7 @@ body.donate-page-active{
   overflow-x:hidden;
   background:#070809;
 }
-body.donate-page-active > :not(#donatePage):not(footer):not(.ios-ban-toast):not(.betv-update-popup):not(script):not(style){display:none!important}
+body.donate-page-active > :not(#donatePage):not(#authLoading):not(footer):not(.ios-ban-toast):not(.betv-update-popup):not(script):not(style){display:none!important}
 body.donate-page-active #donatePage{display:block!important}
 body.donate-page-active > footer{
   display:block!important;
@@ -11881,4 +11881,22 @@ body.profile-page-active .profile-page-share svg{
     text-underline-offset:3px!important;
     opacity:1!important;
   }
+}
+
+
+/* /ong reload mobile: mantém o skeleton acima da página até a liberação atômica.
+   O tempo mínimo continua controlado por __beSiteSkeletonMinimumMs (2000 ms). */
+body.site-loading-active.donate-page-active > #authLoading{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147483647!important;
+  pointer-events:auto!important;
+}
+body.site-loading-active.donate-page-active > #donatePage,
+body.site-loading-active.donate-page-active > footer{
+  visibility:hidden!important;
+  pointer-events:none!important;
 }
