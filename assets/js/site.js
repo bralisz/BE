@@ -49,7 +49,7 @@
 
   var root=document.documentElement;
   var releaseVersion=0;
-  var CONFIG_SKELETON_MIN_MS=5000;
+  var CONFIG_SKELETON_MIN_MS=2000;
   var configBootStartedAt=Number(window.__beConfigBootStartedAt||Date.now());
 
   function configRouteActive(){
@@ -68,7 +68,10 @@
 
   function revealConfigPage(){
     clearConfigBootTimer();
-    root.classList.remove('config-route-boot');
+    root.classList.remove('config-route-boot','site-loading-active');
+    if(document.body)document.body.classList.remove('site-loading-active');
+    var loading=document.getElementById('authLoading');
+    if(loading)loading.hidden=true;
   }
 
   function afterTwoFrames(){
@@ -7205,11 +7208,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(location.hash.startsWith('#/admin')||initialCallbackDestination==='admin') return;
 
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
-  var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||5000);
+  var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
   var initialSkeletonPending=true,siteSkeletonHideTimer=0;
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
-  function releaseSiteSkeleton(){var loading=q('authLoading');if(loading)loading.hidden=true;setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;}
+  function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;var loading=q('authLoading');if(loading)loading.hidden=true;setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;}
   function hideSiteSkeleton(){
     if(initialSkeletonPending){
       var remaining=Math.max(0,SITE_SKELETON_MIN_MS-(Date.now()-siteSkeletonStartedAt));
@@ -8486,9 +8489,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var updateStarted = false;
   var intervalId = 0;
   var UPDATE_COPY = {
-    'pt-br': { available:'Atualização disponível', ready:'Uma nova versão do site está pronta.', action:'Atualizar', updating:'Atualizando o site', syncing:'Limpando o cache sem remover sua conta ou preferências.' },
-    'en-us': { available:'Update available', ready:'A new version of the site is ready.', action:'Update', updating:'Updating the site', syncing:'Clearing the cache without removing your account or preferences.' },
-    'es': { available:'Actualización disponible', ready:'Hay una nueva versión del sitio lista.', action:'Actualizar', updating:'Actualizando el sitio', syncing:'Limpiando la caché sin eliminar tu cuenta ni tus preferencias.' }
+    'pt-br': { available:'Atualização disponível', ready:'Uma nova versão do site está pronta.', action:'Atualizar', updating:'Atualizando a nova versão' },
+    'en-us': { available:'Update available', ready:'A new version of the site is ready.', action:'Update', updating:'Updating to the new version' },
+    'es': { available:'Actualización disponible', ready:'Hay una nueva versión del sitio lista.', action:'Actualizar', updating:'Actualizando a la nueva versión' }
   };
 
   function updateLocaleSlug() {
@@ -8757,10 +8760,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var copy = updateCopy();
     var element = createPopup();
     var button = element.querySelector('.betv-update-action');
+    var title = element.querySelector('.betv-update-copy strong');
     var subtitle = element.querySelector('.betv-update-copy span');
-    button.disabled = true;
-    button.textContent = copy.updating;
-    subtitle.textContent = copy.syncing;
+    element.setAttribute('aria-label',copy.updating);
+    if(title)title.textContent=copy.updating;
+    if(subtitle)subtitle.hidden=true;
+    if(button){button.disabled=true;button.hidden=true;}
 
     Promise.resolve()
       .then(clearBrowserCaches)
