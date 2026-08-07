@@ -8715,6 +8715,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   var ENDPOINT = '/api/deployment-version';
   var CHECK_INTERVAL = 60000;
+  var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var currentVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || '').trim();
   var latestVersion = '';
   var popup = null;
@@ -8738,10 +8739,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return UPDATE_COPY[updateLocaleSlug()] || UPDATE_COPY['pt-br'];
   }
 
+  function readPendingUpdate() {
+    var value = '';
+    try { value = String(window.localStorage.getItem(PENDING_UPDATE_KEY) || '').trim(); } catch (_) {}
+    if (value) return value;
+    try { value = String(window.sessionStorage.getItem(PENDING_UPDATE_KEY) || '').trim(); } catch (_) {}
+    return value;
+  }
+
+  function persistPendingUpdate(version) {
+    version = String(version || '').trim();
+    if (!version) return;
+    try { window.localStorage.setItem(PENDING_UPDATE_KEY, version); } catch (_) {}
+    try { window.sessionStorage.setItem(PENDING_UPDATE_KEY, version); } catch (_) {}
+  }
+
+  function clearPendingUpdate() {
+    try { window.localStorage.removeItem(PENDING_UPDATE_KEY); } catch (_) {}
+    try { window.sessionStorage.removeItem(PENDING_UPDATE_KEY); } catch (_) {}
+  }
+
   function cleanUpdateParameter() {
     try {
       var url = new URL(window.location.href);
       if (!url.searchParams.has('__betv_update')) return;
+      clearPendingUpdate();
       url.searchParams.delete('__betv_update');
       url.searchParams.delete('_');
       window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
@@ -8749,7 +8771,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function createPopup() {
-    if (popup) return popup;
+    if (popup && document.body.contains(popup)) return popup;
 
     var copy = updateCopy();
     var element = document.createElement('aside');
@@ -8775,11 +8797,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return element;
   }
 
-  function showPopup(version) {
-    if (!version || version === currentVersion || updateStarted) return;
-    latestVersion = version;
-    var element = createPopup();
+  function forcePopupVisible(element) {
+    if (!element) return;
     element.hidden = false;
+    // Mantém o aviso acima de qualquer página/rota que esconda outros filhos do body.
+    element.style.setProperty('display', 'grid', 'important');
+    element.style.setProperty('visibility', 'visible', 'important');
+  }
+
+  function showPopup(version, force) {
+    version = String(version || '').trim();
+    if (!version || updateStarted) return;
+    if (!force && version === currentVersion) return;
+    latestVersion = version;
+    persistPendingUpdate(version);
+    forcePopupVisible(createPopup());
+  }
+
+  function restorePendingUpdate() {
+    var pending = readPendingUpdate();
+    if (!pending || updateStarted) return;
+    showPopup(pending, true);
   }
 
   function fetchLatestVersion() {
@@ -8801,12 +8839,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var version = String(data && data.version || '').trim();
         if (!version || version.indexOf('local:') === 0) return;
 
+        var pending = readPendingUpdate();
+        if (pending) {
+          // Se outro deploy saiu enquanto o aviso estava pendente, atualiza o aviso
+          // para a versão mais nova sem fazê-lo sumir ao trocar de página.
+          showPopup(version, true);
+          return;
+        }
+
         if (!currentVersion) {
           currentVersion = version;
           return;
         }
 
-        if (version !== currentVersion) showPopup(version);
+        if (version !== currentVersion) showPopup(version, false);
       })
       .catch(function () {})
       .finally(function () { checking = false; });
@@ -9006,26 +9052,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       .finally(function () {
         try {
           var url = new URL(window.location.href);
-          url.searchParams.set('__betv_update', latestVersion || String(Date.now()));
+          url.searchParams.set('__betv_update', latestVersion || readPendingUpdate() || String(Date.now()));
           url.searchParams.set('_', String(Date.now()));
           window.location.replace(url.href);
         } catch (_) {
+          clearPendingUpdate();
           window.location.reload();
         }
       });
   }
 
   function scheduleChecks() {
+    restorePendingUpdate();
     window.setTimeout(fetchLatestVersion, 3000);
     intervalId = window.setInterval(fetchLatestVersion, CHECK_INTERVAL);
 
-    window.addEventListener('focus', fetchLatestVersion, { passive: true });
+    window.addEventListener('focus', function () {
+      restorePendingUpdate();
+      fetchLatestVersion();
+    }, { passive: true });
     window.addEventListener('online', fetchLatestVersion, { passive: true });
     window.addEventListener('pageshow', function (event) {
+      restorePendingUpdate();
       if (event.persisted) fetchLatestVersion();
     });
+    window.addEventListener('popstate', restorePendingUpdate, { passive: true });
+    window.addEventListener('hashchange', restorePendingUpdate, { passive: true });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible') fetchLatestVersion();
+      if (document.visibilityState === 'visible') {
+        restorePendingUpdate();
+        fetchLatestVersion();
+      }
     });
   }
 
@@ -9041,7 +9098,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (intervalId) window.clearInterval(intervalId);
   }, { once: true });
 })();
-
 
 
 ;/* Página dedicada: Quem é Billie Eilish. */
