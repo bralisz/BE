@@ -754,7 +754,7 @@ document.head.appendChild(s);
   function chooseContentCategory() {
     const wrap = document.createElement('div');
     wrap.className = 'modal-backdrop';
-    wrap.innerHTML = `<div class="modal category-modal"><h2>Adicionar conteúdo</h2><p class="category-help">Escolha em qual categoria o novo conteúdo será cadastrado.</p><div class="category-picker">${CONTENT_CATEGORIES.map(([key,label,icon]) => `<button type="button" data-category="${key}" ${key === 'news' ? 'disabled aria-disabled="true"' : ''}><i>${icon}</i><span>${label}</span><small>${key === 'news' ? 'Em breve' : 'Criar novo item'}</small></button>`).join('')}</div><div class="modal-actions"><button type="button" class="a-btn" id="cancelCategory">Cancelar</button></div></div>`;
+    wrap.innerHTML = `<div class="modal category-modal"><h2>Adicionar conteúdo</h2><p class="category-help">Escolha em qual categoria o novo conteúdo será cadastrado.</p><div class="category-picker">${CONTENT_CATEGORIES.map(([key,label,icon]) => `<button type="button" data-category="${key}"><i>${icon}</i><span>${label}</span><small>${key === 'news' ? 'Adicionar álbum ou single' : 'Criar novo item'}</small></button>`).join('')}</div><div class="modal-actions"><button type="button" class="a-btn" id="cancelCategory">Cancelar</button></div></div>`;
     document.body.append(wrap);
     $('#cancelCategory').onclick = () => wrap.remove();
     wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
@@ -796,11 +796,11 @@ document.head.appendChild(s);
     const isFeatured = active === 'featured';
     const isAlbums = active === 'news';
     const isVideoFolders = active === 'videos';
-    const buttonText = isAlbums ? 'Álbuns em breve' : (isFeatured ? '+ Adicionar destaque' : '+ Adicionar conteúdo');
+    const buttonText = isAlbums ? '+ Adicionar álbum ou single' : (isFeatured ? '+ Adicionar destaque' : '+ Adicionar conteúdo');
     const sidebarCategories = `<div class="content-category-list">${CONTENT_CATEGORIES.map(([key,categoryLabel,icon]) => `<button class="content-category-link ${key === active ? 'active' : ''}" data-content-category="${key}"><i>${icon}</i><span>${categoryLabel}</span><b>${counts[key] || 0}</b></button>`).join('')}</div>`;
     const featuredBlock = `<div class="content-featured-block"><small>Vitrine da home</small><button class="content-category-link featured-link ${isFeatured ? 'active' : ''}" data-content-category="featured"><i>★</i><span>Destaque</span><b>${counts.featured || 0}</b></button></div>`;
-    content.innerHTML = `<div class="admin-title-row content-title-row"><div><span class="dashboard-kicker">Conteúdos</span><h1>${esc(label)}</h1><p>${isFeatured ? 'Escolha os conteúdos que aparecem no destaque principal da home.' : (isVideoFolders ? 'Os vídeos estão organizados pelas seções às quais foram vinculados.' : 'Gerencie os conteúdos separados por categoria.')}</p></div><button class="a-btn primary" id="newContent" ${isAlbums ? 'disabled' : ''}>${buttonText}</button></div><section class="content-manager"><aside class="content-category-sidebar"><h2>Categorias</h2>${sidebarCategories}${featuredBlock}</aside><div class="content-category-panel"><div class="toolbar"><input class="a-input" id="search" placeholder="${isFeatured ? 'Buscar destaque…' : (isVideoFolders ? 'Buscar seção ou vídeo…' : 'Buscar por título…')}"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="admin-inline-skeleton"><i></i><i></i><i></i></div></div></div></section>`;
-    if ($('#newContent') && !isAlbums) $('#newContent').onclick = () => isFeatured ? openEditor('featured') : chooseContentCategory();
+    content.innerHTML = `<div class="admin-title-row content-title-row"><div><span class="dashboard-kicker">Conteúdos</span><h1>${esc(label)}</h1><p>${isFeatured ? 'Escolha os conteúdos que aparecem no destaque principal da home.' : (isAlbums ? 'Cadastre álbuns e singles, organize as faixas e defina o link externo do player.' : (isVideoFolders ? 'Os vídeos estão organizados pelas seções às quais foram vinculados.' : 'Gerencie os conteúdos separados por categoria.'))}</p></div><button class="a-btn primary" id="newContent">${buttonText}</button></div><section class="content-manager"><aside class="content-category-sidebar"><h2>Categorias</h2>${sidebarCategories}${featuredBlock}</aside><div class="content-category-panel"><div class="toolbar"><input class="a-input" id="search" placeholder="${isFeatured ? 'Buscar destaque…' : (isVideoFolders ? 'Buscar seção ou vídeo…' : 'Buscar por título…')}"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="admin-inline-skeleton"><i></i><i></i><i></i></div></div></div></section>`;
+    if ($('#newContent')) $('#newContent').onclick = () => isFeatured ? openEditor('featured') : (isAlbums ? openEditor('news') : chooseContentCategory());
     document.querySelectorAll('[data-content-category]').forEach(button => button.onclick = () => {
       const next = button.dataset.contentCategory;
       go(next === 'featured' ? 'featured' : 'contents/' + next);
@@ -1469,7 +1469,7 @@ document.head.appendChild(s);
 
   const CONTENT_DRAFT_PREFIX = 'be_admin_content_draft_v3';
   const ACTIVE_CONTENT_EDITOR_KEY = 'be_admin_active_content_editor_v1';
-  const MODERN_CONTENT_COLLECTIONS = new Set(['videos','movies','series','shows']);
+  const MODERN_CONTENT_COLLECTIONS = new Set(['videos','movies','series','shows','news']);
 
   function contentDraftKey(name, item) {
     return `${CONTENT_DRAFT_PREFIX}:${name}:${item?.id || 'new'}`;
@@ -1510,7 +1510,66 @@ document.head.appendChild(s);
     return copy;
   }
 
+
+  function albumTracksValue(item = {}) {
+    const source = Array.isArray(item.tracks)
+      ? item.tracks
+      : (() => { try { return JSON.parse(String(item.tracksJson || '[]')); } catch (_) { return []; } })();
+    return source
+      .slice(0, 100)
+      .map((track, index) => ({
+        title: String(track?.title || track?.name || '').trim(),
+        duration: String(track?.duration || track?.time || '').trim(),
+        order: Number(track?.order ?? index) || index
+      }))
+      .filter(track => track.title || track.duration);
+  }
+
+  function albumContentEditorFields(item = {}) {
+    const tracks = albumTracksValue(item);
+    const tracksJson = JSON.stringify(tracks);
+    const albumType = String(item.type || '').toLowerCase() === 'single' ? 'Single' : 'Álbum';
+    return `<div class="content-editor-fields album-editor-fields">
+      <section class="editor-field-group">
+        <div class="editor-group-heading"><span>01</span><div><h3>Informações do lançamento</h3><p>Os nomes oficiais do álbum, single e das faixas serão preservados em todos os idiomas.</p></div></div>
+        <div class="form-grid modern-form-grid">
+          <div class="field full"><label>Nome oficial *</label><input class="a-input" name="title" required maxlength="160" value="${esc(item.title || '')}" placeholder="Ex.: HIT ME HARD AND SOFT"><small>Este texto não será traduzido no site.</small></div>
+          <div class="field"><label>Tipo *</label><select class="a-select" name="type"><option value="Álbum" ${albumType === 'Álbum' ? 'selected' : ''}>Álbum</option><option value="Single" ${albumType === 'Single' ? 'selected' : ''}>Single</option></select></div>
+          <div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}" inputmode="numeric" maxlength="4" placeholder="2024"></div>
+          <div class="field full"><label>Descrição</label><textarea class="a-textarea" rows="4" maxlength="1000" name="description" placeholder="Descrição opcional do lançamento">${esc(item.description || '')}</textarea><div class="field-counter"><span data-description-count>0</span>/1000</div></div>
+        </div>
+      </section>
+
+      <section class="editor-field-group">
+        <div class="editor-group-heading"><span>02</span><div><h3>Capa e player</h3><p>A capa aparece na home e o botão de reprodução abre o serviço escolhido.</p></div></div>
+        <div class="form-grid modern-form-grid">
+          ${imageField('Capa do álbum ou single *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}
+          <div class="field full"><label>Link do player *</label><input class="a-input" name="contentUrl" required value="${esc(item.contentUrl || item.link || '')}" placeholder="https://open.spotify.com/... ou outro serviço"><small>Use um link HTTPS para Spotify, Apple Music, YouTube Music ou outro player.</small></div>
+        </div>
+      </section>
+
+      <section class="editor-field-group album-track-field-group">
+        <div class="editor-group-heading"><span>03</span><div><h3>Faixas</h3><p>Adicione o nome oficial e a duração de cada música na ordem correta.</p></div></div>
+        <input type="hidden" name="tracksJson" value="${esc(tracksJson)}">
+        <input type="hidden" name="duration" value="${esc(item.duration || (tracks.length ? `${tracks.length} músicas` : ''))}">
+        <div class="album-track-editor" data-album-track-editor>
+          <div class="album-track-list" data-album-track-list></div>
+          <button type="button" class="a-btn album-track-add" data-album-track-add>+ Adicionar faixa</button>
+        </div>
+      </section>
+
+      <section class="editor-field-group">
+        <div class="editor-group-heading"><span>04</span><div><h3>Publicação</h3><p>Defina a posição na seção fixa da home e a visibilidade.</p></div></div>
+        <div class="form-grid modern-form-grid compact-fields">
+          <div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>
+          <div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div>
+        </div>
+      </section>
+    </div>`;
+  }
+
   function modernContentEditorFields(name, item = {}, context = {}) {
+    if (name === 'news') return albumContentEditorFields(item);
     const sections = context.sections || [];
     const sectionLinked = ['videos','movies','series'].includes(name);
     const isVisualTitle = ['movies','series'].includes(name);
@@ -1555,6 +1614,22 @@ document.head.appendChild(s);
   }
 
   function modernContentPreview(name) {
+    if (name === 'news') {
+      return `<aside class="content-live-preview album-live-preview" aria-label="Prévia do álbum">
+        <div class="preview-pane-heading"><div><span>Preview ao vivo</span><strong>Álbum no site</strong></div><i data-draft-indicator>Rascunho protegido</i></div>
+        <div class="album-admin-preview">
+          <div class="album-admin-cover" data-preview-hero data-preview-card><span>Imagem da capa</span></div>
+          <div class="album-admin-preview-copy">
+            <small>Álbuns &amp; Singles</small>
+            <strong class="notranslate" translate="no" data-preview-logo>Nome do álbum</strong>
+            <p data-preview-description>A descrição aparecerá aqui conforme você digitar.</p>
+            <div><span data-preview-year>Ano</span><b>•</b><span data-preview-duration>0 músicas</span></div>
+          </div>
+          <ol class="album-admin-preview-tracks" data-album-preview-tracks><li><span>1</span><strong>Nome da faixa</strong><small>0:00</small></li></ol>
+        </div>
+        <div class="preview-help"><span>✓</span><p>Os nomes oficiais permanecem iguais em português, inglês e espanhol.</p></div>
+      </aside>`;
+    }
     const label = ({ videos:'Vídeo', movies:'Filme', series:'Série', shows:'Show' })[name] || 'Conteúdo';
     return `<aside class="content-live-preview" aria-label="Prévia do conteúdo">
       <div class="preview-pane-heading"><div><span>Preview ao vivo</span><strong>Como ficará no site</strong></div><i data-draft-indicator>Rascunho protegido</i></div>
@@ -1672,11 +1747,83 @@ document.head.appendChild(s);
     };
   }
 
+
+  function setupAlbumTrackEditor(root) {
+    const form = $('#editorForm', root);
+    const editor = $('[data-album-track-editor]', root);
+    const list = $('[data-album-track-list]', root);
+    const addButton = $('[data-album-track-add]', root);
+    const hidden = form?.elements?.tracksJson;
+    const durationField = form?.elements?.duration;
+    const preview = $('[data-album-preview-tracks]', root);
+    if (!form || !editor || !list || !addButton || !hidden) return;
+
+    let tracks = [];
+    try { tracks = albumTracksValue({ tracks: JSON.parse(String(hidden.value || '[]')) }); }
+    catch (_) { tracks = []; }
+    if (!tracks.length) tracks = [{ title: '', duration: '', order: 0 }];
+
+    const previewMarkup = () => {
+      const visible = tracks.filter(track => track.title || track.duration).slice(0, 8);
+      if (!visible.length) return '<li><span>1</span><strong>Nome da faixa</strong><small>0:00</small></li>';
+      return visible.map((track, index) => `<li><span>${index + 1}</span><strong class="notranslate" translate="no">${esc(track.title || 'Nome da faixa')}</strong><small>${esc(track.duration || '0:00')}</small></li>`).join('');
+    };
+
+    const sync = (notify = true) => {
+      tracks = tracks.map((track, index) => ({
+        title: String(track.title || '').trimStart(),
+        duration: String(track.duration || '').trim(),
+        order: index
+      }));
+      hidden.value = JSON.stringify(tracks);
+      const count = tracks.filter(track => String(track.title || '').trim()).length;
+      if (durationField) durationField.value = `${count} ${count === 1 ? 'música' : 'músicas'}`;
+      const previewDuration = $('[data-preview-duration]', root);
+      if (previewDuration) previewDuration.textContent = durationField?.value || '0 músicas';
+      if (preview) preview.innerHTML = previewMarkup();
+      if (notify) hidden.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    const render = (focusIndex = -1) => {
+      list.innerHTML = tracks.map((track, index) => `<div class="album-track-row" data-track-index="${index}">
+        <span class="album-track-number">${index + 1}</span>
+        <label><span>Nome da faixa</span><input class="a-input album-track-title-input" maxlength="200" value="${esc(track.title || '')}" placeholder="Nome oficial da música"></label>
+        <label><span>Duração</span><input class="a-input album-track-duration-input" maxlength="20" value="${esc(track.duration || '')}" placeholder="3:42" inputmode="text"></label>
+        <button type="button" class="album-track-remove" aria-label="Remover faixa" title="Remover faixa">×</button>
+      </div>`).join('');
+      sync(false);
+      if (focusIndex >= 0) list.querySelector(`[data-track-index="${focusIndex}"] .album-track-title-input`)?.focus();
+    };
+
+    list.addEventListener('input', event => {
+      const row = event.target.closest('[data-track-index]');
+      if (!row) return;
+      const index = Number(row.dataset.trackIndex);
+      if (!tracks[index]) return;
+      tracks[index].title = row.querySelector('.album-track-title-input')?.value || '';
+      tracks[index].duration = row.querySelector('.album-track-duration-input')?.value || '';
+      sync(true);
+    });
+    list.addEventListener('click', event => {
+      const button = event.target.closest('.album-track-remove');
+      if (!button) return;
+      const row = button.closest('[data-track-index]');
+      const index = Number(row?.dataset.trackIndex);
+      if (!Number.isFinite(index)) return;
+      tracks.splice(index, 1);
+      if (!tracks.length) tracks.push({ title: '', duration: '', order: 0 });
+      render(Math.min(index, tracks.length - 1));
+      sync(true);
+    });
+    addButton.addEventListener('click', () => {
+      tracks.push({ title: '', duration: '', order: tracks.length });
+      render(tracks.length - 1);
+      sync(true);
+    });
+    render();
+  }
+
   async function openEditor(name, item = null, defaults = {}) {
-    if (name === 'news') {
-      toast('A área de Álbuns será configurada em uma próxima etapa.');
-      return;
-    }
     const storedDraft = MODERN_CONTENT_COLLECTIONS.has(name) ? readContentDraft(name, item) : null;
     const draft = { ...(item ? { ...item } : { ...defaults }), ...(storedDraft ? normalizedDraftData(storedDraft.data) : {}) };
     if (name === 'videos' && !normalizePublicId(draft.publicId)) draft.publicId = generatePublicId(item?.id || '');
@@ -1754,6 +1901,7 @@ document.head.appendChild(s);
     setupImagePreviews(root);
     if (name === 'featured') setupFeaturedContentPicker(root, context, draft);
     if (modernEditor) draftController = setupModernContentEditor(root, name, item, draftKey, storedDraft);
+    if (name === 'news') setupAlbumTrackEditor(root);
 
     if (['videos','movies','series'].includes(name)) {
       const search = $('#contentSectionSearch', root);
@@ -1791,6 +1939,35 @@ document.head.appendChild(s);
             : data.category.trim().toLowerCase().replace(/\s+/g, '-');
         }
         if (name === 'gallery') data.itemType = data.itemType === 'banner' ? 'banner' : 'avatar';
+
+        if (name === 'news') {
+          data.title = String(data.title || '').trim();
+          data.description = String(data.description || '').trim();
+          data.type = String(data.type || '').toLowerCase() === 'single' ? 'Single' : 'Álbum';
+          data.contentUrl = String(data.contentUrl || '').trim();
+          data.year = String(data.year || '').trim();
+          if (!data.title) throw new Error('Informe o nome oficial do álbum ou single.');
+          if (!String(data.imageUrl || '').trim()) throw new Error('Adicione a capa do álbum ou single.');
+          if (!/^https:\/\//i.test(data.contentUrl)) throw new Error('Informe um link HTTPS válido para o player.');
+          let tracks;
+          try { tracks = JSON.parse(String(data.tracksJson || '[]')); }
+          catch (_) { throw new Error('Não foi possível ler a lista de faixas.'); }
+          tracks = (Array.isArray(tracks) ? tracks : []).slice(0, 100).map((track, index) => ({
+            title: String(track?.title || '').trim(),
+            duration: String(track?.duration || '').trim(),
+            order: index
+          })).filter(track => track.title || track.duration);
+          if (!tracks.length) throw new Error('Adicione pelo menos uma faixa.');
+          const incomplete = tracks.find(track => !track.title || !track.duration);
+          if (incomplete) throw new Error('Preencha o nome e a duração de todas as faixas.');
+          data.tracks = tracks;
+          data.duration = `${tracks.length} ${tracks.length === 1 ? 'música' : 'músicas'}`;
+          data.bannerUrl = String(data.imageUrl || '').trim();
+          data.category = 'albums-singles';
+          data.translations = {};
+          delete data.tracksJson;
+          delete data.link;
+        }
         if (name === 'ongs') {
           data.title = String(data.title || '').trim();
           data.description = String(data.description || '').trim();
@@ -2651,6 +2828,37 @@ document.head.appendChild(s);
     .community-admin-empty{border:1px dashed var(--a-line);border-radius:16px}
     @media(max-width:1050px){.community-admin-layout{grid-template-columns:1fr}.community-form-card{position:relative;top:auto}}
     @media(max-width:700px){.community-title-row>a{width:100%;text-align:center}.dashboard-settings-form{padding:15px}.community-admin-banner{height:102px}}
+  `;
+  document.head.appendChild(style);
+})();
+
+
+/* Editor de Álbuns & Singles */
+(() => {
+  if (document.getElementById('be-admin-album-style')) return;
+  const style = document.createElement('style');
+  style.id = 'be-admin-album-style';
+  style.textContent = `
+    .album-track-editor{display:grid;gap:14px}
+    .album-track-list{display:grid;gap:10px}
+    .album-track-row{display:grid;grid-template-columns:38px minmax(0,1fr) 132px 42px;gap:10px;align-items:end;padding:12px;border:1px solid var(--a-line);border-radius:15px;background:rgba(2,8,19,.36)}
+    .album-track-number{align-self:center;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:rgba(61,140,255,.13);color:#91bfff;font-weight:850}
+    .album-track-row label{display:grid;gap:6px;min-width:0;color:var(--a-muted);font-size:11px;font-weight:750}
+    .album-track-remove{width:40px;height:40px;border:1px solid rgba(255,107,122,.25);border-radius:11px;background:rgba(255,107,122,.08);color:#ff9aa5;font-size:22px;cursor:pointer}
+    .album-track-add{justify-self:start}
+    .album-admin-preview{overflow:hidden;border:1px solid rgba(125,181,255,.15);border-radius:18px;background:#080b10}
+    .album-admin-cover{aspect-ratio:1;width:min(220px,66%);margin:22px auto 14px;border-radius:12px;background:#111824 center/cover no-repeat;display:grid;place-items:center;color:var(--a-muted);overflow:hidden}
+    .album-admin-cover.has-image span{display:none}
+    .album-admin-preview-copy{padding:0 20px 18px;display:grid;gap:7px}
+    .album-admin-preview-copy>small{color:#73aaff;font-size:10px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+    .album-admin-preview-copy>strong{font-size:24px;line-height:1.06;color:#fff}
+    .album-admin-preview-copy>p{margin:0;color:var(--a-muted);line-height:1.45;font-size:12px}
+    .album-admin-preview-copy>div{display:flex;align-items:center;gap:7px;color:#aab5c5;font-size:11px}
+    .album-admin-preview-tracks{list-style:none;margin:0;padding:0 16px 18px;display:grid}
+    .album-admin-preview-tracks li{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:9px;align-items:center;padding:9px 4px;border-top:1px solid rgba(255,255,255,.06)}
+    .album-admin-preview-tracks li span,.album-admin-preview-tracks li small{color:#8f9aac;font-size:10px}
+    .album-admin-preview-tracks li strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+    @media(max-width:760px){.album-track-row{grid-template-columns:32px minmax(0,1fr) 86px 38px;gap:7px;padding:9px}.album-track-number{width:27px;height:27px}.album-track-remove{width:36px;height:40px}}
   `;
   document.head.appendChild(style);
 })();

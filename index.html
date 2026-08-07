@@ -115,10 +115,10 @@ html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.co
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-mobile-route-footer-v3">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-albums-singles-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260807-community-label-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260807-mobile-route-footer-v3"></script>
+<script defer src="/assets/js/i18n.js?rev=20260807-albums-singles-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260807-albums-singles-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -987,6 +987,38 @@ html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.co
     <div class="donate-supporters-list fans-page-list" id="fansPageList"></div>
     <div class="donate-supporters-sentinel fans-page-sentinel" id="fansPageSentinel" role="status" aria-live="polite" hidden></div>
   </main>
+</section>
+<section class="album-page-shell" id="albumPage" hidden aria-label="Álbuns e singles" aria-hidden="true">
+  <div class="album-page-inner">
+    <header class="album-page-heading">
+      <div>
+        <span>Discografia</span>
+        <h1>Álbuns &amp; Singles</h1>
+      </div>
+    </header>
+    <div class="album-page-cover-rail" id="albumPageRail" aria-label="Escolha um álbum"></div>
+    <div class="album-page-status" id="albumPageStatus" role="status" aria-live="polite">Carregando álbuns…</div>
+    <article class="album-page-detail" id="albumPageDetail" hidden>
+      <header class="album-detail-hero">
+        <div class="album-detail-cover-wrap">
+          <img class="album-detail-cover" id="albumDetailCover" src="" alt="" loading="eager" decoding="async">
+        </div>
+        <div class="album-detail-copy">
+          <span id="albumDetailType">Álbum</span>
+          <h2 class="notranslate" translate="no" id="albumDetailTitle"></h2>
+          <p id="albumDetailMeta"></p>
+          <p id="albumDetailDescription"></p>
+        </div>
+        <a class="album-detail-player" id="albumDetailPlayer" href="#" target="_blank" rel="noopener noreferrer" aria-label="Ouvir álbum" title="Ouvir álbum">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"></path></svg>
+        </a>
+      </header>
+      <div class="album-track-heading" aria-hidden="true">
+        <span>#</span><span>Faixa</span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v5l3 2"></path></svg>
+      </div>
+      <ol class="album-track-list" id="albumTrackList"></ol>
+    </article>
+  </div>
 </section>
 <section class="legal-page-shell" id="legalPage" hidden aria-label="Informações legais do BETV">
   <header class="legal-page-header">

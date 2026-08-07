@@ -18,7 +18,7 @@
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v4';
-  var STATIC_REV='20260807-community-label-v1';
+  var STATIC_REV='20260807-albums-singles-v1';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}

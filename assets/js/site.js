@@ -18,6 +18,7 @@
     if(name==='suporte'||name==='support')return '/suporte';
     if(['ong','ongs'].indexOf(name)!==-1)return '/ong';
     if(['fas','fãs','fans'].indexOf(name)!==-1)return '/fãs';
+    if(['albuns','álbuns','albums'].indexOf(name)!==-1)return '/albuns'+(parts[1]?'/'+encodeURIComponent(parts[1]):'');
     if(name==='billie'||name==='billie-eilish'||name==='quem-e-billie')return '/billie-eilish';
     if(name==='video'&&parts[1])return '/'+encodeURIComponent(parts[1]);
     if((name==='perfil'||name==='profile')&&parts[1])return '/'+String(parts[1]).replace(/^@?/, '@');
@@ -82,7 +83,7 @@
       settings.setAttribute('aria-hidden','false');
     }
     if(body){
-      body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','detail-page-active','section-catalog-active');
+      body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active','section-catalog-active');
       body.classList.add('settings-page-active');
     }
   }
@@ -2705,15 +2706,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const sections = (await beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }))
       .filter(section => section.active !== false);
-    const [videoRows, movieRows, seriesRows, featuredRows] = await Promise.all([
+    const [videoRows, movieRows, seriesRows, featuredRows, albumRows] = await Promise.all([
       beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
       beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => []),
       beBackend.data.list('series', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => [])
+      beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => []),
+      beBackend.data.list('news', { orderBy: 'order', direction: 'asc' }).catch(() => [])
     ]);
     const allVideos = videoRows.filter(video => video.active !== false);
     const allMovies = movieRows.filter(movie => movie.active !== false);
     const allSeries = seriesRows.filter(series => series.active !== false);
+    const allAlbums = albumRows.filter(album => album.active !== false);
     randomFeaturedPools.videos = allVideos.map(item => ({ ...item, collection: 'videos' }));
     randomFeaturedPools.movies = allMovies.map(item => ({ ...item, collection: 'movies' }));
     randomFeaturedPools.series = allSeries.map(item => ({ ...item, collection: 'series' }));
@@ -2757,7 +2760,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         };
       })
       .filter(Boolean);
-    if (!sections.length && !featuredContents.length) return;
+    if (!sections.length && !featuredContents.length && !allAlbums.length) return;
 
     const old = document.getElementById('dynamicSections');
     if (old) old.remove();
@@ -2906,6 +2909,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     await addBillieHomeSpotlight(host);
+    await addAlbumsHomeSection(host, allAlbums);
     await addDonateHomeSpotlight(host);
     main.insertAdjacentElement('afterend', host);
     setupContentDetailInteractions(host);
@@ -2940,6 +2944,53 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
   }
 
+
+
+  async function addAlbumsHomeSection(host, albums) {
+    if (!host || host.querySelector('.album-home-section')) return;
+    const records = (Array.isArray(albums) ? albums : [])
+      .filter(album => album && album.active !== false && String(album.title || '').trim())
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || String(a.title || '').localeCompare(String(b.title || ''), 'pt-BR'));
+    if (!records.length) return;
+
+    const localizedRoute = path => window.BETVLocaleURL ? window.BETVLocaleURL(path) : path;
+    const block = document.createElement('section');
+    block.className = 'video-rail-section album-home-section';
+    block.dataset.category = 'albuns-singles';
+    block.dataset.collection = 'news';
+    block.dataset.homeView = 'default';
+    block.innerHTML = `
+      <a class="video-rail-title album-home-title" href="${escapeHtml(localizedRoute('/albuns'))}" data-open-albums="true" aria-label="${escapeHtml(localizedUiText('Ver todos: Álbuns & Singles'))}">
+        <span>${escapeHtml(localizedUiText('Álbuns & Singles'))}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </a>
+      <div class="video-rail-shell album-home-shell">
+        <button class="video-rail-arrow prev" type="button" aria-label="${escapeHtml(localizedUiText('Ver álbuns anteriores'))}" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="video-rail album-home-rail" tabindex="0" aria-label="${escapeHtml(localizedUiText('Álbuns & Singles'))}">
+          ${records.map(album => {
+            const title = String(album.title || 'Álbum').trim();
+            const image = album.imageUrl || album.thumbnailUrl || album.bannerUrl || '';
+            const type = String(album.type || 'Álbum');
+            const year = String(album.year || '');
+            const route = localizedRoute('/albuns/' + encodeURIComponent(String(album.id || '')));
+            return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml('/albuns/' + encodeURIComponent(String(album.id || '')))}" aria-label="${escapeHtml(title)}">
+              <span class="album-home-cover">${image ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">` : '<i aria-hidden="true">♪</i>'}</span>
+              <strong class="notranslate" translate="no">${escapeHtml(title)}</strong>
+              <small>${escapeHtml([localizedUiText(type), year].filter(Boolean).join(' • '))}</small>
+            </a>`;
+          }).join('')}
+        </div>
+        <button class="video-rail-arrow next" type="button" aria-label="${escapeHtml(localizedUiText('Ver mais álbuns'))}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>`;
+    const billie = host.querySelector('.billie-home-spotlight');
+    if (billie) billie.insertAdjacentElement('afterend', block);
+    else host.append(block);
+    setupRail(block);
+  }
 
   async function addDonateHomeSpotlight(host) {
     if (!host || host.querySelector('.donate-home-spotlight')) return;
@@ -3318,6 +3369,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (!section) return;
         event.preventDefault();
         event.stopPropagation();
+        if (title.matches('[data-open-albums]')) {
+          const url = new URL(title.href || '/albuns', location.origin);
+          history.pushState({ beRoute: '/albuns' }, '', url.pathname + (location.search || ''));
+          window.dispatchEvent(new PopStateEvent('popstate', { state: { beRoute: '/albuns' } }));
+          return;
+        }
 
         const originView = currentCatalogView();
         const originScrollY = Math.max(0, window.scrollY || 0);
@@ -7057,7 +7114,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       toggleDropdown(false);
       profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');
       settingsPage.hidden=true;settingsPage.setAttribute('hidden','');settingsPage.setAttribute('aria-hidden','true');settingsPage.dataset.renderReady='false';
-      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','detail-page-active');
+      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active');
       document.body.classList.add('settings-page-active');
       try{renderSettingsPage();}catch(error){console.error('Falha ao renderizar configurações:',error);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
       settingsPage.dataset.renderReady='true';
@@ -7367,22 +7424,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isDonateRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/ong'||hash==='#ong'||hash==='#/ong';}
   function isBillieRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/billie-eilish'||path==='/billie'||hash==='#billie-eilish'||hash==='#/billie-eilish'||hash==='#billie'||hash==='#/billie';}
   function isFansRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/fãs'||path==='/fas'||path==='/fans'||hash==='#fãs'||hash==='#/fãs'||hash==='#fas'||hash==='#/fas'||hash==='#fans'||hash==='#/fans';}
-  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
-  function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
-  function showDonateRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','support-page-active','fans-page-active','section-catalog-active');document.body.classList.add('donate-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-donate-page'));window.scrollTo(0,0);}
-  function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
-  function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','donate-page-active','fans-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
-  function showFansRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active');document.body.classList.add('fans-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-fans-page'));window.scrollTo(0,0);}
-  function showLogin(){if(window.BETVReleaseConfigPaint)window.BETVReleaseConfigPaint({immediate:true});document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(!isLoginRoute()||location.hash)replaceRoute('/login');}
+  function isAlbumsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:albuns|álbuns|albums)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:albuns|álbuns|albums)(?:\/|$)/i.test(hash);}
+  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
+  function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
+  function showDonateRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','support-page-active','fans-page-active','album-page-active','section-catalog-active');document.body.classList.add('donate-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-donate-page'));window.scrollTo(0,0);}
+  function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
+  function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
+  function showFansRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','album-page-active');document.body.classList.add('fans-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:open-fans-page'));window.scrollTo(0,0);}
+  function showAlbumsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('album-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-album-page'));window.scrollTo(0,0);}
+  function showLogin(){if(window.BETVReleaseConfigPaint)window.BETVReleaseConfigPaint({immediate:true});document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if(!isLoginRoute()||location.hash)replaceRoute('/login');}
   function showPasswordRecovery(message,type){
-    document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');
+    document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');
     document.body.classList.add('login-mode');
     setMode('recovery');
     if(message)setStatus(message,type||'');
     hideSiteSkeleton();
   }
-  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
-  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
+  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
+  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
     var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep'),recovery:q('passwordRecoveryStep')};
@@ -7491,6 +7550,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else if(isSupportRoute())showSupportRoute();
     else if(isBillieRoute())showBillieRoute();
     else if(isFansRoute())showFansRoute();
+    else if(isAlbumsRoute())showAlbumsRoute();
     else if(isConfigRoute()){enterConfig();hideSiteSkeleton();}
     else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}
     else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}
@@ -7641,6 +7701,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(isSupportRoute()){if(auth.currentUser)showSupportRoute();else showLogin();return;}
       if(isBillieRoute()){if(auth.currentUser)showBillieRoute();else showLogin();return;}
       if(isFansRoute()){if(auth.currentUser)showFansRoute();else showLogin();return;}
+      if(isAlbumsRoute()){if(auth.currentUser)showAlbumsRoute();else showLogin();return;}
       if(isLoginRoute()){if(auth.currentUser)enterHome();else showLogin();return;}
       if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}
       if(isVideoRoute()){if(auth.currentUser){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else showLogin();return;}
@@ -10201,4 +10262,102 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('popstate',function(){if(!isRoute()&&document.body.classList.contains('fans-page-active'))close();});
   window.addEventListener('hashchange',function(){if(!isRoute()&&document.body.classList.contains('fans-page-active'))close();});
   window.addEventListener('resize',function(){if(isRoute()&&!page.hidden)window.requestAnimationFrame(function(){window.scrollTo(0,window.scrollY);});});
+})();
+
+
+/* Página pública de Álbuns & Singles */
+;(function(){
+  'use strict';
+  var page=document.getElementById('albumPage');
+  var rail=document.getElementById('albumPageRail');
+  var detail=document.getElementById('albumPageDetail');
+  var status=document.getElementById('albumPageStatus');
+  var cover=document.getElementById('albumDetailCover');
+  var title=document.getElementById('albumDetailTitle');
+  var type=document.getElementById('albumDetailType');
+  var meta=document.getElementById('albumDetailMeta');
+  var description=document.getElementById('albumDetailDescription');
+  var player=document.getElementById('albumDetailPlayer');
+  var tracks=document.getElementById('albumTrackList');
+  if(!page||!rail||!detail||!status||!cover||!title||!type||!meta||!description||!player||!tracks)return;
+
+  var records=[];
+  var loaded=false;
+  var loading=null;
+  function esc(value){return String(value==null?'':value).replace(/[&<>\"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char];});}
+  function t(value,vars){return window.BETVI18n&&typeof window.BETVI18n.t==='function'?window.BETVI18n.t(value,vars):String(value||'').replace(/\{(\w+)\}/g,function(_,key){return vars&&vars[key]!=null?vars[key]:_;});}
+  function localized(path){return window.BETVLocaleURL?window.BETVLocaleURL(path):path;}
+  function cleanPath(){try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){return String(location.pathname||'/').replace(/\/+$/,'')||'/';}}
+  function routeId(){var match=cleanPath().match(/^\/(?:albuns|álbuns|albums)\/([^/]+)$/i);if(match){try{return decodeURIComponent(match[1]);}catch(_){return match[1];}}var hash=String(location.hash||'').match(/^#\/?(?:albuns|álbuns|albums)\/([^/?#]+)/i);if(!hash)return '';try{return decodeURIComponent(hash[1]);}catch(_){return hash[1];}}
+  function isRoute(){return /^\/(?:albuns|álbuns|albums)(?:\/[^/]+)?$/i.test(cleanPath())||/^#\/?(?:albuns|álbuns|albums)(?:\/|$)/i.test(String(location.hash||''));}
+  function navigate(path,replace){var target=localized(path);var url=new URL(target,location.origin);history[replace?'replaceState':'pushState']({beRoute:path},'',url.pathname+(location.search||''));window.dispatchEvent(new PopStateEvent('popstate',{state:{beRoute:path}}));}
+  function image(value){var raw=String(value||'').trim();if(!raw)return '';if(/^\/(?!\/)/.test(raw)||/^https:\/\//i.test(raw))return raw;return '';}
+  function href(value){var raw=String(value||'').trim();if(!raw)return '';try{var url=new URL(raw,location.origin);return url.protocol==='https:'?url.href:'';}catch(_){return '';}}
+  function trackCountLabel(count){return count===1?t('1 música'):t('{count} músicas',{count:count});}
+  function albumTypeLabel(value){return String(value||'').toLowerCase()==='single'?t('Single'):t('Álbum');}
+
+  function renderRail(selectedId){
+    rail.innerHTML=records.map(function(album){
+      var active=String(album.id)===String(selectedId);
+      var albumTitle=String(album.title||'Álbum');
+      var albumImage=image(album.imageUrl||album.thumbnailUrl||album.bannerUrl);
+      return '<a class="album-page-cover-card'+(active?' active':'')+'" href="'+esc(localized('/albuns/'+encodeURIComponent(String(album.id))))+'" data-album-id="'+esc(String(album.id))+'" aria-current="'+(active?'true':'false')+'">'+
+        '<span>'+(albumImage?'<img src="'+esc(albumImage)+'" alt="'+esc(albumTitle)+'" loading="lazy" decoding="async">':'<i aria-hidden="true">♪</i>')+'</span>'+
+        '<strong class="notranslate" translate="no">'+esc(albumTitle)+'</strong><small>'+esc([albumTypeLabel(album.type),String(album.year||'')].filter(Boolean).join(' • '))+'</small></a>';
+    }).join('');
+  }
+
+  function renderSelected(album){
+    if(!album){detail.hidden=true;status.hidden=false;status.textContent=t('Nenhum álbum ou single publicado.');return;}
+    var albumTracks=(Array.isArray(album.tracks)?album.tracks:[]).slice().sort(function(a,b){return Number(a&&a.order||0)-Number(b&&b.order||0);});
+    var albumTitle=String(album.title||'Álbum');
+    var albumImage=image(album.imageUrl||album.thumbnailUrl||album.bannerUrl);
+    var playerUrl=href(album.contentUrl||album.link);
+    type.textContent=albumTypeLabel(album.type);
+    title.textContent=albumTitle;
+    meta.textContent=[String(album.year||''),trackCountLabel(albumTracks.length)].filter(Boolean).join(' • ');
+    description.textContent=String(album.description||'');
+    description.hidden=!description.textContent.trim();
+    cover.src=albumImage||'/assets/images/profile/default-avatar.png';
+    cover.alt=albumTitle;
+    player.href=playerUrl||'#';
+    player.hidden=!playerUrl;
+    player.setAttribute('aria-label',t('Ouvir álbum'));
+    player.title=t('Ouvir álbum');
+    tracks.innerHTML=albumTracks.length?albumTracks.map(function(track,index){return '<li><span class="album-track-index">'+(index+1)+'</span><strong class="notranslate" translate="no">'+esc(track&&track.title||'')+'</strong><small>'+esc(track&&track.duration||'')+'</small></li>';}).join(''):'<li class="album-track-empty">'+esc(t('Nenhuma faixa cadastrada.'))+'</li>';
+    status.hidden=true;detail.hidden=false;
+    renderRail(album.id);
+    document.title='Billie Eilish TV';
+    if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(page);
+  }
+
+  async function load(force){
+    if(loading)return loading;
+    if(loaded&&!force){renderSelected(records.find(function(album){return String(album.id)===String(routeId());})||records[0]);return;}
+    status.hidden=false;status.textContent=t('Carregando álbuns…');detail.hidden=true;
+    loading=(async function(){
+      try{
+        if(!window.beBackend)throw new Error('backend_unavailable');
+        await window.beBackend.ready;
+        var values=await window.beBackend.data.list('news',{orderBy:'order',direction:'asc'});
+        records=(Array.isArray(values)?values:[]).filter(function(album){return album&&album.active!==false&&String(album.title||'').trim();}).sort(function(a,b){return Number(a.order||0)-Number(b.order||0)||String(a.title||'').localeCompare(String(b.title||''),'pt-BR');});
+        loaded=true;
+        renderSelected(records.find(function(album){return String(album.id)===String(routeId());})||records[0]);
+      }catch(error){console.warn('Não foi possível carregar os álbuns:',error);records=[];status.hidden=false;status.textContent=t('Não foi possível carregar os álbuns agora.');detail.hidden=true;}
+      finally{loading=null;}
+    })();
+    return loading;
+  }
+
+  function open(){document.body.classList.add('album-page-active');page.hidden=false;page.setAttribute('aria-hidden','false');document.title='Billie Eilish TV';load(false);}
+  function close(){document.body.classList.remove('album-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV';}
+
+  rail.addEventListener('click',function(event){var link=event.target.closest('[data-album-id]');if(!link)return;event.preventDefault();navigate('/albuns/'+encodeURIComponent(link.dataset.albumId),false);});
+  document.addEventListener('click',function(event){var link=event.target.closest('[data-album-route],[data-open-albums]');if(!link)return;if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();var path=link.getAttribute('data-album-route')||'/albuns';navigate(path,false);});
+  window.addEventListener('be:open-album-page',open);
+  window.addEventListener('be:close-album-page',close);
+  window.addEventListener('be:content-ready',function(){loaded=false;if(isRoute())load(true);});
+  window.addEventListener('be:i18n-ready',function(){if(!page.hidden){if(window.BETVI18n)window.BETVI18n.apply(page);renderSelected(records.find(function(album){return String(album.id)===String(routeId());})||records[0]);}});
+  window.addEventListener('popstate',function(){if(isRoute()){if(document.body.classList.contains('album-page-active'))load(false);}else if(document.body.classList.contains('album-page-active'))close();});
+  window.addEventListener('hashchange',function(){if(isRoute()){if(document.body.classList.contains('album-page-active'))load(false);}else if(document.body.classList.contains('album-page-active'))close();});
 })();

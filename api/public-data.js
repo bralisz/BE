@@ -3,13 +3,13 @@
 const DEFAULT_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const ALLOWED_COLLECTIONS = new Set([
-  'contents', 'featured', 'gallery', 'movies', 'notifications', 'ongs', 'sections', 'series', 'videos'
+  'contents', 'featured', 'gallery', 'movies', 'news', 'notifications', 'ongs', 'sections', 'series', 'videos'
 ]);
 const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
   'mediaType', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
-  'sourceCollection', 'thumbnailUrl', 'title', 'translations', 'type', 'videoDuration', 'videoId',
+  'sourceCollection', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
 ]);
 const MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl']);
@@ -99,6 +99,16 @@ function sanitizeItem(collection, row) {
   }
   for (const field of ['title', 'type', 'category', 'description', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? 4000 : 500);
+  }
+  if (Object.prototype.hasOwnProperty.call(source, 'tracks')) {
+    source.tracks = (Array.isArray(source.tracks) ? source.tracks : [])
+      .slice(0, 100)
+      .map((track, index) => ({
+        title: safeText(track && (track.title || track.name) || '', 200).trim(),
+        duration: safeText(track && (track.duration || track.time) || '', 30).trim(),
+        order: Number.isFinite(Number(track && track.order)) ? Number(track.order) : index
+      }))
+      .filter(track => track.title);
   }
   if (Object.prototype.hasOwnProperty.call(source, 'translations')) source.translations = sanitizeTranslations(source.translations);
   source.active = source.active !== false && String(source.active).toLowerCase() !== 'false';
