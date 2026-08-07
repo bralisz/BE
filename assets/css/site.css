@@ -11810,3 +11810,24 @@ body.profile-page-active .profile-page-share svg{
     left:auto!important;
   }
 }
+
+/* Link para os termos aplicado à área de apoio às ONGs. */
+.donate-intro .donate-terms-link{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  margin-top:10px;
+  color:#4da3ff;
+  font-size:14px;
+  font-weight:650;
+  line-height:1.35;
+  text-decoration:none;
+  transition:color .18s ease,opacity .18s ease;
+}
+.donate-intro .donate-terms-link:hover,
+.donate-intro .donate-terms-link:focus-visible{
+  color:#82c0ff;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  outline:none;
+}
