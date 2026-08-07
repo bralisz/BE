@@ -10741,6 +10741,21 @@ body.donate-page-active .donate-page-avatar>.betv-header-avatar-inner>img:not([h
 }
 .footer-fans-link:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(0,0,0,.3)}
 .footer-fans-link:focus-visible{outline:2px solid #fff;outline-offset:4px}
+.footer-fans-support-link{display:none}
+@media (min-width:901px){
+  body.fans-page-active .footer-fans-link:not(.footer-fans-support-link){display:none!important}
+  body.fans-page-active .footer-fans-support-link{
+    display:inline-flex!important;
+    border-color:#0a84ff!important;
+    color:#fff!important;
+    background:#0a84ff!important;
+    box-shadow:0 10px 26px rgba(10,132,255,.28)!important;
+  }
+  body.fans-page-active .footer-fans-support-link:hover{
+    background:#168cff!important;
+    box-shadow:0 14px 32px rgba(10,132,255,.36)!important;
+  }
+}
 
 .fans-page-shell{
   display:none;
