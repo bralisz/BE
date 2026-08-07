@@ -11641,3 +11641,50 @@ body.profile-page-active .profile-page-share.is-copied{
     right:var(--profile-mobile-action-edge,16px)!important;
   }
 }
+
+
+/* Ajuste final dos ícones do topo do perfil no mobile e centralização do botão de compartilhar. */
+body.profile-page-active .profile-page-share{
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+}
+body.profile-page-active .profile-page-share svg{
+  display:block!important;
+  width:21px!important;
+  height:21px!important;
+  margin:0!important;
+  transform:translateX(.5px)!important;
+  transform-origin:center center!important;
+}
+
+@media(max-width:760px){
+  body.profile-page-active{
+    --profile-mobile-action-edge:24px;
+    --profile-mobile-action-gap:10px;
+    --profile-mobile-action-size:46px;
+    --profile-mobile-action-top:calc(18px + env(safe-area-inset-top));
+  }
+  body.profile-page-active .profile-page-home,
+  body.profile-page-active .mobile-header-actions,
+  body.profile-page-active .profile-page-share,
+  body.profile-page-active .profile-page-more{
+    top:var(--profile-mobile-action-top)!important;
+  }
+  body.profile-page-active .profile-page-home{
+    left:var(--profile-mobile-action-edge)!important;
+    right:auto!important;
+  }
+  body.profile-page-active .mobile-header-actions{
+    right:calc(var(--profile-mobile-action-edge) + (var(--profile-mobile-action-size) + var(--profile-mobile-action-gap)) * 2)!important;
+    left:auto!important;
+  }
+  body.profile-page-active .profile-page-share{
+    right:calc(var(--profile-mobile-action-edge) + (var(--profile-mobile-action-size) + var(--profile-mobile-action-gap)))!important;
+    left:auto!important;
+  }
+  body.profile-page-active .profile-page-more{
+    right:var(--profile-mobile-action-edge)!important;
+    left:auto!important;
+  }
+}
