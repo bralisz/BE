@@ -1,0 +1,11 @@
+{
+  "name": "billie-eilish-tv",
+  "private": true,
+  "version": "2.112.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "sharp": "^0.34.1"
+  }
+}

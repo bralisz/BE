@@ -583,6 +583,23 @@
       ]
     },
     {
+      "source": "/api/profile-share-image",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300, s-maxage=900, stale-while-revalidate=86400"
+        },
+        {
+          "key": "Content-Type",
+          "value": "image/png"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
       "source": "/api/admin-runtime",
       "headers": [
         {
@@ -651,6 +668,9 @@
   "functions": {
     "api/site-page.js": {
       "includeFiles": "index.html"
+    },
+    "api/profile-share-image.js": {
+      "maxDuration": 20
     }
   },
   "redirects": [

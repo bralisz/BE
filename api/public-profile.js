@@ -105,7 +105,7 @@ async function fetchPublicProfile(username) {
   return sanitizeProfile(row);
 }
 
-module.exports = async function publicProfile(req, res) {
+async function publicProfile(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).end();
@@ -130,3 +130,8 @@ module.exports = async function publicProfile(req, res) {
     return res.status(503).end();
   }
 };
+
+module.exports = publicProfile;
+module.exports.fetchPublicProfile = fetchPublicProfile;
+module.exports.normalizeUsername = normalizeUsername;
+module.exports.validUsername = validUsername;

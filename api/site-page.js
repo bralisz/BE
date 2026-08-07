@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const LEGAL_TRANSLATIONS = require('../config/legal-translations');
+const PUBLIC_PROFILE_API = require('./public-profile');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
@@ -216,48 +217,96 @@ function isLegalRouteInfo(routeInfo) {
   return ['/terms', '/privacy', '/cookies', '/dmca'].includes(logical);
 }
 
-function injectSocialMetadata(html, settings, origin, routeInfo) {
-  const title = 'Billie Eilish TV';
+function profileUsernameFromRoute(routeInfo) {
+  const logicalPath = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
+  const match = logicalPath.match(/^\/@([^/]+)$/i);
+  if (!match) return '';
+  const username = PUBLIC_PROFILE_API.normalizeUsername(match[1]);
+  return PUBLIC_PROFILE_API.validUsername(username) ? username : '';
+}
+
+function profileShareVersion(profile) {
+  if (!profile) return '';
+  const source = JSON.stringify({
+    displayName: profile.displayName || '',
+    username: profile.username || '',
+    avatarUrl: profile.avatarUrl || '',
+    bannerUrl: profile.bannerUrl || '',
+    favorites: Array.isArray(profile.favorites)
+      ? profile.favorites.slice(0, 4).map(item => ({
+        title: item && item.title || '',
+        imageUrl: item && (item.imageUrl || item.bannerUrl) || '',
+        collection: item && item.collection || ''
+      }))
+      : []
+  });
+  return crypto.createHash('sha256').update(source).digest('hex').slice(0, 16);
+}
+
+function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile) {
+  const siteTitle = 'Billie Eilish TV';
   const defaults = {
     'pt-br': {
       description: 'Todo o conteúdo da Billie Eilish em um só lugar.',
-      imageAlt: 'Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar'
+      imageAlt: 'Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar',
+      profileDescription: name => `Veja os quatro conteúdos favoritos de ${name} na Billie Eilish TV.`,
+      profileImageAlt: name => `Perfil de ${name} com seus quatro conteúdos favoritos na Billie Eilish TV`
     },
     'en-us': {
       description: 'All Billie Eilish content in one place.',
-      imageAlt: 'Billie Eilish TV — all Billie Eilish content in one place'
+      imageAlt: 'Billie Eilish TV — all Billie Eilish content in one place',
+      profileDescription: name => `See ${name}'s four favorite picks on Billie Eilish TV.`,
+      profileImageAlt: name => `${name}'s profile with four favorite picks on Billie Eilish TV`
     },
     es: {
       description: 'Todo el contenido de Billie Eilish en un solo lugar.',
-      imageAlt: 'Billie Eilish TV — todo el contenido de Billie Eilish en un solo lugar'
+      imageAlt: 'Billie Eilish TV — todo el contenido de Billie Eilish en un solo lugar',
+      profileDescription: name => `Mira los cuatro contenidos favoritos de ${name} en Billie Eilish TV.`,
+      profileImageAlt: name => `Perfil de ${name} con sus cuatro contenidos favoritos en Billie Eilish TV`
     }
   };
   const fallback = defaults[routeInfo.slug] || defaults['pt-br'];
   const localizedSettings = settings.translations && typeof settings.translations === 'object'
     ? settings.translations[routeInfo.slug]
     : null;
-  const description = String(
+  const defaultDescription = String(
     (localizedSettings && localizedSettings.description) ||
     (routeInfo.slug === 'pt-br' && settings.description) ||
     fallback.description
   ).trim();
-  const socialDescription = description;
-  // O preview social do site é fixo e não pode ser substituído pelas configurações do painel.
-  const image = FIXED_SHARE_IMAGE_URL;
   const canonical = `${origin}${routeInfo.publicPath === '/' ? '/' : routeInfo.publicPath}`;
-  const imageAlt = fallback.imageAlt;
+
+  let documentTitle = siteTitle;
+  let socialTitle = siteTitle;
+  let socialDescription = defaultDescription;
+  let image = FIXED_SHARE_IMAGE_URL;
+  let imageAlt = fallback.imageAlt;
+  let ogType = 'website';
+
+  if (publicProfile && publicProfile.username) {
+    const displayName = String(publicProfile.displayName || publicProfile.username).trim().slice(0, 80);
+    const username = PUBLIC_PROFILE_API.normalizeUsername(publicProfile.username);
+    const version = profileShareVersion(publicProfile);
+    documentTitle = `${displayName} — ${siteTitle}`;
+    socialTitle = `${displayName} (@${username})`;
+    socialDescription = fallback.profileDescription(displayName);
+    imageAlt = fallback.profileImageAlt(displayName);
+    image = `${origin}/api/profile-share-image?username=${encodeURIComponent(username)}&v=${encodeURIComponent(version)}`;
+    ogType = 'profile';
+  }
 
   html = html
+    .replace(/<title>[^<]*<\/title>/i, `<title>${attr(documentTitle)}</title>`)
     .replace(/\s*<meta\s+(?:property=["']og:[^>]+|name=["']twitter:[^>]+)[^>]*>/gi, '')
     .replace(/\s*<link\s+rel=["']canonical["'][^>]*>/gi, '')
     .replace(/\s*<meta\s+name=["']description["'][^>]*>/gi, '');
 
   const metadata = `
-<meta name="description" content="${attr(description)}">
-<meta property="og:type" content="website">
+<meta name="description" content="${attr(socialDescription)}">
+<meta property="og:type" content="${attr(ogType)}">
 <meta property="og:locale" content="${attr(routeInfo.ogLocale)}">
-<meta property="og:site_name" content="${attr(title)}">
-<meta property="og:title" content="${attr(title)}">
+<meta property="og:site_name" content="${attr(siteTitle)}">
+<meta property="og:title" content="${attr(socialTitle)}">
 <meta property="og:description" content="${attr(socialDescription)}">
 <meta property="og:url" content="${attr(canonical)}">
 <meta property="og:image" content="${attr(image)}">
@@ -267,7 +316,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo) {
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="${attr(imageAlt)}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${attr(title)}">
+<meta name="twitter:title" content="${attr(socialTitle)}">
 <meta name="twitter:description" content="${attr(socialDescription)}">
 <meta name="twitter:image" content="${attr(image)}">
 <meta name="twitter:image:alt" content="${attr(imageAlt)}">
@@ -285,15 +334,22 @@ module.exports = async function sitePage(req, res) {
   try {
     const origin = publicOrigin(req);
     const routeInfo = routeLocaleInfo(req);
+    const profileUsername = profileUsernameFromRoute(routeInfo);
     const legalRequest = isLegalRouteInfo(routeInfo);
     const recoveryRequest = routeInfo.logicalPath === '/reset-password' || routeInfo.logicalPath === '/reset-password/';
     // Páginas legais são totalmente estáticas e localizadas no servidor.
     // Não aguardam o Supabase, reduzindo o tempo de resposta em cache frio.
-    const settings = (legalRequest || recoveryRequest) ? (settingsCache.value || {}) : await loadSettings();
+    const settings = (legalRequest || recoveryRequest || profileUsername) ? (settingsCache.value || {}) : await loadSettings();
+    let publicProfile = null;
+    if (profileUsername) {
+      try {
+        publicProfile = await PUBLIC_PROFILE_API.fetchPublicProfile(profileUsername);
+      } catch (_) {}
+    }
     const html = injectDeploymentVersion(
       injectLocalePreload(
         localizeStaticText(
-          injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo),
+          injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo, publicProfile),
           routeInfo
         ),
         routeInfo
@@ -306,7 +362,9 @@ module.exports = async function sitePage(req, res) {
         ? 'no-store, max-age=0'
         : legalRequest
           ? 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400'
-          : 'public, max-age=0, s-maxage=60, stale-while-revalidate=600'
+          : profileUsername
+            ? 'public, max-age=0, s-maxage=30, stale-while-revalidate=300'
+            : 'public, max-age=0, s-maxage=60, stale-while-revalidate=600'
     );
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const requestPath = routeInfo.logicalPath;
