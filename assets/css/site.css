@@ -10793,8 +10793,30 @@ body.fans-page-active > footer > .footer-card{width:min(100%,1390px)!important;m
 .fans-page-sentinel{margin-top:18px}
 
 @media(max-width:900px){
-  .footer-fans-link,.fans-page-shell{display:none!important}
+  .footer-fans-link{display:none!important}
   .footer-side{display:contents}
+  body.fans-page-active > footer{display:none!important}
+  .fans-page-header{
+    height:72px;
+    padding:0 16px;
+    background:rgba(5,6,7,.96);
+  }
+  .fans-page-home{width:44px;height:44px}
+  .fans-page-content{
+    width:calc(100% - 28px);
+    min-height:calc(100svh - 72px);
+    padding:38px 0 72px;
+  }
+  .fans-page-intro{margin-bottom:32px}
+  .fans-page-kicker{font-size:11px}
+  .fans-page-intro h1{
+    white-space:normal!important;
+    font-size:clamp(34px,11vw,52px)!important;
+    line-height:1!important;
+  }
+  .fans-page-intro>p:last-child{margin-top:18px;font-size:15px;line-height:1.55}
+  .fans-page-list{grid-template-columns:1fr;gap:12px}
+  .fans-page-status{min-height:120px}
 }
 
 
