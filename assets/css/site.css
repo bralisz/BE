@@ -11447,10 +11447,11 @@ body.section-catalog-active.featured-section-catalog-active #dynamicSections.sec
 /* Redes sociais do perfil — X e Instagram. */
 body.profile-page-active .profile-page-socials[hidden]{display:none!important}
 body.profile-page-active .profile-page-socials{
-  display:inline-flex;
+  display:flex;
   align-items:center;
+  justify-content:flex-start;
   gap:10px;
-  margin-left:3px;
+  margin:6px 0 2px;
   min-height:24px;
 }
 body.profile-page-active .profile-page-social-link{
@@ -11536,7 +11537,7 @@ body.profile-page-active .profile-page-social-link.is-instagram svg{fill:none;st
 .settings-social-actions .settings-button{min-width:190px}
 
 @media(max-width:760px){
-  body.profile-page-active .profile-page-socials{gap:9px;margin-left:2px}
+  body.profile-page-active .profile-page-socials{gap:9px;margin:4px 0 1px}
   body.profile-page-active .profile-page-social-link{width:21px;height:21px;flex-basis:21px}
   body.profile-page-active .profile-page-social-link svg{width:19px;height:19px}
   .settings-social-heading{margin-bottom:18px}
