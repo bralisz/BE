@@ -2108,6 +2108,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   const auth = MODE === 'supabase' ? supabaseAuth : localAuth;
 
+  async function recordDailyAuthenticatedVisit() {
+    if (MODE !== 'supabase' || !supabaseClient || !currentUser?.uid) return;
+    try {
+      const { error } = await supabaseClient.rpc('record_daily_user_visit');
+      if (error) throw error;
+    } catch (error) {
+      console.warn('Não foi possível registrar o acesso diário:', error?.message || error);
+    }
+  }
+
   async function initialize() {
     if (MODE === 'supabase') {
       // Corrige callbacks antigos no formato #/admin/dashboard#access_token=...
@@ -2173,6 +2183,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             }
             currentUser = await hydratePrivileges(eventUser);
             notify();
+            recordDailyAuthenticatedVisit();
             return;
           }
 
@@ -2201,6 +2212,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const { data: sessionData, error } = await supabaseClient.auth.getSession();
       if (error) console.warn('Não foi possível restaurar a sessão:', error.message);
       currentUser = await hydratePrivileges(normalizeUser(sessionData?.session?.user || null));
+      if (currentUser) recordDailyAuthenticatedVisit();
 
       // O processamento do callback pode terminar alguns instantes depois da
       // criação do cliente. Nessas URLs aguardamos a sessão antes de liberar a UI.
@@ -7688,7 +7700,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     q('signupForm').addEventListener('submit',async function(e){
       e.preventDefault();
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),name=form.elements.namedItem('name').value.trim(),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
-      if(name.length<2){setStatus('Digite seu nome.','error');return;}
+      if(name.length<2){setStatus('Digite seu nome completo.','error');return;}
       if(!validAuthPassword(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
