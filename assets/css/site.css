@@ -11129,13 +11129,14 @@ body.album-page-active .topbar-wrap{z-index:170}
 }
 @media(max-width:390px){.album-page-cover-card{flex-basis:34vw}.album-detail-hero{grid-template-columns:90px minmax(0,1fr) 40px}.album-detail-cover-wrap{width:90px}.album-detail-player{width:40px;height:40px}}
 
-/* Login: alinha visualmente a logo ao botão do Discord. */
+/* Login: logo maior, mantendo o centro alinhado ao botão do Discord. */
 .login-topbar{
+  min-height:72px!important;
   align-items:center!important;
 }
 .login-brand{
   align-self:center!important;
-  min-height:48px!important;
+  min-height:72px!important;
   display:inline-flex!important;
   align-items:center!important;
   justify-content:flex-start!important;
@@ -11143,17 +11144,20 @@ body.album-page-active .topbar-wrap{z-index:170}
 .login-brand img{
   display:block!important;
   width:auto!important;
-  height:48px!important;
-  max-height:48px!important;
+  height:68px!important;
+  max-height:68px!important;
   object-fit:contain!important;
   object-position:left center!important;
 }
 @media(max-width:520px){
+  .login-topbar{
+    min-height:62px!important;
+  }
   .login-brand{
-    min-height:43px!important;
+    min-height:62px!important;
   }
   .login-brand img{
-    height:43px!important;
-    max-height:43px!important;
+    height:58px!important;
+    max-height:58px!important;
   }
 }
