@@ -2874,6 +2874,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
       const block = document.createElement('section');
       block.className = 'video-rail-section';
+      block.dataset.sectionId = String(section.id || '');
       block.dataset.category = normalizeText(category);
       block.dataset.collection = 'mixed';
       block.dataset.homeView = 'default';
@@ -3322,9 +3323,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const originScrollY = Math.max(0, window.scrollY || 0);
         const sectionTitle = normalizeText(title.querySelector('span')?.textContent || '');
         const sectionCategory = normalizeText(section.dataset.category || '');
-        const isFilmsAndSeriesSection = [sectionTitle, sectionCategory].some(value =>
-          value.includes('filmes') && value.includes('series')
-        );
+        const sectionId = String(section.dataset.sectionId || '').trim();
+        const combinedFilmsSectionId = 'abeedcc2-d001-4f05-9d51-5a0c284e4047';
+        const combinedSectionNames = [
+          'filmes e series',
+          'filmes & series',
+          'films and series',
+          'films & series',
+          'movies and series',
+          'movies & series',
+          'peliculas y series',
+          'peliculas & series'
+        ];
+        const isFilmsAndSeriesSection = sectionId === combinedFilmsSectionId
+          || [sectionTitle, sectionCategory].some(value => combinedSectionNames.includes(value))
+          || (section.dataset.hasMovies === 'true'
+            && section.dataset.hasSeries === 'true'
+            && section.dataset.hasVideos !== 'true');
 
         // A seção combinada da Home funciona como atalho para a aba Filmes,
         // onde Filmes e Séries permanecem organizados em trilhos separados.
