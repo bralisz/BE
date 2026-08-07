@@ -8115,6 +8115,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(isProfileRoute()&&!callbackFailure){
           enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));hideSiteSkeleton();return;
         }
+        if(isFansRoute()&&!callbackFailure){
+          showFansRoute();hideSiteSkeleton();return;
+        }
         if(isPasswordRecoveryRoute()){
           showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');
           return;
@@ -8142,7 +8145,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(isDonateRoute()){if(auth.currentUser)showDonateRoute();else showLogin();return;}
       if(isSupportRoute()){if(auth.currentUser)showSupportRoute();else showLogin();return;}
       if(isBillieRoute()){if(auth.currentUser)showBillieRoute();else showLogin();return;}
-      if(isFansRoute()){if(auth.currentUser)showFansRoute();else showLogin();return;}
+      if(isFansRoute()){showFansRoute();return;}
       if(isAlbumsRoute()){if(auth.currentUser)showAlbumsRoute();else showLogin();return;}
       if(isLoginRoute()){if(auth.currentUser)enterHome();else showLogin();return;}
       if(isConfigRoute()){if(auth.currentUser)enterConfig();else showLogin();return;}
@@ -8157,7 +8160,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function startAuthentication(){
-    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}console.error('Falha ao iniciar autenticação:',error);}
+    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}console.error('Falha ao iniciar autenticação:',error);}
   }
 
   document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode(isPasswordRecoveryRoute()?'recovery':'email');startAuthentication()});
