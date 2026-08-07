@@ -2108,15 +2108,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   const auth = MODE === 'supabase' ? supabaseAuth : localAuth;
 
-  async function recordDailyAuthenticatedVisit() {
-    if (MODE !== 'supabase' || !supabaseClient || !currentUser?.uid) return;
-    try {
-      const { error } = await supabaseClient.rpc('record_daily_user_visit');
-      if (error) throw error;
-    } catch (error) {
-      console.warn('Não foi possível registrar o acesso diário:', error?.message || error);
-    }
-  }
 
   async function initialize() {
     if (MODE === 'supabase') {
@@ -2183,7 +2174,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             }
             currentUser = await hydratePrivileges(eventUser);
             notify();
-            recordDailyAuthenticatedVisit();
             return;
           }
 
@@ -2212,7 +2202,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const { data: sessionData, error } = await supabaseClient.auth.getSession();
       if (error) console.warn('Não foi possível restaurar a sessão:', error.message);
       currentUser = await hydratePrivileges(normalizeUser(sessionData?.session?.user || null));
-      if (currentUser) recordDailyAuthenticatedVisit();
 
       // O processamento do callback pode terminar alguns instantes depois da
       // criação do cliente. Nessas URLs aguardamos a sessão antes de liberar a UI.
