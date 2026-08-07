@@ -11246,18 +11246,18 @@ body.login-mode .login-topbar{
   align-items:center!important;
 }
 body.login-mode .login-brand{
-  min-width:148px!important;
-  height:82px!important;
+  min-width:126px!important;
+  height:74px!important;
   display:inline-flex!important;
   align-items:center!important;
   justify-content:flex-start!important;
   line-height:0!important;
 }
 body.login-mode .login-brand img{
-  width:148px!important;
+  width:126px!important;
   height:auto!important;
   max-width:none!important;
-  max-height:82px!important;
+  max-height:74px!important;
   object-fit:contain!important;
   object-position:left center!important;
   display:block!important;
