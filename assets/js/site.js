@@ -9955,7 +9955,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     syncUnread();
     load(false);
     if(supportersLoaded)observeSupportersEnd();
-    document.title='Apoie uma ONG — Billie Eilish TV';
+    document.title='Billie Eilish TV';
   }
 
   function close(){
@@ -10163,7 +10163,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     page.hidden=false;page.setAttribute('aria-hidden','false');
     if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(page);
     load(false);
-    document.title=t('Fãs que ajudaram o site')+' — Billie Eilish TV';
+    document.title='Billie Eilish TV';
   }
   function close(){disconnect();document.body.classList.remove('fans-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV';}
   function navigate(path,replace){var target=localized(path);var url=new URL(target,location.origin);var state={beRoute:path};history[replace?'replaceState':'pushState'](state,'',url.pathname+(location.search||''));window.dispatchEvent(new PopStateEvent('popstate',{state:state}));}
