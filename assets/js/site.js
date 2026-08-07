@@ -4472,10 +4472,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     desc.classList.add('be-markdown');
     desc.innerHTML = markdownToHtml(description);
 
-    play.href = safeUrlValue(contentUrl);
-    const usesInternalPlayer = Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl));
+    const playableUrl = safeUrlValue(contentUrl);
+    const hasContentLink = playableUrl !== '#';
+    play.innerHTML = hasContentLink
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir'
+      : 'Disponível em Breve';
+    if (hasContentLink) {
+      play.href = playableUrl;
+      play.removeAttribute('aria-disabled');
+    } else {
+      play.removeAttribute('href');
+      play.setAttribute('aria-disabled', 'true');
+    }
+    const usesInternalPlayer = hasContentLink && Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl));
     play.dataset.mediaPlayerTrigger = usesInternalPlayer ? 'true' : 'false';
-    if (/^https?:\/\//i.test(contentUrl) && !usesInternalPlayer) {
+    if (hasContentLink && /^https?:\/\//i.test(contentUrl) && !usesInternalPlayer) {
       play.target = '_blank';
       play.rel = 'noopener';
     } else {
