@@ -10241,7 +10241,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
       '<span class="donate-supporter-content">'+
         '<span class="donate-supporter-avatar" data-initials="'+esc(initials(displayName))+'">'+avatarMarkup+'</span>'+ 
-        '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong>'+(community?'<span class="donate-supporter-tags"><small class="donate-supporter-tag">Community</small><small class="donate-supporter-tag">Criador de conteúdo</small></span>':'<small>@'+esc(username)+'</small>')+'</span>'+ 
+        '<span class="donate-supporter-copy"><strong>'+esc(displayName)+'</strong>'+(community?'<span class="donate-supporter-tags"><small class="donate-supporter-tag">'+esc((String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase()==='es')?'Comunidad':'Community')+'</small><small class="donate-supporter-tag">'+esc((String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase()==='en-us')?'Content Creator':(String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase()==='es'?'Creador de contenido':'Criador de conteúdo'))+'</small></span>':'<small>@'+esc(username)+'</small>')+'</span>'+ 
       '</span>'+ 
     '</a>';
   }
