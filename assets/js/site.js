@@ -10080,7 +10080,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var list=document.getElementById('fansPageList');
   var status=document.getElementById('fansPageStatus');
   var sentinel=document.getElementById('fansPageSentinel');
-  var footerLink=document.getElementById('footerFansLink');
+  var footerLinks=Array.from(document.querySelectorAll('[data-open-fans="true"]'));
   var loaded=false;
   var loading=null;
   var offset=0;
@@ -10188,15 +10188,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function navigate(path,replace){var target=localized(path);var url=new URL(target,location.origin);var state={beRoute:path};history[replace?'replaceState':'pushState'](state,'',url.pathname+(location.search||''));window.dispatchEvent(new PopStateEvent('popstate',{state:state}));}
   function goHome(replace){navigate('/',Boolean(replace));}
 
-  if(footerLink){
+  footerLinks.forEach(function(footerLink){
     footerLink.href=localized('/fãs');
     footerLink.addEventListener('click',function(event){if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();navigate('/fãs',false);});
-  }
+  });
   if(home)home.addEventListener('click',function(){goHome(false);});
   list.addEventListener('click',function(event){var link=event.target&&event.target.closest?event.target.closest('[data-fans-profile]'):null;if(!link)return;event.preventDefault();navigate(link.getAttribute('data-profile-route')||'/',false);});
   window.addEventListener('be:open-fans-page',open);
   window.addEventListener('be:close-fans-page',close);
-  window.addEventListener('be:i18n-ready',function(){if(!page.hidden&&window.BETVI18n)window.BETVI18n.apply(page);if(footerLink&&window.BETVI18n)window.BETVI18n.apply(footerLink);});
+  window.addEventListener('be:i18n-ready',function(){if(!page.hidden&&window.BETVI18n)window.BETVI18n.apply(page);if(window.BETVI18n)footerLinks.forEach(function(footerLink){window.BETVI18n.apply(footerLink);});});
   window.addEventListener('be:content-ready',function(){loaded=false;if(isRoute())load(true);});
   window.addEventListener('popstate',function(){if(!isRoute()&&document.body.classList.contains('fans-page-active'))close();});
   window.addEventListener('hashchange',function(){if(!isRoute()&&document.body.classList.contains('fans-page-active'))close();});

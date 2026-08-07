@@ -4793,28 +4793,46 @@ body.settings-page-active #mobileNotificationPopover{
   backdrop-filter:blur(34px) saturate(130%)!important;
 }
 
-/* Botão de suporte exibido somente após o rodapé no mobile. */
-.mobile-footer-support-cta{display:none}
+/* Ações exibidas após o rodapé no mobile. */
+.mobile-footer-support-cta,
+.mobile-footer-fans-cta{display:none}
 @media(max-width:760px){
-  body:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.settings-page-active):not(.detail-page-active):not(.support-page-active):not(.legal-page-active):not(.notification-page-active) .mobile-footer-support-cta{
+  body:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.settings-page-active):not(.detail-page-active):not(.support-page-active):not(.legal-page-active):not(.notification-page-active):not(.fans-page-active) .mobile-footer-support-cta,
+  body:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.settings-page-active):not(.detail-page-active):not(.support-page-active):not(.legal-page-active):not(.notification-page-active):not(.fans-page-active) .mobile-footer-fans-cta{
     width:calc(100% - 40px);
     min-height:52px;
-    margin:0 20px max(30px,env(safe-area-inset-bottom));
+    margin-left:20px;
+    margin-right:20px;
     padding:0 24px;
     display:flex;
     align-items:center;
     justify-content:center;
-    border:0;
     border-radius:18px;
-    background:#0a84ff;
-    color:#fff;
     font:750 16px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;
-    box-shadow:0 12px 30px rgba(10,132,255,.24);
+    text-align:center;
+    text-decoration:none!important;
     cursor:pointer;
     -webkit-tap-highlight-color:transparent;
     touch-action:manipulation;
   }
+  body:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.settings-page-active):not(.detail-page-active):not(.support-page-active):not(.legal-page-active):not(.notification-page-active):not(.fans-page-active) .mobile-footer-support-cta{
+    margin-top:0;
+    margin-bottom:12px;
+    border:0;
+    background:#0a84ff;
+    color:#fff;
+    box-shadow:0 12px 30px rgba(10,132,255,.24);
+  }
+  body:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.settings-page-active):not(.detail-page-active):not(.support-page-active):not(.legal-page-active):not(.notification-page-active):not(.fans-page-active) .mobile-footer-fans-cta{
+    margin-top:0;
+    margin-bottom:max(30px,env(safe-area-inset-bottom));
+    border:1px solid rgba(255,255,255,.9);
+    background:#fff;
+    color:#08090b!important;
+    box-shadow:0 12px 30px rgba(0,0,0,.22);
+  }
   .mobile-footer-support-cta:active{transform:scale(.985);background:#0077ed}
+  .mobile-footer-fans-cta:active{transform:scale(.985);background:#ececef}
 }
 
 /* Otimizações gerais para celulares e aparelhos com pouca memória/CPU. */
