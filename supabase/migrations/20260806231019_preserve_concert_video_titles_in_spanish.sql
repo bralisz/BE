@@ -1,0 +1,3 @@
+-- Remote history marker. Current behavior is defined by the later concert and behind-the-scenes rules.
+-- Intentionally contains no SQL: it records an immutable migration that is already
+-- present in the linked production database and prevents local/remote history drift.

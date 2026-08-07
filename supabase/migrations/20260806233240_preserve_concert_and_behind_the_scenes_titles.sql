@@ -1,0 +1,3 @@
+-- Remote history marker. The deployed translation worker preserves titles for Concert and Behind the Scenes.
+-- Intentionally contains no SQL: it records an immutable migration that is already
+-- present in the linked production database and prevents local/remote history drift.
