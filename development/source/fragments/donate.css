@@ -620,3 +620,31 @@ body.donate-page-active .donate-page-avatar img{
   }
 }
 
+
+
+/* Link dos termos da área de ONGs — visível e minimalista também no mobile. */
+@media (max-width:720px){
+  .donate-intro .donate-terms-link{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:max-content!important;
+    max-width:100%!important;
+    margin:2px auto 0!important;
+    padding:2px 0!important;
+    color:#58a6ff!important;
+    font-size:13px!important;
+    font-weight:600!important;
+    line-height:1.3!important;
+    letter-spacing:.005em!important;
+    text-decoration:none!important;
+    opacity:.94!important;
+  }
+  .donate-intro .donate-terms-link:hover,
+  .donate-intro .donate-terms-link:focus-visible{
+    color:#82c0ff!important;
+    text-decoration:underline!important;
+    text-underline-offset:3px!important;
+    opacity:1!important;
+  }
+}
