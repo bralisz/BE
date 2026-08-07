@@ -2223,9 +2223,9 @@
     transition:max-width .5s var(--ease),opacity .3s ease,transform .5s var(--ease);
   }
   .home-logo-pill{
-    width:92px;
-    height:48px;
-    padding:0 12px;
+    width:86px;
+    height:46px;
+    padding:0 10px;
     justify-content:center;
     flex:0 0 auto;
     border-radius:999px;
@@ -2241,8 +2241,8 @@
     box-shadow:0 7px 20px rgba(0,0,0,.22),0 0 0 2px rgba(66,139,255,.72),inset 0 0 0 1px rgba(0,0,0,.05);
   }
   .home-logo-pill .logo-mark{
-    width:57px;
-    height:41px;
+    width:50px;
+    height:36px;
     object-fit:contain;
     filter:none;
     opacity:1;
@@ -3384,8 +3384,8 @@
     isolation:isolate;
     --home-tab-x:0px;
     --home-tab-y:0px;
-    --home-tab-width:92px;
-    --home-tab-height:48px;
+    --home-tab-width:86px;
+    --home-tab-height:46px;
   }
   .home-nav-leading::before{
     content:"";
@@ -11283,7 +11283,7 @@ body.login-mode .login-brand img{
 }
 @media (min-width:761px){
   .home-logo-pill .logo-mark{
-    width:66px!important;
-    height:44px!important;
+    width:54px!important;
+    height:37px!important;
   }
 }
