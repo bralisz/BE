@@ -10883,6 +10883,8 @@ body.fans-page-active > footer > .footer-card{width:min(100%,1390px)!important;m
 .donate-supporter-avatar-fallback{display:grid;width:100%;height:100%;place-items:center}
 .donate-supporter-card.is-community .donate-supporter-copy{justify-content:center}
 .donate-supporter-card.is-community .donate-supporter-copy strong{font-size:18px}
+.donate-supporter-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}
+.donate-supporter-tag{display:inline-flex;align-items:center;width:max-content;max-width:100%;padding:3px 7px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(15,18,24,.72);color:rgba(255,255,255,.84);font-size:10px!important;font-weight:600;line-height:1.2;white-space:nowrap;backdrop-filter:blur(6px)}
 
 /* Mobile: o mural de fãs mantém sempre dois cards por linha. */
 @media (max-width:900px){
@@ -10931,6 +10933,8 @@ body.fans-page-active > footer > .footer-card{width:min(100%,1390px)!important;m
     max-width:100%;
     font-size:11px;
   }
+  .fans-page-list .donate-supporter-tags{gap:4px;margin-top:2px}
+  .fans-page-list .donate-supporter-tag{padding:2px 5px;font-size:9px!important}
 }
 @media (max-width:380px){
   .fans-page-list{gap:8px!important}
@@ -11285,5 +11289,48 @@ body.login-mode .login-brand img{
   .home-logo-pill .logo-mark{
     width:54px!important;
     height:37px!important;
+  }
+}
+
+/* Login: ajuste SOMENTE no mobile — mantém o tamanho atual do desktop. */
+@media (max-width:760px){
+  body.login-mode .login-brand{
+    min-width:72px!important;
+    width:72px!important;
+    height:74px!important;
+  }
+  body.login-mode .login-brand img{
+    width:72px!important;
+    height:auto!important;
+    max-width:72px!important;
+    max-height:62px!important;
+    object-fit:contain!important;
+    object-position:left center!important;
+  }
+}
+@media (max-width:380px){
+  body.login-mode .login-brand{
+    min-width:68px!important;
+    width:68px!important;
+  }
+  body.login-mode .login-brand img{
+    width:68px!important;
+    max-width:68px!important;
+  }
+}
+
+
+/* Mobile: barra superior sempre totalmente transparente */
+@media (max-width:760px){
+  body:not(.login-mode):not(.admin-mode) .mobile-app-bar,
+  html.mobile-lite body:not(.login-mode):not(.admin-mode) .mobile-app-bar,
+  html.mobile-optimized body:not(.login-mode):not(.admin-mode) .mobile-app-bar{
+    background:transparent!important;
+    background-color:transparent!important;
+    background-image:none!important;
+    box-shadow:none!important;
+    border:0!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
   }
 }
