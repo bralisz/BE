@@ -41,7 +41,7 @@
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260807-notification-date-v1';
+    var href='/assets/i18n/'+slug+'.json?rev=20260807-fans-title-nowrap-v1';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -78,6 +78,7 @@ html.config-route-boot body > #authLoading{display:block!important;visibility:vi
 html.config-route-boot #authLoading[hidden]{display:block!important;visibility:visible!important;opacity:1!important}
 html.config-route-boot #authLoading .site-loading-skeleton{display:block!important;visibility:visible!important;opacity:1!important}
 html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.config-route-boot body.settings-page-active > #profilePage,html.config-route-boot body.settings-page-active > #settingsPage{display:none!important;visibility:hidden!important}
+@media (min-width:901px){.fans-page-intro{max-width:min(1320px,calc(100vw - 120px))}.fans-page-intro h1{white-space:nowrap;font-size:clamp(42px,4.8vw,76px)}}
 </style>
 <script>
 (function(){
@@ -114,10 +115,10 @@ html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.co
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-notification-date-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-fans-title-nowrap-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260807-notification-date-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260807-notification-date-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260807-fans-title-nowrap-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260807-fans-title-nowrap-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
