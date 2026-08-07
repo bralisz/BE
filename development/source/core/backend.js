@@ -728,6 +728,7 @@
           avatarUrl: profile.avatarUrl ? String(profile.avatarUrl) : '',
           bannerUrl: profile.bannerId && profile.bannerUrl ? String(profile.bannerUrl) : '',
           createdAt: String(profile.createdAt || ''),
+          socialLinks: preferenceData.profileSocialLinks && typeof preferenceData.profileSocialLinks === 'object' && !Array.isArray(preferenceData.profileSocialLinks) ? clone(preferenceData.profileSocialLinks) : {},
           favorites: Array.isArray(preferenceData.profileTopFavorites) ? clone(preferenceData.profileTopFavorites).slice(0, 4) : [],
           lovedAlbums: Array.isArray(preferenceData.profileLovedAlbums) ? clone(preferenceData.profileLovedAlbums).slice(0, 3) : [],
           savedContents: Array.isArray(preferenceData.savedContents) ? clone(preferenceData.savedContents).slice(0, 20) : []

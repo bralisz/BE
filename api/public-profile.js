@@ -71,6 +71,15 @@ function sanitizeList(value, limit) {
   return result;
 }
 
+function sanitizeSocialLinks(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    x: safeText(source.x || source.twitter, 80),
+    instagram: safeText(source.instagram, 100),
+    discord: safeText(source.discord, 180)
+  };
+}
+
 function sanitizeProfile(row) {
   if (!row || typeof row !== 'object') return null;
   const username = normalizeUsername(row.username);
@@ -81,6 +90,7 @@ function sanitizeProfile(row) {
     avatarUrl: safeAsset(row.avatar_url || row.avatarUrl),
     bannerUrl: safeAsset(row.banner_url || row.bannerUrl),
     createdAt: safeText(row.created_at || row.createdAt, 40),
+    socialLinks: sanitizeSocialLinks(row.social_links || row.socialLinks),
     favorites: sanitizeList(row.favorites, 4),
     lovedAlbums: sanitizeList(row.loved_albums || row.lovedAlbums, 3),
     savedContents: sanitizeList(row.saved_contents || row.savedContents, 20)

@@ -447,6 +447,7 @@ returns table (
   avatar_url text,
   banner_url text,
   created_at timestamptz,
+  social_links jsonb,
   favorites jsonb,
   loved_albums jsonb,
   saved_contents jsonb
@@ -483,6 +484,14 @@ as $$
     sp.avatar_url,
     sp.banner_url,
     sp.created_at,
+    case
+      when jsonb_typeof(sp.preferences -> 'profileSocialLinks') = 'object' then jsonb_build_object(
+        'x', left(coalesce(sp.preferences #>> '{profileSocialLinks,x}', ''), 80),
+        'instagram', left(coalesce(sp.preferences #>> '{profileSocialLinks,instagram}', ''), 100),
+        'discord', left(coalesce(sp.preferences #>> '{profileSocialLinks,discord}', ''), 180)
+      )
+      else '{}'::jsonb
+    end as social_links,
     coalesce((
       select jsonb_agg(
         jsonb_build_object(

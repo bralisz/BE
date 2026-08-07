@@ -1115,6 +1115,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           avatarUrl: profile.avatarUrl ? String(profile.avatarUrl) : '',
           bannerUrl: profile.bannerId && profile.bannerUrl ? String(profile.bannerUrl) : '',
           createdAt: String(profile.createdAt || ''),
+          socialLinks: preferenceData.profileSocialLinks && typeof preferenceData.profileSocialLinks === 'object' && !Array.isArray(preferenceData.profileSocialLinks) ? clone(preferenceData.profileSocialLinks) : {},
           favorites: Array.isArray(preferenceData.profileTopFavorites) ? clone(preferenceData.profileTopFavorites).slice(0, 4) : [],
           lovedAlbums: Array.isArray(preferenceData.profileLovedAlbums) ? clone(preferenceData.profileLovedAlbums).slice(0, 3) : [],
           savedContents: Array.isArray(preferenceData.savedContents) ? clone(preferenceData.savedContents).slice(0, 20) : []
@@ -6071,6 +6072,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profilePageName=document.getElementById('profilePageName');
     var profilePageHandle=document.getElementById('profilePageHandle');
     var profilePageBadge=document.getElementById('profilePageBadge');
+    var profilePageSocials=document.getElementById('profilePageSocials');
     var profilePageMetaLabel=document.getElementById('profilePageMetaLabel');
     var profilePageMemberSince=document.getElementById('profilePageMemberSince');
     var profilePageMore=document.getElementById('profilePageMore');
@@ -6160,7 +6162,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var settingsActiveTab=(function(){
       var remembered='';
       try{remembered=String(history.state&&history.state.settingsTab||sessionStorage.getItem(SETTINGS_TAB_SESSION_KEY)||'');}catch(_){ }
-      return ['profile','connections','data','language','session','account'].indexOf(remembered)>=0?remembered:'profile';
+      return ['profile','connections','socials','data','language','session','account'].indexOf(remembered)>=0?remembered:'profile';
     })();
     var settingsSaveConfirm=document.getElementById('settingsSaveConfirm');
     var settingsSaveCancel=document.getElementById('settingsSaveCancel');
@@ -6184,6 +6186,97 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var settingsSyncMessage='Aguardando login para sincronizar.';
 
     function escapePublic(value){return String(value||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    function normalizeProfileSocialValue(network,value){
+      var kind=String(network||'').toLowerCase();
+      var raw=String(value||'').trim();
+      if(!raw)return '';
+      if(kind==='x'||kind==='instagram'){
+        var expectedHosts=kind==='x'?['x.com','twitter.com']:['instagram.com'];
+        var candidate=raw;
+        if(/^https?:\/\//i.test(candidate)||/^(?:www\.)?(?:x\.com|twitter\.com|instagram\.com)\//i.test(candidate)){
+          try{
+            var socialUrl=new URL(/^https?:\/\//i.test(candidate)?candidate:'https://'+candidate);
+            var host=String(socialUrl.hostname||'').toLowerCase().replace(/^www\./,'');
+            if(expectedHosts.indexOf(host)<0)return '';
+            candidate=String(socialUrl.pathname||'').replace(/^\/+|\/+$/g,'').split('/')[0]||'';
+          }catch(_){return '';}
+        }
+        candidate=String(candidate||'').replace(/^@+/,'').split(/[/?#]/)[0].trim();
+        if(kind==='x')return /^[A-Za-z0-9_]{1,15}$/.test(candidate)?candidate:'';
+        return /^[A-Za-z0-9._]{1,30}$/.test(candidate)&&candidate.indexOf('..')<0?candidate:'';
+      }
+      if(kind==='discord'){
+        if(/^https?:\/\//i.test(raw)||/^(?:www\.)?(?:discord\.gg|discord\.com)\//i.test(raw)){
+          try{
+            var discordUrl=new URL(/^https?:\/\//i.test(raw)?raw:'https://'+raw);
+            var discordHost=String(discordUrl.hostname||'').toLowerCase().replace(/^www\./,'');
+            if(['discord.com','discord.gg'].indexOf(discordHost)<0)return '';
+            return ('https://'+discordHost+String(discordUrl.pathname||'/')).slice(0,180);
+          }catch(_){return '';}
+        }
+        raw=raw.replace(/^@+/,'').trim();
+        if(!raw||raw.length>64||/[\u0000-\u001f\u007f\s]/.test(raw))return '';
+        return raw;
+      }
+      return '';
+    }
+    function normalizeProfileSocialLinks(value){
+      var source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+      return {
+        x:normalizeProfileSocialValue('x',source.x||source.twitter||''),
+        instagram:normalizeProfileSocialValue('instagram',source.instagram||''),
+        discord:normalizeProfileSocialValue('discord',source.discord||'')
+      };
+    }
+    function hasProfileSocialLinks(value){var links=normalizeProfileSocialLinks(value);return Boolean(links.x||links.instagram||links.discord);}
+    function profileSocialStorageKey(userId){return 'beProfileSocialLinks:'+String(userId||'guest');}
+    function readProfileSocialLinks(userId){
+      try{return normalizeProfileSocialLinks(JSON.parse(localStorage.getItem(profileSocialStorageKey(userId))||'{}'));}
+      catch(_){return normalizeProfileSocialLinks({});}
+    }
+    function writeProfileSocialLinks(userId,value){
+      var links=normalizeProfileSocialLinks(value);
+      try{localStorage.setItem(profileSocialStorageKey(userId),JSON.stringify(links));}catch(_){ }
+      return links;
+    }
+    function profileSocialHref(network,value){
+      var normalized=normalizeProfileSocialValue(network,value);
+      if(!normalized)return '';
+      if(network==='x')return 'https://x.com/'+encodeURIComponent(normalized);
+      if(network==='instagram')return 'https://www.instagram.com/'+encodeURIComponent(normalized)+'/';
+      if(network==='discord'){
+        if(/^https:\/\//i.test(normalized))return normalized;
+        if(/^\d{15,25}$/.test(normalized))return 'https://discord.com/users/'+normalized;
+      }
+      return '';
+    }
+    function profileSocialIcon(network){
+      if(network==='x')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.4L6.47 22H3.36l7.26-8.3L2.97 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.84h1.72L8.43 4.05H6.58L17.8 19.84Z"></path></svg>';
+      if(network==='instagram')return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><path d="M17.5 6.5h.01"></path></svg>';
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"></path></svg>';
+    }
+    function renderProfileSocials(profile){
+      if(!profilePageSocials)return;
+      if(!profile){profilePageSocials.innerHTML='';profilePageSocials.hidden=true;profilePageSocials.setAttribute('hidden','');return;}
+      var links=normalizeProfileSocialLinks(profile&&profile.socialLinks);
+      if(isOwnProfileView()&&auth.currentUser){
+        var localLinks=readProfileSocialLinks(auth.currentUser.uid);
+        if(hasProfileSocialLinks(localLinks)||!hasProfileSocialLinks(links))links=localLinks;
+      }
+      var labels={x:'X',instagram:'Instagram',discord:'Discord'};
+      var order=['x','instagram','discord'];
+      var markup=order.map(function(network){
+        var value=links[network];if(!value)return '';
+        var href=profileSocialHref(network,value);
+        var title=labels[network]+(network==='discord'&&!href?': '+value:'');
+        var className='profile-page-social-link is-'+network;
+        if(href)return '<a class="'+className+'" href="'+escapePublic(href)+'" target="_blank" rel="noopener noreferrer" aria-label="Abrir '+labels[network]+'" title="'+escapePublic(title)+'">'+profileSocialIcon(network)+'</a>';
+        return '<span class="'+className+' is-static" role="img" aria-label="'+escapePublic(title)+'" title="'+escapePublic(title)+'">'+profileSocialIcon(network)+'</span>';
+      }).join('');
+      profilePageSocials.innerHTML=markup;
+      profilePageSocials.hidden=!markup;
+      if(markup)profilePageSocials.removeAttribute('hidden');else profilePageSocials.setAttribute('hidden','');
+    }
     function avatarCacheKey(user){return 'beSelectedAvatar:'+(user&&user.uid?user.uid:'guest');}
     function selectedProfileAvatar(profile){return profile&&profile.avatarUrl?String(profile.avatarUrl):'';}
     function setMainAvatar(url){var shown=String(url||'').trim();if(window.BETVApplyAvatar)window.BETVApplyAvatar(photo,shown);else{photo.src=shown||window.BETV_DEFAULT_AVATAR;photo.hidden=false;}fallback.hidden=true;updateOnboardingAvatar();}
@@ -6248,6 +6341,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         savedContents:uniqueSyncRecords(source.savedContents,20),
         profileTopFavorites:uniqueSyncRecords(source.profileTopFavorites,4),
         profileLovedAlbums:uniqueSyncRecords(source.profileLovedAlbums,3),
+        profileSocialLinks:normalizeProfileSocialLinks(source.profileSocialLinks),
         updatedAt:String(source.updatedAt||'')
       };
     }
@@ -6258,6 +6352,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         savedContents:readStorageJson('beSavedContents',[]),
         profileTopFavorites:readStorageJson('beProfileTopFavorites:'+String(userId||'guest'),[]),
         profileLovedAlbums:readStorageJson('beProfileLovedAlbums:'+String(userId||'guest'),[]),
+        profileSocialLinks:readProfileSocialLinks(userId),
         updatedAt:beBackend.now()
       });
     }
@@ -6269,6 +6364,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         savedContents:remote.savedContents.concat(local.savedContents),
         profileTopFavorites:remote.profileTopFavorites.concat(local.profileTopFavorites),
         profileLovedAlbums:remote.profileLovedAlbums.concat(local.profileLovedAlbums),
+        profileSocialLinks:hasProfileSocialLinks(remote.profileSocialLinks)?remote.profileSocialLinks:local.profileSocialLinks,
         updatedAt:beBackend.now()
       });
     }
@@ -6302,17 +6398,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.setItem('beSavedContents',JSON.stringify(data.savedContents));
         localStorage.setItem('beProfileTopFavorites:'+userId,JSON.stringify(data.profileTopFavorites));
         localStorage.setItem('beProfileLovedAlbums:'+userId,JSON.stringify(data.profileLovedAlbums));
+        localStorage.setItem(profileSocialStorageKey(userId),JSON.stringify(data.profileSocialLinks));
         localStorage.setItem(syncedUserCacheKey(userId),JSON.stringify({data:data,updatedAt:data.updatedAt||beBackend.now()}));
         localStorage.setItem('beSyncedDataOwner',String(userId));
       }catch(error){console.warn('Não foi possível atualizar o cache sincronizado:',error);}
       applyingRemotePreferences=false;
       profileFavoritesItems=data.profileTopFavorites.slice(0,4);
       profileLovedAlbumsItems=data.profileLovedAlbums.slice(0,3);
+      if(auth.currentUser&&auth.currentUser.uid===userId){
+        currentProfile={...(currentProfile||{}),socialLinks:data.profileSocialLinks};
+        if(viewedProfile&&isOwnProfileView())viewedProfile={...viewedProfile,socialLinks:data.profileSocialLinks};
+      }
       try{window.dispatchEvent(new CustomEvent('be:user-data-synced',{detail:{userId:userId,source:source||'remote',data:data}}));}catch(_){ }
       try{window.dispatchEvent(new CustomEvent('be:favorites-changed',{detail:{synced:true}}));}catch(_){ }
       try{window.dispatchEvent(new CustomEvent('be:profile-favorites-changed',{detail:{items:profileFavoritesItems,synced:true}}));}catch(_){ }
       try{window.dispatchEvent(new CustomEvent('be:profile-loved-albums-changed',{detail:{items:profileLovedAlbumsItems,synced:true}}));}catch(_){ }
-      if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}
+      if(document.body.classList.contains('profile-page-active')){renderProfileSocials(viewedProfile||currentProfile);renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}
     }
     async function persistCrossDeviceData(reason){
       var user=auth.currentUser;
@@ -6320,7 +6421,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var userId=user.uid;
       var payload=captureCrossDeviceData(userId);
       try{localStorage.setItem(syncedUserCacheKey(userId),JSON.stringify({data:payload,updatedAt:payload.updatedAt}));localStorage.setItem('beSyncedDataOwner',String(userId));}catch(_){ }
-      setSettingsSyncStatus('syncing','Salvando alterações do '+((reason==='profile-favorites'||reason==='profile-albums')?'perfil':'aparelho')+'…');
+      setSettingsSyncStatus('syncing','Salvando alterações do '+((reason==='profile-favorites'||reason==='profile-albums'||reason==='profile-socials')?'perfil':'aparelho')+'…');
       try{
         var saved=await beBackend.preferences.save(userId,payload);
         if(auth.currentUser&&auth.currentUser.uid===userId){
@@ -6604,6 +6705,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profilePageBadge.textContent='Perfil';
       profilePageMetaLabel.textContent='Perfil público';
       profilePageMemberSince.textContent=message||'';
+      renderProfileSocials(null);
       setProfilePageAvatar('');
       applyProfileBanner('');
       profileFavoritesSection.hidden=true;
@@ -7142,6 +7244,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profilePageBadge.textContent='Perfil';
       profilePageMetaLabel.textContent='Perfil público';
       profilePageMemberSince.textContent='Membro desde '+publicProfileYear(profile);
+      renderProfileSocials(profile);
       setProfilePageAvatar(avatar);
       applyProfileBanner(banner);
       renderProfileFavorites();
@@ -7165,7 +7268,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var identities=user&&user.raw&&Array.isArray(user.raw.identities)?user.raw.identities:[];
       var providers=user&&user.raw&&user.raw.app_metadata&&Array.isArray(user.raw.app_metadata.providers)?user.raw.app_metadata.providers:[];
       var discordConnected=providers.indexOf('discord')>=0||identities.some(function(identity){return String(identity.provider||'').toLowerCase()==='discord';});
-      var settingsTabs=['profile','connections','data','language','session'];
+      var storedSocialLinks=readProfileSocialLinks(user.uid);
+      var socialLinks=hasProfileSocialLinks(storedSocialLinks)?storedSocialLinks:normalizeProfileSocialLinks(currentProfile&&currentProfile.socialLinks);
+      var settingsTabs=['profile','connections','socials','data','language','session'];
       if(settingsActiveTab==='account')settingsActiveTab='session';
       if(settingsTabs.indexOf(settingsActiveTab)<0)settingsActiveTab='profile';
       settingsPageBody.innerHTML=''
@@ -7173,13 +7278,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         +  '<nav class="settings-page-nav" aria-label="Seções das configurações">'
         +    '<button type="button" data-settings-tab="profile"'+(settingsActiveTab==='profile'?' class="active" aria-current="page"':'')+'>Perfil</button>'
         +    '<button type="button" data-settings-tab="connections"'+(settingsActiveTab==='connections'?' class="active" aria-current="page"':'')+'>Conexões</button>'
+        +    '<button type="button" data-settings-tab="socials"'+(settingsActiveTab==='socials'?' class="active" aria-current="page"':'')+'>Redes Sociais</button>'
         +    '<button type="button" data-settings-tab="data"'+(settingsActiveTab==='data'?' class="active" aria-current="page"':'')+'>Meus Dados</button>'
         +    '<button type="button" data-settings-tab="language"'+(settingsActiveTab==='language'?' class="active" aria-current="page"':'')+'>Idioma</button>'
         +    '<button type="button" data-settings-tab="session"'+(settingsActiveTab==='session'?' class="active" aria-current="page"':'')+'>Conta e Sessão</button>'
         +  '</nav>'
         +  '<main class="settings-page-content">'
         +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner e o avatar do seu perfil.</p><div class="settings-panel-card"><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></div></section>'
-        +    '<section class="settings-section-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões</h1><p class="settings-panel-lead">Gerencie serviços conectados à sua conta.</p><div class="settings-panel-card"><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div></section>'
+        +    '<section class="settings-section-panel settings-connections-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões</h1><p class="settings-panel-lead">Gerencie serviços conectados à sua conta.</p><div class="settings-panel-card"><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div></section>'
+        +    '<section class="settings-section-panel settings-socials-panel" data-settings-panel="socials"'+(settingsActiveTab==='socials'?'':' hidden')+'><h1>Redes Sociais</h1><p class="settings-panel-lead">Adicione as redes que devem aparecer ao lado do seu nome no perfil público.</p><div class="settings-panel-card settings-social-card"><form id="settingsSocialForm"><div class="settings-social-fields"><div class="settings-social-field"><label for="settingsSocialX"><span class="settings-social-brand is-x">'+profileSocialIcon('x')+'</span><span>X</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">x.com/</span><input id="settingsSocialX" name="x" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.x||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialDiscord"><span class="settings-social-brand is-discord">'+profileSocialIcon('discord')+'</span><span>Discord</span></label><div class="settings-social-input-wrap no-prefix"><input id="settingsSocialDiscord" name="discord" type="text" maxlength="180" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.discord||'')+'" placeholder="usuario, ID ou link"></div></div><div class="settings-social-field"><label for="settingsSocialInstagram"><span class="settings-social-brand is-instagram">'+profileSocialIcon('instagram')+'</span><span>Instagram</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">instagram.com/</span><input id="settingsSocialInstagram" name="instagram" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.instagram||'')+'" placeholder="usuario"></div></div></div><p class="settings-social-note">No Discord, use o ID ou um link do perfil/convite para deixar o ícone clicável. Se informar apenas o usuário, o nome ficará disponível no ícone.</p><div class="settings-status" id="settingsSocialStatus"></div><div class="settings-btn-row settings-social-actions"><button class="settings-button primary" type="submit">Salvar redes sociais</button></div></form></div></section>'
         +    '<section class="settings-section-panel settings-data-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Meus Dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-data-actions settings-data-actions-outside"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><a class="settings-data-privacy-button" href="/privacy">Ver Termos de Privacidade</a></div><div class="settings-status settings-data-status" id="settingsExportStatus"></div></section>'
         +    '<section class="settings-section-panel settings-language-panel" data-settings-panel="language"'+(settingsActiveTab==='language'?'':' hidden')+'><h1>Idioma</h1><p class="settings-panel-lead">Escolha o idioma usado em todas as áreas públicas do site.</p><div class="settings-panel-card"><div class="settings-language-options" role="radiogroup" aria-label="Idioma do site"><button class="settings-language-option" type="button" data-settings-language="pt-br" role="radio"><strong>Português (Brasil)</strong><span>Português</span></button><button class="settings-language-option" type="button" data-settings-language="en-us" role="radio"><strong>English (United States)</strong><span>Inglês</span></button><button class="settings-language-option" type="button" data-settings-language="es" role="radio"><strong>Español</strong><span>Espanhol</span></button></div><p class="settings-muted settings-language-note">A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.</p></div></section>'
         +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input class="notranslate" translate="no" name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input class="notranslate" translate="no" name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="seunome"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div><div class="settings-session-section"><h1>Sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></div></section>'
@@ -7243,6 +7350,34 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         try{sessionStorage.setItem('beOpenSettingsAfterDiscord','1');await auth.connectDiscord();msg.textContent='Redirecionando para o Discord…';msg.className='settings-status ok';}
         catch(error){msg.textContent='Não foi possível conectar: '+(error&&error.message?error.message:'Tente novamente.');msg.className='settings-status err';this.disabled=false;}
       };
+      var socialForm=document.getElementById('settingsSocialForm');
+      if(socialForm)socialForm.addEventListener('submit',async function(event){
+        event.preventDefault();
+        var form=event.currentTarget;
+        var msg=document.getElementById('settingsSocialStatus');
+        var submit=form.querySelector('[type="submit"]');
+        var rawX=String(form.x.value||'').trim();
+        var rawInstagram=String(form.instagram.value||'').trim();
+        var rawDiscord=String(form.discord.value||'').trim();
+        var x=normalizeProfileSocialValue('x',rawX);
+        var instagram=normalizeProfileSocialValue('instagram',rawInstagram);
+        var discord=normalizeProfileSocialValue('discord',rawDiscord);
+        if(rawX&&!x){msg.textContent='Informe um usuário válido do X, como x.com/usuario.';msg.className='settings-status err';return;}
+        if(rawInstagram&&!instagram){msg.textContent='Informe um usuário válido do Instagram, como instagram.com/usuario.';msg.className='settings-status err';return;}
+        if(rawDiscord&&!discord){msg.textContent='Informe um usuário, ID ou link válido do Discord.';msg.className='settings-status err';return;}
+        submit.disabled=true;msg.textContent='Salvando redes sociais…';msg.className='settings-status';
+        var links=writeProfileSocialLinks(user.uid,{x:x,instagram:instagram,discord:discord});
+        currentProfile={...(currentProfile||{}),socialLinks:links};
+        if(viewedProfile&&isOwnProfileView())viewedProfile={...viewedProfile,socialLinks:links};
+        form.x.value=links.x;form.instagram.value=links.instagram;form.discord.value=links.discord;
+        try{
+          await persistCrossDeviceData('profile-socials');
+          if(settingsSyncState==='error'){msg.textContent='Redes sociais salvas neste aparelho. A sincronização será tentada novamente.';msg.className='settings-status err';}
+          else{msg.textContent='Redes sociais salvas no perfil.';msg.className='settings-status ok';showSettingsSaved();}
+        }catch(error){
+          msg.textContent='As redes sociais foram salvas neste aparelho, mas a sincronização falhou.';msg.className='settings-status err';
+        }finally{submit.disabled=false;}
+      });
       document.getElementById('settingsExportData').onclick=async function(){
         var button=this;
         var msg=document.getElementById('settingsExportStatus');
@@ -7256,6 +7391,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           try{localData.savedContents=JSON.parse(localStorage.getItem('beSavedContents')||'[]');}catch(_){localData.savedContents=[];}
           try{localData.profileTopFavorites=JSON.parse(localStorage.getItem('beProfileTopFavorites:'+user.uid)||'[]');}catch(_){localData.profileTopFavorites=[];}
           try{localData.profileLovedAlbums=JSON.parse(localStorage.getItem('beProfileLovedAlbums:'+user.uid)||'[]');}catch(_){localData.profileLovedAlbums=[];}
+          localData.profileSocialLinks=readProfileSocialLinks(user.uid);
           localData.crossDeviceSync={enabled:beBackend.mode==='supabase',state:settingsSyncState,lastMessage:settingsSyncMessage};
           var exportData={
             exportedAt:payload.exportedAt||beBackend.now(),
@@ -7406,7 +7542,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var requestId=++viewedProfileRequest;
       var ownHandle=beBackend.normalizeUsername((currentProfile&&currentProfile.username)||'');
       if(auth.currentUser&&ownHandle&&handle===ownHandle){
-        viewedProfile={...(currentProfile||{}),favorites:readProfileFavorites(),lovedAlbums:readProfileLovedAlbums(),savedContents:(typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[])};
+        viewedProfile={...(currentProfile||{}),socialLinks:readProfileSocialLinks(auth.currentUser.uid),favorites:readProfileFavorites(),lovedAlbums:readProfileLovedAlbums(),savedContents:(typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[])};
         viewedProfileStatus='ready';
         renderProfilePage();
         window.scrollTo({top:0,behavior:'auto'});

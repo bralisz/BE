@@ -134,10 +134,10 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-profile-albums-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-profile-socials-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260807-profile-albums-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260807-album-avatar-routing-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260807-profile-socials-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -598,6 +598,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
         <div class="profile-page-name-row">
           <h1 class="profile-page-name" id="profilePageName">Seu perfil</h1>
           <span class="profile-page-badge" id="profilePageBadge">Perfil</span>
+          <nav class="profile-page-socials" id="profilePageSocials" aria-label="Redes sociais do perfil" hidden></nav>
         </div>
         <p class="profile-page-handle" id="profilePageHandle">@usuario</p>
         <div class="profile-page-meta">
