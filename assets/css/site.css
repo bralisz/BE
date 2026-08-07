@@ -11008,6 +11008,9 @@ body.fans-page-active > footer > .footer-card{width:min(100%,1390px)!important;m
 .album-home-card>small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.58);font-size:11px}
 @media(hover:hover){.album-home-card:hover .album-home-cover img{transform:scale(1.045);filter:brightness(1.07)}.album-home-card:hover>strong{color:#91bdff}}
 
+.album-home-title svg{animation:none!important;transition:none!important;transform:none!important}
+.album-home-section .video-rail-arrow{transition:none!important}
+.album-home-section .video-rail-arrow:hover{transform:translateY(-58%)!important}
 .album-page-shell{
   position:relative;
   width:100%;
@@ -11034,10 +11037,10 @@ body.album-page-active .topbar-wrap{z-index:170}
 .album-page-inner{width:min(1450px,100%);margin:0 auto}
 .album-page-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:66px;margin-bottom:22px;padding:0 2px 17px;border-bottom:1px solid rgba(255,255,255,.08)}
 .album-page-heading h1{margin:0;min-width:0;font-size:clamp(25px,2.35vw,36px);line-height:1.08;letter-spacing:-.035em}
-.album-page-back{flex:0 0 42px;width:42px;height:42px;border:1px solid rgba(255,255,255,.14);border-radius:50%;background:rgba(255,255,255,.045);color:#fff;display:grid;place-items:center;transition:background .18s ease,border-color .18s ease,transform .18s ease}
-.album-page-back svg{width:21px;height:21px}
-@media(hover:hover){.album-page-back:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28);transform:translateX(-2px)}}
-.album-page-back:active{transform:scale(.96)}
+.album-page-back{flex:0 0 42px;width:42px;height:42px;border:1px solid rgba(255,255,255,.14);border-radius:50%;background:rgba(255,255,255,.045);color:#fff;display:grid;place-items:center;transition:none}
+.album-page-back svg{width:21px;height:21px;animation:none;transition:none;transform:none}
+@media(hover:hover){.album-page-back:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28);transform:none}}
+.album-page-back:active{transform:none}
 .album-page-cover-rail{display:flex;gap:22px;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;padding:4px 2px 25px;scrollbar-width:none}
 .album-page-cover-rail[hidden]{display:none!important}
 .album-page-cover-rail::-webkit-scrollbar{display:none}
@@ -11063,10 +11066,10 @@ body.album-page-active .topbar-wrap{z-index:170}
 .album-detail-copy>p{margin:9px 0 0;color:rgba(255,255,255,.66);line-height:1.48}
 .album-detail-copy>#albumDetailMeta{font-size:13px;font-weight:650}
 .album-detail-copy>#albumDetailDescription{max-width:780px;font-size:13px}
-.album-detail-player{align-self:center;justify-self:end;width:58px;height:58px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.82);border-radius:50%;background:#fff;color:#080909;text-decoration:none;box-shadow:0 14px 32px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.08) inset;transition:transform .2s ease,background .2s ease,box-shadow .2s ease}
+.album-detail-player{align-self:end;justify-self:end;margin-bottom:26px;width:58px;height:58px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.82);border-radius:50%;background:#fff;color:#080909;text-decoration:none;box-shadow:0 14px 32px rgba(0,0,0,.3),0 0 0 1px rgba(0,0,0,.08) inset;transition:none}
 .album-detail-player[hidden]{display:none!important}
-.album-detail-player svg{display:block;width:23px;height:23px;fill:currentColor;transform:translateX(1px)}
-@media(hover:hover){.album-detail-player:hover{transform:scale(1.07);background:#dceaff;box-shadow:0 16px 38px rgba(0,0,0,.38),0 0 0 4px rgba(130,174,240,.16)}}
+.album-detail-player svg{display:block;width:23px;height:23px;fill:currentColor;transform:translateX(1px);animation:none;transition:none}
+@media(hover:hover){.album-detail-player:hover{transform:none;background:#dceaff;box-shadow:0 16px 38px rgba(0,0,0,.38),0 0 0 4px rgba(130,174,240,.16)}}
 .album-track-heading,.album-track-list li{display:grid;grid-template-columns:44px minmax(0,1fr) 96px;align-items:center;gap:12px}
 .album-track-heading{min-height:42px;padding:0 14px;border-bottom:1px solid rgba(255,255,255,.11);color:rgba(255,255,255,.52);font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.08em}
 .album-track-heading svg{justify-self:end;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7}
@@ -11101,7 +11104,7 @@ body.album-page-active .topbar-wrap{z-index:170}
   .album-detail-copy h2{font-size:clamp(21px,6.4vw,29px);line-height:1.03}
   .album-detail-copy>#albumDetailMeta{font-size:10px;margin-top:7px}
   .album-detail-copy>#albumDetailDescription{grid-column:1/-1;font-size:11px;display:none}
-  .album-detail-player{width:44px;height:44px}
+  .album-detail-player{align-self:center;margin-bottom:0;width:44px;height:44px}
   .album-detail-player svg{width:20px;height:20px}
   .album-track-heading,.album-track-list li{grid-template-columns:28px minmax(0,1fr) 52px;gap:8px}
   .album-track-heading{padding:0 8px;min-height:38px;font-size:9px}
