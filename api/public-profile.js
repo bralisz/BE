@@ -2,7 +2,7 @@
 
 const DEFAULT_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const ALLOWED_COLLECTIONS = new Set(['videos', 'movies', 'series']);
+const ALLOWED_COLLECTIONS = new Set(['videos', 'movies', 'series', 'albums']);
 
 function config() {
   return {
@@ -82,6 +82,7 @@ function sanitizeProfile(row) {
     bannerUrl: safeAsset(row.banner_url || row.bannerUrl),
     createdAt: safeText(row.created_at || row.createdAt, 40),
     favorites: sanitizeList(row.favorites, 4),
+    lovedAlbums: sanitizeList(row.loved_albums || row.lovedAlbums, 3),
     savedContents: sanitizeList(row.saved_contents || row.savedContents, 20)
   };
 }

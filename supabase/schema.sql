@@ -448,6 +448,7 @@ returns table (
   banner_url text,
   created_at timestamptz,
   favorites jsonb,
+  loved_albums jsonb,
   saved_contents jsonb
 )
 language sql
@@ -506,6 +507,30 @@ as $$
       ) with ordinality as entry(item, position)
       where entry.position <= 4 and jsonb_typeof(entry.item) = 'object'
     ), '[]'::jsonb) as favorites,
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'itemId', left(coalesce(entry.item ->> 'itemId', ''), 120),
+          'recordId', left(coalesce(entry.item ->> 'recordId', ''), 120),
+          'favoriteId', left(coalesce(entry.item ->> 'favoriteId', ''), 180),
+          'title', left(coalesce(entry.item ->> 'title', 'Álbum'), 160),
+          'year', left(coalesce(entry.item ->> 'year', ''), 20),
+          'duration', left(coalesce(entry.item ->> 'duration', ''), 40),
+          'imageUrl', left(coalesce(entry.item ->> 'imageUrl', ''), 1200),
+          'bannerUrl', left(coalesce(entry.item ->> 'bannerUrl', ''), 1200),
+          'logoUrl', left(coalesce(entry.item ->> 'logoUrl', ''), 1200),
+          'collection', left(coalesce(entry.item ->> 'collection', 'albums'), 20)
+        ) order by entry.position
+      )
+      from jsonb_array_elements(
+        case
+          when jsonb_typeof(sp.preferences -> 'profileLovedAlbums') = 'array'
+            then sp.preferences -> 'profileLovedAlbums'
+          else '[]'::jsonb
+        end
+      ) with ordinality as entry(item, position)
+      where entry.position <= 3 and jsonb_typeof(entry.item) = 'object'
+    ), '[]'::jsonb) as loved_albums,
     coalesce((
       select jsonb_agg(
         jsonb_build_object(

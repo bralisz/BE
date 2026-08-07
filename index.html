@@ -134,10 +134,10 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-featured-no-banners-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-profile-albums-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260807-ong-copy-v2"></script>
-<script defer src="/assets/js/site.js?rev=20260807-update-persistence-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260807-profile-albums-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260807-profile-albums-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -617,6 +617,15 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     </div>
     <div class="profile-favorites-content" id="profileFavoritesContent"></div>
   </section>
+  <section class="profile-favorites-section profile-loved-albums-section" id="profileLovedAlbumsSection" hidden aria-labelledby="profileLovedAlbumsTitle">
+    <div class="profile-favorites-heading">
+      <div>
+        <h2 id="profileLovedAlbumsTitle">Álbuns que amo</h2>
+      </div>
+      <button class="profile-favorites-edit" id="profileLovedAlbumsEdit" type="button" hidden>Editar álbuns</button>
+    </div>
+    <div class="profile-favorites-content" id="profileLovedAlbumsContent"></div>
+  </section>
   <section class="profile-saved-section" id="profileSavedSection" hidden aria-labelledby="profileSavedTitle">
     <div class="profile-saved-heading">
       <h2 id="profileSavedTitle">Salvos</h2>
@@ -650,6 +659,34 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
       <button class="profile-favorites-cancel" id="profileFavoritesCancel" type="button">Cancelar</button>
       <span class="profile-favorites-selection-count" id="profileFavoritesSelectionCount" aria-live="polite">0 de 4</span>
       <button class="profile-favorites-save" id="profileFavoritesSave" type="button" disabled>Salvar favoritos</button>
+    </footer>
+  </section>
+</div>
+<div class="profile-favorites-picker-backdrop" id="profileLovedAlbumsPicker" hidden>
+  <section class="profile-favorites-picker" role="dialog" aria-modal="true" aria-labelledby="profileLovedAlbumsPickerTitle">
+    <header class="profile-favorites-picker-header">
+      <div>
+        <span>Álbuns do perfil</span>
+        <h2 id="profileLovedAlbumsPickerTitle">Escolha 3 álbuns</h2>
+        <p>Toque nos álbuns na ordem em que deseja exibi-los.</p>
+      </div>
+      <div class="profile-favorites-picker-header-actions">
+        <button class="profile-favorites-header-save" id="profileLovedAlbumsHeaderSave" type="button" disabled>Salvar</button>
+        <button class="profile-favorites-picker-close" id="profileLovedAlbumsPickerClose" type="button" aria-label="Fechar seletor de álbuns">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="profile-favorites-picker-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="m16 16 4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+      <label class="sr-only" for="profileLovedAlbumsSearch">Pesquisar álbuns</label>
+      <input id="profileLovedAlbumsSearch" type="text" role="searchbox" inputmode="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="Pesquisar álbuns">
+    </div>
+    <div class="profile-favorites-picker-body" id="profileLovedAlbumsPickerBody"></div>
+    <footer class="profile-favorites-picker-footer">
+      <button class="profile-favorites-cancel" id="profileLovedAlbumsCancel" type="button">Cancelar</button>
+      <span class="profile-favorites-selection-count" id="profileLovedAlbumsSelectionCount" aria-live="polite">0 de 3</span>
+      <button class="profile-favorites-save" id="profileLovedAlbumsSave" type="button" disabled>Salvar álbuns</button>
     </footer>
   </section>
 </div>
@@ -1023,9 +1060,14 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
           <h2 class="notranslate" translate="no" id="albumDetailTitle"></h2>
           <p id="albumDetailMeta"></p>
         </div>
-        <a class="album-detail-player" id="albumDetailPlayer" href="#" target="_blank" rel="noopener noreferrer" aria-label="Ouvir álbum" title="Ouvir álbum">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.25 7.15v9.7L17.1 12 9.25 7.15Z"></path></svg>
-        </a>
+        <div class="album-detail-actions">
+          <a class="album-detail-player" id="albumDetailPlayer" href="#" target="_blank" rel="noopener noreferrer" aria-label="Ouvir álbum" title="Ouvir álbum">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.25 7.15v9.7L17.1 12 9.25 7.15Z"></path></svg>
+          </a>
+          <button class="album-detail-favorite" id="albumDetailFavorite" type="button" aria-label="Salvar álbum" title="Salvar álbum" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg>
+          </button>
+        </div>
       </header>
       <div class="album-track-heading" aria-hidden="true">
         <span>#</span><span>Faixa</span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v5l3 2"></path></svg>
