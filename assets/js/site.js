@@ -3241,7 +3241,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setupContentDetailInteractions(activeRail);
     }
     host.classList.remove('section-view-mode');
-    document.body.classList.remove('section-catalog-active');
+    document.body.classList.remove('section-catalog-active', 'featured-section-catalog-active');
     host.querySelectorAll('.video-rail-section').forEach(section => {
       section.classList.remove('section-view-active');
       if (section.dataset.sectionViewPreviousHidden !== undefined) {
@@ -3279,6 +3279,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
     host.classList.add('section-view-mode');
     document.body.classList.add('section-catalog-active');
+    const isFeaturedSectionView = normalizeText(section.dataset.category || '') === 'destaque' || section.classList.contains('featured-video-rail');
+    document.body.classList.toggle('featured-section-catalog-active', isFeaturedSectionView);
     section.hidden = false;
     section.classList.add('section-view-active');
     const rail = section.querySelector('.video-rail');
