@@ -228,6 +228,7 @@ function profileUsernameFromRoute(routeInfo) {
 function profileShareVersion(profile) {
   if (!profile) return '';
   const source = JSON.stringify({
+    previewLayoutVersion: 2,
     displayName: profile.displayName || '',
     username: profile.username || '',
     avatarUrl: profile.avatarUrl || '',

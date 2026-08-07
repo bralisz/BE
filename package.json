@@ -1,7 +1,7 @@
 {
   "name": "billie-eilish-tv",
   "private": true,
-  "version": "2.112.0",
+  "version": "2.112.1",
   "engines": {
     "node": ">=20"
   },
