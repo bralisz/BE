@@ -11318,19 +11318,3 @@ body.login-mode .login-brand img{
     max-width:68px!important;
   }
 }
-
-
-/* Mobile: barra superior sempre totalmente transparente */
-@media (max-width:760px){
-  body:not(.login-mode):not(.admin-mode) .mobile-app-bar,
-  html.mobile-lite body:not(.login-mode):not(.admin-mode) .mobile-app-bar,
-  html.mobile-optimized body:not(.login-mode):not(.admin-mode) .mobile-app-bar{
-    background:transparent!important;
-    background-color:transparent!important;
-    background-image:none!important;
-    box-shadow:none!important;
-    border:0!important;
-    -webkit-backdrop-filter:none!important;
-    backdrop-filter:none!important;
-  }
-}
