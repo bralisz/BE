@@ -3310,7 +3310,7 @@
   #legalPage[hidden],
   #legalPage .legal-article[hidden]{display:none!important}
   body.legal-page-active{overflow-x:hidden!important}
-  body.legal-page-active > :not(#legalPage):not(.betv-update-popup):not(script):not(style){display:none!important}
+  body.legal-page-active > :not(#legalPage):not(#authLoading):not(.betv-update-popup):not(script):not(style){display:none!important}
   body.legal-page-active > #legalPage{display:block!important;width:100%;min-height:100vh}
 .user-chip,
 .avatar,
@@ -11179,4 +11179,43 @@ body.album-page-active .topbar-wrap{z-index:170}
 }
 @media(max-width:820px){
   .legal-home-button .legal-home-icon{width:23px!important;height:23px!important}
+}
+
+/* Recarregamento das páginas legais: mantém o skeleton visível por 2 s e
+   só revela o cabeçalho (incluindo Home) junto com o conteúdo legal. */
+html.site-loading-active body.legal-page-active > #authLoading,
+body.site-loading-active.legal-page-active > #authLoading{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+html.site-loading-active body.legal-page-active > #legalPage,
+body.site-loading-active.legal-page-active > #legalPage{
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
+
+/* Login mobile: logo com o mesmo tamanho do desktop e alinhada ao botão Discord. */
+@media (max-width:760px){
+  body.login-mode .login-topbar{
+    min-height:76px!important;
+    align-items:center!important;
+  }
+  body.login-mode .login-brand{
+    min-width:82px!important;
+    height:76px!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+  }
+  body.login-mode .login-brand img{
+    width:82px!important;
+    height:76px!important;
+    max-width:none!important;
+    max-height:none!important;
+    object-fit:contain!important;
+    display:block!important;
+  }
 }
