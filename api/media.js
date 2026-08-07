@@ -33,6 +33,7 @@ const ALLOWED_HOSTS = new Set([
   'm.media-amazon.com',
   'media.themoviedb.org',
   'occ-0-3934-3933.1.nflxso.net',
+  'pbs.twimg.com',
   'upload.wikimedia.org',
   'variety.com',
   'www.billboard.com',
@@ -44,7 +45,7 @@ const ALLOWED_SUFFIXES = [
   '.discordapp.com', '.googleusercontent.com', '.gstatic.com', '.hollywoodreporter.com',
   '.hotstar.com', '.imgur.com', '.media-amazon.com', '.nflxso.net',
   '.pinimg.com', '.scdn.co', '.spotifycdn.com', '.themoviedb.org', '.theplaylist.net', '.tmdb.org',
-  '.wikimedia.org', '.wp.com', '.ytimg.com'
+  '.twimg.com', '.wikimedia.org', '.wp.com', '.ytimg.com'
 ];
 
 async function serveSupabaseRuntime(req, res) {
@@ -159,6 +160,7 @@ function upstreamHeaders(url) {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36'
   };
   if (host.endsWith('.pinimg.com')) headers.Referer = 'https://www.pinterest.com/';
+  else if (host.endsWith('.twimg.com')) headers.Referer = 'https://x.com/';
   else if (host.endsWith('.ytimg.com')) headers.Referer = 'https://www.youtube.com/';
   else if (host.endsWith('.nflxso.net')) headers.Referer = 'https://www.netflix.com/';
   else if (host.endsWith('.bamgrid.com') || host.endsWith('.hotstar.com')) headers.Referer = 'https://www.disneyplus.com/';
