@@ -41,7 +41,7 @@
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260806-donate-faq-v1';
+    var href='/assets/i18n/'+slug+'.json?rev=20260807-notification-date-v1';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -114,10 +114,10 @@ html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.co
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-community-fans-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-notification-date-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260807-community-fans-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260807-community-fans-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260807-notification-date-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260807-notification-date-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
