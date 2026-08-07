@@ -10279,6 +10279,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var description=document.getElementById('albumDetailDescription');
   var player=document.getElementById('albumDetailPlayer');
   var tracks=document.getElementById('albumTrackList');
+  var back=document.getElementById('albumPageBack');
   if(!page||!rail||!detail||!status||!cover||!title||!type||!meta||!description||!player||!tracks)return;
 
   var records=[];
@@ -10352,6 +10353,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function open(){document.body.classList.add('album-page-active');page.hidden=false;page.setAttribute('aria-hidden','false');document.title='Billie Eilish TV';load(false);}
   function close(){document.body.classList.remove('album-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV';}
 
+  if(back)back.addEventListener('click',function(){navigate('/',false);});
   rail.addEventListener('click',function(event){var link=event.target.closest('[data-album-id]');if(!link)return;event.preventDefault();navigate('/albuns/'+encodeURIComponent(link.dataset.albumId),false);});
   document.addEventListener('click',function(event){var link=event.target.closest('[data-album-route],[data-open-albums]');if(!link)return;if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();var path=link.getAttribute('data-album-route')||'/albuns';navigate(path,false);});
   window.addEventListener('be:open-album-page',open);

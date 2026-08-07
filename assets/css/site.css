@@ -11032,9 +11032,12 @@ body.album-page-active>#legalPage{display:none!important}
 body.album-page-active>.album-page-shell{display:block!important}
 body.album-page-active .topbar-wrap{z-index:170}
 .album-page-inner{width:min(1450px,100%);margin:0 auto}
-.album-page-heading{display:flex;align-items:end;justify-content:space-between;gap:24px;margin-bottom:25px}
-.album-page-heading span{display:block;margin-bottom:7px;color:#7eabec;font-size:11px;font-weight:850;letter-spacing:.16em;text-transform:uppercase}
-.album-page-heading h1{margin:0;font-size:clamp(32px,4.4vw,64px);line-height:.98;letter-spacing:-.055em}
+.album-page-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:66px;margin-bottom:22px;padding:0 2px 17px;border-bottom:1px solid rgba(255,255,255,.08)}
+.album-page-heading h1{margin:0;min-width:0;font-size:clamp(25px,2.35vw,36px);line-height:1.08;letter-spacing:-.035em}
+.album-page-back{flex:0 0 42px;width:42px;height:42px;border:1px solid rgba(255,255,255,.14);border-radius:50%;background:rgba(255,255,255,.045);color:#fff;display:grid;place-items:center;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.album-page-back svg{width:21px;height:21px}
+@media(hover:hover){.album-page-back:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.28);transform:translateX(-2px)}}
+.album-page-back:active{transform:scale(.96)}
 .album-page-cover-rail{display:flex;gap:22px;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x proximity;padding:4px 2px 25px;scrollbar-width:none}
 .album-page-cover-rail::-webkit-scrollbar{display:none}
 .album-page-cover-card{flex:0 0 clamp(150px,14vw,210px);min-width:0;display:grid;gap:9px;color:#fff;text-decoration:none;scroll-snap-align:start;opacity:.66;transition:opacity .2s ease,transform .2s ease}
@@ -11079,9 +11082,10 @@ body.album-page-active .topbar-wrap{z-index:170}
   .album-home-card>strong{font-size:12px}
   .album-home-card>small{font-size:10px}
   .album-page-shell{padding:calc(var(--mobile-header-h,68px) + env(safe-area-inset-top) + 30px) 16px 58px}
-  .album-page-heading{margin-bottom:18px}
-  .album-page-heading span{font-size:9px}
-  .album-page-heading h1{font-size:clamp(31px,10vw,42px)}
+  .album-page-heading{min-height:56px;margin-bottom:17px;padding:0 0 13px}
+  .album-page-heading h1{font-size:clamp(23px,7.2vw,30px);line-height:1.08}
+  .album-page-back{flex-basis:38px;width:38px;height:38px}
+  .album-page-back svg{width:19px;height:19px}
   .album-page-cover-rail{gap:12px;margin:0 -16px;padding:4px 16px 23px}
   .album-page-cover-card{flex-basis:31vw;gap:6px}
   .album-page-cover-card>span{border-radius:8px;border-width:1.5px}

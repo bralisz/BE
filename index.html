@@ -115,10 +115,10 @@ html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.co
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-fans-desktop-support-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-album-simple-header-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260807-albums-singles-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260807-albums-singles-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260807-album-simple-header-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -991,10 +991,10 @@ html.config-route-boot #profilePage,html.config-route-boot #settingsPage,html.co
 <section class="album-page-shell" id="albumPage" hidden aria-label="Álbuns e singles" aria-hidden="true">
   <div class="album-page-inner">
     <header class="album-page-heading">
-      <div>
-        <span>Discografia</span>
-        <h1>Álbuns &amp; Singles</h1>
-      </div>
+      <h1>Álbuns &amp; Singles</h1>
+      <button class="album-page-back" id="albumPageBack" type="button" aria-label="Voltar para a página inicial" title="Voltar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+      </button>
     </header>
     <div class="album-page-cover-rail" id="albumPageRail" aria-label="Escolha um álbum"></div>
     <div class="album-page-status" id="albumPageStatus" role="status" aria-live="polite">Carregando álbuns…</div>
