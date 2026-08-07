@@ -944,6 +944,11 @@
     if(cookieNotice)cookieNotice.hidden=acknowledged();
   }
 
+  function syncLegalHomeButton(){
+    if(!legalHomeButton)return;
+    legalHomeButton.setAttribute('aria-label','Voltar para a página inicial');
+    legalHomeButton.innerHTML='<svg class="legal-home-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 10.8 12 3.7l8.5 7.1v8.4a1.8 1.8 0 0 1-1.8 1.8h-4.2v-6.2h-5V21H5.3a1.8 1.8 0 0 1-1.8-1.8Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
   function syncLegalAvatar(){
     if(!legalAvatarButton||!legalAvatarImage||!legalAvatarFallback)return;
     var loggedUser=window.beBackend&&beBackend.auth?beBackend.auth.currentUser:null;
@@ -993,6 +998,7 @@
       link.classList.toggle('active',active);
       if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
     });
+    syncLegalHomeButton();
     syncLegalAvatar();
     if(window.BETVI18n&&window.BETVI18n.ready){
       window.BETVI18n.ready.then(function(){if(legalPage)window.BETVI18n.apply(legalPage);}).catch(function(){});
