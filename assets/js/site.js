@@ -3713,7 +3713,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       oid: info.ownerId,
       id: info.videoId,
       autoplay: '1',
-      js_api: '1'
+      js_api: '1',
+      hd: '4'
     });
     if (info.hash) params.set('hash', info.hash);
     return `https://vkvideo.ru/video_ext.php?${params.toString()}`;
