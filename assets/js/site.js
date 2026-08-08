@@ -3664,67 +3664,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `https://www.youtube-nocookie.com/${path}?${params.toString()}`;
   }
 
-  function vkVideoMediaInfo(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return null;
-    try {
-      const url = new URL(raw, location.origin);
-      const host = String(url.hostname || '').toLowerCase().replace(/^www\./, '');
-      if (host !== 'vkvideo.ru') return null;
-
-      let ownerId = '';
-      let videoId = '';
-      let hash = '';
-      let hd = '';
-
-      if (/\/video_ext\.php$/i.test(String(url.pathname || ''))) {
-        ownerId = String(url.searchParams.get('oid') || '').trim();
-        videoId = String(url.searchParams.get('id') || '').trim();
-        hash = String(url.searchParams.get('hash') || '').trim();
-        hd = String(url.searchParams.get('hd') || '').trim();
-      } else {
-        const match = String(url.pathname || '').match(/(?:^|\/)video(-?\d+)_(\d+)(?:$|[/?#])/i);
-        if (match) {
-          ownerId = match[1] || '';
-          videoId = match[2] || '';
-        }
-      }
-
-      if (!/^-?\d+$/.test(ownerId) || !/^\d+$/.test(videoId)) return null;
-      if (hash && !/^[a-z0-9_-]+$/i.test(hash)) hash = '';
-      if (hd && !/^\d+$/.test(hd)) hd = '';
-
-      return {
-        ownerId,
-        videoId,
-        hash,
-        hd,
-        externalUrl: url.href
-      };
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function vkVideoEmbedUrl(info) {
-    if (!info?.ownerId || !info?.videoId) return '';
-    const params = new URLSearchParams({
-      oid: String(info.ownerId),
-      id: String(info.videoId),
-      autoplay: '1'
-    });
-    if (info.hash) params.set('hash', String(info.hash));
-    if (info.hd) params.set('hd', String(info.hd));
-    return `https://vkvideo.ru/video_ext.php?${params.toString()}`;
-  }
-
-  function vkVideoWatchUrl(info) {
-    if (!info?.ownerId || !info?.videoId) return '';
-    const rawExternal = String(info.externalUrl || '').trim();
-    if (rawExternal) return rawExternal;
-    return `https://vkvideo.ru/video${encodeURIComponent(info.ownerId)}_${encodeURIComponent(info.videoId)}`;
-  }
-
   function youtubeWatchUrl(info) {
     if (!info) return '';
     const params = new URLSearchParams();
@@ -3734,6 +3673,54 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return info.videoId
       ? `https://www.youtube.com/watch?${params.toString()}`
       : `https://www.youtube.com/playlist?list=${encodeURIComponent(info.playlistId || '')}`;
+  }
+
+  function vkVideoInfo(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    try {
+      const url = new URL(raw, location.origin);
+      const host = String(url.hostname || '').toLowerCase().replace(/^www\./, '');
+      if (host !== 'vkvideo.ru' && host !== 'vk.com') return null;
+
+      let ownerId = '';
+      let videoId = '';
+      let hash = '';
+
+      if (/\/video_ext\.php$/i.test(url.pathname)) {
+        ownerId = String(url.searchParams.get('oid') || '').trim();
+        videoId = String(url.searchParams.get('id') || '').trim();
+        hash = String(url.searchParams.get('hash') || '').trim();
+      } else {
+        const match = String(url.pathname || '').match(/\/video(-?\d+)_(\d+)/i);
+        if (match) {
+          ownerId = match[1] || '';
+          videoId = match[2] || '';
+        }
+      }
+
+      if (!/^-?\d+$/.test(ownerId) || !/^\d+$/.test(videoId)) return null;
+      if (hash && !/^[a-z0-9_-]+$/i.test(hash)) hash = '';
+      return { ownerId, videoId, hash };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function vkVideoEmbedUrl(info) {
+    if (!info) return '';
+    const params = new URLSearchParams({
+      oid: info.ownerId,
+      id: info.videoId,
+      autoplay: '1'
+    });
+    if (info.hash) params.set('hash', info.hash);
+    return `https://vkvideo.ru/video_ext.php?${params.toString()}`;
+  }
+
+  function vkVideoWatchUrl(info) {
+    if (!info) return '';
+    return `https://vkvideo.ru/video${encodeURIComponent(info.ownerId)}_${encodeURIComponent(info.videoId)}`;
   }
 
   function googleDrivePreviewUrl(fileId, resourceKey = '') {
@@ -4078,16 +4065,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     };
 
-    const isMobileProviderLayout = () => window.matchMedia('(max-width: 700px)').matches;
-
-    const useFrameFallback = (mobileDirect = false) => {
+    const useFrameFallback = () => {
       if (!activeFileId || frameMode || overlay.hidden) return;
-      if (!mobileDirect && (activeMediaKind === 'audio' || audioMode)) {
+      if (activeMediaKind === 'audio' || audioMode) {
         showStreamError('O MP3 não pôde ser reproduzido. Confirme se o arquivo está público para qualquer pessoa com o link.');
         return;
       }
       frameMode = true;
-      streamAttempt = mobileDirect ? 'mobile-frame' : 'frame';
+      streamAttempt = 'frame';
       window.clearTimeout(fallbackTimer);
       video.pause();
       video.removeAttribute('src');
@@ -4095,7 +4080,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
       frameShell.hidden = false;
       overlay.classList.add('is-frame-mode', 'is-drive-frame-mode');
-      overlay.classList.toggle('is-mobile-provider-mode', isMobileProviderLayout());
       loading.hidden = true;
       overlay.classList.remove('is-loading');
       setPlayerInteractive(false);
@@ -4195,7 +4179,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vkvideo-mode', 'is-mobile-provider-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
       youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
@@ -4254,13 +4238,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         applyMediaKind(kind);
       });
 
-      // No mobile, Drive usa somente o player incorporado. Assim o <video> customizado
-      // e o iframe do Drive nunca ficam ativos ao mesmo tempo, evitando controles duplicados.
-      if (isMobileProviderLayout()) {
-        useFrameFallback(true);
-      } else {
-        loadProxyStream(false);
-      }
+      loadProxyStream(false);
       closeButton.focus({ preventScroll: true });
     };
 
@@ -4315,9 +4293,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setAudioMode(false);
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
-      overlay.classList.remove('is-error', 'is-loading', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-muted');
-      overlay.classList.add('is-open', 'is-frame-mode', 'is-youtube-mode', 'is-vkvideo-mode', 'controls-visible');
-      overlay.classList.toggle('is-mobile-provider-mode', isMobileProviderLayout());
+      youtubeMuted = false;
+      overlay.classList.remove('is-error', 'is-loading', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-muted');
+      overlay.classList.add('is-open', 'is-frame-mode', 'controls-visible');
       document.body.classList.add('drive-player-open');
       video.pause();
       video.removeAttribute('src');
@@ -4350,8 +4328,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
       const fileId = googleDriveFileId(mediaUrl);
       const youtubeInfo = youtubeMediaInfo(mediaUrl);
-      const vkVideoInfo = vkVideoMediaInfo(mediaUrl);
-      if (!fileId && !youtubeInfo && !vkVideoInfo) return;
+      const vkInfo = vkVideoInfo(mediaUrl);
+      if (!fileId && !youtubeInfo && !vkInfo) return;
 
       const linkedContent = contentDataFromElement(link);
       const detailBannerImage = document.querySelector('#contentDetailBg img');
@@ -4368,8 +4346,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         openYouTubePlayer(youtubeInfo, { bannerUrl, title, contentUrl: mediaUrl });
         return;
       }
-      if (vkVideoInfo) {
-        openVkVideoPlayer(vkVideoInfo, { bannerUrl, title, contentUrl: mediaUrl });
+      if (vkInfo) {
+        openVkVideoPlayer(vkInfo, { bannerUrl, title, contentUrl: mediaUrl });
         return;
       }
 
@@ -4600,7 +4578,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       play.removeAttribute('href');
       play.setAttribute('aria-disabled', 'true');
     }
-    const usesInternalPlayer = hasContentLink && Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl) || vkVideoMediaInfo(contentUrl));
+    const usesInternalPlayer = hasContentLink && Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl));
     play.dataset.mediaPlayerTrigger = usesInternalPlayer ? 'true' : 'false';
     if (hasContentLink && /^https?:\/\//i.test(contentUrl) && !usesInternalPlayer) {
       play.target = '_blank';
