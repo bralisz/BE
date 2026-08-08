@@ -12290,3 +12290,32 @@ body.site-loading-active.donate-page-active > footer{
     right:max(16px,env(safe-area-inset-right))!important;
   }
 }
+
+
+/* VK Video — esconde visualmente a barra nativa que fica atrás dos controles BETV.
+   O iframe continua reproduzindo normalmente e sendo controlado pela API do VK. */
+.drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:52px;
+  z-index:5;
+  pointer-events:none;
+  background:#000;
+  opacity:0;
+  transition:opacity .16s ease;
+}
+.drive-player-overlay.is-vk-api-mode.controls-visible .drive-player-frame-shell::after,
+.drive-player-overlay.is-vk-api-mode.is-paused .drive-player-frame-shell::after{
+  opacity:1;
+}
+.drive-player-overlay.is-vk-api-mode.controls-idle .drive-player-frame-shell::after{
+  opacity:0;
+}
+@media(max-width:700px){
+  .drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after{
+    height:58px;
+  }
+}
