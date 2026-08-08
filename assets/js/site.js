@@ -4978,7 +4978,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeFileId = fileId;
       activeResourceKey = resourceKey;
       const requestedBanner = String(context?.bannerUrl || '').trim();
-      const safeBanner = requestedBanner ? safeAssetUrlValue(requestedBanner) : '';
+      let safeBanner = '';
+      if (requestedBanner) {
+        try {
+          const resolvedBanner = new URL(requestedBanner, location.href);
+          safeBanner = resolvedBanner.origin === location.origin
+            ? `${resolvedBanner.pathname}${resolvedBanner.search}${resolvedBanner.hash}`
+            : safeAssetUrlValue(requestedBanner);
+        } catch (_) {
+          safeBanner = safeAssetUrlValue(requestedBanner);
+        }
+      }
       activeBannerUrl = safeBanner && safeBanner !== '#' ? safeBanner : '';
       activeTitle = String(context?.title || '').trim();
       activeProvider = 'drive';
@@ -5119,12 +5129,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
       const linkedContent = contentDataFromElement(link);
       const detailBannerImage = document.querySelector('#contentDetailBg img');
-      const bannerUrl = detailBannerImage?.currentSrc
-        || detailBannerImage?.src
-        || link.dataset.bannerUrl
-        || link.dataset.imageUrl
+      const bannerUrl = link.dataset.bannerUrl
         || linkedContent.bannerUrl
+        || link.dataset.imageUrl
         || linkedContent.imageUrl
+        || detailBannerImage?.currentSrc
+        || detailBannerImage?.src
         || '';
       const title = link.dataset.title || linkedContent.title || '';
 
