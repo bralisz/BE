@@ -1935,6 +1935,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       ? image
       : (video.bannerUrl || video.imageUrl || video.thumbnailUrl || '');
     const logo = video.logoUrl || '';
+    const showCardLogo = logo && logo !== '#' && String(collection).toLowerCase() !== 'videos';
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
     const routeHref = detailRoutePath(itemId);
@@ -1954,7 +1955,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       data-category="${escapeHtml(normalizeText(category))}"
       data-collection="${escapeHtml(normalizeText(collection))}">
       <img class="video-card-thumbnail" src="${safeUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
-      ${logo && logo !== '#' ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
+      ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
     </a>`;
   }
 
@@ -2338,7 +2339,9 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       : '<div class="ph ph-wide" style="height:100%"></div>';
 
     if (logoUrl && logoUrl !== '#') {
-      logo.innerHTML = `<span class="detail-logo-media"><img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`;
+      logo.innerHTML = collection === 'videos'
+        ? `<span class="detail-logo-media--video"><img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`
+        : `<img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
     } else if (['movies', 'series'].includes(String(data.collection || '').toLowerCase())) {
       logo.innerHTML = `<span class="sr-only">${escapeHtml(title)}</span>`;
     } else {

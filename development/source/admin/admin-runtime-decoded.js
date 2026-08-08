@@ -660,7 +660,7 @@ body.admin-preview-open{overflow:hidden}
   function navButton(key) {
     const current = route();
     const contentRoutes = ['billie','featured','contents','gallery'];
-    const siteRoutes = ['sections','settings'];
+    const siteRoutes = ['sections','settings','ongs'];
     const isContentRoute = contentRoutes.includes(current) || current.startsWith('contents/');
     const isSiteRoute = siteRoutes.includes(current);
 
@@ -686,7 +686,7 @@ body.admin-preview-open{overflow:hidden}
 
     const current = route();
     const contentActive = ['billie','featured','contents','gallery'].includes(current) || current.startsWith('contents/');
-    const siteActive = ['sections','settings'].includes(current);
+    const siteActive = ['sections','settings','ongs'].includes(current);
 
     let tabs = [];
     if (contentActive) {
@@ -698,7 +698,8 @@ body.admin-preview-open{overflow:hidden}
     } else if (siteActive) {
       tabs = [
         ['sections', 'Seções do site', current === 'sections'],
-        ['settings', 'Comunidade', current === 'settings']
+        ['settings', 'Comunidade', current === 'settings'],
+        ['ongs', 'Apoie uma ONG', current === 'ongs']
       ];
     }
 
@@ -720,7 +721,7 @@ body.admin-preview-open{overflow:hidden}
       adminLoginBgTimer = null;
     }
     setAdminDocumentScroll(true);
-    const routes = ['dashboard','notifications','contentHub','siteHub','ongs','users'];
+    const routes = ['dashboard','notifications','contentHub','siteHub','users'];
     const activeAvatar = selectedProfileAvatar(user.profile) || String(user.photoURL || '');
     const accountAvatar = activeAvatar
       ? `<img loading="lazy" decoding="async" src="${esc(media(activeAvatar))}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`

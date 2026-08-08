@@ -3055,7 +3055,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ? image
       : (video.bannerUrl || video.imageUrl || video.thumbnailUrl || '');
     const logo = video.logoUrl || '';
-    const showCardLogo = logo && logo !== '#';
+    const showCardLogo = logo && logo !== '#' && String(collection).toLowerCase() !== 'videos';
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
     const routeHref = detailRoutePath(itemId);
@@ -4463,7 +4463,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     logo.classList.toggle('notranslate', preserveTitle);
     if (preserveTitle) logo.setAttribute('translate', 'no'); else logo.removeAttribute('translate');
     if (logoUrl && logoUrl !== '#') {
-      logo.innerHTML = `<span class="detail-logo-media"><img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`;
+      logo.innerHTML = collection === 'videos'
+        ? `<span class="detail-logo-media--video"><img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`
+        : `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
     } else if (['movies', 'series'].includes(String(data.collection || '').toLowerCase())) {
       logo.innerHTML = `<span class="sr-only">${escapeHtml(title)}</span>`;
     } else {

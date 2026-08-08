@@ -523,7 +523,7 @@
       ? image
       : (video.bannerUrl || video.imageUrl || video.thumbnailUrl || '');
     const logo = video.logoUrl || '';
-    const showCardLogo = logo && logo !== '#';
+    const showCardLogo = logo && logo !== '#' && String(collection).toLowerCase() !== 'videos';
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
     const routeHref = detailRoutePath(itemId);
@@ -786,7 +786,9 @@
       : '<div class="ph ph-wide" style="height:100%"></div>';
 
     if (logoUrl && logoUrl !== '#') {
-      logo.innerHTML = `<span class="detail-logo-media"><img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`;
+      logo.innerHTML = collection === 'videos'
+        ? `<span class="detail-logo-media--video"><img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`
+        : `<img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
     } else if (['movies', 'series'].includes(String(data.collection || '').toLowerCase())) {
       logo.innerHTML = `<span class="sr-only">${escapeHtml(title)}</span>`;
     } else {

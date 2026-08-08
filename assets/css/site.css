@@ -12073,9 +12073,9 @@ body.site-loading-active.donate-page-active > footer{
   }
 }
 
-
-/* Logos de vídeos: sem sobreposição nos cards mobile e tamanho estável nos detalhes. */
-.detail-logo-media{
+/* Logo opcional de Vídeos/Festivals & Shows: somente nos detalhes.
+   Filmes e Séries continuam usando as regras originais de .detail-logo img. */
+.detail-logo-media--video{
   display:flex;
   align-items:flex-end;
   justify-content:flex-start;
@@ -12086,7 +12086,7 @@ body.site-loading-active.donate-page-active > footer{
   overflow:visible;
   line-height:0;
 }
-.detail-logo-media > img{
+.detail-logo-media--video > img{
   display:block!important;
   width:auto!important;
   height:auto!important;
@@ -12098,19 +12098,9 @@ body.site-loading-active.donate-page-active > footer{
   filter:drop-shadow(0 6px 24px rgba(0,0,0,.48));
 }
 @media(max-width:760px){
-  /* No celular, somente cards da coleção Vídeos usam apenas a thumbnail.
-     Filmes e Séries mantêm a logo sobre o card, como no visual original. */
-  .video-card[data-collection="videos"] > .video-card-logo,
-  .video-card[data-collection="videos"] > .video-card-logo-slot{
-    display:none!important;
-  }
-  .detail-logo-media{
+  .detail-logo-media--video{
     width:min(78vw,320px);
     height:92px;
     max-width:calc(100vw - 44px);
-  }
-  .detail-logo-media > img{
-    max-width:100%!important;
-    max-height:100%!important;
   }
 }
