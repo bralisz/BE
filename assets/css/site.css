@@ -12555,3 +12555,24 @@ body.site-loading-active.donate-page-active > footer{
     gap:clamp(72px,24vw,118px)!important;
   }
 }
+
+
+/* Fullscreen — inatividade de 2s somente para os ícones superiores e cursor.
+   A timeline/tempo continuam visíveis embaixo. */
+.drive-player-overlay.is-browser-fullscreen .drive-player-top-controls{
+  transition:opacity .18s ease,transform .18s ease!important;
+}
+.drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle .drive-player-shell:-webkit-full-screen .drive-player-top-controls{
+  opacity:0!important;
+  pointer-events:none!important;
+  transform:translateY(-8px)!important;
+}
+@media (hover:hover) and (pointer:fine){
+  .drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle .drive-player-shell,
+  .drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle .drive-player-video,
+  .drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle .drive-player-frame-shell{
+    cursor:none!important;
+  }
+}

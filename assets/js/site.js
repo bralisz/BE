@@ -3877,6 +3877,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
+    let fullscreenUiTimer = 0;
     let controlsInteracting = false;
     let previousFocus = null;
     let activeFileId = '';
@@ -3910,11 +3911,32 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return Boolean(fullscreenElement && (fullscreenElement === shell || fullscreenElement === overlay || shell.contains(fullscreenElement)));
     };
 
+    const hideFullscreenUiForInactivity = () => {
+      window.clearTimeout(fullscreenUiTimer);
+      fullscreenUiTimer = 0;
+      if (!playerOwnsFullscreen() || overlay.hidden) return;
+      overlay.classList.add('fullscreen-ui-idle');
+    };
+
+    const registerFullscreenActivity = () => {
+      window.clearTimeout(fullscreenUiTimer);
+      fullscreenUiTimer = 0;
+      overlay.classList.remove('fullscreen-ui-idle');
+      if (!playerOwnsFullscreen() || overlay.hidden) return;
+      fullscreenUiTimer = window.setTimeout(hideFullscreenUiForInactivity, 2000);
+    };
+
     const syncFullscreenButton = () => {
       const active = playerOwnsFullscreen();
       overlay.classList.toggle('is-browser-fullscreen', active);
       fullscreenButton.setAttribute('aria-label', active ? 'Sair da tela cheia' : 'Entrar em tela cheia');
       fullscreenButton.title = active ? 'Sair da tela cheia' : 'Tela cheia';
+      if (active) registerFullscreenActivity();
+      else {
+        window.clearTimeout(fullscreenUiTimer);
+        fullscreenUiTimer = 0;
+        overlay.classList.remove('fullscreen-ui-idle');
+      }
     };
 
     const toggleBrowserFullscreen = async () => {
@@ -4111,8 +4133,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const clearPlayerTimers = () => {
       window.clearTimeout(fallbackTimer);
       window.clearTimeout(controlsTimer);
+      window.clearTimeout(fullscreenUiTimer);
       fallbackTimer = 0;
       controlsTimer = 0;
+      fullscreenUiTimer = 0;
     };
 
     const setLoadingMessage = (message, visible = true, revealText = false) => {
@@ -4173,25 +4197,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setAudioMode(shouldUseAudioMode);
     };
 
-    const canAutoHideSiteControls = () => {
-      if (overlay.hidden || overlay.classList.contains('is-loading') || overlay.classList.contains('is-error')) return false;
-      if (!frameMode) return true;
-      return activeProvider === 'vkvideo' && overlay.classList.contains('is-vk-api-mode');
-    };
-
-    const hideControlsForInactivity = () => {
-      window.clearTimeout(controlsTimer);
-      if (!canAutoHideSiteControls() || controlsInteracting) return;
-      overlay.classList.remove('controls-visible');
-      overlay.classList.add('controls-idle');
-    };
-
     const showControls = (_keepVisible = false) => {
+      window.clearTimeout(controlsTimer);
       overlay.classList.remove('controls-idle');
       overlay.classList.add('controls-visible');
-      window.clearTimeout(controlsTimer);
-      if (!canAutoHideSiteControls() || controlsInteracting) return;
-      controlsTimer = window.setTimeout(hideControlsForInactivity, 2000);
     };
 
     const syncPlayerState = () => {
@@ -4365,7 +4374,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vk-api-mode', 'is-loading', 'is-error', 'controls-visible', 'controls-idle', 'is-paused', 'is-muted', 'is-browser-fullscreen');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vk-api-mode', 'is-loading', 'is-error', 'controls-visible', 'controls-idle', 'fullscreen-ui-idle', 'is-paused', 'is-muted', 'is-browser-fullscreen');
       youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
@@ -4660,13 +4669,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls();
     });
 
-    shell.addEventListener('pointermove', () => showControls());
+    shell.addEventListener('pointermove', () => {
+      showControls();
+      registerFullscreenActivity();
+    });
     shell.addEventListener('pointerdown', event => {
+      registerFullscreenActivity();
       if (event.target.closest('button,input,iframe')) return;
       showControls();
     });
-    shell.addEventListener('touchstart', () => showControls(), { passive: true });
-    shell.addEventListener('keydown', () => showControls());
+    shell.addEventListener('touchstart', () => {
+      showControls();
+      registerFullscreenActivity();
+    }, { passive: true });
+    shell.addEventListener('keydown', () => {
+      showControls();
+      registerFullscreenActivity();
+    });
     shell.addEventListener('dblclick', event => {
       const vkControllable = activeProvider === 'vkvideo' && frameMode && vkApiReady;
       if ((frameMode && !vkControllable) || event.target.closest('button,input,iframe')) return;
@@ -4705,6 +4724,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     window.addEventListener('keydown', event => {
       if (overlay.hidden) return;
+      registerFullscreenActivity();
       if (event.key === 'Escape') {
         if (playerOwnsFullscreen()) return;
         event.preventDefault();
