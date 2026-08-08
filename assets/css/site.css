@@ -13677,6 +13677,24 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   bottom:calc(88px + max(8px,env(safe-area-inset-bottom)))!important;
 }
 
+/* Zona invisível de hover ao redor do dock central.
+   Faz a aba reaparecer também alguns pixels nas laterais/abaixo, inclusive
+   quando o preview nativo do Drive está em iframe e captura o ponteiro. */
+.drive-video-player-action-wake-zone{
+  position:absolute;
+  left:50%;
+  bottom:0;
+  z-index:9;
+  width:238px;
+  height:92px;
+  transform:translateX(-50%);
+  background:transparent;
+  pointer-events:auto;
+}
+@media(hover:none),(pointer:coarse){
+  .drive-video-player-action-wake-zone{pointer-events:none}
+}
+
 /* Dock inferior central no mesmo estilo da Home usado pelo MP3. */
 .drive-video-player-actionbar{
   left:50%!important;
@@ -13768,6 +13786,7 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   .drive-video-player-skip svg{width:58px!important;height:58px!important}
   .drive-video-player-toggle{width:64px!important;height:64px!important}
   .drive-video-player-toggle svg{width:50px!important;height:50px!important}
+  .drive-video-player-action-wake-zone{width:222px;height:82px}
   .drive-video-player-actionbar{
     bottom:max(12px,env(safe-area-inset-bottom))!important;
     height:54px!important;

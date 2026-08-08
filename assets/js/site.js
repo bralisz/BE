@@ -3977,7 +3977,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           <input class="drive-video-player-progress" id="driveVideoPlayerProgress" type="range" min="0" max="1000" value="0" step="1" aria-label="Progresso do vídeo">
           <div class="drive-video-player-time"><span id="driveVideoPlayerCurrent">0:00</span><span aria-hidden="true">/</span><span id="driveVideoPlayerDuration">0:00</span></div>
         </div>
-        <div class="drive-video-player-actionbar" aria-label="Controles do vídeo">
+        <div class="drive-video-player-action-wake-zone" id="driveVideoPlayerActionWakeZone" aria-hidden="true"></div>
+        <div class="drive-video-player-actionbar" id="driveVideoPlayerActionbar" aria-label="Controles do vídeo">
           <button class="drive-video-player-action drive-video-player-fullscreen" id="driveVideoPlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
             <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v5M5 5l6 6M14 19h5v-5M19 19l-6-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4a1 1 0 0 0 1-1V4M20 9h-4a1 1 0 0 1-1-1V4M4 15h4a1 1 0 0 1 1 1v4M20 15h-4a1 1 0 0 0-1 1v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -4021,7 +4022,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const volumeButton = document.getElementById('driveVideoPlayerVolume');
     const externalButton = document.getElementById('driveVideoPlayerExternal');
     const closeButton = document.getElementById('driveVideoPlayerClose');
-    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !loadingMessage || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel || !fullscreenButton || !volumeButton || !externalButton || !closeButton) return;
+    const actionbar = document.getElementById('driveVideoPlayerActionbar');
+    const actionWakeZone = document.getElementById('driveVideoPlayerActionWakeZone');
+    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !loadingMessage || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel || !fullscreenButton || !volumeButton || !externalButton || !closeButton || !actionbar || !actionWakeZone) return;
 
     let activeFileId = '';
     let activeResourceKey = '';
@@ -4368,6 +4371,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     progress.addEventListener('pointerup', releaseProgress);
     progress.addEventListener('pointercancel', releaseProgress);
     progress.addEventListener('change', releaseProgress);
+
+    // Área de hover maior ao redor do dock central. Isso é especialmente
+    // importante no fallback nativo do Drive, pois o iframe captura o mouse
+    // e o shell não recebe pointermove. A zona é invisível e só mantém os
+    // controles visíveis; o dock continua com o mesmo tamanho visual.
+    const enterActionHoverArea = () => {
+      controlsInteracting = true;
+      showControls(true);
+    };
+    const leaveActionHoverArea = () => {
+      controlsInteracting = false;
+      showControls(false);
+    };
+    actionWakeZone.addEventListener('pointerenter', enterActionHoverArea);
+    actionWakeZone.addEventListener('pointermove', () => showControls(true));
+    actionWakeZone.addEventListener('pointerleave', leaveActionHoverArea);
+    actionbar.addEventListener('pointerenter', enterActionHoverArea);
+    actionbar.addEventListener('pointermove', () => showControls(true));
+    actionbar.addEventListener('pointerleave', leaveActionHoverArea);
 
     shell.addEventListener('pointermove', () => showControls(false));
     shell.addEventListener('pointerdown', event => {
