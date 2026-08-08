@@ -13344,12 +13344,27 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   position:absolute;
   z-index:23;
   left:50%;
-  bottom:max(42px,calc(env(safe-area-inset-bottom) + 32px));
+  /* A zona de hover fica somente ACIMA da tab. Assim a faixa abaixo
+     continua pertencendo ao iframe do VK e recebe cliques normalmente. */
+  bottom:max(126px,calc(env(safe-area-inset-bottom) + 116px));
   width:270px;
-  height:132px;
+  height:58px;
   transform:translateX(-50%);
   background:transparent;
 }
+/* Amplia apenas as laterais da própria tab, sem criar uma camada sobre
+   a barra/progresso nativos do VK abaixo dela. */
+.external-native-player-toolbar::before,
+.external-native-player-toolbar::after{
+  content:"";
+  position:absolute;
+  top:0;
+  width:54px;
+  height:100%;
+  background:transparent;
+}
+.external-native-player-toolbar::before{right:100%}
+.external-native-player-toolbar::after{left:100%}
 .external-native-player-overlay[data-provider="vk"] .external-native-player-bottom-shade{
   opacity:.9;
 }
@@ -13512,7 +13527,7 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   }
   .external-native-player-action{width:38px;height:38px}
   .external-native-player-menu{bottom:max(118px,calc(env(safe-area-inset-bottom) + 108px))}
-  .external-native-player-wake-zone{bottom:max(34px,calc(env(safe-area-inset-bottom) + 24px));width:252px;height:120px}
+  .external-native-player-wake-zone{bottom:max(112px,calc(env(safe-area-inset-bottom) + 102px));width:252px;height:52px}
   .external-native-player-bottom-shade{height:164px}
 }
 @media(prefers-reduced-motion:reduce){
