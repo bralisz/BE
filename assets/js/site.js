@@ -4078,14 +4078,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     };
 
-    const useFrameFallback = () => {
+    const isMobileProviderLayout = () => window.matchMedia('(max-width: 700px)').matches;
+
+    const useFrameFallback = (mobileDirect = false) => {
       if (!activeFileId || frameMode || overlay.hidden) return;
-      if (activeMediaKind === 'audio' || audioMode) {
+      if (!mobileDirect && (activeMediaKind === 'audio' || audioMode)) {
         showStreamError('O MP3 não pôde ser reproduzido. Confirme se o arquivo está público para qualquer pessoa com o link.');
         return;
       }
       frameMode = true;
-      streamAttempt = 'frame';
+      streamAttempt = mobileDirect ? 'mobile-frame' : 'frame';
       window.clearTimeout(fallbackTimer);
       video.pause();
       video.removeAttribute('src');
@@ -4093,6 +4095,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
       frameShell.hidden = false;
       overlay.classList.add('is-frame-mode', 'is-drive-frame-mode');
+      overlay.classList.toggle('is-mobile-provider-mode', isMobileProviderLayout());
       loading.hidden = true;
       overlay.classList.remove('is-loading');
       setPlayerInteractive(false);
@@ -4192,7 +4195,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vkvideo-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vkvideo-mode', 'is-mobile-provider-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
       youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
@@ -4251,7 +4254,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         applyMediaKind(kind);
       });
 
-      loadProxyStream(false);
+      // No mobile, Drive usa somente o player incorporado. Assim o <video> customizado
+      // e o iframe do Drive nunca ficam ativos ao mesmo tempo, evitando controles duplicados.
+      if (isMobileProviderLayout()) {
+        useFrameFallback(true);
+      } else {
+        loadProxyStream(false);
+      }
       closeButton.focus({ preventScroll: true });
     };
 
@@ -4308,6 +4317,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.setAttribute('aria-hidden', 'false');
       overlay.classList.remove('is-error', 'is-loading', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-muted');
       overlay.classList.add('is-open', 'is-frame-mode', 'is-youtube-mode', 'is-vkvideo-mode', 'controls-visible');
+      overlay.classList.toggle('is-mobile-provider-mode', isMobileProviderLayout());
       document.body.classList.add('drive-player-open');
       video.pause();
       video.removeAttribute('src');
