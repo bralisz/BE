@@ -3877,6 +3877,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
+    let controlsInteracting = false;
     let previousFocus = null;
     let activeFileId = '';
     let activeResourceKey = '';
@@ -4172,14 +4173,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setAudioMode(shouldUseAudioMode);
     };
 
-    const showControls = (keepVisible = false) => {
+    const canAutoHideSiteControls = () => {
+      if (overlay.hidden || overlay.classList.contains('is-loading') || overlay.classList.contains('is-error')) return false;
+      if (!frameMode) return true;
+      return activeProvider === 'vkvideo' && overlay.classList.contains('is-vk-api-mode');
+    };
+
+    const hideControlsForInactivity = () => {
+      window.clearTimeout(controlsTimer);
+      if (!canAutoHideSiteControls() || controlsInteracting) return;
+      overlay.classList.remove('controls-visible');
+      overlay.classList.add('controls-idle');
+    };
+
+    const showControls = (_keepVisible = false) => {
+      overlay.classList.remove('controls-idle');
       overlay.classList.add('controls-visible');
       window.clearTimeout(controlsTimer);
-      const vkPlaying = activeProvider === 'vkvideo' && frameMode && vkApiReady && !vkPaused;
-      const nativePlaying = !frameMode && mediaReady && !video.paused;
-      if (!keepVisible && mediaReady && (vkPlaying || nativePlaying)) {
-        controlsTimer = window.setTimeout(() => overlay.classList.remove('controls-visible'), 2400);
-      }
+      if (!canAutoHideSiteControls() || controlsInteracting) return;
+      controlsTimer = window.setTimeout(hideControlsForInactivity, 3000);
     };
 
     const syncPlayerState = () => {
@@ -4353,7 +4365,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vk-api-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vk-api-mode', 'is-loading', 'is-error', 'controls-visible', 'controls-idle', 'is-paused', 'is-muted', 'is-browser-fullscreen');
       youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
@@ -4630,13 +4642,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       syncPlayerState();
       showControls(true);
     });
-    progress.addEventListener('change', () => showControls());
+    progress.addEventListener('pointerdown', () => {
+      controlsInteracting = true;
+      window.clearTimeout(controlsTimer);
+      overlay.classList.remove('controls-idle');
+      overlay.classList.add('controls-visible');
+    });
+    const releaseControlsInteraction = () => {
+      if (!controlsInteracting) return;
+      controlsInteracting = false;
+      showControls();
+    };
+    progress.addEventListener('pointerup', releaseControlsInteraction);
+    progress.addEventListener('pointercancel', releaseControlsInteraction);
+    progress.addEventListener('change', () => {
+      controlsInteracting = false;
+      showControls();
+    });
 
     shell.addEventListener('pointermove', () => showControls());
     shell.addEventListener('pointerdown', event => {
       if (event.target.closest('button,input,iframe')) return;
       showControls();
     });
+    shell.addEventListener('touchstart', () => showControls(), { passive: true });
+    shell.addEventListener('keydown', () => showControls());
     shell.addEventListener('dblclick', event => {
       const vkControllable = activeProvider === 'vkvideo' && frameMode && vkApiReady;
       if ((frameMode && !vkControllable) || event.target.closest('button,input,iframe')) return;
@@ -4722,8 +4752,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls();
     });
 
-    document.addEventListener('fullscreenchange', syncFullscreenButton);
-    document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
+    const handlePlayerFullscreenChange = () => {
+      syncFullscreenButton();
+      if (!overlay.hidden && overlay.classList.contains('is-open')) showControls();
+    };
+    document.addEventListener('fullscreenchange', handlePlayerFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handlePlayerFullscreenChange);
     window.addEventListener('pagehide', closePlayer);
     window.addEventListener('be:close-drive-player', closePlayer);
     setPlayerInteractive(false);

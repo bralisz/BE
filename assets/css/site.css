@@ -12128,3 +12128,165 @@ body.site-loading-active.donate-page-active > footer{
 @media(max-width:700px){
   .drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after{height:70px}
 }
+
+
+/* Player — ocultação por inatividade.
+   Em modos controlados pelo site (player nativo e VK via API), os controles
+   somem após alguns segundos sem interação e reaparecem ao mover/tocar/usar teclado. */
+.drive-player-overlay.controls-idle .drive-player-top-controls,
+.drive-player-overlay.controls-idle .drive-player-center-controls,
+.drive-player-overlay.controls-idle .drive-player-bottom-controls,
+.drive-player-overlay.controls-idle.is-paused .drive-player-top-controls,
+.drive-player-overlay.controls-idle.is-paused .drive-player-center-controls,
+.drive-player-overlay.controls-idle.is-paused .drive-player-bottom-controls{
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.drive-player-overlay.controls-idle .drive-player-shell::after,
+.drive-player-overlay.controls-idle.is-paused .drive-player-shell::after,
+.drive-player-overlay.is-vk-api-mode.controls-idle .drive-player-shell::after,
+.drive-player-overlay.is-vk-api-mode.controls-idle.is-paused .drive-player-shell::after{
+  opacity:0!important;
+}
+.drive-player-overlay.controls-idle .drive-player-top-controls,
+.drive-player-overlay.controls-idle.is-paused .drive-player-top-controls{
+  transform:translateY(-5px)!important;
+}
+.drive-player-overlay.controls-idle .drive-player-center-controls,
+.drive-player-overlay.controls-idle.is-paused .drive-player-center-controls{
+  transform:translate(-50%,-48%) scale(.96)!important;
+}
+.drive-player-overlay.controls-idle .drive-player-bottom-controls,
+.drive-player-overlay.controls-idle.is-paused .drive-player-bottom-controls{
+  transform:translateY(6px)!important;
+}
+@media (hover:hover) and (pointer:fine){
+  .drive-player-overlay.controls-idle:not(.is-frame-mode) .drive-player-shell,
+  .drive-player-overlay.controls-idle.is-vk-api-mode .drive-player-shell{
+    cursor:none;
+  }
+}
+
+
+/* Player — controles da Billie Eilish TV também funcionam em tela cheia.
+   Eles continuam sujeitos à inatividade: aparecem com interação e somem
+   novamente depois do tempo configurado no JavaScript. */
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-top-controls{
+  display:flex!important;
+  height:64px!important;
+  padding:
+    0 max(18px,env(safe-area-inset-right))
+    max(4px,env(safe-area-inset-bottom))
+    max(18px,env(safe-area-inset-left))!important;
+  background:linear-gradient(180deg,transparent,rgba(0,0,0,.72))!important;
+  border-top:0!important;
+  box-shadow:none!important;
+}
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-center-controls{
+  display:flex!important;
+}
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-bottom-controls{
+  display:block!important;
+  bottom:78px!important;
+}
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-video,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-video{
+  height:100%!important;
+}
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-frame-shell{
+  inset:0!important;
+}
+
+/* Reverte a regra antiga que escondia todos os controles quando o próprio
+   shell era o elemento fullscreen. */
+.drive-player-shell:fullscreen .drive-player-overlay-controls-placeholder,
+.drive-player-shell:-webkit-full-screen .drive-player-overlay-controls-placeholder{
+  display:block;
+}
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-bottom-controls{
+  visibility:visible!important;
+}
+
+/* Quando há atividade, libera os controles em fullscreen; quando entra em
+   controls-idle, as regras de inatividade continuam vencendo por especificidade. */
+.drive-player-overlay.is-browser-fullscreen.controls-visible:not(.is-frame-mode) .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-visible:not(.is-frame-mode) .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-visible:not(.is-frame-mode) .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-visible.is-vk-api-mode .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-visible.is-vk-api-mode .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-visible.is-vk-api-mode .drive-player-bottom-controls{
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+
+/* A regra antiga usa display:none!important em :fullscreen. Estes seletores,
+   colocados depois dela, restauram somente os modos controlados pelo site. */
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:fullscreen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:fullscreen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:-webkit-full-screen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:-webkit-full-screen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:-webkit-full-screen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:fullscreen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:fullscreen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:-webkit-full-screen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:-webkit-full-screen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:-webkit-full-screen .drive-player-bottom-controls{
+  visibility:visible!important;
+}
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:-webkit-full-screen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:-webkit-full-screen .drive-player-top-controls{
+  display:flex!important;
+}
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:fullscreen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:-webkit-full-screen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:fullscreen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:-webkit-full-screen .drive-player-center-controls{
+  display:flex!important;
+}
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:fullscreen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-shell:-webkit-full-screen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:fullscreen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:-webkit-full-screen .drive-player-bottom-controls{
+  display:block!important;
+}
+
+/* Mantém a inatividade funcionando inclusive em fullscreen, mesmo pausado. */
+.drive-player-overlay.is-browser-fullscreen.controls-idle .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-idle .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-idle .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-idle .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-idle .drive-player-shell:fullscreen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-idle .drive-player-shell:fullscreen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-idle .drive-player-shell:-webkit-full-screen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-idle .drive-player-shell:-webkit-full-screen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen.controls-idle .drive-player-shell:-webkit-full-screen .drive-player-bottom-controls{
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+@media(max-width:700px){
+  .drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-top-controls,
+  .drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-top-controls{
+    height:58px!important;
+    padding-left:max(10px,env(safe-area-inset-left))!important;
+    padding-right:max(10px,env(safe-area-inset-right))!important;
+  }
+  .drive-player-overlay.is-browser-fullscreen:not(.is-frame-mode) .drive-player-bottom-controls,
+  .drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-bottom-controls{
+    bottom:68px!important;
+    left:max(16px,env(safe-area-inset-left))!important;
+    right:max(16px,env(safe-area-inset-right))!important;
+  }
+}
