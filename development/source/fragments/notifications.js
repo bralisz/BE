@@ -185,20 +185,16 @@
         if(!fragment)fragment=document.createDocumentFragment();
         fragment.append(document.createTextNode(text.slice(lastIndex,match.index)));
         if(isDiscordNotificationImageUrl(safeUrl)){
-          var imageLink=document.createElement('a');
-          imageLink.className='notification-markdown-image notification-discord-image';
-          imageLink.href=safeUrl;
-          imageLink.target='_blank';
-          imageLink.rel='noopener noreferrer';
-          imageLink.setAttribute('aria-label','Abrir imagem em tamanho completo');
+          var imageWrapper=document.createElement('span');
+          imageWrapper.className='notification-markdown-image notification-discord-image';
           var image=document.createElement('img');
           image.loading='lazy';
           image.decoding='async';
           image.referrerPolicy='no-referrer';
           image.src=safeUrl;
           image.alt='Imagem da notificação';
-          imageLink.append(image);
-          fragment.append(imageLink);
+          imageWrapper.append(image);
+          fragment.append(imageWrapper);
         }else{
           var link=document.createElement('a');
           link.className='notification-inline-link';
@@ -223,9 +219,9 @@
     var source=replaceNotificationImageMarkdown(value,function(safeUrl,alt){
       var token='BETVNOTIFICATIONIMAGE'+images.length+'TOKEN';
       var fallbackUrl=isDiscordNotificationImageUrl(safeUrl)?'':notificationImageProxyUrl(safeUrl);
-      images.push('<a class="notification-markdown-image" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagem em tamanho completo">'+
+      images.push('<span class="notification-markdown-image">'+
         '<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(safeUrl)+'"'+(fallbackUrl?' data-notification-fallback-src="'+esc(fallbackUrl)+'"':'')+' alt="'+esc(alt||'Imagem da notificação')+'">'+
-      '</a>');
+      '</span>');
       return token;
     });
     var html=window.beRenderMarkdown?window.beRenderMarkdown(source):esc(source).replace(/\r?\n/g,'<br>');
