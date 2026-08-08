@@ -523,7 +523,7 @@
       ? image
       : (video.bannerUrl || video.imageUrl || video.thumbnailUrl || '');
     const logo = video.logoUrl || '';
-    const showCardLogo = ['movies', 'series'].includes(String(collection).toLowerCase()) && logo && logo !== '#';
+    const showCardLogo = logo && logo !== '#';
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
     const routeHref = detailRoutePath(itemId);

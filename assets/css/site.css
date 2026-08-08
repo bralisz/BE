@@ -12098,9 +12098,10 @@ body.site-loading-active.donate-page-active > footer{
   filter:drop-shadow(0 6px 24px rgba(0,0,0,.48));
 }
 @media(max-width:760px){
-  /* No celular, os cards usam somente a thumbnail. A logo fica exclusiva dos detalhes. */
-  .video-card > .video-card-logo,
-  .video-card > .video-card-logo-slot{
+  /* No celular, somente cards da coleção Vídeos usam apenas a thumbnail.
+     Filmes e Séries mantêm a logo sobre o card, como no visual original. */
+  .video-card[data-collection="videos"] > .video-card-logo,
+  .video-card[data-collection="videos"] > .video-card-logo-slot{
     display:none!important;
   }
   .detail-logo-media{
