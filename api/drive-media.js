@@ -41,6 +41,22 @@ function wantsMetadata(req) {
   return value === '1' || value === 'true' || value === 'yes';
 }
 
+function wantsMobileStreaming(req) {
+  const value = String(firstQueryValue(req.query?.mobile) || '').trim().toLowerCase();
+  return value === '1' || value === 'true' || value === 'yes';
+}
+
+function requestedMediaKind(req) {
+  const value = String(firstQueryValue(req.query?.kind ?? req.query?.type) || '').trim().toLowerCase();
+  return value === 'video' || value === 'audio' ? value : '';
+}
+
+function requestedMime(req) {
+  const value = String(firstQueryValue(req.query?.mime) || '').trim().toLowerCase();
+  if (value === 'video/mp4' || value === 'audio/mpeg' || value === 'audio/mp4') return value;
+  return '';
+}
+
 function sourceUrls(fileId, resourceKey) {
   const makeUrl = base => {
     const url = new URL(base);
@@ -212,7 +228,8 @@ function confirmedDownloadUrl(html, baseUrl) {
 
 async function fetchDriveSource(url, req, probeOnly = false) {
   const clientRange = String(req.headers.range || '').trim();
-  const requestedRange = probeOnly && !clientRange ? 'bytes=0-0' : clientRange;
+  const mobileRange = wantsMobileStreaming(req) && !clientRange && !probeOnly ? 'bytes=0-2097151' : '';
+  const requestedRange = probeOnly && !clientRange ? 'bytes=0-0' : (clientRange || mobileRange);
   const headers = {
     Accept: '*/*',
     'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
@@ -313,6 +330,9 @@ module.exports = async function driveMediaProxy(req, res) {
   if (!fileId || (rawResourceKey && !resourceKey)) return res.status(400).end();
 
   const metadataRequest = wantsMetadata(req);
+  const mobileStreaming = wantsMobileStreaming(req);
+  const forcedKind = requestedMediaKind(req);
+  const forcedMime = requestedMime(req);
 
   try {
     let upstream = null;
@@ -349,14 +369,23 @@ module.exports = async function driveMediaProxy(req, res) {
 
     if (!upstream) return res.status(502).end();
 
+    const genericType = !contentType || contentType === 'application/octet-stream' || contentType === 'binary/octet-stream';
+    if (forcedMime && genericType) contentType = forcedMime;
+    else if (forcedKind === 'video' && genericType) contentType = 'video/mp4';
+    else if (forcedKind === 'audio' && genericType) contentType = 'audio/mpeg';
+
     res.statusCode = upstream.status;
     res.setHeader('Content-Type', contentType || 'application/octet-stream');
-    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Content-Disposition', forcedKind === 'video' ? 'inline; filename="video.mp4"' : 'inline');
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Accept-Ranges', upstream.headers.get('accept-ranges') || 'bytes');
+    if (mobileStreaming) {
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type');
+      res.setHeader('X-BETV-Mobile-Stream', '1');
+    }
 
-    const kind = mediaKind(contentType, upstream.headers.get('content-disposition'), filename);
+    const kind = forcedKind || mediaKind(contentType, upstream.headers.get('content-disposition'), filename);
     if (kind) res.setHeader('X-BETV-Media-Kind', kind);
 
     copyHeader(upstream, res, 'content-length');

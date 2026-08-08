@@ -14452,3 +14452,21 @@ body.profile-page-active .profile-page-hero{
     pointer-events:auto!important;
   }
 }
+
+/* =========================================================
+   08/08/2026 — ajuste pontual MOBILE
+   YouTube: X afastado da barra nativa. Desktop não é alterado.
+   ========================================================= */
+@media (max-width:820px){
+  .external-native-player-overlay[data-provider="youtube"] .external-native-player-toolbar{
+    bottom:max(150px,calc(env(safe-area-inset-bottom) + 138px))!important;
+  }
+}
+
+/* Em paisagem os controles nativos ocupam bem menos altura; manter o X
+   próximo da base, mas ainda fora da barra de progresso do YouTube. */
+@media (max-width:920px) and (orientation:landscape), (pointer:coarse) and (max-height:620px){
+  .external-native-player-overlay[data-provider="youtube"] .external-native-player-toolbar{
+    bottom:max(72px,calc(env(safe-area-inset-bottom) + 62px))!important;
+  }
+}

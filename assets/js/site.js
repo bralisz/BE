@@ -3742,16 +3742,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview?${params.toString()}`;
   }
 
-  function googleDriveStreamUrl(fileId, resourceKey = '') {
+  function googleDriveStreamUrl(fileId, resourceKey = '', options = {}) {
     const params = new URLSearchParams({ id: fileId });
     if (resourceKey) params.set('resourcekey', resourceKey);
+    if (options?.mobile) params.set('mobile', '1');
+    if (options?.kind) params.set('kind', String(options.kind));
+    if (options?.mime) params.set('mime', String(options.mime));
     return `/api/drive-media?${params.toString()}`;
   }
 
   function googleDriveDirectStreamUrl(fileId, resourceKey = '') {
-    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: 't' });
+    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: 't', authuser: '0' });
     if (resourceKey) params.set('resourcekey', resourceKey);
     return `https://drive.google.com/uc?${params.toString()}`;
+  }
+
+  function googleDriveUserContentStreamUrl(fileId, resourceKey = '') {
+    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: 't', authuser: '0' });
+    if (resourceKey) params.set('resourcekey', resourceKey);
+    return `https://drive.usercontent.google.com/download?${params.toString()}`;
   }
 
   function normalizeDriveMediaKind(value) {
@@ -4557,7 +4566,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const proxyStreamUrl = (fileId, resourceKey = '', retry = false) => {
-      const url = new URL(googleDriveStreamUrl(fileId, resourceKey), location.origin);
+      const mobileDedicated = isMobileDedicatedDrivePlayer();
+      const url = new URL(googleDriveStreamUrl(fileId, resourceKey, mobileDedicated ? {
+        mobile: true,
+        kind: 'video',
+        mime: 'video/mp4'
+      } : {}), location.origin);
       if (retry) url.searchParams.set('retry', String(Date.now()));
       return `${url.pathname}${url.search}`;
     };
@@ -4606,6 +4620,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(true);
     };
 
+    const tryUserContentStream = () => {
+      if (!activeFileId || overlay.hidden || frameMode || mediaReady || streamAttempt === 'usercontent') return;
+      streamAttempt = 'usercontent';
+      mediaReady = false;
+      window.clearTimeout(fallbackTimer);
+      setInteractive(false);
+      overlay.classList.add('is-source-syncing');
+      setLoading('Tentando conexão direta com o Google Drive...');
+      video.pause();
+      video.src = googleDriveUserContentStreamUrl(activeFileId, activeResourceKey);
+      video.load();
+      requestPlayback();
+      fallbackTimer = window.setTimeout(() => {
+        if (!mediaReady && !overlay.hidden && !frameMode) loadProxyStream(true);
+      }, 12000);
+    };
+
     const tryDirectStream = () => {
       if (!activeFileId || overlay.hidden || frameMode || mediaReady || streamAttempt === 'direct') return;
       streamAttempt = 'direct';
@@ -4638,9 +4669,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       requestPlayback();
       fallbackTimer = window.setTimeout(() => {
         if (mediaReady || overlay.hidden || frameMode) return;
-        if (!retry) loadProxyStream(true);
+        if (!retry && isMobileDedicatedDrivePlayer()) tryUserContentStream();
+        else if (!retry) loadProxyStream(true);
         else tryDirectStream();
-      }, retry ? 22000 : 16000);
+      }, retry ? 18000 : (isMobileDedicatedDrivePlayer() ? 10000 : 16000));
     };
 
     const handleStreamFailure = () => {
@@ -4648,6 +4680,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.clearTimeout(fallbackTimer);
       fallbackTimer = 0;
       if (streamAttempt === 'proxy') {
+        if (isMobileDedicatedDrivePlayer()) tryUserContentStream();
+        else loadProxyStream(true);
+      } else if (streamAttempt === 'usercontent') {
         loadProxyStream(true);
       } else if (streamAttempt === 'proxy-retry') {
         tryDirectStream();
@@ -4712,6 +4747,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const mobileDedicated = isMobileDedicatedDrivePlayer();
       video.preload = mobileDedicated ? 'auto' : 'metadata';
       video.playsInline = true;
+      if (mobileDedicated) {
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.removeAttribute('crossorigin');
+      }
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       overlay.className = `drive-video-player-overlay is-open is-paused is-source-syncing${mobileDedicated ? ' is-mobile-dedicated' : ''}`;
