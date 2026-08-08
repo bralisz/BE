@@ -9,8 +9,11 @@ const ALLOWED_COLLECTIONS = new Set(['contents', 'featured', 'gallery', 'movies'
 const ALLOWED_MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl', 'shareImage', 'portraitUrl']);
 
 const SUPABASE_RUNTIME_SOURCES = [
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js',
-  'https://unpkg.com/@supabase/supabase-js@2.112.0/dist/umd/supabase.js'
+  // A documentação oficial recomenda o major `@2` para o build UMD no navegador.
+  // Evita prender o site a uma versão inexistente/retirada e mantém um fallback
+  // entre dois CDNs independentes.
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+  'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'
 ];
 
 const ALLOWED_HOSTS = new Set([
@@ -54,8 +57,12 @@ async function serveSupabaseRuntime(req, res) {
       const response = await fetch(url, { headers: { 'User-Agent': 'BETV/1.0' } });
       if (!response.ok) continue;
       const body = await response.text();
+      // Não aceite página de erro/HTML retornada por CDN como se fosse o SDK.
+      if (body.length < 10000 || !/createClient/.test(body)) continue;
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
+      // O alias @2 pode receber novas versões; não deixe o navegador congelar
+      // uma cópia por um ano inteiro.
+      res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
       res.setHeader('X-Content-Type-Options', 'nosniff');
       if (req.method === 'HEAD') return res.status(200).end();
       return res.status(200).send(body);
