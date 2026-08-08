@@ -12960,28 +12960,7 @@ body.external-video-player-open{overflow:hidden!important;overscroll-behavior:no
   height:100%!important;
 }
 
-/* Inatividade exclusiva do Google Drive. Não alcança YouTube/VK. */
-.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-top-controls,
-.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-center-controls,
-.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-bottom-controls,
-.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode).is-paused .drive-player-top-controls,
-.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode).is-paused .drive-player-center-controls,
-.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode).is-paused .drive-player-bottom-controls{
-  opacity:0!important;
-  visibility:hidden!important;
-  pointer-events:none!important;
-}
-.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-shell::after,
-.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode).is-paused .drive-player-shell::after{
-  opacity:0!important;
-}
-@media (hover:hover) and (pointer:fine){
-  .drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-shell,
-  .drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-video,
-  .drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-frame-shell{
-    cursor:none!important;
-  }
-}
+/* MP3 do Google Drive: configuração original restaurada; controles permanecem no comportamento anterior. */
 
 
 /* Ajuste YouTube 2026-08-08 v3

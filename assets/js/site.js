@@ -4749,23 +4749,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setAudioMode(shouldUseAudioMode);
     };
 
-    const hideDriveControlsForInactivity = () => {
-      window.clearTimeout(controlsTimer);
-      controlsTimer = 0;
-      if (overlay.hidden || activeProvider !== 'drive' || controlsInteracting) return;
-      if (overlay.classList.contains('is-loading') || overlay.classList.contains('is-error')) return;
-      overlay.classList.add('controls-idle');
-      overlay.classList.remove('controls-visible');
-    };
-
     const showControls = (_keepVisible = false) => {
       window.clearTimeout(controlsTimer);
-      controlsTimer = 0;
       overlay.classList.remove('controls-idle');
       overlay.classList.add('controls-visible');
-      if (activeProvider === 'drive' && !controlsInteracting && !overlay.classList.contains('is-loading') && !overlay.classList.contains('is-error')) {
-        controlsTimer = window.setTimeout(hideDriveControlsForInactivity, 2000);
-      }
       if (activeProvider !== 'vkvideo') registerCenterSkipActivity();
     };
 
