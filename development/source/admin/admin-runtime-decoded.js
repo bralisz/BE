@@ -18,7 +18,7 @@ body.admin-preview-open{overflow:hidden}
 .content-editor-fields{
   min-height:0;
   overflow:auto;
-  padding:22px 24px 118px;
+  padding:22px 24px 28px;
   border-right:0;
   display:grid;
   grid-template-columns:minmax(0,1.12fr) minmax(360px,.88fr);
@@ -27,11 +27,11 @@ body.admin-preview-open{overflow:hidden}
   scrollbar-width:thin;
   scrollbar-color:rgba(255,255,255,.22) transparent;
 }
-.content-editor-fields>.editor-field-group{min-width:0;margin:0}
-.content-editor-fields>.editor-field-group:nth-child(1){grid-column:1;grid-row:1 / span 2}
+.content-editor-fields>.editor-field-group{min-width:0;margin:0;align-self:start;align-content:start}
+.content-editor-fields>.editor-field-group:nth-child(1){grid-column:1;grid-row:1}
 .content-editor-fields>.editor-field-group:nth-child(2){grid-column:2;grid-row:1}
-.content-editor-fields>.editor-field-group:nth-child(3){grid-column:2;grid-row:2}
-.content-editor-layout-news .content-editor-fields{display:block;padding-bottom:118px}
+.content-editor-fields>.editor-field-group:nth-child(3){grid-column:1/-1;grid-row:2}
+.content-editor-layout-news .content-editor-fields{display:block;padding-bottom:28px}
 .content-editor-layout-news .content-editor-fields>.editor-field-group{margin-bottom:18px}
 .content-editor-layout-news .content-editor-fields>.editor-field-group:last-child{margin-bottom:0}
 .content-live-preview{
@@ -101,6 +101,27 @@ body.admin-preview-open{overflow:hidden}
   cursor:pointer;
 }
 .preview-drawer-close:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
+.editor-header-preview-button{
+  min-width:132px;
+  min-height:44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 20px;
+  border:1px solid rgba(255,255,255,.92);
+  border-radius:999px;
+  background:#fff;
+  color:#0a0d12;
+  font:inherit;
+  font-size:12px;
+  font-weight:850;
+  letter-spacing:.01em;
+  cursor:pointer;
+  box-shadow:none!important;
+  transition:background .18s ease,transform .18s ease,border-color .18s ease;
+}
+.editor-header-preview-button:hover{background:#f1f3f6;border-color:#f1f3f6;transform:translateY(-1px)}
+.editor-header-preview-button:focus-visible{outline:2px solid #78aefe;outline-offset:3px}
 .content-preview-toggle{
   position:fixed;
   left:max(22px,env(safe-area-inset-left));
@@ -155,7 +176,8 @@ body.admin-preview-open{overflow:hidden}
   .content-editor-header h2{font-size:25px}
   .content-editor-header p{font-size:12px;line-height:1.45}
   .editor-header-status{max-width:100%;padding:7px 10px;font-size:11px}
-  .content-editor-fields{display:block;padding:14px 13px 96px}
+  .editor-header-preview-button{min-height:44px;padding:0 18px}
+  .content-editor-fields{display:block;padding:14px 13px 20px}
   .content-editor-fields>.editor-field-group{margin-bottom:13px}
   .content-editor-fields>.editor-field-group:last-child{margin-bottom:0}
   .editor-field-group{padding:15px;border-radius:18px;gap:15px}
@@ -193,7 +215,11 @@ body.admin-preview-open{overflow:hidden}
   .editor-preview-rail{padding:17px 18px 20px}
   .editor-preview-card{width:100%;max-width:330px}
 }
+@media(max-width:680px){
+  .editor-header-preview-button{width:100%}
+}
 @media(max-width:420px){
+  .editor-header-preview-button{min-height:46px}
   .content-editor-action-buttons{grid-template-columns:1fr}
   .content-editor-actions>div:first-child{display:none}
   .content-preview-toggle-copy strong{font-size:11px}
@@ -2121,7 +2147,7 @@ body.admin-preview-open{overflow:hidden}
       }
       const content = $('#adminContent');
       content.classList.add('admin-editor-active');
-      content.innerHTML = `<section class="content-editor-inline-shell"><div class="content-editor-modal inline"><header class="content-editor-header"><div><span class="dashboard-kicker">${item ? 'Editar conteúdo' : 'Novo conteúdo'}</span><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><p>Organize as informações e visualize o resultado quando quiser.</p></div><div class="editor-header-status"><span class="editor-save-dot"></span><small data-editor-draft-status>${storedDraft ? 'Rascunho anterior encontrado' : 'Rascunho protegido no navegador'}</small></div></header><form id="editorForm" class="modern-content-form"><div class="content-editor-layout content-editor-layout-${esc(name)}">${modernContentEditorFields(name, draft, context)}${modernContentPreview(name)}</div><button type="button" class="content-preview-backdrop" data-preview-backdrop aria-label="Fechar preview"></button><button type="button" class="content-preview-toggle" data-preview-toggle aria-expanded="false" aria-controls="contentLivePreview"><span class="content-preview-toggle-icon" aria-hidden="true">◉</span><span class="content-preview-toggle-copy"><strong>Ver preview</strong><small>como fica no site</small></span></button><div class="content-editor-actions"><div><strong>${item ? 'Alterações ainda não publicadas' : 'Novo conteúdo não publicado'}</strong><small>Salvar publica os dados no banco. O rascunho local evita perdas.</small></div><div class="content-editor-action-buttons"><button type="button" class="a-btn" id="footerCancelButton">Cancelar</button><button class="a-btn primary" type="submit">${item ? 'Salvar alterações' : 'Publicar conteúdo'}</button></div></div></form></div></section>`;
+      content.innerHTML = `<section class="content-editor-inline-shell"><div class="content-editor-modal inline"><header class="content-editor-header"><div><span class="dashboard-kicker">${item ? 'Editar conteúdo' : 'Novo conteúdo'}</span><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><p>Organize as informações e visualize o resultado quando quiser.</p></div><button type="button" class="editor-header-preview-button" data-preview-toggle aria-expanded="false" aria-controls="contentLivePreview">Ver Preview</button></header><form id="editorForm" class="modern-content-form"><div class="content-editor-layout content-editor-layout-${esc(name)}">${modernContentEditorFields(name, draft, context)}${modernContentPreview(name)}</div><button type="button" class="content-preview-backdrop" data-preview-backdrop aria-label="Fechar preview"></button><div class="content-editor-actions"><div><strong>${item ? 'Alterações ainda não publicadas' : 'Novo conteúdo não publicado'}</strong><small>Salvar publica os dados no banco. O rascunho local evita perdas.</small></div><div class="content-editor-action-buttons"><button type="button" class="a-btn" id="footerCancelButton">Cancelar</button><button class="a-btn primary" type="submit">${item ? 'Salvar alterações' : 'Publicar conteúdo'}</button></div></div></form></div></section>`;
       root = content;
       window.scrollTo({ top: 0, behavior: 'instant' });
     } else {
