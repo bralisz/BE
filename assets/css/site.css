@@ -12304,15 +12304,7 @@ body.site-loading-active.donate-page-active > footer{
   z-index:5;
   pointer-events:none;
   background:#000;
-  opacity:0;
-  transition:opacity .16s ease;
-}
-.drive-player-overlay.is-vk-api-mode.controls-visible .drive-player-frame-shell::after,
-.drive-player-overlay.is-vk-api-mode.is-paused .drive-player-frame-shell::after{
   opacity:1;
-}
-.drive-player-overlay.is-vk-api-mode.controls-idle .drive-player-frame-shell::after{
-  opacity:0;
 }
 @media(max-width:700px){
   .drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after{
@@ -12336,4 +12328,145 @@ body.site-loading-active.donate-page-active > footer{
 .drive-player-overlay.controls-idle:not(.is-browser-fullscreen).is-paused .drive-player-shell::after,
 .drive-player-overlay.is-vk-api-mode.controls-idle:not(.is-browser-fullscreen) .drive-player-shell::after{
   opacity:0!important;
+}
+
+/* Player sem inatividade: os controles BETV permanecem visíveis o tempo todo. */
+.drive-player-overlay.is-open .drive-player-top-controls,
+.drive-player-overlay.is-open .drive-player-center-controls,
+.drive-player-overlay.is-open .drive-player-bottom-controls,
+.drive-player-overlay.is-open.is-paused .drive-player-top-controls,
+.drive-player-overlay.is-open.is-paused .drive-player-center-controls,
+.drive-player-overlay.is-open.is-paused .drive-player-bottom-controls{
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+.drive-player-overlay.is-open .drive-player-shell::after,
+.drive-player-overlay.is-open.is-paused .drive-player-shell::after{
+  opacity:1!important;
+}
+.drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after{
+  opacity:1!important;
+}
+
+
+/* =========================================================
+   Player final:
+   - sem inatividade no modo normal (PC/mobile);
+   - fullscreen sem os controles centrais;
+   - timeline/tempo continuam acessíveis no fullscreen;
+   - VK nativo fica mascarado atrás do player BETV.
+   ========================================================= */
+
+/* Fora da tela cheia os controles do site ficam sempre visíveis. */
+.drive-player-overlay.is-open:not(.is-browser-fullscreen) .drive-player-top-controls,
+.drive-player-overlay.is-open:not(.is-browser-fullscreen) .drive-player-center-controls,
+.drive-player-overlay.is-open:not(.is-browser-fullscreen) .drive-player-bottom-controls{
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+
+/* No fullscreen: sem voltar 10s / play-pause / avançar 10s no centro. */
+.drive-player-overlay.is-browser-fullscreen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-center-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-center-controls{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+/* No fullscreen: mantém a barra de progresso e o tempo do player do site. */
+.drive-player-overlay.is-browser-fullscreen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-bottom-controls{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  left:max(24px,env(safe-area-inset-left))!important;
+  right:max(24px,env(safe-area-inset-right))!important;
+  bottom:max(24px,env(safe-area-inset-bottom))!important;
+  transform:none!important;
+  z-index:12!important;
+}
+
+/* Mantém os botões superiores úteis no fullscreen. */
+.drive-player-overlay.is-browser-fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-top-controls{
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  z-index:12!important;
+}
+
+/* VK: o iframe fica apenas como fonte visual do vídeo; interação é feita
+   pelos controles do player BETV através da API. */
+.drive-player-overlay.is-vk-api-mode .drive-player-frame{
+  pointer-events:none!important;
+}
+
+/* Esconde a barra inferior nativa do VK que aparecia atrás da timeline BETV. */
+.drive-player-overlay.is-vk-api-mode .drive-player-frame-shell{
+  overflow:hidden!important;
+}
+.drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:64px;
+  z-index:8;
+  pointer-events:none;
+  background:#000!important;
+  opacity:1!important;
+}
+
+/* Em fullscreen cobre uma faixa maior do chrome nativo do VK.
+   A timeline do BETV fica acima dessa máscara. */
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-frame-shell::after{
+  height:86px!important;
+}
+
+/* Corrige o efeito de dois ícones quando o VK está pausado:
+   o botão do BETV ganha fundo opaco e cobre o ícone central do iframe. */
+.drive-player-overlay.is-vk-api-mode:not(.is-browser-fullscreen) .drive-player-toggle{
+  position:relative;
+  z-index:10!important;
+  background:rgba(0,0,0,.82)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.05);
+}
+.drive-player-overlay.is-vk-api-mode:not(.is-browser-fullscreen).is-paused .drive-player-toggle{
+  background:#000!important;
+}
+
+/* A camada de gradiente do BETV não deve esconder a timeline. */
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell::after{
+  z-index:9!important;
+  background:linear-gradient(180deg,rgba(0,0,0,.38),transparent 24%,transparent 72%,rgba(0,0,0,.72))!important;
+  opacity:1!important;
+}
+
+/* Controles ficam acima do gradiente/máscara. */
+.drive-player-overlay.is-browser-fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-bottom-controls{
+  z-index:12!important;
+}
+
+@media(max-width:700px){
+  .drive-player-overlay.is-browser-fullscreen .drive-player-bottom-controls,
+  .drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-bottom-controls,
+  .drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-bottom-controls{
+    left:max(18px,env(safe-area-inset-left))!important;
+    right:max(18px,env(safe-area-inset-right))!important;
+    bottom:max(18px,env(safe-area-inset-bottom))!important;
+  }
+  .drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after{
+    height:70px;
+  }
+  .drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-frame-shell::after{
+    height:92px!important;
+  }
 }
