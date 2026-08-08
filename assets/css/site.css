@@ -12999,3 +12999,62 @@ body.external-video-player-open{overflow:hidden!important;overscroll-behavior:no
 .youtube-player-fullscreen{
   background:rgba(255,255,255,.07)!important;
 }
+
+
+/* =========================================================
+   YouTube 2026-08-08 v4
+   - controles nativos do YouTube (uma única timeline/duração);
+   - sem botão de fullscreen customizado do site;
+   - botão fechar centralizado embaixo em uma barra cinza minimalista.
+   ========================================================= */
+.youtube-player-toolbar{
+  top:auto!important;
+  right:auto!important;
+  left:50%!important;
+  bottom:max(12px,env(safe-area-inset-bottom))!important;
+  transform:translateX(-50%)!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:auto!important;
+  min-width:54px!important;
+  height:46px!important;
+  padding:4px!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  border-radius:999px!important;
+  background:rgba(52,52,52,.78)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.28)!important;
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+  pointer-events:auto!important;
+}
+.youtube-player-actions{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:0!important;
+}
+.youtube-player-fullscreen{
+  display:none!important;
+}
+.youtube-player-close{
+  width:38px!important;
+  height:38px!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:transparent!important;
+  color:rgba(255,255,255,.92)!important;
+  box-shadow:none!important;
+}
+.youtube-player-close:hover,
+.youtube-player-close:focus-visible{
+  background:rgba(255,255,255,.12)!important;
+}
+.youtube-player-close svg{
+  width:21px!important;
+  height:21px!important;
+}
+.youtube-player-shell:fullscreen .youtube-player-toolbar,
+.youtube-player-shell:-webkit-full-screen .youtube-player-toolbar{
+  display:none!important;
+}

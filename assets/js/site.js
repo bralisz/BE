@@ -3653,7 +3653,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       playsinline: '1',
       rel: '0',
       modestbranding: '1',
-      controls: '0'
+      controls: '1'
     });
     if (info.playlistId) params.set('list', info.playlistId);
     if (info.startSeconds > 0) params.set('start', String(info.startSeconds));
@@ -3852,9 +3852,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       <section class="youtube-player-shell" id="youtubePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor do YouTube">
         <header class="youtube-player-toolbar" aria-label="Ações do YouTube">
           <div class="youtube-player-actions">
-            <button class="youtube-player-action youtube-player-fullscreen" id="youtubePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
             <button class="youtube-player-action youtube-player-close" id="youtubePlayerClose" type="button" aria-label="Fechar YouTube" title="Fechar">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
             </button>
@@ -3894,13 +3891,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const youtubeShell = document.getElementById('youtubePlayerShell');
     const youtubeFrame = document.getElementById('youtubePlayerFrame');
     const youtubeClose = document.getElementById('youtubePlayerClose');
-    const youtubeFullscreen = document.getElementById('youtubePlayerFullscreen');
     const vkOverlay = document.getElementById('vkPlayerOverlay');
     const vkShell = document.getElementById('vkPlayerShell');
     const vkFrame = document.getElementById('vkPlayerFrame');
     const vkClose = document.getElementById('vkPlayerClose');
     const vkExternal = document.getElementById('vkPlayerExternal');
-    if (!youtubeOverlay || !youtubeShell || !youtubeFrame || !youtubeClose || !youtubeFullscreen || !vkOverlay || !vkShell || !vkFrame || !vkClose || !vkExternal) return;
+    if (!youtubeOverlay || !youtubeShell || !youtubeFrame || !youtubeClose || !vkOverlay || !vkShell || !vkFrame || !vkClose || !vkExternal) return;
 
     let vkExternalUrl = '';
     let youtubePreviousFocus = null;
@@ -3992,33 +3988,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     youtubeClose.addEventListener('click', () => closeYouTubePlayer(true));
     vkClose.addEventListener('click', () => closeVkPlayer(true));
-    const youtubeFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
-    const youtubeOwnsFullscreen = () => {
-      const element = youtubeFullscreenElement();
-      return Boolean(element && (element === youtubeShell || youtubeShell.contains(element)));
-    };
-    const syncYouTubeFullscreenButton = () => {
-      const active = youtubeOwnsFullscreen();
-      youtubeFullscreen.setAttribute('aria-label', active ? 'Sair da tela cheia' : 'Entrar em tela cheia');
-      youtubeFullscreen.title = active ? 'Sair da tela cheia' : 'Tela cheia';
-    };
-    const toggleYouTubeFullscreen = async () => {
-      try {
-        if (youtubeOwnsFullscreen()) {
-          if (typeof document.exitFullscreen === 'function') await document.exitFullscreen();
-          else if (typeof document.webkitExitFullscreen === 'function') document.webkitExitFullscreen();
-        } else if (typeof youtubeShell.requestFullscreen === 'function') {
-          await youtubeShell.requestFullscreen();
-        } else if (typeof youtubeShell.webkitRequestFullscreen === 'function') {
-          youtubeShell.webkitRequestFullscreen();
-        }
-      } catch (_) {}
-      syncYouTubeFullscreenButton();
-    };
-
-    youtubeFullscreen.addEventListener('click', toggleYouTubeFullscreen);
-    document.addEventListener('fullscreenchange', syncYouTubeFullscreenButton);
-    document.addEventListener('webkitfullscreenchange', syncYouTubeFullscreenButton);
     vkExternal.addEventListener('click', () => {
       if (vkExternalUrl) window.open(vkExternalUrl, '_blank', 'noopener,noreferrer');
     });
