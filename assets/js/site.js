@@ -3878,6 +3878,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let fallbackTimer = 0;
     let controlsTimer = 0;
     let fullscreenUiTimer = 0;
+    let centerSkipTimer = 0;
     let controlsInteracting = false;
     let previousFocus = null;
     let activeFileId = '';
@@ -3926,16 +3927,36 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       fullscreenUiTimer = window.setTimeout(hideFullscreenUiForInactivity, 2000);
     };
 
+    const hideCenterSkipForInactivity = () => {
+      window.clearTimeout(centerSkipTimer);
+      centerSkipTimer = 0;
+      if (overlay.hidden || playerOwnsFullscreen()) return;
+      overlay.classList.add('center-skip-idle');
+    };
+
+    const registerCenterSkipActivity = () => {
+      window.clearTimeout(centerSkipTimer);
+      centerSkipTimer = 0;
+      overlay.classList.remove('center-skip-idle');
+      if (overlay.hidden || playerOwnsFullscreen()) return;
+      centerSkipTimer = window.setTimeout(hideCenterSkipForInactivity, 2000);
+    };
+
     const syncFullscreenButton = () => {
       const active = playerOwnsFullscreen();
       overlay.classList.toggle('is-browser-fullscreen', active);
       fullscreenButton.setAttribute('aria-label', active ? 'Sair da tela cheia' : 'Entrar em tela cheia');
       fullscreenButton.title = active ? 'Sair da tela cheia' : 'Tela cheia';
-      if (active) registerFullscreenActivity();
-      else {
+      if (active) {
+        window.clearTimeout(centerSkipTimer);
+        centerSkipTimer = 0;
+        overlay.classList.remove('center-skip-idle');
+        registerFullscreenActivity();
+      } else {
         window.clearTimeout(fullscreenUiTimer);
         fullscreenUiTimer = 0;
         overlay.classList.remove('fullscreen-ui-idle');
+        registerCenterSkipActivity();
       }
     };
 
@@ -4134,9 +4155,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.clearTimeout(fallbackTimer);
       window.clearTimeout(controlsTimer);
       window.clearTimeout(fullscreenUiTimer);
+      window.clearTimeout(centerSkipTimer);
       fallbackTimer = 0;
       controlsTimer = 0;
       fullscreenUiTimer = 0;
+      centerSkipTimer = 0;
     };
 
     const setLoadingMessage = (message, visible = true, revealText = false) => {
@@ -4201,6 +4224,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.clearTimeout(controlsTimer);
       overlay.classList.remove('controls-idle');
       overlay.classList.add('controls-visible');
+      if (activeProvider !== 'vkvideo') registerCenterSkipActivity();
     };
 
     const syncPlayerState = () => {
@@ -4374,7 +4398,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vk-api-mode', 'is-loading', 'is-error', 'controls-visible', 'controls-idle', 'fullscreen-ui-idle', 'is-paused', 'is-muted', 'is-browser-fullscreen');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vk-api-mode', 'is-loading', 'is-error', 'controls-visible', 'controls-idle', 'fullscreen-ui-idle', 'center-skip-idle', 'is-paused', 'is-muted', 'is-browser-fullscreen');
       youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
@@ -4504,6 +4528,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       externalButton.setAttribute('aria-label', 'Abrir no VK Video');
       externalButton.title = 'Abrir no VK Video';
       bindVkPlayerApi(token);
+      registerCenterSkipActivity();
       closeButton.focus({ preventScroll: true });
     };
 
@@ -4672,19 +4697,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     shell.addEventListener('pointermove', () => {
       showControls();
       registerFullscreenActivity();
+      registerCenterSkipActivity();
     });
     shell.addEventListener('pointerdown', event => {
       registerFullscreenActivity();
+      registerCenterSkipActivity();
       if (event.target.closest('button,input,iframe')) return;
       showControls();
     });
     shell.addEventListener('touchstart', () => {
       showControls();
       registerFullscreenActivity();
+      registerCenterSkipActivity();
     }, { passive: true });
     shell.addEventListener('keydown', () => {
       showControls();
       registerFullscreenActivity();
+      registerCenterSkipActivity();
     });
     shell.addEventListener('dblclick', event => {
       const vkControllable = activeProvider === 'vkvideo' && frameMode && vkApiReady;
@@ -4725,6 +4754,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('keydown', event => {
       if (overlay.hidden) return;
       registerFullscreenActivity();
+      registerCenterSkipActivity();
       if (event.key === 'Escape') {
         if (playerOwnsFullscreen()) return;
         event.preventDefault();

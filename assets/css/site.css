@@ -12576,3 +12576,84 @@ body.site-loading-active.donate-page-active > footer{
     cursor:none!important;
   }
 }
+
+
+/* Fora da tela cheia: somente os botões de voltar/avançar 10s
+   entram em inatividade após 2s. Timeline, tempo e barra de ações continuam. */
+.drive-player-overlay:not(.is-browser-fullscreen) .drive-player-skip{
+  transition:opacity .18s ease,transform .18s ease!important;
+}
+.drive-player-overlay:not(.is-browser-fullscreen).center-skip-idle .drive-player-skip{
+  opacity:0!important;
+  pointer-events:none!important;
+  transform:scale(.94)!important;
+}
+
+
+/* =========================================================
+   Ajustes mobile finais
+   ========================================================= */
+
+/* Fora da tela cheia no mobile: deixa -10s/+10s mais afastados do centro,
+   seguindo melhor a proporção usada no desktop. */
+@media(max-width:700px){
+  .drive-player-overlay.is-vk-api-mode:not(.is-browser-fullscreen) .drive-player-center-controls{
+    gap:clamp(120px,36vw,170px)!important;
+  }
+}
+
+/* Celular deitado em tela cheia:
+   - reduz a faixa preta inferior;
+   - aproveita mais a altura para o vídeo;
+   - mantém uma máscara preta suficiente para esconder os controles nativos do VK;
+   - a timeline/tempo do BETV continuam acessíveis.
+   A inatividade de 2s dos ícones superiores continua sendo controlada por
+   .fullscreen-ui-idle, inclusive nesta orientação. */
+@media(max-width:950px) and (max-height:560px) and (orientation:landscape){
+  .drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-frame{
+    top:-38px!important;
+    height:calc(100% + 76px)!important;
+  }
+
+  .drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-frame-shell::after{
+    height:42px!important;
+    background:#000!important;
+    opacity:1!important;
+  }
+
+  .drive-player-overlay.is-browser-fullscreen .drive-player-bottom-controls,
+  .drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-bottom-controls,
+  .drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-bottom-controls{
+    left:max(12px,env(safe-area-inset-left))!important;
+    right:max(12px,env(safe-area-inset-right))!important;
+    bottom:max(4px,env(safe-area-inset-bottom))!important;
+  }
+
+  .drive-player-overlay.is-browser-fullscreen .drive-player-progress{
+    height:14px!important;
+  }
+
+  .drive-player-overlay.is-browser-fullscreen .drive-player-time{
+    margin-top:-1px!important;
+    font-size:11px!important;
+    line-height:1.15!important;
+  }
+
+  .drive-player-overlay.is-browser-fullscreen .drive-player-shell::after{
+    background:linear-gradient(
+      180deg,
+      rgba(0,0,0,.34),
+      transparent 20%,
+      transparent 82%,
+      rgba(0,0,0,.48)
+    )!important;
+  }
+
+  .drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle .drive-player-top-controls,
+  .drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle .drive-player-shell:fullscreen .drive-player-top-controls,
+  .drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle .drive-player-shell:-webkit-full-screen .drive-player-top-controls{
+    opacity:0!important;
+    pointer-events:none!important;
+    transform:translateY(-8px)!important;
+  }
+}
