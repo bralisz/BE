@@ -12319,3 +12319,21 @@ body.site-loading-active.donate-page-active > footer{
     height:58px;
   }
 }
+
+
+/* Inatividade também fora da tela cheia:
+   aplica a ocultação aos controles do player normal e do VK controlado pela API. */
+.drive-player-overlay.controls-idle:not(.is-browser-fullscreen) .drive-player-top-controls,
+.drive-player-overlay.controls-idle:not(.is-browser-fullscreen) .drive-player-center-controls,
+.drive-player-overlay.controls-idle:not(.is-browser-fullscreen) .drive-player-bottom-controls,
+.drive-player-overlay.controls-idle:not(.is-browser-fullscreen).is-paused .drive-player-top-controls,
+.drive-player-overlay.controls-idle:not(.is-browser-fullscreen).is-paused .drive-player-center-controls,
+.drive-player-overlay.controls-idle:not(.is-browser-fullscreen).is-paused .drive-player-bottom-controls{
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.drive-player-overlay.controls-idle:not(.is-browser-fullscreen) .drive-player-shell::after,
+.drive-player-overlay.controls-idle:not(.is-browser-fullscreen).is-paused .drive-player-shell::after,
+.drive-player-overlay.is-vk-api-mode.controls-idle:not(.is-browser-fullscreen) .drive-player-shell::after{
+  opacity:0!important;
+}

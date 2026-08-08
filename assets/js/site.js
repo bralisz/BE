@@ -4191,7 +4191,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.add('controls-visible');
       window.clearTimeout(controlsTimer);
       if (!canAutoHideSiteControls() || controlsInteracting) return;
-      controlsTimer = window.setTimeout(hideControlsForInactivity, 3000);
+      controlsTimer = window.setTimeout(hideControlsForInactivity, 2000);
     };
 
     const syncPlayerState = () => {
