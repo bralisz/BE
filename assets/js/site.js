@@ -8918,6 +8918,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function closeMenus(){closeDesktop();closeMobile();}
 
+  function hideProfileSurfacesForNotifications(){
+    var profilePage=document.getElementById('profilePage');
+    var settingsPage=document.getElementById('settingsPage');
+    if(profilePage){
+      profilePage.hidden=true;
+      profilePage.setAttribute('hidden','');
+      profilePage.setAttribute('aria-hidden','true');
+    }
+    if(settingsPage){
+      settingsPage.hidden=true;
+      settingsPage.setAttribute('hidden','');
+      settingsPage.setAttribute('aria-hidden','true');
+    }
+  }
+
   function syncPageAvatar(){
     if(!pageAvatar||!pageAvatarImage||!pageAvatarFallback)return;
     var account=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
@@ -9103,6 +9118,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function openPage(id,updateRoute){
     closeMenus();
+    // O perfil/configurações são páginas persistentes no DOM. Ao abrir uma
+    // notificação a partir delas, esconda também o elemento para que, ao
+    // fechar a notificação e voltar à Home, o conteúdo antigo não reapareça
+    // no fim da página junto com o catálogo.
+    hideProfileSurfacesForNotifications();
     document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','support-page-active','detail-page-active');
     document.body.classList.add('notification-page-active');
     page.hidden=false;
