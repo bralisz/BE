@@ -13328,15 +13328,37 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   border:0;
   background:#000;
 }
-.external-native-player-overlay[data-provider="vk"] .external-native-player-frame-shell{
-  bottom:72px;
+.external-native-player-bottom-shade{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:188px;
+  z-index:12;
+  pointer-events:none;
+  background:linear-gradient(to top,rgba(0,0,0,.40) 0%,rgba(0,0,0,.24) 34%,rgba(0,0,0,.10) 58%,rgba(0,0,0,0) 100%);
+  opacity:0;
+  transition:opacity .18s ease;
+}
+.external-native-player-wake-zone{
+  position:absolute;
+  z-index:23;
+  left:50%;
+  bottom:0;
+  width:242px;
+  height:110px;
+  transform:translateX(-50%);
+  background:transparent;
+}
+.external-native-player-overlay[data-provider="vk"] .external-native-player-bottom-shade{
+  opacity:.9;
 }
 .external-native-player-toolbar{
   position:absolute;
   z-index:24;
   left:50%;
-  bottom:max(12px,env(safe-area-inset-bottom));
-  transform:translateX(-50%);
+  bottom:max(14px,calc(env(safe-area-inset-bottom) + 4px));
+  transform:translateX(-50%) translateY(0);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -13351,6 +13373,20 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   -webkit-backdrop-filter:blur(20px) saturate(145%);
   backdrop-filter:blur(20px) saturate(145%);
   box-shadow:0 8px 28px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08);
+  opacity:1;
+  transition:opacity .18s ease,transform .18s ease;
+}
+.external-native-player-overlay.controls-idle[data-provider="vk"] .external-native-player-toolbar{
+  opacity:0;
+  transform:translateX(-50%) translateY(14px);
+  pointer-events:none;
+}
+.external-native-player-overlay.controls-idle[data-provider="vk"] .external-native-player-menu{
+  opacity:0;
+  pointer-events:none;
+}
+.external-native-player-overlay.controls-idle[data-provider="vk"] .external-native-player-bottom-shade{
+  opacity:.28;
 }
 .external-native-player-action{
   appearance:none;
@@ -13429,6 +13465,7 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   -webkit-backdrop-filter:blur(24px) saturate(150%);
   backdrop-filter:blur(24px) saturate(150%);
   box-shadow:0 18px 46px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.07);
+  transition:opacity .18s ease,transform .18s ease;
 }
 .external-native-player-menu[hidden]{display:none!important}
 .external-native-player-menu-item{
@@ -13469,18 +13506,20 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
 .external-native-player-menu-item.is-active small,
 .external-native-player-menu-item[aria-checked="true"] small{margin-left:auto}
 @media(max-width:700px){
-  .external-native-player-overlay[data-provider="vk"] .external-native-player-frame-shell{
-    bottom:max(66px,calc(env(safe-area-inset-bottom) + 58px));
-  }
   .external-native-player-toolbar{
     bottom:max(10px,env(safe-area-inset-bottom));
     height:46px;
   }
   .external-native-player-action{width:38px;height:38px}
   .external-native-player-menu{bottom:max(66px,calc(env(safe-area-inset-bottom) + 58px))}
+  .external-native-player-wake-zone{width:228px;height:98px}
+  .external-native-player-bottom-shade{height:164px}
 }
 @media(prefers-reduced-motion:reduce){
-  .external-native-player-action{transition:none!important}
+  .external-native-player-action,
+  .external-native-player-toolbar,
+  .external-native-player-menu,
+  .external-native-player-bottom-shade{transition:none!important}
 }
 
 /* MP3 do Google Drive — banner do conteúdo + dock central no estilo da Home. */
