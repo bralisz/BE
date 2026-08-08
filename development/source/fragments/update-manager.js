@@ -5,12 +5,14 @@
   var RELEASE_ENDPOINT = '/api/public-data?name=settings&id=site';
   var CHECK_INTERVAL = 60000;
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
+  var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
   var currentVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || '').trim();
   var latestVersion = '';
   var popup = null;
   var checking = false;
   var updateStarted = false;
   var intervalId = 0;
+  var popupObserver = null;
   var releaseStateLoaded = false;
   var publicReleaseEnabled = false;
   var publicReleasedVersion = '';
@@ -52,6 +54,17 @@
     return releaseStateLoaded && publicReleaseEnabled && publicReleasedVersion === version;
   }
 
+  function readAdminAppliedUpdate() {
+    try { return String(window.localStorage.getItem(ADMIN_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
+    return '';
+  }
+
+  function persistAdminAppliedUpdate(version) {
+    version = String(version || '').trim();
+    if (!version) return;
+    try { window.localStorage.setItem(ADMIN_APPLIED_UPDATE_KEY, version); } catch (_) {}
+  }
+
   function readPendingUpdate() {
     var value = '';
     try { value = String(window.localStorage.getItem(PENDING_UPDATE_KEY) || '').trim(); } catch (_) {}
@@ -76,6 +89,8 @@
     try {
       var url = new URL(window.location.href);
       if (!url.searchParams.has('__betv_update')) return;
+      var appliedVersion = String(url.searchParams.get('__betv_update') || '').trim();
+      if (isAdminContext() && appliedVersion) persistAdminAppliedUpdate(appliedVersion);
       clearPendingUpdate();
       url.searchParams.delete('__betv_update');
       url.searchParams.delete('_');
@@ -116,6 +131,24 @@
     // Mantém o aviso acima de qualquer página/rota que esconda outros filhos do body.
     element.style.setProperty('display', 'grid', 'important');
     element.style.setProperty('visibility', 'visible', 'important');
+  }
+
+  function ensurePopupStillMounted() {
+    if (updateStarted) return;
+    if (popup && !document.body.contains(popup)) popup = null;
+    var pending = readPendingUpdate();
+    if (!pending) return;
+    if (canExposeVersionToCurrentViewer(pending)) forcePopupVisible(createPopup());
+  }
+
+  function observePopupMount() {
+    if (popupObserver || typeof MutationObserver !== 'function' || !document.body) return;
+    popupObserver = new MutationObserver(function () {
+      if (updateStarted) return;
+      if (popup && document.body.contains(popup)) return;
+      window.setTimeout(ensurePopupStillMounted, 0);
+    });
+    popupObserver.observe(document.body, { childList:true });
   }
 
   function showPopup(version, force) {
@@ -177,11 +210,25 @@
         publicReleaseEnabled = release && (release.updateReleaseEnabled === true || String(release.updateReleaseEnabled || '').toLowerCase() === 'true');
         publicReleasedVersion = String(release && release.releasedDeploymentVersion || '').trim();
 
-        if (!canExposeVersionToCurrentViewer(version)) {
-          if (!isAdminContext()) {
+        // O administrador usa a notificação antiga do canto direito sempre que
+        // existe uma versão que ele ainda não aplicou pelo botão Atualizar. A
+        // liberação pública não interfere no aviso do admin.
+        if (isAdminContext()) {
+          var adminAppliedVersion = readAdminAppliedUpdate();
+          if (version !== adminAppliedVersion) showPopup(version, true);
+          else {
             clearPendingUpdate();
             hidePopup();
           }
+          if (!currentVersion) currentVersion = version;
+          return;
+        }
+
+        // Para usuários comuns, a mesma notificação antiga só é exposta quando
+        // esta versão específica foi liberada no card da Visão Geral.
+        if (!canExposeVersionToCurrentViewer(version)) {
+          clearPendingUpdate();
+          hidePopup();
           if (!currentVersion) currentVersion = version;
           return;
         }
@@ -401,8 +448,10 @@
       .then(refreshNetworkResources)
       .finally(function () {
         try {
+          var targetVersion = latestVersion || readPendingUpdate() || String(Date.now());
+          if (isAdminContext()) persistAdminAppliedUpdate(targetVersion);
           var url = new URL(window.location.href);
-          url.searchParams.set('__betv_update', latestVersion || readPendingUpdate() || String(Date.now()));
+          url.searchParams.set('__betv_update', targetVersion);
           url.searchParams.set('_', String(Date.now()));
           window.location.replace(url.href);
         } catch (_) {
@@ -413,6 +462,7 @@
   }
 
   function scheduleChecks() {
+    observePopupMount();
     window.setTimeout(fetchLatestVersion, 1200);
     intervalId = window.setInterval(fetchLatestVersion, CHECK_INTERVAL);
 
@@ -449,5 +499,6 @@
 
   window.addEventListener('beforeunload', function () {
     if (intervalId) window.clearInterval(intervalId);
+    if (popupObserver) popupObserver.disconnect();
   }, { once: true });
 })();
