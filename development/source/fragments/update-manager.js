@@ -3,9 +3,10 @@
 
   var ENDPOINT = '/api/deployment-version';
   var RELEASE_ENDPOINT = '/api/public-data?name=settings&id=site';
-  var CHECK_INTERVAL = 60000;
+  var CHECK_INTERVAL = 15000;
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
+  var PUBLIC_APPLIED_UPDATE_KEY = 'betvPublicAppliedUpdateVersion';
   var currentVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || '').trim();
   var latestVersion = '';
   var popup = null;
@@ -65,6 +66,17 @@
     try { window.localStorage.setItem(ADMIN_APPLIED_UPDATE_KEY, version); } catch (_) {}
   }
 
+  function readPublicAppliedUpdate() {
+    try { return String(window.localStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
+    return '';
+  }
+
+  function persistPublicAppliedUpdate(version) {
+    version = String(version || '').trim();
+    if (!version) return;
+    try { window.localStorage.setItem(PUBLIC_APPLIED_UPDATE_KEY, version); } catch (_) {}
+  }
+
   function readPendingUpdate() {
     var value = '';
     try { value = String(window.localStorage.getItem(PENDING_UPDATE_KEY) || '').trim(); } catch (_) {}
@@ -90,7 +102,10 @@
       var url = new URL(window.location.href);
       if (!url.searchParams.has('__betv_update')) return;
       var appliedVersion = String(url.searchParams.get('__betv_update') || '').trim();
-      if (isAdminContext() && appliedVersion) persistAdminAppliedUpdate(appliedVersion);
+      if (appliedVersion) {
+        if (isAdminContext()) persistAdminAppliedUpdate(appliedVersion);
+        else persistPublicAppliedUpdate(appliedVersion);
+      }
       clearPendingUpdate();
       url.searchParams.delete('__betv_update');
       url.searchParams.delete('_');
@@ -224,8 +239,10 @@
           return;
         }
 
-        // Para usuários comuns, a mesma notificação antiga só é exposta quando
-        // esta versão específica foi liberada no card da Visão Geral.
+        // Para usuários comuns, a liberação é controlada por versão. O fato de
+        // o navegador já ter carregado os arquivos do deploy não significa que o usuário
+        // aplicou a atualização. A versão só é considerada aplicada depois do clique em
+        // "Atualizar", que grava PUBLIC_APPLIED_UPDATE_KEY durante o reload.
         if (!canExposeVersionToCurrentViewer(version)) {
           clearPendingUpdate();
           hidePopup();
@@ -233,22 +250,15 @@
           return;
         }
 
-        var pending = readPendingUpdate();
-        if (pending) {
+        var publicAppliedVersion = readPublicAppliedUpdate();
+        if (publicAppliedVersion !== version) {
           showPopup(version, true);
           return;
         }
 
-        if (!currentVersion) {
-          currentVersion = version;
-          return;
-        }
-
-        if (version !== currentVersion) showPopup(version, false);
-        else {
-          clearPendingUpdate();
-          hidePopup();
-        }
+        clearPendingUpdate();
+        hidePopup();
+        if (!currentVersion) currentVersion = version;
       })
       .catch(function () {})
       .finally(function () { checking = false; });
