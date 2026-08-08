@@ -13403,6 +13403,22 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
 .external-native-player-overlay.controls-idle[data-provider="vk"] .external-native-player-bottom-shade{
   opacity:.28;
 }
+
+/* YouTube usa o iframe nativo e deve permanecer independente do VK.
+   A tab fica na faixa inferior, enquanto todo o restante continua clicável
+   diretamente no player do YouTube. */
+.external-native-player-overlay[data-provider="youtube"] .external-native-player-toolbar{
+  bottom:max(8px,env(safe-area-inset-bottom));
+}
+.external-native-player-overlay[data-provider="youtube"] .external-native-player-wake-zone{
+  display:none!important;
+  pointer-events:none!important;
+}
+.external-native-player-overlay[data-provider="youtube"] .external-native-player-toolbar::before,
+.external-native-player-overlay[data-provider="youtube"] .external-native-player-toolbar::after{
+  display:none!important;
+  pointer-events:none!important;
+}
 .external-native-player-action{
   appearance:none;
   width:40px;
@@ -13524,6 +13540,9 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   .external-native-player-toolbar{
     bottom:max(62px,calc(env(safe-area-inset-bottom) + 52px));
     height:46px;
+  }
+  .external-native-player-overlay[data-provider="youtube"] .external-native-player-toolbar{
+    bottom:max(8px,env(safe-area-inset-bottom));
   }
   .external-native-player-action{width:38px;height:38px}
   .external-native-player-menu{bottom:max(118px,calc(env(safe-area-inset-bottom) + 108px))}
