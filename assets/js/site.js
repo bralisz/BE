@@ -3547,7 +3547,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-section-id="${escapeHtml(String(data.sectionId || ''))}"
       data-section-name="${escapeHtml(String(data.sectionName || data.sourceSectionTitle || ''))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}"
-      aria-label="Abrir ${escapeHtml(title)}">
+      aria-label="${escapeHtml(localizedUiText('Abrir {name}',{name:title}))}">
       <span class="detail-reco-thumb">${image && image !== '#' ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">` : '<span class="ph ph-wide" style="height:100%"></span>'}</span>
       <span class="detail-reco-name">${escapeHtml(title)}</span>
     </a>`;
@@ -4024,7 +4024,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         button.setAttribute('aria-checked', String(active));
       });
       qualityButton.dataset.quality = String(normalized);
-      qualityButton.title = `Qualidade — ${normalized === 4 ? '1080p' : normalized === 3 ? '720p' : normalized === 2 ? '480p' : '360p'}`;
+      qualityButton.title = `${localizedUiText('Qualidade')} — ${normalized === 4 ? '1080p' : normalized === 3 ? '720p' : normalized === 2 ? '480p' : '360p'}`;
     };
 
     const normalizeVkAudioTracks = raw => {
@@ -4035,7 +4035,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const idValue = source.id ?? source.trackId ?? source.track_id ?? source.audioTrackId ?? source.audio_track_id ?? source.value ?? index;
         const id = String(idValue ?? index);
         if (!id) return;
-        const label = String(source.label ?? source.title ?? source.name ?? source.langName ?? source.languageName ?? source.language ?? source.lang ?? `Faixa ${index + 1}`).trim() || `Faixa ${index + 1}`;
+        const fallbackTrackLabel = localizedUiText('Faixa {number}', { number: index + 1 });
+        const label = String(source.label ?? source.title ?? source.name ?? source.langName ?? source.languageName ?? source.language ?? source.lang ?? fallbackTrackLabel).trim() || fallbackTrackLabel;
         const active = Boolean(source.active ?? source.selected ?? source.enabled ?? source.current);
         if (!result.some(track => track.id === id)) result.push({ id, label, raw: source, active });
       });
@@ -7065,9 +7066,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         host.prepend(empty);
       }
       if (query) {
-        empty.innerHTML = `<strong>Nenhum conteúdo encontrado para “${escapeHtml(input.value.trim())}”.</strong><span>Não encontrou o que procurava? <a href="/suporte" data-public-action="support" data-support-target="contact">Relate para o suporte</a>.</span>`;
+        empty.innerHTML = `<strong>${escapeHtml(localizedUiText('Nenhum conteúdo encontrado para “{query}”.', { query: input.value.trim() }))}</strong><span>${escapeHtml(localizedUiText('Não encontrou o que procurava?'))} <a href="/suporte" data-public-action="support" data-support-target="contact">${escapeHtml(localizedUiText('Relate para o suporte'))}</a>.</span>`;
       } else {
-        empty.textContent = 'Nenhum filme ou série publicado.';
+        empty.textContent = localizedUiText('Nenhum filme ou série publicado.');
       }
       empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && Boolean(query));
     };
@@ -8202,7 +8203,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var href=profileSocialHref(network,value);
         var title=labels[network];
         var className='profile-page-social-link is-'+network;
-        if(href)return '<a class="'+className+'" href="'+escapePublic(href)+'" target="_blank" rel="noopener noreferrer" aria-label="Abrir '+labels[network]+'" title="'+escapePublic(title)+'">'+profileSocialIcon(network)+'</a>';
+        if(href)return '<a class="'+className+'" href="'+escapePublic(href)+'" target="_blank" rel="noopener noreferrer" aria-label="'+escapePublic(localizedUiText('Abrir {name}',{name:labels[network]}))+'" title="'+escapePublic(title)+'">'+profileSocialIcon(network)+'</a>';
         return '<span class="'+className+' is-static" role="img" aria-label="'+escapePublic(title)+'" title="'+escapePublic(title)+'">'+profileSocialIcon(network)+'</span>';
       }).join('');
       profilePageSocials.innerHTML=markup;
@@ -8745,7 +8746,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var rankSvg='<svg class="profile-favorite-rank-svg" viewBox="0 0 126 240" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">'
           +'<defs><linearGradient id="'+gradientId+'" y1="0%" y2="0%" x1="0%" x2="100%"><stop offset="0%" stop-color="rgba(255,255,255,1)"></stop><stop offset="50%" stop-color="rgba(255,255,255,1)"></stop><stop offset="100%" stop-color="rgba(255,255,255,0)"></stop></linearGradient><clipPath id="'+clipId+'"><text x="63" y="177" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="151" font-weight="900">'+rank+'</text></clipPath></defs>'
           +'<rect x="0" y="0" width="100%" height="100%" fill="url(#'+gradientId+')" clip-path="url(#'+clipId+')"></rect></svg>';
-        return '<button class="profile-favorite-ranked-item" type="button" data-profile-favorite-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'favorito')+'">'
+        return '<button class="profile-favorite-ranked-item" type="button" data-profile-favorite-index="'+index+'" aria-label="'+escapePublic(localizedUiText('Abrir {name}',{name:item.title||localizedUiText('Favorito')}))+'">'
           +'<span class="profile-favorite-rank" aria-hidden="true">'+rankSvg+'</span>'
           +'<span class="profile-favorite-poster">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
           +'<span class="profile-favorite-type">'+profileFavoriteCollectionLabel(item)+'</span>'
@@ -8835,7 +8836,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var rankSvg='<svg class="profile-favorite-rank-svg" viewBox="0 0 126 240" xmlns="http://www.w3.org/2000/svg" focusable="false" aria-hidden="true">'
           +'<defs><linearGradient id="'+gradientId+'" y1="0%" y2="0%" x1="0%" x2="100%"><stop offset="0%" stop-color="rgba(255,255,255,1)"></stop><stop offset="50%" stop-color="rgba(255,255,255,1)"></stop><stop offset="100%" stop-color="rgba(255,255,255,0)"></stop></linearGradient><clipPath id="'+clipId+'"><text x="63" y="177" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="151" font-weight="900">'+rank+'</text></clipPath></defs>'
           +'<rect x="0" y="0" width="100%" height="100%" fill="url(#'+gradientId+')" clip-path="url(#'+clipId+')"></rect></svg>';
-        return '<button class="profile-favorite-ranked-item" type="button" data-profile-loved-album-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'álbum')+'">'
+        return '<button class="profile-favorite-ranked-item" type="button" data-profile-loved-album-index="'+index+'" aria-label="'+escapePublic(localizedUiText('Abrir {name}',{name:item.title||localizedUiText('Álbum')}))+'">'
           +'<span class="profile-favorite-rank" aria-hidden="true">'+rankSvg+'</span>'
           +'<span class="profile-favorite-poster">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
           +'<span class="profile-favorite-type">ÁLBUM</span>'
@@ -9136,7 +9137,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var image=item.imageUrl||item.bannerUrl||'';
         var isAlbum=String(item.collection||'').toLowerCase()==='albums';
         var meta=[isAlbum?'Álbum':'',item.year,item.duration].filter(Boolean).join(' • ');
-        return '<button class="profile-saved-card'+(isAlbum?' is-album':'')+'" type="button" data-saved-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'conteúdo salvo')+'">'
+        return '<button class="profile-saved-card'+(isAlbum?' is-album':'')+'" type="button" data-saved-index="'+index+'" aria-label="'+escapePublic(localizedUiText('Abrir {name}',{name:item.title||localizedUiText('Conteúdo salvo')}))+'">'
           +'<span class="profile-saved-thumb">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-saved-placeholder" aria-hidden="true"></span>')+'<span class="profile-saved-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7Z"></path></svg></span></span>'
           +'<span class="profile-saved-copy"><strong>'+escapePublic(item.title||'Conteúdo salvo')+'</strong>'+(meta?'<small>'+escapePublic(meta)+'</small>':'')+'</span>'
           +'</button>';
@@ -10538,8 +10539,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     page.classList.toggle('support-filter-empty',empty);
     if(status){
       status.textContent=empty
-        ? 'Nenhuma pergunta frequente encontrada. Use a área para relatar o problema.'
-        : visible+' '+(visible===1?'pergunta frequente encontrada.':'perguntas frequentes encontradas.');
+        ? localizedUiText('Nenhuma pergunta frequente encontrada. Use a área para relatar o problema.')
+        : localizedUiText(visible===1?'{count} pergunta frequente encontrada.':'{count} perguntas frequentes encontradas.',{count:visible});
     }
   }
 
