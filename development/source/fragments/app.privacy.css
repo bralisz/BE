@@ -6133,3 +6133,10 @@ body.login-mode .login-brand img{
     max-width:calc(100vw - 44px);
   }
 }
+
+/* /fãs — descrição em uma linha no desktop e atalho para as regras da comunidade. */
+.fans-page-intro .fans-page-description{max-width:none;margin:22px auto 0;color:rgba(255,255,255,.62);font-size:clamp(15px,1.4vw,18px);line-height:1.6}
+.fans-page-community-help{display:inline-block;margin-top:10px;color:#3d9cff;font-size:14px;font-weight:700;line-height:1.45;text-decoration:none;transition:color .18s ease,opacity .18s ease}
+.fans-page-community-help:hover,.fans-page-community-help:focus-visible{color:#72b7ff;text-decoration:underline;text-underline-offset:3px}
+@media(min-width:901px){.fans-page-intro{max-width:980px}.fans-page-intro .fans-page-description{white-space:nowrap}}
+@media(max-width:900px){.fans-page-intro .fans-page-description{margin-top:18px;font-size:15px;line-height:1.55}.fans-page-community-help{max-width:330px;margin-top:10px;font-size:13px}}

@@ -42,7 +42,7 @@
   try{
     var path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';
     var hash=String(location.hash||'').toLowerCase();
-    var legal=/^\/(?:terms|privacy|cookies|dmca)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca)$/i.test(hash);
+    var legal=/^\/(?:terms|privacy|cookies|dmca|comunidade)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade)$/i.test(hash);
     if(!legal)return;
     document.documentElement.classList.add('legal-route-boot');
     window.__beLegalBootStartedAt=Date.now();
@@ -54,7 +54,7 @@
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260807-ong-copy-v2';
+    var href='/assets/i18n/'+slug+'.json?rev=20260808-community-page-v1';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -135,10 +135,10 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260808-mobile-card-logo-v2">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260808-community-page-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260807-profile-albums-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260808-mobile-card-logo-v2"></script>
+<script defer src="/assets/js/i18n.js?rev=20260808-community-page-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260808-community-page-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -1088,7 +1088,8 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   <main class="fans-page-content">
     <section class="fans-page-intro" aria-labelledby="fansPageTitle">
       <h1 id="fansPageTitle">Fãs que ajudaram o site</h1>
-      <p>Colabore com o site divulgando ele em alguma rede social para aparecer aqui.</p>
+      <p class="fans-page-description">Colabore com o site divulgando ele em alguma rede social para aparecer aqui.</p>
+      <a class="fans-page-community-help" href="/comunidade">Dúvidas? Confira como ajudar e aparecer nesta página</a>
     </section>
     <div class="fans-page-status" id="fansPageStatus" role="status" aria-live="polite">Carregando fãs…</div>
     <div class="donate-supporters-list fans-page-list" id="fansPageList"></div>
@@ -1144,6 +1145,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   <div class="legal-page-wrap">
     <aside class="legal-page-nav" aria-label="Navegação das políticas">
       <a href="/terms" data-legal-link="terms">Terms &amp; Conditions</a>
+      <a href="/comunidade" data-legal-link="comunidade">Comunidade</a>
       <a href="/privacy" data-legal-link="privacy">Privacy Policy</a>
       <a href="/cookies" data-legal-link="cookies">Cookies</a>
       <a href="/dmca" data-legal-link="dmca">DMCA / Copyright</a>
@@ -1174,6 +1176,17 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
         <p>As doações são voluntárias. Um comprovante do pagamento não representa, por si só, recibo fiscal ou garantia de dedução tributária. Depois da confirmação, a doação é definitiva, não pode ser cancelada e não possui devolução, salvo quando a legislação exigir o contrário. Antes do pagamento, confira a ONG, a moeda e o valor escolhidos.</p>
         <h2>8. Contato</h2>
         <p>Dúvidas, denúncias ou solicitações podem ser encaminhadas pela área de <a href="/suporte">Suporte</a>.</p>
+      </article>
+      <article class="legal-article" data-legal-page="comunidade" hidden>
+        <span class="legal-kicker">FÃS &amp; COMUNIDADES</span>
+        <h1>Comunidade</h1>
+        <p>Esta área é dedicada a quem é fã da Billie Eilish e está apoiando a Billie Eilish TV, ajudando o projeto a alcançar mais pessoas.</p>
+        <h2>Como aparecer na página de fãs</h2>
+        <p>Para aparecer em /fãs ou /fas, basta divulgar e comentar sobre o site em qualquer rede social. Nossa equipe acompanha publicações públicas e vai tentar encontrar você para incluir seu perfil na página de fãs junto com outros perfis que apoiam o site.</p>
+        <h2>Comunidades também podem participar</h2>
+        <p>Também funciona para comunidades de fãs, incluindo servidores e comunidades no Discord. Se uma comunidade divulgar a Billie Eilish TV, ela também poderá ser incluída na página.</p>
+        <h2>Divulgou e ainda não apareceu?</h2>
+        <p>Entre em contato com o <a href="/suporte">Suporte</a> e informe que você divulgou o site. Inclua o link do seu perfil e o link da publicação ou post em que a divulgação foi feita para que nossa equipe possa conferir e adicionar você à seção de fãs.</p>
       </article>
       <article class="legal-article" data-legal-page="privacy" hidden>
         <h1>Privacy Policy</h1>

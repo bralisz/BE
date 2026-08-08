@@ -647,7 +647,7 @@
   function isLoginRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/login'||hash==='#login'||hash==='#/login';}
   function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
   function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
-  function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca)$/i.test(String(location.hash||''));}
+  function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca|comunidade)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade)$/i.test(String(location.hash||''));}
   function isNotificationsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:atualizacoes|notificacoes)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:atualizacoes|notificacoes|updates|notifications)(?:\/|$)/i.test(hash);}
   function isSupportRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/suporte'||hash==='#suporte'||hash==='#/suporte'||hash==='#support'||hash==='#/support';}
   function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
@@ -902,7 +902,7 @@
   var legalHomeButton=document.getElementById('legalHomeButton');
   var cookieNotice=document.getElementById('cookieNotice');
   var cookieAccept=document.getElementById('cookieAccept');
-  var legalRoutes=['terms','privacy','cookies','dmca'];
+  var legalRoutes=['terms','privacy','cookies','dmca','comunidade'];
 
   // Mantém a área legal fora da estrutura da Home para que ela nunca seja
   // renderizada junto do catálogo, independentemente do restante do layout.

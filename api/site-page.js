@@ -389,6 +389,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       privacyTitle: `Política de Privacidade | ${siteTitle}`,
       cookiesTitle: `Política de Cookies | ${siteTitle}`,
       dmcaTitle: `DMCA e direitos autorais | ${siteTitle}`,
+      communityTitle: `Comunidade | ${siteTitle}`,
+      communityDescription: 'Saiba como fãs e comunidades podem apoiar a Billie Eilish TV, divulgar o projeto e aparecer na página de fãs.',
       fanProject: 'Projeto de fãs não oficial dedicado a organizar conteúdo e informações sobre Billie Eilish.'
     },
     'en-us': {
@@ -408,6 +410,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       privacyTitle: `Privacy Policy | ${siteTitle}`,
       cookiesTitle: `Cookie Policy | ${siteTitle}`,
       dmcaTitle: `DMCA and copyright | ${siteTitle}`,
+      communityTitle: `Community | ${siteTitle}`,
+      communityDescription: 'Learn how fans and communities can support Billie Eilish TV, share the project and appear on the fan page.',
       fanProject: 'Unofficial fan-made project dedicated to organizing content and information about Billie Eilish.'
     },
     es: {
@@ -427,6 +431,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       privacyTitle: `Política de privacidad | ${siteTitle}`,
       cookiesTitle: `Política de cookies | ${siteTitle}`,
       dmcaTitle: `DMCA y derechos de autor | ${siteTitle}`,
+      communityTitle: `Comunidad | ${siteTitle}`,
+      communityDescription: 'Descubre cómo fans y comunidades pueden apoyar Billie Eilish TV, compartir el proyecto y aparecer en la página de fans.',
       fanProject: 'Proyecto no oficial creado por fans para organizar contenido e información sobre Billie Eilish.'
     }
   };
@@ -475,6 +481,9 @@ function pageCopy(routeInfo, settings, seoRecord) {
   } else if (logical === '/dmca') {
     title = copy.dmcaTitle;
     description = copy.fanProject;
+  } else if (logical === '/comunidade') {
+    title = copy.communityTitle;
+    description = copy.communityDescription;
   }
 
   if (seoRecord) {
