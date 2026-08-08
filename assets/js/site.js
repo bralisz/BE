@@ -3664,6 +3664,67 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `https://www.youtube-nocookie.com/${path}?${params.toString()}`;
   }
 
+  function vkVideoMediaInfo(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    try {
+      const url = new URL(raw, location.origin);
+      const host = String(url.hostname || '').toLowerCase().replace(/^www\./, '');
+      if (host !== 'vkvideo.ru') return null;
+
+      let ownerId = '';
+      let videoId = '';
+      let hash = '';
+      let hd = '';
+
+      if (/\/video_ext\.php$/i.test(String(url.pathname || ''))) {
+        ownerId = String(url.searchParams.get('oid') || '').trim();
+        videoId = String(url.searchParams.get('id') || '').trim();
+        hash = String(url.searchParams.get('hash') || '').trim();
+        hd = String(url.searchParams.get('hd') || '').trim();
+      } else {
+        const match = String(url.pathname || '').match(/(?:^|\/)video(-?\d+)_(\d+)(?:$|[/?#])/i);
+        if (match) {
+          ownerId = match[1] || '';
+          videoId = match[2] || '';
+        }
+      }
+
+      if (!/^-?\d+$/.test(ownerId) || !/^\d+$/.test(videoId)) return null;
+      if (hash && !/^[a-z0-9_-]+$/i.test(hash)) hash = '';
+      if (hd && !/^\d+$/.test(hd)) hd = '';
+
+      return {
+        ownerId,
+        videoId,
+        hash,
+        hd,
+        externalUrl: url.href
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function vkVideoEmbedUrl(info) {
+    if (!info?.ownerId || !info?.videoId) return '';
+    const params = new URLSearchParams({
+      oid: String(info.ownerId),
+      id: String(info.videoId),
+      autoplay: '1'
+    });
+    if (info.hash) params.set('hash', String(info.hash));
+    if (info.hd) params.set('hd', String(info.hd));
+    return `https://vkvideo.ru/video_ext.php?${params.toString()}`;
+  }
+
+  function vkVideoWatchUrl(info) {
+    if (!info?.ownerId || !info?.videoId) return '';
+    const rawExternal = String(info.externalUrl || '').trim();
+    if (rawExternal) return rawExternal;
+    return `https://vkvideo.ru/video${encodeURIComponent(info.ownerId)}_${encodeURIComponent(info.videoId)}`;
+  }
+
   function youtubeWatchUrl(info) {
     if (!info) return '';
     const params = new URLSearchParams();
@@ -3771,6 +3832,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
             <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
+          <button class="drive-player-icon drive-player-external" id="drivePlayerExternal" type="button" aria-label="Abrir no Google Drive" title="Abrir no Google Drive">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <button class="drive-player-icon drive-player-close" id="drivePlayerClose" type="button" aria-label="Fechar reprodutor" title="Fechar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
           </button>
@@ -3812,6 +3876,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const supportLink = loading?.querySelector('.drive-player-support-link');
     const fullscreenButton = document.getElementById('drivePlayerFullscreen');
     const closeButton = document.getElementById('drivePlayerClose');
+    const externalButton = document.getElementById('drivePlayerExternal');
     const volumeButton = document.getElementById('drivePlayerVolume');
     const toggleButton = document.getElementById('drivePlayerToggle');
     const backButton = document.getElementById('drivePlayerBack10');
@@ -3819,7 +3884,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const progress = document.getElementById('drivePlayerProgress');
     const currentLabel = document.getElementById('drivePlayerCurrent');
     const durationLabel = document.getElementById('drivePlayerDuration');
-    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
+    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
@@ -3830,6 +3895,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeTitle = '';
     let activeMediaKind = '';
     let activeProvider = '';
+    let activeExternalUrl = '';
     let frameMode = false;
     let audioMode = false;
     let streamAttempt = '';
@@ -3925,7 +3991,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.toggle('is-audio-mode', audioMode);
       overlay.classList.toggle('is-audio-frame-mode', audioMode && frameMode);
       applyBackdrop();
-      syncNativeMobileVideoControls();
     };
 
     const applyMediaKind = kind => {
@@ -3947,26 +4012,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (shouldUseAudioMode) activeMediaKind = 'audio';
       else if (hasVideoDimensions) activeMediaKind = 'video';
       setAudioMode(shouldUseAudioMode);
-    };
-
-    const shouldUseNativeMobileVideoControls = () => {
-      if (frameMode || audioMode || activeProvider !== 'drive') return false;
-      const viewportIsMobile = window.matchMedia ? window.matchMedia('(max-width: 700px)').matches : window.innerWidth <= 700;
-      const touchPrimary = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : ('ontouchstart' in window);
-      return Boolean(viewportIsMobile || touchPrimary);
-    };
-
-    const syncNativeMobileVideoControls = () => {
-      const nativeMobileControls = shouldUseNativeMobileVideoControls();
-      overlay.classList.toggle('is-native-mobile-video', nativeMobileControls);
-      video.controls = nativeMobileControls;
-      if (nativeMobileControls) {
-        video.setAttribute('controls', 'controls');
-        video.setAttribute('controlsList', 'nodownload');
-      } else {
-        video.removeAttribute('controls');
-        video.removeAttribute('controlsList');
-      }
     };
 
     const showControls = (keepVisible = false) => {
@@ -4006,7 +4051,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setLoadingMessage('', false);
       setPlayerInteractive(true);
       detectAudioMode();
-      syncNativeMobileVideoControls();
       syncPlayerState();
       showControls();
     };
@@ -4144,13 +4188,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeTitle = '';
       activeMediaKind = '';
       activeProvider = '';
+      activeExternalUrl = '';
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen', 'is-native-mobile-video');
-      video.controls = false;
-      video.removeAttribute('controls');
-      video.removeAttribute('controlsList');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vkvideo-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
       youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
@@ -4179,7 +4221,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeBannerUrl = safeBanner && safeBanner !== '#' ? safeBanner : '';
       activeTitle = String(context?.title || '').trim();
       activeProvider = 'drive';
-      syncNativeMobileVideoControls();
+      const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
+      activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
+      externalButton.setAttribute('aria-label', 'Abrir no Google Drive');
+      externalButton.title = 'Abrir no Google Drive';
       frame.title = 'Reprodutor do Google Drive';
       activeMediaKind = normalizeDriveMediaKind(context?.mediaKind)
         || inferDriveMediaKind(context?.mediaType, context?.contentType, context?.category, activeTitle, context?.contentUrl);
@@ -4216,13 +4261,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closePlayer();
       openingToken += 1;
       activeProvider = 'youtube';
+      activeExternalUrl = youtubeWatchUrl(info);
       activeTitle = String(context?.title || '').trim();
       activeMediaKind = 'video';
       frameMode = true;
       mediaReady = false;
       previousFocus = document.activeElement;
       setAudioMode(false);
-      syncNativeMobileVideoControls();
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       youtubeMuted = false;
@@ -4237,10 +4282,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       loadingText.hidden = true;
       frame.title = activeTitle ? `YouTube — ${activeTitle}` : 'Reprodutor do YouTube';
       frame.src = embedUrl;
+      externalButton.setAttribute('aria-label', 'Abrir no YouTube');
+      externalButton.title = 'Abrir no YouTube';
       setPlayerInteractive(false);
       volumeButton.disabled = false;
       volumeButton.setAttribute('aria-label', 'Silenciar');
       volumeButton.title = 'Silenciar';
+      closeButton.focus({ preventScroll: true });
+    };
+
+    const openVkVideoPlayer = (info, context = {}) => {
+      const embedUrl = vkVideoEmbedUrl(info);
+      if (!embedUrl) return;
+      closePlayer();
+      openingToken += 1;
+      activeProvider = 'vkvideo';
+      activeExternalUrl = vkVideoWatchUrl(info);
+      activeTitle = String(context?.title || '').trim();
+      activeMediaKind = 'video';
+      frameMode = true;
+      mediaReady = false;
+      previousFocus = document.activeElement;
+      setAudioMode(false);
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.classList.remove('is-error', 'is-loading', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-muted');
+      overlay.classList.add('is-open', 'is-frame-mode', 'is-youtube-mode', 'is-vkvideo-mode', 'controls-visible');
+      document.body.classList.add('drive-player-open');
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      frameShell.hidden = false;
+      loading.hidden = true;
+      loadingText.hidden = true;
+      frame.title = activeTitle ? `VK Video — ${activeTitle}` : 'Reprodutor do VK Video';
+      frame.src = embedUrl;
+      externalButton.setAttribute('aria-label', 'Abrir no VK Video');
+      externalButton.title = 'Abrir no VK Video';
+      setPlayerInteractive(false);
       closeButton.focus({ preventScroll: true });
     };
 
@@ -4261,7 +4340,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
       const fileId = googleDriveFileId(mediaUrl);
       const youtubeInfo = youtubeMediaInfo(mediaUrl);
-      if (!fileId && !youtubeInfo) return;
+      const vkVideoInfo = vkVideoMediaInfo(mediaUrl);
+      if (!fileId && !youtubeInfo && !vkVideoInfo) return;
 
       const linkedContent = contentDataFromElement(link);
       const detailBannerImage = document.querySelector('#contentDetailBg img');
@@ -4276,6 +4356,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       event.preventDefault();
       if (youtubeInfo) {
         openYouTubePlayer(youtubeInfo, { bannerUrl, title, contentUrl: mediaUrl });
+        return;
+      }
+      if (vkVideoInfo) {
+        openVkVideoPlayer(vkVideoInfo, { bannerUrl, title, contentUrl: mediaUrl });
         return;
       }
 
@@ -4300,6 +4384,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     fullscreenButton.addEventListener('click', toggleBrowserFullscreen);
     closeButton.addEventListener('click', closePlayer);
+    externalButton.addEventListener('click', () => {
+      if (!activeExternalUrl) return;
+      window.open(activeExternalUrl, '_blank', 'noopener,noreferrer');
+      showControls(true);
+    });
     volumeButton.addEventListener('click', () => {
       if (activeProvider === 'youtube' && frameMode) {
         youtubeMuted = !youtubeMuted;
@@ -4354,7 +4443,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
     video.addEventListener('loadedmetadata', () => {
       detectAudioMode();
-      syncNativeMobileVideoControls();
       syncPlayerState();
       setLoadingMessage(audioMode ? 'Sincronizando o MP3 com o player...' : 'Sincronizando mídia com o player...');
       showControls(true);
@@ -4414,8 +4502,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
     window.addEventListener('pagehide', closePlayer);
     window.addEventListener('be:close-drive-player', closePlayer);
-    window.addEventListener('resize', syncNativeMobileVideoControls);
-    window.addEventListener('orientationchange', syncNativeMobileVideoControls);
     setPlayerInteractive(false);
   }
 
@@ -4504,7 +4590,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       play.removeAttribute('href');
       play.setAttribute('aria-disabled', 'true');
     }
-    const usesInternalPlayer = hasContentLink && Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl));
+    const usesInternalPlayer = hasContentLink && Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl) || vkVideoMediaInfo(contentUrl));
     play.dataset.mediaPlayerTrigger = usesInternalPlayer ? 'true' : 'false';
     if (hasContentLink && /^https?:\/\//i.test(contentUrl) && !usesInternalPlayer) {
       play.target = '_blank';
@@ -8930,21 +9016,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function closeMenus(){closeDesktop();closeMobile();}
 
-  function hideProfileSurfacesForNotifications(){
-    var profilePage=document.getElementById('profilePage');
-    var settingsPage=document.getElementById('settingsPage');
-    if(profilePage){
-      profilePage.hidden=true;
-      profilePage.setAttribute('hidden','');
-      profilePage.setAttribute('aria-hidden','true');
-    }
-    if(settingsPage){
-      settingsPage.hidden=true;
-      settingsPage.setAttribute('hidden','');
-      settingsPage.setAttribute('aria-hidden','true');
-    }
-  }
-
   function syncPageAvatar(){
     if(!pageAvatar||!pageAvatarImage||!pageAvatarFallback)return;
     var account=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
@@ -9130,11 +9201,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function openPage(id,updateRoute){
     closeMenus();
-    // O perfil/configurações são páginas persistentes no DOM. Ao abrir uma
-    // notificação a partir delas, esconda também o elemento para que, ao
-    // fechar a notificação e voltar à Home, o conteúdo antigo não reapareça
-    // no fim da página junto com o catálogo.
-    hideProfileSurfacesForNotifications();
     document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','support-page-active','detail-page-active');
     document.body.classList.add('notification-page-active');
     page.hidden=false;
@@ -9151,27 +9217,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function closePage(updateRoute){
-    // A página de perfil/configurações permanece montada no DOM. Antes de
-    // voltar para a Home, force o estado visual dessas superfícies para
-    // fechado em qualquer tamanho de tela. Isso evita que um perfil aberto
-    // antes da notificação reapareça abaixo do catálogo.
-    hideProfileSurfacesForNotifications();
-    document.body.classList.remove('notification-page-active','profile-page-active','settings-page-active');
+    document.body.classList.remove('notification-page-active');
     page.hidden=true;
     page.setAttribute('aria-hidden','true');
     selectedId='';
-    if(updateRoute!==false){
-      // Use o roteador público em vez de alterar history diretamente. O
-      // roteador dispara popstate e permite que todos os módulos encerrem o
-      // estado anterior (inclusive /@perfil) antes de exibir a Home.
-      if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/');
-      else{
-        var url=new URL(location.href);
-        url.pathname='/';
-        url.hash='';
-        history.pushState({beRoute:'home'},'',url.pathname+(url.search||''));
-        window.dispatchEvent(new PopStateEvent('popstate',{state:{beRoute:'home'}}));
-      }
+    if(updateRoute!==false&&routeInfo().active){
+      var url=new URL(location.href);
+      url.pathname='/';
+      url.hash='';
+      history.pushState({beRoute:'home'},'',url.pathname+(url.search||''));
     }
     document.title='Billie Eilish TV';
   }
@@ -9256,11 +9310,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   window.addEventListener('be:open-notifications',function(event){
     var detail=event&&event.detail||{};
-    var info=routeInfo();
-    // Se a abertura veio diretamente do Perfil, a URL ainda pode estar em
-    // /@usuario. Nesse caso, também leve a rota para /atualizacoes. Quando o
-    // roteador já abriu a rota correta, não cria uma entrada duplicada.
-    openPage(detail.id||info.id,!info.active);
+    openPage(detail.id||routeInfo().id,false);
   });
   window.addEventListener('be:close-notifications',function(){closePage(false);});
   window.addEventListener('be:i18n-ready',function(){if(loaded){renderPreviews();if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);}});
