@@ -3213,7 +3213,17 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
         token=sessionResult&&sessionResult.data&&sessionResult.data.session&&sessionResult.data.session.access_token||'';
       }
       if(!token){showLogin('Sua sessão expirou. Entre novamente.');return;}
-      var response=await fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'same-origin'});
+      var fetchProtectedRuntime=function(accessToken){
+        return fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+accessToken},cache:'no-store',credentials:'same-origin'});
+      };
+      var response=await fetchProtectedRuntime(token);
+      if(response.status===404&&client&&client.auth&&typeof client.auth.refreshSession==='function'){
+        try{
+          var refreshed=await client.auth.refreshSession();
+          var refreshedToken=refreshed&&refreshed.data&&refreshed.data.session&&refreshed.data.session.access_token||'';
+          if(refreshedToken){token=refreshedToken;response=await fetchProtectedRuntime(token);}
+        }catch(_){ }
+      }
       if(!response.ok){location.replace('/404.html');return;}
       var source=await response.text();
       await new Promise(function(resolve,reject){

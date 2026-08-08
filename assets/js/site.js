@@ -7525,7 +7525,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!token){showLogin('Sua sessão expirou. Entre novamente.');return;}
       var currentAccount=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
       if(currentAccount&&window.beBackend&&typeof window.beBackend.isAdmin==='function'&&!window.beBackend.isAdmin(currentAccount)){showDenied();return;}
-      var response=await fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+token},cache:'no-store',credentials:'same-origin'});
+      var fetchProtectedRuntime=function(accessToken){
+        return fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+accessToken},cache:'no-store',credentials:'same-origin'});
+      };
+      var response=await fetchProtectedRuntime(token);
+      // O endpoint protegido usa 404 também para sessão inválida/expirada.
+      // Renovamos a sessão uma vez e repetimos a solicitação sem remover a
+      // checagem de administrador feita no servidor.
+      if(response.status===404&&client&&client.auth&&typeof client.auth.refreshSession==='function'){
+        try{
+          var refreshed=await client.auth.refreshSession();
+          var refreshedToken=refreshed&&refreshed.data&&refreshed.data.session&&refreshed.data.session.access_token||'';
+          if(refreshedToken){token=refreshedToken;response=await fetchProtectedRuntime(token);}
+        }catch(_){ }
+      }
       if(!response.ok){
         if(response.status===401||response.status===403){showDenied();return;}
         throw new Error('O runtime protegido não respondeu corretamente (código '+response.status+').');
