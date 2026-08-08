@@ -13329,6 +13329,10 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   border:0;
   background:#000;
 }
+/* VK: sobe a área nativa do player para separar os controles da barra de fechar. */
+.external-native-player-overlay[data-provider="vk"] .external-native-player-frame-shell{
+  bottom:72px;
+}
 .external-native-player-toolbar{
   position:absolute;
   z-index:20;
@@ -13381,6 +13385,9 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   pointer-events:none;
 }
 @media(max-width:700px){
+  .external-native-player-overlay[data-provider="vk"] .external-native-player-frame-shell{
+    bottom:max(66px,calc(env(safe-area-inset-bottom) + 58px));
+  }
   .external-native-player-toolbar{
     bottom:max(10px,env(safe-area-inset-bottom));
     width:54px;
@@ -13390,4 +13397,188 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
 }
 @media(prefers-reduced-motion:reduce){
   .external-native-player-close{transition:none!important}
+}
+
+/* MP3 do Google Drive — banner do conteúdo + dock central no estilo da Home. */
+.drive-player-overlay.is-audio-mode{
+  --drive-player-actionbar-height:74px;
+}
+.drive-player-overlay.is-audio-mode .drive-player-backdrop{
+  display:block!important;
+  background:#05070b;
+}
+.drive-player-overlay.is-audio-mode.has-backdrop .drive-player-backdrop-image{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:center center!important;
+  transform:scale(1.015)!important;
+  filter:brightness(.56) saturate(1.06)!important;
+  opacity:1!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-backdrop::after{
+  background:
+    linear-gradient(180deg,rgba(0,0,0,.20) 0%,rgba(0,0,0,.30) 50%,rgba(0,0,0,.56) 100%)!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-video{
+  opacity:0!important;
+  background:transparent!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-center-controls{
+  top:50%!important;
+}
+
+/* O grupo de ações do MP3 vira uma dock central, sem reutilizar a tab da Home. */
+.drive-player-overlay.is-audio-mode .drive-player-top-controls{
+  left:50%!important;
+  right:auto!important;
+  bottom:max(16px,env(safe-area-inset-bottom))!important;
+  width:max-content!important;
+  min-width:0!important;
+  height:58px!important;
+  padding:6px!important;
+  gap:6px!important;
+  justify-content:center!important;
+  border:1px solid rgba(255,255,255,.17)!important;
+  border-radius:999px!important;
+  background:rgba(18,20,20,.68)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(150%)!important;
+  backdrop-filter:blur(22px) saturate(150%)!important;
+  box-shadow:
+    0 14px 45px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.08)!important;
+  transform:translateX(-50%)!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-fullscreen{
+  margin-right:0!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-top-controls .drive-player-icon{
+  width:46px!important;
+  height:46px!important;
+  flex:0 0 46px!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  transition:background .18s ease,transform .18s ease!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-top-controls .drive-player-icon:hover,
+.drive-player-overlay.is-audio-mode .drive-player-top-controls .drive-player-icon:focus-visible{
+  background:rgba(255,255,255,.10)!important;
+  box-shadow:none!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-top-controls .drive-player-icon:active{
+  transform:scale(.96);
+}
+.drive-player-overlay.is-audio-mode .drive-player-bottom-controls{
+  bottom:calc(88px + max(8px,env(safe-area-inset-bottom)))!important;
+}
+
+@media(max-width:700px){
+  .drive-player-overlay.is-audio-mode{
+    --drive-player-actionbar-height:68px;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-top-controls{
+    bottom:max(12px,env(safe-area-inset-bottom))!important;
+    height:54px!important;
+    padding:5px!important;
+    gap:4px!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-top-controls .drive-player-icon{
+    width:44px!important;
+    height:44px!important;
+    flex-basis:44px!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-bottom-controls{
+    bottom:calc(80px + max(8px,env(safe-area-inset-bottom)))!important;
+  }
+}
+
+
+
+/* MP3 Drive — controles centrais clássicos 10s / play-pause / 10s */
+.drive-player-overlay.is-audio-mode .drive-player-center-controls{
+  left:50%!important;
+  top:50%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:clamp(72px,12vw,170px)!important;
+  transform:translate(-50%,-50%)!important;
+  opacity:1;
+  z-index:8!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip,
+.drive-player-overlay.is-audio-mode .drive-player-toggle{
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  color:rgba(255,255,255,.74)!important;
+  opacity:1!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip{
+  width:78px!important;
+  height:78px!important;
+  border-radius:0!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip svg{
+  width:68px!important;
+  height:68px!important;
+  stroke:currentColor!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip text{
+  fill:currentColor!important;
+  font-size:19px!important;
+  font-weight:700!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-toggle{
+  width:76px!important;
+  height:76px!important;
+  border-radius:0!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-toggle svg{
+  width:58px!important;
+  height:58px!important;
+  fill:currentColor!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-toggle .play-icon{
+  margin-left:5px!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip:hover,
+.drive-player-overlay.is-audio-mode .drive-player-skip:focus-visible,
+.drive-player-overlay.is-audio-mode .drive-player-toggle:hover,
+.drive-player-overlay.is-audio-mode .drive-player-toggle:focus-visible{
+  background:transparent!important;
+  box-shadow:none!important;
+  color:rgba(255,255,255,.92)!important;
+  outline:none!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip:active,
+.drive-player-overlay.is-audio-mode .drive-player-toggle:active{
+  transform:scale(.94)!important;
+}
+@media(max-width:700px){
+  .drive-player-overlay.is-audio-mode .drive-player-center-controls{
+    gap:clamp(48px,14vw,92px)!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-skip{
+    width:66px!important;
+    height:66px!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-skip svg{
+    width:58px!important;
+    height:58px!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-toggle{
+    width:64px!important;
+    height:64px!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-toggle svg{
+    width:50px!important;
+    height:50px!important;
+  }
 }

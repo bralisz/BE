@@ -5094,10 +5094,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
       const linkedContent = contentDataFromElement(link);
       const detailBannerImage = document.querySelector('#contentDetailBg img');
-      const bannerUrl = link.dataset.bannerUrl
-        || linkedContent.bannerUrl
-        || detailBannerImage?.currentSrc
+      const bannerUrl = detailBannerImage?.currentSrc
         || detailBannerImage?.src
+        || link.dataset.bannerUrl
+        || link.dataset.imageUrl
+        || linkedContent.bannerUrl
         || linkedContent.imageUrl
         || '';
       const title = link.dataset.title || linkedContent.title || '';
