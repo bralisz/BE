@@ -12982,3 +12982,20 @@ body.external-video-player-open{overflow:hidden!important;overscroll-behavior:no
     cursor:none!important;
   }
 }
+
+
+/* Ajuste YouTube 2026-08-08 v3
+   - remove a barra/timeline nativa do embed (controls=0 no JS);
+   - remove o antigo ícone de abrir externamente;
+   - mantém apenas tela cheia + fechar fora do fullscreen;
+   - no fullscreen, os ícones do site desaparecem. */
+.youtube-player-shell:fullscreen .youtube-player-toolbar,
+.youtube-player-shell:-webkit-full-screen .youtube-player-toolbar{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.youtube-player-fullscreen{
+  background:rgba(255,255,255,.07)!important;
+}

@@ -3653,7 +3653,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       playsinline: '1',
       rel: '0',
       modestbranding: '1',
-      controls: '1'
+      controls: '0'
     });
     if (info.playlistId) params.set('list', info.playlistId);
     if (info.startSeconds > 0) params.set('start', String(info.startSeconds));
@@ -3852,8 +3852,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       <section class="youtube-player-shell" id="youtubePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor do YouTube">
         <header class="youtube-player-toolbar" aria-label="Ações do YouTube">
           <div class="youtube-player-actions">
-            <button class="youtube-player-action youtube-player-external" id="youtubePlayerExternal" type="button" aria-label="Abrir no YouTube" title="Abrir no YouTube">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <button class="youtube-player-action youtube-player-fullscreen" id="youtubePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <button class="youtube-player-action youtube-player-close" id="youtubePlayerClose" type="button" aria-label="Fechar YouTube" title="Fechar">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
@@ -3894,15 +3894,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const youtubeShell = document.getElementById('youtubePlayerShell');
     const youtubeFrame = document.getElementById('youtubePlayerFrame');
     const youtubeClose = document.getElementById('youtubePlayerClose');
-    const youtubeExternal = document.getElementById('youtubePlayerExternal');
+    const youtubeFullscreen = document.getElementById('youtubePlayerFullscreen');
     const vkOverlay = document.getElementById('vkPlayerOverlay');
     const vkShell = document.getElementById('vkPlayerShell');
     const vkFrame = document.getElementById('vkPlayerFrame');
     const vkClose = document.getElementById('vkPlayerClose');
     const vkExternal = document.getElementById('vkPlayerExternal');
-    if (!youtubeOverlay || !youtubeShell || !youtubeFrame || !youtubeClose || !youtubeExternal || !vkOverlay || !vkShell || !vkFrame || !vkClose || !vkExternal) return;
+    if (!youtubeOverlay || !youtubeShell || !youtubeFrame || !youtubeClose || !youtubeFullscreen || !vkOverlay || !vkShell || !vkFrame || !vkClose || !vkExternal) return;
 
-    let youtubeExternalUrl = '';
     let vkExternalUrl = '';
     let youtubePreviousFocus = null;
     let vkPreviousFocus = null;
@@ -3918,7 +3917,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       youtubeOverlay.hidden = true;
       youtubeOverlay.setAttribute('aria-hidden', 'true');
       youtubeOverlay.classList.remove('is-open');
-      youtubeExternalUrl = '';
       syncBodyLock();
       if (restoreFocus && youtubePreviousFocus && typeof youtubePreviousFocus.focus === 'function') youtubePreviousFocus.focus({ preventScroll: true });
       youtubePreviousFocus = null;
@@ -3948,7 +3946,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeAllExternalPlayers();
       window.dispatchEvent(new Event('be:close-drive-player'));
       youtubePreviousFocus = document.activeElement;
-      youtubeExternalUrl = youtubeWatchUrl(info);
       youtubeFrame.title = context?.title ? `YouTube — ${String(context.title).trim()}` : 'Reprodutor do YouTube';
       youtubeFrame.src = embedUrl;
       youtubeOverlay.hidden = false;
@@ -3995,9 +3992,33 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     youtubeClose.addEventListener('click', () => closeYouTubePlayer(true));
     vkClose.addEventListener('click', () => closeVkPlayer(true));
-    youtubeExternal.addEventListener('click', () => {
-      if (youtubeExternalUrl) window.open(youtubeExternalUrl, '_blank', 'noopener,noreferrer');
-    });
+    const youtubeFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+    const youtubeOwnsFullscreen = () => {
+      const element = youtubeFullscreenElement();
+      return Boolean(element && (element === youtubeShell || youtubeShell.contains(element)));
+    };
+    const syncYouTubeFullscreenButton = () => {
+      const active = youtubeOwnsFullscreen();
+      youtubeFullscreen.setAttribute('aria-label', active ? 'Sair da tela cheia' : 'Entrar em tela cheia');
+      youtubeFullscreen.title = active ? 'Sair da tela cheia' : 'Tela cheia';
+    };
+    const toggleYouTubeFullscreen = async () => {
+      try {
+        if (youtubeOwnsFullscreen()) {
+          if (typeof document.exitFullscreen === 'function') await document.exitFullscreen();
+          else if (typeof document.webkitExitFullscreen === 'function') document.webkitExitFullscreen();
+        } else if (typeof youtubeShell.requestFullscreen === 'function') {
+          await youtubeShell.requestFullscreen();
+        } else if (typeof youtubeShell.webkitRequestFullscreen === 'function') {
+          youtubeShell.webkitRequestFullscreen();
+        }
+      } catch (_) {}
+      syncYouTubeFullscreenButton();
+    };
+
+    youtubeFullscreen.addEventListener('click', toggleYouTubeFullscreen);
+    document.addEventListener('fullscreenchange', syncYouTubeFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', syncYouTubeFullscreenButton);
     vkExternal.addEventListener('click', () => {
       if (vkExternalUrl) window.open(vkExternalUrl, '_blank', 'noopener,noreferrer');
     });
