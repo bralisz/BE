@@ -3871,9 +3871,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const backButton = document.getElementById('drivePlayerBack10');
     const forwardButton = document.getElementById('drivePlayerForward10');
     const progress = document.getElementById('drivePlayerProgress');
+    const bottomControls = overlay.querySelector('.drive-player-bottom-controls');
     const currentLabel = document.getElementById('drivePlayerCurrent');
     const durationLabel = document.getElementById('drivePlayerDuration');
-    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
+    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !bottomControls || !currentLabel || !durationLabel) return;
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
@@ -4384,6 +4385,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       video.load();
       frame.src = 'about:blank';
       frameShell.hidden = true;
+      bottomControls.hidden = false;
       loading.hidden = false;
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
@@ -4447,6 +4449,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.add('is-open', 'controls-visible', 'is-paused');
       document.body.classList.add('drive-player-open');
       frameShell.hidden = true;
+      bottomControls.hidden = false;
       frame.src = 'about:blank';
       setPlayerInteractive(false);
       setLoadingMessage(activeMediaKind === 'audio' ? 'Carregando MP3 do Google Drive...' : 'Preparando arquivo do Google Drive...');
@@ -4484,6 +4487,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       video.removeAttribute('src');
       video.load();
       frameShell.hidden = false;
+      bottomControls.hidden = true;
       loading.hidden = true;
       loadingText.hidden = true;
       frame.title = activeTitle ? `YouTube — ${activeTitle}` : 'Reprodutor do YouTube';
@@ -4521,6 +4525,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       video.removeAttribute('src');
       video.load();
       frameShell.hidden = false;
+      bottomControls.hidden = false;
       frame.title = activeTitle ? `VK Video — ${activeTitle}` : 'Reprodutor do VK Video';
       setPlayerInteractive(false);
       setLoadingMessage('Sincronizando VK Video com o player...', true);
