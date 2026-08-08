@@ -12762,3 +12762,28 @@ body.site-loading-active.donate-page-active > footer{
     height:100%!important;
   }
 }
+
+
+/* YouTube: em tela cheia, deixa somente o player do YouTube.
+   Remove os ícones do BETV que ficavam no canto superior direito. */
+.drive-player-overlay.is-youtube-mode.is-browser-fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-youtube-mode.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-youtube-mode.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-top-controls{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+
+/* YouTube: usa somente os controles/timeline do próprio YouTube.
+   Remove a barra de duração/progresso do player BETV para links do YouTube,
+   tanto no modo normal quanto em tela cheia. */
+.drive-player-overlay.is-youtube-mode .drive-player-bottom-controls,
+.drive-player-overlay.is-youtube-mode .drive-player-progress-wrap,
+.drive-player-overlay.is-youtube-mode .drive-player-time{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
