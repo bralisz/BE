@@ -8,7 +8,7 @@ Esta pasta contém as funções executadas no ambiente serverless da Vercel. Ela
 - `admin-runtime.js`: entrega recursos necessários ao painel administrativo;
 - `admin-user.js`: executa operações administrativas relacionadas a usuários;
 - `delete-account.js`: processa a exclusão segura da conta do usuário;
-- `deployment-version.js`: identifica mudanças de deploy para avisar sobre novas versões;
+- `meta.js`: roteia endpoints públicos pequenos (versão do deploy, robots, sitemap e Wikipédia) em uma única Serverless Function;
 - `drive-media.js`: entrega arquivos do Google Drive ao player interno;
 - `export-account.js`: prepara a exportação dos dados da conta;
 - `media.js`: atende solicitações relacionadas a arquivos e mídias do catálogo;

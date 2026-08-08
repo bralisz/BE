@@ -2,11 +2,27 @@
   "rewrites": [
     {
       "source": "/robots.txt",
-      "destination": "/api/robots"
+      "destination": "/api/meta?handler=robots"
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/sitemap"
+      "destination": "/api/meta?handler=sitemap"
+    },
+    {
+      "source": "/api/deployment-version",
+      "destination": "/api/meta?handler=deployment-version"
+    },
+    {
+      "source": "/api/robots",
+      "destination": "/api/meta?handler=robots"
+    },
+    {
+      "source": "/api/sitemap",
+      "destination": "/api/meta?handler=sitemap"
+    },
+    {
+      "source": "/api/billie-wikipedia",
+      "destination": "/api/meta?handler=billie-wikipedia"
     },
     {
       "source": "/albuns",

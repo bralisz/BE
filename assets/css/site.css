@@ -6360,6 +6360,8 @@ body.section-catalog-active #dynamicSections.section-view-mode > .film-library-s
 .f-desc.be-markdown{display:block}
 .f-desc.be-markdown p{margin:0}
 .notification-article-body.be-markdown{white-space:normal}
+.notification-article-body.be-markdown a:not(.notification-markdown-image){color:#2997ff;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;overflow-wrap:anywhere;word-break:break-word}
+.notification-article-body.be-markdown a:not(.notification-markdown-image):hover{color:#64b5ff}
 .notification-markdown-image{
   display:block;
   width:min(100%,760px);
