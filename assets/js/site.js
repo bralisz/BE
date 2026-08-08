@@ -3706,14 +3706,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  function vkVideoEmbedUrl(info) {
+  function vkVideoTimeParam(seconds) {
+    const total = Number.isFinite(Number(seconds)) ? Math.max(0, Math.floor(Number(seconds))) : 0;
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const rest = total % 60;
+    return `${String(hours).padStart(2, '0')}h${String(minutes).padStart(2, '0')}m${String(rest).padStart(2, '0')}s`;
+  }
+
+  function vkVideoEmbedUrl(info, options = {}) {
     if (!info) return '';
+    const requestedHd = Number(options?.hd);
+    const hd = Number.isFinite(requestedHd) ? Math.min(4, Math.max(0, Math.round(requestedHd))) : 4;
     const params = new URLSearchParams({
       oid: info.ownerId,
       id: info.videoId,
-      autoplay: '1',
-      hd: '4'
+      autoplay: options?.autoplay === false ? '0' : '1',
+      hd: String(hd),
+      js_api: '1'
     });
+    const startSeconds = Number(options?.startSeconds);
+    if (Number.isFinite(startSeconds) && startSeconds > 0) params.set('t', vkVideoTimeParam(startSeconds));
     if (info.hash) params.set('hash', info.hash);
     return `https://vkvideo.ru/video_ext.php?${params.toString()}`;
   }
@@ -3853,8 +3866,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="external-native-player-frame-shell">
           <iframe class="external-native-player-frame" id="externalNativePlayerFrame" title="Reprodutor de vídeo" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
+        <div class="external-native-player-menu external-native-player-quality-menu" id="externalNativePlayerQualityMenu" hidden role="menu" aria-label="Qualidade do vídeo">
+          <button type="button" class="external-native-player-menu-item" data-vk-quality="4" role="menuitemradio" aria-checked="true"><span>1080p</span><small>Full HD</small></button>
+          <button type="button" class="external-native-player-menu-item" data-vk-quality="3" role="menuitemradio" aria-checked="false"><span>720p</span><small>HD</small></button>
+          <button type="button" class="external-native-player-menu-item" data-vk-quality="2" role="menuitemradio" aria-checked="false"><span>480p</span></button>
+          <button type="button" class="external-native-player-menu-item" data-vk-quality="1" role="menuitemradio" aria-checked="false"><span>360p</span></button>
+        </div>
+        <div class="external-native-player-menu external-native-player-audio-menu" id="externalNativePlayerAudioMenu" hidden role="menu" aria-label="Faixa de áudio">
+          <button type="button" class="external-native-player-menu-item is-active" data-vk-audio-track="default" role="menuitemradio" aria-checked="true"><span>Original</span></button>
+        </div>
         <header class="external-native-player-toolbar" aria-label="Ações do vídeo">
-          <button class="external-native-player-close" id="externalNativePlayerClose" type="button" aria-label="Fechar vídeo" title="Fechar">
+          <button class="external-native-player-action external-native-player-quality" id="externalNativePlayerQuality" type="button" aria-label="Alterar qualidade do vídeo" title="Qualidade" aria-expanded="false" aria-controls="externalNativePlayerQualityMenu">
+            <span class="external-native-player-quality-badge" aria-hidden="true">HD</span>
+          </button>
+          <button class="external-native-player-action external-native-player-audio" id="externalNativePlayerAudio" type="button" aria-label="Alterar faixa de áudio" title="Faixa de áudio" aria-expanded="false" aria-controls="externalNativePlayerAudioMenu">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
+          </button>
+          <button class="external-native-player-action external-native-player-close" id="externalNativePlayerClose" type="button" aria-label="Fechar vídeo" title="Fechar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
           </button>
         </header>
@@ -3871,23 +3899,282 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const shell = document.getElementById('externalNativePlayerShell');
     const frame = document.getElementById('externalNativePlayerFrame');
     const closeButton = document.getElementById('externalNativePlayerClose');
-    if (!overlay || !shell || !frame || !closeButton) return;
+    const qualityButton = document.getElementById('externalNativePlayerQuality');
+    const audioButton = document.getElementById('externalNativePlayerAudio');
+    const qualityMenu = document.getElementById('externalNativePlayerQualityMenu');
+    const audioMenu = document.getElementById('externalNativePlayerAudioMenu');
+    if (!overlay || !shell || !frame || !closeButton || !qualityButton || !audioButton || !qualityMenu || !audioMenu) return;
 
     let previousFocus = null;
     let activeProvider = '';
+    let activeVkInfo = null;
+    let vkPlayer = null;
+    let vkApiPromise = null;
+    let vkApiReady = false;
+    let vkBindToken = 0;
+    let vkSelectedQuality = 4;
+    let vkAudioTracks = [];
+    let vkSelectedAudioTrack = 'default';
 
     const syncBodyLock = () => {
       document.body.classList.toggle('external-video-player-open', !overlay.hidden);
     };
 
+    const closeMenus = except => {
+      [qualityMenu, audioMenu].forEach(menu => {
+        if (menu === except) return;
+        menu.hidden = true;
+      });
+      qualityButton.setAttribute('aria-expanded', String(!qualityMenu.hidden));
+      audioButton.setAttribute('aria-expanded', String(!audioMenu.hidden));
+    };
+
+    const resetVkPlayer = () => {
+      vkBindToken += 1;
+      if (vkPlayer && typeof vkPlayer.destroy === 'function') {
+        try { vkPlayer.destroy(); } catch (_) {}
+      }
+      vkPlayer = null;
+      vkApiReady = false;
+    };
+
+    const ensureVkVideoApiForExternalPlayer = () => {
+      if (window.VK && typeof window.VK.VideoPlayer === 'function') return Promise.resolve(window.VK);
+      if (vkApiPromise) return vkApiPromise;
+      vkApiPromise = new Promise((resolve, reject) => {
+        const finish = () => {
+          if (window.VK && typeof window.VK.VideoPlayer === 'function') resolve(window.VK);
+          else reject(new Error('VK Video API indisponível'));
+        };
+        const existing = document.querySelector('script[data-be-vk-video-api]');
+        if (existing) {
+          existing.addEventListener('load', finish, { once: true });
+          existing.addEventListener('error', () => reject(new Error('Falha ao carregar VK Video API')), { once: true });
+          window.setTimeout(finish, 2500);
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://vk.com/js/api/videoplayer.js';
+        script.async = true;
+        script.dataset.beVkVideoApi = 'true';
+        script.addEventListener('load', finish, { once: true });
+        script.addEventListener('error', () => reject(new Error('Falha ao carregar VK Video API')), { once: true });
+        document.head.appendChild(script);
+      }).catch(error => {
+        vkApiPromise = null;
+        throw error;
+      });
+      return vkApiPromise;
+    };
+
+    const normalizeVkQuality = value => {
+      const text = String(value ?? '').trim().toLowerCase();
+      const numeric = Number(text.replace(/[^0-9.]/g, ''));
+      if (Number.isFinite(numeric)) {
+        if (numeric <= 4 && numeric >= 1 && !/p/.test(text)) return Math.round(numeric);
+        if (numeric >= 1080) return 4;
+        if (numeric >= 720) return 3;
+        if (numeric >= 480) return 2;
+        if (numeric >= 360) return 1;
+      }
+      return 0;
+    };
+
+    const syncQualityMenu = quality => {
+      const normalized = normalizeVkQuality(quality) || vkSelectedQuality || 4;
+      vkSelectedQuality = normalized;
+      qualityMenu.querySelectorAll('[data-vk-quality]').forEach(button => {
+        const active = Number(button.dataset.vkQuality) === normalized;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-checked', String(active));
+      });
+      qualityButton.dataset.quality = String(normalized);
+      qualityButton.title = `Qualidade — ${normalized === 4 ? '1080p' : normalized === 3 ? '720p' : normalized === 2 ? '480p' : '360p'}`;
+    };
+
+    const normalizeVkAudioTracks = raw => {
+      const list = Array.isArray(raw) ? raw : [];
+      const result = [];
+      list.forEach((item, index) => {
+        const source = item && typeof item === 'object' ? item : { id: item, label: item };
+        const idValue = source.id ?? source.trackId ?? source.track_id ?? source.audioTrackId ?? source.audio_track_id ?? source.value ?? index;
+        const id = String(idValue ?? index);
+        if (!id) return;
+        const label = String(source.label ?? source.title ?? source.name ?? source.langName ?? source.languageName ?? source.language ?? source.lang ?? `Faixa ${index + 1}`).trim() || `Faixa ${index + 1}`;
+        const active = Boolean(source.active ?? source.selected ?? source.enabled ?? source.current);
+        if (!result.some(track => track.id === id)) result.push({ id, label, raw: source, active });
+      });
+      return result;
+    };
+
+    const renderVkAudioTracks = tracks => {
+      const normalized = normalizeVkAudioTracks(tracks);
+      vkAudioTracks = normalized;
+      if (!normalized.length) {
+        audioMenu.innerHTML = '<button type="button" class="external-native-player-menu-item is-active" data-vk-audio-track="default" role="menuitemradio" aria-checked="true"><span>Original</span></button>';
+        vkSelectedAudioTrack = 'default';
+        audioButton.classList.remove('has-multiple-tracks');
+        return;
+      }
+      const selected = normalized.find(track => track.active)?.id || (normalized.some(track => track.id === vkSelectedAudioTrack) ? vkSelectedAudioTrack : normalized[0].id);
+      vkSelectedAudioTrack = selected;
+      audioMenu.innerHTML = normalized.map(track => {
+        const active = track.id === selected;
+        return `<button type="button" class="external-native-player-menu-item${active ? ' is-active' : ''}" data-vk-audio-track="${escapeHtml(track.id)}" role="menuitemradio" aria-checked="${active ? 'true' : 'false'}"><span>${escapeHtml(track.label)}</span></button>`;
+      }).join('');
+      audioButton.classList.toggle('has-multiple-tracks', normalized.length > 1);
+    };
+
+    const extractTracksFromMessage = value => {
+      if (!value || typeof value !== 'object') return [];
+      const keys = ['audioTracks', 'audio_tracks', 'audioTrackList', 'audio_track_list', 'availableAudioTracks', 'available_audio_tracks'];
+      for (const key of keys) {
+        if (Array.isArray(value[key])) return value[key];
+      }
+      for (const key of ['data', 'payload', 'state', 'params', 'player']) {
+        const nested = value[key];
+        if (nested && typeof nested === 'object') {
+          const found = extractTracksFromMessage(nested);
+          if (found.length) return found;
+        }
+      }
+      return [];
+    };
+
+    const discoverVkAudioTracks = async () => {
+      if (!vkPlayer || !vkApiReady) return;
+      const getterNames = ['getAudioTracks', 'getAudioTrackList', 'getAudioTracksList', 'getAvailableAudioTracks'];
+      for (const name of getterNames) {
+        if (typeof vkPlayer[name] !== 'function') continue;
+        try {
+          const value = await Promise.resolve(vkPlayer[name]());
+          const tracks = normalizeVkAudioTracks(value);
+          if (tracks.length) {
+            renderVkAudioTracks(tracks);
+            return;
+          }
+        } catch (_) {}
+      }
+    };
+
+    const bindVkApi = () => {
+      if (activeProvider !== 'vk' || !activeVkInfo || overlay.hidden) return;
+      const token = ++vkBindToken;
+      ensureVkVideoApiForExternalPlayer().then(() => {
+        if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden) return;
+        try {
+          if (vkPlayer && typeof vkPlayer.destroy === 'function') vkPlayer.destroy();
+          vkPlayer = window.VK.VideoPlayer(frame);
+          vkApiReady = true;
+          const syncQualityFromApi = state => {
+            let quality = state && (state.quality ?? state.videoQuality ?? state.hd);
+            if (!quality && vkPlayer && typeof vkPlayer.getQuality === 'function') {
+              try { quality = vkPlayer.getQuality(); } catch (_) {}
+            }
+            if (quality !== undefined && quality !== null && String(quality).trim()) syncQualityMenu(quality);
+            discoverVkAudioTracks();
+          };
+          if (vkPlayer && typeof vkPlayer.on === 'function') {
+            ['inited', 'started', 'qualitychange'].forEach(eventName => {
+              try { vkPlayer.on(eventName, syncQualityFromApi); } catch (_) {}
+            });
+          }
+          window.setTimeout(() => syncQualityFromApi({}), 180);
+          window.setTimeout(discoverVkAudioTracks, 600);
+        } catch (_) {
+          vkApiReady = false;
+          vkPlayer = null;
+        }
+      }).catch(() => {});
+    };
+
+    const readVkCurrentTime = () => {
+      if (!vkPlayer || !vkApiReady || typeof vkPlayer.getCurrentTime !== 'function') return 0;
+      try {
+        const value = Number(vkPlayer.getCurrentTime());
+        return Number.isFinite(value) && value > 0 ? value : 0;
+      } catch (_) {
+        return 0;
+      }
+    };
+
+    const readVkPaused = () => {
+      if (!vkPlayer || !vkApiReady || typeof vkPlayer.getState !== 'function') return false;
+      try {
+        const value = vkPlayer.getState();
+        const state = String(value && typeof value === 'object' ? value.state || '' : value || '').toLowerCase();
+        return state === 'paused' || state === 'ended';
+      } catch (_) {
+        return false;
+      }
+    };
+
+    const switchVkQuality = quality => {
+      const hd = Math.min(4, Math.max(1, Number(quality) || 4));
+      if (activeProvider !== 'vk' || !activeVkInfo) return;
+      const currentTime = readVkCurrentTime();
+      const paused = readVkPaused();
+      vkSelectedQuality = hd;
+      syncQualityMenu(hd);
+      resetVkPlayer();
+      frame.src = vkVideoEmbedUrl(activeVkInfo, { hd, startSeconds: currentTime, autoplay: !paused });
+      frame.addEventListener('load', bindVkApi, { once: true });
+      window.setTimeout(bindVkApi, 900);
+    };
+
+    const setVkAudioTrack = async trackId => {
+      if (activeProvider !== 'vk' || !frame.contentWindow) return false;
+      const id = String(trackId || 'default');
+      const track = vkAudioTracks.find(item => item.id === id) || null;
+      const candidates = [id, track?.raw?.id, track?.raw?.trackId, track?.raw?.track_id].filter(value => value !== undefined && value !== null);
+      if (vkPlayer && vkApiReady) {
+        const setterNames = ['setAudioTrack', 'selectAudioTrack', 'changeAudioTrack'];
+        for (const name of setterNames) {
+          if (typeof vkPlayer[name] !== 'function') continue;
+          for (const value of candidates) {
+            try {
+              await Promise.resolve(vkPlayer[name](value));
+              vkSelectedAudioTrack = id;
+              renderVkAudioTracks(vkAudioTracks.map(item => ({ ...item.raw, id: item.id, label: item.label, active: item.id === id })));
+              return true;
+            } catch (_) {}
+          }
+        }
+      }
+      const payloads = [
+        { method: 'set_audio_track', track: id, id, value: id },
+        { method: 'setAudioTrack', track: id, id, value: id },
+        { event: 'command', func: 'setAudioTrack', args: [id] },
+        { event: 'command', func: 'selectAudioTrack', args: [id] }
+      ];
+      let sent = false;
+      payloads.forEach(payload => {
+        try { frame.contentWindow.postMessage(payload, '*'); sent = true; } catch (_) {}
+      });
+      if (sent) {
+        vkSelectedAudioTrack = id;
+        audioMenu.querySelectorAll('[data-vk-audio-track]').forEach(button => {
+          const active = button.dataset.vkAudioTrack === id;
+          button.classList.toggle('is-active', active);
+          button.setAttribute('aria-checked', String(active));
+        });
+      }
+      return sent;
+    };
+
     const closeExternalPlayer = (restoreFocus = true) => {
       if (overlay.hidden) return;
+      closeMenus();
+      resetVkPlayer();
       frame.src = 'about:blank';
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
       overlay.classList.remove('is-open', 'is-youtube', 'is-vk');
       overlay.dataset.provider = '';
       activeProvider = '';
+      activeVkInfo = null;
+      vkAudioTracks = [];
+      renderVkAudioTracks([]);
       syncBodyLock();
       if (restoreFocus && previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
       previousFocus = null;
@@ -3895,7 +4182,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const openExternalPlayer = (provider, info, context = {}) => {
       const normalizedProvider = provider === 'vk' ? 'vk' : 'youtube';
-      const embedUrl = normalizedProvider === 'vk' ? vkVideoEmbedUrl(info) : youtubeEmbedUrl(info);
+      const embedUrl = normalizedProvider === 'vk' ? vkVideoEmbedUrl(info, { hd: 4 }) : youtubeEmbedUrl(info);
       if (!embedUrl) return;
 
       closeExternalPlayer(false);
@@ -3904,6 +4191,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
       previousFocus = document.activeElement;
       activeProvider = normalizedProvider;
+      activeVkInfo = normalizedProvider === 'vk' ? info : null;
+      vkSelectedQuality = 4;
+      renderVkAudioTracks([]);
+      syncQualityMenu(4);
       const providerLabel = normalizedProvider === 'vk' ? 'VK Video' : 'YouTube';
       const mediaTitle = String(context?.title || '').trim();
       shell.setAttribute('aria-label', `Reprodutor do ${providerLabel}`);
@@ -3915,6 +4206,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       syncBodyLock();
+      if (normalizedProvider === 'vk') {
+        frame.addEventListener('load', bindVkApi, { once: true });
+        window.setTimeout(bindVkApi, 900);
+      }
       closeButton.focus({ preventScroll: true });
     };
 
@@ -3935,11 +4230,73 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       else openExternalPlayer('vk', vkInfo, { title });
     }, true);
 
+    qualityButton.addEventListener('click', () => {
+      if (activeProvider !== 'vk') return;
+      const nextHidden = !qualityMenu.hidden;
+      closeMenus(qualityMenu);
+      qualityMenu.hidden = nextHidden;
+      qualityButton.setAttribute('aria-expanded', String(!qualityMenu.hidden));
+    });
+
+    audioButton.addEventListener('click', () => {
+      if (activeProvider !== 'vk') return;
+      const nextHidden = !audioMenu.hidden;
+      closeMenus(audioMenu);
+      audioMenu.hidden = nextHidden;
+      audioButton.setAttribute('aria-expanded', String(!audioMenu.hidden));
+      if (!nextHidden) discoverVkAudioTracks();
+    });
+
+    qualityMenu.addEventListener('click', event => {
+      const option = event.target.closest('[data-vk-quality]');
+      if (!option) return;
+      switchVkQuality(option.dataset.vkQuality);
+      qualityMenu.hidden = true;
+      qualityButton.setAttribute('aria-expanded', 'false');
+    });
+
+    audioMenu.addEventListener('click', event => {
+      const option = event.target.closest('[data-vk-audio-track]');
+      if (!option) return;
+      const trackId = option.dataset.vkAudioTrack || 'default';
+      if (trackId !== 'default' || vkAudioTracks.length) setVkAudioTrack(trackId);
+      audioMenu.hidden = true;
+      audioButton.setAttribute('aria-expanded', 'false');
+    });
+
     closeButton.addEventListener('click', () => closeExternalPlayer(true));
+
+    document.addEventListener('pointerdown', event => {
+      if (overlay.hidden) return;
+      if (event.target.closest('.external-native-player-toolbar,.external-native-player-menu')) return;
+      closeMenus();
+    }, true);
+
+    window.addEventListener('message', event => {
+      if (activeProvider !== 'vk' || overlay.hidden || event.source !== frame.contentWindow) return;
+      if (event.origin && event.origin !== 'null') {
+        let hostname = '';
+        try { hostname = new URL(event.origin).hostname; } catch (_) { return; }
+        if (!/(^|\.)vk(?:video)?\.(?:ru|com)$/i.test(hostname)) return;
+      }
+      let payload = event.data;
+      if (typeof payload === 'string') {
+        try { payload = JSON.parse(payload); } catch (_) { return; }
+      }
+      const tracks = extractTracksFromMessage(payload);
+      if (tracks.length) renderVkAudioTracks(tracks);
+      const quality = payload && typeof payload === 'object' ? (payload.quality ?? payload?.data?.quality ?? payload?.state?.quality) : null;
+      if (quality !== null && quality !== undefined) syncQualityMenu(quality);
+    });
 
     window.addEventListener('keydown', event => {
       if (overlay.hidden) return;
       if (event.key === 'Escape') {
+        if (!qualityMenu.hidden || !audioMenu.hidden) {
+          event.preventDefault();
+          closeMenus();
+          return;
+        }
         event.preventDefault();
         closeExternalPlayer(true);
       }

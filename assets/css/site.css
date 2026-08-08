@@ -13293,8 +13293,7 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
 
 /* =========================================================
    Player externo compartilhado — YouTube + VK
-   Ambos usam o mesmo layout/modal e apenas trocam a URL do iframe.
-   O Google Drive continua no player de vídeo independente.
+   No VK, a tab inferior reúne qualidade, faixa de áudio e fechar.
    ========================================================= */
 .external-native-player-overlay{
   position:fixed;
@@ -13329,20 +13328,21 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   border:0;
   background:#000;
 }
-/* VK: sobe a área nativa do player para separar os controles da barra de fechar. */
 .external-native-player-overlay[data-provider="vk"] .external-native-player-frame-shell{
   bottom:72px;
 }
 .external-native-player-toolbar{
   position:absolute;
-  z-index:20;
+  z-index:24;
   left:50%;
   bottom:max(12px,env(safe-area-inset-bottom));
   transform:translateX(-50%);
   display:flex;
   align-items:center;
   justify-content:center;
-  width:56px;
+  gap:2px;
+  width:auto;
+  min-width:56px;
   height:48px;
   padding:3px;
   border:1px solid rgba(255,255,255,.15);
@@ -13352,7 +13352,7 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   backdrop-filter:blur(20px) saturate(145%);
   box-shadow:0 8px 28px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08);
 }
-.external-native-player-close{
+.external-native-player-action{
   appearance:none;
   width:40px;
   height:40px;
@@ -13367,36 +13367,120 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   box-shadow:none;
   cursor:pointer;
   outline:none;
-  transition:none;
+  transition:background .16s ease,color .16s ease;
 }
-/* Sem halo/fundo extra ao passar o mouse no X. */
-.external-native-player-close:hover,
-.external-native-player-close:active,
-.external-native-player-close:focus,
-.external-native-player-close:focus-visible{
-  background:transparent;
+.external-native-player-action:hover,
+.external-native-player-action:active,
+.external-native-player-action:focus,
+.external-native-player-action:focus-visible{
+  background:rgba(255,255,255,.08);
   box-shadow:none;
   transform:none;
   outline:none;
 }
-.external-native-player-close svg{
+.external-native-player-close:hover,
+.external-native-player-close:active,
+.external-native-player-close:focus,
+.external-native-player-close:focus-visible{background:transparent}
+.external-native-player-action svg{
   width:21px;
   height:21px;
   pointer-events:none;
 }
+.external-native-player-quality-badge{
+  display:grid;
+  place-items:center;
+  min-width:25px;
+  height:18px;
+  padding:0 4px;
+  border:1.5px solid currentColor;
+  border-radius:5px;
+  font-size:9px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:.02em;
+  pointer-events:none;
+}
+.external-native-player-audio{position:relative}
+.external-native-player-audio.has-multiple-tracks::after{
+  content:"";
+  position:absolute;
+  width:6px;
+  height:6px;
+  margin:22px 0 0 22px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 0 0 2px rgba(17,19,19,.9);
+}
+.external-native-player-overlay:not([data-provider="vk"]) .external-native-player-quality,
+.external-native-player-overlay:not([data-provider="vk"]) .external-native-player-audio,
+.external-native-player-overlay:not([data-provider="vk"]) .external-native-player-menu{display:none!important}
+.external-native-player-menu{
+  position:absolute;
+  z-index:26;
+  left:50%;
+  bottom:max(70px,calc(env(safe-area-inset-bottom) + 62px));
+  transform:translateX(-50%);
+  width:min(220px,calc(100vw - 28px));
+  padding:6px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  background:rgba(17,19,19,.9);
+  -webkit-backdrop-filter:blur(24px) saturate(150%);
+  backdrop-filter:blur(24px) saturate(150%);
+  box-shadow:0 18px 46px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.07);
+}
+.external-native-player-menu[hidden]{display:none!important}
+.external-native-player-menu-item{
+  appearance:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  width:100%;
+  min-height:42px;
+  padding:0 13px;
+  border:0;
+  border-radius:12px;
+  background:transparent;
+  color:rgba(255,255,255,.82);
+  font:inherit;
+  font-size:13px;
+  font-weight:750;
+  text-align:left;
+  cursor:pointer;
+}
+.external-native-player-menu-item small{
+  color:rgba(255,255,255,.46);
+  font-size:10px;
+  font-weight:700;
+}
+.external-native-player-menu-item:hover,
+.external-native-player-menu-item:focus-visible{background:rgba(255,255,255,.075);outline:none}
+.external-native-player-menu-item.is-active,
+.external-native-player-menu-item[aria-checked="true"]{color:#fff;background:rgba(255,255,255,.1)}
+.external-native-player-menu-item.is-active::after,
+.external-native-player-menu-item[aria-checked="true"]::after{
+  content:"✓";
+  margin-left:auto;
+  font-size:12px;
+  font-weight:900;
+}
+.external-native-player-menu-item.is-active small,
+.external-native-player-menu-item[aria-checked="true"] small{margin-left:auto}
 @media(max-width:700px){
   .external-native-player-overlay[data-provider="vk"] .external-native-player-frame-shell{
     bottom:max(66px,calc(env(safe-area-inset-bottom) + 58px));
   }
   .external-native-player-toolbar{
     bottom:max(10px,env(safe-area-inset-bottom));
-    width:54px;
     height:46px;
   }
-  .external-native-player-close{width:38px;height:38px}
+  .external-native-player-action{width:38px;height:38px}
+  .external-native-player-menu{bottom:max(66px,calc(env(safe-area-inset-bottom) + 58px))}
 }
 @media(prefers-reduced-motion:reduce){
-  .external-native-player-close{transition:none!important}
+  .external-native-player-action{transition:none!important}
 }
 
 /* MP3 do Google Drive — banner do conteúdo + dock central no estilo da Home. */
