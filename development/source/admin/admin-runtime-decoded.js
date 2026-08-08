@@ -764,6 +764,30 @@ body.admin-preview-open{overflow:hidden}
     return db.count(name);
   }
 
+  async function adminDeploymentReleaseRequest(method = 'GET', deploymentId = '') {
+    const client = beBackend && beBackend.client;
+    if (!client?.auth?.getSession) throw new Error('A sessão administrativa não está disponível.');
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    const token = sessionData?.session?.access_token;
+    if (!token) throw new Error('Sua sessão expirou. Entre novamente no painel.');
+
+    const response = await fetch('/api/admin-deployment-release', {
+      method,
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+        ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {})
+      },
+      body: method === 'POST' ? JSON.stringify({ deploymentId }) : undefined
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.error || payload?.message || `Falha na integração com a Vercel (${response.status}).`);
+    return payload && typeof payload === 'object' ? payload : {};
+  }
+
 
   async function dashboard() {
     const content = $('#adminContent');
@@ -803,7 +827,7 @@ body.admin-preview-open{overflow:hidden}
       return String(payload && payload.version || '').trim();
     };
 
-    const [recent, donationOverview, siteSettings, dashboardMetrics, deploymentVersion] = await Promise.all([
+    const [recent, donationOverview, siteSettings, dashboardMetrics, deploymentVersion, deploymentReleaseState] = await Promise.all([
       db.list('admin_logs', { orderBy: 'createdAt', direction: 'desc', limit: 8 }).catch(() => []),
       loadDonationOverview().catch(error => {
         console.warn('Não foi possível carregar os dados de doação:', error?.message || error);
@@ -817,6 +841,10 @@ body.admin-preview-open{overflow:hidden}
       loadDeploymentVersion().catch(error => {
         console.warn('Não foi possível carregar a versão do deploy:', error?.message || error);
         return '';
+      }),
+      adminDeploymentReleaseRequest('GET').catch(error => {
+        console.warn('Não foi possível consultar os deploys em espera na Vercel:', error?.message || error);
+        return { configured: false, error: error?.message || 'Integração com a Vercel indisponível.' };
       })
     ]);
     await Promise.all(names.map(async name => {
@@ -913,10 +941,37 @@ body.admin-preview-open{overflow:hidden}
     const releasedDeploymentVersion = String(siteSettings?.releasedDeploymentVersion || '').trim();
     const releaseEnabled = siteSettings?.updateReleaseEnabled === true || String(siteSettings?.updateReleaseEnabled || '').toLowerCase() === 'true';
     const deploymentCanBeReleased = Boolean(deploymentVersion && !deploymentVersion.startsWith('local:'));
-    const currentDeploymentReleased = Boolean(deploymentCanBeReleased && releaseEnabled && releasedDeploymentVersion === deploymentVersion);
-    const deploymentShortLabel = deploymentCanBeReleased
-      ? deploymentVersion.replace(/^v:/, '').slice(0, 8)
+    const stagedDeployment = deploymentReleaseState?.stagedDeployment && typeof deploymentReleaseState.stagedDeployment === 'object'
+      ? deploymentReleaseState.stagedDeployment
+      : null;
+    const stagedDeploymentVersion = String(stagedDeployment?.version || '').trim();
+    const stagedDeploymentId = String(stagedDeployment?.id || '').trim();
+    const stagedDeploymentUrl = String(stagedDeployment?.url || '').trim();
+    const hasStagedDeployment = Boolean(deploymentReleaseState?.configured !== false && stagedDeploymentId && stagedDeploymentVersion);
+    const currentDeploymentReleased = Boolean(!hasStagedDeployment && deploymentCanBeReleased && releaseEnabled && releasedDeploymentVersion === deploymentVersion);
+    const releaseTargetVersion = hasStagedDeployment ? stagedDeploymentVersion : deploymentVersion;
+    const deploymentShortLabel = releaseTargetVersion && !releaseTargetVersion.startsWith('local:')
+      ? releaseTargetVersion.replace(/^v:/, '').slice(0, 8)
       : 'local';
+    const releaseCardTitle = deploymentReleaseState?.configured === false
+      ? 'Configurar integração Vercel'
+      : hasStagedDeployment
+        ? 'Somente administrador'
+        : currentDeploymentReleased
+          ? 'Liberada aos usuários'
+          : 'Sem atualização pendente';
+    const releaseCardDescription = deploymentReleaseState?.configured === false
+      ? 'A liberação automática ainda não está pronta.'
+      : hasStagedDeployment
+        ? 'Nova versão pronta para teste. Usuários continuam na versão anterior.'
+        : currentDeploymentReleased
+          ? 'A versão atual está publicada no domínio principal.'
+          : 'Nenhum deploy novo está aguardando liberação.';
+    const releaseHelp = deploymentReleaseState?.configured === false
+      ? String(deploymentReleaseState?.error || 'Configure VERCEL_API_TOKEN e as variáveis da Vercel.')
+      : hasStagedDeployment
+        ? 'Teste a versão em espera e marque para promovê-la ao domínio público.'
+        : 'Quando um novo deploy Production ficar em espera na Vercel, ele aparecerá aqui.';
 
     content.innerHTML = `
       <section class="dashboard-hero dashboard-insights-hero">
@@ -942,15 +997,16 @@ body.admin-preview-open{overflow:hidden}
             <article class="dashboard-metric-card dashboard-update-release-card ${currentDeploymentReleased ? 'is-released' : ''}">
               <div class="dashboard-metric-label"><i>↻</i><span>Atualização do site</span></div>
               <label class="dashboard-update-checkbox" for="dashboardReleaseUpdate">
-                <input id="dashboardReleaseUpdate" type="checkbox" ${currentDeploymentReleased ? 'checked' : ''} ${deploymentCanBeReleased ? '' : 'disabled'}>
+                <input id="dashboardReleaseUpdate" type="checkbox" ${currentDeploymentReleased ? 'checked' : ''} ${hasStagedDeployment ? '' : 'disabled'}>
                 <span class="dashboard-update-checkbox-box" aria-hidden="true"></span>
                 <span class="dashboard-update-checkbox-copy">
-                  <strong>${currentDeploymentReleased ? 'Liberada aos usuários' : 'Somente administrador'}</strong>
-                  <small>${currentDeploymentReleased ? 'O aviso de atualização está ativo.' : 'Usuários ainda não recebem o aviso.'}</small>
+                  <strong>${esc(releaseCardTitle)}</strong>
+                  <small>${esc(releaseCardDescription)}</small>
                 </span>
               </label>
               <div class="dashboard-update-version">Versão <code>${esc(deploymentShortLabel)}</code></div>
-              <small class="dashboard-update-help">O administrador detecta novos deploys normalmente. Marque para liberar esta versão aos usuários.</small>
+              ${hasStagedDeployment && stagedDeploymentUrl ? `<a class="a-btn" href="https://${esc(stagedDeploymentUrl)}" target="_blank" rel="noopener noreferrer" style="margin-top:8px;text-align:center">Abrir versão em teste</a>` : ''}
+              <small class="dashboard-update-help">${esc(releaseHelp)}</small>
             </article>
           </div>
         </div>
@@ -1122,12 +1178,36 @@ body.admin-preview-open{overflow:hidden}
         const checked = dashboardReleaseUpdate.checked;
         const card = dashboardReleaseUpdate.closest('.dashboard-update-release-card');
         const copy = card && card.querySelector('.dashboard-update-checkbox-copy');
+
+        if (!checked) {
+          dashboardReleaseUpdate.checked = true;
+          toast('A publicação já foi promovida. Uma retirada exige rollback pela Vercel.', 'err');
+          return;
+        }
+
+        if (!hasStagedDeployment) {
+          dashboardReleaseUpdate.checked = false;
+          toast('Não há uma nova versão aguardando liberação.', 'err');
+          return;
+        }
+
+        const confirmed = window.confirm('Liberar esta versão agora? O domínio público da Vercel passará a apontar para este deploy e os usuários receberão a atualização.');
+        if (!confirmed) {
+          dashboardReleaseUpdate.checked = false;
+          return;
+        }
+
         dashboardReleaseUpdate.disabled = true;
         try {
-          if (!deploymentCanBeReleased) throw new Error('A versão atual não pode ser liberada a partir deste ambiente.');
+          if (copy) copy.innerHTML = '<strong>Liberando atualização…</strong><small>Promovendo o deploy na Vercel.</small>';
+          const promotion = await adminDeploymentReleaseRequest('POST', stagedDeploymentId);
+          const promotedDeployment = promotion?.deployment && typeof promotion.deployment === 'object' ? promotion.deployment : {};
+          const promotedVersion = String(promotedDeployment.version || stagedDeploymentVersion || '').trim();
+          if (!promotedVersion) throw new Error('A Vercel promoveu o deploy, mas a versão publicada não pôde ser identificada.');
+
           const releaseData = {
-            updateReleaseEnabled: checked,
-            releasedDeploymentVersion: checked ? deploymentVersion : releasedDeploymentVersion,
+            updateReleaseEnabled: true,
+            releasedDeploymentVersion: promotedVersion,
             updateReleaseChangedAt: now(),
             updateReleaseChangedBy: user.email || user.uid || '',
             updatedAt: now(),
@@ -1135,22 +1215,21 @@ body.admin-preview-open{overflow:hidden}
           };
           await db.set('settings', 'site', releaseData, { merge: true });
           await logAction(
-            checked ? 'site_update_released' : 'site_update_withheld',
+            'site_update_released',
             'settings',
             'site',
-            checked ? `Atualização ${deploymentShortLabel} liberada aos usuários` : `Atualização ${deploymentShortLabel} retirada dos usuários`
+            `Atualização ${promotedVersion.replace(/^v:/, '').slice(0, 8)} promovida na Vercel e liberada aos usuários`
           );
-          if (card) card.classList.toggle('is-released', checked);
-          if (copy) copy.innerHTML = checked
-            ? '<strong>Liberada aos usuários</strong><small>O aviso de atualização está ativo.</small>'
-            : '<strong>Somente administrador</strong><small>Usuários ainda não recebem o aviso.</small>';
+          if (card) card.classList.add('is-released');
+          if (copy) copy.innerHTML = '<strong>Liberada aos usuários</strong><small>Deploy promovido com sucesso na Vercel.</small>';
           window.dispatchEvent(new CustomEvent('be:update-release-changed', { detail: releaseData }));
-          toast(checked ? 'Atualização liberada para os usuários.' : 'Atualização ocultada dos usuários.');
+          toast('Atualização promovida na Vercel e liberada para os usuários.');
+          window.setTimeout(() => window.location.reload(), 1800);
         } catch (error) {
-          dashboardReleaseUpdate.checked = !checked;
-          toast(error.message || 'Não foi possível alterar a liberação da atualização.', 'err');
-        } finally {
-          dashboardReleaseUpdate.disabled = !deploymentCanBeReleased;
+          dashboardReleaseUpdate.checked = false;
+          if (copy) copy.innerHTML = '<strong>Somente administrador</strong><small>A versão continua em espera.</small>';
+          toast(error.message || 'Não foi possível promover a atualização na Vercel.', 'err');
+          dashboardReleaseUpdate.disabled = false;
         }
       });
     }
