@@ -4533,6 +4533,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     };
 
+    // No fallback nativo do Drive em celular retrato, damos ao iframe um
+    // viewport virtual 1280x720 e só então reduzimos visualmente. O player do
+    // Google monta seus controles como em uma tela larga, mas os toques ainda
+    // são mapeados corretamente pelo transform do navegador.
+    const syncMobileDriveFrameViewport = () => {
+      const portraitMobile = window.matchMedia('(max-width: 820px) and (orientation: portrait)').matches;
+      if (!frameMode || !portraitMobile || frameShell.hidden) {
+        frameShell.style.removeProperty('--drive-mobile-frame-scale');
+        return;
+      }
+      const shellWidth = Math.max(1, frameShell.getBoundingClientRect().width || window.innerWidth || 1);
+      const scale = Math.min(1, shellWidth / 1280);
+      frameShell.style.setProperty('--drive-mobile-frame-scale', String(scale));
+    };
+
     const requestPlayback = () => {
       if (frameMode) return;
       const promise = video.play();
@@ -4574,6 +4589,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frameShell.hidden = false;
       overlay.classList.remove('is-error', 'is-source-syncing');
       overlay.classList.add('is-frame-mode');
+      syncMobileDriveFrameViewport();
+      window.requestAnimationFrame(syncMobileDriveFrameViewport);
       setLoading('', false);
       setInteractive(false);
       showControls(true);
@@ -4829,6 +4846,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     frame.addEventListener('load', () => {
       if (overlay.hidden || !frameMode || frame.src === 'about:blank') return;
+      syncMobileDriveFrameViewport();
       setLoading('', false);
     });
 
@@ -4900,6 +4918,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    window.addEventListener('resize', () => {
+      if (!overlay.hidden && frameMode) window.requestAnimationFrame(syncMobileDriveFrameViewport);
+    }, { passive: true });
+    window.addEventListener('orientationchange', () => {
+      if (!overlay.hidden && frameMode) window.setTimeout(syncMobileDriveFrameViewport, 80);
+    });
     window.addEventListener('pagehide', () => closePlayer(false));
     window.addEventListener('be:close-drive-video-player', () => closePlayer(false));
     setInteractive(false);
