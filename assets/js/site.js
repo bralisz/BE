@@ -3925,6 +3925,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.toggle('is-audio-mode', audioMode);
       overlay.classList.toggle('is-audio-frame-mode', audioMode && frameMode);
       applyBackdrop();
+      syncNativeMobileVideoControls();
     };
 
     const applyMediaKind = kind => {
@@ -3946,6 +3947,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (shouldUseAudioMode) activeMediaKind = 'audio';
       else if (hasVideoDimensions) activeMediaKind = 'video';
       setAudioMode(shouldUseAudioMode);
+    };
+
+    const shouldUseNativeMobileVideoControls = () => {
+      if (frameMode || audioMode || activeProvider !== 'drive') return false;
+      const viewportIsMobile = window.matchMedia ? window.matchMedia('(max-width: 700px)').matches : window.innerWidth <= 700;
+      const touchPrimary = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : ('ontouchstart' in window);
+      return Boolean(viewportIsMobile || touchPrimary);
+    };
+
+    const syncNativeMobileVideoControls = () => {
+      const nativeMobileControls = shouldUseNativeMobileVideoControls();
+      overlay.classList.toggle('is-native-mobile-video', nativeMobileControls);
+      video.controls = nativeMobileControls;
+      if (nativeMobileControls) {
+        video.setAttribute('controls', 'controls');
+        video.setAttribute('controlsList', 'nodownload');
+      } else {
+        video.removeAttribute('controls');
+        video.removeAttribute('controlsList');
+      }
     };
 
     const showControls = (keepVisible = false) => {
@@ -3985,6 +4006,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setLoadingMessage('', false);
       setPlayerInteractive(true);
       detectAudioMode();
+      syncNativeMobileVideoControls();
       syncPlayerState();
       showControls();
     };
@@ -4125,7 +4147,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen', 'is-native-mobile-video');
+      video.controls = false;
+      video.removeAttribute('controls');
+      video.removeAttribute('controlsList');
       youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
@@ -4154,6 +4179,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeBannerUrl = safeBanner && safeBanner !== '#' ? safeBanner : '';
       activeTitle = String(context?.title || '').trim();
       activeProvider = 'drive';
+      syncNativeMobileVideoControls();
       frame.title = 'Reprodutor do Google Drive';
       activeMediaKind = normalizeDriveMediaKind(context?.mediaKind)
         || inferDriveMediaKind(context?.mediaType, context?.contentType, context?.category, activeTitle, context?.contentUrl);
@@ -4196,6 +4222,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       mediaReady = false;
       previousFocus = document.activeElement;
       setAudioMode(false);
+      syncNativeMobileVideoControls();
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       youtubeMuted = false;
@@ -4327,6 +4354,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
     video.addEventListener('loadedmetadata', () => {
       detectAudioMode();
+      syncNativeMobileVideoControls();
       syncPlayerState();
       setLoadingMessage(audioMode ? 'Sincronizando o MP3 com o player...' : 'Sincronizando mídia com o player...');
       showControls(true);
@@ -4386,6 +4414,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.addEventListener('webkitfullscreenchange', syncFullscreenButton);
     window.addEventListener('pagehide', closePlayer);
     window.addEventListener('be:close-drive-player', closePlayer);
+    window.addEventListener('resize', syncNativeMobileVideoControls);
+    window.addEventListener('orientationchange', syncNativeMobileVideoControls);
     setPlayerInteractive(false);
   }
 

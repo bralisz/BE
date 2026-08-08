@@ -12128,3 +12128,22 @@ body.site-loading-active.donate-page-active > footer{
 .drive-player-external{
   display:none!important;
 }
+
+
+/* Mobile: usa somente um player visual para vídeos diretos do Drive. */
+.drive-player-overlay.is-native-mobile-video .drive-player-center-controls,
+.drive-player-overlay.is-native-mobile-video .drive-player-bottom-controls{
+  display:none!important;
+}
+.drive-player-overlay.is-native-mobile-video .drive-player-shell::after{
+  display:none!important;
+}
+.drive-player-overlay.is-native-mobile-video .drive-player-video{
+  object-fit:contain;
+}
+.drive-player-overlay.is-native-mobile-video .drive-player-video::-webkit-media-controls-fullscreen-button{
+  display:block;
+}
+.drive-player-overlay.is-native-mobile-video .drive-player-video::-webkit-media-controls-enclosure{
+  overflow:hidden;
+}
