@@ -3771,9 +3771,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
             <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
-          <button class="drive-player-icon drive-player-external" id="drivePlayerExternal" type="button" aria-label="Abrir no Google Drive" title="Abrir no Google Drive">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
           <button class="drive-player-icon drive-player-close" id="drivePlayerClose" type="button" aria-label="Fechar reprodutor" title="Fechar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
           </button>
@@ -3815,7 +3812,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const supportLink = loading?.querySelector('.drive-player-support-link');
     const fullscreenButton = document.getElementById('drivePlayerFullscreen');
     const closeButton = document.getElementById('drivePlayerClose');
-    const externalButton = document.getElementById('drivePlayerExternal');
     const volumeButton = document.getElementById('drivePlayerVolume');
     const toggleButton = document.getElementById('drivePlayerToggle');
     const backButton = document.getElementById('drivePlayerBack10');
@@ -3823,7 +3819,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const progress = document.getElementById('drivePlayerProgress');
     const currentLabel = document.getElementById('drivePlayerCurrent');
     const durationLabel = document.getElementById('drivePlayerDuration');
-    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
+    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
@@ -3834,7 +3830,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeTitle = '';
     let activeMediaKind = '';
     let activeProvider = '';
-    let activeExternalUrl = '';
     let frameMode = false;
     let audioMode = false;
     let streamAttempt = '';
@@ -4097,7 +4092,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         else showStreamError('Não foi possível carregar o MP3. Verifique a permissão pública do arquivo no Google Drive.');
         return;
       }
-      if (streamAttempt === 'proxy') tryDirectDriveStream();
+      // Um erro rápido do primeiro request do proxy não deve jogar o usuário
+      // imediatamente no preview incorporado do Google Drive. No mobile isso
+      // fazia o player trocar para os controles nativos do Drive mesmo em
+      // falhas transitórias. Tenta o proxy uma segunda vez antes do fallback.
+      if (streamAttempt === 'proxy') loadProxyStream(true);
       else if (streamAttempt === 'proxy-retry') tryDirectDriveStream();
       else useFrameFallback();
     };
@@ -4127,7 +4126,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeTitle = '';
       activeMediaKind = '';
       activeProvider = '';
-      activeExternalUrl = '';
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
@@ -4160,10 +4158,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeBannerUrl = safeBanner && safeBanner !== '#' ? safeBanner : '';
       activeTitle = String(context?.title || '').trim();
       activeProvider = 'drive';
-      const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
-      activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
-      externalButton.setAttribute('aria-label', 'Abrir no Google Drive');
-      externalButton.title = 'Abrir no Google Drive';
       frame.title = 'Reprodutor do Google Drive';
       activeMediaKind = normalizeDriveMediaKind(context?.mediaKind)
         || inferDriveMediaKind(context?.mediaType, context?.contentType, context?.category, activeTitle, context?.contentUrl);
@@ -4200,7 +4194,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closePlayer();
       openingToken += 1;
       activeProvider = 'youtube';
-      activeExternalUrl = youtubeWatchUrl(info);
       activeTitle = String(context?.title || '').trim();
       activeMediaKind = 'video';
       frameMode = true;
@@ -4221,8 +4214,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       loadingText.hidden = true;
       frame.title = activeTitle ? `YouTube — ${activeTitle}` : 'Reprodutor do YouTube';
       frame.src = embedUrl;
-      externalButton.setAttribute('aria-label', 'Abrir no YouTube');
-      externalButton.title = 'Abrir no YouTube';
       setPlayerInteractive(false);
       volumeButton.disabled = false;
       volumeButton.setAttribute('aria-label', 'Silenciar');
@@ -4286,11 +4277,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     fullscreenButton.addEventListener('click', toggleBrowserFullscreen);
     closeButton.addEventListener('click', closePlayer);
-    externalButton.addEventListener('click', () => {
-      if (!activeExternalUrl) return;
-      window.open(activeExternalUrl, '_blank', 'noopener,noreferrer');
-      showControls(true);
-    });
     volumeButton.addEventListener('click', () => {
       if (activeProvider === 'youtube' && frameMode) {
         youtubeMuted = !youtubeMuted;

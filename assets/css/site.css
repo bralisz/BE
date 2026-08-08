@@ -12127,3 +12127,11 @@ body.site-loading-active.donate-page-active > footer{
 .drive-player-external{
   display:none!important;
 }
+
+/* Player: remoção definitiva do atalho externo e limpeza do fallback do Drive. */
+.drive-player-overlay .drive-player-top-controls .drive-player-external{
+  display:none!important;
+}
+.drive-player-overlay.is-drive-frame-mode .drive-player-top-controls .drive-player-volume{
+  display:none!important;
+}
