@@ -38,7 +38,7 @@
   "A Stripe não retornou um checkout válido.": "Stripe no devolvió un pago válido.",
   "A doação gera recibo ou dedução fiscal?": "¿La donación genera recibo o deducción fiscal?",
   "A plataforma tem finalidade informativa, organizacional e de entretenimento para fãs. Você pode navegar, criar uma conta, configurar seu perfil e utilizar os recursos disponíveis apenas para fins pessoais e lícitos.": "La plataforma tiene fines informativos, organizativos y de entretenimiento para fans. Puedes navegar, crear una cuenta, configurar tu perfil y utilizar las funciones disponibles únicamente con fines personales y lícitos.",
-  "A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.": "La página se volverá a cargar en el idioma elegido y tu preferencia quedará guardada en este dispositivo.",
+  "A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.": "La página se recargará en el idioma elegido y tu preferencia quedará guardada en este dispositivo.",
   "A recusa pode ocorrer por limite, dados incorretos, bloqueio do banco, verificação antifraude ou indisponibilidade do método escolhido. Confira os dados, tente outro método ou consulte sua instituição financeira.": "El rechazo puede deberse a límites, datos incorrectos, bloqueo del banco, verificación antifraude o falta de disponibilidad del método elegido. Revisa los datos, prueba otro método o consulta a tu entidad financiera.",
   "A redefinição de senha não está disponível.": "El restablecimiento de contraseña no está disponible.",
   "Abra Configurações e procure a seção Idioma. Escolha Português, English ou Español. O site reabrirá a página atual no idioma selecionado e salvará a preferência neste dispositivo.": "Abre Configuración y busca la sección Idioma. Elige Português, English o Español. El sitio volverá a abrir la página actual en el idioma seleccionado y guardará la preferencia en este dispositivo.",
@@ -207,7 +207,7 @@
   "Enviar": "Enviar",
   "Escolha 4 conteúdos": "Elige 4 contenidos",
   "Escolha o banner e o avatar do seu perfil.": "Elige el banner y el avatar de tu perfil.",
-  "Escolha o idioma usado em todas as áreas públicas do site.": "Elige el idioma utilizado en todas las áreas públicas del sitio.",
+  "Escolha o idioma usado em todas as áreas públicas do site.": "Elige el idioma que se utilizará en todas las áreas públicas del sitio.",
   "Escolha seu @ de usuário": "Elige tu nombre de usuario",
   "Escolha um álbum": "Elige un álbum",
   "Escolha uma senha nova para voltar a acessar sua conta.": "Elige una nueva contraseña para volver a acceder a tu cuenta.",
@@ -568,5 +568,7 @@
   "Ausência de endosso ou parceria": "Ausencia de respaldo o asociación",
   "Ser destacado na página Comunidade não representa parceria oficial, patrocínio, endosso, vínculo empregatício ou qualquer outra afiliação entre o Billie Eilish TV e a pessoa, conta, servidor ou comunidade apresentada.": "Ser destacado en la página Comunidad no representa una asociación oficial, patrocinio, respaldo, relación laboral ni ninguna otra afiliación entre Billie Eilish TV y la persona, cuenta, servidor o comunidad presentada.",
   "Da mesma forma, o Billie Eilish TV é um projeto independente de fãs para fãs e não é afiliado, endossado, patrocinado ou oficialmente conectado à Billie Eilish ou aos seus representantes, salvo quando expressamente indicado.": "Del mismo modo, Billie Eilish TV es un proyecto independiente hecho por fans para fans y no está afiliado, respaldado, patrocinado ni conectado oficialmente con Billie Eilish o sus representantes, salvo que se indique expresamente.",
-  "Os vídeos reproduzidos no BETV não são hospedados nos servidores do projeto. A reprodução é fornecida por serviços e plataformas de terceiros por meio de links ou incorporações, e a disponibilidade, qualidade e funcionamento desses vídeos dependem desses provedores.": "Los videos reproducidos en BETV no están alojados en los servidores del proyecto. La reproducción es proporcionada por servicios y plataformas de terceros mediante enlaces o contenido integrado, y la disponibilidad, calidad y funcionamiento de esos videos dependen de dichos proveedores."
+  "Os vídeos reproduzidos no BETV não são hospedados nos servidores do projeto. A reprodução é fornecida por serviços e plataformas de terceiros por meio de links ou incorporações, e a disponibilidade, qualidade e funcionamento desses vídeos dependem desses provedores.": "Los videos reproducidos en BETV no están alojados en los servidores del proyecto. La reproducción es proporcionada por servicios y plataformas de terceros mediante enlaces o contenido integrado, y la disponibilidad, calidad y funcionamiento de esos videos dependen de dichos proveedores.",
+  "Conexões e Redes Sociais": "Conexiones y redes sociales",
+  "English (United States)": "Inglés (Estados Unidos)"
 }
