@@ -13496,3 +13496,89 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   }
 }
 
+
+
+/* MP3 Drive — controles centrais clássicos 10s / play-pause / 10s */
+.drive-player-overlay.is-audio-mode .drive-player-center-controls{
+  left:50%!important;
+  top:50%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:clamp(72px,12vw,170px)!important;
+  transform:translate(-50%,-50%)!important;
+  opacity:1;
+  z-index:8!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip,
+.drive-player-overlay.is-audio-mode .drive-player-toggle{
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  color:rgba(255,255,255,.74)!important;
+  opacity:1!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip{
+  width:78px!important;
+  height:78px!important;
+  border-radius:0!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip svg{
+  width:68px!important;
+  height:68px!important;
+  stroke:currentColor!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip text{
+  fill:currentColor!important;
+  font-size:19px!important;
+  font-weight:700!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-toggle{
+  width:76px!important;
+  height:76px!important;
+  border-radius:0!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-toggle svg{
+  width:58px!important;
+  height:58px!important;
+  fill:currentColor!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-toggle .play-icon{
+  margin-left:5px!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip:hover,
+.drive-player-overlay.is-audio-mode .drive-player-skip:focus-visible,
+.drive-player-overlay.is-audio-mode .drive-player-toggle:hover,
+.drive-player-overlay.is-audio-mode .drive-player-toggle:focus-visible{
+  background:transparent!important;
+  box-shadow:none!important;
+  color:rgba(255,255,255,.92)!important;
+  outline:none!important;
+}
+.drive-player-overlay.is-audio-mode .drive-player-skip:active,
+.drive-player-overlay.is-audio-mode .drive-player-toggle:active{
+  transform:scale(.94)!important;
+}
+@media(max-width:700px){
+  .drive-player-overlay.is-audio-mode .drive-player-center-controls{
+    gap:clamp(48px,14vw,92px)!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-skip{
+    width:66px!important;
+    height:66px!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-skip svg{
+    width:58px!important;
+    height:58px!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-toggle{
+    width:64px!important;
+    height:64px!important;
+  }
+  .drive-player-overlay.is-audio-mode .drive-player-toggle svg{
+    width:50px!important;
+    height:50px!important;
+  }
+}
