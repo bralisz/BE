@@ -11623,6 +11623,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (updateStarted) return;
     updateStarted = true;
 
+    // Guarda rota, aba do catálogo, pesquisa e posição antes do reload de
+    // atualização. O módulo de restauração usa estes dados depois que os
+    // novos arquivos terminam de carregar.
+    try {
+      if (window.BETVPreserveReloadPosition && typeof window.BETVPreserveReloadPosition.markUpdate === 'function') {
+        window.BETVPreserveReloadPosition.markUpdate();
+      }
+    } catch (_) {}
+
     var copy = updateCopy();
     var element = createPopup();
     var button = element.querySelector('.betv-update-action');
@@ -13312,4 +13321,241 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{await copyText(url);showCopiedFeedback();}catch(_){ }
     }
   });
+})();
+
+
+;/* Preserva rota/contexto/scroll após recarregar a página ou aplicar atualização. */
+(function () {
+  'use strict';
+
+  var SNAPSHOT_KEY = 'betvReloadPositionSnapshotV1';
+  var INTENT_KEY = 'betvReloadPositionIntentV1';
+  var MAX_AGE = 10 * 60 * 1000;
+  var restoring = false;
+  var userInteracted = false;
+  var restoreTimers = [];
+
+  function storageGet(key) {
+    try { return window.sessionStorage.getItem(key); } catch (_) { return null; }
+  }
+
+  function storageSet(key, value) {
+    try { window.sessionStorage.setItem(key, value); } catch (_) {}
+  }
+
+  function storageRemove(key) {
+    try { window.sessionStorage.removeItem(key); } catch (_) {}
+  }
+
+  function cleanUrlKey(value) {
+    try {
+      var url = new URL(value || window.location.href, window.location.origin);
+      url.searchParams.delete('__betv_update');
+      url.searchParams.delete('_');
+      return url.pathname + (url.search || '') + (url.hash || '');
+    } catch (_) {
+      return String(window.location.pathname || '/') + String(window.location.search || '') + String(window.location.hash || '');
+    }
+  }
+
+  function serializableHistoryState() {
+    try {
+      return JSON.parse(JSON.stringify(window.history.state || null));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function readSearchValue() {
+    var desktop = document.getElementById('homeSearchInput');
+    var mobile = document.getElementById('mobileSearchInput');
+    return String((desktop && desktop.value) || (mobile && mobile.value) || '');
+  }
+
+  function capture(reason) {
+    if (!document.body) return null;
+    var topbar = document.getElementById('topbar');
+    var supportInput = document.getElementById('supportSearchInput');
+    var snapshot = {
+      ts: Date.now(),
+      reason: String(reason || 'reload'),
+      urlKey: cleanUrlKey(window.location.href),
+      scrollX: Math.max(0, Number(window.scrollX) || 0),
+      scrollY: Math.max(0, Number(window.scrollY) || 0),
+      homeView: String(document.body.dataset.homeView || ''),
+      searchValue: readSearchValue(),
+      searchOpen: Boolean(topbar && topbar.classList.contains('search-open')),
+      supportSearch: String(supportInput && supportInput.value || ''),
+      historyState: serializableHistoryState()
+    };
+    storageSet(SNAPSHOT_KEY, JSON.stringify(snapshot));
+    return snapshot;
+  }
+
+  function markUpdate() {
+    capture('update');
+    storageSet(INTENT_KEY, 'update');
+  }
+
+  function navigationType() {
+    try {
+      var entries = performance.getEntriesByType && performance.getEntriesByType('navigation');
+      if (entries && entries[0] && entries[0].type) return String(entries[0].type);
+    } catch (_) {}
+    try {
+      if (performance.navigation && performance.navigation.type === 1) return 'reload';
+    } catch (_) {}
+    return '';
+  }
+
+  function readSnapshot() {
+    var raw = storageGet(SNAPSHOT_KEY);
+    if (!raw) return null;
+    try {
+      var value = JSON.parse(raw);
+      if (!value || !value.ts || Date.now() - Number(value.ts) > MAX_AGE) return null;
+      return value;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function markInteraction() {
+    userInteracted = true;
+    restoreTimers.forEach(function (id) { window.clearTimeout(id); });
+    restoreTimers = [];
+  }
+
+  ['pointerdown','touchstart','wheel','keydown'].forEach(function (name) {
+    window.addEventListener(name, markInteraction, { passive:true, once:true, capture:true });
+  });
+
+  function restoreHistoryState(snapshot) {
+    if (!snapshot || !snapshot.historyState) return;
+    try {
+      window.history.replaceState(snapshot.historyState, '', window.location.pathname + (window.location.search || '') + (window.location.hash || ''));
+    } catch (_) {}
+  }
+
+  function restoreCatalogView(snapshot) {
+    var view = String(snapshot && snapshot.homeView || '').toLowerCase();
+    if (!view || view === 'home') return;
+    if (!['films','movies','series','videos'].includes(view)) return;
+    if (document.body.classList.contains('detail-page-active') ||
+        document.body.classList.contains('section-catalog-active') ||
+        document.body.classList.contains('profile-page-active') ||
+        document.body.classList.contains('settings-page-active') ||
+        document.body.classList.contains('support-page-active') ||
+        document.body.classList.contains('notification-page-active') ||
+        document.body.classList.contains('legal-page-active') ||
+        document.body.classList.contains('billie-page-active') ||
+        document.body.classList.contains('login-mode')) return;
+    if (String(document.body.dataset.homeView || '').toLowerCase() === view) return;
+    var button = document.querySelector('[data-home-view="' + view + '"]');
+    if (!button || typeof button.click !== 'function') return;
+    try { button.dataset.beHistoryMode = 'none'; } catch (_) {}
+    button.click();
+    try { delete button.dataset.beHistoryMode; } catch (_) {}
+  }
+
+  function restoreSearch(snapshot) {
+    if (!snapshot) return;
+    var value = String(snapshot.searchValue || '');
+    var desktop = document.getElementById('homeSearchInput');
+    var mobile = document.getElementById('mobileSearchInput');
+    if (desktop && desktop.value !== value) {
+      desktop.value = value;
+      desktop.dispatchEvent(new Event('input', { bubbles:true }));
+    }
+    if (mobile && mobile.value !== value) mobile.value = value;
+
+    if (snapshot.searchOpen && value) {
+      var topbar = document.getElementById('topbar');
+      var toggle = document.getElementById('homeSearchToggle');
+      if (topbar) topbar.classList.add('search-open');
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-label', 'Fechar pesquisa');
+      }
+    }
+
+    var support = document.getElementById('supportSearchInput');
+    var supportValue = String(snapshot.supportSearch || '');
+    if (support && supportValue && support.value !== supportValue) {
+      support.value = supportValue;
+      support.dispatchEvent(new Event('input', { bubbles:true }));
+    }
+  }
+
+  function restoreScroll(snapshot) {
+    if (!snapshot || userInteracted) return;
+    try {
+      window.scrollTo({
+        left: Math.max(0, Number(snapshot.scrollX) || 0),
+        top: Math.max(0, Number(snapshot.scrollY) || 0),
+        behavior: 'auto'
+      });
+    } catch (_) {
+      window.scrollTo(Math.max(0, Number(snapshot.scrollX) || 0), Math.max(0, Number(snapshot.scrollY) || 0));
+    }
+  }
+
+  function restoreOnce(snapshot) {
+    if (!snapshot || userInteracted) return;
+    restoreCatalogView(snapshot);
+    restoreSearch(snapshot);
+    restoreScroll(snapshot);
+  }
+
+  function scheduleRestore(snapshot) {
+    if (!snapshot || restoring) return;
+    restoring = true;
+    restoreHistoryState(snapshot);
+
+    // Algumas rotas (detalhes, perfil e admin) terminam de renderizar de forma
+    // assíncrona. Repetimos a restauração por poucos segundos e paramos assim
+    // que o usuário interagir, evitando qualquer salto durante a navegação.
+    [0, 80, 220, 500, 900, 1500, 2400, 3600].forEach(function (delay, index, list) {
+      var id = window.setTimeout(function () {
+        restoreOnce(snapshot);
+        if (index === list.length - 1) {
+          restoring = false;
+          storageRemove(INTENT_KEY);
+        }
+      }, delay);
+      restoreTimers.push(id);
+    });
+  }
+
+  function shouldRestore(snapshot) {
+    if (!snapshot) return false;
+    if (cleanUrlKey(window.location.href) !== String(snapshot.urlKey || '')) return false;
+    var intent = String(storageGet(INTENT_KEY) || '');
+    return intent === 'update' || navigationType() === 'reload';
+  }
+
+  function bootRestore() {
+    var snapshot = readSnapshot();
+    if (!shouldRestore(snapshot)) {
+      storageRemove(INTENT_KEY);
+      return;
+    }
+    scheduleRestore(snapshot);
+  }
+
+  window.BETVPreserveReloadPosition = {
+    capture: capture,
+    markUpdate: markUpdate
+  };
+
+  // pagehide cobre recarga, atualização e fechamento/navegação do documento.
+  // sessionStorage mantém o snapshot apenas na aba atual.
+  window.addEventListener('pagehide', function () { capture('pagehide'); }, { capture:true });
+  window.addEventListener('beforeunload', function () { capture('beforeunload'); }, { capture:true });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootRestore, { once:true });
+  } else {
+    bootRestore();
+  }
 })();
