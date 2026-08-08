@@ -3848,36 +3848,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   function externalVideoPlayersMarkup() {
-    return `<div class="youtube-player-overlay" id="youtubePlayerOverlay" hidden aria-hidden="true">
-      <section class="youtube-player-shell" id="youtubePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor do YouTube">
-        <header class="youtube-player-toolbar" aria-label="Ações do YouTube">
-          <div class="youtube-player-actions">
-            <button class="youtube-player-action youtube-player-close" id="youtubePlayerClose" type="button" aria-label="Fechar YouTube" title="Fechar">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-            </button>
-          </div>
-        </header>
-        <div class="youtube-player-frame-shell">
-          <iframe class="youtube-player-frame" id="youtubePlayerFrame" title="Reprodutor do YouTube" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    return `<div class="external-native-player-overlay" id="externalNativePlayerOverlay" hidden aria-hidden="true" data-provider="">
+      <section class="external-native-player-shell" id="externalNativePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo externo">
+        <div class="external-native-player-frame-shell">
+          <iframe class="external-native-player-frame" id="externalNativePlayerFrame" title="Reprodutor de vídeo" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-      </section>
-    </div>
-    <div class="vk-player-overlay" id="vkPlayerOverlay" hidden aria-hidden="true">
-      <section class="vk-player-shell" id="vkPlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor do VK Video">
-        <header class="vk-player-toolbar">
-          <span class="vk-player-brand" aria-hidden="true"><strong>VK</strong><span>Video</span></span>
-          <div class="vk-player-actions">
-            <button class="vk-player-action vk-player-external" id="vkPlayerExternal" type="button" aria-label="Abrir no VK Video" title="Abrir no VK Video">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <button class="vk-player-action vk-player-close" id="vkPlayerClose" type="button" aria-label="Fechar VK Video" title="Fechar">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
-            </button>
-          </div>
+        <header class="external-native-player-toolbar" aria-label="Ações do vídeo">
+          <button class="external-native-player-close" id="externalNativePlayerClose" type="button" aria-label="Fechar vídeo" title="Fechar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+          </button>
         </header>
-        <div class="vk-player-frame-shell">
-          <iframe class="vk-player-frame" id="vkPlayerFrame" title="Reprodutor do VK Video" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
-        </div>
       </section>
     </div>`;
   }
@@ -3887,86 +3867,55 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.dataset.externalVideoPlayersBound = 'true';
     document.body.insertAdjacentHTML('beforeend', externalVideoPlayersMarkup());
 
-    const youtubeOverlay = document.getElementById('youtubePlayerOverlay');
-    const youtubeShell = document.getElementById('youtubePlayerShell');
-    const youtubeFrame = document.getElementById('youtubePlayerFrame');
-    const youtubeClose = document.getElementById('youtubePlayerClose');
-    const vkOverlay = document.getElementById('vkPlayerOverlay');
-    const vkShell = document.getElementById('vkPlayerShell');
-    const vkFrame = document.getElementById('vkPlayerFrame');
-    const vkClose = document.getElementById('vkPlayerClose');
-    const vkExternal = document.getElementById('vkPlayerExternal');
-    if (!youtubeOverlay || !youtubeShell || !youtubeFrame || !youtubeClose || !vkOverlay || !vkShell || !vkFrame || !vkClose || !vkExternal) return;
+    const overlay = document.getElementById('externalNativePlayerOverlay');
+    const shell = document.getElementById('externalNativePlayerShell');
+    const frame = document.getElementById('externalNativePlayerFrame');
+    const closeButton = document.getElementById('externalNativePlayerClose');
+    if (!overlay || !shell || !frame || !closeButton) return;
 
-    let vkExternalUrl = '';
-    let youtubePreviousFocus = null;
-    let vkPreviousFocus = null;
+    let previousFocus = null;
+    let activeProvider = '';
 
     const syncBodyLock = () => {
-      const hasOpenProvider = !youtubeOverlay.hidden || !vkOverlay.hidden;
-      document.body.classList.toggle('external-video-player-open', hasOpenProvider);
+      document.body.classList.toggle('external-video-player-open', !overlay.hidden);
     };
 
-    const closeYouTubePlayer = (restoreFocus = true) => {
-      if (youtubeOverlay.hidden) return;
-      youtubeFrame.src = 'about:blank';
-      youtubeOverlay.hidden = true;
-      youtubeOverlay.setAttribute('aria-hidden', 'true');
-      youtubeOverlay.classList.remove('is-open');
+    const closeExternalPlayer = (restoreFocus = true) => {
+      if (overlay.hidden) return;
+      frame.src = 'about:blank';
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.classList.remove('is-open', 'is-youtube', 'is-vk');
+      overlay.dataset.provider = '';
+      activeProvider = '';
       syncBodyLock();
-      if (restoreFocus && youtubePreviousFocus && typeof youtubePreviousFocus.focus === 'function') youtubePreviousFocus.focus({ preventScroll: true });
-      youtubePreviousFocus = null;
+      if (restoreFocus && previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
+      previousFocus = null;
     };
 
-    const closeVkPlayer = (restoreFocus = true) => {
-      if (vkOverlay.hidden) return;
-      vkFrame.src = 'about:blank';
-      vkOverlay.hidden = true;
-      vkOverlay.setAttribute('aria-hidden', 'true');
-      vkOverlay.classList.remove('is-open');
-      vkExternalUrl = '';
-      syncBodyLock();
-      if (restoreFocus && vkPreviousFocus && typeof vkPreviousFocus.focus === 'function') vkPreviousFocus.focus({ preventScroll: true });
-      vkPreviousFocus = null;
-    };
-
-    const closeAllExternalPlayers = () => {
-      closeYouTubePlayer(false);
-      closeVkPlayer(false);
-      syncBodyLock();
-    };
-
-    const openYouTubePlayer = (info, context = {}) => {
-      const embedUrl = youtubeEmbedUrl(info);
+    const openExternalPlayer = (provider, info, context = {}) => {
+      const normalizedProvider = provider === 'vk' ? 'vk' : 'youtube';
+      const embedUrl = normalizedProvider === 'vk' ? vkVideoEmbedUrl(info) : youtubeEmbedUrl(info);
       if (!embedUrl) return;
-      closeAllExternalPlayers();
+
+      closeExternalPlayer(false);
       window.dispatchEvent(new Event('be:close-drive-player'));
       window.dispatchEvent(new Event('be:close-drive-video-player'));
-      youtubePreviousFocus = document.activeElement;
-      youtubeFrame.title = context?.title ? `YouTube — ${String(context.title).trim()}` : 'Reprodutor do YouTube';
-      youtubeFrame.src = embedUrl;
-      youtubeOverlay.hidden = false;
-      youtubeOverlay.setAttribute('aria-hidden', 'false');
-      youtubeOverlay.classList.add('is-open');
-      syncBodyLock();
-      youtubeClose.focus({ preventScroll: true });
-    };
 
-    const openVkPlayer = (info, context = {}) => {
-      const embedUrl = vkVideoEmbedUrl(info);
-      if (!embedUrl) return;
-      closeAllExternalPlayers();
-      window.dispatchEvent(new Event('be:close-drive-player'));
-      window.dispatchEvent(new Event('be:close-drive-video-player'));
-      vkPreviousFocus = document.activeElement;
-      vkExternalUrl = vkVideoWatchUrl(info);
-      vkFrame.title = context?.title ? `VK Video — ${String(context.title).trim()}` : 'Reprodutor do VK Video';
-      vkFrame.src = embedUrl;
-      vkOverlay.hidden = false;
-      vkOverlay.setAttribute('aria-hidden', 'false');
-      vkOverlay.classList.add('is-open');
+      previousFocus = document.activeElement;
+      activeProvider = normalizedProvider;
+      const providerLabel = normalizedProvider === 'vk' ? 'VK Video' : 'YouTube';
+      const mediaTitle = String(context?.title || '').trim();
+      shell.setAttribute('aria-label', `Reprodutor do ${providerLabel}`);
+      frame.title = mediaTitle ? `${providerLabel} — ${mediaTitle}` : `Reprodutor do ${providerLabel}`;
+      closeButton.setAttribute('aria-label', `Fechar ${providerLabel}`);
+      overlay.dataset.provider = normalizedProvider;
+      overlay.classList.add('is-open', normalizedProvider === 'vk' ? 'is-vk' : 'is-youtube');
+      frame.src = embedUrl;
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
       syncBodyLock();
-      vkClose.focus({ preventScroll: true });
+      closeButton.focus({ preventScroll: true });
     };
 
     document.addEventListener('click', event => {
@@ -3980,33 +3929,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const linkedContent = contentDataFromElement(link);
       const title = link.dataset.title || linkedContent.title || '';
       event.preventDefault();
+      event.stopImmediatePropagation();
 
-      if (youtubeInfo) {
-        openYouTubePlayer(youtubeInfo, { title });
-        return;
-      }
-      openVkPlayer(vkInfo, { title });
+      if (youtubeInfo) openExternalPlayer('youtube', youtubeInfo, { title });
+      else openExternalPlayer('vk', vkInfo, { title });
     }, true);
 
-    youtubeClose.addEventListener('click', () => closeYouTubePlayer(true));
-    vkClose.addEventListener('click', () => closeVkPlayer(true));
-    vkExternal.addEventListener('click', () => {
-      if (vkExternalUrl) window.open(vkExternalUrl, '_blank', 'noopener,noreferrer');
-    });
+    closeButton.addEventListener('click', () => closeExternalPlayer(true));
 
     window.addEventListener('keydown', event => {
-      const youtubeOpen = !youtubeOverlay.hidden;
-      const vkOpen = !vkOverlay.hidden;
-      if (!youtubeOpen && !vkOpen) return;
+      if (overlay.hidden) return;
       if (event.key === 'Escape') {
         event.preventDefault();
-        if (youtubeOpen) closeYouTubePlayer(true);
-        else closeVkPlayer(true);
+        closeExternalPlayer(true);
       }
     });
 
-    window.addEventListener('pagehide', closeAllExternalPlayers);
-    window.addEventListener('be:close-external-video-players', closeAllExternalPlayers);
+    window.addEventListener('pagehide', () => closeExternalPlayer(false));
+    window.addEventListener('be:close-external-video-players', () => closeExternalPlayer(false));
   }
 
 
@@ -5499,7 +5439,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       play.removeAttribute('href');
       play.setAttribute('aria-disabled', 'true');
     }
-    const usesInternalPlayer = hasContentLink && Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl));
+    const usesInternalPlayer = hasContentLink && Boolean(googleDriveFileId(contentUrl) || youtubeMediaInfo(contentUrl) || vkVideoInfo(contentUrl));
     play.dataset.mediaPlayerTrigger = usesInternalPlayer ? 'true' : 'false';
     if (hasContentLink && /^https?:\/\//i.test(contentUrl) && !usesInternalPlayer) {
       play.target = '_blank';

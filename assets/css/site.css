@@ -13311,3 +13311,104 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   .drive-video-player-actionbar,
   .drive-video-player-shell::after{transition:none!important}
 }
+
+/* =========================================================
+   Player externo compartilhado — YouTube + VK
+   Ambos usam o mesmo layout/modal e apenas trocam a URL do iframe.
+   O Google Drive continua no player de vídeo independente.
+   ========================================================= */
+.external-native-player-overlay{
+  position:fixed;
+  inset:0;
+  z-index:2147483100;
+  display:grid;
+  place-items:stretch;
+  background:#000;
+  color:#fff;
+}
+.external-native-player-overlay[hidden]{display:none!important}
+.external-native-player-shell{
+  position:relative;
+  width:100%;
+  height:100%;
+  height:100dvh;
+  overflow:hidden;
+  background:#000;
+  isolation:isolate;
+}
+.external-native-player-frame-shell{
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  background:#000;
+}
+.external-native-player-frame{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+  background:#000;
+}
+.external-native-player-toolbar{
+  position:absolute;
+  z-index:20;
+  left:50%;
+  bottom:max(12px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:56px;
+  height:48px;
+  padding:3px;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:999px;
+  background:rgba(17,19,19,.76);
+  -webkit-backdrop-filter:blur(20px) saturate(145%);
+  backdrop-filter:blur(20px) saturate(145%);
+  box-shadow:0 8px 28px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.external-native-player-close{
+  appearance:none;
+  width:40px;
+  height:40px;
+  margin:0;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:rgba(255,255,255,.92);
+  box-shadow:none;
+  cursor:pointer;
+  outline:none;
+  transition:none;
+}
+/* Sem halo/fundo extra ao passar o mouse no X. */
+.external-native-player-close:hover,
+.external-native-player-close:active,
+.external-native-player-close:focus,
+.external-native-player-close:focus-visible{
+  background:transparent;
+  box-shadow:none;
+  transform:none;
+  outline:none;
+}
+.external-native-player-close svg{
+  width:21px;
+  height:21px;
+  pointer-events:none;
+}
+@media(max-width:700px){
+  .external-native-player-toolbar{
+    bottom:max(10px,env(safe-area-inset-bottom));
+    width:54px;
+    height:46px;
+  }
+  .external-native-player-close{width:38px;height:38px}
+}
+@media(prefers-reduced-motion:reduce){
+  .external-native-player-close{transition:none!important}
+}
