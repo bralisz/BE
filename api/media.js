@@ -15,6 +15,9 @@ const SUPABASE_RUNTIME_SOURCES = [
 
 const ALLOWED_HOSTS = new Set([
   'cdn.discordapp.com',
+  'media.discordapp.net',
+  'images-ext-1.discordapp.net',
+  'images-ext-2.discordapp.net',
   'cdn.theplaylist.net',
   'disney.images.edge.bamgrid.com',
   'dwgyu36up6iuz.cloudfront.net',
@@ -42,7 +45,7 @@ const ALLOWED_HOSTS = new Set([
 
 const ALLOWED_SUFFIXES = [
   '.bamgrid.com', '.billboard.com', '.cloudfront.net', '.ctfassets.net',
-  '.discordapp.com', '.googleusercontent.com', '.gstatic.com', '.hollywoodreporter.com',
+  '.discordapp.com', '.discordapp.net', '.googleusercontent.com', '.gstatic.com', '.hollywoodreporter.com',
   '.hotstar.com', '.imgur.com', '.media-amazon.com', '.nflxso.net',
   '.pinimg.com', '.scdn.co', '.spotifycdn.com', '.themoviedb.org', '.theplaylist.net', '.tmdb.org',
   '.twimg.com', '.wikimedia.org', '.wp.com', '.ytimg.com'
