@@ -9139,15 +9139,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function closePage(updateRoute){
-    document.body.classList.remove('notification-page-active');
+    // A página de perfil/configurações permanece montada no DOM. Antes de
+    // voltar para a Home, force o estado visual dessas superfícies para
+    // fechado em qualquer tamanho de tela. Isso evita que um perfil aberto
+    // antes da notificação reapareça abaixo do catálogo.
+    hideProfileSurfacesForNotifications();
+    document.body.classList.remove('notification-page-active','profile-page-active','settings-page-active');
     page.hidden=true;
     page.setAttribute('aria-hidden','true');
     selectedId='';
-    if(updateRoute!==false&&routeInfo().active){
-      var url=new URL(location.href);
-      url.pathname='/';
-      url.hash='';
-      history.pushState({beRoute:'home'},'',url.pathname+(url.search||''));
+    if(updateRoute!==false){
+      // Use o roteador público em vez de alterar history diretamente. O
+      // roteador dispara popstate e permite que todos os módulos encerrem o
+      // estado anterior (inclusive /@perfil) antes de exibir a Home.
+      if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/');
+      else{
+        var url=new URL(location.href);
+        url.pathname='/';
+        url.hash='';
+        history.pushState({beRoute:'home'},'',url.pathname+(url.search||''));
+        window.dispatchEvent(new PopStateEvent('popstate',{state:{beRoute:'home'}}));
+      }
     }
     document.title='Billie Eilish TV';
   }
@@ -9232,7 +9244,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   window.addEventListener('be:open-notifications',function(event){
     var detail=event&&event.detail||{};
-    openPage(detail.id||routeInfo().id,false);
+    var info=routeInfo();
+    // Se a abertura veio diretamente do Perfil, a URL ainda pode estar em
+    // /@usuario. Nesse caso, também leve a rota para /atualizacoes. Quando o
+    // roteador já abriu a rota correta, não cria uma entrada duplicada.
+    openPage(detail.id||info.id,!info.active);
   });
   window.addEventListener('be:close-notifications',function(){closePage(false);});
   window.addEventListener('be:i18n-ready',function(){if(loaded){renderPreviews();if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);}});

@@ -2826,6 +2826,11 @@
   .settings-page-shell{padding-top:96px}
   .profile-page-shell[hidden],
   .settings-page-shell[hidden]{display:none!important}
+
+  /* Fail-safe de navegação: páginas persistentes nunca podem aparecer
+     misturadas à Home quando sua classe de rota não estiver ativa. */
+  body:not(.profile-page-active) > #profilePage{display:none!important}
+  body:not(.settings-page-active) > #settingsPage{display:none!important}
   .profile-page-hero{
     position:relative;
     min-height:100svh;
