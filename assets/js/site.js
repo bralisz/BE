@@ -5207,32 +5207,32 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return '';
       };
 
+      // Mantém o comportamento da versão que exibia corretamente o banner:
+      // captura primeiro a capa já vinculada/renderizada no conteúdo aberto e
+      // não deixa uma consulta posterior substituir uma imagem que já funciona.
       let bannerUrl = firstValidBanner(
         link.dataset.bannerUrl,
         linkedContent.bannerUrl,
-        link.dataset.imageUrl,
-        linkedContent.imageUrl,
         detailBannerImage?.currentSrc,
-        detailBannerImage?.src
+        detailBannerImage?.src,
+        link.dataset.imageUrl,
+        linkedContent.imageUrl
       );
 
-      // Se o botão não carregou o banner completo, busca a mídia vinculada
-      // diretamente no registro do conteúdo e usa a capa correspondente.
+      // O banco vira apenas fallback. Antes ele tinha prioridade e podia trocar
+      // o banner correto do DOM por um endereço antigo/incompatível.
       const recordId = String(link.dataset.recordId || linkedContent.recordId || '').trim();
       const collection = String(link.dataset.collection || linkedContent.collection || 'videos').trim().toLowerCase() || 'videos';
-      if (recordId && window.beBackend?.data?.get) {
+      if (!bannerUrl && recordId && window.beBackend?.data?.get) {
         try {
           const source = await window.beBackend.data.get(collection, recordId);
           bannerUrl = firstValidBanner(
             source?.bannerUrl,
             source?.imageUrl,
-            source?.thumbnailUrl,
-            bannerUrl,
-            detailBannerImage?.currentSrc,
-            detailBannerImage?.src
+            source?.thumbnailUrl
           );
         } catch (_) {
-          // Mantém o melhor banner já encontrado no DOM.
+          // Sem banner no banco: o player continua normalmente com fundo padrão.
         }
       }
 
