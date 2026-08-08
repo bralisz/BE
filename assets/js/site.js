@@ -4468,6 +4468,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeResourceKey = '';
     let activeBannerUrl = '';
     let activeBannerCandidates = [];
+    let activeBackdropSourceImage = null;
+    let borrowedBackdropImage = null;
+    let borrowedBackdropState = null;
+    let pendingBackdropLoadImage = null;
     let activeTitle = '';
     let activeMediaKind = '';
     let activeProvider = '';
@@ -4764,6 +4768,87 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       progress.disabled = disabled;
     };
 
+    const clearPendingBackdropLoad = () => {
+      if (!pendingBackdropLoadImage) return;
+      pendingBackdropLoadImage.removeEventListener('load', handlePendingBackdropLoad);
+      pendingBackdropLoadImage.removeEventListener('error', handlePendingBackdropLoadError);
+      pendingBackdropLoadImage = null;
+    };
+
+    const restoreBorrowedBackdrop = () => {
+      clearPendingBackdropLoad();
+      if (!borrowedBackdropImage || !borrowedBackdropState) {
+        borrowedBackdropImage = null;
+        borrowedBackdropState = null;
+        backdropImage.hidden = false;
+        return;
+      }
+
+      const image = borrowedBackdropImage;
+      const state = borrowedBackdropState;
+      borrowedBackdropImage = null;
+      borrowedBackdropState = null;
+
+      try {
+        if (state.parent && state.parent.isConnected) {
+          if (state.nextSibling && state.nextSibling.parentNode === state.parent) state.parent.insertBefore(image, state.nextSibling);
+          else state.parent.appendChild(image);
+        }
+      } catch (_) {}
+
+      image.className = state.className;
+      if (state.alt === null) image.removeAttribute('alt'); else image.setAttribute('alt', state.alt);
+      if (state.ariaHidden === null) image.removeAttribute('aria-hidden'); else image.setAttribute('aria-hidden', state.ariaHidden);
+      image.hidden = state.hidden;
+      backdropImage.hidden = false;
+    };
+
+    const borrowBackdropImage = image => {
+      if (!(image instanceof HTMLImageElement) || !image.isConnected || !image.complete || image.naturalWidth <= 0) return false;
+      if (borrowedBackdropImage === image) return true;
+      restoreBorrowedBackdrop();
+
+      borrowedBackdropState = {
+        parent: image.parentNode,
+        nextSibling: image.nextSibling,
+        className: image.className,
+        alt: image.hasAttribute('alt') ? image.getAttribute('alt') : null,
+        ariaHidden: image.hasAttribute('aria-hidden') ? image.getAttribute('aria-hidden') : null,
+        hidden: image.hidden
+      };
+      borrowedBackdropImage = image;
+      image.classList.add('drive-player-backdrop-image');
+      image.hidden = false;
+      image.setAttribute('aria-hidden', 'true');
+      image.alt = activeTitle ? `Capa de ${activeTitle}` : 'Capa do áudio';
+      backdrop.appendChild(image);
+      backdropImage.hidden = true;
+      return true;
+    };
+
+    function handlePendingBackdropLoad() {
+      const image = pendingBackdropLoadImage;
+      pendingBackdropLoadImage = null;
+      if (!image || image !== activeBackdropSourceImage || !audioMode || overlay.hidden) return;
+      if (borrowBackdropImage(image)) applyBackdrop();
+    }
+
+    function handlePendingBackdropLoadError() {
+      pendingBackdropLoadImage = null;
+    }
+
+    const tryBorrowActiveBackdropImage = () => {
+      if (!audioMode || !activeBackdropSourceImage || borrowedBackdropImage) return Boolean(borrowedBackdropImage);
+      if (borrowBackdropImage(activeBackdropSourceImage)) return true;
+      if (pendingBackdropLoadImage !== activeBackdropSourceImage) {
+        clearPendingBackdropLoad();
+        pendingBackdropLoadImage = activeBackdropSourceImage;
+        pendingBackdropLoadImage.addEventListener('load', handlePendingBackdropLoad, { once: true });
+        pendingBackdropLoadImage.addEventListener('error', handlePendingBackdropLoadError, { once: true });
+      }
+      return false;
+    };
+
     const setBackdropCandidates = values => {
       const candidates = [];
       (Array.isArray(values) ? values : [values]).forEach(value => {
@@ -4783,11 +4868,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const applyBackdrop = () => {
-      const hasBanner = Boolean(activeBannerUrl && activeBannerUrl !== '#');
+      if (audioMode) tryBorrowActiveBackdropImage();
+      const hasBorrowedBanner = Boolean(borrowedBackdropImage);
+      const hasUrlBanner = Boolean(activeBannerUrl && activeBannerUrl !== '#');
+      const hasBanner = hasBorrowedBanner || hasUrlBanner;
       backdrop.hidden = !audioMode;
       overlay.classList.toggle('has-backdrop', audioMode && hasBanner);
+
+      if (hasBorrowedBanner) {
+        borrowedBackdropImage.alt = activeTitle ? `Capa de ${activeTitle}` : 'Capa do áudio';
+        backdropImage.removeAttribute('src');
+        backdropImage.hidden = true;
+        return;
+      }
+
+      backdropImage.hidden = false;
       backdropImage.alt = activeTitle ? `Capa de ${activeTitle}` : 'Capa do áudio';
-      if (hasBanner) {
+      if (hasUrlBanner) {
         if (backdropImage.getAttribute('src') !== activeBannerUrl) backdropImage.setAttribute('src', activeBannerUrl);
       } else {
         backdropImage.removeAttribute('src');
@@ -4804,6 +4901,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const setAudioMode = enabled => {
       audioMode = Boolean(enabled);
+      if (!audioMode) restoreBorrowedBackdrop();
       overlay.classList.toggle('is-audio-mode', audioMode);
       overlay.classList.toggle('is-audio-frame-mode', audioMode && frameMode);
       applyBackdrop();
@@ -5003,6 +5101,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setAudioMode(false);
       activeBannerUrl = '';
       activeBannerCandidates = [];
+      activeBackdropSourceImage = null;
+      restoreBorrowedBackdrop();
       activeTitle = '';
       activeMediaKind = '';
       activeProvider = '';
@@ -5034,6 +5134,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const token = ++openingToken;
       activeFileId = fileId;
       activeResourceKey = resourceKey;
+      activeBackdropSourceImage = context?.bannerElement instanceof HTMLImageElement ? context.bannerElement : null;
       const requestedBanners = [
         context?.bannerUrl,
         ...(Array.isArray(context?.bannerCandidates) ? context.bannerCandidates : []),
@@ -5260,6 +5361,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       openPlayer(fileId, googleDriveResourceKey(mediaUrl), {
         bannerUrl,
         bannerCandidates,
+        bannerElement: detailBannerImage,
         imageUrl: linkedContent.imageUrl || catalogMatch?.imageUrl || backendSource?.imageUrl || backendSource?.thumbnailUrl || '',
         title,
         mediaKind: inferredKind,
