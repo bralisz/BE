@@ -13582,3 +13582,202 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
     height:50px!important;
   }
 }
+
+/* =========================================================
+   Google Drive VIDEO — mesmo template visual do MP3,
+   mantendo player, IDs, classes e estado totalmente separados.
+   ========================================================= */
+.drive-video-player-overlay{
+  --drive-video-actionbar-height:74px;
+}
+
+/* Trinca central: voltar 10s / play-pause / avançar 10s */
+.drive-video-player-center-controls{
+  position:absolute;
+  left:50%;
+  top:50%;
+  z-index:8;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(72px,12vw,170px);
+  transform:translate(-50%,-50%);
+  opacity:1;
+  transition:opacity .18s ease,transform .18s ease;
+}
+.drive-video-player-skip,
+.drive-video-player-toggle{
+  appearance:none;
+  position:static!important;
+  left:auto!important;
+  top:auto!important;
+  margin:0;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:0!important;
+  border-radius:0!important;
+  color:rgba(255,255,255,.74)!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  transform:none!important;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:color .16s ease,transform .16s ease!important;
+}
+.drive-video-player-skip{
+  width:78px!important;
+  height:78px!important;
+}
+.drive-video-player-skip svg{
+  width:68px!important;
+  height:68px!important;
+  fill:none!important;
+  stroke:currentColor!important;
+  stroke-width:4!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+}
+.drive-video-player-skip text{
+  fill:currentColor!important;
+  stroke:none!important;
+  font-size:19px!important;
+  font-family:inherit!important;
+  font-weight:700!important;
+  text-anchor:middle!important;
+}
+.drive-video-player-toggle{
+  width:76px!important;
+  height:76px!important;
+}
+.drive-video-player-toggle svg{
+  width:58px!important;
+  height:58px!important;
+  fill:currentColor!important;
+}
+.drive-video-player-toggle .play-icon{margin-left:5px!important}
+.drive-video-player-skip:hover,
+.drive-video-player-skip:focus-visible,
+.drive-video-player-toggle:hover,
+.drive-video-player-toggle:focus-visible{
+  color:rgba(255,255,255,.92)!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  outline:none!important;
+}
+.drive-video-player-skip:active,
+.drive-video-player-toggle:active{transform:scale(.94)!important}
+
+/* Progresso/tempo no mesmo posicionamento do MP3. */
+.drive-video-player-progress-area{
+  left:max(34px,env(safe-area-inset-left))!important;
+  right:max(34px,env(safe-area-inset-right))!important;
+  bottom:calc(88px + max(8px,env(safe-area-inset-bottom)))!important;
+}
+
+/* Dock inferior central no mesmo estilo da Home usado pelo MP3. */
+.drive-video-player-actionbar{
+  left:50%!important;
+  right:auto!important;
+  bottom:max(16px,env(safe-area-inset-bottom))!important;
+  width:max-content!important;
+  min-width:0!important;
+  height:58px!important;
+  padding:6px!important;
+  gap:6px!important;
+  justify-content:center!important;
+  border:1px solid rgba(255,255,255,.17)!important;
+  border-radius:999px!important;
+  background:rgba(18,20,20,.68)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(150%)!important;
+  backdrop-filter:blur(22px) saturate(150%)!important;
+  box-shadow:0 14px 45px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  transform:translateX(-50%)!important;
+}
+.drive-video-player-actions-right{display:contents!important}
+.drive-video-player-action{
+  width:46px!important;
+  height:46px!important;
+  flex:0 0 46px!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  transition:background .18s ease,transform .18s ease!important;
+}
+.drive-video-player-action:hover,
+.drive-video-player-action:focus-visible{
+  background:rgba(255,255,255,.10)!important;
+  box-shadow:none!important;
+  outline:none!important;
+}
+.drive-video-player-action:active{transform:scale(.96)}
+
+/* O vídeo continua sendo vídeo: ocupa o fundo, sem usar o banner do MP3. */
+.drive-video-player-video,
+.drive-video-player-frame-shell{
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+}
+.drive-video-player-shell::after,
+.drive-video-player-loading{
+  inset:0!important;
+}
+
+/* Inatividade continua exclusiva do player de vídeo do Drive. */
+.drive-video-player-overlay.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-center-controls,
+.drive-video-player-overlay.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-progress-area,
+.drive-video-player-overlay.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-actionbar{
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.drive-video-player-overlay.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-center-controls{
+  transform:translate(-50%,-50%) scale(.96)!important;
+}
+.drive-video-player-overlay.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-actionbar{
+  transform:translateX(-50%) translateY(8px)!important;
+}
+
+.drive-video-player-overlay.is-loading .drive-video-player-center-controls,
+.drive-video-player-overlay.is-loading .drive-video-player-progress-area{
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.drive-video-player-overlay.is-frame-mode .drive-video-player-center-controls,
+.drive-video-player-overlay.is-frame-mode .drive-video-player-progress-area,
+.drive-video-player-overlay.is-frame-mode .drive-video-player-volume{
+  display:none!important;
+}
+.drive-video-player-skip:disabled,
+.drive-video-player-toggle:disabled,
+.drive-video-player-progress:disabled,
+.drive-video-player-volume:disabled{
+  cursor:wait;
+  opacity:.42!important;
+}
+
+@media(max-width:700px){
+  .drive-video-player-overlay{--drive-video-actionbar-height:68px}
+  .drive-video-player-center-controls{gap:clamp(48px,14vw,92px)!important}
+  .drive-video-player-skip{width:66px!important;height:66px!important}
+  .drive-video-player-skip svg{width:58px!important;height:58px!important}
+  .drive-video-player-toggle{width:64px!important;height:64px!important}
+  .drive-video-player-toggle svg{width:50px!important;height:50px!important}
+  .drive-video-player-actionbar{
+    bottom:max(12px,env(safe-area-inset-bottom))!important;
+    height:54px!important;
+    padding:5px!important;
+    gap:4px!important;
+  }
+  .drive-video-player-action{width:44px!important;height:44px!important;flex-basis:44px!important}
+  .drive-video-player-progress-area{
+    left:max(16px,env(safe-area-inset-left))!important;
+    right:max(16px,env(safe-area-inset-right))!important;
+    bottom:calc(80px + max(8px,env(safe-area-inset-bottom)))!important;
+  }
+}

@@ -3961,10 +3961,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           <span class="drive-video-player-loader" aria-hidden="true"></span>
           <span class="drive-video-player-loading-message" id="driveVideoPlayerLoadingMessage" hidden></span>
         </div>
-        <button class="drive-video-player-toggle" id="driveVideoPlayerToggle" type="button" aria-label="Pausar" title="Pausar">
-          <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zm7 0h3v14h-3z"/></svg>
-          <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>
-        </button>
+        <div class="drive-video-player-center-controls" aria-label="Controles de reprodução">
+          <button class="drive-video-player-skip" id="driveVideoPlayerBack10" type="button" aria-label="Voltar 10 segundos" title="Voltar 10 segundos">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 18H8V6"/><path d="M10 18a24 24 0 1 1-2 18"/><text x="32" y="40">10</text></svg>
+          </button>
+          <button class="drive-video-player-toggle" id="driveVideoPlayerToggle" type="button" aria-label="Pausar" title="Pausar">
+            <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zm7 0h3v14h-3z"/></svg>
+            <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>
+          </button>
+          <button class="drive-video-player-skip" id="driveVideoPlayerForward10" type="button" aria-label="Avançar 10 segundos" title="Avançar 10 segundos">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M44 18h12V6"/><path d="M54 18a24 24 0 1 0 2 18"/><text x="32" y="40">10</text></svg>
+          </button>
+        </div>
         <div class="drive-video-player-progress-area">
           <input class="drive-video-player-progress" id="driveVideoPlayerProgress" type="range" min="0" max="1000" value="0" step="1" aria-label="Progresso do vídeo">
           <div class="drive-video-player-time"><span id="driveVideoPlayerCurrent">0:00</span><span aria-hidden="true">/</span><span id="driveVideoPlayerDuration">0:00</span></div>
@@ -4004,6 +4012,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const loading = document.getElementById('driveVideoPlayerLoading');
     const loadingMessage = document.getElementById('driveVideoPlayerLoadingMessage');
     const toggleButton = document.getElementById('driveVideoPlayerToggle');
+    const backButton = document.getElementById('driveVideoPlayerBack10');
+    const forwardButton = document.getElementById('driveVideoPlayerForward10');
     const progress = document.getElementById('driveVideoPlayerProgress');
     const currentLabel = document.getElementById('driveVideoPlayerCurrent');
     const durationLabel = document.getElementById('driveVideoPlayerDuration');
@@ -4011,7 +4021,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const volumeButton = document.getElementById('driveVideoPlayerVolume');
     const externalButton = document.getElementById('driveVideoPlayerExternal');
     const closeButton = document.getElementById('driveVideoPlayerClose');
-    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !loadingMessage || !toggleButton || !progress || !currentLabel || !durationLabel || !fullscreenButton || !volumeButton || !externalButton || !closeButton) return;
+    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !loadingMessage || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel || !fullscreenButton || !volumeButton || !externalButton || !closeButton) return;
 
     let activeFileId = '';
     let activeResourceKey = '';
@@ -4049,6 +4059,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const setInteractive = enabled => {
       const disabled = !enabled;
       toggleButton.disabled = disabled;
+      backButton.disabled = disabled;
+      forwardButton.disabled = disabled;
       volumeButton.disabled = disabled;
       progress.disabled = disabled;
     };
@@ -4260,10 +4272,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       openPlayer(fileId, googleDriveResourceKey(mediaUrl), { title });
     }, true);
 
+    backButton.addEventListener('click', () => {
+      if (frameMode || !mediaReady) return;
+      video.currentTime = Math.max(0, video.currentTime - 10);
+      syncState();
+      showControls(false);
+    });
     toggleButton.addEventListener('click', () => {
       if (frameMode || (!mediaReady && video.readyState < 2)) return;
       if (video.paused) requestPlayback();
       else video.pause();
+      showControls(false);
+    });
+    forwardButton.addEventListener('click', () => {
+      if (frameMode || !mediaReady) return;
+      const end = Number.isFinite(video.duration) ? video.duration : video.currentTime + 10;
+      video.currentTime = Math.min(end, video.currentTime + 10);
+      syncState();
       showControls(false);
     });
     volumeButton.addEventListener('click', () => {
