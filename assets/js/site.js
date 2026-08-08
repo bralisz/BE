@@ -5166,7 +5166,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       else video.pause();
     };
 
-    document.addEventListener('click', event => {
+    document.addEventListener('click', async event => {
       const link = event.target.closest('#contentDetailPlay');
       if (!link) return;
       const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
@@ -5175,13 +5175,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
       const linkedContent = contentDataFromElement(link);
       const detailBannerImage = document.querySelector('#contentDetailBg img');
-      const bannerUrl = link.dataset.bannerUrl
-        || linkedContent.bannerUrl
-        || link.dataset.imageUrl
-        || linkedContent.imageUrl
-        || detailBannerImage?.currentSrc
-        || detailBannerImage?.src
-        || '';
       const title = link.dataset.title || linkedContent.title || '';
 
       event.preventDefault();
@@ -5197,6 +5190,46 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         mediaUrl
       );
       if (inferredKind !== 'audio') return;
+
+      const firstValidBanner = (...values) => {
+        for (const value of values) {
+          const raw = String(value || '').trim();
+          if (!raw || raw === '#' || /^(?:null|undefined)$/i.test(raw)) continue;
+          const safe = safeAssetUrlValue(raw);
+          if (safe && safe !== '#') return raw;
+        }
+        return '';
+      };
+
+      let bannerUrl = firstValidBanner(
+        link.dataset.bannerUrl,
+        linkedContent.bannerUrl,
+        link.dataset.imageUrl,
+        linkedContent.imageUrl,
+        detailBannerImage?.currentSrc,
+        detailBannerImage?.src
+      );
+
+      // Se o botão não carregou o banner completo, busca a mídia vinculada
+      // diretamente no registro do conteúdo e usa a capa correspondente.
+      const recordId = String(link.dataset.recordId || linkedContent.recordId || '').trim();
+      const collection = String(link.dataset.collection || linkedContent.collection || 'videos').trim().toLowerCase() || 'videos';
+      if (recordId && window.beBackend?.data?.get) {
+        try {
+          const source = await window.beBackend.data.get(collection, recordId);
+          bannerUrl = firstValidBanner(
+            source?.bannerUrl,
+            source?.imageUrl,
+            source?.thumbnailUrl,
+            bannerUrl,
+            detailBannerImage?.currentSrc,
+            detailBannerImage?.src
+          );
+        } catch (_) {
+          // Mantém o melhor banner já encontrado no DOM.
+        }
+      }
+
       openPlayer(fileId, googleDriveResourceKey(mediaUrl), {
         bannerUrl,
         title,
