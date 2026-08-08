@@ -102,8 +102,16 @@
     return text.length>max?text.slice(0,max-1).trim()+'…':text;
   }
 
+  function normalizeNotificationUrlSource(value){
+    return String(value||'')
+      .trim()
+      .replace(/^<|>$/g,'')
+      .replace(/&amp;/gi,'&')
+      .replace(/\\([\\`*_{}\[\]()#+\-.!&=?])/g,'$1');
+  }
+
   function safeNotificationImageUrl(value){
-    var raw=String(value||'').trim().replace(/^<|>$/g,'');
+    var raw=normalizeNotificationUrlSource(value);
     if(!raw||/[\u0000-\u001f\u007f]/.test(raw))return '';
     try{
       var parsed=new URL(raw,location.origin);
@@ -113,15 +121,29 @@
     }catch(_){return '';}
   }
 
+  function isDiscordNotificationImageUrl(value){
+    var safeUrl=safeNotificationImageUrl(value);
+    if(!safeUrl)return false;
+    try{
+      var parsed=new URL(safeUrl);
+      var host=String(parsed.hostname||'').toLowerCase();
+      if(host!=='cdn.discordapp.com'&&host!=='media.discordapp.net')return false;
+      return /\.(?:png|jpe?g)$/i.test(parsed.pathname||'');
+    }catch(_){return false;}
+  }
+
   function replaceNotificationImageMarkdown(value,onImage){
-    // Exclusivo das notificações. Aceita:
-    // [](https://site/imagem.png) e ![](https://site/imagem.png)
-    // Também aceita a forma tradicional ![descrição](https://site/imagem.png).
-    var pattern=/(?:!\[([^\]\r\n]*)\]|\[\s*\])\(\s*(?:<([^>\r\n]+)>|([^\s)\r\n]+))\s*(?:["']([^"'\r\n]*)["'])?\s*\)/g;
-    return String(value||'').replace(pattern,function(match,alt,angleUrl,plainUrl){
+    var pattern=/(!?)\[([^\]\r\n]*)\]\(\s*(?:<([^>\r\n]+)>|([^\s)\r\n]+))\s*(?:["']([^"'\r\n]*)["'])?\s*\)/g;
+    return String(value||'').replace(pattern,function(match,bang,label,angleUrl,plainUrl){
       var safeUrl=safeNotificationImageUrl(angleUrl||plainUrl||'');
       if(!safeUrl)return match;
-      return onImage(safeUrl,String(alt||'').trim());
+      var isExplicitImage=bang==='!';
+      var isEmptyLink=!String(label||'').trim();
+      var isDiscordImage=isDiscordNotificationImageUrl(safeUrl);
+      if(!isExplicitImage&&!isEmptyLink&&!isDiscordImage)return match;
+      var alt=String(label||'').trim();
+      if(/^https?:\/\//i.test(normalizeNotificationUrlSource(alt)))alt='';
+      return onImage(safeUrl,alt);
     });
   }
 
@@ -131,18 +153,84 @@
     return proxy&&proxy!=='#'&&proxy!==value?proxy:'';
   }
 
+  function linkifyNotificationHtml(html){
+    if(!html||!document.createElement)return html;
+    var template=document.createElement('template');
+    template.innerHTML=String(html);
+    var walker=document.createTreeWalker(template.content,NodeFilter.SHOW_TEXT);
+    var nodes=[];
+    var node;
+    while((node=walker.nextNode()))nodes.push(node);
+    nodes.forEach(function(textNode){
+      var parent=textNode.parentElement;
+      if(!parent||parent.closest('a,code,pre'))return;
+      var text=String(textNode.nodeValue||'');
+      var pattern=/https?:\/\/[^\s<>"']+/gi;
+      var match;
+      var lastIndex=0;
+      var fragment=null;
+      while((match=pattern.exec(text))){
+        var raw=match[0];
+        var trailing='';
+        while(/[.,!?;:]$/.test(raw)){trailing=raw.slice(-1)+trailing;raw=raw.slice(0,-1);}
+        while(/\)$/.test(raw)){
+          var opens=(raw.match(/\(/g)||[]).length;
+          var closes=(raw.match(/\)/g)||[]).length;
+          if(closes<=opens)break;
+          trailing=')'+trailing;
+          raw=raw.slice(0,-1);
+        }
+        var safeUrl=safeNotificationImageUrl(raw);
+        if(!safeUrl)continue;
+        if(!fragment)fragment=document.createDocumentFragment();
+        fragment.append(document.createTextNode(text.slice(lastIndex,match.index)));
+        if(isDiscordNotificationImageUrl(safeUrl)){
+          var imageLink=document.createElement('a');
+          imageLink.className='notification-markdown-image notification-discord-image';
+          imageLink.href=safeUrl;
+          imageLink.target='_blank';
+          imageLink.rel='noopener noreferrer';
+          imageLink.setAttribute('aria-label','Abrir imagem em tamanho completo');
+          var image=document.createElement('img');
+          image.loading='lazy';
+          image.decoding='async';
+          image.referrerPolicy='no-referrer';
+          image.src=safeUrl;
+          image.alt='Imagem da notificação';
+          imageLink.append(image);
+          fragment.append(imageLink);
+        }else{
+          var link=document.createElement('a');
+          link.className='notification-inline-link';
+          link.href=safeUrl;
+          link.target='_blank';
+          link.rel='noopener noreferrer';
+          link.textContent=raw;
+          fragment.append(link);
+        }
+        if(trailing)fragment.append(document.createTextNode(trailing));
+        lastIndex=match.index+match[0].length;
+      }
+      if(!fragment)return;
+      fragment.append(document.createTextNode(text.slice(lastIndex)));
+      textNode.replaceWith(fragment);
+    });
+    return template.innerHTML;
+  }
+
   function renderNotificationMarkdown(value){
     var images=[];
     var source=replaceNotificationImageMarkdown(value,function(safeUrl,alt){
       var token='BETVNOTIFICATIONIMAGE'+images.length+'TOKEN';
-      var fallbackUrl=notificationImageProxyUrl(safeUrl);
+      var fallbackUrl=isDiscordNotificationImageUrl(safeUrl)?'':notificationImageProxyUrl(safeUrl);
       images.push('<a class="notification-markdown-image" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagem em tamanho completo">'+
-        '<img loading="lazy" decoding="async" src="'+esc(safeUrl)+'"'+(fallbackUrl?' data-notification-fallback-src="'+esc(fallbackUrl)+'"':'')+' alt="'+esc(alt||'Imagem da notificação')+'">'+
+        '<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(safeUrl)+'"'+(fallbackUrl?' data-notification-fallback-src="'+esc(fallbackUrl)+'"':'')+' alt="'+esc(alt||'Imagem da notificação')+'">'+
       '</a>');
       return token;
     });
     var html=window.beRenderMarkdown?window.beRenderMarkdown(source):esc(source).replace(/\r?\n/g,'<br>');
-    return html.replace(/BETVNOTIFICATIONIMAGE(\d+)TOKEN/g,function(_,index){return images[Number(index)]||'';});
+    html=html.replace(/BETVNOTIFICATIONIMAGE(\d+)TOKEN/g,function(_,index){return images[Number(index)]||'';});
+    return linkifyNotificationHtml(html);
   }
 
   function bindNotificationImages(root){
@@ -156,8 +244,25 @@
     });
   }
 
+  function stripRawDiscordNotificationImages(value){
+    return String(value||'').replace(/https?:\/\/[^\s<>"']+/gi,function(match){
+      var raw=match;
+      var trailing='';
+      while(/[.,!?;:]$/.test(raw)){trailing=raw.slice(-1)+trailing;raw=raw.slice(0,-1);}
+      while(/\)$/.test(raw)){
+        var opens=(raw.match(/\(/g)||[]).length;
+        var closes=(raw.match(/\)/g)||[]).length;
+        if(closes<=opens)break;
+        trailing=')'+trailing;
+        raw=raw.slice(0,-1);
+      }
+      return isDiscordNotificationImageUrl(raw)?(' '+trailing):match;
+    });
+  }
+
   function notificationPlainText(value){
     var source=replaceNotificationImageMarkdown(value,function(){return ' ';});
+    source=stripRawDiscordNotificationImages(source);
     return window.beMarkdownPlainText?window.beMarkdownPlainText(source):source.replace(/\s+/g,' ').trim();
   }
 

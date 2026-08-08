@@ -10723,8 +10723,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return text.length>max?text.slice(0,max-1).trim()+'…':text;
   }
 
+  function normalizeNotificationUrlSource(value){
+    return String(value||'')
+      .trim()
+      .replace(/^<|>$/g,'')
+      .replace(/&amp;/gi,'&')
+      // Markdown costuma escapar & em links copiados como \&. Isso quebra a assinatura do Discord.
+      .replace(/\\([\\`*_{}\[\]()#+\-.!&=?])/g,'$1');
+  }
+
   function safeNotificationImageUrl(value){
-    var raw=String(value||'').trim().replace(/^<|>$/g,'');
+    var raw=normalizeNotificationUrlSource(value);
     if(!raw||/[\u0000-\u001f\u007f]/.test(raw))return '';
     try{
       var parsed=new URL(raw,location.origin);
@@ -10747,13 +10756,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function replaceNotificationImageMarkdown(value,onImage){
     // Exclusivo das notificações. Aceita:
-    // [](https://site/imagem.png) e ![](https://site/imagem.png)
-    // Também aceita a forma tradicional ![descrição](https://site/imagem.png).
-    var pattern=/(?:!\[([^\]\r\n]*)\]|\[\s*\])\(\s*(?:<([^>\r\n]+)>|([^\s)\r\n]+))\s*(?:["']([^"'\r\n]*)["'])?\s*\)/g;
-    return String(value||'').replace(pattern,function(match,alt,angleUrl,plainUrl){
+    // [](https://site/imagem.png), ![](https://site/imagem.png) e ![descrição](...).
+    // Para imagens do Discord também aceita [https://.../imagem.png?...](https://.../imagem.png?...)
+    // e [qualquer texto](https://.../imagem.jpg?...).
+    var pattern=/(!?)\[([^\]\r\n]*)\]\(\s*(?:<([^>\r\n]+)>|([^\s)\r\n]+))\s*(?:["']([^"'\r\n]*)["'])?\s*\)/g;
+    return String(value||'').replace(pattern,function(match,bang,label,angleUrl,plainUrl){
       var safeUrl=safeNotificationImageUrl(angleUrl||plainUrl||'');
       if(!safeUrl)return match;
-      return onImage(safeUrl,String(alt||'').trim());
+      var isExplicitImage=bang==='!';
+      var isEmptyLink=!String(label||'').trim();
+      var isDiscordImage=isDiscordNotificationImageUrl(safeUrl);
+      if(!isExplicitImage&&!isEmptyLink&&!isDiscordImage)return match;
+      var alt=String(label||'').trim();
+      if(/^https?:\/\//i.test(normalizeNotificationUrlSource(alt)))alt='';
+      return onImage(safeUrl,alt);
     });
   }
 
@@ -10807,9 +10823,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           var image=document.createElement('img');
           image.loading='lazy';
           image.decoding='async';
+          image.referrerPolicy='no-referrer';
           image.src=safeUrl;
           image.alt='Imagem da notificação';
-          var imageFallback=notificationImageProxyUrl(safeUrl);
+          var imageFallback=isDiscordNotificationImageUrl(safeUrl)?'':notificationImageProxyUrl(safeUrl);
           if(imageFallback)image.setAttribute('data-notification-fallback-src',imageFallback);
           imageLink.append(image);
           fragment.append(imageLink);
@@ -10836,9 +10853,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var images=[];
     var source=replaceNotificationImageMarkdown(value,function(safeUrl,alt){
       var token='BETVNOTIFICATIONIMAGE'+images.length+'TOKEN';
-      var fallbackUrl=notificationImageProxyUrl(safeUrl);
+      var fallbackUrl=isDiscordNotificationImageUrl(safeUrl)?'':notificationImageProxyUrl(safeUrl);
       images.push('<a class="notification-markdown-image" href="'+esc(safeUrl)+'" target="_blank" rel="noopener noreferrer" aria-label="Abrir imagem em tamanho completo">'+
-        '<img loading="lazy" decoding="async" src="'+esc(safeUrl)+'"'+(fallbackUrl?' data-notification-fallback-src="'+esc(fallbackUrl)+'"':'')+' alt="'+esc(alt||'Imagem da notificação')+'">'+
+        '<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(safeUrl)+'"'+(fallbackUrl?' data-notification-fallback-src="'+esc(fallbackUrl)+'"':'')+' alt="'+esc(alt||'Imagem da notificação')+'">'+
       '</a>');
       return token;
     });
