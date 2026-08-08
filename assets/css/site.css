@@ -14059,3 +14059,24 @@ body.profile-page-active .profile-page-hero{
     padding-top:34px!important;
   }
 }
+
+/* =========================================================
+   08/08/2026 — limpeza do boot do player do Google Drive.
+   Evita que a barra/base anterior apareça por um instante enquanto
+   o MP4 ainda está sincronizando com o Drive.
+   ========================================================= */
+.drive-video-player-overlay.is-source-syncing .drive-video-player-actionbar,
+.drive-video-player-overlay.is-source-syncing .drive-video-player-action-wake-zone{
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+
+/* Proteção para a base genérica (mantida para MP3/compatibilidade):
+   durante um carregamento que não seja áudio, não mostra os antigos
+   controles inferiores antes de o provedor/modo definitivo assumir. */
+.drive-player-overlay.is-loading:not(.is-audio-mode) .drive-player-top-controls{
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
