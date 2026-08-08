@@ -1246,7 +1246,10 @@ document.head.appendChild(s);
     const safe = esc(value);
     const directMedia = options.directMedia === true;
     const previewSource = directMedia ? String(value || '').trim() : media(value);
-    return `<div class="field full image-url-field"${directMedia ? ' data-direct-media="true"' : ''}><label>${label}</label><div class="image-source-hint">Cole uma URL pública (https://...) ou use um arquivo publicado em <code>/assets/...</code>.</div><div class="image-input-row"><input class="a-input image-url-input" name="${name}" value="${safe}" placeholder="/assets/banners/exemplo.webp ou https://..."><button class="a-btn image-clear" type="button">Limpar</button></div><div class="image-validation" aria-live="polite"></div><div class="image-preview-wrap" ${value ? '' : 'hidden'}><img loading="lazy" decoding="async" referrerpolicy="no-referrer" class="preview image-live-preview" src="${esc(previewSource)}" alt="Prévia de ${esc(label)}"></div></div>`;
+    const festivalsShowsOnly = options.festivalsShowsOnly === true;
+    const hidden = options.hidden === true;
+    const help = String(options.help || '').trim();
+    return `<div class="field full image-url-field"${directMedia ? ' data-direct-media="true"' : ''}${festivalsShowsOnly ? ' data-festivals-shows-logo-field' : ''}${hidden ? ' hidden' : ''}><label>${label}</label><div class="image-source-hint">Cole uma URL pública (https://...) ou use um arquivo publicado em <code>/assets/...</code>.</div><div class="image-input-row"><input class="a-input image-url-input" name="${name}" value="${safe}" placeholder="/assets/banners/exemplo.webp ou https://..."><button class="a-btn image-clear" type="button">Limpar</button></div><div class="image-validation" aria-live="polite"></div><div class="image-preview-wrap" ${value ? '' : 'hidden'}><img loading="lazy" decoding="async" referrerpolicy="no-referrer" class="preview image-live-preview" src="${esc(previewSource)}" alt="Prévia de ${esc(label)}"></div>${help ? `<small>${esc(help)}</small>` : ''}</div>`;
   }
 
   function editorFields(name, item = {}, context = {}) {
@@ -1569,6 +1572,20 @@ document.head.appendChild(s);
     </div>`;
   }
 
+  function isFestivalsShowsSection(section) {
+    const source = typeof section === 'string'
+      ? section
+      : [section?.title, section?.category, section?.slug, section?.sectionName, section?.sectionSearch, section?.type].filter(Boolean).join(' ');
+    const normalized = String(source || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+    return /\bfestivals?\b/.test(normalized) && /\bshows?\b/.test(normalized);
+  }
+
   function modernContentEditorFields(name, item = {}, context = {}) {
     if (name === 'news') return albumContentEditorFields(item);
     const sections = context.sections || [];
@@ -1580,6 +1597,7 @@ document.head.appendChild(s);
     });
     const sectionOptions = sections.map(section => `<option value="${esc(section.title || section.category || section.id)}"></option>`).join('');
     const publicId = normalizePublicId(item.publicId) || generatePublicId(item.id || '');
+    const festivalsShowsVideo = name === 'videos' && isFestivalsShowsSection(currentSection || item);
     const categoryName = LABELS[name] || 'Conteúdo';
 
     return `<div class="content-editor-fields">
@@ -1597,6 +1615,7 @@ document.head.appendChild(s);
         <div class="form-grid modern-form-grid">
           ${imageField(isVisualTitle ? 'Imagem / thumbnail *' : 'Imagem / thumbnail *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
+          ${name === 'videos' ? imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. A logo aparece somente ao abrir os detalhes do conteúdo e não é exibida nos cards.' }) : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
         </div>
       </section>
@@ -1688,7 +1707,8 @@ document.head.appendChild(s);
       const descriptionText = fieldValue('description') || 'A descrição aparecerá aqui conforme você digitar.';
       setPreviewImage(hero, image, '');
       setPreviewImage(previewCard, image, 'Imagem do conteúdo');
-      if (['movies','series'].includes(name) && logo) {
+      const festivalDetailLogo = name === 'videos' && isFestivalsShowsSection(fieldValue('sectionSearch'));
+      if ((['movies','series'].includes(name) || festivalDetailLogo) && logo) {
         previewLogo.innerHTML = `<img loading="lazy" decoding="async" src="${esc(media(logo))}" alt="${esc(title)}">`;
       } else {
         previewLogo.textContent = title;
@@ -1913,6 +1933,10 @@ document.head.appendChild(s);
         const match = context.sections.find(section => [section.title, section.category, section.slug, section.id].some(value => normalize(value) === typed));
         hidden.value = match ? match.id : '';
         search.setCustomValidity(match ? '' : 'Selecione uma seção criada em Seções do site.');
+        if (name === 'videos') {
+          const logoField = $('[data-festivals-shows-logo-field]', root);
+          if (logoField) logoField.hidden = !isFestivalsShowsSection(match || search.value);
+        }
       };
       search.addEventListener('input', syncSection);
       search.addEventListener('change', syncSection);
@@ -2011,6 +2035,7 @@ document.head.appendChild(s);
           data.sectionName = String(selected.title || selected.category || selected.id).trim();
           data.category = String(selected.category || selected.slug || selected.id).trim().toLowerCase();
           data.type = data.sectionName;
+          if (name === 'videos' && !isFestivalsShowsSection(selected)) data.logoUrl = '';
           delete data.sectionSearch;
         }
         if (name === 'videos') {

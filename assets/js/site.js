@@ -3055,6 +3055,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ? image
       : (video.bannerUrl || video.imageUrl || video.thumbnailUrl || '');
     const logo = video.logoUrl || '';
+    const showCardLogo = ['movies', 'series'].includes(String(collection).toLowerCase()) && logo && logo !== '#';
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
     const routeHref = detailRoutePath(itemId);
@@ -3078,7 +3079,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-section-name="${escapeHtml(String(video.sectionName || ''))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}">
       <img class="video-card-thumbnail" src="${safeAssetUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
-      ${logo && logo !== '#' ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
+      ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
     </a>`;
   }
 

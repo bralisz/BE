@@ -523,6 +523,7 @@
       ? image
       : (video.bannerUrl || video.imageUrl || video.thumbnailUrl || '');
     const logo = video.logoUrl || '';
+    const showCardLogo = ['movies', 'series'].includes(String(collection).toLowerCase()) && logo && logo !== '#';
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
     const routeHref = detailRoutePath(itemId);
@@ -542,7 +543,7 @@
       data-category="${escapeHtml(normalizeText(category))}"
       data-collection="${escapeHtml(normalizeText(collection))}">
       <img class="video-card-thumbnail" src="${safeUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
-      ${logo && logo !== '#' ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
+      ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
     </a>`;
   }
 
