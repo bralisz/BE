@@ -4031,9 +4031,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let mediaReady = false;
     let frameMode = false;
     let fallbackTimer = 0;
+    let driveWarmupTimer = 0;
     let inactivityTimer = 0;
     let controlsInteracting = false;
     let openingToken = 0;
+    let drivePreviewReady = false;
+    let sourceRetryCount = 0;
 
     const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
     const ownsFullscreen = () => {
@@ -4043,8 +4046,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const clearTimers = () => {
       window.clearTimeout(fallbackTimer);
+      window.clearTimeout(driveWarmupTimer);
       window.clearTimeout(inactivityTimer);
       fallbackTimer = 0;
+      driveWarmupTimer = 0;
       inactivityTimer = 0;
     };
 
@@ -4063,6 +4068,41 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       forwardButton.disabled = disabled;
       volumeButton.disabled = disabled;
       progress.disabled = disabled;
+    };
+
+    const finishSynchronizedReady = () => {
+      if (overlay.hidden || !mediaReady || !drivePreviewReady) return;
+      window.clearTimeout(fallbackTimer);
+      overlay.classList.remove('is-error', 'is-drive-warming', 'is-source-syncing');
+      frameShell.hidden = true;
+      setLoading('', false);
+      setInteractive(true);
+      syncState();
+      showControls(false);
+    };
+
+    const markDrivePreviewReady = () => {
+      if (overlay.hidden || drivePreviewReady) return;
+      drivePreviewReady = true;
+      window.clearTimeout(driveWarmupTimer);
+      driveWarmupTimer = 0;
+      overlay.classList.remove('is-drive-warming');
+      if (mediaReady) finishSynchronizedReady();
+      else if (!overlay.classList.contains('is-error')) setLoading('Sincronizando vídeo com o player...', true);
+    };
+
+    const warmupDrivePreview = () => {
+      if (!activeFileId || overlay.hidden) return;
+      drivePreviewReady = false;
+      overlay.classList.add('is-drive-warming', 'is-source-syncing');
+      frameShell.hidden = false;
+      frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
+      window.clearTimeout(driveWarmupTimer);
+      driveWarmupTimer = window.setTimeout(() => {
+        // O carregamento do iframe pode não emitir load em alguns navegadores,
+        // então liberamos a sincronização após a janela de preparação.
+        markDrivePreviewReady();
+      }, 12000);
     };
 
     const syncFullscreen = () => {
@@ -4114,74 +4154,70 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const markReady = () => {
       if (overlay.hidden || frameMode) return;
       mediaReady = true;
-      window.clearTimeout(fallbackTimer);
       overlay.classList.remove('is-error');
-      setLoading('', false);
-      setInteractive(true);
       syncState();
-      showControls(false);
+      if (drivePreviewReady) finishSynchronizedReady();
+      else {
+        setInteractive(false);
+        setLoading('Sincronizando com o Google Drive...', true);
+      }
     };
 
-    const useFrameFallback = () => {
-      if (!activeFileId || overlay.hidden || frameMode) return;
-      frameMode = true;
+    const showSourceError = () => {
+      if (overlay.hidden) return;
       mediaReady = false;
-      streamAttempt = 'frame';
-      window.clearTimeout(fallbackTimer);
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
-      frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
-      frameShell.hidden = false;
-      overlay.classList.add('is-frame-mode');
-      setLoading('', false);
+      frameMode = false;
+      frameShell.hidden = true;
+      overlay.classList.remove('is-drive-warming', 'is-source-syncing');
+      overlay.classList.add('is-error');
       setInteractive(false);
-      showControls(false);
+      setLoading('Não foi possível sincronizar este vídeo do Google Drive.', true);
+      showControls(true);
     };
 
-    const tryDirectStream = () => {
-      if (!activeFileId || overlay.hidden || frameMode || streamAttempt === 'direct') return;
-      mediaReady = false;
-      streamAttempt = 'direct';
-      setInteractive(false);
-      setLoading('Aguardando o Google Drive liberar o vídeo...');
-      video.pause();
-      video.src = googleDriveDirectStreamUrl(activeFileId, activeResourceKey);
-      video.load();
-      requestPlayback();
-      window.clearTimeout(fallbackTimer);
-      fallbackTimer = window.setTimeout(useFrameFallback, 18000);
-    };
-
-    const proxyStreamUrl = (fileId, resourceKey = '', retry = false) => {
+    const proxyStreamUrl = (fileId, resourceKey = '', retryIndex = 0) => {
       const url = new URL(googleDriveStreamUrl(fileId, resourceKey), location.origin);
-      if (retry) url.searchParams.set('retry', String(Date.now()));
+      if (retryIndex > 0) url.searchParams.set('retry', `${Date.now()}-${retryIndex}`);
       return `${url.pathname}${url.search}`;
     };
 
-    const loadProxyStream = (retry = false) => {
-      if (!activeFileId || overlay.hidden || frameMode) return;
-      mediaReady = false;
-      streamAttempt = retry ? 'proxy-retry' : 'proxy';
+    const loadSourceAttempt = () => {
+      if (!activeFileId || overlay.hidden || frameMode || mediaReady) return;
+      sourceRetryCount += 1;
+      const attempt = sourceRetryCount;
       setInteractive(false);
-      setLoading(retry ? 'Tentando carregar o vídeo novamente...' : 'Carregando vídeo do Google Drive...');
+      overlay.classList.add('is-source-syncing');
+
       video.pause();
-      video.src = proxyStreamUrl(activeFileId, activeResourceKey, retry);
+      if (attempt <= 4) {
+        streamAttempt = `proxy-${attempt}`;
+        setLoading(drivePreviewReady ? 'Sincronizando vídeo com o player...' : 'Preparando vídeo no Google Drive...');
+        video.src = proxyStreamUrl(activeFileId, activeResourceKey, attempt - 1);
+      } else if (attempt === 5) {
+        streamAttempt = 'direct';
+        setLoading('Finalizando sincronização do vídeo...');
+        video.src = googleDriveDirectStreamUrl(activeFileId, activeResourceKey);
+      } else {
+        showSourceError();
+        return;
+      }
+
       video.load();
       requestPlayback();
       window.clearTimeout(fallbackTimer);
+      const wait = attempt <= 2 ? 14000 : (attempt <= 4 ? 18000 : 16000);
       fallbackTimer = window.setTimeout(() => {
         if (mediaReady || overlay.hidden || frameMode) return;
-        if (!retry) loadProxyStream(true);
-        else tryDirectStream();
-      }, retry ? 22000 : 16000);
+        loadSourceAttempt();
+      }, wait);
     };
 
     const handleStreamFailure = () => {
       if (overlay.hidden || frameMode || mediaReady) return;
-      if (streamAttempt === 'proxy') loadProxyStream(true);
-      else if (streamAttempt === 'proxy-retry') tryDirectStream();
-      else useFrameFallback();
+      window.clearTimeout(fallbackTimer);
+      // Enquanto o preview do Drive prepara o arquivo, continuamos tentando
+      // obter o MP4 para o player HTML5 fixo do site.
+      window.setTimeout(loadSourceAttempt, drivePreviewReady ? 350 : 900);
     };
 
     const closePlayer = (restoreFocus = true) => {
@@ -4209,6 +4245,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       mediaReady = false;
       frameMode = false;
+      drivePreviewReady = false;
+      sourceRetryCount = 0;
       progress.value = '0';
       progress.style.setProperty('--drive-video-progress', '0%');
       currentLabel.textContent = '0:00';
@@ -4230,17 +4268,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       mediaReady = false;
       frameMode = false;
+      drivePreviewReady = false;
+      sourceRetryCount = 0;
       frameShell.hidden = true;
       frame.src = 'about:blank';
       frame.title = context?.title ? `Google Drive — ${String(context.title).trim()}` : 'Reprodutor de vídeo do Google Drive';
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
-      overlay.className = 'drive-video-player-overlay is-open is-paused';
+      overlay.className = 'drive-video-player-overlay is-open is-paused is-source-syncing';
       document.body.classList.add('drive-video-player-open');
       setInteractive(false);
-      setLoading('Carregando vídeo do Google Drive...');
+      setLoading('Preparando vídeo no Google Drive...');
       syncFullscreen();
-      loadProxyStream(false);
+      warmupDrivePreview();
+      loadSourceAttempt();
       window.setTimeout(() => {
         if (token === openingToken && !overlay.hidden) showControls(false);
       }, 50);
@@ -4342,6 +4383,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (frameMode || event.target.closest('button,input,iframe')) return;
       if (video.paused) requestPlayback();
       else video.pause();
+    });
+
+    frame.addEventListener('load', () => {
+      if (overlay.hidden || !activeFileId || frame.src === 'about:blank') return;
+      markDrivePreviewReady();
     });
 
     video.addEventListener('loadstart', () => {

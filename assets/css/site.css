@@ -13781,3 +13781,35 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
     bottom:calc(80px + max(8px,env(safe-area-inset-bottom)))!important;
   }
 }
+
+/* MP4 do Drive — o preview nativo aquece em segundo plano; a interface fixa é a do site. */
+.drive-video-player-overlay.is-drive-warming .drive-video-player-frame-shell,
+.drive-video-player-overlay.is-source-syncing .drive-video-player-frame-shell{
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  z-index:0!important;
+}
+.drive-video-player-overlay.is-drive-warming .drive-video-player-frame,
+.drive-video-player-overlay.is-source-syncing .drive-video-player-frame{
+  pointer-events:none!important;
+}
+.drive-video-player-overlay.is-source-syncing .drive-video-player-video{
+  opacity:0!important;
+}
+.drive-video-player-overlay.is-source-syncing .drive-video-player-shell{
+  background:#000!important;
+}
+.drive-video-player-overlay.is-source-syncing .drive-video-player-actionbar{
+  opacity:1!important;
+  pointer-events:auto!important;
+}
+.drive-video-player-overlay.is-source-syncing .drive-video-player-center-controls,
+.drive-video-player-overlay.is-source-syncing .drive-video-player-progress-area{
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.drive-video-player-overlay.is-error .drive-video-player-actionbar{
+  opacity:1!important;
+  pointer-events:auto!important;
+}
