@@ -12,7 +12,7 @@ const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUB
 const SETTINGS_CACHE_TTL_MS = 60000;
 const SEO_CATALOG_CACHE_TTL_MS = 60000;
 const SEO_CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents', 'news']);
-const I18N_REV = '20260808-community-fans-i18n-v3';
+const I18N_REV = '20260808-community-guidelines-v1';
 const LOCALIZED_ROUTE_SLUGS = Object.freeze({
   'pt-br': Object.freeze({ '/comunidade': '/comunidade', '/fãs': '/fãs' }),
   'en-us': Object.freeze({ '/comunidade': '/community', '/fãs': '/fans' }),
@@ -416,8 +416,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       privacyTitle: `Política de Privacidade | ${siteTitle}`,
       cookiesTitle: `Política de Cookies | ${siteTitle}`,
       dmcaTitle: `DMCA e direitos autorais | ${siteTitle}`,
-      communityTitle: `Comunidade | ${siteTitle}`,
-      communityDescription: 'Saiba como fãs e comunidades podem apoiar a Billie Eilish TV, divulgar o projeto e aparecer na página de fãs.',
+      communityTitle: `Diretrizes da Comunidade | ${siteTitle}`,
+      communityDescription: 'Confira as diretrizes da página de fãs da Billie Eilish TV, como perfis e comunidades podem aparecer, quais informações públicas podem ser exibidas e como solicitar remoção.',
       fansTitle: `Fãs que ajudaram o site | ${siteTitle}`,
       fansDescription: 'Conheça fãs e comunidades que ajudam a Billie Eilish TV divulgando e apoiando o projeto.',
       fanProject: 'Projeto de fãs não oficial dedicado a organizar conteúdo e informações sobre Billie Eilish.'
@@ -439,8 +439,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       privacyTitle: `Privacy Policy | ${siteTitle}`,
       cookiesTitle: `Cookie Policy | ${siteTitle}`,
       dmcaTitle: `DMCA and copyright | ${siteTitle}`,
-      communityTitle: `Community | ${siteTitle}`,
-      communityDescription: 'Learn how fans and communities can support Billie Eilish TV, share the project and appear on the fan page.',
+      communityTitle: `Community Guidelines | ${siteTitle}`,
+      communityDescription: 'Read the Billie Eilish TV fan page guidelines, including how profiles and communities may be featured, what public information may be shown, and how to request removal.',
       fansTitle: `Fans who helped the site | ${siteTitle}`,
       fansDescription: 'Meet fans and communities that help Billie Eilish TV by sharing and supporting the project.',
       fanProject: 'Unofficial fan-made project dedicated to organizing content and information about Billie Eilish.'
@@ -462,8 +462,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       privacyTitle: `Política de privacidad | ${siteTitle}`,
       cookiesTitle: `Política de cookies | ${siteTitle}`,
       dmcaTitle: `DMCA y derechos de autor | ${siteTitle}`,
-      communityTitle: `Comunidad | ${siteTitle}`,
-      communityDescription: 'Descubre cómo fans y comunidades pueden apoyar Billie Eilish TV, compartir el proyecto y aparecer en la página de fans.',
+      communityTitle: `Directrices de la comunidad | ${siteTitle}`,
+      communityDescription: 'Consulta las directrices de la página de fans de Billie Eilish TV, cómo pueden aparecer perfiles y comunidades, qué información pública puede mostrarse y cómo solicitar su eliminación.',
       fansTitle: `Fans que ayudaron al sitio | ${siteTitle}`,
       fansDescription: 'Conoce a fans y comunidades que ayudan a Billie Eilish TV compartiendo y apoyando el proyecto.',
       fanProject: 'Proyecto no oficial creado por fans para organizar contenido e información sobre Billie Eilish.'
