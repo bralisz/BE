@@ -12797,3 +12797,205 @@ body.site-loading-active.donate-page-active > footer{
   pointer-events:none!important;
 }
 
+
+/* Players externos isolados v1: YouTube e VK usam DOM, estilos e iframes próprios. */
+body.external-video-player-open{overflow:hidden!important;overscroll-behavior:none}
+
+.youtube-player-overlay,
+.vk-player-overlay{
+  position:fixed;
+  inset:0;
+  z-index:2147483100;
+  color:#fff;
+}
+.youtube-player-overlay[hidden],
+.vk-player-overlay[hidden]{display:none!important}
+
+/* YouTube: player independente com barra minimalista e identidade vermelha. */
+.youtube-player-overlay{background:#000}
+.youtube-player-shell{
+  position:relative;
+  width:100%;
+  height:100%;
+  height:100dvh;
+  display:grid;
+  grid-template-rows:58px minmax(0,1fr);
+  overflow:hidden;
+  background:#000;
+  isolation:isolate;
+}
+.youtube-player-toolbar{
+  position:relative;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:0 max(12px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));
+  border-bottom:1px solid rgba(255,255,255,.08);
+  background:rgba(8,8,8,.96);
+}
+.youtube-player-brand{display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:700;letter-spacing:.01em;color:#fff}
+.youtube-player-brand i{width:10px;height:10px;border-radius:50%;background:#ff0033;box-shadow:0 0 0 5px rgba(255,0,51,.12)}
+.youtube-player-actions{display:flex;align-items:center;gap:7px}
+.youtube-player-action{
+  appearance:none;
+  width:42px;
+  height:42px;
+  margin:0;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:50%;
+  color:#fff;
+  background:rgba(255,255,255,.07);
+  cursor:pointer;
+}
+.youtube-player-action:hover,.youtube-player-action:focus-visible{background:rgba(255,255,255,.15);outline:none}
+.youtube-player-action svg{width:23px;height:23px}
+.youtube-player-close{border-color:rgba(255,0,51,.24);background:rgba(255,0,51,.12)}
+.youtube-player-frame-shell{position:relative;min-height:0;overflow:hidden;background:#000}
+.youtube-player-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+
+/* VK Video: player independente com barra azul e iframe nativo do VK. */
+.vk-player-overlay{background:#080d16}
+.vk-player-shell{
+  position:relative;
+  width:100%;
+  height:100%;
+  height:100dvh;
+  display:grid;
+  grid-template-rows:64px minmax(0,1fr);
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 0,#13243c 0,#080d16 42%,#05070b 100%);
+  isolation:isolate;
+}
+.vk-player-toolbar{
+  position:relative;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:0 max(14px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));
+  border-bottom:1px solid rgba(74,142,255,.18);
+  background:rgba(12,20,33,.92);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+.vk-player-brand{display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:650;color:rgba(255,255,255,.9)}
+.vk-player-brand strong{display:grid;place-items:center;min-width:35px;height:29px;padding:0 8px;border-radius:9px;background:#2787f5;color:#fff;font-size:13px;letter-spacing:-.02em}
+.vk-player-actions{display:flex;align-items:center;gap:8px}
+.vk-player-action{
+  appearance:none;
+  width:43px;
+  height:43px;
+  margin:0;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(111,166,255,.17);
+  border-radius:13px;
+  color:#fff;
+  background:rgba(39,135,245,.1);
+  cursor:pointer;
+}
+.vk-player-action:hover,.vk-player-action:focus-visible{background:rgba(39,135,245,.22);outline:none}
+.vk-player-action svg{width:23px;height:23px}
+.vk-player-close{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1)}
+.vk-player-frame-shell{position:relative;min-height:0;overflow:hidden;background:#000}
+.vk-player-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+
+@media(max-width:700px){
+  .youtube-player-shell{grid-template-rows:52px minmax(0,1fr)}
+  .vk-player-shell{grid-template-rows:56px minmax(0,1fr)}
+  .youtube-player-toolbar,.vk-player-toolbar{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right))}
+  .youtube-player-action,.vk-player-action{width:40px;height:40px}
+  .youtube-player-brand{font-size:13px}
+  .vk-player-brand{font-size:13px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .youtube-player-action,.vk-player-action{transition:none!important}
+}
+
+
+/* =========================================================
+   Ajuste 2026-08-08
+   YouTube: fora do fullscreen, somente os ícones do site ficam
+   sobre o player; sem barra, marca ou faixa ocupando espaço.
+   Google Drive: controles entram em inatividade após 2s.
+   VK permanece inalterado.
+   ========================================================= */
+.youtube-player-shell{
+  display:block!important;
+}
+.youtube-player-toolbar{
+  position:absolute!important;
+  top:max(10px,env(safe-area-inset-top))!important;
+  right:max(10px,env(safe-area-inset-right))!important;
+  left:auto!important;
+  width:auto!important;
+  height:auto!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  pointer-events:none!important;
+  z-index:20!important;
+}
+.youtube-player-brand{
+  display:none!important;
+}
+.youtube-player-actions{
+  pointer-events:auto!important;
+}
+.youtube-player-frame-shell{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+}
+
+/* Inatividade exclusiva do Google Drive. Não alcança YouTube/VK. */
+.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-top-controls,
+.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-center-controls,
+.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-bottom-controls,
+.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode).is-paused .drive-player-top-controls,
+.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode).is-paused .drive-player-center-controls,
+.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode).is-paused .drive-player-bottom-controls{
+  opacity:0!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-shell::after,
+.drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode).is-paused .drive-player-shell::after{
+  opacity:0!important;
+}
+@media (hover:hover) and (pointer:fine){
+  .drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-shell,
+  .drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-video,
+  .drive-player-overlay.is-open.controls-idle:not(.is-vk-api-mode):not(.is-youtube-mode) .drive-player-frame-shell{
+    cursor:none!important;
+  }
+}
+
+
+/* Ajuste YouTube 2026-08-08 v3
+   - remove a barra/timeline nativa do embed (controls=0 no JS);
+   - remove o antigo ícone de abrir externamente;
+   - mantém apenas tela cheia + fechar fora do fullscreen;
+   - no fullscreen, os ícones do site desaparecem. */
+.youtube-player-shell:fullscreen .youtube-player-toolbar,
+.youtube-player-shell:-webkit-full-screen .youtube-player-toolbar{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.youtube-player-fullscreen{
+  background:rgba(255,255,255,.07)!important;
+}

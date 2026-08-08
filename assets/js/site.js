@@ -3653,8 +3653,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       playsinline: '1',
       rel: '0',
       modestbranding: '1',
-      enablejsapi: '1',
-      origin: location.origin
+      controls: '0'
     });
     if (info.playlistId) params.set('list', info.playlistId);
     if (info.startSeconds > 0) params.set('start', String(info.startSeconds));
@@ -3713,7 +3712,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       oid: info.ownerId,
       id: info.videoId,
       autoplay: '1',
-      js_api: '1',
       hd: '4'
     });
     if (info.hash) params.set('hash', info.hash);
@@ -3846,6 +3844,198 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         </div>
       </section>
     </div>`;
+  }
+
+
+  function externalVideoPlayersMarkup() {
+    return `<div class="youtube-player-overlay" id="youtubePlayerOverlay" hidden aria-hidden="true">
+      <section class="youtube-player-shell" id="youtubePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor do YouTube">
+        <header class="youtube-player-toolbar" aria-label="Ações do YouTube">
+          <div class="youtube-player-actions">
+            <button class="youtube-player-action youtube-player-fullscreen" id="youtubePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="youtube-player-action youtube-player-close" id="youtubePlayerClose" type="button" aria-label="Fechar YouTube" title="Fechar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </header>
+        <div class="youtube-player-frame-shell">
+          <iframe class="youtube-player-frame" id="youtubePlayerFrame" title="Reprodutor do YouTube" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+      </section>
+    </div>
+    <div class="vk-player-overlay" id="vkPlayerOverlay" hidden aria-hidden="true">
+      <section class="vk-player-shell" id="vkPlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor do VK Video">
+        <header class="vk-player-toolbar">
+          <span class="vk-player-brand" aria-hidden="true"><strong>VK</strong><span>Video</span></span>
+          <div class="vk-player-actions">
+            <button class="vk-player-action vk-player-external" id="vkPlayerExternal" type="button" aria-label="Abrir no VK Video" title="Abrir no VK Video">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="vk-player-action vk-player-close" id="vkPlayerClose" type="button" aria-label="Fechar VK Video" title="Fechar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </header>
+        <div class="vk-player-frame-shell">
+          <iframe class="vk-player-frame" id="vkPlayerFrame" title="Reprodutor do VK Video" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+      </section>
+    </div>`;
+  }
+
+  function setupExternalVideoPlayers() {
+    if (document.body.dataset.externalVideoPlayersBound === 'true') return;
+    document.body.dataset.externalVideoPlayersBound = 'true';
+    document.body.insertAdjacentHTML('beforeend', externalVideoPlayersMarkup());
+
+    const youtubeOverlay = document.getElementById('youtubePlayerOverlay');
+    const youtubeShell = document.getElementById('youtubePlayerShell');
+    const youtubeFrame = document.getElementById('youtubePlayerFrame');
+    const youtubeClose = document.getElementById('youtubePlayerClose');
+    const youtubeFullscreen = document.getElementById('youtubePlayerFullscreen');
+    const vkOverlay = document.getElementById('vkPlayerOverlay');
+    const vkShell = document.getElementById('vkPlayerShell');
+    const vkFrame = document.getElementById('vkPlayerFrame');
+    const vkClose = document.getElementById('vkPlayerClose');
+    const vkExternal = document.getElementById('vkPlayerExternal');
+    if (!youtubeOverlay || !youtubeShell || !youtubeFrame || !youtubeClose || !youtubeFullscreen || !vkOverlay || !vkShell || !vkFrame || !vkClose || !vkExternal) return;
+
+    let vkExternalUrl = '';
+    let youtubePreviousFocus = null;
+    let vkPreviousFocus = null;
+
+    const syncBodyLock = () => {
+      const hasOpenProvider = !youtubeOverlay.hidden || !vkOverlay.hidden;
+      document.body.classList.toggle('external-video-player-open', hasOpenProvider);
+    };
+
+    const closeYouTubePlayer = (restoreFocus = true) => {
+      if (youtubeOverlay.hidden) return;
+      youtubeFrame.src = 'about:blank';
+      youtubeOverlay.hidden = true;
+      youtubeOverlay.setAttribute('aria-hidden', 'true');
+      youtubeOverlay.classList.remove('is-open');
+      syncBodyLock();
+      if (restoreFocus && youtubePreviousFocus && typeof youtubePreviousFocus.focus === 'function') youtubePreviousFocus.focus({ preventScroll: true });
+      youtubePreviousFocus = null;
+    };
+
+    const closeVkPlayer = (restoreFocus = true) => {
+      if (vkOverlay.hidden) return;
+      vkFrame.src = 'about:blank';
+      vkOverlay.hidden = true;
+      vkOverlay.setAttribute('aria-hidden', 'true');
+      vkOverlay.classList.remove('is-open');
+      vkExternalUrl = '';
+      syncBodyLock();
+      if (restoreFocus && vkPreviousFocus && typeof vkPreviousFocus.focus === 'function') vkPreviousFocus.focus({ preventScroll: true });
+      vkPreviousFocus = null;
+    };
+
+    const closeAllExternalPlayers = () => {
+      closeYouTubePlayer(false);
+      closeVkPlayer(false);
+      syncBodyLock();
+    };
+
+    const openYouTubePlayer = (info, context = {}) => {
+      const embedUrl = youtubeEmbedUrl(info);
+      if (!embedUrl) return;
+      closeAllExternalPlayers();
+      window.dispatchEvent(new Event('be:close-drive-player'));
+      youtubePreviousFocus = document.activeElement;
+      youtubeFrame.title = context?.title ? `YouTube — ${String(context.title).trim()}` : 'Reprodutor do YouTube';
+      youtubeFrame.src = embedUrl;
+      youtubeOverlay.hidden = false;
+      youtubeOverlay.setAttribute('aria-hidden', 'false');
+      youtubeOverlay.classList.add('is-open');
+      syncBodyLock();
+      youtubeClose.focus({ preventScroll: true });
+    };
+
+    const openVkPlayer = (info, context = {}) => {
+      const embedUrl = vkVideoEmbedUrl(info);
+      if (!embedUrl) return;
+      closeAllExternalPlayers();
+      window.dispatchEvent(new Event('be:close-drive-player'));
+      vkPreviousFocus = document.activeElement;
+      vkExternalUrl = vkVideoWatchUrl(info);
+      vkFrame.title = context?.title ? `VK Video — ${String(context.title).trim()}` : 'Reprodutor do VK Video';
+      vkFrame.src = embedUrl;
+      vkOverlay.hidden = false;
+      vkOverlay.setAttribute('aria-hidden', 'false');
+      vkOverlay.classList.add('is-open');
+      syncBodyLock();
+      vkClose.focus({ preventScroll: true });
+    };
+
+    document.addEventListener('click', event => {
+      const link = event.target.closest('#contentDetailPlay');
+      if (!link) return;
+      const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
+      const youtubeInfo = youtubeMediaInfo(mediaUrl);
+      const vkInfo = vkVideoInfo(mediaUrl);
+      if (!youtubeInfo && !vkInfo) return;
+
+      const linkedContent = contentDataFromElement(link);
+      const title = link.dataset.title || linkedContent.title || '';
+      event.preventDefault();
+
+      if (youtubeInfo) {
+        openYouTubePlayer(youtubeInfo, { title });
+        return;
+      }
+      openVkPlayer(vkInfo, { title });
+    }, true);
+
+    youtubeClose.addEventListener('click', () => closeYouTubePlayer(true));
+    vkClose.addEventListener('click', () => closeVkPlayer(true));
+    const youtubeFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+    const youtubeOwnsFullscreen = () => {
+      const element = youtubeFullscreenElement();
+      return Boolean(element && (element === youtubeShell || youtubeShell.contains(element)));
+    };
+    const syncYouTubeFullscreenButton = () => {
+      const active = youtubeOwnsFullscreen();
+      youtubeFullscreen.setAttribute('aria-label', active ? 'Sair da tela cheia' : 'Entrar em tela cheia');
+      youtubeFullscreen.title = active ? 'Sair da tela cheia' : 'Tela cheia';
+    };
+    const toggleYouTubeFullscreen = async () => {
+      try {
+        if (youtubeOwnsFullscreen()) {
+          if (typeof document.exitFullscreen === 'function') await document.exitFullscreen();
+          else if (typeof document.webkitExitFullscreen === 'function') document.webkitExitFullscreen();
+        } else if (typeof youtubeShell.requestFullscreen === 'function') {
+          await youtubeShell.requestFullscreen();
+        } else if (typeof youtubeShell.webkitRequestFullscreen === 'function') {
+          youtubeShell.webkitRequestFullscreen();
+        }
+      } catch (_) {}
+      syncYouTubeFullscreenButton();
+    };
+
+    youtubeFullscreen.addEventListener('click', toggleYouTubeFullscreen);
+    document.addEventListener('fullscreenchange', syncYouTubeFullscreenButton);
+    document.addEventListener('webkitfullscreenchange', syncYouTubeFullscreenButton);
+    vkExternal.addEventListener('click', () => {
+      if (vkExternalUrl) window.open(vkExternalUrl, '_blank', 'noopener,noreferrer');
+    });
+
+    window.addEventListener('keydown', event => {
+      const youtubeOpen = !youtubeOverlay.hidden;
+      const vkOpen = !vkOverlay.hidden;
+      if (!youtubeOpen && !vkOpen) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (youtubeOpen) closeYouTubePlayer(true);
+        else closeVkPlayer(true);
+      }
+    });
+
+    window.addEventListener('pagehide', closeAllExternalPlayers);
+    window.addEventListener('be:close-external-video-players', closeAllExternalPlayers);
   }
 
   function setupGoogleDrivePlayer() {
@@ -4221,10 +4411,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setAudioMode(shouldUseAudioMode);
     };
 
+    const hideDriveControlsForInactivity = () => {
+      window.clearTimeout(controlsTimer);
+      controlsTimer = 0;
+      if (overlay.hidden || activeProvider !== 'drive' || controlsInteracting) return;
+      if (overlay.classList.contains('is-loading') || overlay.classList.contains('is-error')) return;
+      overlay.classList.add('controls-idle');
+      overlay.classList.remove('controls-visible');
+    };
+
     const showControls = (_keepVisible = false) => {
       window.clearTimeout(controlsTimer);
+      controlsTimer = 0;
       overlay.classList.remove('controls-idle');
       overlay.classList.add('controls-visible');
+      if (activeProvider === 'drive' && !controlsInteracting && !overlay.classList.contains('is-loading') && !overlay.classList.contains('is-error')) {
+        controlsTimer = window.setTimeout(hideDriveControlsForInactivity, 2000);
+      }
       if (activeProvider !== 'vkvideo') registerCenterSkipActivity();
     };
 
@@ -4562,9 +4765,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!link) return;
       const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
       const fileId = googleDriveFileId(mediaUrl);
-      const youtubeInfo = youtubeMediaInfo(mediaUrl);
-      const vkInfo = vkVideoInfo(mediaUrl);
-      if (!fileId && !youtubeInfo && !vkInfo) return;
+      if (!fileId) return;
 
       const linkedContent = contentDataFromElement(link);
       const detailBannerImage = document.querySelector('#contentDetailBg img');
@@ -4577,14 +4778,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const title = link.dataset.title || linkedContent.title || '';
 
       event.preventDefault();
-      if (youtubeInfo) {
-        openYouTubePlayer(youtubeInfo, { bannerUrl, title, contentUrl: mediaUrl });
-        return;
-      }
-      if (vkInfo) {
-        openVkVideoPlayer(vkInfo, { bannerUrl, title, contentUrl: mediaUrl });
-        return;
-      }
+      window.dispatchEvent(new Event('be:close-external-video-players'));
 
       const explicitKind = normalizeDriveMediaKind(link.dataset.mediaKind || link.dataset.mediaType || '');
       const inferredKind = explicitKind || inferDriveMediaKind(
@@ -4819,6 +5013,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function setupDetailControls() {
+    setupExternalVideoPlayers();
     setupGoogleDrivePlayer();
     const section = document.getElementById('contentDetailSection');
     const back = document.getElementById('detailBackButton');
@@ -4966,6 +5161,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function closeContentDetail(scrollHome = false, updateRoute = true) {
+    window.dispatchEvent(new Event('be:close-drive-player'));
+    window.dispatchEvent(new Event('be:close-external-video-players'));
     const section = document.getElementById('contentDetailSection');
     const featuredSection = document.getElementById('featuredSection');
     const randomFeaturedSection = document.getElementById('randomFeaturedSection');
