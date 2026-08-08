@@ -6074,6 +6074,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var username=document.getElementById('ddUsername');
     var dashboard=document.getElementById('publicDashboardLink');
     var authAction=document.getElementById('publicAuthAction');
+    function syncAuthActionLabel(){
+      if(!authAction)return;
+      var guestActive=!auth.currentUser&&Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
+      authAction.textContent=(auth.currentUser||guestActive)?'Sair':'Entrar';
+    }
     var avatarPicker=document.getElementById('avatarPicker');
     var avatarPickerBody=document.getElementById('avatarPickerBody');
     var avatarPickerClose=document.getElementById('avatarPickerClose');
@@ -7687,13 +7692,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
         if(currentProfile&&currentProfile.banned){window.dispatchEvent(new CustomEvent('be:user-banned',{detail:{email:currentUser.email||'',reason:currentProfile.banReason||'',bannedAt:currentProfile.bannedAt||''}}));try{await auth.signOut();}catch(_){ }return;}
         var restoredBanner=resolvedProfileBanner(currentUser);if(restoredBanner.bannerUrl){currentProfile.bannerUrl=restoredBanner.bannerUrl;currentProfile.bannerId=restoredBanner.bannerId;}
-        setLiteralText(username,currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário'));selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);authAction.textContent='Sair';updateProfileActionVisibility();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();startCrossDeviceSync(currentUser).catch(function(error){console.warn('Falha ao iniciar sincronização:',error);});if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
-      }else{stopCrossDeviceSync();setInterfaceText(username,'Visitante');currentProfile={};selectedAvatar='';setMainAvatar('');authAction.textContent='Entrar';updateProfileActionVisibility();if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);else{viewedProfile=null;viewedProfileStatus='idle';}if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
+        setLiteralText(username,currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário'));selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);syncAuthActionLabel();updateProfileActionVisibility();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();startCrossDeviceSync(currentUser).catch(function(error){console.warn('Falha ao iniciar sincronização:',error);});if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
+      }else{stopCrossDeviceSync();setInterfaceText(username,'Visitante');currentProfile={};selectedAvatar='';setMainAvatar('');syncAuthActionLabel();updateProfileActionVisibility();if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);else{viewedProfile=null;viewedProfileStatus='idle';}if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
-      var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}window.BETVPublicRoutes.go('/login');document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='donate'){toggleDropdown(false);if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/ong');return;}if(action==='support'){toggleDropdown(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/suporte');else window.dispatchEvent(new CustomEvent('be:open-support'));return;}if(action==='settings'){openSettingsPage(true);return;}
+      var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()){window.BETVGuestAccess.setActive(false);localStorage.removeItem('beAuthExpected');localStorage.removeItem('beSessionUid');}syncAuthActionLabel();window.BETVPublicRoutes.go('/login');document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='donate'){toggleDropdown(false);if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/ong');return;}if(action==='support'){toggleDropdown(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/suporte');else window.dispatchEvent(new CustomEvent('be:open-support'));return;}if(action==='settings'){openSettingsPage(true);return;}
     });});
+    window.addEventListener('be:guest-access',syncAuthActionLabel);
+    window.addEventListener('storage',function(event){if(event&&event.key==='beGuestAccess')syncAuthActionLabel();});
     window.addEventListener('be:profile-avatar-changed',function(event){
       var detail=event&&event.detail||{};
       if(!auth.currentUser||detail.userId!==auth.currentUser.uid)return;
@@ -10711,6 +10718,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   var page=document.getElementById('fansPage');
   var home=document.getElementById('fansPageHome');
+  var accountButton=document.getElementById('fansPageAccount');
+  var accountFrame=document.getElementById('fansPageAvatarFrame');
+  var accountImage=document.getElementById('fansPageAvatarImage');
+  var accountLabel=document.getElementById('fansPageLoginLabel');
   var list=document.getElementById('fansPageList');
   var status=document.getElementById('fansPageStatus');
   var sentinel=document.getElementById('fansPageSentinel');
@@ -10731,6 +10742,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isRoute(){var path=cleanPath().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/fãs'||path==='/fas'||path==='/fans'||hash==='#fãs'||hash==='#/fãs'||hash==='#fas'||hash==='#/fas'||hash==='#fans'||hash==='#/fans';}
   function localized(path){return window.BETVLocaleURL?window.BETVLocaleURL(path):path;}
   function t(source,variables){return window.BETVI18n&&typeof window.BETVI18n.t==='function'?window.BETVI18n.t(source,variables||{}):String(source||'').replace(/\{([a-zA-Z0-9_]+)\}/g,function(_,key){return variables&&Object.prototype.hasOwnProperty.call(variables,key)?variables[key]:_;});}
+  function currentAccount(){return window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;}
+  function syncAccount(){
+    if(!accountButton)return;
+    var account=currentAccount();
+    var source=document.getElementById('publicUserPhoto');
+    if(account){
+      var avatar=source&&!source.hidden?String(source.getAttribute('src')||'').trim():'';
+      if(!avatar)avatar=window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png';
+      accountButton.classList.remove('is-login');
+      accountButton.setAttribute('aria-label',t('Abrir perfil'));
+      accountButton.title=t('Perfil');
+      if(accountFrame){accountFrame.hidden=false;accountFrame.setAttribute('aria-hidden','false');}
+      if(accountImage&&accountImage.getAttribute('src')!==avatar)accountImage.setAttribute('src',avatar);
+      if(accountLabel)accountLabel.hidden=true;
+      return;
+    }
+    accountButton.classList.add('is-login');
+    accountButton.setAttribute('aria-label',t('Entrar na plataforma'));
+    accountButton.title=t('Entrar');
+    if(accountFrame){accountFrame.hidden=true;accountFrame.setAttribute('aria-hidden','true');}
+    if(accountLabel){accountLabel.hidden=false;accountLabel.textContent=t('Entrar');}
+  }
+  function openAccount(){
+    var account=currentAccount();
+    if(!account){
+      if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/login');
+      else location.assign(localized('/login'));
+      return;
+    }
+    close();
+    window.setTimeout(function(){
+      var profileAction=document.querySelector('#userDropdown [data-public-action="profile"]');
+      if(profileAction){profileAction.click();return;}
+      var handle=document.getElementById('ddUsername');
+      var username=handle?String(handle.textContent||'').replace(/^@/,'').trim():'';
+      if(username&&window.BETVPublicRoutes)window.BETVPublicRoutes.go('/@'+encodeURIComponent(username));
+    },0);
+  }
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];});}
   function mediaUrl(value){var raw=String(value||'').trim();return raw&&window.beMediaUrl?window.beMediaUrl(raw):raw;}
   function initials(value){var parts=String(value||'Fã').trim().split(/\s+/).filter(Boolean);return (parts.slice(0,2).map(function(part){return part.charAt(0);}).join('')||'F').toUpperCase();}
@@ -10827,6 +10876,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.classList.add('fans-page-active');
     page.hidden=false;page.setAttribute('aria-hidden','false');
     if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(page);
+    syncAccount();
     load(false);
     document.title='Billie Eilish TV';
   }
@@ -10839,10 +10889,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     footerLink.addEventListener('click',function(event){if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();navigate('/fãs',false);});
   });
   if(home)home.addEventListener('click',function(){goHome(false);});
+  if(accountButton)accountButton.addEventListener('click',openAccount);
+  var sourceAccountPhoto=document.getElementById('publicUserPhoto');
+  if(window.MutationObserver&&sourceAccountPhoto)new MutationObserver(syncAccount).observe(sourceAccountPhoto,{attributes:true,attributeFilter:['src','hidden']});
+  if(accountImage)accountImage.addEventListener('error',function(){accountImage.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');});
+  if(window.beBackend&&window.beBackend.ready)Promise.resolve(window.beBackend.ready).then(function(){if(window.beBackend.auth&&typeof window.beBackend.auth.onChange==='function')window.beBackend.auth.onChange(syncAccount);syncAccount();}).catch(function(){syncAccount();});
   list.addEventListener('click',function(event){var link=event.target&&event.target.closest?event.target.closest('[data-fans-profile]'):null;if(!link)return;event.preventDefault();navigate(link.getAttribute('data-profile-route')||'/',false);});
   window.addEventListener('be:open-fans-page',open);
   window.addEventListener('be:close-fans-page',close);
-  window.addEventListener('be:i18n-ready',function(){if(!page.hidden&&window.BETVI18n)window.BETVI18n.apply(page);if(window.BETVI18n)footerLinks.forEach(function(footerLink){window.BETVI18n.apply(footerLink);});});
+  window.addEventListener('be:profile-avatar-changed',syncAccount);
+  window.addEventListener('be:profile-device-synced',syncAccount);
+  window.addEventListener('be:guest-access',syncAccount);
+  window.addEventListener('be:i18n-ready',function(){if(!page.hidden&&window.BETVI18n)window.BETVI18n.apply(page);syncAccount();if(window.BETVI18n)footerLinks.forEach(function(footerLink){window.BETVI18n.apply(footerLink);});});
   window.addEventListener('be:content-ready',function(){loaded=false;if(isRoute())load(true);});
   window.addEventListener('be:favorites-changed',function(){if(currentAlbum&&!page.hidden)syncAlbumFavorite();});
   window.addEventListener('popstate',function(){if(!isRoute()&&document.body.classList.contains('fans-page-active'))close();});

@@ -135,10 +135,10 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260807-guest-access-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260808-fans-account-ui-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260807-profile-albums-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260807-guest-access-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260808-fans-account-ui-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -1076,6 +1076,14 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     <button class="fans-page-home" id="fansPageHome" type="button" aria-label="Voltar para a Home" title="Home">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg>
     </button>
+    <div class="fans-page-header-actions">
+      <button class="fans-page-account is-login" id="fansPageAccount" type="button" aria-label="Entrar na plataforma" title="Entrar">
+        <span class="fans-page-avatar-frame" id="fansPageAvatarFrame" hidden aria-hidden="true">
+          <img id="fansPageAvatarImage" src="/assets/images/profile/default-avatar.png" alt="Foto do usuário" data-avatar-fallback="/assets/images/profile/default-avatar.png">
+        </span>
+        <span class="fans-page-login-label" id="fansPageLoginLabel">Entrar</span>
+      </button>
+    </div>
   </header>
   <main class="fans-page-content">
     <section class="fans-page-intro" aria-labelledby="fansPageTitle">
