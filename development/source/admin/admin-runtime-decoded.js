@@ -721,7 +721,7 @@ body.admin-preview-open{overflow:hidden}
       adminLoginBgTimer = null;
     }
     setAdminDocumentScroll(true);
-    const routes = ['dashboard','notifications','contentHub','siteHub','users'];
+    const routes = ['dashboard','notifications','siteHub','contentHub','users'];
     const activeAvatar = selectedProfileAvatar(user.profile) || String(user.photoURL || '');
     const accountAvatar = activeAvatar
       ? `<img loading="lazy" decoding="async" src="${esc(media(activeAvatar))}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`
