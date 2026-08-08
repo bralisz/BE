@@ -4071,10 +4071,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const finishSynchronizedReady = () => {
-      if (overlay.hidden || !mediaReady || !drivePreviewReady) return;
+      // O MP4 do site é a fonte principal. Assim que ele estiver pronto,
+      // liberamos a interface imediatamente — sem esperar o iframe do Drive.
+      if (overlay.hidden || !mediaReady) return;
       window.clearTimeout(fallbackTimer);
+      window.clearTimeout(driveWarmupTimer);
+      fallbackTimer = 0;
+      driveWarmupTimer = 0;
+      drivePreviewReady = true;
       overlay.classList.remove('is-error', 'is-drive-warming', 'is-source-syncing');
       frameShell.hidden = true;
+      if (frame.src && frame.src !== 'about:blank') frame.src = 'about:blank';
       setLoading('', false);
       setInteractive(true);
       syncState();
@@ -4156,11 +4163,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       mediaReady = true;
       overlay.classList.remove('is-error');
       syncState();
-      if (drivePreviewReady) finishSynchronizedReady();
-      else {
-        setInteractive(false);
-        setLoading('Sincronizando com o Google Drive...', true);
-      }
+      finishSynchronizedReady();
     };
 
     const showSourceError = () => {
@@ -4393,6 +4396,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     video.addEventListener('loadstart', () => {
       mediaReady = false;
       setInteractive(false);
+    });
+    video.addEventListener('loadedmetadata', () => {
+      if (video.readyState >= 1 && Number.isFinite(video.duration) && video.duration > 0) markReady();
     });
     video.addEventListener('loadeddata', markReady);
     video.addEventListener('canplay', markReady);
