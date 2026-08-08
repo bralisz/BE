@@ -4034,6 +4034,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let inactivityTimer = 0;
     let controlsInteracting = false;
     let openingToken = 0;
+    let activeSourceLink = null;
 
     const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
     const ownsFullscreen = () => {
@@ -4225,6 +4226,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeFileId = '';
       activeResourceKey = '';
       activeExternalUrl = '';
+      activeSourceLink = null;
       streamAttempt = '';
       mediaReady = false;
       frameMode = false;
@@ -4243,6 +4245,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const token = ++openingToken;
       activeFileId = fileId;
       activeResourceKey = resourceKey;
+      activeSourceLink = context?.sourceLink instanceof Element ? context.sourceLink : null;
       const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
       activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
       previousFocus = document.activeElement;
@@ -4259,6 +4262,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setInteractive(false);
       setLoading('Carregando vídeo do Google Drive...');
       syncFullscreen();
+
+      // O link do Drive pode não indicar a extensão. Enquanto o carregamento
+      // começa normalmente, consultamos o tipo real do arquivo. Se for áudio,
+      // transferimos para o player de mídia com o banner deste conteúdo.
+      if (activeSourceLink) {
+        googleDriveMediaKind(fileId, resourceKey).then(kind => {
+          if (kind !== 'audio' || token !== openingToken || overlay.hidden || activeFileId !== fileId || !activeSourceLink) return;
+          const sourceLink = activeSourceLink;
+          closePlayer(false);
+          window.dispatchEvent(new CustomEvent('be:open-drive-audio-player', {
+            detail: { link: sourceLink, mediaKind: 'audio' }
+          }));
+        });
+      }
+
       loadProxyStream(false);
       window.setTimeout(() => {
         if (token === openingToken && !overlay.hidden) showControls(false);
@@ -4288,7 +4306,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       event.stopImmediatePropagation();
       window.dispatchEvent(new Event('be:close-external-video-players'));
       window.dispatchEvent(new Event('be:close-drive-player'));
-      openPlayer(fileId, googleDriveResourceKey(mediaUrl), { title });
+      openPlayer(fileId, googleDriveResourceKey(mediaUrl), { title, sourceLink: link });
     }, true);
 
     backButton.addEventListener('click', () => {
@@ -4375,7 +4393,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
     video.addEventListener('loadedmetadata', () => {
       if (frameMode) return;
-      if (video.readyState >= 1 && Number.isFinite(video.duration) && video.duration > 0) markReady();
+      if (video.readyState >= 1 && Number.isFinite(video.duration) && video.duration > 0) {
+        const hasVideoTrack = Number(video.videoWidth) > 0 && Number(video.videoHeight) > 0;
+        if (!hasVideoTrack && activeSourceLink) {
+          const sourceLink = activeSourceLink;
+          closePlayer(false);
+          window.dispatchEvent(new CustomEvent('be:open-drive-audio-player', {
+            detail: { link: sourceLink, mediaKind: 'audio' }
+          }));
+          return;
+        }
+        markReady();
+      }
     });
     video.addEventListener('loadeddata', markReady);
     video.addEventListener('canplay', markReady);
@@ -5273,9 +5302,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       else video.pause();
     };
 
-    document.addEventListener('click', async event => {
-      const link = event.target.closest('#contentDetailPlay');
-      if (!link) return;
+    const openDriveAudioFromLink = async (link, forcedKind = '') => {
+      if (!(link instanceof Element)) return;
       const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
       const fileId = googleDriveFileId(mediaUrl);
       if (!fileId) return;
@@ -5283,12 +5311,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const linkedContent = contentDataFromElement(link);
       const detailBannerImage = document.querySelector('#contentDetailBg img');
       const title = link.dataset.title || linkedContent.title || '';
-
-      event.preventDefault();
-      window.dispatchEvent(new Event('be:close-external-video-players'));
-      window.dispatchEvent(new Event('be:close-drive-video-player'));
-
-      const explicitKind = normalizeDriveMediaKind(link.dataset.mediaKind || link.dataset.mediaType || '');
+      const explicitKind = normalizeDriveMediaKind(forcedKind || link.dataset.mediaKind || link.dataset.mediaType || '');
       const inferredKind = explicitKind || inferDriveMediaKind(
         link.dataset.contentType,
         link.dataset.category,
@@ -5297,6 +5320,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         mediaUrl
       );
       if (inferredKind !== 'audio') return;
+
+      window.dispatchEvent(new Event('be:close-external-video-players'));
+      window.dispatchEvent(new Event('be:close-drive-video-player'));
 
       const validBannerValues = (...values) => {
         const result = [];
@@ -5314,8 +5340,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const itemId = String(link.dataset.itemId || linkedContent.itemId || '').trim();
       const collection = String(link.dataset.collection || linkedContent.collection || 'videos').trim().toLowerCase() || 'videos';
 
-      // Procura o mesmo conteúdo no catálogo atual. Isso cobre favoritos/rotas
-      // antigas em que o MP3 chegou ao player sem carregar o banner do vídeo.
+      // O banner prioritário é sempre o do conteúdo que está aberto nos detalhes.
+      // Só buscamos outras fontes se esse conteúdo realmente não tiver banner.
       let catalogMatch = null;
       try {
         const catalog = typeof window.beGetCatalogContents === 'function' ? window.beGetCatalogContents() : [];
@@ -5328,12 +5354,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       } catch (_) {}
 
       const siteBannerCandidates = validBannerValues(
-        detailBannerImage?.getAttribute('src'),
         link.dataset.bannerUrl,
-        linkedContent.bannerUrl,
-        catalogMatch?.bannerUrl,
+        detailBannerImage?.getAttribute('src'),
         detailBannerImage?.currentSrc,
-        detailBannerImage?.src
+        detailBannerImage?.src,
+        linkedContent.bannerUrl,
+        catalogMatch?.bannerUrl
       );
 
       let backendSource = null;
@@ -5345,8 +5371,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
       }
 
-      // Usa primeiro o banner do vídeo cadastrado no site; thumbnail/imagem fica
-      // somente como fallback quando aquele conteúdo não possui banner válido.
       const bannerCandidates = validBannerValues(
         siteBannerCandidates,
         backendSource?.bannerUrl,
@@ -5364,13 +5388,39 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         bannerElement: detailBannerImage,
         imageUrl: linkedContent.imageUrl || catalogMatch?.imageUrl || backendSource?.imageUrl || backendSource?.thumbnailUrl || '',
         title,
-        mediaKind: inferredKind,
+        mediaKind: 'audio',
         mediaType: link.dataset.mediaType || '',
         contentType: link.dataset.contentType || '',
         category: link.dataset.category || '',
         contentUrl: mediaUrl
       });
+    };
+
+    document.addEventListener('click', event => {
+      const link = event.target.closest('#contentDetailPlay');
+      if (!link) return;
+      const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
+      if (!googleDriveFileId(mediaUrl)) return;
+      const linkedContent = contentDataFromElement(link);
+      const title = link.dataset.title || linkedContent.title || '';
+      const explicitKind = normalizeDriveMediaKind(link.dataset.mediaKind || link.dataset.mediaType || '');
+      const inferredKind = explicitKind || inferDriveMediaKind(
+        link.dataset.contentType,
+        link.dataset.category,
+        linkedContent.collection,
+        title,
+        mediaUrl
+      );
+      if (inferredKind !== 'audio') return;
+      event.preventDefault();
+      openDriveAudioFromLink(link, 'audio');
     }, true);
+
+    window.addEventListener('be:open-drive-audio-player', event => {
+      const link = event.detail?.link;
+      if (!(link instanceof Element)) return;
+      openDriveAudioFromLink(link, event.detail?.mediaKind || 'audio');
+    });
 
     fullscreenButton.addEventListener('click', toggleBrowserFullscreen);
     closeButton.addEventListener('click', closePlayer);
