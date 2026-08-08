@@ -3742,25 +3742,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview?${params.toString()}`;
   }
 
-  function googleDriveStreamUrl(fileId, resourceKey = '', options = {}) {
+  function googleDriveStreamUrl(fileId, resourceKey = '') {
     const params = new URLSearchParams({ id: fileId });
     if (resourceKey) params.set('resourcekey', resourceKey);
-    if (options?.mobile) params.set('mobile', '1');
-    if (options?.kind) params.set('kind', String(options.kind));
-    if (options?.mime) params.set('mime', String(options.mime));
     return `/api/drive-media?${params.toString()}`;
   }
 
   function googleDriveDirectStreamUrl(fileId, resourceKey = '') {
-    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: 't', authuser: '0' });
+    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: 't' });
     if (resourceKey) params.set('resourcekey', resourceKey);
     return `https://drive.google.com/uc?${params.toString()}`;
-  }
-
-  function googleDriveUserContentStreamUrl(fileId, resourceKey = '') {
-    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: 't', authuser: '0' });
-    if (resourceKey) params.set('resourcekey', resourceKey);
-    return `https://drive.usercontent.google.com/download?${params.toString()}`;
   }
 
   function normalizeDriveMediaKind(value) {
@@ -4466,15 +4457,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let openingToken = 0;
     let activeSourceLink = null;
 
-    // Somente no mobile: o MP4 do Drive usa exclusivamente o player HTML5
-    // dedicado do site. O iframe nativo do Drive continua disponível no desktop
-    // como fallback, preservando exatamente o comportamento já configurado no PC.
-    const isMobileDedicatedDrivePlayer = () => {
-      const compactViewport = window.matchMedia?.('(max-width: 820px)')?.matches;
-      const coarseLandscape = window.matchMedia?.('(pointer: coarse)')?.matches && window.innerHeight <= 620;
-      return Boolean(compactViewport || coarseLandscape);
-    };
-
     const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
     const ownsFullscreen = () => {
       const element = currentFullscreenElement();
@@ -4566,42 +4548,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const proxyStreamUrl = (fileId, resourceKey = '', retry = false) => {
-      const mobileDedicated = isMobileDedicatedDrivePlayer();
-      const url = new URL(googleDriveStreamUrl(fileId, resourceKey, mobileDedicated ? {
-        mobile: true,
-        kind: 'video',
-        mime: 'video/mp4'
-      } : {}), location.origin);
+      const url = new URL(googleDriveStreamUrl(fileId, resourceKey), location.origin);
       if (retry) url.searchParams.set('retry', String(Date.now()));
       return `${url.pathname}${url.search}`;
     };
 
-    const showMobileDedicatedError = () => {
-      if (overlay.hidden) return;
-      window.clearTimeout(fallbackTimer);
-      fallbackTimer = 0;
-      mediaReady = false;
-      frameMode = false;
-      video.pause();
-      frame.src = 'about:blank';
-      frameShell.hidden = true;
-      overlay.classList.remove('is-source-syncing', 'is-loading', 'is-frame-mode');
-      overlay.classList.add('is-error', 'is-mobile-dedicated');
-      loading.hidden = false;
-      loading.setAttribute('aria-label', 'Não foi possível reproduzir este vídeo diretamente');
-      loadingMessage.textContent = 'Não foi possível reproduzir este MP4 diretamente. Você ainda pode abri-lo no Google Drive.';
-      loadingMessage.hidden = false;
-      setInteractive(false);
-      showControls(true);
-    };
-
     const useFrameFallback = () => {
       if (!activeFileId || overlay.hidden || frameMode) return;
-      // No mobile não usamos o iframe/player interno do Google Drive.
-      if (isMobileDedicatedDrivePlayer()) {
-        showMobileDedicatedError();
-        return;
-      }
       frameMode = true;
       mediaReady = false;
       streamAttempt = 'frame';
@@ -4618,23 +4571,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setLoading('', false);
       setInteractive(false);
       showControls(true);
-    };
-
-    const tryUserContentStream = () => {
-      if (!activeFileId || overlay.hidden || frameMode || mediaReady || streamAttempt === 'usercontent') return;
-      streamAttempt = 'usercontent';
-      mediaReady = false;
-      window.clearTimeout(fallbackTimer);
-      setInteractive(false);
-      overlay.classList.add('is-source-syncing');
-      setLoading('Tentando conexão direta com o Google Drive...');
-      video.pause();
-      video.src = googleDriveUserContentStreamUrl(activeFileId, activeResourceKey);
-      video.load();
-      requestPlayback();
-      fallbackTimer = window.setTimeout(() => {
-        if (!mediaReady && !overlay.hidden && !frameMode) loadProxyStream(true);
-      }, 12000);
     };
 
     const tryDirectStream = () => {
@@ -4669,10 +4605,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       requestPlayback();
       fallbackTimer = window.setTimeout(() => {
         if (mediaReady || overlay.hidden || frameMode) return;
-        if (!retry && isMobileDedicatedDrivePlayer()) tryUserContentStream();
-        else if (!retry) loadProxyStream(true);
+        if (!retry) loadProxyStream(true);
         else tryDirectStream();
-      }, retry ? 18000 : (isMobileDedicatedDrivePlayer() ? 10000 : 16000));
+      }, retry ? 22000 : 16000);
     };
 
     const handleStreamFailure = () => {
@@ -4680,9 +4615,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.clearTimeout(fallbackTimer);
       fallbackTimer = 0;
       if (streamAttempt === 'proxy') {
-        if (isMobileDedicatedDrivePlayer()) tryUserContentStream();
-        else loadProxyStream(true);
-      } else if (streamAttempt === 'usercontent') {
         loadProxyStream(true);
       } else if (streamAttempt === 'proxy-retry') {
         tryDirectStream();
@@ -4744,17 +4676,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frameShell.hidden = true;
       frame.src = 'about:blank';
       frame.title = context?.title ? `Google Drive — ${String(context.title).trim()}` : 'Reprodutor de vídeo do Google Drive';
-      const mobileDedicated = isMobileDedicatedDrivePlayer();
-      video.preload = mobileDedicated ? 'auto' : 'metadata';
-      video.playsInline = true;
-      if (mobileDedicated) {
-        video.setAttribute('playsinline', '');
-        video.setAttribute('webkit-playsinline', '');
-        video.removeAttribute('crossorigin');
-      }
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
-      overlay.className = `drive-video-player-overlay is-open is-paused is-source-syncing${mobileDedicated ? ' is-mobile-dedicated' : ''}`;
+      overlay.className = 'drive-video-player-overlay is-open is-paused is-source-syncing';
       document.body.classList.add('drive-video-player-open');
       setInteractive(false);
       setLoading('Carregando vídeo do Google Drive...');

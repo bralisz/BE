@@ -14241,7 +14241,7 @@ body.profile-page-active .profile-page-hero{
 /* =========================================================
    08/08/2026 — Players em MOBILE (sem alterar o desktop)
    YouTube + VK: layout compacto inspirado no PC.
-   Drive MP4: interface dedicada do site; iframe do Drive desativado no mobile.
+   Drive MP4: layout responsivo estável, mantendo o fallback nativo do Drive.
    ========================================================= */
 @media (max-width:820px), (pointer:coarse) and (max-height:620px){
   /* ---------- YouTube + VK ---------- */
@@ -14328,70 +14328,60 @@ body.profile-page-active .profile-page-hero{
     opacity:.66!important;
   }
 
-  /* ---------- Google Drive MP4 dedicado ---------- */
-  .drive-video-player-overlay.is-mobile-dedicated,
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-shell{
+  /* ---------- Google Drive MP4 — mobile estável ---------- */
+  .drive-video-player-overlay,
+  .drive-video-player-shell{
     width:100vw!important;
     height:100dvh!important;
     min-height:100dvh!important;
     background:#000!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-frame-shell{
-    display:none!important;
-    visibility:hidden!important;
-    pointer-events:none!important;
+  .drive-video-player-shell{
+    overflow:hidden!important;
+    touch-action:manipulation;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-video{
+  .drive-video-player-video,
+  .drive-video-player-frame-shell,
+  .drive-video-player-frame{
     inset:0!important;
     width:100%!important;
     height:100%!important;
-    object-fit:contain!important;
     background:#000!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-shell::after{
-    inset:0!important;
-    background:linear-gradient(180deg,rgba(0,0,0,.08) 0%,transparent 25%,transparent 60%,rgba(0,0,0,.54) 100%)!important;
-  }
+  .drive-video-player-video{object-fit:contain!important}
 
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-center-controls{
+  /* Controles próprios quando o MP4 toca diretamente no <video>. */
+  .drive-video-player-center-controls{
     top:50%!important;
-    gap:clamp(30px,10vw,58px)!important;
+    gap:clamp(26px,9vw,54px)!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-skip{
-    width:54px!important;
-    height:54px!important;
+  .drive-video-player-skip{
+    width:52px!important;
+    height:52px!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-skip svg{
-    width:48px!important;
-    height:48px!important;
+  .drive-video-player-skip svg{
+    width:46px!important;
+    height:46px!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-skip text{
-    font-size:17px!important;
-  }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-toggle{
+  .drive-video-player-skip text{font-size:16px!important}
+  .drive-video-player-toggle{
     width:58px!important;
     height:58px!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-toggle svg{
+  .drive-video-player-toggle svg{
     width:44px!important;
     height:44px!important;
   }
-
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-progress-area{
+  .drive-video-player-progress-area{
     left:max(14px,env(safe-area-inset-left))!important;
     right:max(14px,env(safe-area-inset-right))!important;
-    bottom:calc(76px + max(8px,env(safe-area-inset-bottom)))!important;
+    bottom:calc(72px + max(8px,env(safe-area-inset-bottom)))!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-progress{
-    height:26px!important;
-  }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-time{
+  .drive-video-player-time{
     margin-top:0!important;
     font-size:12px!important;
   }
-
-  /* Dock central inferior como no PC, só menor e respeitando safe-area. */
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-actionbar{
+  .drive-video-player-actionbar{
     left:50%!important;
     right:auto!important;
     bottom:max(10px,env(safe-area-inset-bottom))!important;
@@ -14401,56 +14391,68 @@ body.profile-page-active .profile-page-hero{
     gap:2px!important;
     transform:translateX(-50%)!important;
     border-radius:999px!important;
-    background:rgba(17,19,19,.76)!important;
+    background:rgba(17,19,19,.78)!important;
     border:1px solid rgba(255,255,255,.14)!important;
     -webkit-backdrop-filter:blur(18px) saturate(145%)!important;
     backdrop-filter:blur(18px) saturate(145%)!important;
     box-shadow:0 10px 32px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.07)!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-action{
+  .drive-video-player-action{
     width:40px!important;
     height:40px!important;
     flex-basis:40px!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-action svg{
+  .drive-video-player-action svg{
     width:22px!important;
     height:22px!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated .drive-video-player-action-wake-zone{
+
+  /* No touch não existe hover: nenhuma zona invisível fica sobre o vídeo. */
+  .drive-video-player-action-wake-zone{
     display:none!important;
     pointer-events:none!important;
   }
 
-  /* Um toque na própria área do vídeo consegue reexibir os controles;
-     portanto não há parede invisível sobre a mídia. */
-  .drive-video-player-overlay.is-mobile-dedicated.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-actionbar{
-    transform:translateX(-50%) translateY(8px)!important;
+  /* Quando o Drive precisa usar o preview nativo, deixa o iframe inteiro
+     livre para receber toque. O dock do site vai para o topo e fica pequeno,
+     sem cobrir a barra/progresso nativos do Drive. */
+  .drive-video-player-overlay.is-frame-mode .drive-video-player-actionbar{
+    left:auto!important;
+    right:max(10px,env(safe-area-inset-right))!important;
+    top:max(10px,env(safe-area-inset-top))!important;
+    bottom:auto!important;
+    height:46px!important;
+    padding:3px!important;
+    transform:none!important;
+    background:rgba(12,14,15,.78)!important;
+    z-index:20!important;
+  }
+  .drive-video-player-overlay.is-frame-mode .drive-video-player-action{
+    width:38px!important;
+    height:38px!important;
+    flex-basis:38px!important;
+  }
+  .drive-video-player-overlay.is-frame-mode.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-actionbar{
+    opacity:1!important;
+    visibility:visible!important;
+    pointer-events:auto!important;
+    transform:none!important;
+  }
+  .drive-video-player-overlay.is-frame-mode .drive-video-player-shell::after{
+    opacity:0!important;
+    pointer-events:none!important;
+  }
+  .drive-video-player-overlay.is-frame-mode .drive-video-player-frame-shell,
+  .drive-video-player-overlay.is-frame-mode .drive-video-player-frame{
+    pointer-events:auto!important;
+    visibility:visible!important;
   }
 
-  /* Se o Drive bloquear o streaming MP4, o erro continua no player do site.
-     O iframe interno do Drive não é usado no mobile. */
-  .drive-video-player-overlay.is-mobile-dedicated.is-error .drive-video-player-loading{
-    display:flex!important;
-    flex-direction:column!important;
-    gap:14px!important;
-    padding:24px!important;
-    text-align:center!important;
-    background:radial-gradient(circle at 50% 42%,rgba(30,34,40,.72),rgba(0,0,0,.96) 62%)!important;
+  /* Em loading, evita flashes de controles deslocados. */
+  .drive-video-player-overlay.is-source-syncing .drive-video-player-actionbar{
+    bottom:max(10px,env(safe-area-inset-bottom))!important;
   }
-  .drive-video-player-overlay.is-mobile-dedicated.is-error .drive-video-player-loader{
-    display:none!important;
-  }
-  .drive-video-player-overlay.is-mobile-dedicated.is-error .drive-video-player-loading-message{
-    display:block!important;
-    max-width:340px!important;
-    color:rgba(255,255,255,.82)!important;
-    font-size:13px!important;
-    line-height:1.45!important;
-  }
-  .drive-video-player-overlay.is-mobile-dedicated.is-error .drive-video-player-actionbar{
-    opacity:1!important;
-    pointer-events:auto!important;
-  }
+
 }
 
 /* =========================================================
