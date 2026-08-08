@@ -12118,3 +12118,12 @@ body.site-loading-active.donate-page-active > footer{
 .fans-page-community-help:hover,.fans-page-community-help:focus-visible{color:#72b7ff;text-decoration:underline;text-underline-offset:3px}
 @media(min-width:901px){.fans-page-intro{max-width:980px}.fans-page-intro .fans-page-description{white-space:nowrap}}
 @media(max-width:900px){.fans-page-intro .fans-page-description{margin-top:18px;font-size:15px;line-height:1.55}.fans-page-community-help{max-width:330px;margin-top:10px;font-size:13px}}
+
+/* Player: loading sem ponto central e sem atalho externo ao lado do fechar. */
+.drive-player-loader::after{
+  content:none!important;
+  display:none!important;
+}
+.drive-player-external{
+  display:none!important;
+}
