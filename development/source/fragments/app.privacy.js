@@ -2338,7 +2338,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       : '<div class="ph ph-wide" style="height:100%"></div>';
 
     if (logoUrl && logoUrl !== '#') {
-      logo.innerHTML = `<img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
+      logo.innerHTML = `<span class="detail-logo-media"><img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`;
     } else if (['movies', 'series'].includes(String(data.collection || '').toLowerCase())) {
       logo.innerHTML = `<span class="sr-only">${escapeHtml(title)}</span>`;
     } else {

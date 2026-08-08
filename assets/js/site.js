@@ -4463,7 +4463,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     logo.classList.toggle('notranslate', preserveTitle);
     if (preserveTitle) logo.setAttribute('translate', 'no'); else logo.removeAttribute('translate');
     if (logoUrl && logoUrl !== '#') {
-      logo.innerHTML = `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
+      logo.innerHTML = `<span class="detail-logo-media"><img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`;
     } else if (['movies', 'series'].includes(String(data.collection || '').toLowerCase())) {
       logo.innerHTML = `<span class="sr-only">${escapeHtml(title)}</span>`;
     } else {

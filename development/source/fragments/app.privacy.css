@@ -6101,3 +6101,44 @@ body.login-mode .login-brand img{
     padding:0 15px;
   }
 }
+
+
+/* Logos de vídeos: sem sobreposição nos cards mobile e tamanho estável nos detalhes. */
+.detail-logo-media{
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-start;
+  width:min(440px,40vw);
+  height:120px;
+  max-width:100%;
+  margin:0;
+  overflow:visible;
+  line-height:0;
+}
+.detail-logo-media > img{
+  display:block!important;
+  width:auto!important;
+  height:auto!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  margin:0!important;
+  object-fit:contain!important;
+  object-position:left bottom!important;
+  filter:drop-shadow(0 6px 24px rgba(0,0,0,.48));
+}
+@media(max-width:760px){
+  /* No celular, os cards usam somente a thumbnail. A logo fica exclusiva dos detalhes. */
+  .video-card > .video-card-logo,
+  .video-card > .video-card-logo-slot{
+    display:none!important;
+  }
+  .detail-logo-media{
+    width:min(78vw,320px);
+    height:92px;
+    max-width:calc(100vw - 44px);
+  }
+  .detail-logo-media > img{
+    max-width:100%!important;
+    max-height:100%!important;
+  }
+}
