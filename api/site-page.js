@@ -12,7 +12,7 @@ const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUB
 const SETTINGS_CACHE_TTL_MS = 60000;
 const SEO_CATALOG_CACHE_TTL_MS = 60000;
 const SEO_CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents', 'news']);
-const I18N_REV = '20260807-profile-albums-v1';
+const I18N_REV = '20260808-community-footer-i18n-v2';
 const LOCALE_PREFIXES = Object.freeze({
   'pt-br': { locale: 'pt-BR', ogLocale: 'pt_BR', slug: 'pt-br' },
   'en-us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
@@ -218,7 +218,7 @@ function injectLocalePreload(html, routeInfo) {
 
 function isLegalRouteInfo(routeInfo) {
   const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
-  return ['/terms', '/privacy', '/cookies', '/dmca'].includes(logical);
+  return ['/terms', '/comunidade', '/privacy', '/cookies', '/dmca'].includes(logical);
 }
 
 function profileUsernameFromRoute(routeInfo) {

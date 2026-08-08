@@ -54,7 +54,7 @@
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260808-community-page-v1';
+    var href='/assets/i18n/'+slug+'.json?rev=20260808-community-footer-i18n-v2';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -137,7 +137,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260808-community-page-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260808-community-page-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260808-community-footer-i18n-v2"></script>
 <script defer src="/assets/js/site.js?rev=20260808-community-page-v1"></script>
 </head>
 <body class="site-loading-active">
@@ -1178,7 +1178,6 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
         <p>Dúvidas, denúncias ou solicitações podem ser encaminhadas pela área de <a href="/suporte">Suporte</a>.</p>
       </article>
       <article class="legal-article" data-legal-page="comunidade" hidden>
-        <span class="legal-kicker">FÃS &amp; COMUNIDADES</span>
         <h1>Comunidade</h1>
         <p>Esta área é dedicada a quem é fã da Billie Eilish e está apoiando a Billie Eilish TV, ajudando o projeto a alcançar mais pessoas.</p>
         <h2>Como aparecer na página de fãs</h2>
@@ -1262,13 +1261,14 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 <footer>
   <div class="footer-card glass">
     <div class="footer-copy">
-      <p class="footer-line">Personal project created for non-commercial purposes.<br>Made for fans.</p>
+      <p class="footer-line">Projeto pessoal criado para fins não comerciais.<br>Feito para fãs.</p>
       <p class="footer-brand">© 2026 BETV — Billie Eilish TV</p>
       <nav class="footer-legal-links" aria-label="Informações legais">
-        <a href="/terms">Terms &amp; Conditions</a>
-        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Termos e Condições</a>
+        <a href="/comunidade">Comunidade</a>
+        <a href="/privacy">Política de Privacidade</a>
         <a href="/cookies">Cookies</a>
-        <a href="/dmca">DMCA / Copyright</a>
+        <a href="/dmca">DMCA / Direitos autorais</a>
       </nav>
     </div>
     <div class="footer-side">
