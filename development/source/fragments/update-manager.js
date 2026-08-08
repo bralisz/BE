@@ -2,6 +2,7 @@
   'use strict';
 
   var ENDPOINT = '/api/deployment-version';
+  var RELEASE_ENDPOINT = '/api/public-data?name=settings&id=site';
   var CHECK_INTERVAL = 60000;
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var currentVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || '').trim();
@@ -10,6 +11,9 @@
   var checking = false;
   var updateStarted = false;
   var intervalId = 0;
+  var releaseStateLoaded = false;
+  var publicReleaseEnabled = false;
+  var publicReleasedVersion = '';
   var UPDATE_COPY = {
     'pt-br': { available:'Atualização disponível', ready:'Uma nova versão do site está pronta.', action:'Atualizar', updating:'Atualizando a nova versão' },
     'en-us': { available:'Update available', ready:'A new version of the site is ready.', action:'Update', updating:'Updating to the new version' },
@@ -25,6 +29,27 @@
 
   function updateCopy() {
     return UPDATE_COPY[updateLocaleSlug()] || UPDATE_COPY['pt-br'];
+  }
+
+  function isAdminContext() {
+    var hash = String(window.location.hash || '').toLowerCase();
+    return hash.indexOf('#/admin') === 0 ||
+      document.body.classList.contains('admin-mode') ||
+      document.documentElement.classList.contains('admin-mode');
+  }
+
+  function hidePopup() {
+    if (!popup) return;
+    popup.hidden = true;
+    popup.style.removeProperty('display');
+    popup.style.removeProperty('visibility');
+  }
+
+  function canExposeVersionToCurrentViewer(version) {
+    version = String(version || '').trim();
+    if (!version) return false;
+    if (isAdminContext()) return true;
+    return releaseStateLoaded && publicReleaseEnabled && publicReleasedVersion === version;
   }
 
   function readPendingUpdate() {
@@ -105,7 +130,14 @@
   function restorePendingUpdate() {
     var pending = readPendingUpdate();
     if (!pending || updateStarted) return;
-    showPopup(pending, true);
+    if (canExposeVersionToCurrentViewer(pending)) {
+      showPopup(pending, true);
+      return;
+    }
+    if (releaseStateLoaded && !isAdminContext()) {
+      clearPendingUpdate();
+      hidePopup();
+    }
   }
 
   function fetchLatestVersion() {
@@ -113,24 +145,49 @@
     checking = true;
 
     var separator = ENDPOINT.indexOf('?') === -1 ? '?' : '&';
-    return fetch(ENDPOINT + separator + 't=' + Date.now(), {
+    var versionRequest = fetch(ENDPOINT + separator + 't=' + Date.now(), {
       method: 'GET',
       cache: 'no-store',
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
-    })
-      .then(function (response) {
-        if (!response.ok) throw new Error('version-check-failed');
-        return response.json();
-      })
-      .then(function (data) {
+    }).then(function (response) {
+      if (!response.ok) throw new Error('version-check-failed');
+      return response.json();
+    });
+
+    var releaseSeparator = RELEASE_ENDPOINT.indexOf('?') === -1 ? '?' : '&';
+    var releaseRequest = fetch(RELEASE_ENDPOINT + releaseSeparator + 't=' + Date.now(), {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (response) {
+      if (!response.ok) return null;
+      return response.json().catch(function () { return null; });
+    }).catch(function () { return null; });
+
+    return Promise.all([versionRequest, releaseRequest])
+      .then(function (results) {
+        var data = results[0] || {};
+        var release = results[1] || {};
         var version = String(data && data.version || '').trim();
         if (!version || version.indexOf('local:') === 0) return;
 
+        releaseStateLoaded = true;
+        publicReleaseEnabled = release && (release.updateReleaseEnabled === true || String(release.updateReleaseEnabled || '').toLowerCase() === 'true');
+        publicReleasedVersion = String(release && release.releasedDeploymentVersion || '').trim();
+
+        if (!canExposeVersionToCurrentViewer(version)) {
+          if (!isAdminContext()) {
+            clearPendingUpdate();
+            hidePopup();
+          }
+          if (!currentVersion) currentVersion = version;
+          return;
+        }
+
         var pending = readPendingUpdate();
         if (pending) {
-          // Se outro deploy saiu enquanto o aviso estava pendente, atualiza o aviso
-          // para a versão mais nova sem fazê-lo sumir ao trocar de página.
           showPopup(version, true);
           return;
         }
@@ -141,10 +198,15 @@
         }
 
         if (version !== currentVersion) showPopup(version, false);
+        else {
+          clearPendingUpdate();
+          hidePopup();
+        }
       })
       .catch(function () {})
       .finally(function () { checking = false; });
   }
+
 
   function protectedCookie(name) {
     var normalized = String(name || '').trim().toLowerCase();
@@ -351,21 +413,24 @@
   }
 
   function scheduleChecks() {
-    restorePendingUpdate();
-    window.setTimeout(fetchLatestVersion, 3000);
+    window.setTimeout(fetchLatestVersion, 1200);
     intervalId = window.setInterval(fetchLatestVersion, CHECK_INTERVAL);
 
-    window.addEventListener('focus', function () {
-      restorePendingUpdate();
-      fetchLatestVersion();
-    }, { passive: true });
+    window.addEventListener('focus', fetchLatestVersion, { passive: true });
     window.addEventListener('online', fetchLatestVersion, { passive: true });
     window.addEventListener('pageshow', function (event) {
-      restorePendingUpdate();
       if (event.persisted) fetchLatestVersion();
+      else restorePendingUpdate();
     });
-    window.addEventListener('popstate', restorePendingUpdate, { passive: true });
-    window.addEventListener('hashchange', restorePendingUpdate, { passive: true });
+    window.addEventListener('popstate', function () { restorePendingUpdate(); fetchLatestVersion(); }, { passive: true });
+    window.addEventListener('hashchange', function () { restorePendingUpdate(); fetchLatestVersion(); }, { passive: true });
+    window.addEventListener('be:update-release-changed', function (event) {
+      var detail = event && event.detail || {};
+      releaseStateLoaded = true;
+      publicReleaseEnabled = detail.updateReleaseEnabled === true || String(detail.updateReleaseEnabled || '').toLowerCase() === 'true';
+      publicReleasedVersion = String(detail.releasedDeploymentVersion || '').trim();
+      fetchLatestVersion();
+    });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
         restorePendingUpdate();

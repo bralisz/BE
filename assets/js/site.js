@@ -3866,6 +3866,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="external-native-player-frame-shell">
           <iframe class="external-native-player-frame" id="externalNativePlayerFrame" title="Reprodutor de vídeo" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
+        <div class="external-native-player-bottom-shade" id="externalNativePlayerBottomShade" aria-hidden="true"></div>
+        <div class="external-native-player-wake-zone" id="externalNativePlayerWakeZone" aria-hidden="true"></div>
         <div class="external-native-player-menu external-native-player-quality-menu" id="externalNativePlayerQualityMenu" hidden role="menu" aria-label="Qualidade do vídeo">
           <button type="button" class="external-native-player-menu-item" data-vk-quality="4" role="menuitemradio" aria-checked="true"><span>1080p</span><small>Full HD</small></button>
           <button type="button" class="external-native-player-menu-item" data-vk-quality="3" role="menuitemradio" aria-checked="false"><span>720p</span><small>HD</small></button>
@@ -3875,7 +3877,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="external-native-player-menu external-native-player-audio-menu" id="externalNativePlayerAudioMenu" hidden role="menu" aria-label="Faixa de áudio">
           <button type="button" class="external-native-player-menu-item is-active" data-vk-audio-track="default" role="menuitemradio" aria-checked="true"><span>Original</span></button>
         </div>
-        <header class="external-native-player-toolbar" aria-label="Ações do vídeo">
+        <header class="external-native-player-toolbar" id="externalNativePlayerToolbar" aria-label="Ações do vídeo">
           <button class="external-native-player-action external-native-player-quality" id="externalNativePlayerQuality" type="button" aria-label="Alterar qualidade do vídeo" title="Qualidade" aria-expanded="false" aria-controls="externalNativePlayerQualityMenu">
             <span class="external-native-player-quality-badge" aria-hidden="true">HD</span>
           </button>
@@ -3898,12 +3900,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const overlay = document.getElementById('externalNativePlayerOverlay');
     const shell = document.getElementById('externalNativePlayerShell');
     const frame = document.getElementById('externalNativePlayerFrame');
+    const toolbar = document.getElementById('externalNativePlayerToolbar');
+    const wakeZone = document.getElementById('externalNativePlayerWakeZone');
     const closeButton = document.getElementById('externalNativePlayerClose');
     const qualityButton = document.getElementById('externalNativePlayerQuality');
     const audioButton = document.getElementById('externalNativePlayerAudio');
     const qualityMenu = document.getElementById('externalNativePlayerQualityMenu');
     const audioMenu = document.getElementById('externalNativePlayerAudioMenu');
-    if (!overlay || !shell || !frame || !closeButton || !qualityButton || !audioButton || !qualityMenu || !audioMenu) return;
+    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !qualityMenu || !audioMenu) return;
 
     let previousFocus = null;
     let activeProvider = '';
@@ -3915,9 +3919,34 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let vkSelectedQuality = 4;
     let vkAudioTracks = [];
     let vkSelectedAudioTrack = 'default';
+    let controlsInteracting = false;
+    let inactivityTimer = 0;
 
     const syncBodyLock = () => {
       document.body.classList.toggle('external-video-player-open', !overlay.hidden);
+    };
+
+    const clearInactivityTimer = () => {
+      window.clearTimeout(inactivityTimer);
+      inactivityTimer = 0;
+    };
+
+    const menusOpen = () => !qualityMenu.hidden || !audioMenu.hidden;
+
+    const hideControlsForInactivity = () => {
+      clearInactivityTimer();
+      if (overlay.hidden || controlsInteracting || menusOpen()) return;
+      if (activeProvider !== 'vk') return;
+      overlay.classList.add('controls-idle');
+    };
+
+    const showControls = (keepVisible = false) => {
+      clearInactivityTimer();
+      overlay.classList.remove('controls-idle');
+      if (activeProvider !== 'vk') return;
+      if (!keepVisible && !controlsInteracting && !menusOpen()) {
+        inactivityTimer = window.setTimeout(hideControlsForInactivity, 2000);
+      }
     };
 
     const closeMenus = except => {
@@ -3927,6 +3956,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
       qualityButton.setAttribute('aria-expanded', String(!qualityMenu.hidden));
       audioButton.setAttribute('aria-expanded', String(!audioMenu.hidden));
+      if (activeProvider === 'vk') showControls(except || menusOpen());
     };
 
     const resetVkPlayer = () => {
@@ -4206,9 +4236,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       syncBodyLock();
+      showControls(normalizedProvider !== 'vk');
       if (normalizedProvider === 'vk') {
         frame.addEventListener('load', bindVkApi, { once: true });
         window.setTimeout(bindVkApi, 900);
+        window.setTimeout(() => {
+          if (!overlay.hidden && activeProvider === 'vk') showControls(false);
+        }, 80);
       }
       closeButton.focus({ preventScroll: true });
     };
@@ -4232,19 +4266,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     qualityButton.addEventListener('click', () => {
       if (activeProvider !== 'vk') return;
-      const nextHidden = !qualityMenu.hidden;
-      closeMenus(qualityMenu);
-      qualityMenu.hidden = nextHidden;
+      const willOpen = qualityMenu.hidden;
+      closeMenus(willOpen ? qualityMenu : null);
+      qualityMenu.hidden = !willOpen;
       qualityButton.setAttribute('aria-expanded', String(!qualityMenu.hidden));
+      showControls(willOpen);
     });
 
     audioButton.addEventListener('click', () => {
       if (activeProvider !== 'vk') return;
-      const nextHidden = !audioMenu.hidden;
-      closeMenus(audioMenu);
-      audioMenu.hidden = nextHidden;
+      const willOpen = audioMenu.hidden;
+      closeMenus(willOpen ? audioMenu : null);
+      audioMenu.hidden = !willOpen;
       audioButton.setAttribute('aria-expanded', String(!audioMenu.hidden));
-      if (!nextHidden) discoverVkAudioTracks();
+      if (willOpen) discoverVkAudioTracks();
+      showControls(willOpen);
     });
 
     qualityMenu.addEventListener('click', event => {
@@ -4253,6 +4289,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       switchVkQuality(option.dataset.vkQuality);
       qualityMenu.hidden = true;
       qualityButton.setAttribute('aria-expanded', 'false');
+      showControls(false);
     });
 
     audioMenu.addEventListener('click', event => {
@@ -4262,9 +4299,33 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (trackId !== 'default' || vkAudioTracks.length) setVkAudioTrack(trackId);
       audioMenu.hidden = true;
       audioButton.setAttribute('aria-expanded', 'false');
+      showControls(false);
     });
 
     closeButton.addEventListener('click', () => closeExternalPlayer(true));
+
+    const enterHoverArea = () => {
+      controlsInteracting = true;
+      showControls(true);
+    };
+
+    const leaveHoverArea = () => {
+      controlsInteracting = false;
+      showControls(false);
+    };
+
+    wakeZone.addEventListener('pointerenter', enterHoverArea);
+    wakeZone.addEventListener('pointermove', () => showControls(true));
+    wakeZone.addEventListener('pointerleave', leaveHoverArea);
+    toolbar.addEventListener('pointerenter', enterHoverArea);
+    toolbar.addEventListener('pointermove', () => showControls(true));
+    toolbar.addEventListener('pointerleave', leaveHoverArea);
+    shell.addEventListener('pointermove', () => showControls(false));
+    shell.addEventListener('pointerdown', event => {
+      if (event.target.closest('.external-native-player-toolbar,.external-native-player-menu')) return;
+      showControls(false);
+    });
+    shell.addEventListener('touchstart', () => showControls(false), { passive: true });
 
     document.addEventListener('pointerdown', event => {
       if (overlay.hidden) return;
@@ -10867,6 +10928,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   'use strict';
 
   var ENDPOINT = '/api/deployment-version';
+  var RELEASE_ENDPOINT = '/api/public-data?name=settings&id=site';
   var CHECK_INTERVAL = 60000;
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var currentVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || '').trim();
@@ -10875,6 +10937,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var checking = false;
   var updateStarted = false;
   var intervalId = 0;
+  var releaseStateLoaded = false;
+  var publicReleaseEnabled = false;
+  var publicReleasedVersion = '';
   var UPDATE_COPY = {
     'pt-br': { available:'Atualização disponível', ready:'Uma nova versão do site está pronta.', action:'Atualizar', updating:'Atualizando a nova versão' },
     'en-us': { available:'Update available', ready:'A new version of the site is ready.', action:'Update', updating:'Updating to the new version' },
@@ -10890,6 +10955,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function updateCopy() {
     return UPDATE_COPY[updateLocaleSlug()] || UPDATE_COPY['pt-br'];
+  }
+
+  function isAdminContext() {
+    var hash = String(window.location.hash || '').toLowerCase();
+    return hash.indexOf('#/admin') === 0 ||
+      document.body.classList.contains('admin-mode') ||
+      document.documentElement.classList.contains('admin-mode');
+  }
+
+  function hidePopup() {
+    if (!popup) return;
+    popup.hidden = true;
+    popup.style.removeProperty('display');
+    popup.style.removeProperty('visibility');
+  }
+
+  function canExposeVersionToCurrentViewer(version) {
+    version = String(version || '').trim();
+    if (!version) return false;
+    if (isAdminContext()) return true;
+    return releaseStateLoaded && publicReleaseEnabled && publicReleasedVersion === version;
   }
 
   function readPendingUpdate() {
@@ -10970,7 +11056,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function restorePendingUpdate() {
     var pending = readPendingUpdate();
     if (!pending || updateStarted) return;
-    showPopup(pending, true);
+    if (canExposeVersionToCurrentViewer(pending)) {
+      showPopup(pending, true);
+      return;
+    }
+    if (releaseStateLoaded && !isAdminContext()) {
+      clearPendingUpdate();
+      hidePopup();
+    }
   }
 
   function fetchLatestVersion() {
@@ -10978,24 +11071,49 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     checking = true;
 
     var separator = ENDPOINT.indexOf('?') === -1 ? '?' : '&';
-    return fetch(ENDPOINT + separator + 't=' + Date.now(), {
+    var versionRequest = fetch(ENDPOINT + separator + 't=' + Date.now(), {
       method: 'GET',
       cache: 'no-store',
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
-    })
-      .then(function (response) {
-        if (!response.ok) throw new Error('version-check-failed');
-        return response.json();
-      })
-      .then(function (data) {
+    }).then(function (response) {
+      if (!response.ok) throw new Error('version-check-failed');
+      return response.json();
+    });
+
+    var releaseSeparator = RELEASE_ENDPOINT.indexOf('?') === -1 ? '?' : '&';
+    var releaseRequest = fetch(RELEASE_ENDPOINT + releaseSeparator + 't=' + Date.now(), {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (response) {
+      if (!response.ok) return null;
+      return response.json().catch(function () { return null; });
+    }).catch(function () { return null; });
+
+    return Promise.all([versionRequest, releaseRequest])
+      .then(function (results) {
+        var data = results[0] || {};
+        var release = results[1] || {};
         var version = String(data && data.version || '').trim();
         if (!version || version.indexOf('local:') === 0) return;
 
+        releaseStateLoaded = true;
+        publicReleaseEnabled = release && (release.updateReleaseEnabled === true || String(release.updateReleaseEnabled || '').toLowerCase() === 'true');
+        publicReleasedVersion = String(release && release.releasedDeploymentVersion || '').trim();
+
+        if (!canExposeVersionToCurrentViewer(version)) {
+          if (!isAdminContext()) {
+            clearPendingUpdate();
+            hidePopup();
+          }
+          if (!currentVersion) currentVersion = version;
+          return;
+        }
+
         var pending = readPendingUpdate();
         if (pending) {
-          // Se outro deploy saiu enquanto o aviso estava pendente, atualiza o aviso
-          // para a versão mais nova sem fazê-lo sumir ao trocar de página.
           showPopup(version, true);
           return;
         }
@@ -11006,10 +11124,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
 
         if (version !== currentVersion) showPopup(version, false);
+        else {
+          clearPendingUpdate();
+          hidePopup();
+        }
       })
       .catch(function () {})
       .finally(function () { checking = false; });
   }
+
 
   function protectedCookie(name) {
     var normalized = String(name || '').trim().toLowerCase();
@@ -11216,21 +11339,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function scheduleChecks() {
-    restorePendingUpdate();
-    window.setTimeout(fetchLatestVersion, 3000);
+    window.setTimeout(fetchLatestVersion, 1200);
     intervalId = window.setInterval(fetchLatestVersion, CHECK_INTERVAL);
 
-    window.addEventListener('focus', function () {
-      restorePendingUpdate();
-      fetchLatestVersion();
-    }, { passive: true });
+    window.addEventListener('focus', fetchLatestVersion, { passive: true });
     window.addEventListener('online', fetchLatestVersion, { passive: true });
     window.addEventListener('pageshow', function (event) {
-      restorePendingUpdate();
       if (event.persisted) fetchLatestVersion();
+      else restorePendingUpdate();
     });
-    window.addEventListener('popstate', restorePendingUpdate, { passive: true });
-    window.addEventListener('hashchange', restorePendingUpdate, { passive: true });
+    window.addEventListener('popstate', function () { restorePendingUpdate(); fetchLatestVersion(); }, { passive: true });
+    window.addEventListener('hashchange', function () { restorePendingUpdate(); fetchLatestVersion(); }, { passive: true });
+    window.addEventListener('be:update-release-changed', function (event) {
+      var detail = event && event.detail || {};
+      releaseStateLoaded = true;
+      publicReleaseEnabled = detail.updateReleaseEnabled === true || String(detail.updateReleaseEnabled || '').toLowerCase() === 'true';
+      publicReleasedVersion = String(detail.releasedDeploymentVersion || '').trim();
+      fetchLatestVersion();
+    });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
         restorePendingUpdate();
@@ -11251,7 +11377,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (intervalId) window.clearInterval(intervalId);
   }, { once: true });
 })();
-
 
 ;/* Página dedicada: Quem é Billie Eilish. */
 (function(){

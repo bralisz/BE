@@ -16,7 +16,8 @@ const MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl'
 const SITE_SETTING_FIELDS = new Set([
   'description', 'discordUrl', 'footerText', 'instagram', 'primaryColor',
   'translations',
-  'shareImage', 'siteName', 'website', 'xUrl', 'youtube'
+  'shareImage', 'siteName', 'website', 'xUrl', 'youtube',
+  'updateReleaseEnabled', 'releasedDeploymentVersion'
 ]);
 const ONG_SETTING_FIELDS = new Set(['bannerUrl', 'translations']);
 const BILLIE_SETTING_FIELDS = new Set([
@@ -29,6 +30,31 @@ function config() {
     url: String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL).replace(/\/$/, ''),
     key: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_KEY
   };
+}
+
+function serviceRoleKey() {
+  return String(
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_KEY ||
+    process.env.SB_SERVICE_ROLE_KEY ||
+    ''
+  ).trim();
+}
+
+async function fetchPrivateSettingWithServiceRole(id) {
+  const key = serviceRoleKey();
+  if (!key) return null;
+  const { url } = config();
+  const params = new URLSearchParams({ select: 'id,data,created_at,updated_at', id: `eq.${id}`, limit: '1' });
+  const response = await fetch(`${url}/rest/v1/site_settings?${params.toString()}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json' },
+    cache: 'no-store'
+  });
+  if (!response.ok) return null;
+  const rows = await response.json().catch(() => []);
+  const row = Array.isArray(rows) ? rows[0] : null;
+  return row && row.data && typeof row.data === 'object' ? row.data : null;
 }
 
 function isLocalAsset(value) {
@@ -160,6 +186,8 @@ function sanitizeSettings(id, raw) {
     source.description = safeText(source.description, 500);
     source.footerText = safeText(source.footerText, 500);
     source.primaryColor = safeText(source.primaryColor, 32);
+    source.updateReleaseEnabled = source.updateReleaseEnabled === true || String(source.updateReleaseEnabled || '').toLowerCase() === 'true';
+    source.releasedDeploymentVersion = safeText(source.releasedDeploymentVersion, 100).trim();
   }
   return source;
 }
@@ -202,6 +230,13 @@ async function fetchLegacyRows(name, id) {
 async function fetchRows(name, id) {
   if (name === 'settings') {
     if (!id || !['site', 'billie-eilish', 'ong'].includes(id)) throw new Error('invalid_setting');
+    try {
+      const privateSetting = await fetchPrivateSettingWithServiceRole(id);
+      if (privateSetting) {
+        const sanitized = sanitizeSettings(id, privateSetting);
+        return sanitized ? [sanitized] : [];
+      }
+    } catch (_) {}
     try {
       const payload = await callRpc('get_public_site_setting', { p_id: id });
       const value = Array.isArray(payload) ? payload[0] : payload;

@@ -791,7 +791,19 @@ body.admin-preview-open{overflow:hidden}
       return data && typeof data === 'object' ? data : {};
     };
 
-    const [recent, donationOverview, siteSettings, dashboardMetrics] = await Promise.all([
+    const loadDeploymentVersion = async () => {
+      const response = await fetch(`/api/deployment-version?t=${Date.now()}`, {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) throw new Error('Não foi possível consultar a versão atual do site.');
+      const payload = await response.json().catch(() => ({}));
+      return String(payload && payload.version || '').trim();
+    };
+
+    const [recent, donationOverview, siteSettings, dashboardMetrics, deploymentVersion] = await Promise.all([
       db.list('admin_logs', { orderBy: 'createdAt', direction: 'desc', limit: 8 }).catch(() => []),
       loadDonationOverview().catch(error => {
         console.warn('Não foi possível carregar os dados de doação:', error?.message || error);
@@ -801,6 +813,10 @@ body.admin-preview-open{overflow:hidden}
       loadDashboardMetrics().catch(error => {
         console.warn('Não foi possível carregar os insights do dashboard:', error?.message || error);
         return {};
+      }),
+      loadDeploymentVersion().catch(error => {
+        console.warn('Não foi possível carregar a versão do deploy:', error?.message || error);
+        return '';
       })
     ]);
     await Promise.all(names.map(async name => {
@@ -894,6 +910,14 @@ body.admin-preview-open{overflow:hidden}
       </div>`;
     }).join('');
 
+    const releasedDeploymentVersion = String(siteSettings?.releasedDeploymentVersion || '').trim();
+    const releaseEnabled = siteSettings?.updateReleaseEnabled === true || String(siteSettings?.updateReleaseEnabled || '').toLowerCase() === 'true';
+    const deploymentCanBeReleased = Boolean(deploymentVersion && !deploymentVersion.startsWith('local:'));
+    const currentDeploymentReleased = Boolean(deploymentCanBeReleased && releaseEnabled && releasedDeploymentVersion === deploymentVersion);
+    const deploymentShortLabel = deploymentCanBeReleased
+      ? deploymentVersion.replace(/^v:/, '').slice(0, 8)
+      : 'local';
+
     content.innerHTML = `
       <section class="dashboard-hero dashboard-insights-hero">
         <div class="dashboard-copy">
@@ -913,6 +937,20 @@ body.admin-preview-open{overflow:hidden}
               <span class="dashboard-approved-badge">Aprovado</span>
               <strong class="dashboard-metric-big-number">${Number(dashboardMetrics?.approvedDonations || 0).toLocaleString('pt-BR')}</strong>
               <small>doações confirmadas com sucesso</small>
+            </article>
+
+            <article class="dashboard-metric-card dashboard-update-release-card ${currentDeploymentReleased ? 'is-released' : ''}">
+              <div class="dashboard-metric-label"><i>↻</i><span>Atualização do site</span></div>
+              <label class="dashboard-update-checkbox" for="dashboardReleaseUpdate">
+                <input id="dashboardReleaseUpdate" type="checkbox" ${currentDeploymentReleased ? 'checked' : ''} ${deploymentCanBeReleased ? '' : 'disabled'}>
+                <span class="dashboard-update-checkbox-box" aria-hidden="true"></span>
+                <span class="dashboard-update-checkbox-copy">
+                  <strong>${currentDeploymentReleased ? 'Liberada aos usuários' : 'Somente administrador'}</strong>
+                  <small>${currentDeploymentReleased ? 'O aviso de atualização está ativo.' : 'Usuários ainda não recebem o aviso.'}</small>
+                </span>
+              </label>
+              <div class="dashboard-update-version">Versão <code>${esc(deploymentShortLabel)}</code></div>
+              <small class="dashboard-update-help">O administrador detecta novos deploys normalmente. Marque para liberar esta versão aos usuários.</small>
             </article>
           </div>
         </div>
@@ -1075,6 +1113,45 @@ body.admin-preview-open{overflow:hidden}
             console.warn('Não foi possível pesquisar o histórico de doações:', error?.message || error);
           }
         }, 280);
+      });
+    }
+
+    const dashboardReleaseUpdate = $('#dashboardReleaseUpdate');
+    if (dashboardReleaseUpdate) {
+      dashboardReleaseUpdate.addEventListener('change', async () => {
+        const checked = dashboardReleaseUpdate.checked;
+        const card = dashboardReleaseUpdate.closest('.dashboard-update-release-card');
+        const copy = card && card.querySelector('.dashboard-update-checkbox-copy');
+        dashboardReleaseUpdate.disabled = true;
+        try {
+          if (!deploymentCanBeReleased) throw new Error('A versão atual não pode ser liberada a partir deste ambiente.');
+          const releaseData = {
+            updateReleaseEnabled: checked,
+            releasedDeploymentVersion: checked ? deploymentVersion : releasedDeploymentVersion,
+            updateReleaseChangedAt: now(),
+            updateReleaseChangedBy: user.email || user.uid || '',
+            updatedAt: now(),
+            updatedBy: user.email || user.uid || ''
+          };
+          await db.set('settings', 'site', releaseData, { merge: true });
+          await logAction(
+            checked ? 'site_update_released' : 'site_update_withheld',
+            'settings',
+            'site',
+            checked ? `Atualização ${deploymentShortLabel} liberada aos usuários` : `Atualização ${deploymentShortLabel} retirada dos usuários`
+          );
+          if (card) card.classList.toggle('is-released', checked);
+          if (copy) copy.innerHTML = checked
+            ? '<strong>Liberada aos usuários</strong><small>O aviso de atualização está ativo.</small>'
+            : '<strong>Somente administrador</strong><small>Usuários ainda não recebem o aviso.</small>';
+          window.dispatchEvent(new CustomEvent('be:update-release-changed', { detail: releaseData }));
+          toast(checked ? 'Atualização liberada para os usuários.' : 'Atualização ocultada dos usuários.');
+        } catch (error) {
+          dashboardReleaseUpdate.checked = !checked;
+          toast(error.message || 'Não foi possível alterar a liberação da atualização.', 'err');
+        } finally {
+          dashboardReleaseUpdate.disabled = !deploymentCanBeReleased;
+        }
       });
     }
 
@@ -3814,7 +3891,7 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
   style.id='be-admin-four-metrics-style';
   style.textContent=`
     body.admin-mode .dashboard-metrics-grid.dashboard-metrics-grid-four{
-      grid-template-columns:repeat(4,minmax(0,1fr))!important;
+      grid-template-columns:repeat(5,minmax(0,1fr))!important;
       gap:12px!important;
     }
 
@@ -3892,6 +3969,112 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
       font-size:10px!important;
       font-weight:800!important;
       letter-spacing:.02em!important;
+    }
+
+    body.admin-mode .dashboard-update-release-card{
+      justify-content:flex-start!important;
+      gap:12px!important;
+      transition:border-color .2s ease,background .2s ease,box-shadow .2s ease!important;
+    }
+
+    body.admin-mode .dashboard-update-release-card.is-released{
+      border-color:rgba(45,211,140,.30)!important;
+      background:linear-gradient(180deg,rgba(7,31,34,.82),rgba(7,20,35,.82))!important;
+      box-shadow:inset 0 0 0 1px rgba(45,211,140,.05)!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox{
+      display:flex!important;
+      align-items:flex-start!important;
+      gap:10px!important;
+      width:100%!important;
+      cursor:pointer!important;
+      user-select:none!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox input{
+      position:absolute!important;
+      width:1px!important;
+      height:1px!important;
+      opacity:0!important;
+      pointer-events:none!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox-box{
+      position:relative!important;
+      flex:0 0 24px!important;
+      width:24px!important;
+      height:24px!important;
+      margin-top:1px!important;
+      border:1px solid rgba(125,181,255,.30)!important;
+      border-radius:7px!important;
+      background:rgba(255,255,255,.035)!important;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
+      transition:.18s ease!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox input:checked + .dashboard-update-checkbox-box{
+      border-color:#2dd38c!important;
+      background:#20b979!important;
+      box-shadow:0 0 0 3px rgba(45,211,140,.10)!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox input:checked + .dashboard-update-checkbox-box::after{
+      content:""!important;
+      position:absolute!important;
+      left:7px!important;
+      top:4px!important;
+      width:6px!important;
+      height:11px!important;
+      border:solid #fff!important;
+      border-width:0 2px 2px 0!important;
+      transform:rotate(45deg)!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox input:focus-visible + .dashboard-update-checkbox-box{
+      outline:3px solid rgba(61,140,255,.22)!important;
+      outline-offset:2px!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox input:disabled + .dashboard-update-checkbox-box{
+      opacity:.45!important;
+      cursor:not-allowed!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox-copy{
+      display:grid!important;
+      gap:3px!important;
+      min-width:0!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox-copy strong{
+      color:#f5f8ff!important;
+      font-size:13px!important;
+      line-height:1.25!important;
+      font-weight:800!important;
+    }
+
+    body.admin-mode .dashboard-update-checkbox-copy small,
+    body.admin-mode .dashboard-update-help{
+      color:var(--a-muted)!important;
+      font-size:10px!important;
+      line-height:1.4!important;
+    }
+
+    body.admin-mode .dashboard-update-version{
+      margin-top:auto!important;
+      color:var(--a-muted)!important;
+      font-size:10px!important;
+    }
+
+    body.admin-mode .dashboard-update-version code{
+      margin-left:4px!important;
+      padding:3px 6px!important;
+      border:1px solid rgba(125,181,255,.12)!important;
+      border-radius:7px!important;
+      background:rgba(255,255,255,.035)!important;
+      color:#dcecff!important;
+      font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace!important;
     }
 
     @media(max-width:1100px){

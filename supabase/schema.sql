@@ -741,6 +741,8 @@ as $$
       'website', s.data -> 'website',
       'discordUrl', s.data -> 'discordUrl',
       'shareImage', s.data -> 'shareImage',
+      'updateReleaseEnabled', s.data -> 'updateReleaseEnabled',
+      'releasedDeploymentVersion', s.data -> 'releasedDeploymentVersion',
       'translations', s.data -> 'translations'
     ))
     when 'ong' then jsonb_strip_nulls(jsonb_build_object(
