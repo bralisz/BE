@@ -11274,11 +11274,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return UPDATE_COPY[updateLocaleSlug()] || UPDATE_COPY['pt-br'];
   }
 
+  function isAuthenticatedAdmin() {
+    try {
+      var backend = window.beBackend;
+      var account = backend && backend.auth ? backend.auth.currentUser : null;
+      if (!account) return false;
+      if (backend && typeof backend.isAdmin === 'function') return backend.isAdmin(account) === true;
+      return String(account.role || '').toLowerCase() === 'admin';
+    } catch (_) {}
+    return false;
+  }
+
   function isAdminContext() {
     var hash = String(window.location.hash || '').toLowerCase();
     return hash.indexOf('#/admin') === 0 ||
       document.body.classList.contains('admin-mode') ||
-      document.documentElement.classList.contains('admin-mode');
+      document.documentElement.classList.contains('admin-mode') ||
+      isAuthenticatedAdmin();
   }
 
   function hidePopup() {
@@ -11724,6 +11736,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     observePopupMount();
     window.setTimeout(fetchLatestVersion, 1200);
     intervalId = window.setInterval(fetchLatestVersion, CHECK_INTERVAL);
+
+    // Uma conta administrativa recebe o aviso mesmo quando estiver navegando
+    // pela área pública. Assim que a autenticação confirmar o papel de admin,
+    // uma nova checagem é feita sem esperar o próximo intervalo.
+    try {
+      var backend = window.beBackend;
+      if (backend && backend.auth && typeof backend.auth.onChange === 'function') {
+        backend.auth.onChange(function (account) {
+          if (!account || !isAuthenticatedAdmin()) return;
+          restorePendingUpdate();
+          fetchLatestVersion();
+        });
+      } else if (backend && backend.ready && typeof backend.ready.then === 'function') {
+        backend.ready.then(function () {
+          if (!isAuthenticatedAdmin()) return;
+          restorePendingUpdate();
+          fetchLatestVersion();
+        }).catch(function () {});
+      }
+    } catch (_) {}
 
     window.addEventListener('focus', fetchLatestVersion, { passive: true });
     window.addEventListener('online', fetchLatestVersion, { passive: true });
