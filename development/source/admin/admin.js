@@ -14,10 +14,15 @@ document.head.appendChild(s);
   style.textContent = `
 /* Editor de conteúdo v3 — formulário amplo + preview sob demanda */
 body.admin-preview-open{overflow:hidden}
-.content-editor-layout{position:relative;display:block;min-height:0;flex:1}
+.content-editor-layout{position:relative;display:flex;min-height:0;flex:1;overflow:hidden}
 .content-editor-fields{
   min-height:0;
-  overflow:auto;
+  height:100%;
+  flex:1 1 auto;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
   padding:22px 24px 28px;
   border-right:0;
   display:grid;
@@ -158,20 +163,25 @@ body.admin-preview-open{overflow:hidden}
 .content-preview-toggle-copy strong{font-size:12px;line-height:1.2}
 .content-preview-toggle-copy small{color:#8fa3bd;font-size:9px;line-height:1.2;font-weight:650}
 .admin-content.content-preview-open .content-preview-toggle{opacity:0;pointer-events:none;transform:translateY(8px)}
-.admin-content.admin-editor-active .modern-content-form{overflow:hidden}
-.admin-content.admin-editor-active .content-editor-actions{flex:0 0 auto}
+.admin-content.admin-editor-active .content-editor-modal.inline{height:calc(100dvh - 140px);min-height:0;max-height:calc(100dvh - 140px);overflow:hidden}
+.admin-content.admin-editor-active .modern-content-form{height:100%;min-height:0;overflow:hidden}
+.admin-content.admin-editor-active .content-editor-layout{min-height:0;overflow:hidden}
+.admin-content.admin-editor-active .content-editor-fields{min-height:0;height:100%;overflow-y:auto}
+.admin-content.admin-editor-active .content-editor-actions{position:relative;z-index:5;flex:0 0 auto;box-shadow:0 -14px 30px rgba(0,0,0,.18)}
 
 @media(max-width:1180px){
   .content-editor-fields{grid-template-columns:1fr;padding-bottom:112px}
   .content-editor-fields>.editor-field-group:nth-child(n){grid-column:1;grid-row:auto}
 }
 @media(max-width:1040px){
-  .admin-content.admin-editor-active .modern-content-form{overflow:visible}
-  .admin-content.admin-editor-active .content-editor-layout{min-height:auto}
-  .admin-content.admin-editor-active .content-editor-fields{overflow:visible}
+  .admin-content.admin-editor-active .content-editor-modal.inline{height:calc(100dvh - 126px);min-height:0;max-height:calc(100dvh - 126px)}
+  .admin-content.admin-editor-active .modern-content-form{height:100%;min-height:0;overflow:hidden}
+  .admin-content.admin-editor-active .content-editor-layout{min-height:0;overflow:hidden}
+  .admin-content.admin-editor-active .content-editor-fields{height:100%;min-height:0;overflow-x:hidden;overflow-y:auto}
 }
 @media(max-width:720px){
   body.admin-preview-open{overscroll-behavior:none}
+  .admin-content.admin-editor-active .content-editor-modal.inline{height:calc(100dvh - 148px);min-height:0;max-height:calc(100dvh - 148px)}
   .content-editor-header{min-height:auto;padding:17px 16px;gap:12px}
   .content-editor-header h2{font-size:25px}
   .content-editor-header p{font-size:12px;line-height:1.45}
@@ -296,7 +306,7 @@ body.admin-preview-open{overflow:hidden}
   'use strict';
 
   const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','ongs','users','notifications'];
-  const LABELS = {dashboard:'Visão geral',notifications:'Notificações',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',ongs:'Apoie uma ONG',users:'Usuários',settings:'Comunidade'};
+  const LABELS = {dashboard:'Visão geral',notifications:'Notificações',contentHub:'Conteúdo',siteHub:'Site',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',ongs:'Apoie uma ONG',users:'Usuários',settings:'Comunidade'};
   const LOCAL_ADMIN_EMAIL = 'admin@local.invalid';
   const CONTENT_CATEGORIES = [
     ['videos','Vídeos','▣'],
@@ -637,7 +647,7 @@ body.admin-preview-open{overflow:hidden}
 
   async function renderLogin() {
     setAdminDocumentScroll(false);
-    document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="admin-login-topbar"><a class="admin-login-logo" href="/" aria-label="Voltar ao site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/login-logo.png?v=20260807-betv-logo-v4" alt="BE TV"></a></div><div class="login-card" aria-label="Acesso administrativo"><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span><span>Conectar via Google</span></button></div></div></div><div class="toast-area"></div>`;
+    document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="admin-login-topbar"><a class="admin-login-logo" href="/" aria-label="Voltar ao site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=6" alt="BE"></a></div><div class="login-card" aria-label="Acesso administrativo"><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span><span>Conectar via Google</span></button></div></div></div><div class="toast-area"></div>`;
     startAdminLoginBackground();
     $('#googleLogin').onclick = loginWithGoogle;
     const savedError = sessionStorage.getItem('adminAuthError');
@@ -649,8 +659,59 @@ body.admin-preview-open{overflow:hidden}
 
   function navButton(key) {
     const current = route();
-    const active = current === key || (key === 'contents' && (current.startsWith('contents/') || current === 'featured'));
-    return `<button data-route="${key}" class="${active ? 'active' : ''}">${LABELS[key]}</button>`;
+    const contentRoutes = ['billie','featured','contents','gallery'];
+    const siteRoutes = ['sections','settings'];
+    const isContentRoute = contentRoutes.includes(current) || current.startsWith('contents/');
+    const isSiteRoute = siteRoutes.includes(current);
+
+    let active = current === key;
+    let target = key;
+
+    if (key === 'contentHub') {
+      active = isContentRoute;
+      target = 'billie';
+    } else if (key === 'siteHub') {
+      active = isSiteRoute;
+      target = 'sections';
+    } else if (key === 'contents') {
+      active = current === 'featured' || current === 'contents' || current.startsWith('contents/');
+    }
+
+    return `<button data-route="${target}" class="${active ? 'active' : ''}">${LABELS[key]}</button>`;
+  }
+
+  function renderAdminSubnav() {
+    const host = $('#adminSubnav');
+    if (!host) return;
+
+    const current = route();
+    const contentActive = ['billie','featured','contents','gallery'].includes(current) || current.startsWith('contents/');
+    const siteActive = ['sections','settings'].includes(current);
+
+    let tabs = [];
+    if (contentActive) {
+      tabs = [
+        ['billie', 'Billie Eilish', current === 'billie'],
+        ['contents', 'Conteúdos', current === 'featured' || current === 'contents' || current.startsWith('contents/')],
+        ['gallery', 'Galeria', current === 'gallery']
+      ];
+    } else if (siteActive) {
+      tabs = [
+        ['sections', 'Seções do site', current === 'sections'],
+        ['settings', 'Comunidade', current === 'settings']
+      ];
+    }
+
+    if (!tabs.length) {
+      host.hidden = true;
+      host.innerHTML = '';
+      return;
+    }
+
+    host.hidden = false;
+    host.innerHTML = tabs.map(([target, label, active]) =>
+      `<button type="button" data-route="${target}" class="${active ? 'active' : ''}">${label}</button>`
+    ).join('');
   }
 
   function renderShell() {
@@ -659,12 +720,13 @@ body.admin-preview-open{overflow:hidden}
       adminLoginBgTimer = null;
     }
     setAdminDocumentScroll(true);
-    const routes = ['dashboard','notifications','billie','sections','contents','gallery','ongs','users','settings'];
+    const routes = ['dashboard','notifications','contentHub','siteHub','ongs','users'];
     const activeAvatar = selectedProfileAvatar(user.profile) || String(user.photoURL || '');
     const accountAvatar = activeAvatar
       ? `<img loading="lazy" decoding="async" src="${esc(media(activeAvatar))}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`
       : `<span aria-label="Sem foto de perfil">${esc((user.displayName || 'U').charAt(0).toUpperCase())}</span>`;
-    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/admin-logo.png?v=20260807-betv-logo-v4" alt="BE TV"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><div class="admin-avatar-button" id="adminAccountAvatar" aria-label="Avatar do administrador">${accountAvatar}</div></div></header><main class="admin-main"><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
+    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=6" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><div class="admin-avatar-button" id="adminAccountAvatar" aria-label="Avatar do administrador">${accountAvatar}</div></div></header><main class="admin-main"><nav class="admin-subnav" id="adminSubnav" aria-label="Subseções do painel" hidden></nav><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
+    renderAdminSubnav();
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
     const accountAvatarElement = $('#adminAccountAvatar');
     if (accountAvatarElement) {
@@ -720,13 +782,25 @@ body.admin-preview-open{overflow:hidden}
       return data && typeof data === 'object' ? data : {};
     };
 
-    const [recent, donationOverview, siteSettings] = await Promise.all([
+    const loadDashboardMetrics = async () => {
+      const client = beBackend && beBackend.client;
+      if (!client || typeof client.rpc !== 'function') return {};
+      const { data, error } = await client.rpc('get_admin_dashboard_metrics');
+      if (error) throw error;
+      return data && typeof data === 'object' ? data : {};
+    };
+
+    const [recent, donationOverview, siteSettings, dashboardMetrics] = await Promise.all([
       db.list('admin_logs', { orderBy: 'createdAt', direction: 'desc', limit: 8 }).catch(() => []),
       loadDonationOverview().catch(error => {
         console.warn('Não foi possível carregar os dados de doação:', error?.message || error);
         return {};
       }),
-      db.get('settings', 'site').catch(() => ({}))
+      db.get('settings', 'site').catch(() => ({})),
+      loadDashboardMetrics().catch(error => {
+        console.warn('Não foi possível carregar os insights do dashboard:', error?.message || error);
+        return {};
+      })
     ]);
     await Promise.all(names.map(async name => {
       counts[name] = await countCollection(name).catch(() => 0);
@@ -782,15 +856,63 @@ body.admin-preview-open{overflow:hidden}
         <small>${esc(detail)}</small>
       </article>`;
 
+    const overallMetric = key => {
+      const item = dashboardMetrics && dashboardMetrics[key] && typeof dashboardMetrics[key] === 'object'
+        ? dashboardMetrics[key]
+        : {};
+      return {
+        title: String(item.title || 'Sem dados'),
+        imageUrl: String(item.imageUrl || ''),
+        collection: String(item.collection || ''),
+        value: Number(item.value || 0)
+      };
+    };
+    const contentMetricCard = (label, item, suffix, icon) => `
+      <article class="dashboard-metric-card content-highlight-card">
+        <div class="dashboard-metric-label"><i>${icon}</i><span>${esc(label)}</span></div>
+        <div class="dashboard-metric-media ${item.imageUrl ? '' : 'is-empty'}">
+          ${item.imageUrl ? `<img src="${esc(item.imageUrl)}" alt="" loading="lazy" decoding="async">` : '<span>Sem imagem</span>'}
+        </div>
+        <strong class="dashboard-metric-number">${Number(item.value || 0).toLocaleString('pt-BR')}</strong>
+        <div class="dashboard-metric-title" title="${esc(item.title)}">${esc(item.title)}</div>
+        <small>${esc(suffix)}</small>
+      </article>`;
+    const weeklyUsers = Array.isArray(dashboardMetrics?.weeklyUsers) ? dashboardMetrics.weeklyUsers : [];
+    const weeklyMax = Math.max(1, ...weeklyUsers.map(item => Number(item.users || 0)));
+    const weeklyChart = weeklyUsers.map(item => {
+      const date = new Date(`${item.date}T12:00:00`);
+      const label = Number.isNaN(date.getTime())
+        ? String(item.date || '')
+        : date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+      const count = Number(item.users || 0);
+      const height = count > 0 ? Math.max(12, Math.round((count / weeklyMax) * 100)) : 4;
+      return `<div class="weekly-user-bar-item">
+        <strong>${count.toLocaleString('pt-BR')}</strong>
+        <div class="weekly-user-bar-track"><span style="height:${height}%"></span></div>
+        <small>${esc(label)}</small>
+      </div>`;
+    }).join('');
+
     content.innerHTML = `
-      <section class="dashboard-hero">
+      <section class="dashboard-hero dashboard-insights-hero">
         <div class="dashboard-copy">
           <h1>Painel de conteúdo</h1>
-          <p>Gerencie todas as áreas do site com facilidade.<br>Crie, edite, organize e publique conteúdos.</p>
-          <div class="dashboard-stats">
-            <article><i>▤</i><div><strong>${counts.news || 0}</strong><span>Álbuns cadastrados</span></div></article>
-            <article><i>▣</i><div><strong>${counts.videos || 0}</strong><span>Vídeos cadastrados</span></div></article>
-            <article><i>◉</i><div><strong>${(counts.featured || 0) + (counts.sections || 0)}</strong><span>Destaques e seções</span></div></article>
+          <div class="dashboard-metrics-grid dashboard-metrics-grid-four">
+            <article class="dashboard-metric-card primary-metric">
+              <div class="dashboard-metric-label"><i>♙</i><span>Novos usuários hoje</span></div>
+              <strong class="dashboard-metric-big-number">${Number(dashboardMetrics?.todayUsers || 0).toLocaleString('pt-BR')}</strong>
+              <small>contas criadas hoje</small>
+            </article>
+
+            ${contentMetricCard('Mais salvo', overallMetric('topSaved'), 'salvamentos', '♡')}
+            ${contentMetricCard('Mais visto', overallMetric('topViewed'), 'visualizações', '◉')}
+
+            <article class="dashboard-metric-card donation-approved-card">
+              <div class="dashboard-metric-label"><i>✓</i><span>Doações para ONGs</span></div>
+              <span class="dashboard-approved-badge">Aprovado</span>
+              <strong class="dashboard-metric-big-number">${Number(dashboardMetrics?.approvedDonations || 0).toLocaleString('pt-BR')}</strong>
+              <small>doações confirmadas com sucesso</small>
+            </article>
           </div>
         </div>
       </section>
@@ -867,24 +989,30 @@ body.admin-preview-open{overflow:hidden}
             )}
           </div>
 
-          <section class="dashboard-site-settings">
-            <div class="donation-insights-heading">
+          <section class="dashboard-weekly-users">
+            <div class="dashboard-section-head">
               <div>
-                <h3>Configurações do site</h3>
-                <p>Identidade, links externos e informações gerais exibidas no BETV.</p>
+                <h3>Novos usuários da semana</h3>
+                <p>Contas criadas em cada dia nos últimos 7 dias.</p>
               </div>
+            </div>
+            <div class="weekly-user-chart" aria-label="Gráfico semanal de usuários">
+              ${weeklyChart || '<div class="empty">Ainda não há dados de acesso.</div>'}
+            </div>
+          </section>
+
+          <section class="dashboard-site-settings">
+            <div class="dashboard-section-head">
+              <div><h3>Configurações do site</h3></div>
             </div>
             <form id="dashboardSettingsForm" class="dashboard-settings-form">
               <div class="form-grid">
-                <div class="field"><label>Nome do site</label><input class="a-input" name="siteName" value="${esc(siteSettings.siteName || 'BETV')}"></div>
-                <div class="field"><label>Cor principal</label><input class="a-input" name="primaryColor" value="${esc(siteSettings.primaryColor || '#2D7FF9')}"></div>
-                <div class="field full"><label>Descrição do site</label><textarea class="a-textarea" name="description">${esc(siteSettings.description || '')}</textarea></div>
-                <div class="field full"><div class="settings-section-heading"><strong>Links do rodapé</strong><small>Os ícones aparecem no site somente quando um link estiver preenchido.</small></div></div>
+                <div class="field full"><label>Cor principal</label><input class="a-input" name="primaryColor" value="${esc(siteSettings.primaryColor || '#2D7FF9')}"></div>
+                <div class="field full"><div class="settings-section-heading"><strong>Links do rodapé</strong></div></div>
                 <div class="field"><label>Instagram</label><input class="a-input" type="url" name="instagram" value="${esc(siteSettings.instagram || '')}" placeholder="https://instagram.com/usuario"></div>
                 <div class="field"><label>Site / website</label><input class="a-input" type="url" name="website" value="${esc(siteSettings.website || siteSettings.siteUrl || '')}" placeholder="https://seusite.com"></div>
                 <div class="field"><label>X / Twitter</label><input class="a-input" type="url" name="xUrl" value="${esc(siteSettings.xUrl || siteSettings.twitter || siteSettings.x || '')}" placeholder="https://x.com/usuario"></div>
                 <div class="field"><label>Discord</label><input class="a-input" type="url" name="discordUrl" value="${esc(siteSettings.discordUrl || siteSettings.discord || siteSettings.discordInvite || '')}" placeholder="https://discord.gg/convite"></div>
-                <div class="field full"><div class="settings-section-heading"><strong>Banner de compartilhamento</strong><small>Preview fixo do site: https://i.imgur.com/tnBMpHr.png</small></div></div>
               </div>
               <div class="modal-actions"><button class="a-btn primary" type="submit">Salvar configurações</button></div>
             </form>
@@ -957,6 +1085,8 @@ body.admin-preview-open{overflow:hidden}
         if (saveButton) saveButton.disabled = true;
         try {
           const data = Object.fromEntries(new FormData(dashboardSettingsForm).entries());
+          data.siteName = 'Billie Eilish TV';
+          data.description = 'Todo o conteúdo da Billie Eilish em um só lugar feito por fã.';
           data.updatedAt = now();
           data.updatedBy = user.email || user.uid || '';
           await db.set('settings', 'site', data, { merge: true });
@@ -971,6 +1101,7 @@ body.admin-preview-open{overflow:hidden}
     }
 
     $('#dashboardNewContent').onclick = chooseContentCategory;
+    renderAdminSubnav();
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
     await maybeResumePendingContentEditor();
   }
@@ -2107,7 +2238,7 @@ body.admin-preview-open{overflow:hidden}
     }
     const context = { sections: [], featuredContents: [] };
     try {
-      if (['videos','movies','series'].includes(name)) context.sections = (await db.list('sections', { orderBy: 'order', direction: 'asc' })).filter(entry => entry.active !== false);
+      if (['videos','movies','series'].includes(name)) context.sections = await db.list('sections', { orderBy: 'order', direction: 'asc' });
       if (name === 'featured') {
         const collections = [
           ['videos', 'Vídeo'],
@@ -2280,6 +2411,10 @@ body.admin-preview-open{overflow:hidden}
         if (['videos','movies','series'].includes(name)) {
           const selected = context.sections.find(section => String(section.id) === String(data.sectionId || ''));
           if (!selected) throw new Error('Selecione uma seção criada em Seções do site.');
+          if (selected.active === false) {
+            await db.set('sections', selected.id, { active: true, updatedAt: now(), updatedBy: user.uid || '' }, { merge: true });
+            selected.active = true;
+          }
           data.sectionId = selected.id;
           data.sectionName = String(selected.title || selected.category || selected.id).trim();
           data.category = String(selected.category || selected.slug || selected.id).trim().toLowerCase();
@@ -2324,7 +2459,7 @@ body.admin-preview-open{overflow:hidden}
             data.order = Number(item.order) || 0;
           }
         }
-        data.active = data.active === 'true';
+        data.active = name === 'sections' ? true : data.active === 'true';
         data.updatedAt = now();
         data.updatedBy = user.uid || '';
         if (!item) {
@@ -2534,9 +2669,10 @@ body.admin-preview-open{overflow:hidden}
     }
 
     const loadCommunities = async () => {
-      const { data, error } = await client.rpc('get_admin_fan_communities');
-      if (error) throw error;
-      return Array.isArray(data) ? data : [];
+      let result = await client.rpc('get_admin_fan_communities_v2');
+      if (result.error) result = await client.rpc('get_admin_fan_communities');
+      if (result.error) throw result.error;
+      return (Array.isArray(result.data) ? result.data : []).map(item => ({ ...item, tag_type: item.tag_type || item.tagType || 'community' }));
     };
 
     let communities = [];
@@ -2554,7 +2690,7 @@ body.admin-preview-open{overflow:hidden}
         <div class="community-admin-banner">${banner ? `<img loading="lazy" decoding="async" src="${esc(banner)}" alt="">` : '<span>Sem banner</span>'}<i></i></div>
         <div class="community-admin-profile">
           <div class="community-admin-icon">${icon ? `<img loading="lazy" decoding="async" src="${esc(icon)}" alt="">` : `<span>${esc(String(item.name || 'C').charAt(0).toUpperCase())}</span>`}</div>
-          <div class="community-admin-copy"><strong>${esc(item.name || 'Comunidade')}</strong><small>${item.active === false ? 'Oculta' : 'Visível'} · ordem ${Number(item.sort_order ?? item.sortOrder ?? 0)}</small></div>
+          <div class="community-admin-copy"><strong>${esc(item.name || 'Comunidade')}</strong><small>${(item.tag_type || item.tagType) === 'creator' ? 'Criador de conteúdo' : 'Community'} · ${item.active === false ? 'Oculta' : 'Visível'} · ordem ${Number(item.sort_order ?? item.sortOrder ?? 0)}</small></div>
         </div>
         <a href="${esc(item.link_url || item.linkUrl || '#')}" target="_blank" rel="noopener noreferrer">${esc(item.link_url || item.linkUrl || '')}</a>
         <div class="community-admin-actions"><button class="a-btn" type="button" data-community-edit="${esc(item.id)}">Editar</button><button class="a-btn danger" type="button" data-community-delete="${esc(item.id)}">Excluir</button></div>
@@ -2579,6 +2715,7 @@ body.admin-preview-open{overflow:hidden}
         form.elements.iconUrl.value = item.icon_url || item.iconUrl || '';
         form.elements.bannerUrl.value = item.banner_url || item.bannerUrl || '';
         form.elements.linkUrl.value = item.link_url || item.linkUrl || '';
+        form.elements.tagType.value = item.tag_type || item.tagType || 'community';
         form.elements.sortOrder.value = Number(item.sort_order ?? item.sortOrder ?? 0);
         form.elements.active.checked = item.active !== false;
         $('#communityFormTitle').textContent = 'Editar comunidade';
@@ -2615,6 +2752,7 @@ body.admin-preview-open{overflow:hidden}
               <div class="field full"><label>Ícone</label><input class="a-input" type="url" name="iconUrl" placeholder="https://..."><small>Imagem quadrada usada como avatar do card.</small></div>
               <div class="field full"><label>Banner</label><input class="a-input" type="url" name="bannerUrl" placeholder="https://..."><small>Imagem horizontal usada no fundo do card.</small></div>
               <div class="field full"><label>Link da comunidade</label><input class="a-input" type="url" name="linkUrl" required pattern="https://.*" placeholder="https://..."></div>
+              <div class="field full"><label>Tag</label><select class="a-select" name="tagType" required><option value="community">Community</option><option value="creator">Criador de conteúdo</option></select><small>Escolha qual tag será exibida abaixo do nome no site.</small></div>
               <div class="field"><label>Ordem</label><input class="a-input" type="number" name="sortOrder" min="-10000" max="10000" value="0"></div>
               <label class="community-active-field"><input type="checkbox" name="active" checked><span><strong>Comunidade visível</strong><small>Exibir imediatamente na página /fãs.</small></span></label>
             </div>
@@ -2632,6 +2770,7 @@ body.admin-preview-open{overflow:hidden}
       form.reset();
       form.elements.id.value = '';
       form.elements.sortOrder.value = '0';
+      form.elements.tagType.value = 'community';
       form.elements.active.checked = true;
       $('#communityFormTitle').textContent = 'Adicionar comunidade';
       $('#communityCancelEdit').hidden = true;
@@ -2645,12 +2784,13 @@ body.admin-preview-open{overflow:hidden}
       saveButton.disabled = true;
       try {
         const values = Object.fromEntries(new FormData(form).entries());
-        const { data, error } = await client.rpc('admin_upsert_fan_community', {
+        const { data, error } = await client.rpc('admin_upsert_fan_community_v2', {
           p_id: values.id || null,
           p_name: values.name,
           p_icon_url: values.iconUrl || '',
           p_banner_url: values.bannerUrl || '',
           p_link_url: values.linkUrl,
+          p_tag_type: values.tagType || 'community',
           p_active: form.elements.active.checked,
           p_sort_order: Number(values.sortOrder || 0)
         });
@@ -3102,6 +3242,7 @@ body.admin-preview-open{overflow:hidden}
     .community-admin-icon{width:64px;height:64px;flex:0 0 64px;display:grid;place-items:center;overflow:hidden;border:3px solid #09101b;border-radius:50%;background:#172335;font-size:22px;font-weight:850}
     .community-admin-icon img{width:100%;height:100%;object-fit:cover}
     .community-admin-copy{min-width:0;padding-top:30px;display:grid;gap:4px}.community-admin-copy strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.community-admin-copy small{color:var(--a-muted)}
+    .community-admin-copy small{line-height:1.35}
     .community-admin-card>a{display:block;margin:14px 16px 0;color:#79afff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .community-admin-actions{display:flex;justify-content:flex-end;gap:8px;padding:14px 16px 16px}
     .community-admin-empty{border:1px dashed var(--a-line);border-radius:16px}
@@ -3145,17 +3286,742 @@ body.admin-preview-open{overflow:hidden}
 
 (()=>{
   'use strict';
-  if(document.getElementById('be-admin-brand-20260807')) return;
+  if(document.getElementById('be-admin-logo-left-size-fix-v2')) return;
   const style=document.createElement('style');
-  style.id='be-admin-brand-20260807';
+  style.id='be-admin-logo-left-size-fix-v2';
   style.textContent=`
-    body.admin-mode .admin-logo-button{width:128px!important;min-width:128px!important;justify-content:flex-start!important}
-    body.admin-mode .admin-logo-button img{width:118px!important;height:46px!important;max-width:118px!important;object-fit:contain!important;object-position:left center!important}
-    body.admin-mode .admin-login-logo img{width:150px!important;height:78px!important;max-width:150px!important;object-fit:contain!important}
+    @media (min-width:901px){
+      body.admin-mode .admin-topbar{
+        grid-template-columns:132px minmax(0,1fr) 110px!important;
+      }
+      body.admin-mode .admin-logo-button{
+        width:118px!important;
+        min-width:118px!important;
+        height:76px!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:flex-start!important;
+        overflow:visible!important;
+      }
+      body.admin-mode .admin-logo-button img{
+        width:112px!important;
+        height:76px!important;
+        max-width:none!important;
+        max-height:none!important;
+        object-fit:contain!important;
+        object-position:left center!important;
+        transform:none!important;
+      }
+    }
+    @media (max-width:900px){
+      body.admin-mode .admin-logo-button img{
+        width:72px!important;
+        height:58px!important;
+        max-width:none!important;
+        object-fit:contain!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+
+/* ============================================================
+   Dashboard admin: navegação agrupada
+   Mantém o layout original da barra principal e adiciona
+   subtabs apenas dentro de Conteúdo e Site.
+   ============================================================ */
+(()=>{
+  'use strict';
+  if(document.getElementById('be-admin-grouped-nav-style')) return;
+  const style=document.createElement('style');
+  style.id='be-admin-grouped-nav-style';
+  style.textContent=`
+    body.admin-mode .admin-title-row p{
+      display:none!important;
+    }
+
+    body.admin-mode .admin-subnav[hidden]{
+      display:none!important;
+    }
+
+    body.admin-mode .admin-subnav{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      max-width:1500px;
+      margin:18px auto 0;
+      padding:0 28px;
+      overflow-x:auto;
+      scrollbar-width:none;
+    }
+    body.admin-mode .admin-subnav::-webkit-scrollbar{
+      display:none;
+    }
+    body.admin-mode .admin-subnav button{
+      flex:0 0 auto;
+      border:1px solid rgba(125,181,255,.16);
+      background:rgba(255,255,255,.035);
+      color:var(--a-muted);
+      min-height:38px;
+      padding:8px 14px;
+      border-radius:11px;
+      font:inherit;
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+      transition:.18s ease;
+    }
+    body.admin-mode .admin-subnav button:hover{
+      color:#fff;
+      border-color:rgba(125,181,255,.32);
+      background:rgba(61,140,255,.08);
+    }
+    body.admin-mode .admin-subnav button.active{
+      color:#fff;
+      border-color:rgba(61,140,255,.5);
+      background:rgba(61,140,255,.18);
+    }
+
+    @media (max-width:760px){
+      body.admin-mode .admin-topbar{
+        padding-left:10px!important;
+        padding-right:10px!important;
+      }
+      body.admin-mode .admin-nav{
+        gap:3px!important;
+        overflow-x:auto!important;
+        scrollbar-width:none!important;
+      }
+      body.admin-mode .admin-nav::-webkit-scrollbar{
+        display:none!important;
+      }
+      body.admin-mode .admin-nav button{
+        flex:0 0 auto!important;
+        white-space:nowrap!important;
+        padding-left:10px!important;
+        padding-right:10px!important;
+      }
+      body.admin-mode .admin-subnav{
+        margin-top:12px;
+        padding:0 12px;
+        gap:6px;
+      }
+      body.admin-mode .admin-subnav button{
+        min-height:36px;
+        padding:7px 11px;
+        font-size:12px;
+      }
+      body.admin-mode .admin-content{
+        padding-top:18px!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+
+/* Dashboard: métricas de uso + gráfico semanal */
+(()=>{
+  'use strict';
+  if(document.getElementById('be-admin-dashboard-metrics-style')) return;
+  const style=document.createElement('style');
+  style.id='be-admin-dashboard-metrics-style';
+  style.textContent=`body.admin-mode .dashboard-insights-hero .dashboard-copy>h1{margin-bottom:24px}
+body.admin-mode .dashboard-metrics-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+body.admin-mode .dashboard-metric-card{
+  min-width:0;
+  min-height:132px;
+  padding:17px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:10px;
+  border:1px solid var(--a-line);
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(14,29,52,.88),rgba(6,14,27,.88));
+}
+body.admin-mode .dashboard-metric-card.primary-metric,
+body.admin-mode .dashboard-metric-card.insight-metric{
+  background:linear-gradient(145deg,rgba(36,94,181,.20),rgba(6,14,27,.90));
+}
+body.admin-mode .dashboard-metric-label{display:flex;align-items:center;gap:8px;color:var(--a-muted);font-size:11px;font-weight:700}
+body.admin-mode .dashboard-metric-label i{width:29px;height:29px;display:grid;place-items:center;border-radius:9px;background:rgba(61,140,255,.12);color:#83b4ff;font-style:normal}
+body.admin-mode .dashboard-metric-card>strong{overflow:hidden;color:#f5f8ff;font-size:18px;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+body.admin-mode .dashboard-metric-card.primary-metric>strong,
+body.admin-mode .dashboard-metric-card.insight-metric>strong{font-size:30px}
+body.admin-mode .dashboard-metric-card>small{color:var(--a-muted);font-size:11px;line-height:1.4}
+body.admin-mode .dashboard-weekly-users,
+body.admin-mode .dashboard-site-settings{
+  margin-top:22px;
+  padding:20px;
+  border:1px solid var(--a-line);
+  border-radius:20px;
+  background:rgba(5,15,30,.62);
+}
+body.admin-mode .dashboard-section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}
+body.admin-mode .dashboard-section-head h3{margin:0;font-size:18px}
+body.admin-mode .dashboard-section-head p{margin:5px 0 0;color:var(--a-muted);font-size:12px}
+body.admin-mode .weekly-user-chart{
+  height:230px;
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+  align-items:end;
+  gap:12px;
+  padding:10px 4px 0;
+}
+body.admin-mode .weekly-user-bar-item{height:100%;display:grid;grid-template-rows:22px 1fr 22px;gap:7px;align-items:end;text-align:center}
+body.admin-mode .weekly-user-bar-item>strong{font-size:12px;color:#dce9ff}
+body.admin-mode .weekly-user-bar-track{height:100%;min-height:120px;display:flex;align-items:flex-end;justify-content:center;border-radius:12px;background:rgba(255,255,255,.025);overflow:hidden}
+body.admin-mode .weekly-user-bar-track>span{width:min(46px,62%);min-height:4px;border-radius:10px 10px 3px 3px;background:linear-gradient(180deg,#4e9cff,#2f79ee)}
+body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;text-transform:capitalize}
+@media(max-width:1100px){
+  body.admin-mode .dashboard-metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  body.admin-mode .dashboard-metrics-grid{grid-template-columns:1fr}
+  body.admin-mode .dashboard-metric-card{min-height:116px}
+  body.admin-mode .dashboard-weekly-users,
+  body.admin-mode .dashboard-site-settings{padding:15px;border-radius:17px}
+  body.admin-mode .weekly-user-chart{height:205px;gap:5px}
+  body.admin-mode .weekly-user-bar-track>span{width:66%}
+  body.admin-mode .weekly-user-bar-item>strong,
+  body.admin-mode .weekly-user-bar-item>small{font-size:10px}
+}`;
+  document.head.appendChild(style);
+})();
+
+/* ============================================================
+   Admin mobile: comportamento semelhante ao desktop
+   ============================================================ */
+(()=>{
+  'use strict';
+  if(document.getElementById('be-admin-mobile-desktop-like')) return;
+  const style=document.createElement('style');
+  style.id='be-admin-mobile-desktop-like';
+  style.textContent=`
+    @media (max-width:760px){
+      body.admin-mode{
+        min-width:0!important;
+        overflow-x:hidden!important;
+      }
+
+      body.admin-mode .admin-shell,
+      body.admin-mode .admin-main{
+        width:100%!important;
+        min-width:0!important;
+      }
+
+      /* Mantém a mesma estrutura visual do PC, adaptada à largura menor */
+      body.admin-mode .admin-topbar{
+        position:sticky!important;
+        top:0!important;
+        z-index:80!important;
+        display:grid!important;
+        grid-template-columns:72px minmax(0,1fr) 46px!important;
+        align-items:center!important;
+        gap:8px!important;
+        min-height:72px!important;
+        height:auto!important;
+        padding:8px 10px!important;
+        background:rgba(8,13,22,.96)!important;
+        border-bottom:1px solid rgba(128,161,208,.14)!important;
+        backdrop-filter:blur(16px)!important;
+        -webkit-backdrop-filter:blur(16px)!important;
+      }
+
+      body.admin-mode .admin-logo-button{
+        width:64px!important;
+        min-width:64px!important;
+        height:48px!important;
+        padding:4px!important;
+      }
+
+      body.admin-mode .admin-logo-button img{
+        max-width:100%!important;
+        max-height:100%!important;
+        object-fit:contain!important;
+      }
+
+      body.admin-mode .admin-account{
+        width:46px!important;
+        justify-self:end!important;
+      }
+
+      body.admin-mode .admin-avatar-button{
+        width:38px!important;
+        height:38px!important;
+        min-width:38px!important;
+      }
+
+      /* Barra principal igual ao PC, com rolagem horizontal em vez de esconder itens */
+      body.admin-mode .admin-nav{
+        display:flex!important;
+        align-items:center!important;
+        gap:5px!important;
+        width:100%!important;
+        min-width:0!important;
+        overflow-x:auto!important;
+        overflow-y:hidden!important;
+        scrollbar-width:none!important;
+        scroll-snap-type:x proximity!important;
+        padding:3px 0!important;
+      }
+
+      body.admin-mode .admin-nav::-webkit-scrollbar{
+        display:none!important;
+      }
+
+      body.admin-mode .admin-nav button{
+        display:flex!important;
+        flex:0 0 auto!important;
+        align-items:center!important;
+        justify-content:center!important;
+        min-height:40px!important;
+        width:auto!important;
+        min-width:max-content!important;
+        padding:0 12px!important;
+        border-radius:10px!important;
+        white-space:nowrap!important;
+        font-size:11px!important;
+        line-height:1!important;
+        scroll-snap-align:start!important;
+      }
+
+      body.admin-mode .admin-nav button.active{
+        box-shadow:none!important;
+      }
+
+      /* Submenu de Conteúdo/Site também se comporta como tabs do desktop */
+      body.admin-mode .admin-subnav{
+        display:flex!important;
+        align-items:center!important;
+        gap:6px!important;
+        max-width:none!important;
+        width:100%!important;
+        margin:10px 0 0!important;
+        padding:0 12px!important;
+        overflow-x:auto!important;
+        overflow-y:hidden!important;
+        scrollbar-width:none!important;
+      }
+
+      body.admin-mode .admin-subnav[hidden]{
+        display:none!important;
+      }
+
+      body.admin-mode .admin-subnav::-webkit-scrollbar{
+        display:none!important;
+      }
+
+      body.admin-mode .admin-subnav button{
+        flex:0 0 auto!important;
+        min-height:36px!important;
+        padding:7px 11px!important;
+        white-space:nowrap!important;
+        font-size:11px!important;
+      }
+
+      body.admin-mode .admin-content{
+        width:100%!important;
+        max-width:none!important;
+        min-width:0!important;
+        padding:18px 12px 42px!important;
+      }
+
+      body.admin-mode .dashboard-hero,
+      body.admin-mode .admin-panel,
+      body.admin-mode .dashboard-weekly-users,
+      body.admin-mode .dashboard-site-settings{
+        width:100%!important;
+        max-width:none!important;
+        min-width:0!important;
+      }
+
+      body.admin-mode .dashboard-copy{
+        width:100%!important;
+        min-width:0!important;
+      }
+
+      body.admin-mode .dashboard-copy>h1{
+        font-size:clamp(30px,10vw,44px)!important;
+        line-height:1.02!important;
+        margin-bottom:18px!important;
+      }
+
+      body.admin-mode .dashboard-metrics-grid{
+        grid-template-columns:1fr!important;
+        gap:10px!important;
+      }
+
+      body.admin-mode .dashboard-metric-card{
+        min-height:108px!important;
+        padding:15px!important;
+      }
+
+      body.admin-mode .dashboard-metric-card>strong{
+        white-space:normal!important;
+        overflow:visible!important;
+        text-overflow:clip!important;
+        font-size:17px!important;
+      }
+
+      body.admin-mode .dashboard-metric-card.primary-metric>strong,
+      body.admin-mode .dashboard-metric-card.insight-metric>strong{
+        font-size:28px!important;
+      }
+
+      /* Gráfico ocupa a largura toda sem estourar a tela */
+      body.admin-mode .dashboard-weekly-users{
+        overflow:hidden!important;
+      }
+
+      body.admin-mode .weekly-user-chart{
+        width:100%!important;
+        min-width:0!important;
+        height:190px!important;
+        grid-template-columns:repeat(7,minmax(22px,1fr))!important;
+        gap:4px!important;
+        padding-left:0!important;
+        padding-right:0!important;
+      }
+
+      body.admin-mode .weekly-user-bar-item{
+        min-width:0!important;
+      }
+
+      body.admin-mode .weekly-user-bar-track{
+        min-height:105px!important;
+      }
+
+      body.admin-mode .weekly-user-bar-track>span{
+        width:62%!important;
+        min-width:8px!important;
+      }
+
+      /* Formulários e grids do admin viram uma coluna no mobile */
+      body.admin-mode .form-grid,
+      body.admin-mode .admin-grid,
+      body.admin-mode .settings-grid,
+      body.admin-mode .content-grid{
+        grid-template-columns:1fr!important;
+      }
+
+      body.admin-mode .field,
+      body.admin-mode .field.full,
+      body.admin-mode input,
+      body.admin-mode textarea,
+      body.admin-mode select{
+        min-width:0!important;
+        max-width:100%!important;
+      }
+
+      body.admin-mode .a-input,
+      body.admin-mode .a-textarea,
+      body.admin-mode .a-select{
+        width:100%!important;
+        box-sizing:border-box!important;
+      }
+
+      body.admin-mode .modal-actions,
+      body.admin-mode .admin-actions{
+        display:flex!important;
+        flex-wrap:wrap!important;
+        gap:8px!important;
+      }
+
+      body.admin-mode .modal-actions .a-btn,
+      body.admin-mode .admin-actions .a-btn{
+        flex:1 1 140px!important;
+      }
+
+      /* Tabelas continuam utilizáveis como no PC por rolagem horizontal */
+      body.admin-mode .admin-table-wrap,
+      body.admin-mode .table-wrap,
+      body.admin-mode .a-table-wrap{
+        width:100%!important;
+        overflow-x:auto!important;
+        -webkit-overflow-scrolling:touch!important;
+      }
+
+      body.admin-mode table{
+        min-width:720px!important;
+      }
+
+      body.admin-mode .admin-title-row{
+        display:flex!important;
+        flex-direction:column!important;
+        align-items:flex-start!important;
+        gap:10px!important;
+      }
+
+      body.admin-mode .admin-title-row p{
+        display:none!important;
+      }
+
+      body.admin-mode .admin-title-row .a-btn{
+        width:100%!important;
+      }
+
+      /* Modais cabem na tela e mantêm os mesmos controles do desktop */
+      body.admin-mode .modal,
+      body.admin-mode .admin-modal,
+      body.admin-mode .modal-card{
+        width:calc(100vw - 20px)!important;
+        max-width:calc(100vw - 20px)!important;
+        max-height:calc(100vh - 24px)!important;
+        overflow:auto!important;
+      }
+    }
+
+    @media (max-width:390px){
+      body.admin-mode .admin-topbar{
+        grid-template-columns:58px minmax(0,1fr) 40px!important;
+        padding-left:8px!important;
+        padding-right:8px!important;
+      }
+
+      body.admin-mode .admin-logo-button{
+        width:54px!important;
+        min-width:54px!important;
+      }
+
+      body.admin-mode .admin-nav button{
+        min-height:38px!important;
+        padding:0 10px!important;
+        font-size:10px!important;
+      }
+
+      body.admin-mode .admin-content{
+        padding-left:9px!important;
+        padding-right:9px!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+
+(()=>{
+  'use strict';
+  if(document.getElementById('be-admin-four-metrics-style')) return;
+  const style=document.createElement('style');
+  style.id='be-admin-four-metrics-style';
+  style.textContent=`
+    body.admin-mode .dashboard-metrics-grid.dashboard-metrics-grid-four{
+      grid-template-columns:repeat(4,minmax(0,1fr))!important;
+      gap:12px!important;
+    }
+
+    body.admin-mode .dashboard-metrics-grid-four .dashboard-metric-card{
+      min-height:214px!important;
+      padding:16px!important;
+    }
+
+    body.admin-mode .dashboard-metrics-grid-four .primary-metric,
+    body.admin-mode .dashboard-metrics-grid-four .donation-approved-card{
+      justify-content:flex-start!important;
+    }
+
+    body.admin-mode .dashboard-metric-big-number{
+      margin-top:auto!important;
+      color:#f5f8ff!important;
+      font-size:38px!important;
+      line-height:1!important;
+      font-weight:800!important;
+    }
+
+    body.admin-mode .dashboard-metric-media{
+      width:100%!important;
+      height:84px!important;
+      margin-top:2px!important;
+      overflow:hidden!important;
+      border-radius:12px!important;
+      background:rgba(255,255,255,.04)!important;
+      border:1px solid rgba(125,181,255,.10)!important;
+    }
+
+    body.admin-mode .dashboard-metric-media img{
+      display:block!important;
+      width:100%!important;
+      height:100%!important;
+      object-fit:cover!important;
+    }
+
+    body.admin-mode .dashboard-metric-media.is-empty{
+      display:grid!important;
+      place-items:center!important;
+      color:var(--a-muted)!important;
+      font-size:11px!important;
+    }
+
+    body.admin-mode .content-highlight-card .dashboard-metric-number{
+      margin:0!important;
+      color:#f5f8ff!important;
+      font-size:30px!important;
+      line-height:1!important;
+      font-weight:800!important;
+    }
+
+    body.admin-mode .content-highlight-card .dashboard-metric-title{
+      min-width:0!important;
+      overflow:hidden!important;
+      color:#f5f8ff!important;
+      font-size:14px!important;
+      line-height:1.25!important;
+      font-weight:750!important;
+      text-overflow:ellipsis!important;
+      white-space:nowrap!important;
+    }
+
+    body.admin-mode .dashboard-approved-badge{
+      align-self:flex-start!important;
+      display:inline-flex!important;
+      align-items:center!important;
+      min-height:25px!important;
+      padding:4px 9px!important;
+      border:1px solid rgba(45,211,140,.30)!important;
+      border-radius:999px!important;
+      background:rgba(45,211,140,.10)!important;
+      color:#6ee7b7!important;
+      font-size:10px!important;
+      font-weight:800!important;
+      letter-spacing:.02em!important;
+    }
+
+    @media(max-width:1100px){
+      body.admin-mode .dashboard-metrics-grid.dashboard-metrics-grid-four{
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      }
+    }
+
     @media(max-width:760px){
-      body.admin-mode .admin-logo-button{width:104px!important;min-width:104px!important}
-      body.admin-mode .admin-logo-button img{width:96px!important;height:42px!important}
-      body.admin-mode .admin-login-logo img{width:126px!important;height:68px!important}
+      body.admin-mode .dashboard-metrics-grid.dashboard-metrics-grid-four{
+        grid-template-columns:1fr!important;
+      }
+      body.admin-mode .dashboard-metrics-grid-four .dashboard-metric-card{
+        min-height:190px!important;
+      }
+      body.admin-mode .dashboard-metric-media{
+        height:118px!important;
+      }
+      body.admin-mode .dashboard-metric-big-number{
+        font-size:34px!important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+
+/* ============================================================
+   Correção final do menu admin no mobile
+   - exibe TODAS as opções da navegação
+   - avatar permanece alinhado à direita como no desktop
+   ============================================================ */
+(()=>{
+  'use strict';
+  if(document.getElementById('be-admin-mobile-nav-final-fix')) return;
+  const style=document.createElement('style');
+  style.id='be-admin-mobile-nav-final-fix';
+  style.textContent=`
+    @media (max-width:760px){
+      /* Sobrescreve a regra antiga que escondia tudo exceto
+         Visão geral e Notificações. */
+      html body.admin-mode .admin-topbar .admin-nav button:not([data-route="__never__"]){
+        display:flex!important;
+        visibility:visible!important;
+        opacity:1!important;
+      }
+
+      html body.admin-mode .admin-topbar{
+        width:100%!important;
+        max-width:none!important;
+        box-sizing:border-box!important;
+        display:grid!important;
+        grid-template-columns:64px minmax(0,1fr) 46px!important;
+        grid-template-rows:auto auto!important;
+        column-gap:8px!important;
+        row-gap:6px!important;
+        padding:10px 12px 10px!important;
+      }
+
+      html body.admin-mode .admin-logo-button{
+        grid-column:1!important;
+        grid-row:1!important;
+        justify-self:start!important;
+        align-self:center!important;
+      }
+
+      html body.admin-mode .admin-account{
+        grid-column:3!important;
+        grid-row:1!important;
+        justify-self:end!important;
+        align-self:center!important;
+        width:42px!important;
+        min-width:42px!important;
+        margin:0!important;
+        padding:0!important;
+      }
+
+      html body.admin-mode .admin-avatar-button{
+        width:42px!important;
+        height:42px!important;
+        min-width:42px!important;
+        min-height:42px!important;
+        margin:0!important;
+      }
+
+      html body.admin-mode .admin-topbar .admin-nav{
+        grid-column:1 / -1!important;
+        grid-row:2!important;
+        order:initial!important;
+        display:flex!important;
+        width:100%!important;
+        max-width:none!important;
+        min-width:0!important;
+        gap:6px!important;
+        padding:4px 0 2px!important;
+        margin:0!important;
+        overflow-x:auto!important;
+        overflow-y:hidden!important;
+        scrollbar-width:none!important;
+        -webkit-overflow-scrolling:touch!important;
+      }
+
+      html body.admin-mode .admin-topbar .admin-nav::-webkit-scrollbar{
+        display:none!important;
+      }
+
+      html body.admin-mode .admin-topbar .admin-nav button{
+        flex:0 0 auto!important;
+        width:auto!important;
+        min-width:max-content!important;
+        min-height:42px!important;
+        padding:0 13px!important;
+        border-radius:11px!important;
+        white-space:nowrap!important;
+        font-size:12px!important;
+      }
+    }
+
+    @media (max-width:390px){
+      html body.admin-mode .admin-topbar{
+        grid-template-columns:56px minmax(0,1fr) 42px!important;
+        padding-left:9px!important;
+        padding-right:9px!important;
+      }
+
+      html body.admin-mode .admin-topbar .admin-nav button{
+        min-height:40px!important;
+        padding-left:11px!important;
+        padding-right:11px!important;
+        font-size:11px!important;
+      }
     }
   `;
   document.head.appendChild(style);
