@@ -12119,19 +12119,12 @@ body.site-loading-active.donate-page-active > footer{
 @media(min-width:901px){.fans-page-intro{max-width:980px}.fans-page-intro .fans-page-description{white-space:nowrap}}
 @media(max-width:900px){.fans-page-intro .fans-page-description{margin-top:18px;font-size:15px;line-height:1.55}.fans-page-community-help{max-width:330px;margin-top:10px;font-size:13px}}
 
-/* Player: loading sem ponto central e sem atalho externo ao lado do fechar. */
+
+/* Player: mantém o fluxo original do Google Drive; remove apenas o ponto central do loading e o atalho externo. */
 .drive-player-loader::after{
   content:none!important;
   display:none!important;
 }
 .drive-player-external{
-  display:none!important;
-}
-
-/* Player: remoção definitiva do atalho externo e limpeza do fallback do Drive. */
-.drive-player-overlay .drive-player-top-controls .drive-player-external{
-  display:none!important;
-}
-.drive-player-overlay.is-drive-frame-mode .drive-player-top-controls .drive-player-volume{
   display:none!important;
 }

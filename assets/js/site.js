@@ -3687,13 +3687,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `/api/drive-media?${params.toString()}`;
   }
 
-  function googleDriveDirectStreamUrl(fileId, resourceKey = '', source = 'usercontent') {
-    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: 't', authuser: '0' });
+  function googleDriveDirectStreamUrl(fileId, resourceKey = '') {
+    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: 't' });
     if (resourceKey) params.set('resourcekey', resourceKey);
-    const base = source === 'drive'
-      ? 'https://drive.google.com/uc'
-      : 'https://drive.usercontent.google.com/download';
-    return `${base}?${params.toString()}`;
+    return `https://drive.google.com/uc?${params.toString()}`;
   }
 
   function normalizeDriveMediaKind(value) {
@@ -3760,7 +3757,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-player-frame-shell" id="drivePlayerFrameShell" hidden>
           <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor de mídia" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
-        <iframe id="drivePlayerWarmupFrame" title="Preparando mídia do Google Drive" tabindex="-1" aria-hidden="true" hidden referrerpolicy="strict-origin-when-cross-origin"></iframe>
         <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span><a class="drive-player-support-link" href="/suporte" data-public-action="support" data-support-target="contact" hidden>Informe o erro ao suporte</a></div>
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-fullscreen" id="drivePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
@@ -3811,7 +3807,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const video = document.getElementById('drivePlayerVideo');
     const frameShell = document.getElementById('drivePlayerFrameShell');
     const frame = document.getElementById('drivePlayerFrame');
-    const warmupFrame = document.getElementById('drivePlayerWarmupFrame');
     const loading = document.getElementById('drivePlayerLoading');
     const loadingText = loading?.querySelector('.drive-player-loading-message');
     const supportLink = loading?.querySelector('.drive-player-support-link');
@@ -3824,11 +3819,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const progress = document.getElementById('drivePlayerProgress');
     const currentLabel = document.getElementById('drivePlayerCurrent');
     const durationLabel = document.getElementById('drivePlayerDuration');
-    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !warmupFrame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
+    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel) return;
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
-    let driveWarmupTimer = 0;
     let previousFocus = null;
     let activeFileId = '';
     let activeResourceKey = '';
@@ -3892,10 +3886,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const clearPlayerTimers = () => {
       window.clearTimeout(fallbackTimer);
       window.clearTimeout(controlsTimer);
-      window.clearTimeout(driveWarmupTimer);
       fallbackTimer = 0;
       controlsTimer = 0;
-      driveWarmupTimer = 0;
     };
 
     const setLoadingMessage = (message, visible = true, revealText = false) => {
@@ -4020,40 +4012,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     };
 
-    const warmupDriveThenLoadSitePlayer = (fileId, resourceKey = '', token = openingToken) => {
-      if (!fileId || overlay.hidden || activeFileId !== fileId || token !== openingToken) return;
-
-      window.clearTimeout(driveWarmupTimer);
-      let finished = false;
-      const finishWarmup = () => {
-        if (finished) return;
-        finished = true;
-        window.clearTimeout(driveWarmupTimer);
-        driveWarmupTimer = 0;
-        warmupFrame.onload = null;
-        if (overlay.hidden || activeFileId !== fileId || token !== openingToken) return;
-
-        // O preview do Drive é usado só para preparar a sessão/arquivo.
-        // Ele nunca fica visível; depois disso o vídeo é entregue ao player BETV.
-        warmupFrame.src = 'about:blank';
-        setLoadingMessage(activeMediaKind === 'audio'
-          ? 'Carregando MP3 no player...'
-          : 'Sincronizando com o player...');
-        loadProxyStream(false);
-      };
-
-      warmupFrame.onload = () => {
-        window.clearTimeout(driveWarmupTimer);
-        driveWarmupTimer = window.setTimeout(finishWarmup, 900);
-      };
-
-      setLoadingMessage(activeMediaKind === 'audio'
-        ? 'Preparando MP3 no Google Drive...'
-        : 'Preparando vídeo no Google Drive...');
-      warmupFrame.src = googleDrivePreviewUrl(fileId, resourceKey).replace('autoplay=1', 'autoplay=0');
-
-      // Se o evento load for bloqueado/atrasar no mobile, não prende o usuário.
-      driveWarmupTimer = window.setTimeout(finishWarmup, 5500);
+    const useFrameFallback = () => {
+      if (!activeFileId || frameMode || overlay.hidden) return;
+      if (activeMediaKind === 'audio' || audioMode) {
+        showStreamError('O MP3 não pôde ser reproduzido. Confirme se o arquivo está público para qualquer pessoa com o link.');
+        return;
+      }
+      frameMode = true;
+      streamAttempt = 'frame';
+      window.clearTimeout(fallbackTimer);
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
+      frameShell.hidden = false;
+      overlay.classList.add('is-frame-mode', 'is-drive-frame-mode');
+      loading.hidden = true;
+      overlay.classList.remove('is-loading');
+      setPlayerInteractive(false);
+      showControls(true);
     };
 
     const loadProxyStream = retry => {
@@ -4089,34 +4066,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }, retry ? 26000 : 18000);
     };
 
-    const tryDirectDriveStream = (source = 'usercontent') => {
-      if (!activeFileId || frameMode || overlay.hidden) return;
-      const attemptName = source === 'drive' ? 'direct-drive' : 'direct-usercontent';
-      if (streamAttempt === attemptName) return;
+    const tryDirectDriveStream = () => {
+      if (!activeFileId || frameMode || overlay.hidden || streamAttempt === 'direct') return;
       if (activeMediaKind === 'audio' || audioMode) {
         if (streamAttempt !== 'proxy-retry') loadProxyStream(true);
         else showStreamError('Não foi possível acessar o MP3 pelo link público do Google Drive.');
         return;
       }
       mediaReady = false;
-      streamAttempt = attemptName;
+      streamAttempt = 'direct';
       window.clearTimeout(fallbackTimer);
-      overlay.classList.remove('is-frame-mode', 'is-drive-frame-mode');
-      frameShell.hidden = true;
-      frame.src = 'about:blank';
       setPlayerInteractive(false);
-      setLoadingMessage(source === 'drive'
-        ? 'Tentando uma rota alternativa do Google Drive...'
-        : 'Aguardando o Google Drive liberar o arquivo...');
+      setLoadingMessage('Aguardando o Google Drive liberar o arquivo...');
       video.pause();
-      video.src = googleDriveDirectStreamUrl(activeFileId, activeResourceKey, source);
+      video.src = googleDriveDirectStreamUrl(activeFileId, activeResourceKey);
       video.load();
       requestPlayback();
-      armFallbackTimer(() => {
-        if (mediaReady || overlay.hidden || frameMode) return;
-        if (source === 'usercontent') tryDirectDriveStream('drive');
-        else showStreamError('Não foi possível carregar esta mídia.');
-      }, source === 'usercontent' ? 16000 : 18000);
+      armFallbackTimer(useFrameFallback, 18000);
     };
 
     const handleStreamFailure = () => {
@@ -4126,14 +4092,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         else showStreamError('Não foi possível carregar o MP3. Verifique a permissão pública do arquivo no Google Drive.');
         return;
       }
-      // O Google Drive nunca substitui o player do site por um iframe de preview.
-      // Isso evita, especialmente no mobile, que os controles nativos do Drive
-      // apareçam dentro do player BETV. Tentamos duas rotas diretas e, se ambas
-      // falharem, mantemos o player do site exibindo o estado de erro.
-      if (streamAttempt === 'proxy') loadProxyStream(true);
-      else if (streamAttempt === 'proxy-retry') tryDirectDriveStream('usercontent');
-      else if (streamAttempt === 'direct-usercontent') tryDirectDriveStream('drive');
-      else showStreamError('Não foi possível carregar esta mídia.');
+      if (streamAttempt === 'proxy') tryDirectDriveStream();
+      else if (streamAttempt === 'proxy-retry') tryDirectDriveStream();
+      else useFrameFallback();
     };
 
     const closePlayer = () => {
@@ -4150,8 +4111,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       video.removeAttribute('src');
       video.load();
       frame.src = 'about:blank';
-      warmupFrame.onload = null;
-      warmupFrame.src = 'about:blank';
       frameShell.hidden = true;
       loading.hidden = false;
       overlay.hidden = true;
@@ -4207,15 +4166,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = document.activeElement;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
-      overlay.classList.remove('is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-error');
+      overlay.classList.remove('is-frame-mode', 'is-drive-frame-mode', 'is-youtube-mode', 'is-error');
       overlay.classList.add('is-open', 'controls-visible', 'is-paused');
       document.body.classList.add('drive-player-open');
       frameShell.hidden = true;
       frame.src = 'about:blank';
-      warmupFrame.onload = null;
-      warmupFrame.src = 'about:blank';
       setPlayerInteractive(false);
-      setLoadingMessage(activeMediaKind === 'audio' ? 'Preparando MP3 no Google Drive...' : 'Preparando vídeo no Google Drive...');
+      setLoadingMessage(activeMediaKind === 'audio' ? 'Carregando MP3 do Google Drive...' : 'Preparando arquivo do Google Drive...');
 
       googleDriveMediaKind(fileId, resourceKey).then(kind => {
         metadataProbeFinished = true;
@@ -4223,7 +4180,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         applyMediaKind(kind);
       });
 
-      warmupDriveThenLoadSitePlayer(fileId, resourceKey, token);
+      loadProxyStream(false);
       closeButton.focus({ preventScroll: true });
     };
 
