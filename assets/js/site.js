@@ -6105,12 +6105,81 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     setPlayerInteractive(false);
   }
 
+  function detailShareUrl(itemId) {
+    const route = detailRoutePath(itemId);
+    const localizedRoute = window.BETVLocaleURL ? window.BETVLocaleURL(route) : route;
+    try { return new URL(localizedRoute, location.origin).href; }
+    catch (_) { return location.origin + route; }
+  }
+
+  function copyDetailShareUrl(url) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      return navigator.clipboard.writeText(url);
+    }
+    return new Promise((resolve, reject) => {
+      try {
+        const field = document.createElement('textarea');
+        field.value = url;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        field.style.pointerEvents = 'none';
+        document.body.appendChild(field);
+        field.select();
+        const copied = document.execCommand('copy');
+        field.remove();
+        if (copied) resolve();
+        else reject(new Error('copy_failed'));
+      } catch (error) { reject(error); }
+    });
+  }
+
+  function showDetailShareCopied(button) {
+    if (!button) return;
+    const originalTitle = button.dataset.defaultTitle || button.getAttribute('title') || 'Compartilhar';
+    button.dataset.defaultTitle = originalTitle;
+    button.classList.add('is-copied');
+    button.setAttribute('title', 'Link copiado!');
+    button.setAttribute('aria-label', 'Link do vídeo copiado');
+    window.clearTimeout(Number(button.dataset.feedbackTimer || 0));
+    const timer = window.setTimeout(() => {
+      button.classList.remove('is-copied');
+      button.setAttribute('title', originalTitle);
+      button.setAttribute('aria-label', 'Compartilhar');
+      delete button.dataset.feedbackTimer;
+    }, 1800);
+    button.dataset.feedbackTimer = String(timer);
+  }
+
+  async function shareDetailContent(button) {
+    if (!button) return;
+    const itemId = String(button.dataset.itemId || detailRouteId() || '').trim();
+    if (!itemId) return;
+    const title = String(button.dataset.title || 'Billie Eilish TV').trim() || 'Billie Eilish TV';
+    const url = detailShareUrl(itemId);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, url });
+        return;
+      }
+      await copyDetailShareUrl(url);
+      showDetailShareCopied(button);
+    } catch (error) {
+      if (error && error.name === 'AbortError') return;
+      try {
+        await copyDetailShareUrl(url);
+        showDetailShareCopied(button);
+      } catch (_) {}
+    }
+  }
+
   function setupDetailControls() {
     setupExternalVideoPlayers();
     setupDriveVideoPlayer();
     setupGoogleDrivePlayer();
     const section = document.getElementById('contentDetailSection');
     const back = document.getElementById('detailBackButton');
+    const share = document.getElementById('contentDetailShare');
     if (back && back.dataset.bound !== 'true') {
       back.dataset.bound = 'true';
       back.addEventListener('click', () => {
@@ -6119,6 +6188,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return;
         }
         closeContentDetail(true);
+      });
+    }
+    if (share && share.dataset.bound !== 'true') {
+      share.dataset.bound = 'true';
+      share.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        shareDetailContent(share);
       });
     }
     if (section && section.dataset.bound !== 'true') {
@@ -6137,7 +6214,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const desc = document.getElementById('contentDetailDesc');
     const play = document.getElementById('contentDetailPlay');
     const list = document.getElementById('contentDetailList');
-    if (!section || !bg || !logo || !meta || !desc || !play || !list) return;
+    const share = document.getElementById('contentDetailShare');
+    if (!section || !bg || !logo || !meta || !desc || !play || !list || !share) return;
 
     const title = data.title || 'Conteúdo';
     const preserveTitle = data.preserveTitle === true || String(data.preserveTitle || '').toLowerCase() === 'true' || preservesOriginalMusicTitle(data);
@@ -6223,6 +6301,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (current.contentUrl && current.contentUrl !== '#') trackContentInteraction(current, 'click');
       });
     }
+
+    share.dataset.itemId = itemId;
+    share.dataset.title = title;
+    share.dataset.defaultTitle = 'Compartilhar';
+    share.classList.remove('is-copied');
+    share.setAttribute('title', 'Compartilhar');
+    share.setAttribute('aria-label', 'Compartilhar');
 
     list.dataset.favoriteId = canonicalFavoriteId;
     list.dataset.itemId = itemId;
@@ -9971,7 +10056,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       localStorage.removeItem('beSessionUid');
       sessionStorage.removeItem('beOAuthDestination');
       setStatus('');
-      enterHome();
+      if(isVideoRoute()){
+        enterHome(true);
+        window.dispatchEvent(new CustomEvent('be:open-video-route'));
+      }else{
+        enterHome();
+      }
       hideSiteSkeleton();
       window.dispatchEvent(new CustomEvent('be:guest-access'));
     };
