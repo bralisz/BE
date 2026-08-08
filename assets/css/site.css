@@ -12542,3 +12542,16 @@ body.site-loading-active.donate-page-active > footer{
     gap:6px!important;
   }
 }
+
+
+/* VK Video: deixa os botões de voltar/avançar 10s mais afastados do centro. */
+.drive-player-overlay.is-vk-api-mode:not(.is-browser-fullscreen) .drive-player-center-controls{
+  gap:clamp(120px,20vw,320px)!important;
+}
+
+/* No mobile mantém um espaçamento confortável sem empurrar os botões para fora. */
+@media(max-width:700px){
+  .drive-player-overlay.is-vk-api-mode:not(.is-browser-fullscreen) .drive-player-center-controls{
+    gap:clamp(72px,24vw,118px)!important;
+  }
+}
