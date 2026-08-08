@@ -12657,3 +12657,108 @@ body.site-loading-active.donate-page-active > footer{
     transform:translateY(-8px)!important;
   }
 }
+
+
+/* =========================================================
+   VK Video — usar somente o player nativo do VK.
+   Remove os controles BETV sobrepostos e libera toda a área
+   do iframe para os controles próprios do VK.
+   ========================================================= */
+.drive-player-overlay.is-vk-api-mode .drive-player-frame-shell{
+  inset:0!important;
+  overflow:hidden!important;
+  background:#000!important;
+}
+
+.drive-player-overlay.is-vk-api-mode .drive-player-frame{
+  inset:0!important;
+  top:0!important;
+  left:0!important;
+  width:100%!important;
+  height:100%!important;
+  transform:none!important;
+  pointer-events:auto!important;
+  background:#000!important;
+}
+
+/* Remove máscaras que cobriam a interface nativa do VK. */
+.drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-frame-shell::after{
+  content:none!important;
+  display:none!important;
+}
+
+/* Não mostra timeline, +/-10s ou play/pause do BETV sobre o VK. */
+.drive-player-overlay.is-vk-api-mode .drive-player-center-controls,
+.drive-player-overlay.is-vk-api-mode .drive-player-bottom-controls{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+
+/* Remove gradiente/overlay visual do BETV sobre o iframe do VK. */
+.drive-player-overlay.is-vk-api-mode .drive-player-shell::after{
+  content:none!important;
+  display:none!important;
+}
+
+/* No VK, mantém apenas o X do site para sair do overlay.
+   Os demais controles ficam por conta do player nativo do VK. */
+.drive-player-overlay.is-vk-api-mode .drive-player-top-controls{
+  display:flex!important;
+  position:absolute!important;
+  top:max(10px,env(safe-area-inset-top))!important;
+  right:max(10px,env(safe-area-inset-right))!important;
+  left:auto!important;
+  bottom:auto!important;
+  width:auto!important;
+  height:auto!important;
+  min-height:0!important;
+  padding:0!important;
+  gap:0!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  transform:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+  pointer-events:none!important;
+  z-index:20!important;
+}
+.drive-player-overlay.is-vk-api-mode .drive-player-top-controls > :not(.drive-player-close){
+  display:none!important;
+}
+.drive-player-overlay.is-vk-api-mode .drive-player-close{
+  display:grid!important;
+  width:44px!important;
+  height:44px!important;
+  pointer-events:auto!important;
+  color:#fff!important;
+  background:rgba(0,0,0,.52)!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+}
+
+/* O X continua disponível em fullscreen sem reintroduzir o player BETV. */
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.fullscreen-ui-idle.is-vk-api-mode .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-shell:-webkit-full-screen .drive-player-top-controls{
+  display:flex!important;
+  opacity:1!important;
+  visibility:visible!important;
+  transform:none!important;
+  pointer-events:none!important;
+}
+
+/* Reverte ajustes antigos de paisagem que ampliavam/cortavam o iframe do VK. */
+@media(max-width:950px) and (max-height:560px) and (orientation:landscape){
+  .drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-frame{
+    inset:0!important;
+    top:0!important;
+    width:100%!important;
+    height:100%!important;
+  }
+}
