@@ -14539,3 +14539,33 @@ body.profile-page-active .profile-page-hero{
     transform:none!important;
   }
 }
+
+
+/* =========================================================
+   08/08/2026 — YouTube PC: X com auto-hide de 2s.
+   Exclusivo para mouse/desktop. Mobile permanece inalterado.
+   A zona invisível coincide apenas com a região do X para não
+   criar uma faixa ampla bloqueando os controles nativos do YouTube.
+   ========================================================= */
+@media (min-width:821px) and (hover:hover) and (pointer:fine){
+  .external-native-player-overlay[data-provider="youtube"] .external-native-player-wake-zone{
+    display:block!important;
+    pointer-events:auto!important;
+    left:50%!important;
+    bottom:max(3px,env(safe-area-inset-bottom))!important;
+    width:76px!important;
+    height:58px!important;
+    transform:translateX(-50%)!important;
+    background:transparent!important;
+  }
+  .external-native-player-overlay[data-provider="youtube"] .external-native-player-toolbar{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+    transition:opacity .18s ease,transform .18s ease;
+  }
+  .external-native-player-overlay.controls-idle[data-provider="youtube"] .external-native-player-toolbar{
+    opacity:0;
+    transform:translateX(-50%) translateY(10px);
+    pointer-events:none;
+  }
+}

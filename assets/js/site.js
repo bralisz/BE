@@ -3935,17 +3935,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const menusOpen = () => !qualityMenu.hidden || !audioMenu.hidden;
 
+    const youtubeDesktopAutoHideEnabled = () => activeProvider === 'youtube' && window.matchMedia('(min-width:821px) and (hover:hover) and (pointer:fine)').matches;
+    const providerUsesAutoHide = () => activeProvider === 'vk' || youtubeDesktopAutoHideEnabled();
+
     const hideControlsForInactivity = () => {
       clearInactivityTimer();
       if (overlay.hidden || controlsInteracting || menusOpen()) return;
-      if (activeProvider !== 'vk') return;
+      if (!providerUsesAutoHide()) return;
       overlay.classList.add('controls-idle');
     };
 
     const showControls = (keepVisible = false) => {
       clearInactivityTimer();
       overlay.classList.remove('controls-idle');
-      if (activeProvider !== 'vk') return;
+      if (!providerUsesAutoHide()) return;
       if (!keepVisible && !controlsInteracting && !menusOpen()) {
         inactivityTimer = window.setTimeout(hideControlsForInactivity, 2000);
       }
@@ -4238,7 +4241,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       syncBodyLock();
-      showControls(normalizedProvider !== 'vk');
+      if (normalizedProvider === 'youtube' && youtubeDesktopAutoHideEnabled()) showControls(false);
+      else showControls(normalizedProvider !== 'vk');
       if (normalizedProvider === 'vk') {
         frame.addEventListener('load', bindVkApi, { once: true });
         window.setTimeout(bindVkApi, 900);
