@@ -12480,3 +12480,65 @@ body.site-loading-active.donate-page-active > footer{
   opacity:0!important;
   pointer-events:none!important;
 }
+
+
+/* Fullscreen: move a barra de ações (tela cheia, volume, abrir e fechar)
+   da parte inferior para a parte superior do player. */
+.drive-player-overlay.is-browser-fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-top-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-top-controls{
+  position:absolute!important;
+  top:max(16px,env(safe-area-inset-top))!important;
+  bottom:auto!important;
+  left:max(18px,env(safe-area-inset-left))!important;
+  right:max(18px,env(safe-area-inset-right))!important;
+  width:auto!important;
+  height:auto!important;
+  min-height:48px!important;
+  padding:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:8px!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  transform:none!important;
+  z-index:20!important;
+}
+
+/* O botão de sair da tela cheia continua no lado esquerdo;
+   volume/abrir/fechar ficam no lado direito. */
+.drive-player-overlay.is-browser-fullscreen .drive-player-top-controls .drive-player-fullscreen,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-top-controls .drive-player-fullscreen,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-top-controls .drive-player-fullscreen{
+  margin-right:auto!important;
+}
+
+.drive-player-overlay.is-browser-fullscreen .drive-player-top-controls .drive-player-icon,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-top-controls .drive-player-icon,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-top-controls .drive-player-icon{
+  background:rgba(0,0,0,.48)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+  backdrop-filter:blur(12px)!important;
+}
+
+/* A timeline continua na parte inferior, separada dos ícones. */
+.drive-player-overlay.is-browser-fullscreen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-bottom-controls,
+.drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-bottom-controls{
+  z-index:18!important;
+}
+
+@media(max-width:700px){
+  .drive-player-overlay.is-browser-fullscreen .drive-player-top-controls,
+  .drive-player-overlay.is-browser-fullscreen .drive-player-shell:fullscreen .drive-player-top-controls,
+  .drive-player-overlay.is-browser-fullscreen .drive-player-shell:-webkit-full-screen .drive-player-top-controls{
+    top:max(10px,env(safe-area-inset-top))!important;
+    left:max(10px,env(safe-area-inset-left))!important;
+    right:max(10px,env(safe-area-inset-right))!important;
+    min-height:44px!important;
+    gap:6px!important;
+  }
+}
