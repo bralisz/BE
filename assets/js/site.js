@@ -4467,6 +4467,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeFileId = '';
     let activeResourceKey = '';
     let activeBannerUrl = '';
+    let activeBannerCandidates = [];
     let activeTitle = '';
     let activeMediaKind = '';
     let activeProvider = '';
@@ -4763,6 +4764,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       progress.disabled = disabled;
     };
 
+    const setBackdropCandidates = values => {
+      const candidates = [];
+      (Array.isArray(values) ? values : [values]).forEach(value => {
+        const raw = String(value || '').trim();
+        if (!raw || raw === '#' || /^(?:null|undefined)$/i.test(raw)) return;
+        let normalized = raw;
+        try {
+          const parsed = new URL(raw, location.origin);
+          if (parsed.origin === location.origin) normalized = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+        } catch (_) {}
+        const safe = safeAssetUrlValue(normalized);
+        if (!safe || safe === '#' || candidates.includes(safe)) return;
+        candidates.push(safe);
+      });
+      activeBannerCandidates = candidates;
+      activeBannerUrl = candidates[0] || '';
+    };
+
     const applyBackdrop = () => {
       const hasBanner = Boolean(activeBannerUrl && activeBannerUrl !== '#');
       backdrop.hidden = !audioMode;
@@ -4774,6 +4793,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         backdropImage.removeAttribute('src');
       }
     };
+
+    backdropImage.addEventListener('error', () => {
+      if (!audioMode || !activeBannerCandidates.length) return;
+      const failed = backdropImage.getAttribute('src') || activeBannerUrl;
+      activeBannerCandidates = activeBannerCandidates.filter(candidate => candidate !== failed);
+      activeBannerUrl = activeBannerCandidates[0] || '';
+      applyBackdrop();
+    });
 
     const setAudioMode = enabled => {
       audioMode = Boolean(enabled);
@@ -4975,6 +5002,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       mediaReady = false;
       setAudioMode(false);
       activeBannerUrl = '';
+      activeBannerCandidates = [];
       activeTitle = '';
       activeMediaKind = '';
       activeProvider = '';
@@ -5006,11 +5034,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const token = ++openingToken;
       activeFileId = fileId;
       activeResourceKey = resourceKey;
-      const requestedBanner = String(context?.bannerUrl || '').trim();
-      // Mantém a mesma normalização da versão 132723, que já aplicava
-      // beMediaUrl/safeAssetUrlValue ao banner antes de colocá-lo no wallpaper.
-      const safeBanner = requestedBanner ? safeAssetUrlValue(requestedBanner) : '';
-      activeBannerUrl = safeBanner && safeBanner !== '#' ? safeBanner : '';
+      const requestedBanners = [
+        context?.bannerUrl,
+        ...(Array.isArray(context?.bannerCandidates) ? context.bannerCandidates : []),
+        context?.imageUrl
+      ];
+      // O MP3 reutiliza a arte do próprio conteúdo do site. Mantemos mais de
+      // uma opção para que uma URL antiga/quebrada não deixe o player sem fundo.
+      setBackdropCandidates(requestedBanners);
       activeTitle = String(context?.title || '').trim();
       activeProvider = 'drive';
       const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
@@ -5166,49 +5197,70 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       );
       if (inferredKind !== 'audio') return;
 
-      const firstValidBanner = (...values) => {
-        for (const value of values) {
+      const validBannerValues = (...values) => {
+        const result = [];
+        values.flat(Infinity).forEach(value => {
           const raw = String(value || '').trim();
-          if (!raw || raw === '#' || /^(?:null|undefined)$/i.test(raw)) continue;
+          if (!raw || raw === '#' || /^(?:null|undefined)$/i.test(raw)) return;
           const safe = safeAssetUrlValue(raw);
-          if (safe && safe !== '#') return raw;
-        }
-        return '';
+          if (!safe || safe === '#') return;
+          if (!result.includes(raw)) result.push(raw);
+        });
+        return result;
       };
 
-      // Mantém o comportamento da versão que exibia corretamente o banner:
-      // captura primeiro a capa já vinculada/renderizada no conteúdo aberto e
-      // não deixa uma consulta posterior substituir uma imagem que já funciona.
-      let bannerUrl = firstValidBanner(
-        // O banner que está realmente renderizado na tela é a fonte mais confiável
-        // para o wallpaper do MP3 correspondente.
-        detailBannerImage?.currentSrc,
-        detailBannerImage?.src,
+      const recordId = String(link.dataset.recordId || linkedContent.recordId || '').trim();
+      const itemId = String(link.dataset.itemId || linkedContent.itemId || '').trim();
+      const collection = String(link.dataset.collection || linkedContent.collection || 'videos').trim().toLowerCase() || 'videos';
+
+      // Procura o mesmo conteúdo no catálogo atual. Isso cobre favoritos/rotas
+      // antigas em que o MP3 chegou ao player sem carregar o banner do vídeo.
+      let catalogMatch = null;
+      try {
+        const catalog = typeof window.beGetCatalogContents === 'function' ? window.beGetCatalogContents() : [];
+        catalogMatch = (catalog || []).find(item => {
+          if (recordId && String(item?.recordId || '') === recordId && String(item?.collection || 'videos').toLowerCase() === collection) return true;
+          if (itemId && String(item?.itemId || '') === itemId) return true;
+          const candidateUrl = String(item?.contentUrl || '');
+          return candidateUrl && googleDriveFileId(candidateUrl) === fileId;
+        }) || null;
+      } catch (_) {}
+
+      const siteBannerCandidates = validBannerValues(
+        detailBannerImage?.getAttribute('src'),
         link.dataset.bannerUrl,
         linkedContent.bannerUrl,
-        link.dataset.imageUrl,
-        linkedContent.imageUrl
+        catalogMatch?.bannerUrl,
+        detailBannerImage?.currentSrc,
+        detailBannerImage?.src
       );
 
-      // O banco vira apenas fallback. Antes ele tinha prioridade e podia trocar
-      // o banner correto do DOM por um endereço antigo/incompatível.
-      const recordId = String(link.dataset.recordId || linkedContent.recordId || '').trim();
-      const collection = String(link.dataset.collection || linkedContent.collection || 'videos').trim().toLowerCase() || 'videos';
-      if (!bannerUrl && recordId && window.beBackend?.data?.get) {
+      let backendSource = null;
+      if (!siteBannerCandidates.length && recordId && window.beBackend?.data?.get) {
         try {
-          const source = await window.beBackend.data.get(collection, recordId);
-          bannerUrl = firstValidBanner(
-            source?.bannerUrl,
-            source?.imageUrl,
-            source?.thumbnailUrl
-          );
+          backendSource = await window.beBackend.data.get(collection, recordId);
         } catch (_) {
-          // Sem banner no banco: o player continua normalmente com fundo padrão.
+          backendSource = null;
         }
       }
 
+      // Usa primeiro o banner do vídeo cadastrado no site; thumbnail/imagem fica
+      // somente como fallback quando aquele conteúdo não possui banner válido.
+      const bannerCandidates = validBannerValues(
+        siteBannerCandidates,
+        backendSource?.bannerUrl,
+        link.dataset.imageUrl,
+        linkedContent.imageUrl,
+        catalogMatch?.imageUrl,
+        backendSource?.imageUrl,
+        backendSource?.thumbnailUrl
+      );
+      const bannerUrl = bannerCandidates[0] || '';
+
       openPlayer(fileId, googleDriveResourceKey(mediaUrl), {
         bannerUrl,
+        bannerCandidates,
+        imageUrl: linkedContent.imageUrl || catalogMatch?.imageUrl || backendSource?.imageUrl || backendSource?.thumbnailUrl || '',
         title,
         mediaKind: inferredKind,
         mediaType: link.dataset.mediaType || '',
@@ -8937,7 +8989,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(message)setStatus(message,type||'');
     hideSiteSkeleton();
   }
-  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
+  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:detail-close'));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
   function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
@@ -9587,6 +9639,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }else if(hasLegacySupportUrl()){
       setSupportRoute(true);
     }
+    // Fecha de fato os detalhes do conteúdo antes de abrir o Suporte.
+    // Só remover `detail-page-active` deixava #contentDetailSection visível no DOM
+    // e, ao voltar para a Home, o banner do vídeo anterior aparecia abaixo dela.
+    window.dispatchEvent(new CustomEvent('be:detail-close'));
     document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','detail-page-active','notification-page-active');
     window.dispatchEvent(new CustomEvent('be:close-notifications'));
     document.body.classList.add('support-page-active');
