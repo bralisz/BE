@@ -12113,3 +12113,26 @@ body.site-loading-active.donate-page-active > footer{
 .fans-page-community-help:hover,.fans-page-community-help:focus-visible{color:#72b7ff;text-decoration:underline;text-underline-offset:3px}
 @media(min-width:901px){.fans-page-intro{max-width:980px}.fans-page-intro .fans-page-description{white-space:nowrap}}
 @media(max-width:900px){.fans-page-intro .fans-page-description{margin-top:18px;font-size:15px;line-height:1.55}.fans-page-community-help{max-width:330px;margin-top:10px;font-size:13px}}
+
+/* VK Video: integração com os controles do player do site sem alterar o layout antigo do Drive. */
+.drive-player-overlay.is-frame-mode.is-vk-api-mode .drive-player-volume{display:grid!important}
+.drive-player-overlay.is-frame-mode.is-vk-api-mode .drive-player-center-controls{display:flex!important}
+.drive-player-overlay.is-frame-mode.is-vk-api-mode .drive-player-bottom-controls{display:block!important}
+.drive-player-overlay.is-frame-mode.is-vk-api-mode .drive-player-shell::after{display:block!important}
+.drive-player-overlay.is-vk-api-mode .drive-player-frame{pointer-events:none}
+.drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:78px;
+  z-index:3;
+  pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(0,0,0,.72));
+}
+.drive-player-overlay.is-vk-api-mode.controls-visible .drive-player-shell::after,
+.drive-player-overlay.is-vk-api-mode.is-paused .drive-player-shell::after{opacity:1}
+@media(max-width:700px){
+  .drive-player-overlay.is-vk-api-mode .drive-player-frame-shell::after{height:70px}
+}

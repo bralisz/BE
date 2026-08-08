@@ -3712,7 +3712,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const params = new URLSearchParams({
       oid: info.ownerId,
       id: info.videoId,
-      autoplay: '1'
+      autoplay: '1',
+      js_api: '1'
     });
     if (info.hash) params.set('hash', info.hash);
     return `https://vkvideo.ru/video_ext.php?${params.toString()}`;
@@ -3890,6 +3891,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let mediaReady = false;
     let openingToken = 0;
     let youtubeMuted = false;
+    let vkPlayer = null;
+    let vkApiReady = false;
+    let vkApiPromise = null;
+    let vkInitTimer = 0;
+    let vkCurrentTime = 0;
+    let vkDuration = 0;
+    let vkPaused = true;
+    let vkMuted = false;
+    let vkVolume = 1;
 
     const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 
@@ -3934,6 +3944,166 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       } catch (_) {
         return false;
       }
+    };
+
+    const ensureVkVideoApi = () => {
+      if (window.VK && typeof window.VK.VideoPlayer === 'function') return Promise.resolve(window.VK);
+      if (vkApiPromise) return vkApiPromise;
+
+      vkApiPromise = new Promise((resolve, reject) => {
+        const finish = () => {
+          if (window.VK && typeof window.VK.VideoPlayer === 'function') resolve(window.VK);
+          else reject(new Error('VK Video API indisponível'));
+        };
+        const existing = document.querySelector('script[data-be-vk-video-api]');
+        if (existing) {
+          existing.addEventListener('load', finish, { once: true });
+          existing.addEventListener('error', () => reject(new Error('Falha ao carregar VK Video API')), { once: true });
+          window.setTimeout(finish, 2500);
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://vk.com/js/api/videoplayer.js';
+        script.async = true;
+        script.dataset.beVkVideoApi = 'true';
+        script.addEventListener('load', finish, { once: true });
+        script.addEventListener('error', () => reject(new Error('Falha ao carregar VK Video API')), { once: true });
+        document.head.appendChild(script);
+      }).catch(error => {
+        vkApiPromise = null;
+        throw error;
+      });
+
+      return vkApiPromise;
+    };
+
+    const resetVkState = () => {
+      window.clearTimeout(vkInitTimer);
+      vkInitTimer = 0;
+      if (vkPlayer && typeof vkPlayer.destroy === 'function') {
+        try { vkPlayer.destroy(); } catch (_) {}
+      }
+      vkPlayer = null;
+      vkApiReady = false;
+      vkCurrentTime = 0;
+      vkDuration = 0;
+      vkPaused = true;
+      vkMuted = false;
+      vkVolume = 1;
+      overlay.classList.remove('is-vk-api-mode');
+    };
+
+    const syncVkPlayerState = (state = {}, eventName = '') => {
+      if (activeProvider !== 'vkvideo' || !frameMode) return;
+      const time = Number(state && state.time);
+      const duration = Number(state && state.duration);
+      const volume = Number(state && state.volume);
+      const muted = state && typeof state.muted === 'boolean' ? state.muted : null;
+      const stateName = String((state && state.state) || eventName || '').trim().toLowerCase();
+
+      if (Number.isFinite(time) && time >= 0) vkCurrentTime = time;
+      if (Number.isFinite(duration) && duration > 0) vkDuration = duration;
+      if (Number.isFinite(volume) && volume >= 0) vkVolume = Math.min(1, volume);
+      if (muted !== null) vkMuted = muted;
+
+      if (['started', 'resumed', 'playing'].includes(stateName)) vkPaused = false;
+      else if (['paused', 'ended'].includes(stateName)) vkPaused = true;
+
+      const ratio = vkDuration > 0 ? Math.min(1, Math.max(0, vkCurrentTime / vkDuration)) : 0;
+      progress.value = String(Math.round(ratio * 1000));
+      progress.style.setProperty('--drive-progress', `${Math.round(ratio * 10000) / 100}%`);
+      currentLabel.textContent = formatPlayerTime(vkCurrentTime);
+      durationLabel.textContent = formatPlayerTime(vkDuration);
+      overlay.classList.toggle('is-paused', vkPaused);
+      overlay.classList.toggle('is-muted', vkMuted || vkVolume === 0);
+      toggleButton.setAttribute('aria-label', vkPaused ? 'Reproduzir' : 'Pausar');
+      toggleButton.title = vkPaused ? 'Reproduzir' : 'Pausar';
+      volumeButton.setAttribute('aria-label', vkMuted || vkVolume === 0 ? 'Ativar som' : 'Silenciar');
+      volumeButton.title = vkMuted || vkVolume === 0 ? 'Ativar som' : 'Silenciar';
+
+      if (!mediaReady) {
+        mediaReady = true;
+        setLoadingMessage('', false);
+        setPlayerInteractive(true);
+      }
+      showControls(vkPaused);
+    };
+
+    const readVkPlayerState = () => {
+      if (!vkPlayer || !vkApiReady) return;
+      const snapshot = {};
+      try {
+        const value = vkPlayer.getCurrentTime && vkPlayer.getCurrentTime();
+        if (Number.isFinite(Number(value))) snapshot.time = Number(value);
+      } catch (_) {}
+      try {
+        const value = vkPlayer.getDuration && vkPlayer.getDuration();
+        if (Number.isFinite(Number(value))) snapshot.duration = Number(value);
+      } catch (_) {}
+      try {
+        const value = vkPlayer.getVolume && vkPlayer.getVolume();
+        if (Number.isFinite(Number(value))) snapshot.volume = Number(value);
+      } catch (_) {}
+      try {
+        const value = vkPlayer.isMuted && vkPlayer.isMuted();
+        if (typeof value === 'boolean') snapshot.muted = value;
+      } catch (_) {}
+      try {
+        const value = vkPlayer.getState && vkPlayer.getState();
+        if (typeof value === 'string') snapshot.state = value;
+      } catch (_) {}
+      syncVkPlayerState(snapshot);
+    };
+
+    const bindVkPlayerApi = (token, attempt = 0) => {
+      if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken) return;
+      ensureVkVideoApi().then(() => {
+        if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken) return;
+        try {
+          if (vkPlayer && typeof vkPlayer.destroy === 'function') {
+            try { vkPlayer.destroy(); } catch (_) {}
+          }
+          vkPlayer = window.VK.VideoPlayer(frame);
+          vkApiReady = true;
+          overlay.classList.add('is-vk-api-mode');
+          setPlayerInteractive(true);
+          setLoadingMessage('', false);
+
+          const onState = eventName => state => syncVkPlayerState(state || {}, eventName);
+          ['inited', 'timeupdate', 'volumechange', 'started', 'resumed', 'paused', 'ended'].forEach(eventName => {
+            if (vkPlayer && typeof vkPlayer.on === 'function') vkPlayer.on(eventName, onState(eventName));
+          });
+          if (vkPlayer && typeof vkPlayer.on === 'function') {
+            vkPlayer.on('error', () => {
+              // O iframe continua utilizável mesmo quando a API não consegue controlar uma mídia específica.
+              overlay.classList.remove('is-vk-api-mode');
+              vkApiReady = false;
+              setPlayerInteractive(false);
+              loading.hidden = true;
+            });
+          }
+          readVkPlayerState();
+          window.setTimeout(readVkPlayerState, 250);
+          window.setTimeout(readVkPlayerState, 900);
+        } catch (_) {
+          if (attempt < 8) {
+            window.clearTimeout(vkInitTimer);
+            vkInitTimer = window.setTimeout(() => bindVkPlayerApi(token, attempt + 1), 280 + (attempt * 120));
+          } else {
+            vkApiReady = false;
+            overlay.classList.remove('is-vk-api-mode');
+            setPlayerInteractive(false);
+            loading.hidden = true;
+          }
+        }
+      }).catch(() => {
+        if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken) return;
+        vkApiReady = false;
+        overlay.classList.remove('is-vk-api-mode');
+        setPlayerInteractive(false);
+        loading.hidden = true;
+      });
     };
 
     const clearPlayerTimers = () => {
@@ -4004,7 +4174,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const showControls = (keepVisible = false) => {
       overlay.classList.add('controls-visible');
       window.clearTimeout(controlsTimer);
-      if (!keepVisible && mediaReady && !video.paused && !frameMode) {
+      const vkPlaying = activeProvider === 'vkvideo' && frameMode && vkApiReady && !vkPaused;
+      const nativePlaying = !frameMode && mediaReady && !video.paused;
+      if (!keepVisible && mediaReady && (vkPlaying || nativePlaying)) {
         controlsTimer = window.setTimeout(() => overlay.classList.remove('controls-visible'), 2400);
       }
     };
@@ -4160,6 +4332,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       openingToken += 1;
       clearPlayerTimers();
+      resetVkState();
       video.pause();
       video.removeAttribute('src');
       video.load();
@@ -4179,7 +4352,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       metadataProbeFinished = false;
       applyBackdrop();
-      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
+      overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vk-api-mode', 'is-loading', 'is-error', 'controls-visible', 'is-paused', 'is-muted', 'is-browser-fullscreen');
       youtubeMuted = false;
       document.body.classList.remove('drive-player-open');
       activeFileId = '';
@@ -4282,7 +4455,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const embedUrl = vkVideoEmbedUrl(info);
       if (!embedUrl) return;
       closePlayer();
-      openingToken += 1;
+      const token = ++openingToken;
       activeProvider = 'vkvideo';
       activeExternalUrl = vkVideoWatchUrl(info);
       activeTitle = String(context?.title || '').trim();
@@ -4291,27 +4464,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       mediaReady = false;
       previousFocus = document.activeElement;
       setAudioMode(false);
+      resetVkState();
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       youtubeMuted = false;
-      overlay.classList.remove('is-error', 'is-loading', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-muted');
-      overlay.classList.add('is-open', 'is-frame-mode', 'controls-visible');
+      overlay.classList.remove('is-error', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vk-api-mode', 'is-muted');
+      overlay.classList.add('is-open', 'is-frame-mode', 'controls-visible', 'is-paused');
       document.body.classList.add('drive-player-open');
       video.pause();
       video.removeAttribute('src');
       video.load();
       frameShell.hidden = false;
-      loading.hidden = true;
-      loadingText.hidden = true;
       frame.title = activeTitle ? `VK Video — ${activeTitle}` : 'Reprodutor do VK Video';
+      setPlayerInteractive(false);
+      setLoadingMessage('Sincronizando VK Video com o player...', true);
       frame.src = embedUrl;
       externalButton.setAttribute('aria-label', 'Abrir no VK Video');
       externalButton.title = 'Abrir no VK Video';
-      setPlayerInteractive(false);
+      bindVkPlayerApi(token);
       closeButton.focus({ preventScroll: true });
     };
 
     const togglePlayback = () => {
+      if (activeProvider === 'vkvideo' && frameMode) {
+        if (!vkPlayer || !vkApiReady) return;
+        try {
+          if (vkPaused) vkPlayer.play();
+          else vkPlayer.pause();
+        } catch (_) {}
+        showControls(true);
+        return;
+      }
       if (frameMode) return;
       if (!mediaReady && video.readyState < 2) {
         setLoadingMessage(audioMode ? 'Aguardando o MP3 ficar pronto...' : 'Aguardando a mídia ficar pronta...');
@@ -4387,27 +4570,60 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         showControls(true);
         return;
       }
+      if (activeProvider === 'vkvideo' && frameMode) {
+        if (!vkPlayer || !vkApiReady) return;
+        try {
+          if (vkMuted || vkVolume === 0) vkPlayer.unmute();
+          else vkPlayer.mute();
+        } catch (_) {}
+        showControls(true);
+        return;
+      }
       if (frameMode || !mediaReady) return;
       video.muted = !video.muted;
       syncPlayerState();
       showControls();
     });
     frame.addEventListener('load', () => {
-      if (activeProvider !== 'youtube') return;
-      window.setTimeout(() => {
-        if (youtubeMuted) postYouTubeCommand('mute');
-      }, 120);
+      if (activeProvider === 'youtube') {
+        window.setTimeout(() => {
+          if (youtubeMuted) postYouTubeCommand('mute');
+        }, 120);
+        return;
+      }
+      if (activeProvider === 'vkvideo' && frame.src && frame.src !== 'about:blank') {
+        const token = openingToken;
+        window.setTimeout(() => bindVkPlayerApi(token), 80);
+      }
     });
     toggleButton.addEventListener('click', togglePlayback);
     backButton.addEventListener('click', () => {
-      if (!frameMode && mediaReady) video.currentTime = Math.max(0, video.currentTime - 10);
+      if (activeProvider === 'vkvideo' && frameMode && vkPlayer && vkApiReady) {
+        try { vkPlayer.seek(Math.max(0, vkCurrentTime - 10)); } catch (_) {}
+      } else if (!frameMode && mediaReady) {
+        video.currentTime = Math.max(0, video.currentTime - 10);
+      }
       showControls();
     });
     forwardButton.addEventListener('click', () => {
-      if (!frameMode && mediaReady) video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
+      if (activeProvider === 'vkvideo' && frameMode && vkPlayer && vkApiReady) {
+        const target = vkDuration > 0 ? Math.min(vkDuration, vkCurrentTime + 10) : vkCurrentTime + 10;
+        try { vkPlayer.seek(target); } catch (_) {}
+      } else if (!frameMode && mediaReady) {
+        video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
+      }
       showControls();
     });
     progress.addEventListener('input', () => {
+      if (activeProvider === 'vkvideo' && frameMode) {
+        if (!vkPlayer || !vkApiReady || vkDuration <= 0) return;
+        const target = (Number(progress.value) / 1000) * vkDuration;
+        vkCurrentTime = target;
+        try { vkPlayer.seek(target); } catch (_) {}
+        syncVkPlayerState({ time: target, duration: vkDuration, muted: vkMuted, volume: vkVolume, state: vkPaused ? 'paused' : 'playing' });
+        showControls(true);
+        return;
+      }
       if (frameMode || !mediaReady || !Number.isFinite(video.duration) || video.duration <= 0) return;
       video.currentTime = (Number(progress.value) / 1000) * video.duration;
       syncPlayerState();
@@ -4421,7 +4637,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls();
     });
     shell.addEventListener('dblclick', event => {
-      if (frameMode || event.target.closest('button,input,iframe')) return;
+      const vkControllable = activeProvider === 'vkvideo' && frameMode && vkApiReady;
+      if ((frameMode && !vkControllable) || event.target.closest('button,input,iframe')) return;
       togglePlayback();
     });
 
@@ -4468,21 +4685,39 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         toggleBrowserFullscreen();
         return;
       }
-      if (frameMode || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')) return;
+      const vkControllable = activeProvider === 'vkvideo' && frameMode && vkApiReady;
+      if ((frameMode && !vkControllable) || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')) return;
       if (event.key === ' ' || event.key.toLowerCase() === 'k') {
         event.preventDefault();
         togglePlayback();
       } else if (event.key === 'ArrowLeft' && mediaReady) {
         event.preventDefault();
-        video.currentTime = Math.max(0, video.currentTime - 10);
+        if (vkControllable) {
+          try { vkPlayer.seek(Math.max(0, vkCurrentTime - 10)); } catch (_) {}
+        } else {
+          video.currentTime = Math.max(0, video.currentTime - 10);
+        }
       } else if (event.key === 'ArrowRight' && mediaReady) {
         event.preventDefault();
-        video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
+        if (vkControllable) {
+          const target = vkDuration > 0 ? Math.min(vkDuration, vkCurrentTime + 10) : vkCurrentTime + 10;
+          try { vkPlayer.seek(target); } catch (_) {}
+        } else {
+          video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
+        }
       } else if (event.key.toLowerCase() === 'm' && mediaReady) {
         event.preventDefault();
-        video.muted = !video.muted;
+        if (vkControllable) {
+          try {
+            if (vkMuted || vkVolume === 0) vkPlayer.unmute();
+            else vkPlayer.mute();
+          } catch (_) {}
+        } else {
+          video.muted = !video.muted;
+        }
       }
-      syncPlayerState();
+      if (vkControllable) readVkPlayerState();
+      else syncPlayerState();
       showControls();
     });
 
