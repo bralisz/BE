@@ -12470,3 +12470,13 @@ body.site-loading-active.donate-page-active > footer{
     height:92px!important;
   }
 }
+
+
+/* VK Video: remove somente o botão central play/pause do player BETV.
+   Os botões de voltar/avançar 10s continuam disponíveis quando aplicável. */
+.drive-player-overlay.is-vk-api-mode .drive-player-toggle{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
