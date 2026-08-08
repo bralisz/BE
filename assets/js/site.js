@@ -5030,17 +5030,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeFileId = fileId;
       activeResourceKey = resourceKey;
       const requestedBanner = String(context?.bannerUrl || '').trim();
-      let safeBanner = '';
-      if (requestedBanner) {
-        try {
-          const resolvedBanner = new URL(requestedBanner, location.href);
-          safeBanner = resolvedBanner.origin === location.origin
-            ? `${resolvedBanner.pathname}${resolvedBanner.search}${resolvedBanner.hash}`
-            : safeAssetUrlValue(requestedBanner);
-        } catch (_) {
-          safeBanner = safeAssetUrlValue(requestedBanner);
-        }
-      }
+      // Mantém a mesma normalização da versão 132723, que já aplicava
+      // beMediaUrl/safeAssetUrlValue ao banner antes de colocá-lo no wallpaper.
+      const safeBanner = requestedBanner ? safeAssetUrlValue(requestedBanner) : '';
       activeBannerUrl = safeBanner && safeBanner !== '#' ? safeBanner : '';
       activeTitle = String(context?.title || '').trim();
       activeProvider = 'drive';
@@ -5211,10 +5203,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       // captura primeiro a capa já vinculada/renderizada no conteúdo aberto e
       // não deixa uma consulta posterior substituir uma imagem que já funciona.
       let bannerUrl = firstValidBanner(
-        link.dataset.bannerUrl,
-        linkedContent.bannerUrl,
+        // O banner que está realmente renderizado na tela é a fonte mais confiável
+        // para o wallpaper do MP3 correspondente.
         detailBannerImage?.currentSrc,
         detailBannerImage?.src,
+        link.dataset.bannerUrl,
+        linkedContent.bannerUrl,
         link.dataset.imageUrl,
         linkedContent.imageUrl
       );
