@@ -3941,6 +3941,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!embedUrl) return;
       closeAllExternalPlayers();
       window.dispatchEvent(new Event('be:close-drive-player'));
+      window.dispatchEvent(new Event('be:close-drive-video-player'));
       youtubePreviousFocus = document.activeElement;
       youtubeFrame.title = context?.title ? `YouTube — ${String(context.title).trim()}` : 'Reprodutor do YouTube';
       youtubeFrame.src = embedUrl;
@@ -3956,6 +3957,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!embedUrl) return;
       closeAllExternalPlayers();
       window.dispatchEvent(new Event('be:close-drive-player'));
+      window.dispatchEvent(new Event('be:close-drive-video-player'));
       vkPreviousFocus = document.activeElement;
       vkExternalUrl = vkVideoWatchUrl(info);
       vkFrame.title = context?.title ? `VK Video — ${String(context.title).trim()}` : 'Reprodutor do VK Video';
@@ -4005,6 +4007,433 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     window.addEventListener('pagehide', closeAllExternalPlayers);
     window.addEventListener('be:close-external-video-players', closeAllExternalPlayers);
+  }
+
+
+  function driveVideoPlayerMarkup() {
+    return `<div class="drive-video-player-overlay" id="driveVideoPlayerOverlay" hidden aria-hidden="true">
+      <section class="drive-video-player-shell" id="driveVideoPlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo do Google Drive">
+        <video class="drive-video-player-video" id="driveVideoPlayerVideo" preload="metadata" playsinline></video>
+        <div class="drive-video-player-frame-shell" id="driveVideoPlayerFrameShell" hidden>
+          <iframe class="drive-video-player-frame" id="driveVideoPlayerFrame" title="Reprodutor de vídeo do Google Drive" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        </div>
+        <div class="drive-video-player-loading" id="driveVideoPlayerLoading" role="status" aria-label="Carregando vídeo">
+          <span class="drive-video-player-loader" aria-hidden="true"></span>
+          <span class="drive-video-player-loading-message" id="driveVideoPlayerLoadingMessage" hidden></span>
+        </div>
+        <button class="drive-video-player-toggle" id="driveVideoPlayerToggle" type="button" aria-label="Pausar" title="Pausar">
+          <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zm7 0h3v14h-3z"/></svg>
+          <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>
+        </button>
+        <div class="drive-video-player-progress-area">
+          <input class="drive-video-player-progress" id="driveVideoPlayerProgress" type="range" min="0" max="1000" value="0" step="1" aria-label="Progresso do vídeo">
+          <div class="drive-video-player-time"><span id="driveVideoPlayerCurrent">0:00</span><span aria-hidden="true">/</span><span id="driveVideoPlayerDuration">0:00</span></div>
+        </div>
+        <div class="drive-video-player-actionbar" aria-label="Controles do vídeo">
+          <button class="drive-video-player-action drive-video-player-fullscreen" id="driveVideoPlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v5M5 5l6 6M14 19h5v-5M19 19l-6-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4a1 1 0 0 0 1-1V4M20 9h-4a1 1 0 0 1-1-1V4M4 15h4a1 1 0 0 1 1 1v4M20 15h-4a1 1 0 0 0-1 1v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="drive-video-player-actions-right">
+            <button class="drive-video-player-action drive-video-player-volume" id="driveVideoPlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
+              <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+            <button class="drive-video-player-action drive-video-player-external" id="driveVideoPlayerExternal" type="button" aria-label="Abrir no Google Drive" title="Abrir no Google Drive">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="drive-video-player-action drive-video-player-close" id="driveVideoPlayerClose" type="button" aria-label="Fechar vídeo" title="Fechar">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>`;
+  }
+
+  function setupDriveVideoPlayer() {
+    if (document.body.dataset.driveVideoPlayerBound === 'true') return;
+    document.body.dataset.driveVideoPlayerBound = 'true';
+    document.body.insertAdjacentHTML('beforeend', driveVideoPlayerMarkup());
+
+    const overlay = document.getElementById('driveVideoPlayerOverlay');
+    const shell = document.getElementById('driveVideoPlayerShell');
+    const video = document.getElementById('driveVideoPlayerVideo');
+    const frameShell = document.getElementById('driveVideoPlayerFrameShell');
+    const frame = document.getElementById('driveVideoPlayerFrame');
+    const loading = document.getElementById('driveVideoPlayerLoading');
+    const loadingMessage = document.getElementById('driveVideoPlayerLoadingMessage');
+    const toggleButton = document.getElementById('driveVideoPlayerToggle');
+    const progress = document.getElementById('driveVideoPlayerProgress');
+    const currentLabel = document.getElementById('driveVideoPlayerCurrent');
+    const durationLabel = document.getElementById('driveVideoPlayerDuration');
+    const fullscreenButton = document.getElementById('driveVideoPlayerFullscreen');
+    const volumeButton = document.getElementById('driveVideoPlayerVolume');
+    const externalButton = document.getElementById('driveVideoPlayerExternal');
+    const closeButton = document.getElementById('driveVideoPlayerClose');
+    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !loadingMessage || !toggleButton || !progress || !currentLabel || !durationLabel || !fullscreenButton || !volumeButton || !externalButton || !closeButton) return;
+
+    let activeFileId = '';
+    let activeResourceKey = '';
+    let activeExternalUrl = '';
+    let previousFocus = null;
+    let streamAttempt = '';
+    let mediaReady = false;
+    let frameMode = false;
+    let fallbackTimer = 0;
+    let inactivityTimer = 0;
+    let controlsInteracting = false;
+    let openingToken = 0;
+
+    const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+    const ownsFullscreen = () => {
+      const element = currentFullscreenElement();
+      return Boolean(element && (element === shell || element === overlay || shell.contains(element)));
+    };
+
+    const clearTimers = () => {
+      window.clearTimeout(fallbackTimer);
+      window.clearTimeout(inactivityTimer);
+      fallbackTimer = 0;
+      inactivityTimer = 0;
+    };
+
+    const setLoading = (message = '', visible = true) => {
+      loadingMessage.textContent = String(message || '');
+      loadingMessage.hidden = true;
+      loading.setAttribute('aria-label', String(message || 'Carregando vídeo'));
+      loading.hidden = !visible;
+      overlay.classList.toggle('is-loading', visible);
+    };
+
+    const setInteractive = enabled => {
+      const disabled = !enabled;
+      toggleButton.disabled = disabled;
+      volumeButton.disabled = disabled;
+      progress.disabled = disabled;
+    };
+
+    const syncFullscreen = () => {
+      const active = ownsFullscreen();
+      overlay.classList.toggle('is-browser-fullscreen', active);
+      fullscreenButton.setAttribute('aria-label', active ? 'Sair da tela cheia' : 'Entrar em tela cheia');
+      fullscreenButton.title = active ? 'Sair da tela cheia' : 'Tela cheia';
+    };
+
+    const syncState = () => {
+      if (frameMode) return;
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      const current = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+      const ratio = duration > 0 ? Math.min(1, Math.max(0, current / duration)) : 0;
+      progress.value = String(Math.round(ratio * 1000));
+      progress.style.setProperty('--drive-video-progress', `${Math.round(ratio * 10000) / 100}%`);
+      currentLabel.textContent = formatPlayerTime(current);
+      durationLabel.textContent = formatPlayerTime(duration);
+      overlay.classList.toggle('is-paused', video.paused);
+      overlay.classList.toggle('is-muted', video.muted || video.volume === 0);
+      toggleButton.setAttribute('aria-label', video.paused ? 'Reproduzir' : 'Pausar');
+      toggleButton.title = video.paused ? 'Reproduzir' : 'Pausar';
+      volumeButton.setAttribute('aria-label', video.muted || video.volume === 0 ? 'Ativar som' : 'Silenciar');
+      volumeButton.title = video.muted || video.volume === 0 ? 'Ativar som' : 'Silenciar';
+    };
+
+    const hideControlsForInactivity = () => {
+      window.clearTimeout(inactivityTimer);
+      inactivityTimer = 0;
+      if (overlay.hidden || controlsInteracting || overlay.classList.contains('is-loading') || overlay.classList.contains('is-error')) return;
+      overlay.classList.add('controls-idle');
+    };
+
+    const showControls = (keepVisible = false) => {
+      window.clearTimeout(inactivityTimer);
+      inactivityTimer = 0;
+      overlay.classList.remove('controls-idle');
+      if (!keepVisible && !controlsInteracting && !overlay.classList.contains('is-loading') && !overlay.classList.contains('is-error')) {
+        inactivityTimer = window.setTimeout(hideControlsForInactivity, 2000);
+      }
+    };
+
+    const requestPlayback = () => {
+      if (frameMode) return;
+      const promise = video.play();
+      if (promise && typeof promise.catch === 'function') promise.catch(() => showControls(true));
+    };
+
+    const markReady = () => {
+      if (overlay.hidden || frameMode) return;
+      mediaReady = true;
+      window.clearTimeout(fallbackTimer);
+      overlay.classList.remove('is-error');
+      setLoading('', false);
+      setInteractive(true);
+      syncState();
+      showControls(false);
+    };
+
+    const useFrameFallback = () => {
+      if (!activeFileId || overlay.hidden || frameMode) return;
+      frameMode = true;
+      mediaReady = false;
+      streamAttempt = 'frame';
+      window.clearTimeout(fallbackTimer);
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
+      frameShell.hidden = false;
+      overlay.classList.add('is-frame-mode');
+      setLoading('', false);
+      setInteractive(false);
+      showControls(false);
+    };
+
+    const tryDirectStream = () => {
+      if (!activeFileId || overlay.hidden || frameMode || streamAttempt === 'direct') return;
+      mediaReady = false;
+      streamAttempt = 'direct';
+      setInteractive(false);
+      setLoading('Aguardando o Google Drive liberar o vídeo...');
+      video.pause();
+      video.src = googleDriveDirectStreamUrl(activeFileId, activeResourceKey);
+      video.load();
+      requestPlayback();
+      window.clearTimeout(fallbackTimer);
+      fallbackTimer = window.setTimeout(useFrameFallback, 18000);
+    };
+
+    const proxyStreamUrl = (fileId, resourceKey = '', retry = false) => {
+      const url = new URL(googleDriveStreamUrl(fileId, resourceKey), location.origin);
+      if (retry) url.searchParams.set('retry', String(Date.now()));
+      return `${url.pathname}${url.search}`;
+    };
+
+    const loadProxyStream = (retry = false) => {
+      if (!activeFileId || overlay.hidden || frameMode) return;
+      mediaReady = false;
+      streamAttempt = retry ? 'proxy-retry' : 'proxy';
+      setInteractive(false);
+      setLoading(retry ? 'Tentando carregar o vídeo novamente...' : 'Carregando vídeo do Google Drive...');
+      video.pause();
+      video.src = proxyStreamUrl(activeFileId, activeResourceKey, retry);
+      video.load();
+      requestPlayback();
+      window.clearTimeout(fallbackTimer);
+      fallbackTimer = window.setTimeout(() => {
+        if (mediaReady || overlay.hidden || frameMode) return;
+        if (!retry) loadProxyStream(true);
+        else tryDirectStream();
+      }, retry ? 22000 : 16000);
+    };
+
+    const handleStreamFailure = () => {
+      if (overlay.hidden || frameMode || mediaReady) return;
+      if (streamAttempt === 'proxy') loadProxyStream(true);
+      else if (streamAttempt === 'proxy-retry') tryDirectStream();
+      else useFrameFallback();
+    };
+
+    const closePlayer = (restoreFocus = true) => {
+      if (overlay.hidden) return;
+      if (ownsFullscreen()) {
+        try {
+          if (typeof document.exitFullscreen === 'function') document.exitFullscreen();
+          else if (typeof document.webkitExitFullscreen === 'function') document.webkitExitFullscreen();
+        } catch (_) {}
+      }
+      openingToken += 1;
+      clearTimers();
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      frame.src = 'about:blank';
+      frameShell.hidden = true;
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.className = 'drive-video-player-overlay';
+      document.body.classList.remove('drive-video-player-open');
+      activeFileId = '';
+      activeResourceKey = '';
+      activeExternalUrl = '';
+      streamAttempt = '';
+      mediaReady = false;
+      frameMode = false;
+      progress.value = '0';
+      progress.style.setProperty('--drive-video-progress', '0%');
+      currentLabel.textContent = '0:00';
+      durationLabel.textContent = '0:00';
+      setInteractive(false);
+      if (restoreFocus && previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
+      previousFocus = null;
+    };
+
+    const openPlayer = (fileId, resourceKey = '', context = {}) => {
+      if (!fileId) return;
+      closePlayer(false);
+      const token = ++openingToken;
+      activeFileId = fileId;
+      activeResourceKey = resourceKey;
+      const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
+      activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
+      previousFocus = document.activeElement;
+      streamAttempt = '';
+      mediaReady = false;
+      frameMode = false;
+      frameShell.hidden = true;
+      frame.src = 'about:blank';
+      frame.title = context?.title ? `Google Drive — ${String(context.title).trim()}` : 'Reprodutor de vídeo do Google Drive';
+      overlay.hidden = false;
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.className = 'drive-video-player-overlay is-open is-paused';
+      document.body.classList.add('drive-video-player-open');
+      setInteractive(false);
+      setLoading('Carregando vídeo do Google Drive...');
+      syncFullscreen();
+      loadProxyStream(false);
+      window.setTimeout(() => {
+        if (token === openingToken && !overlay.hidden) showControls(false);
+      }, 50);
+      closeButton.focus({ preventScroll: true });
+    };
+
+    document.addEventListener('click', event => {
+      const link = event.target.closest('#contentDetailPlay');
+      if (!link) return;
+      const mediaUrl = link.dataset.contentUrl || link.getAttribute('href') || link.href;
+      const fileId = googleDriveFileId(mediaUrl);
+      if (!fileId) return;
+      const linkedContent = contentDataFromElement(link);
+      const title = link.dataset.title || linkedContent.title || '';
+      const explicitKind = normalizeDriveMediaKind(link.dataset.mediaKind || link.dataset.mediaType || '');
+      const inferredKind = explicitKind || inferDriveMediaKind(
+        link.dataset.contentType,
+        link.dataset.category,
+        linkedContent.collection,
+        title,
+        mediaUrl
+      );
+      if (inferredKind === 'audio') return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.dispatchEvent(new Event('be:close-external-video-players'));
+      window.dispatchEvent(new Event('be:close-drive-player'));
+      openPlayer(fileId, googleDriveResourceKey(mediaUrl), { title });
+    }, true);
+
+    toggleButton.addEventListener('click', () => {
+      if (frameMode || (!mediaReady && video.readyState < 2)) return;
+      if (video.paused) requestPlayback();
+      else video.pause();
+      showControls(false);
+    });
+    volumeButton.addEventListener('click', () => {
+      if (frameMode) return;
+      video.muted = !video.muted;
+      syncState();
+      showControls(false);
+    });
+    externalButton.addEventListener('click', () => {
+      if (activeExternalUrl) window.open(activeExternalUrl, '_blank', 'noopener,noreferrer');
+      showControls(false);
+    });
+    closeButton.addEventListener('click', () => closePlayer(true));
+    fullscreenButton.addEventListener('click', async () => {
+      try {
+        if (ownsFullscreen()) {
+          if (typeof document.exitFullscreen === 'function') await document.exitFullscreen();
+          else if (typeof document.webkitExitFullscreen === 'function') document.webkitExitFullscreen();
+        } else if (typeof shell.requestFullscreen === 'function') await shell.requestFullscreen();
+        else if (typeof shell.webkitRequestFullscreen === 'function') shell.webkitRequestFullscreen();
+      } catch (_) {}
+      syncFullscreen();
+      showControls(false);
+    });
+
+    progress.addEventListener('input', () => {
+      if (frameMode || !mediaReady || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      video.currentTime = (Number(progress.value) / 1000) * video.duration;
+      syncState();
+      showControls(true);
+    });
+    progress.addEventListener('pointerdown', () => {
+      controlsInteracting = true;
+      showControls(true);
+    });
+    const releaseProgress = () => {
+      controlsInteracting = false;
+      showControls(false);
+    };
+    progress.addEventListener('pointerup', releaseProgress);
+    progress.addEventListener('pointercancel', releaseProgress);
+    progress.addEventListener('change', releaseProgress);
+
+    shell.addEventListener('pointermove', () => showControls(false));
+    shell.addEventListener('pointerdown', event => {
+      if (event.target.closest('button,input,iframe')) return;
+      showControls(false);
+    });
+    shell.addEventListener('touchstart', () => showControls(false), { passive: true });
+    shell.addEventListener('dblclick', event => {
+      if (frameMode || event.target.closest('button,input,iframe')) return;
+      if (video.paused) requestPlayback();
+      else video.pause();
+    });
+
+    video.addEventListener('loadstart', () => {
+      mediaReady = false;
+      setInteractive(false);
+    });
+    video.addEventListener('loadeddata', markReady);
+    video.addEventListener('canplay', markReady);
+    video.addEventListener('playing', markReady);
+    video.addEventListener('timeupdate', syncState);
+    video.addEventListener('durationchange', syncState);
+    video.addEventListener('volumechange', syncState);
+    video.addEventListener('play', () => { syncState(); showControls(false); });
+    video.addEventListener('pause', () => { syncState(); showControls(false); });
+    video.addEventListener('ended', () => { syncState(); showControls(true); });
+    video.addEventListener('error', handleStreamFailure);
+
+    window.addEventListener('keydown', event => {
+      if (overlay.hidden) return;
+      if (event.key === 'Escape') {
+        if (ownsFullscreen()) return;
+        event.preventDefault();
+        closePlayer(true);
+        return;
+      }
+      if (event.key.toLowerCase() === 'f' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')) {
+        event.preventDefault();
+        fullscreenButton.click();
+        return;
+      }
+      if (frameMode || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName || '')) return;
+      if (event.key === ' ' || event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        toggleButton.click();
+      } else if (event.key === 'ArrowLeft' && mediaReady) {
+        event.preventDefault();
+        video.currentTime = Math.max(0, video.currentTime - 10);
+      } else if (event.key === 'ArrowRight' && mediaReady) {
+        event.preventDefault();
+        video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + 10, video.currentTime + 10);
+      } else if (event.key.toLowerCase() === 'm' && mediaReady) {
+        event.preventDefault();
+        volumeButton.click();
+      }
+      syncState();
+      showControls(false);
+    });
+
+    const handleFullscreenChange = () => {
+      syncFullscreen();
+      if (!overlay.hidden) showControls(false);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    window.addEventListener('pagehide', () => closePlayer(false));
+    window.addEventListener('be:close-drive-video-player', () => closePlayer(false));
+    setInteractive(false);
   }
 
   function setupGoogleDrivePlayer() {
@@ -4748,6 +5177,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
       event.preventDefault();
       window.dispatchEvent(new Event('be:close-external-video-players'));
+      window.dispatchEvent(new Event('be:close-drive-video-player'));
 
       const explicitKind = normalizeDriveMediaKind(link.dataset.mediaKind || link.dataset.mediaType || '');
       const inferredKind = explicitKind || inferDriveMediaKind(
@@ -4757,6 +5187,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         title,
         mediaUrl
       );
+      if (inferredKind !== 'audio') return;
       openPlayer(fileId, googleDriveResourceKey(mediaUrl), {
         bannerUrl,
         title,
@@ -4983,6 +5414,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function setupDetailControls() {
     setupExternalVideoPlayers();
+    setupDriveVideoPlayer();
     setupGoogleDrivePlayer();
     const section = document.getElementById('contentDetailSection');
     const back = document.getElementById('detailBackButton');
