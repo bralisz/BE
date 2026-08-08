@@ -19,7 +19,7 @@
     if(name==='home')return '/';
     if(name==='login'||name==='entrar')return '/login';
     if(name==='config')return '/config';
-    if(['terms','privacy','cookies','dmca','comunidade'].indexOf(name)!==-1)return '/'+name;if(name==='community')return '/comunidade';
+    if(['terms','privacy','cookies','dmca','comunidade'].indexOf(name)!==-1)return '/'+name;if(name==='community'||name==='comunidad')return '/comunidade';
     if(name==='suporte'||name==='support')return '/suporte';
     if(['ong','ongs'].indexOf(name)!==-1)return '/ong';
     if(['fas','fãs','fans'].indexOf(name)!==-1)return '/fãs';
@@ -7886,7 +7886,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isPasswordRecoveryRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/reset-password'||hash==='#reset-password'||hash==='#/reset-password'||sessionStorage.getItem('bePasswordRecoveryActive')==='1';}
   function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
   function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
-  function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca|comunidade)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade)$/i.test(String(location.hash||''));}
+  function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(String(location.hash||''));}
   function isNotificationsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:atualizacoes|notificacoes)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:atualizacoes|notificacoes|updates|notifications)(?:\/|$)/i.test(hash);}
   function isSupportRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/suporte'||hash==='#suporte'||hash==='#/suporte'||hash==='#support'||hash==='#/support';}
   function isDonateRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/ong'||hash==='#ong'||hash==='#/ong';}
@@ -8241,8 +8241,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var path='';
     try{path=decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}
     var value=path.replace(/^\//,'').toLowerCase();
+    if(value==='community'||value==='comunidad')value='comunidade';
     if(legalRoutes.indexOf(value)>=0)return value;
     value=String(location.hash||'').replace(/^#\/?/,'').split(/[?&]/)[0].toLowerCase();
+    if(value==='community'||value==='comunidad')value='comunidade';
     return legalRoutes.indexOf(value)>=0?value:'';
   }
   function isSecure(){return location.protocol==='https:';}

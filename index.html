@@ -36,13 +36,13 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20260807-betv-logo-v4">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#050816">
-<script src="/assets/js/locale-routing.js?rev=20260806-password-avatar-v1"></script>
+<script src="/assets/js/locale-routing.js?rev=20260808-localized-community-fans-routes-v1"></script>
 <script>
 (function(){
   try{
     var path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';
     var hash=String(location.hash||'').toLowerCase();
-    var legal=/^\/(?:terms|privacy|cookies|dmca|comunidade)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade)$/i.test(hash);
+    var legal=/^\/(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(hash);
     if(!legal)return;
     document.documentElement.classList.add('legal-route-boot');
     window.__beLegalBootStartedAt=Date.now();
@@ -54,7 +54,7 @@
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260808-community-footer-i18n-v2';
+    var href='/assets/i18n/'+slug+'.json?rev=20260808-community-fans-i18n-v3';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -137,8 +137,8 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260808-community-page-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260808-community-footer-i18n-v2"></script>
-<script defer src="/assets/js/site.js?rev=20260808-community-page-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260808-community-fans-i18n-v3"></script>
+<script defer src="/assets/js/site.js?rev=20260808-localized-community-fans-routes-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -1179,7 +1179,8 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
       </article>
       <article class="legal-article" data-legal-page="comunidade" hidden>
         <h1>Comunidade</h1>
-        <p>Esta área é dedicada a quem é fã da Billie Eilish e está apoiando a Billie Eilish TV, ajudando o projeto a alcançar mais pessoas.</p>
+        <p class="legal-updated">Última atualização: 8 de agosto de 2026.</p>
+        <p>A página /fãs é dedicada a quem é fã da Billie Eilish e está apoiando a Billie Eilish TV, ajudando o projeto a alcançar mais pessoas.</p>
         <h2>Como aparecer na página de fãs</h2>
         <p>Para aparecer em /fãs ou /fas, basta divulgar e comentar sobre o site em qualquer rede social. Nossa equipe acompanha publicações públicas e vai tentar encontrar você para incluir seu perfil na página de fãs junto com outros perfis que apoiam o site.</p>
         <h2>Comunidades também podem participar</h2>

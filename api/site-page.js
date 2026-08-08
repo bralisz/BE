@@ -12,7 +12,16 @@ const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUB
 const SETTINGS_CACHE_TTL_MS = 60000;
 const SEO_CATALOG_CACHE_TTL_MS = 60000;
 const SEO_CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents', 'news']);
-const I18N_REV = '20260808-community-footer-i18n-v2';
+const I18N_REV = '20260808-community-fans-i18n-v3';
+const LOCALIZED_ROUTE_SLUGS = Object.freeze({
+  'pt-br': Object.freeze({ '/comunidade': '/comunidade', '/fãs': '/fãs' }),
+  'en-us': Object.freeze({ '/comunidade': '/community', '/fãs': '/fans' }),
+  es: Object.freeze({ '/comunidade': '/comunidad', '/fãs': '/fans' })
+});
+const LOCALIZED_ROUTE_ALIASES = Object.freeze({
+  '/comunidade': '/comunidade', '/community': '/comunidade', '/comunidad': '/comunidade',
+  '/fãs': '/fãs', '/fas': '/fãs', '/fans': '/fãs'
+});
 const LOCALE_PREFIXES = Object.freeze({
   'pt-br': { locale: 'pt-BR', ogLocale: 'pt_BR', slug: 'pt-br' },
   'en-us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
@@ -153,21 +162,38 @@ function normalizedRequestPath(req) {
   return '/';
 }
 
+function canonicalLocalizedRoutePath(value) {
+  let raw = String(value || '/');
+  try { raw = decodeURIComponent(raw); } catch (_) {}
+  raw = raw.replace(/\/{2,}/g, '/').replace(/\/+$/, '') || '/';
+  const key = raw.toLowerCase();
+  return LOCALIZED_ROUTE_ALIASES[key] || raw;
+}
+
+function localizedLogicalRoutePath(value, slug) {
+  const canonical = canonicalLocalizedRoutePath(value);
+  const routes = LOCALIZED_ROUTE_SLUGS[String(slug || 'pt-br').toLowerCase()] || LOCALIZED_ROUTE_SLUGS['pt-br'];
+  return routes[canonical] || canonical;
+}
+
 function routeLocaleInfo(req) {
   const requestPath = normalizedRequestPath(req).replace(/\/{2,}/g, '/').replace(/\/+$/, '') || '/';
   const first = String(requestPath.split('/')[1] || '').toLowerCase();
   const config = LOCALE_PREFIXES[first] || LOCALE_PREFIXES['pt-br'];
   const hasPrefix = Boolean(LOCALE_PREFIXES[first]);
-  const logicalPath = hasPrefix
+  const rawLogicalPath = hasPrefix
     ? (requestPath.replace(new RegExp(`^/${first}(?=/|$)`, 'i'), '') || '/')
     : requestPath;
+  const logicalPath = canonicalLocalizedRoutePath(rawLogicalPath);
+  const localizedLogicalPath = localizedLogicalRoutePath(logicalPath, config.slug);
   const prefix = hasPrefix ? `/${config.slug}` : '';
-  const publicPath = prefix + (logicalPath === '/' ? '' : logicalPath);
+  const publicPath = prefix + (localizedLogicalPath === '/' ? '' : localizedLogicalPath);
   return {
     locale: config.locale,
     ogLocale: config.ogLocale,
     prefix,
     logicalPath: logicalPath || '/',
+    localizedLogicalPath: localizedLogicalPath || '/',
     publicPath: publicPath || '/',
     slug: config.slug,
     hasPrefix
@@ -351,8 +377,9 @@ function canonicalPathForRoute(routeInfo) {
 }
 
 function localizedRouteUrl(origin, slug, logicalPath) {
-  const logical = String(logicalPath || '/').replace(/\/+$/, '') || '/';
-  return `${origin}/${slug}${logical === '/' ? '' : logical}`;
+  const logical = canonicalLocalizedRoutePath(String(logicalPath || '/').replace(/\/+$/, '') || '/');
+  const localized = localizedLogicalRoutePath(logical, slug);
+  return `${origin}/${slug}${localized === '/' ? '' : localized}`;
 }
 
 function xDefaultRouteUrl(origin, logicalPath) {
@@ -391,6 +418,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       dmcaTitle: `DMCA e direitos autorais | ${siteTitle}`,
       communityTitle: `Comunidade | ${siteTitle}`,
       communityDescription: 'Saiba como fãs e comunidades podem apoiar a Billie Eilish TV, divulgar o projeto e aparecer na página de fãs.',
+      fansTitle: `Fãs que ajudaram o site | ${siteTitle}`,
+      fansDescription: 'Conheça fãs e comunidades que ajudam a Billie Eilish TV divulgando e apoiando o projeto.',
       fanProject: 'Projeto de fãs não oficial dedicado a organizar conteúdo e informações sobre Billie Eilish.'
     },
     'en-us': {
@@ -412,6 +441,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       dmcaTitle: `DMCA and copyright | ${siteTitle}`,
       communityTitle: `Community | ${siteTitle}`,
       communityDescription: 'Learn how fans and communities can support Billie Eilish TV, share the project and appear on the fan page.',
+      fansTitle: `Fans who helped the site | ${siteTitle}`,
+      fansDescription: 'Meet fans and communities that help Billie Eilish TV by sharing and supporting the project.',
       fanProject: 'Unofficial fan-made project dedicated to organizing content and information about Billie Eilish.'
     },
     es: {
@@ -433,6 +464,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       dmcaTitle: `DMCA y derechos de autor | ${siteTitle}`,
       communityTitle: `Comunidad | ${siteTitle}`,
       communityDescription: 'Descubre cómo fans y comunidades pueden apoyar Billie Eilish TV, compartir el proyecto y aparecer en la página de fans.',
+      fansTitle: `Fans que ayudaron al sitio | ${siteTitle}`,
+      fansDescription: 'Conoce a fans y comunidades que ayudan a Billie Eilish TV compartiendo y apoyando el proyecto.',
       fanProject: 'Proyecto no oficial creado por fans para organizar contenido e información sobre Billie Eilish.'
     }
   };
@@ -484,6 +517,10 @@ function pageCopy(routeInfo, settings, seoRecord) {
   } else if (logical === '/comunidade') {
     title = copy.communityTitle;
     description = copy.communityDescription;
+  } else if (/^\/(?:fãs|fas|fans)$/i.test(logical)) {
+    title = copy.fansTitle;
+    description = copy.fansDescription;
+    pageType = 'CollectionPage';
   }
 
   if (seoRecord) {

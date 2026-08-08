@@ -6,7 +6,7 @@
     var raw=hash.replace(/^#\/?/,'');if(!raw||raw.indexOf('#')!==-1||/^(?:access_token|refresh_token|error|error_code)=/i.test(raw))return '';
     var parts=raw.split('/').filter(Boolean),name=String(parts[0]||'').toLowerCase();
     if(name==='home')return '/';if(name==='login'||name==='entrar')return '/login';if(name==='config')return '/config';
-    if(['terms','privacy','cookies','dmca','comunidade'].indexOf(name)!==-1)return '/'+name;if(name==='community')return '/comunidade';
+    if(['terms','privacy','cookies','dmca','comunidade'].indexOf(name)!==-1)return '/'+name;if(name==='community'||name==='comunidad')return '/comunidade';
     if(name==='suporte'||name==='support')return '/suporte';
     if(name==='video'&&parts[1])return '/'+encodeURIComponent(parts[1]);
     if((name==='perfil'||name==='profile')&&parts[1])return '/'+String(parts[1]).replace(/^@?/,'@');

@@ -647,7 +647,7 @@
   function isLoginRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/login'||hash==='#login'||hash==='#/login';}
   function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
   function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
-  function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca|comunidade)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade)$/i.test(String(location.hash||''));}
+  function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(String(location.hash||''));}
   function isNotificationsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:atualizacoes|notificacoes)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:atualizacoes|notificacoes|updates|notifications)(?:\/|$)/i.test(hash);}
   function isSupportRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/suporte'||hash==='#suporte'||hash==='#/suporte'||hash==='#support'||hash==='#/support';}
   function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
@@ -912,8 +912,10 @@
     var path='';
     try{path=decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}
     var value=path.replace(/^\//,'').toLowerCase();
+    if(value==='community'||value==='comunidad')value='comunidade';
     if(legalRoutes.indexOf(value)>=0)return value;
     value=String(location.hash||'').replace(/^#\/?/,'').split(/[?&]/)[0].toLowerCase();
+    if(value==='community'||value==='comunidad')value='comunidade';
     return legalRoutes.indexOf(value)>=0?value:'';
   }
   function isSecure(){return location.protocol==='https:';}
