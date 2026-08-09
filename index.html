@@ -5,7 +5,7 @@
 <script>
 (function(){
   window.__beSiteSkeletonStartedAt=Date.now();
-  window.__beSiteSkeletonMinimumMs=2000;
+  window.__beSiteSkeletonMinimumMs=650;
 })();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -30,11 +30,14 @@
 <meta name="twitter:image" content="https://i.imgur.com/tnBMpHr.png">
 <meta name="twitter:image:alt" content="Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar">
 <link rel="canonical" href="https://billieilishtv.site/">
+<link rel="preconnect" href="https://cxkevnnxibhezvospkce.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="//cxkevnnxibhezvospkce.supabase.co">
+<link rel="preload" href="/assets/images/brand/logo.webp?v=20260809-performance-v1" as="image" type="image/webp" fetchpriority="high">
 <link rel="icon" href="/assets/icons/favicon-home-pc.ico?v=20260807-home-site-v1" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-home-pc-32x32.png?v=20260807-home-site-v1">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-home-pc-16x16.png?v=20260807-home-site-v1">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20260807-betv-logo-v4">
-<link rel="manifest" href="/site.webmanifest">
+<link rel="manifest" href="/site.webmanifest?rev=20260809-player-rotation-v1">
 <meta name="theme-color" content="#050816">
 <script src="/assets/js/locale-routing.js?rev=20260806-password-avatar-v1"></script>
 <script>
@@ -126,19 +129,22 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 (function(){
   try{
     var mobile=window.matchMedia&&window.matchMedia('(max-width: 760px)').matches;
-    if(!mobile)return;
     var memory=Number(navigator.deviceMemory||0);
     var cores=Number(navigator.hardwareConcurrency||0);
     var saveData=Boolean(navigator.connection&&navigator.connection.saveData);
-    document.documentElement.classList.add('mobile-optimized');
-    if(saveData||(memory&&memory<=4)||(cores&&cores<=4))document.documentElement.classList.add('mobile-lite');
+    var lite=saveData||(memory&&memory<=4)||(cores&&cores<=4);
+    if(mobile)document.documentElement.classList.add('mobile-optimized');
+    if(lite){
+      document.documentElement.classList.add('performance-lite');
+      if(mobile)document.documentElement.classList.add('mobile-lite');
+    }
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=section-cards-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=cast-mobile-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260808-community-guidelines-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260809-profile-home-cleanup-v1"></script>
+<script defer src="/assets/js/site.js?rev=cast-mobile-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -167,7 +173,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </div>
 <section id="authGate" aria-label="Entrar ou criar conta">
   <div class="login-bg-stack" id="loginBgStack" aria-hidden="true">
-    <div class="login-bg-slide active" style="background-image:url('/assets/images/auth/login-admin-banner.jpg')"></div>
+    <div class="login-bg-slide active" style="background-image:url('/assets/images/auth/login-admin-banner.webp')"></div>
     <div class="login-bg-slide" data-login-bg="/assets/images/auth/login-bg-1.webp"></div>
     <div class="login-bg-slide" data-login-bg="/assets/images/auth/login-bg-2.webp"></div>
     <div class="login-bg-slide" data-login-bg="/assets/images/auth/login-bg-3.webp"></div>
@@ -178,7 +184,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   </div>
   <div class="login-shell">
     <div class="login-topbar" aria-label="Ações de acesso">
-      <a class="login-brand" href="/login" aria-label="BE"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=20260807-betv-logo-v4" alt="BE"></a>
+      <a class="login-brand" href="/login" aria-label="BE"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE"></a>
       <button class="discord-connect-button" id="discordAuthButton" type="button" aria-label="Conectar Discord">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg>
         <span>Conectar Discord</span>
@@ -284,7 +290,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   <nav class="topbar home-topbar" id="topbar" aria-label="Navegação principal">
     <div class="home-nav-leading" id="homeNavLeading">
       <button class="logo-btn home-logo-pill active" id="logoBtn" type="button" aria-label="BE — voltar para a Home" aria-current="page" aria-pressed="true">
-        <img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=20260807-betv-logo-v4" alt="BE" class="logo-mark">
+        <img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE" class="logo-mark">
       </button>
       <div class="home-nav-links" id="homeNavLinks">
         <button class="home-nav-link" type="button" data-home-view="films">Filmes</button>
@@ -293,8 +299,8 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
       </div>
     </div>
     <div class="home-search-wrap" id="homeSearchWrap">
-      <label class="sr-only" for="homeSearchInput">Pesquisar conteúdos</label>
-      <input id="homeSearchInput" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="Pesquisar filmes e vídeos" aria-label="Pesquisar filmes e vídeos">
+      <label class="sr-only" for="homeSearchInput">Pesquisar filmes, vídeos, shows e usuários</label>
+      <input id="homeSearchInput" type="text" inputmode="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="Pesquisar filmes, vídeos, shows e @usuários" aria-label="Pesquisar filmes, vídeos, shows e @usuários">
       <button class="home-search-toggle" id="homeSearchToggle" type="button" aria-label="Abrir pesquisa" aria-expanded="false">
         <svg class="home-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
         <svg class="home-close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
@@ -536,12 +542,36 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
         </div>
         <p class="detail-desc" id="contentDetailDesc"></p>
       </div>
+      <div class="detail-streaming-store" id="detailStreamingStore" hidden>
+        <div class="detail-streaming-panel" id="detailStreamingPanel" hidden role="dialog" aria-label="Disponível em">
+          <span class="detail-streaming-panel-title">Disponível em</span>
+          <div class="detail-streaming-list" id="detailStreamingList"></div>
+        </div>
+        <button class="detail-streaming-button" id="detailStreamingButton" type="button" aria-label="Onde assistir" title="Onde assistir" aria-expanded="false" aria-controls="detailStreamingPanel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 8.5h11l1 11h-13l1-11Z"></path><path d="M9 9V6.8a3 3 0 0 1 6 0V9"></path></svg>
+        </button>
+      </div>
     </div>
   </section>
   <section class="detail-recommendations" id="detailRecommendations" hidden aria-label="Mais conteúdos relacionados">
     <div class="detail-reco-group">
       <h2>Recomendações</h2>
       <div class="detail-reco-rail" id="detailMoreRail"></div>
+    </div>
+    <div class="detail-comments-group" id="detailCommentsGroup" hidden aria-labelledby="detailCommentsTitle">
+      <h2 id="detailCommentsTitle">Comentários</h2>
+      <div class="detail-comment-composer" id="detailCommentComposer">
+        <span class="detail-comment-composer-avatar" id="detailCommentComposerAvatar" aria-hidden="true"></span>
+        <form class="detail-comment-form" id="detailCommentForm">
+          <textarea id="detailCommentInput" maxlength="500" rows="2" placeholder="Escreva um comentário..." aria-label="Escreva um comentário"></textarea>
+          <div class="detail-comment-form-footer">
+            <span class="detail-comment-status" id="detailCommentStatus" aria-live="polite"></span>
+            <button class="detail-comment-submit" id="detailCommentSubmit" type="submit">Enviar</button>
+          </div>
+        </form>
+      </div>
+      <div class="detail-comments-list" id="detailCommentsList" aria-live="polite"></div>
+      <p class="detail-comments-empty" id="detailCommentsEmpty" hidden>Ainda não há comentários.</p>
     </div>
   </section>
 </main>
@@ -591,8 +621,8 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     <button class="profile-page-home" id="profilePageHome" type="button" aria-label="Voltar para a Home" title="Home">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg>
     </button>
-    <button class="profile-page-notifications" id="profilePageNotifications" type="button" aria-label="Abrir notificações" title="Notificações">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+    <button class="profile-page-like" id="profilePageLike" type="button" aria-label="Curtir perfil" title="Curtir perfil" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg>
     </button>
     <button class="profile-page-share" id="profilePageShare" type="button" aria-label="Compartilhar perfil" title="Compartilhar perfil">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="M8.2 10.7 15.8 6.3M8.2 13.3l7.6 4.4"></path></svg>
@@ -600,6 +630,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     <button class="profile-page-more" id="profilePageMore" type="button" data-public-action="settings" aria-label="Abrir configurações do perfil" title="Mais opções">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
     </button>
+    <p class="profile-page-likes-received" id="profilePageLikesReceived" hidden aria-live="polite"></p>
     <div class="profile-page-info">
       <div class="profile-page-avatar" id="profilePageAvatar"></div>
       <div class="profile-page-copy">
@@ -765,7 +796,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
       <aside class="billie-portrait-column">
         <figure class="billie-portrait-frame">
           <div class="billie-portrait-inner">
-            <img id="billiePagePortrait" src="/assets/images/pages/billie-portrait-default.webp" alt="Billie Eilish" loading="eager" decoding="async">
+            <img id="billiePagePortrait" src="/assets/images/pages/billie-portrait-default.webp" alt="Billie Eilish" loading="lazy" decoding="async">
           </div>
         </figure>
       </aside>
@@ -1063,7 +1094,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
         <img loading="eager" decoding="async" id="notificationPageAvatarImage" src="/assets/images/profile/default-avatar.png" alt="Avatar do usuário" data-avatar-fallback="/assets/images/profile/default-avatar.png">
         <span id="notificationPageAvatarFallback" aria-hidden="true" hidden>M</span>
       </button>
-      <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/assets/images/brand/logo.png?v=20260807-betv-logo-v4" alt="BETV"></button>
+      <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BETV"></button>
     </div>
     <div class="notification-page-heading"><strong>Notificações</strong></div>
     <button class="notification-page-close" id="notificationPageClose" type="button" aria-label="Fechar notificações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></button>
@@ -1142,7 +1173,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
       <span id="legalAvatarFallback">Entrar</span>
     </button>
     <button class="legal-home-button" id="legalHomeButton" type="button" aria-label="Voltar para a página inicial">
-      <img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=20260807-betv-logo-v4" alt="BETV">
+      <img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BETV">
     </button>
   </header>
   <div class="legal-page-wrap">

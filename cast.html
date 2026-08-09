@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>BETV — Cast</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;background:#000;color:#fff;overflow:hidden;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    .stage{position:fixed;inset:0;display:grid;place-items:center;background:#000}
+    video,iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+    video{object-fit:contain}
+    .status{position:relative;z-index:3;max-width:70vw;padding:14px 18px;border-radius:14px;background:rgba(16,18,20,.86);font-size:16px;text-align:center}
+    .status[hidden]{display:none}
+  </style>
+</head>
+<body>
+  <main class="stage" id="stage">
+    <p class="status" id="status">Conectando ao conteúdo…</p>
+  </main>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      const provider = String(params.get('provider') || '').toLowerCase();
+      const rawSrc = String(params.get('src') || '');
+      const title = String(params.get('title') || 'BETV');
+      const startTime = Math.max(0, Number(params.get('time') || 0) || 0);
+      const stage = document.getElementById('stage');
+      const status = document.getElementById('status');
+      document.title = title ? `${title} — BETV` : 'BETV — Cast';
+
+      const safeUrl = value => {
+        try {
+          const url = new URL(value, location.origin);
+          const host = url.hostname.toLowerCase();
+          const sameOrigin = url.origin === location.origin;
+          const allowedVk = host === 'vkvideo.ru' || host.endsWith('.vkvideo.ru') || host === 'vk.com' || host.endsWith('.vk.com');
+          const allowedDrive = host === 'drive.google.com' || host.endsWith('.drive.google.com') || host === 'drive.usercontent.google.com' || host.endsWith('.drive.usercontent.google.com');
+          if (!sameOrigin && !allowedVk && !allowedDrive) return '';
+          return url.href;
+        } catch (_) { return ''; }
+      };
+
+      const src = safeUrl(rawSrc);
+      if (!src) {
+        status.textContent = 'Não foi possível abrir este conteúdo na TV.';
+        return;
+      }
+
+      if (provider === 'vk' || provider === 'drive-frame') {
+        const frame = document.createElement('iframe');
+        frame.src = src;
+        frame.title = title || 'Reprodutor';
+        frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = 'strict-origin-when-cross-origin';
+        frame.addEventListener('load', () => { status.hidden = true; }, { once:true });
+        stage.appendChild(frame);
+        window.setTimeout(() => { status.hidden = true; }, 2500);
+        return;
+      }
+
+      if (provider === 'drive') {
+        const video = document.createElement('video');
+        video.src = src;
+        video.controls = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.preload = 'auto';
+        video.addEventListener('loadedmetadata', () => {
+          if (startTime > 0 && Number.isFinite(video.duration)) {
+            try { video.currentTime = Math.min(startTime, Math.max(0, video.duration - .25)); } catch (_) {}
+          }
+        }, { once:true });
+        video.addEventListener('canplay', () => {
+          status.hidden = true;
+          const promise = video.play();
+          if (promise && typeof promise.catch === 'function') promise.catch(() => {});
+        }, { once:true });
+        video.addEventListener('error', () => {
+          status.hidden = false;
+          status.textContent = 'A TV não conseguiu carregar este vídeo.';
+        });
+        stage.appendChild(video);
+        return;
+      }
+
+      status.textContent = 'Este player não é compatível com transmissão.';
+    })();
+  </script>
+</body>
+</html>

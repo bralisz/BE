@@ -4653,6 +4653,68 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   setupMobileSiteOrientationLock();
 
+  // Cast / segunda tela no mobile. Para elementos <video>, usa Remote Playback
+  // quando o navegador oferece suporte. Para players externos em iframe (VK)
+  // usa a Presentation API com uma página receptora do próprio site.
+  let betvPresentationConnection = null;
+
+  function isMobileCastViewport() {
+    return window.matchMedia('(max-width: 820px)').matches;
+  }
+
+  function showPlayerCastNotice(message) {
+    let toast = document.getElementById('betvPlayerCastToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'betvPlayerCastToast';
+      toast.className = 'betv-player-cast-toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      document.body.appendChild(toast);
+    }
+    toast.textContent = String(message || 'Transmissão indisponível neste dispositivo.');
+    toast.classList.add('show');
+    window.clearTimeout(Number(toast.dataset.hideTimer || 0));
+    const timer = window.setTimeout(() => toast.classList.remove('show'), 3300);
+    toast.dataset.hideTimer = String(timer);
+  }
+
+  function playerCastReceiverUrl(provider, sourceUrl, options = {}) {
+    const url = new URL('/cast.html', location.origin);
+    url.searchParams.set('provider', String(provider || ''));
+    url.searchParams.set('src', String(sourceUrl || ''));
+    if (options.title) url.searchParams.set('title', String(options.title));
+    if (Number.isFinite(Number(options.time)) && Number(options.time) > 0) {
+      url.searchParams.set('time', String(Math.max(0, Number(options.time))));
+    }
+    return url.href;
+  }
+
+  async function startPlayerPresentation(receiverUrl) {
+    if (!isMobileCastViewport() || typeof window.PresentationRequest !== 'function') {
+      throw new Error('presentation-unsupported');
+    }
+    try {
+      if (betvPresentationConnection && betvPresentationConnection.state === 'connected') {
+        try { betvPresentationConnection.close(); } catch (_) {}
+      }
+      const request = new window.PresentationRequest([receiverUrl]);
+      if (navigator.presentation) navigator.presentation.defaultRequest = request;
+      const connection = await request.start();
+      betvPresentationConnection = connection;
+      connection.addEventListener?.('close', () => {
+        if (betvPresentationConnection === connection) betvPresentationConnection = null;
+      });
+      connection.addEventListener?.('terminate', () => {
+        if (betvPresentationConnection === connection) betvPresentationConnection = null;
+      });
+      return connection;
+    } catch (error) {
+      if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) throw error;
+      throw new Error('presentation-failed');
+    }
+  }
+
 
   function externalVideoPlayersMarkup() {
     return `<div class="external-native-player-overlay" id="externalNativePlayerOverlay" hidden aria-hidden="true" data-provider="">
@@ -4678,6 +4740,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           <button class="external-native-player-action external-native-player-audio" id="externalNativePlayerAudio" type="button" aria-label="Alterar faixa de áudio" title="Faixa de áudio" aria-expanded="false" aria-controls="externalNativePlayerAudioMenu">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
           </button>
+          <button class="external-native-player-action external-native-player-cast" id="externalNativePlayerCast" type="button" aria-label="Transmitir para a TV" title="Transmitir para a TV" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z" fill="currentColor"/><path d="M3 14.5a6.5 6.5 0 0 1 6.5 6.5M3 10a11 11 0 0 1 11 11M3 5.5h13.5A4.5 4.5 0 0 1 21 10v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
           <button class="external-native-player-action external-native-player-close" id="externalNativePlayerClose" type="button" aria-label="Fechar vídeo" title="Fechar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
           </button>
@@ -4699,9 +4764,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const closeButton = document.getElementById('externalNativePlayerClose');
     const qualityButton = document.getElementById('externalNativePlayerQuality');
     const audioButton = document.getElementById('externalNativePlayerAudio');
+    const castButton = document.getElementById('externalNativePlayerCast');
     const qualityMenu = document.getElementById('externalNativePlayerQualityMenu');
     const audioMenu = document.getElementById('externalNativePlayerAudioMenu');
-    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !qualityMenu || !audioMenu) return;
+    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !castButton || !qualityMenu || !audioMenu) return;
 
     let previousFocus = null;
     let activeProvider = '';
@@ -4998,6 +5064,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.setAttribute('aria-hidden', 'true');
       overlay.classList.remove('is-open', 'is-youtube', 'is-vk');
       overlay.dataset.provider = '';
+      castButton.hidden = true;
       activeProvider = '';
       activeVkInfo = null;
       vkAudioTracks = [];
@@ -5030,6 +5097,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frame.title = mediaTitle ? `${providerLabel} — ${mediaTitle}` : `Reprodutor do ${providerLabel}`;
       closeButton.setAttribute('aria-label', `Fechar ${providerLabel}`);
       overlay.dataset.provider = normalizedProvider;
+      castButton.hidden = !(normalizedProvider === 'vk' && isMobileCastViewport());
       overlay.classList.add('is-open', normalizedProvider === 'vk' ? 'is-vk' : 'is-youtube');
       frame.src = embedUrl;
       overlay.hidden = false;
@@ -5100,6 +5168,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       audioMenu.hidden = true;
       audioButton.setAttribute('aria-expanded', 'false');
       showControls(false);
+    });
+
+    castButton.addEventListener('click', async () => {
+      if (activeProvider !== 'vk' || !activeVkInfo || !isMobileCastViewport()) return;
+      const currentTime = getVkCurrentTime();
+      const receiverSrc = vkVideoEmbedUrl(activeVkInfo, {
+        hd: vkSelectedQuality || 4,
+        startSeconds: currentTime,
+        autoplay: true
+      });
+      if (!receiverSrc) return;
+      castButton.disabled = true;
+      try {
+        const receiverUrl = playerCastReceiverUrl('vk', receiverSrc, {
+          title: frame.title || 'VK Video',
+          time: currentTime
+        });
+        await startPlayerPresentation(receiverUrl);
+        if (vkPlayer && vkApiReady && typeof vkPlayer.pause === 'function') {
+          try { vkPlayer.pause(); } catch (_) {}
+        } else {
+          try { frame.contentWindow?.postMessage({ method: 'pause' }, '*'); } catch (_) {}
+        }
+        showPlayerCastNotice('Transmitindo para a tela selecionada.');
+      } catch (error) {
+        if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) return;
+        showPlayerCastNotice('Este navegador ou TV não oferece transmissão direta para o player do VK.');
+      } finally {
+        castButton.disabled = false;
+        showControls(false);
+      }
     });
 
     closeButton.addEventListener('click', () => closeExternalPlayer(true));
@@ -5206,6 +5305,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
             </button>
+            <button class="drive-video-player-action drive-video-player-cast" id="driveVideoPlayerCast" type="button" aria-label="Transmitir para a TV" title="Transmitir para a TV">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z" fill="currentColor"/><path d="M3 14.5a6.5 6.5 0 0 1 6.5 6.5M3 10a11 11 0 0 1 11 11M3 5.5h13.5A4.5 4.5 0 0 1 21 10v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
             <button class="drive-video-player-action drive-video-player-external" id="driveVideoPlayerExternal" type="button" aria-label="Abrir no Google Drive" title="Abrir no Google Drive">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -5238,11 +5340,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const durationLabel = document.getElementById('driveVideoPlayerDuration');
     const fullscreenButton = document.getElementById('driveVideoPlayerFullscreen');
     const volumeButton = document.getElementById('driveVideoPlayerVolume');
+    const castButton = document.getElementById('driveVideoPlayerCast');
     const externalButton = document.getElementById('driveVideoPlayerExternal');
     const closeButton = document.getElementById('driveVideoPlayerClose');
     const actionbar = document.getElementById('driveVideoPlayerActionbar');
     const actionWakeZone = document.getElementById('driveVideoPlayerActionWakeZone');
-    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !loadingMessage || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel || !fullscreenButton || !volumeButton || !externalButton || !closeButton || !actionbar || !actionWakeZone) return;
+    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !loadingMessage || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel || !fullscreenButton || !volumeButton || !castButton || !externalButton || !closeButton || !actionbar || !actionWakeZone) return;
 
     let activeFileId = '';
     let activeResourceKey = '';
@@ -5371,6 +5474,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const useFrameFallback = () => {
       if (!activeFileId || overlay.hidden || frameMode) return;
       frameMode = true;
+      castButton.hidden = !isMobileCastViewport();
       mediaReady = false;
       streamAttempt = 'frame';
       window.clearTimeout(fallbackTimer);
@@ -5468,6 +5572,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       mediaReady = false;
       frameMode = false;
+      castButton.hidden = true;
       progress.value = '0';
       progress.style.setProperty('--drive-video-progress', '0%');
       currentLabel.textContent = '0:00';
@@ -5492,6 +5597,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = '';
       mediaReady = false;
       frameMode = false;
+      castButton.hidden = !isMobileCastViewport();
       frameShell.hidden = true;
       frame.src = 'about:blank';
       frame.title = context?.title ? `Google Drive — ${String(context.title).trim()}` : 'Reprodutor de vídeo do Google Drive';
@@ -5574,6 +5680,43 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       syncState();
       showControls(false);
     });
+    castButton.addEventListener('click', async () => {
+      if (!isMobileCastViewport() || overlay.hidden) return;
+      castButton.disabled = true;
+      try {
+        // Remote Playback é a opção mais integrada quando o player está usando
+        // o <video> real (ex.: Chromecast/AirPlay oferecido pelo navegador).
+        if (!frameMode && video.remote && typeof video.remote.prompt === 'function' && video.currentSrc) {
+          try {
+            await video.remote.prompt();
+            return;
+          } catch (error) {
+            if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) return;
+          }
+        }
+
+        // Fallback de segunda tela: abre uma página receptora do próprio site.
+        const source = frameMode
+          ? googleDrivePreviewUrl(activeFileId, activeResourceKey)
+          : (video.currentSrc || video.src || proxyStreamUrl(activeFileId, activeResourceKey, false));
+        if (!source) throw new Error('cast-source-missing');
+        const absoluteSource = new URL(source, location.origin).href;
+        const receiverUrl = playerCastReceiverUrl(frameMode ? 'drive-frame' : 'drive', absoluteSource, {
+          title: frame.title || 'Google Drive',
+          time: frameMode ? 0 : (Number(video.currentTime) || 0)
+        });
+        await startPlayerPresentation(receiverUrl);
+        if (!frameMode) video.pause();
+        showPlayerCastNotice('Transmitindo para a tela selecionada.');
+      } catch (error) {
+        if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) return;
+        showPlayerCastNotice('Não foi possível encontrar uma TV compatível para este player.');
+      } finally {
+        castButton.disabled = false;
+        showControls(false);
+      }
+    });
+
     externalButton.addEventListener('click', () => {
       if (activeExternalUrl) window.open(activeExternalUrl, '_blank', 'noopener,noreferrer');
       showControls(false);
