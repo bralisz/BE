@@ -288,7 +288,9 @@ module.exports = async function publicData(req, res) {
     const isSiteReleaseSetting = name === 'settings' && id === 'site';
     res.setHeader('Cache-Control', isSiteReleaseSetting
       ? 'no-store, no-cache, must-revalidate'
-      : (rows.length ? 'public, max-age=0, s-maxage=20, stale-while-revalidate=120' : 'no-store'));
+      : name === 'movies'
+        ? (rows.length ? 'public, max-age=0, s-maxage=5, stale-while-revalidate=10' : 'no-store')
+        : (rows.length ? 'public, max-age=0, s-maxage=20, stale-while-revalidate=120' : 'no-store'));
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     if (req.method === 'HEAD') return res.status(200).end();

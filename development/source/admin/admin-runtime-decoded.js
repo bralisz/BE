@@ -2921,12 +2921,13 @@ body.admin-preview-open{overflow:hidden}
           delete data.link;
         }
         if (name === 'movies') {
-          const streamingAvailability = [];
-          if (data.streamingAppleTv === 'true') streamingAvailability.push('apple-tv');
-          if (data.streamingPrimeVideo === 'true') streamingAvailability.push('prime-video');
-          if (data.streamingParamountPlus === 'true') streamingAvailability.push('paramount-plus');
-          if (data.streamingDisneyPlus === 'true') streamingAvailability.push('disney-plus');
-          data.streamingAvailability = streamingAvailability;
+          // Usa o estado real dos checkboxes para persistir os streamings.
+          data.streamingAvailability = MOVIE_STREAMING_OPTIONS
+            .filter(([, , inputName]) => {
+              const control = event.currentTarget.elements.namedItem(inputName);
+              return Boolean(control && control.checked === true);
+            })
+            .map(([serviceId]) => serviceId);
           delete data.streamingAppleTv;
           delete data.streamingPrimeVideo;
           delete data.streamingParamountPlus;
