@@ -2738,6 +2738,133 @@
     white-space:nowrap;
   }
   .detail-reco-empty{grid-column:1/-1;margin:0;color:rgba(255,255,255,.55);font-size:14px}
+  .detail-comments-group{
+    margin-top:48px;
+    padding-top:34px;
+    border-top:1px solid rgba(255,255,255,.10);
+  }
+  .detail-comments-group[hidden]{display:none!important}
+  .detail-comments-group h2{
+    margin:0 0 18px;
+    color:#fff;
+    font:750 clamp(20px,2vw,27px)/1.1 var(--font-display);
+    letter-spacing:-.025em;
+  }
+  .detail-comment-composer{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    max-width:820px;
+    margin-bottom:26px;
+  }
+  .detail-comment-composer-avatar,
+  .detail-comment-avatar{
+    flex:0 0 auto;
+    width:42px;
+    height:42px;
+    overflow:hidden;
+    border-radius:50%;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.10);
+  }
+  .detail-comment-composer-avatar img,
+  .detail-comment-avatar img{
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:cover;
+  }
+  .detail-comment-form{
+    flex:1 1 auto;
+    min-width:0;
+  }
+  .detail-comment-form textarea{
+    width:100%;
+    min-height:74px;
+    max-height:180px;
+    resize:vertical;
+    display:block;
+    padding:13px 14px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.13);
+    outline:none;
+    background:rgba(255,255,255,.055);
+    color:#fff;
+    font:500 14px/1.5 var(--font-body);
+    transition:border-color .18s ease,background .18s ease,box-shadow .18s ease;
+  }
+  .detail-comment-form textarea::placeholder{color:rgba(255,255,255,.42)}
+  .detail-comment-form textarea:focus{
+    border-color:rgba(110,180,255,.5);
+    background:rgba(255,255,255,.075);
+    box-shadow:0 0 0 3px rgba(45,127,249,.10);
+  }
+  .detail-comment-form textarea:disabled{cursor:not-allowed;opacity:.65}
+  .detail-comment-form-footer{
+    min-height:38px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-top:9px;
+  }
+  .detail-comment-status{
+    color:rgba(255,255,255,.58);
+    font-size:12.5px;
+    line-height:1.35;
+  }
+  .detail-comment-submit{
+    height:36px;
+    padding:0 17px;
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:999px;
+    background:#fff;
+    color:#0a0b0d;
+    font-size:13px;
+    font-weight:750;
+    transition:transform .18s ease,opacity .18s ease;
+  }
+  .detail-comment-submit:hover:not(:disabled){transform:translateY(-1px)}
+  .detail-comment-submit:active:not(:disabled){transform:scale(.97)}
+  .detail-comment-submit:disabled{cursor:not-allowed;opacity:.42}
+  .detail-comments-list{
+    max-width:820px;
+    display:grid;
+    gap:20px;
+  }
+  .detail-comment-item{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    min-width:0;
+  }
+  .detail-comment-body{min-width:0;padding-top:1px}
+  .detail-comment-user{
+    display:inline-block;
+    max-width:100%;
+    overflow:hidden;
+    color:rgba(255,255,255,.92);
+    font-size:13.5px;
+    font-weight:750;
+    line-height:1.35;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .detail-comment-user:hover{text-decoration:underline}
+  .detail-comment-message{
+    margin:4px 0 0;
+    color:rgba(255,255,255,.76);
+    font-size:14px;
+    line-height:1.52;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+  }
+  .detail-comments-empty{
+    max-width:820px;
+    margin:0;
+    color:rgba(255,255,255,.48);
+    font-size:13.5px;
+  }
   @media(max-width:760px){
     .topbar-wrap{top:10px;padding:0 10px}
     .home-topbar{width:max-content;max-width:calc(100vw - 76px);height:56px;padding:5px;gap:5px}
@@ -2776,6 +2903,12 @@
     .detail-reco-rail{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
     .detail-reco-rail::-webkit-scrollbar{display:none}
     .detail-reco-card{flex:0 0 min(78vw,310px)}
+    .detail-comments-group{margin-top:38px;padding-top:28px}
+    .detail-comment-composer{gap:10px;margin-bottom:24px}
+    .detail-comment-composer-avatar,.detail-comment-avatar{width:38px;height:38px}
+    .detail-comment-form textarea{min-height:68px;padding:12px 13px;font-size:13.5px}
+    .detail-comments-list{gap:18px}
+    .detail-comment-message{font-size:13.5px}
     .video-catalog{
       width:100%;
       margin-top:-20px;

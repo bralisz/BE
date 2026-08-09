@@ -3660,6 +3660,246 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
 
+  let detailCommentsRequestToken = 0;
+  let activeDetailCommentsKey = '';
+  let detailCommentProfile = null;
+  let detailCommentPosting = false;
+
+  function videoCommentKey(data) {
+    const collection = String(data?.collection || 'videos').trim().toLowerCase();
+    if (collection !== 'videos') return '';
+    const stableId = String(data?.recordId || data?.id || data?.itemId || '').trim();
+    return stableId ? `videos:${stableId}` : '';
+  }
+
+  function defaultCommentAvatar() {
+    return String(window.BETV_DEFAULT_AVATAR || '/assets/images/profile/default-avatar.png');
+  }
+
+  function detailCommentAvatarMarkup(url, alt = '') {
+    const source = String(url || '').trim() || defaultCommentAvatar();
+    return `<img loading="lazy" decoding="async" src="${safeAssetUrl(source)}" alt="${escapeHtml(alt)}">`;
+  }
+
+  function detailCommentMarkup(row) {
+    const username = String(row?.username || '').trim().replace(/^@+/, '');
+    const message = String(row?.message || '').trim();
+    const profileHref = username ? `/@${encodeURIComponent(username)}` : '#';
+    const avatar = String(row?.avatar_url || row?.avatarUrl || '').trim();
+    return `<article class="detail-comment-item" data-comment-id="${escapeHtml(String(row?.comment_id || row?.commentId || ''))}">
+      <a class="detail-comment-avatar" href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
+        ${detailCommentAvatarMarkup(avatar, '')}
+      </a>
+      <div class="detail-comment-body">
+        <a class="detail-comment-user notranslate" translate="no" href="${escapeHtml(profileHref)}">@${escapeHtml(username || 'usuario')}</a>
+        <p class="detail-comment-message notranslate" translate="no">${escapeHtml(message)}</p>
+      </div>
+    </article>`;
+  }
+
+  function setDetailCommentStatus(message) {
+    const status = document.getElementById('detailCommentStatus');
+    if (status) status.textContent = String(message || '');
+  }
+
+  function syncDetailCommentSubmit() {
+    const input = document.getElementById('detailCommentInput');
+    const submit = document.getElementById('detailCommentSubmit');
+    const user = window.beBackend?.auth?.currentUser;
+    const hasUsername = Boolean(String(detailCommentProfile?.username || '').trim());
+    if (!submit || !input) return;
+    submit.disabled = detailCommentPosting || !user || !hasUsername || !String(input.value || '').trim();
+  }
+
+  async function syncDetailCommentComposer(requestToken) {
+    const composer = document.getElementById('detailCommentComposer');
+    const avatar = document.getElementById('detailCommentComposerAvatar');
+    const input = document.getElementById('detailCommentInput');
+    const submit = document.getElementById('detailCommentSubmit');
+    if (!composer || !avatar || !input || !submit) return;
+
+    detailCommentProfile = null;
+    const backend = window.beBackend;
+    if (backend?.ready) {
+      try { await backend.ready; } catch (_) {}
+    }
+    if (requestToken !== detailCommentsRequestToken) return;
+
+    const user = backend?.auth?.currentUser;
+    if (!user) {
+      avatar.innerHTML = detailCommentAvatarMarkup(defaultCommentAvatar(), '');
+      input.value = '';
+      input.disabled = true;
+      input.placeholder = localizedUiText('Entre para comentar.');
+      submit.disabled = true;
+      setDetailCommentStatus(localizedUiText('Entre para comentar.'));
+      return;
+    }
+
+    try {
+      detailCommentProfile = user.profile || await backend.profiles.ensure(user);
+    } catch (_) {
+      detailCommentProfile = user.profile || null;
+    }
+    if (requestToken !== detailCommentsRequestToken) return;
+
+    const profileAvatar = String(detailCommentProfile?.avatarUrl || user.photoURL || '').trim();
+    const username = String(detailCommentProfile?.username || '').trim().replace(/^@+/, '');
+    avatar.innerHTML = detailCommentAvatarMarkup(profileAvatar, username ? `@${username}` : '');
+    input.disabled = !username;
+    input.placeholder = username
+      ? localizedUiText('Escreva um comentário...')
+      : localizedUiText('Seu perfil precisa de um @ para comentar.');
+    setDetailCommentStatus(username ? '' : localizedUiText('Seu perfil precisa de um @ para comentar.'));
+    syncDetailCommentSubmit();
+  }
+
+  async function loadVideoComments(videoKey, requestToken = detailCommentsRequestToken) {
+    const list = document.getElementById('detailCommentsList');
+    const empty = document.getElementById('detailCommentsEmpty');
+    if (!list || !empty || !videoKey) return;
+
+    list.innerHTML = '';
+    empty.hidden = true;
+    setDetailCommentStatus(localizedUiText('Carregando comentários...'));
+
+    const backend = window.beBackend;
+    if (backend?.ready) {
+      try { await backend.ready; } catch (_) {}
+    }
+    if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+
+    try {
+      if (!backend?.client || backend.mode !== 'supabase') {
+        empty.hidden = false;
+        empty.textContent = localizedUiText('Ainda não há comentários.');
+        setDetailCommentStatus('');
+        return;
+      }
+      const { data, error } = await backend.client.rpc('get_video_comments', {
+        p_video_key: videoKey,
+        p_limit: 60
+      });
+      if (error) throw error;
+      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+      const rows = Array.isArray(data) ? data : [];
+      list.innerHTML = rows.map(detailCommentMarkup).join('');
+      empty.hidden = rows.length > 0;
+      empty.textContent = localizedUiText('Ainda não há comentários.');
+      setDetailCommentStatus('');
+    } catch (error) {
+      console.warn('Não foi possível carregar os comentários:', error);
+      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+      list.innerHTML = '';
+      empty.hidden = false;
+      empty.textContent = localizedUiText('Não foi possível carregar os comentários.');
+      setDetailCommentStatus('');
+    }
+  }
+
+  async function submitVideoComment() {
+    const input = document.getElementById('detailCommentInput');
+    const backend = window.beBackend;
+    const videoKey = activeDetailCommentsKey;
+    const message = String(input?.value || '').trim();
+    if (!input || !videoKey || detailCommentPosting || !message) return;
+    if (!backend?.auth?.currentUser) {
+      setDetailCommentStatus(localizedUiText('Entre para comentar.'));
+      return;
+    }
+    if (!String(detailCommentProfile?.username || '').trim()) {
+      setDetailCommentStatus(localizedUiText('Seu perfil precisa de um @ para comentar.'));
+      return;
+    }
+    if (!backend.client || backend.mode !== 'supabase') return;
+
+    detailCommentPosting = true;
+    syncDetailCommentSubmit();
+    setDetailCommentStatus(localizedUiText('Enviando...'));
+    const requestToken = detailCommentsRequestToken;
+    try {
+      const { error } = await backend.client.rpc('post_video_comment', {
+        p_video_key: videoKey,
+        p_message: message
+      });
+      if (error) throw error;
+      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+      input.value = '';
+      setDetailCommentStatus(localizedUiText('Comentário enviado.'));
+      await loadVideoComments(videoKey, requestToken);
+    } catch (error) {
+      console.warn('Não foi possível enviar o comentário:', error);
+      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+      const raw = String(error?.message || error?.details || '').toLowerCase();
+      if (raw.includes('comment_too_fast')) {
+        setDetailCommentStatus(localizedUiText('Aguarde alguns segundos antes de comentar novamente.'));
+      } else if (raw.includes('profile_not_ready')) {
+        setDetailCommentStatus(localizedUiText('Seu perfil precisa de um @ para comentar.'));
+      } else {
+        setDetailCommentStatus(localizedUiText('Não foi possível enviar o comentário.'));
+      }
+    } finally {
+      detailCommentPosting = false;
+      if (requestToken === detailCommentsRequestToken) syncDetailCommentSubmit();
+    }
+  }
+
+  function setupVideoCommentsControls() {
+    const form = document.getElementById('detailCommentForm');
+    const input = document.getElementById('detailCommentInput');
+    if (form && form.dataset.bound !== 'true') {
+      form.dataset.bound = 'true';
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        submitVideoComment();
+      });
+    }
+    if (input && input.dataset.bound !== 'true') {
+      input.dataset.bound = 'true';
+      input.addEventListener('input', syncDetailCommentSubmit);
+      input.addEventListener('keydown', event => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          submitVideoComment();
+        }
+      });
+    }
+  }
+
+  function closeVideoComments() {
+    detailCommentsRequestToken += 1;
+    activeDetailCommentsKey = '';
+    detailCommentProfile = null;
+    detailCommentPosting = false;
+    const group = document.getElementById('detailCommentsGroup');
+    const list = document.getElementById('detailCommentsList');
+    const empty = document.getElementById('detailCommentsEmpty');
+    const input = document.getElementById('detailCommentInput');
+    if (group) group.hidden = true;
+    if (list) list.innerHTML = '';
+    if (empty) empty.hidden = true;
+    if (input) input.value = '';
+    setDetailCommentStatus('');
+  }
+
+  function openVideoComments(data) {
+    setupVideoCommentsControls();
+    const group = document.getElementById('detailCommentsGroup');
+    const videoKey = videoCommentKey(data);
+    if (!group || !videoKey) {
+      closeVideoComments();
+      return;
+    }
+
+    const requestToken = ++detailCommentsRequestToken;
+    activeDetailCommentsKey = videoKey;
+    group.hidden = false;
+    group.removeAttribute('hidden');
+    group.setAttribute('aria-hidden', 'false');
+    syncDetailCommentComposer(requestToken);
+    loadVideoComments(videoKey, requestToken);
+  }
+
   function googleDriveFileId(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -6407,6 +6647,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     renderDetailRecommendations(data);
+    openVideoComments({ ...data, recordId, itemId, collection: collection || 'videos' });
     if (featuredSection) featuredSection.hidden = true;
     if (randomFeaturedSection) randomFeaturedSection.hidden = true;
     document.body.classList.add('detail-page-active');
@@ -6423,6 +6664,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const featuredSection = document.getElementById('featuredSection');
     const randomFeaturedSection = document.getElementById('randomFeaturedSection');
     if (section) section.hidden = true;
+    closeVideoComments();
     document.body.classList.remove('detail-page-active');
     if (updateRoute && detailRouteId()) {
       history.pushState({ beRoute: 'home' }, '', '/' + (location.search || ''));

@@ -141,10 +141,10 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260809-detail-notifications-v2">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260809-video-comments-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260808-community-guidelines-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260809-detail-notifications-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260809-video-comments-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -548,6 +548,21 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     <div class="detail-reco-group">
       <h2>Recomendações</h2>
       <div class="detail-reco-rail" id="detailMoreRail"></div>
+    </div>
+    <div class="detail-comments-group" id="detailCommentsGroup" hidden aria-labelledby="detailCommentsTitle">
+      <h2 id="detailCommentsTitle">Comentários</h2>
+      <div class="detail-comment-composer" id="detailCommentComposer">
+        <span class="detail-comment-composer-avatar" id="detailCommentComposerAvatar" aria-hidden="true"></span>
+        <form class="detail-comment-form" id="detailCommentForm">
+          <textarea id="detailCommentInput" maxlength="500" rows="2" placeholder="Escreva um comentário..." aria-label="Escreva um comentário"></textarea>
+          <div class="detail-comment-form-footer">
+            <span class="detail-comment-status" id="detailCommentStatus" aria-live="polite"></span>
+            <button class="detail-comment-submit" id="detailCommentSubmit" type="submit">Enviar</button>
+          </div>
+        </form>
+      </div>
+      <div class="detail-comments-list" id="detailCommentsList" aria-live="polite"></div>
+      <p class="detail-comments-empty" id="detailCommentsEmpty" hidden>Ainda não há comentários.</p>
     </div>
   </section>
 </main>
