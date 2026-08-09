@@ -141,7 +141,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=cast-mobile-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=profile-mobile-premium-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260808-community-guidelines-v1"></script>
 <script defer src="/assets/js/site.js?rev=cast-mobile-v1"></script>
@@ -630,7 +630,6 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     <button class="profile-page-more" id="profilePageMore" type="button" data-public-action="settings" aria-label="Abrir configurações do perfil" title="Mais opções">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
     </button>
-    <p class="profile-page-likes-received" id="profilePageLikesReceived" hidden aria-live="polite"></p>
     <div class="profile-page-info">
       <div class="profile-page-avatar" id="profilePageAvatar"></div>
       <div class="profile-page-copy">
@@ -638,8 +637,11 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
           <h1 class="profile-page-name" id="profilePageName">Seu perfil</h1>
           <span class="profile-page-badge" id="profilePageBadge">Perfil</span>
         </div>
-        <nav class="profile-page-socials" id="profilePageSocials" aria-label="Redes sociais do perfil" hidden></nav>
-        <p class="profile-page-handle" id="profilePageHandle">@usuario</p>
+        <div class="profile-page-mobile-meta-row">
+          <nav class="profile-page-socials" id="profilePageSocials" aria-label="Redes sociais do perfil" hidden></nav>
+          <p class="profile-page-handle" id="profilePageHandle">@usuario</p>
+          <p class="profile-page-likes-received" id="profilePageLikesReceived" hidden aria-live="polite"></p>
+        </div>
         <div class="profile-page-meta">
           <span id="profilePageMetaLabel">Coleção BE</span>
           <span class="profile-page-dot"></span>
