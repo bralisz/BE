@@ -11485,7 +11485,7 @@ body.profile-page-active .profile-page-socials{
   display:flex;
   align-items:center;
   justify-content:flex-start;
-  gap:10px;
+  gap:8px;
   margin:6px 0 2px;
   min-height:24px;
 }
@@ -11516,6 +11516,7 @@ body.profile-page-active .profile-page-social-link.is-static:hover{transform:non
 body.profile-page-active .profile-page-social-link svg{display:block;width:20px;height:20px}
 body.profile-page-active .profile-page-social-link.is-x svg{fill:currentColor;stroke:none}
 body.profile-page-active .profile-page-social-link.is-instagram svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body.profile-page-active .profile-page-social-link.is-tiktok{margin-left:-1px}
 body.profile-page-active .profile-page-social-link.is-tiktok svg{width:22px;height:22px;fill:currentColor;stroke:none;transform:translateY(-.5px)}
 
 /* Conexões e redes sociais dentro da mesma área de Configurações. */
@@ -11574,7 +11575,7 @@ body.profile-page-active .profile-page-social-link.is-tiktok svg{width:22px;heig
 .settings-social-actions .settings-button{min-width:190px}
 
 @media(max-width:760px){
-  body.profile-page-active .profile-page-socials{gap:9px;margin:4px 0 1px}
+  body.profile-page-active .profile-page-socials{gap:7px;margin:4px 0 1px}
   body.profile-page-active .profile-page-social-link{width:21px;height:21px;flex-basis:21px}
   body.profile-page-active .profile-page-social-link svg{width:19px;height:19px}
   body.profile-page-active .profile-page-social-link.is-tiktok svg{width:21px;height:21px;transform:translateY(-.5px)}
@@ -14610,4 +14611,57 @@ html.site-loading-active body.notification-page-active > #notificationPage,
 body.site-loading-active.notification-page-active > #notificationPage{
   visibility:hidden!important;
   pointer-events:none!important;
+}
+
+/* 09/08/2026 — Perfil: hover/press consistente nas quatro ações.
+   As regras ficam no fim do CSS para não serem anuladas pelos ajustes
+   responsivos posteriores de Notificações e Mais opções. */
+body.profile-page-active .profile-page-home,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications,
+body.profile-page-active .profile-page-share,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-more{
+  transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s ease,border-color .2s ease,box-shadow .2s ease!important;
+  transform:translateZ(0);
+  will-change:transform,background-color,border-color;
+}
+body.profile-page-active .profile-page-home:hover,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:hover,
+body.profile-page-active .profile-page-share:hover,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover{
+  background:rgba(42,43,46,.92)!important;
+  border-color:rgba(255,255,255,.26)!important;
+  transform:scale(1.045)!important;
+}
+body.profile-page-active .profile-page-home:active,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:active,
+body.profile-page-active .profile-page-share:active,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:active{
+  transform:scale(.94)!important;
+  transition-duration:.09s!important;
+}
+body.profile-page-active .profile-page-home svg,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications svg,
+body.profile-page-active .profile-page-share svg,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-more svg{
+  transition:transform .2s cubic-bezier(.2,.8,.2,1)!important;
+}
+body.profile-page-active .profile-page-home:hover svg,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:hover svg,
+body.profile-page-active .profile-page-share:hover svg,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover svg{
+  transform:scale(1.06)!important;
+}
+@media (hover:none), (pointer:coarse){
+  body.profile-page-active .profile-page-home:hover,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:hover,
+  body.profile-page-active .profile-page-share:hover,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover{
+    transform:none!important;
+  }
+  body.profile-page-active .profile-page-home:hover svg,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:hover svg,
+  body.profile-page-active .profile-page-share:hover svg,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover svg{
+    transform:none!important;
+  }
 }
