@@ -14590,3 +14590,21 @@ body.profile-page-active .profile-page-hero{
     pointer-events:none;
   }
 }
+
+/* Notificações: no reload, o skeleton global permanece acima da rota até
+   a liberação do carregamento. Evita revelar parcialmente o avatar/layout. */
+html.site-loading-active body.notification-page-active > #authLoading,
+body.site-loading-active.notification-page-active > #authLoading{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:fixed!important;
+  inset:0!important;
+  z-index:2147483647!important;
+  pointer-events:auto!important;
+}
+html.site-loading-active body.notification-page-active > #notificationPage,
+body.site-loading-active.notification-page-active > #notificationPage{
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
