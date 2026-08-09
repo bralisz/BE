@@ -15300,3 +15300,65 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
   .detail-comment-report-option{min-height:51px;font-size:13.5px}
   @keyframes detailCommentSheetMobileIn{from{opacity:.6;transform:translateY(100%)}to{opacity:1;transform:none}}
 }
+
+/* 09/08/2026 — Perfil desktop: ações sem sobreposição.
+   Ordem visual fixa: Home → Curtir → Compartilhar → Mais opções. */
+@media (min-width:761px){
+  body.profile-page-active{
+    --profile-desktop-action-size-final:48px;
+    --profile-desktop-action-gap-final:10px;
+    --profile-desktop-action-edge-final:clamp(24px,3vw,46px);
+  }
+
+  body.profile-page-active .profile-page-home,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-like,
+  body.profile-page-active .profile-page-share,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-more{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    place-items:center!important;
+    width:var(--profile-desktop-action-size-final)!important;
+    height:var(--profile-desktop-action-size-final)!important;
+    min-width:var(--profile-desktop-action-size-final)!important;
+    min-height:var(--profile-desktop-action-size-final)!important;
+    top:auto!important;
+    bottom:22px!important;
+    left:auto!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+    isolation:isolate!important;
+  }
+
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-more{
+    right:var(--profile-desktop-action-edge-final)!important;
+  }
+  body.profile-page-active .profile-page-share{
+    right:calc(var(--profile-desktop-action-edge-final) + var(--profile-desktop-action-size-final) + var(--profile-desktop-action-gap-final))!important;
+  }
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-like{
+    right:calc(var(--profile-desktop-action-edge-final) + (var(--profile-desktop-action-size-final) + var(--profile-desktop-action-gap-final)) * 2)!important;
+  }
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-home{
+    right:calc(var(--profile-desktop-action-edge-final) + (var(--profile-desktop-action-size-final) + var(--profile-desktop-action-gap-final)) * 3)!important;
+  }
+
+  /* No próprio perfil o coração não existe; fecha o espaço sem deixar buraco. */
+  body.profile-page-active.profile-view-own .profile-page-more{
+    right:var(--profile-desktop-action-edge-final)!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-share{
+    right:calc(var(--profile-desktop-action-edge-final) + var(--profile-desktop-action-size-final) + var(--profile-desktop-action-gap-final))!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-home{
+    right:calc(var(--profile-desktop-action-edge-final) + (var(--profile-desktop-action-size-final) + var(--profile-desktop-action-gap-final)) * 2)!important;
+  }
+
+  /* Evita qualquer camada residual/pseudo-elemento atrás do coração. */
+  body.profile-page-active .profile-page-like::before,
+  body.profile-page-active .profile-page-like::after{
+    content:none!important;
+    display:none!important;
+  }
+}
