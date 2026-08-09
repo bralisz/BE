@@ -4402,6 +4402,46 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
 
+  // Mantém os players mobile livres para acompanhar a rotação física do aparelho.
+  // O unlock é best-effort (alguns navegadores não expõem a API) e o viewport
+  // visual é sincronizado para evitar dimensões antigas após portrait <-> landscape.
+  function enableMobilePlayerRotation() {
+    const root = document.documentElement;
+    const syncViewport = () => {
+      const viewport = window.visualViewport;
+      const width = Math.max(1, Math.round(Number(viewport?.width) || window.innerWidth || root.clientWidth || 1));
+      const height = Math.max(1, Math.round(Number(viewport?.height) || window.innerHeight || root.clientHeight || 1));
+      root.style.setProperty('--betv-player-vw', `${width}px`);
+      root.style.setProperty('--betv-player-vh', `${height}px`);
+      root.dataset.playerOrientation = width > height ? 'landscape' : 'portrait';
+    };
+
+    syncViewport();
+    try {
+      if (window.screen?.orientation && typeof window.screen.orientation.unlock === 'function') {
+        window.screen.orientation.unlock();
+      }
+    } catch (_) {}
+
+    if (root.dataset.playerRotationBound === 'true') return;
+    root.dataset.playerRotationBound = 'true';
+    let resizeFrame = 0;
+    const scheduleSync = () => {
+      window.cancelAnimationFrame(resizeFrame);
+      resizeFrame = window.requestAnimationFrame(syncViewport);
+    };
+    window.addEventListener('resize', scheduleSync, { passive: true });
+    window.addEventListener('orientationchange', () => {
+      syncViewport();
+      window.setTimeout(syncViewport, 80);
+      window.setTimeout(syncViewport, 240);
+    }, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', scheduleSync, { passive: true });
+    }
+  }
+
+
   function externalVideoPlayersMarkup() {
     return `<div class="external-native-player-overlay" id="externalNativePlayerOverlay" hidden aria-hidden="true" data-provider="">
       <section class="external-native-player-shell" id="externalNativePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo externo">
@@ -4756,6 +4796,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const openExternalPlayer = (provider, info, context = {}) => {
+      enableMobilePlayerRotation();
       const normalizedProvider = provider === 'vk' ? 'vk' : 'youtube';
       const embedUrl = normalizedProvider === 'vk' ? vkVideoEmbedUrl(info, { hd: 4 }) : youtubeEmbedUrl(info);
       if (!embedUrl) return;
@@ -5225,6 +5266,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const openPlayer = (fileId, resourceKey = '', context = {}) => {
       if (!fileId) return;
+      enableMobilePlayerRotation();
       closePlayer(false);
       const token = ++openingToken;
       activeFileId = fileId;
@@ -6169,6 +6211,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const openPlayer = (fileId, resourceKey = '', context = {}) => {
       if (!fileId) return;
+      enableMobilePlayerRotation();
       closePlayer();
       const token = ++openingToken;
       activeFileId = fileId;
@@ -6220,6 +6263,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const openYouTubePlayer = (info, context = {}) => {
+      enableMobilePlayerRotation();
       const embedUrl = youtubeEmbedUrl(info);
       if (!embedUrl) return;
       closePlayer();
@@ -6257,6 +6301,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const openVkVideoPlayer = (info, context = {}) => {
+      enableMobilePlayerRotation();
       const embedUrl = vkVideoEmbedUrl(info);
       if (!embedUrl) return;
       closePlayer();

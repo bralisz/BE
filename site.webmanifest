@@ -18,5 +18,6 @@
   "display": "standalone",
   "id": "/",
   "start_url": "/",
-  "scope": "/"
+  "scope": "/",
+  "orientation": "any"
 }

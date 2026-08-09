@@ -15516,3 +15516,121 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
     padding-top:28px!important;
   }
 }
+
+/* 09/08/2026 — Curtida dos comentários: sem fundo/sombra atrás do coração. */
+.detail-comment-like,
+.detail-comment-like:hover,
+.detail-comment-like:focus,
+.detail-comment-like:focus-visible,
+.detail-comment-like:active,
+.detail-comment-like.is-liked,
+.detail-comment-like.is-liked:hover,
+.detail-comment-like.is-liked:focus-visible,
+.detail-comment-like.is-liked:active{
+  background:transparent!important;
+  background-color:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  filter:none!important;
+  -webkit-filter:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.detail-comment-like::before,
+.detail-comment-like::after{
+  content:none!important;
+  display:none!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+
+
+/* 09/08/2026 — Curtida dos comentários também garantida no desktop. */
+@media (min-width:761px){
+  body.detail-page-active .detail-comment-actions .detail-comment-like{
+    display:inline-flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    align-items:center!important;
+    justify-content:center!important;
+    background:transparent!important;
+    background-color:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    filter:none!important;
+    -webkit-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  body.detail-page-active .detail-comment-actions .detail-comment-like:hover,
+  body.detail-page-active .detail-comment-actions .detail-comment-like:focus,
+  body.detail-page-active .detail-comment-actions .detail-comment-like:focus-visible,
+  body.detail-page-active .detail-comment-actions .detail-comment-like:active,
+  body.detail-page-active .detail-comment-actions .detail-comment-like.is-liked{
+    background:transparent!important;
+    background-color:transparent!important;
+    box-shadow:none!important;
+  }
+}
+
+/* 09/08/2026 — Players mobile acompanham a rotação do aparelho.
+   Aplica-se ao Drive, VK e YouTube e também ao modo PWA/standalone. */
+@media (pointer:coarse), (max-width:920px){
+  body.external-video-player-open .external-native-player-overlay,
+  body.external-video-player-open .external-native-player-shell,
+  body.drive-player-open .drive-player-overlay,
+  body.drive-player-open .drive-player-shell,
+  body.drive-video-player-open .drive-video-player-overlay,
+  body.drive-video-player-open .drive-video-player-shell{
+    width:var(--betv-player-vw,100vw)!important;
+    height:var(--betv-player-vh,100dvh)!important;
+    min-width:0!important;
+    min-height:0!important;
+    max-width:none!important;
+    max-height:none!important;
+  }
+}
+
+@media (orientation:landscape) and (pointer:coarse),
+       (orientation:landscape) and (max-height:620px){
+  body.external-video-player-open .external-native-player-overlay,
+  body.drive-player-open .drive-player-overlay,
+  body.drive-video-player-open .drive-video-player-overlay{
+    position:fixed!important;
+    inset:0!important;
+    width:var(--betv-player-vw,100vw)!important;
+    height:var(--betv-player-vh,100dvh)!important;
+    overflow:hidden!important;
+  }
+
+  body.external-video-player-open .external-native-player-shell,
+  body.drive-player-open .drive-player-shell,
+  body.drive-video-player-open .drive-video-player-shell{
+    width:100%!important;
+    height:100%!important;
+    min-height:0!important;
+    max-height:none!important;
+  }
+
+  body.external-video-player-open .external-native-player-frame-shell,
+  body.external-video-player-open .external-native-player-frame,
+  body.drive-player-open .drive-player-frame-shell,
+  body.drive-player-open .drive-player-frame,
+  body.drive-player-open .drive-player-video,
+  body.drive-video-player-open .drive-video-player-frame-shell,
+  body.drive-video-player-open .drive-video-player-frame,
+  body.drive-video-player-open .drive-video-player-video{
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    max-width:none!important;
+    max-height:none!important;
+  }
+
+  /* Em paisagem o vídeo deve aproveitar toda a tela sem manter dimensões de retrato. */
+  body.drive-player-open .drive-player-frame-shell,
+  body.drive-video-player-open .drive-video-player-frame-shell,
+  body.external-video-player-open .external-native-player-frame-shell{
+    transform:none!important;
+  }
+}
