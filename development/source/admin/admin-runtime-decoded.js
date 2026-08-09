@@ -4103,9 +4103,15 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
   const style=document.createElement('style');
   style.id='be-admin-four-metrics-style';
   style.textContent=`
+    body.admin-mode .dashboard-insights-hero .dashboard-copy{
+      width:100%!important;
+      max-width:none!important;
+    }
+
     body.admin-mode .dashboard-metrics-grid.dashboard-metrics-grid-four{
+      width:100%!important;
       grid-template-columns:repeat(5,minmax(0,1fr))!important;
-      gap:12px!important;
+      gap:clamp(16px,1.5vw,24px)!important;
     }
 
     body.admin-mode .dashboard-metrics-grid-four .dashboard-metric-card{
