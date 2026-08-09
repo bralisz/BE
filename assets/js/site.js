@@ -2561,6 +2561,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         year: source.year || item.year,
         logoUrl: source.logoUrl || item.logoUrl || '',
         streamingAvailability: source.streamingAvailability || [],
+        streamingLinks: source.streamingLinks || {},
         sectionId: source.sectionId || '',
         sectionName: source.sectionName || '',
         collection,
@@ -2606,6 +2607,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-section-id="${escapeHtml(String(item.sectionId || ''))}"
               data-section-name="${escapeHtml(String(item.sectionName || ''))}"
               data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(item.streamingAvailability).join(','))}"
+              data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(item.streamingLinks))}"
               data-preserve-title="${preserveTitle ? 'true' : 'false'}">
               <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
             </button>
@@ -2769,6 +2771,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             data-section-id="${escapeHtml(String(item.sectionId || ''))}"
             data-section-name="${escapeHtml(String(item.sectionName || ''))}"
             data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(item.streamingAvailability).join(','))}"
+              data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(item.streamingLinks))}"
             data-preserve-title="${preserveTitle ? 'true' : 'false'}">
             <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
           </button>
@@ -3138,6 +3141,30 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       .filter(item => MOVIE_STREAMING_SERVICES[item] && !seen.has(item) && seen.add(item));
   }
 
+  function normalizeMovieStreamingLinks(value) {
+    let source = value;
+    if (typeof source === 'string') {
+      const raw = source.trim();
+      if (!raw) return {};
+      try { source = JSON.parse(decodeURIComponent(raw)); }
+      catch (_) { try { source = JSON.parse(raw); } catch (_) { source = {}; } }
+    }
+    if (!source || typeof source !== 'object' || Array.isArray(source)) return {};
+    const links = {};
+    for (const [serviceId, rawUrl] of Object.entries(source)) {
+      if (!MOVIE_STREAMING_SERVICES[serviceId]) continue;
+      const url = String(rawUrl || '').trim();
+      if (!/^https:\/\//i.test(url)) continue;
+      links[serviceId] = url;
+    }
+    return links;
+  }
+
+  function serializeMovieStreamingLinks(value) {
+    try { return encodeURIComponent(JSON.stringify(normalizeMovieStreamingLinks(value))); }
+    catch (_) { return ''; }
+  }
+
   function movieStreamingServiceIcon(serviceId) {
     if (serviceId === 'apple-tv') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="3"></rect><path d="M9 10.2v3.6M9 12h3"></path><path d="M15.2 10.4 17 12l-1.8 1.6"></path></svg>';
     if (serviceId === 'prime-video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z"></path><path d="M5 19c3.8 1.5 8.3 1.2 12-.8"></path></svg>';
@@ -3145,7 +3172,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return '<span aria-hidden="true">D+</span>';
   }
 
-  function syncMovieStreamingStore(collection, availability) {
+  function syncMovieStreamingStore(collection, availability, streamingLinks) {
     const store = document.getElementById('detailStreamingStore');
     const panel = document.getElementById('detailStreamingPanel');
     const button = document.getElementById('detailStreamingButton');
@@ -3154,6 +3181,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const services = String(collection || '').toLowerCase() === 'movies'
       ? normalizeMovieStreamingAvailability(availability)
       : [];
+    const directLinks = normalizeMovieStreamingLinks(streamingLinks);
     panel.hidden = true;
     button.setAttribute('aria-expanded', 'false');
     if (!services.length) {
@@ -3164,7 +3192,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     list.innerHTML = services.map(serviceId => {
       const service = MOVIE_STREAMING_SERVICES[serviceId];
       const iconClass = serviceId === 'disney-plus' ? ' disney' : serviceId === 'paramount-plus' ? ' paramount' : '';
-      return `<a class="detail-streaming-link" href="${safeUrl(service.url)}" target="_blank" rel="noopener" data-streaming-service="${escapeHtml(serviceId)}"><span class="detail-streaming-service-icon${iconClass}">${movieStreamingServiceIcon(serviceId)}</span><span class="detail-streaming-service-name">${escapeHtml(service.label)}</span><span class="detail-streaming-link-arrow" aria-hidden="true">›</span></a>`;
+      return `<a class="detail-streaming-link" href="${safeUrl(directLinks[serviceId] || service.url)}" target="_blank" rel="noopener" data-streaming-service="${escapeHtml(serviceId)}"><span class="detail-streaming-service-icon${iconClass}">${movieStreamingServiceIcon(serviceId)}</span><span class="detail-streaming-service-name">${escapeHtml(service.label)}</span><span class="detail-streaming-link-arrow" aria-hidden="true">›</span></a>`;
     }).join('');
     store.hidden = false;
   }
@@ -3207,6 +3235,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-section-id="${escapeHtml(String(video.sectionId || ''))}"
       data-section-name="${escapeHtml(String(video.sectionName || ''))}"
       data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(video.streamingAvailability).join(','))}"
+              data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(video.streamingLinks))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}">
       <img class="video-card-thumbnail" src="${safeAssetUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
       ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
@@ -3311,6 +3340,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           logoUrl: item.logoUrl || '',
           category: item.category || item.type || '',
           streamingAvailability: item.streamingAvailability || [],
+          streamingLinks: item.streamingLinks || {},
           collection
         }, { updateRoute: false, instant: true });
         return true;
@@ -3693,6 +3723,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-section-id="${escapeHtml(String(data.sectionId || ''))}"
       data-section-name="${escapeHtml(String(data.sectionName || data.sourceSectionTitle || ''))}"
       data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(data.streamingAvailability).join(','))}"
+              data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(data.streamingLinks))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}"
       aria-label="Abrir ${escapeHtml(title)}">
       <span class="detail-reco-thumb">${image && image !== '#' ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">` : '<span class="ph ph-wide" style="height:100%"></span>'}</span>
@@ -7159,7 +7190,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     share.classList.remove('is-copied');
     share.setAttribute('title', 'Compartilhar');
     share.setAttribute('aria-label', 'Compartilhar');
-    syncMovieStreamingStore(collection, data.streamingAvailability);
+    syncMovieStreamingStore(collection, data.streamingAvailability, data.streamingLinks);
 
     list.dataset.favoriteId = canonicalFavoriteId;
     list.dataset.itemId = itemId;
@@ -7625,6 +7656,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       sectionId:String(data?.sectionId || ''),
       sectionName:String(data?.sectionName || data?.sourceSectionTitle || ''),
       streamingAvailability:normalizeMovieStreamingAvailability(data?.streamingAvailability),
+      streamingLinks:normalizeMovieStreamingLinks(data?.streamingLinks),
       preserveTitle:data?.preserveTitle === true || String(data?.preserveTitle || '').toLowerCase() === 'true' || preservesOriginalMusicTitle(data),
       savedAt:String(data?.savedAt || new Date().toISOString())
     };
@@ -7654,6 +7686,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       sectionId:dataset.sectionId || element.dataset?.sectionId || '',
       sectionName:dataset.sectionName || dataset.sourceSectionTitle || element.dataset?.sectionName || '',
       streamingAvailability:dataset.streamingAvailability || element.dataset?.streamingAvailability || '',
+      streamingLinks:dataset.streamingLinks || element.dataset?.streamingLinks || '',
       preserveTitle:dataset.preserveTitle || element.dataset?.preserveTitle || ''
     });
   }

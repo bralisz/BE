@@ -2100,16 +2100,28 @@ body.admin-preview-open{overflow:hidden}
 
 
   const MOVIE_STREAMING_OPTIONS = Object.freeze([
-    ['apple-tv', 'Apple TV', 'streamingAppleTv'],
-    ['prime-video', 'Prime Video', 'streamingPrimeVideo'],
-    ['paramount-plus', 'Paramount+', 'streamingParamountPlus'],
-    ['disney-plus', 'Disney+', 'streamingDisneyPlus']
+    ['apple-tv', 'Apple TV', 'streamingAppleTv', 'streamingAppleTvUrl'],
+    ['prime-video', 'Prime Video', 'streamingPrimeVideo', 'streamingPrimeVideoUrl'],
+    ['paramount-plus', 'Paramount+', 'streamingParamountPlus', 'streamingParamountPlusUrl'],
+    ['disney-plus', 'Disney+', 'streamingDisneyPlus', 'streamingDisneyPlusUrl']
   ]);
 
   function normalizeAdminStreamingAvailability(value) {
     const source = Array.isArray(value) ? value : String(value || '').split(',');
     const allowed = new Set(MOVIE_STREAMING_OPTIONS.map(option => option[0]));
     return Array.from(new Set(source.map(item => String(item || '').trim().toLowerCase()).filter(item => allowed.has(item))));
+  }
+
+  function normalizeAdminStreamingLinks(value) {
+    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    const allowed = new Set(MOVIE_STREAMING_OPTIONS.map(option => option[0]));
+    const links = {};
+    for (const [serviceId, rawUrl] of Object.entries(source)) {
+      if (!allowed.has(serviceId)) continue;
+      const url = String(rawUrl || '').trim();
+      if (/^https:\/\//i.test(url)) links[serviceId] = url;
+    }
+    return links;
   }
 
   function adminStreamingIcon(serviceId) {
@@ -2121,9 +2133,25 @@ body.admin-preview-open{overflow:hidden}
 
   function movieStreamingEditorField(item = {}) {
     const selected = new Set(normalizeAdminStreamingAvailability(item.streamingAvailability));
-    const cards = MOVIE_STREAMING_OPTIONS.map(([serviceId, label, inputName]) => `<label class="movie-streaming-option"><input type="checkbox" name="${inputName}" value="true" ${selected.has(serviceId) ? 'checked' : ''}><span class="movie-streaming-option-ui"><span class="movie-streaming-option-icon ${serviceId === 'disney-plus' ? 'disney' : ''}">${adminStreamingIcon(serviceId)}</span><span class="movie-streaming-option-name">${esc(label)}</span><span class="movie-streaming-option-check" aria-hidden="true">✓</span></span></label>`).join('');
-    return `<div class="field full movie-streaming-field"><label>Disponível em</label><div class="movie-streaming-options">${cards}</div><small>Marque os streamings em que o filme está disponível. Essa informação aparece somente no desktop.</small></div>`;
+    const links = normalizeAdminStreamingLinks(item.streamingLinks);
+    const cards = MOVIE_STREAMING_OPTIONS.map(([serviceId, label, inputName, linkName]) => {
+      const checked = selected.has(serviceId);
+      return `<div class="movie-streaming-option-wrap" data-streaming-service="${esc(serviceId)}"><label class="movie-streaming-option"><input type="checkbox" name="${inputName}" value="true" data-streaming-toggle="${esc(serviceId)}" ${checked ? 'checked' : ''}><span class="movie-streaming-option-ui"><span class="movie-streaming-option-icon ${serviceId === 'disney-plus' ? 'disney' : ''}">${adminStreamingIcon(serviceId)}</span><span class="movie-streaming-option-name">${esc(label)}</span><span class="movie-streaming-option-check" aria-hidden="true">✓</span></span></label><div class="movie-streaming-link-field" data-streaming-link-field="${esc(serviceId)}" ${checked ? '' : 'hidden'}><label>Link do filme no ${esc(label)}</label><input class="a-input" type="url" inputmode="url" name="${linkName}" value="${esc(links[serviceId] || '')}" placeholder="https://..." ${checked ? 'required' : ''}><small>Cole o link direto da página do filme.</small></div></div>`;
+    }).join('');
+    return `<div class="field full movie-streaming-field"><label>Disponível em</label><div class="movie-streaming-options">${cards}</div><small>Ao marcar um streaming, adicione abaixo o link direto do filme. Essa informação aparece somente no desktop.</small></div>`;
   }
+
+  document.addEventListener('change', event => {
+    const checkbox = event.target.closest?.('[data-streaming-toggle]');
+    if (!checkbox) return;
+    const wrap = checkbox.closest('.movie-streaming-option-wrap');
+    const linkField = wrap?.querySelector('[data-streaming-link-field]');
+    const linkInput = linkField?.querySelector('input[type="url"]');
+    if (!linkField || !linkInput) return;
+    linkField.hidden = !checkbox.checked;
+    linkInput.required = checkbox.checked;
+    if (checkbox.checked) requestAnimationFrame(() => linkInput.focus());
+  });
 
   function editorFields(name, item = {}, context = {}) {
     if (name === 'ongs') {
@@ -2921,17 +2949,27 @@ body.admin-preview-open{overflow:hidden}
           delete data.link;
         }
         if (name === 'movies') {
-          // Usa o estado real dos checkboxes para persistir os streamings.
-          data.streamingAvailability = MOVIE_STREAMING_OPTIONS
-            .filter(([, , inputName]) => {
-              const control = event.currentTarget.elements.namedItem(inputName);
-              return Boolean(control && control.checked === true);
-            })
-            .map(([serviceId]) => serviceId);
-          delete data.streamingAppleTv;
-          delete data.streamingPrimeVideo;
-          delete data.streamingParamountPlus;
-          delete data.streamingDisneyPlus;
+          // Persiste os streamings marcados e o link direto do filme em cada serviço.
+          const selectedStreaming = [];
+          const streamingLinks = {};
+          for (const [serviceId, label, inputName, linkName] of MOVIE_STREAMING_OPTIONS) {
+            const control = event.currentTarget.elements.namedItem(inputName);
+            if (!control || control.checked !== true) continue;
+            const linkControl = event.currentTarget.elements.namedItem(linkName);
+            const directUrl = String(linkControl?.value || '').trim();
+            if (!/^https:\/\//i.test(directUrl)) {
+              linkControl?.focus?.();
+              throw new Error(`Adicione o link HTTPS do filme no ${label}.`);
+            }
+            selectedStreaming.push(serviceId);
+            streamingLinks[serviceId] = directUrl;
+          }
+          data.streamingAvailability = selectedStreaming;
+          data.streamingLinks = streamingLinks;
+          for (const [, , inputName, linkName] of MOVIE_STREAMING_OPTIONS) {
+            delete data[inputName];
+            delete data[linkName];
+          }
         }
         if (['movies','series'].includes(name) && !String(data.logoUrl || '').trim()) {
           throw new Error('Adicione a logo do título. Filmes e séries usam a logo no lugar do texto do cabeçalho.');
@@ -4745,8 +4783,8 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
   style.id = 'be-admin-movie-streaming-style';
   style.textContent = `
     body.admin-mode .movie-streaming-field{margin-top:2px}
-    body.admin-mode .movie-streaming-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
-    body.admin-mode .movie-streaming-option{display:block;cursor:pointer;user-select:none}
+    body.admin-mode .movie-streaming-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 9px;align-items:start}
+    body.admin-mode .movie-streaming-option-wrap{display:grid;gap:8px;min-width:0}\n    body.admin-mode .movie-streaming-option{display:block;cursor:pointer;user-select:none}
     body.admin-mode .movie-streaming-option>input{position:absolute;opacity:0;pointer-events:none}
     body.admin-mode .movie-streaming-option-ui{min-height:62px;display:grid;grid-template-columns:34px minmax(0,1fr) 22px;align-items:center;gap:9px;padding:8px 10px;border:1px solid rgba(125,181,255,.14);border-radius:14px;background:rgba(3,10,21,.68);color:#d8e3f1;transition:.16s ease}
     body.admin-mode .movie-streaming-option:hover .movie-streaming-option-ui{border-color:rgba(125,181,255,.32);background:rgba(10,24,43,.82)}
@@ -4756,7 +4794,7 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
     body.admin-mode .movie-streaming-option-icon.disney{font-size:12px}
     body.admin-mode .movie-streaming-option-name{min-width:0;font-size:12px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     body.admin-mode .movie-streaming-option-check{width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.06);color:transparent;font-size:11px;font-weight:900}
-    body.admin-mode .movie-streaming-option>input:checked+.movie-streaming-option-ui .movie-streaming-option-check{background:#43d19e;color:#052217}
+    body.admin-mode .movie-streaming-option>input:checked+.movie-streaming-option-ui .movie-streaming-option-check{background:#43d19e;color:#052217}\n    body.admin-mode .movie-streaming-link-field{display:grid;gap:6px;padding:10px;border:1px solid rgba(67,209,158,.18);border-radius:12px;background:rgba(22,80,62,.10)}\n    body.admin-mode .movie-streaming-link-field[hidden]{display:none!important}\n    body.admin-mode .movie-streaming-link-field>label{font-size:11px;color:#b9c8d8}\n    body.admin-mode .movie-streaming-link-field>.a-input{min-height:40px;font-size:12px}\n    body.admin-mode .movie-streaming-link-field>small{font-size:10.5px;color:#8291a3}
     @media(max-width:920px){body.admin-mode .movie-streaming-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:520px){body.admin-mode .movie-streaming-options{grid-template-columns:1fr}}
   `;
