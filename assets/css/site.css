@@ -6356,7 +6356,7 @@ body.section-catalog-active #dynamicSections.section-view-mode > .film-library-s
 .be-markdown code{padding:.14em .38em;border-radius:.42em;background:rgba(255,255,255,.09);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.9em}
 .be-markdown pre{overflow:auto;margin:.75em 0;padding:12px 14px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:#080b10}
 .be-markdown pre code{padding:0;background:none;white-space:pre}
-.be-markdown a{color:#70adff;text-decoration:underline;text-underline-offset:2px}
+.be-markdown a{color:#70adff;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere;word-break:break-word}
 .be-markdown hr{height:1px;margin:1em 0;border:0;background:rgba(255,255,255,.12)}
 .be-markdown del{opacity:.68}
 .f-desc.be-markdown{display:block}

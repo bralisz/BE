@@ -2288,6 +2288,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return token(`<a href="${safeHref}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${escapeHtml(label)}</a>`);
     });
 
+    // Links simples também funcionam sem sintaxe Markdown. Assim, uma URL colada
+    // diretamente na descrição de um vídeo vira um link seguro no detalhe.
+    source = source.replace(/(?:https?:\/\/|www\.)[^\s<]+/gi, rawUrl => {
+      let visible = rawUrl;
+      let trailing = '';
+      while (/[),.!?;:]$/.test(visible)) {
+        trailing = visible.slice(-1) + trailing;
+        visible = visible.slice(0, -1);
+      }
+      if (!visible) return rawUrl;
+      const href = /^www\./i.test(visible) ? `https://${visible}` : visible;
+      return token(`<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(visible)}</a>`) + trailing;
+    });
+
     let html = escapeHtml(source);
     html = html
       .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
