@@ -4036,7 +4036,7 @@ body.notification-page-active{
   background:#050607!important;
   color:#f5f5f7;
 }
-body.notification-page-active > :not(#notificationPage):not(.betv-update-popup):not(script):not(style){display:none!important}
+body.notification-page-active > :not(#notificationPage):not(#authLoading):not(.betv-update-popup):not(script):not(style){display:none!important}
 body.notification-page-active > #notificationPage{
   display:block!important;
   width:100%;
@@ -11479,7 +11479,7 @@ body.section-catalog-active.featured-section-catalog-active #dynamicSections.sec
   }
 }
 
-/* Redes sociais do perfil — X e Instagram. */
+/* Redes sociais do perfil — X, Instagram e TikTok. */
 body.profile-page-active .profile-page-socials[hidden]{display:none!important}
 body.profile-page-active .profile-page-socials{
   display:flex;
@@ -11513,9 +11513,10 @@ body.profile-page-active .profile-page-social-link:focus-visible{
 }
 body.profile-page-active .profile-page-social-link.is-static{cursor:default;opacity:.72}
 body.profile-page-active .profile-page-social-link.is-static:hover{transform:none;color:rgba(255,255,255,.78)}
-body.profile-page-active .profile-page-social-link svg{display:block;width:20px;height:20px}
+body.profile-page-active .profile-page-social-link svg{display:block;width:20px;height:20px;flex:0 0 20px;vertical-align:middle}
 body.profile-page-active .profile-page-social-link.is-x svg{fill:currentColor;stroke:none}
 body.profile-page-active .profile-page-social-link.is-instagram svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body.profile-page-active .profile-page-social-link.is-tiktok svg{width:19px;height:19px;fill:currentColor;stroke:none;transform:translateY(-.5px)}
 
 /* Conexões e redes sociais dentro da mesma área de Configurações. */
 .settings-connections-panel .settings-panel-card + .settings-panel-card{margin-top:18px}
@@ -11530,6 +11531,7 @@ body.profile-page-active .profile-page-social-link.is-instagram svg{fill:none;st
 .settings-social-brand svg{display:block;width:16px;height:16px}
 .settings-social-brand.is-x svg{fill:currentColor;stroke:none}
 .settings-social-brand.is-instagram svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.settings-social-brand.is-tiktok svg{width:15px;height:15px;fill:currentColor;stroke:none;transform:translateY(-.4px)}
 .settings-social-input-wrap{
   min-height:50px;
   display:flex;
