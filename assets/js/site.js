@@ -6954,6 +6954,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function openContentDetail(data, options = {}) {
+    // Ao abrir um conteúdo a partir da pesquisa, feche imediatamente
+    // qualquer UI de busca (desktop e mobile) para que ela não fique
+    // renderizada sobre a tela de detalhes.
+    try { window.dispatchEvent(new CustomEvent('be:close-public-search')); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('be:close-mobile-search')); } catch (_) {}
+
     const section = document.getElementById('contentDetailSection');
     const featuredSection = document.getElementById('featuredSection');
     const randomFeaturedSection = document.getElementById('randomFeaturedSection');
