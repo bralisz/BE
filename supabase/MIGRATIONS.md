@@ -67,3 +67,5 @@ As migrations marcadas como `noop` são registros históricos intencionais e pre
 - `20260809170757_video_comments.sql`: adiciona comentários públicos nos vídeos com leitura pública, envio autenticado, avatar/@ do autor, limite de 500 caracteres e proteção simples contra spam.
 
 - `20260809172456_public_profile_search.sql`: adiciona pesquisa pública de perfis por prefixo de `@`, retornando somente avatar e nome de usuário, com limite de 8 resultados e índice para manter a busca rápida.
+
+- `20260809173734_video_comment_moderation.sql` — adiciona exclusão do próprio comentário, denúncias de comentários e moderação administrativa de denúncias.

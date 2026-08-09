@@ -1671,6 +1671,198 @@ body.admin-preview-open{overflow:hidden}
     wrap.onclick = event => { if (event.target === wrap) close(); };
   }
 
+  const COMMENT_REPORT_REASON_LABELS = {
+    spam_abuse: 'Spam ou comportamento abusivo',
+    impersonation: 'Falsidade de identidade',
+    harassment: 'Assédio',
+    hate_discrimination: 'Conteúdo discriminatório ou de ódio',
+    illegal_activity: 'Atividade ilegal',
+    malicious_link: 'Link malicioso ou tentativa de golpe',
+    privacy_rights: 'Violação de privacidade ou direitos',
+    harmful_other: 'Outro conteúdo prejudicial à comunidade'
+  };
+
+  function moderationShieldIcon() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.8 2.8 8 7 10 4.2-2 7-5.2 7-10V6l-7-3Z"></path><path d="M9.5 12.2 11 13.7l3.5-3.7"></path></svg>';
+  }
+
+  async function openUsersModerationPanel(initialTab = 'reports') {
+    const content = $('#adminContent');
+    const adminClient = beBackend && beBackend.client;
+    content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando denúncias e banimentos…</div>';
+
+    const loadReports = async () => {
+      if (!adminClient || typeof adminClient.rpc !== 'function') return [];
+      const { data, error } = await adminClient.rpc('get_admin_comment_reports', { p_limit: 250 });
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    };
+
+    let reports = [];
+    let allUsers = [];
+    try {
+      const [reportRows, rawUsers] = await Promise.all([
+        loadReports(),
+        db.list('users', { orderBy: 'createdAt', direction: 'desc' })
+      ]);
+      reports = reportRows;
+      allUsers = rawUsers.filter(item => !String(item.email || '').toLowerCase().endsWith('@deleted.invalid')).map(item => ({
+        ...item,
+        banned: userProfileIsBanned(item)
+      }));
+    } catch (error) {
+      console.error(error);
+      content.innerHTML = `<div class="a-card"><h2>Não foi possível carregar a moderação</h2><p>${esc(error.message || 'Tente novamente.')}</p><button type="button" class="a-btn" id="moderationBackError">Voltar para Usuários</button></div>`;
+      $('#moderationBackError').onclick = () => usersPage();
+      return;
+    }
+
+    let activeTab = initialTab === 'bans' ? 'bans' : 'reports';
+
+    const bannedUsers = () => allUsers.filter(userItem => userProfileIsBanned(userItem));
+    const profileForReport = report => allUsers.find(item => String(item.id) === String(report.reported_user_id || report.reportedUserId || '')) || {
+      id: report.reported_user_id || report.reportedUserId || '',
+      username: report.username || '',
+      displayName: report.username ? '@' + report.username : 'Usuário',
+      avatarUrl: report.avatar_url || report.avatarUrl || '',
+      banned: Boolean(report.user_banned || report.userBanned),
+      banReason: report.ban_reason || report.banReason || ''
+    };
+
+    const avatarMarkup = profile => {
+      const chosenAvatar = selectedProfileAvatar(profile) || String(profile?.avatar_url || profile?.avatarUrl || '');
+      return chosenAvatar
+        ? `<img loading="lazy" decoding="async" src="${esc(media(chosenAvatar))}" alt="">`
+        : `<span>${esc(String(profile?.displayName || profile?.username || 'U').charAt(0).toUpperCase())}</span>`;
+    };
+
+    const reportCard = report => {
+      const profile = profileForReport(report);
+      const reportId = String(report.report_id || report.reportId || '');
+      const commentId = String(report.comment_id || report.commentId || '');
+      const userId = String(report.reported_user_id || report.reportedUserId || profile.id || '');
+      const username = String(report.username || profile.username || 'usuario').replace(/^@+/, '');
+      const reasonKey = String(report.reason || 'harmful_other');
+      const reasonLabel = COMMENT_REPORT_REASON_LABELS[reasonKey] || 'Outro conteúdo prejudicial à comunidade';
+      const isBanned = Boolean(report.user_banned || report.userBanned || userProfileIsBanned(profile));
+      const protectedAccount = profile.role === 'admin' || userId === String(user?.uid || '');
+      return `<article class="moderation-report-card" data-report-card="${esc(reportId)}">
+        <header class="moderation-report-head">
+          <div class="moderation-user-avatar">${avatarMarkup(profile)}</div>
+          <div class="moderation-report-user"><strong>@${esc(username)}</strong><small>${esc(reasonLabel)} · ${esc(formatDateTime(report.created_at || report.createdAt))}</small></div>
+          ${isBanned ? '<span class="moderation-banned-chip">Banido</span>' : ''}
+        </header>
+        <p class="moderation-comment-copy">${esc(String(report.message || ''))}</p>
+        <div class="moderation-report-actions">
+          ${protectedAccount ? '<span class="protected-account">Conta protegida</span>' : isBanned ? '<button type="button" class="a-btn" disabled>Usuário banido</button>' : `<button type="button" class="a-btn warning" data-report-ban="${esc(reportId)}" data-report-user="${esc(userId)}">Banir usuário</button>`}
+          <button type="button" class="a-btn danger" data-report-delete="${esc(reportId)}" data-report-comment="${esc(commentId)}">Apagar comentário</button>
+        </div>
+      </article>`;
+    };
+
+    const banCard = profile => {
+      const username = String(profile.username || '').replace(/^@+/, '');
+      return `<article class="moderation-ban-card" data-ban-user="${esc(profile.id)}">
+        <div class="moderation-user-avatar">${avatarMarkup(profile)}</div>
+        <div class="moderation-ban-copy"><strong>${username ? '@' + esc(username) : esc(profile.displayName || profile.email || 'Usuário')}</strong><small>${esc(profile.email || '')}</small></div>
+        ${profile.banReason ? `<button type="button" class="ban-reason-mail" data-moderation-ban-reason="${esc(profile.id)}" aria-label="Ver motivo do banimento" title="Ver motivo do banimento">📫</button>` : ''}
+        <button type="button" class="a-btn" data-moderation-unban="${esc(profile.id)}">Desbanir</button>
+      </article>`;
+    };
+
+    const draw = () => {
+      content.innerHTML = `<div class="users-moderation-back-row"><button type="button" class="users-moderation-back" id="usersModerationBack" aria-label="Voltar para Usuários"><span aria-hidden="true">‹</span> Usuários</button></div>
+        <div class="admin-title-row users-moderation-title"><div><span class="dashboard-kicker">Moderação</span><h1>Denúncias e banimentos</h1><p>Revise denúncias de comentários e gerencie contas banidas sem alterar as opções existentes em Usuários.</p></div><span class="users-moderation-shield">${moderationShieldIcon()}</span></div>
+        <nav class="users-moderation-tabs" aria-label="Denúncias e banimentos">
+          <button type="button" data-moderation-tab="reports" class="${activeTab === 'reports' ? 'active' : ''}">Denúncias <span>${reports.length}</span></button>
+          <button type="button" data-moderation-tab="bans" class="${activeTab === 'bans' ? 'active' : ''}">Banimentos <span>${bannedUsers().length}</span></button>
+        </nav>
+        <section class="users-moderation-panel" id="usersModerationPanel">${activeTab === 'reports'
+          ? (reports.length ? `<div class="moderation-report-list">${reports.map(reportCard).join('')}</div>` : '<div class="moderation-empty"><strong>Nenhuma denúncia pendente</strong><span>Quando alguém denunciar um comentário, ele aparecerá aqui.</span></div>')
+          : (bannedUsers().length ? `<div class="moderation-ban-list">${bannedUsers().map(banCard).join('')}</div>` : '<div class="moderation-empty"><strong>Nenhum usuário banido</strong><span>Os banimentos ativos aparecerão aqui.</span></div>')
+        }</section>`;
+
+      $('#usersModerationBack').onclick = () => usersPage();
+      document.querySelectorAll('[data-moderation-tab]').forEach(button => button.onclick = () => {
+        activeTab = button.dataset.moderationTab === 'bans' ? 'bans' : 'reports';
+        draw();
+      });
+
+      document.querySelectorAll('[data-moderation-ban-reason]').forEach(button => button.onclick = () => {
+        const profile = allUsers.find(item => String(item.id) === String(button.dataset.moderationBanReason));
+        if (profile) showBanReasonModal(profile);
+      });
+
+      document.querySelectorAll('[data-report-delete]').forEach(button => button.onclick = async () => {
+        const report = reports.find(item => String(item.report_id || item.reportId || '') === String(button.dataset.reportDelete));
+        if (!report || !confirm('Apagar este comentário permanentemente?')) return;
+        button.disabled = true;
+        try {
+          const { error } = await adminClient.rpc('admin_delete_video_comment', { p_comment_id: button.dataset.reportComment });
+          if (error) throw error;
+          const commentId = String(button.dataset.reportComment || '');
+          reports = reports.filter(item => String(item.comment_id || item.commentId || '') !== commentId);
+          toast('Comentário apagado.');
+          await logAction('reported_comment_deleted', 'users', commentId, `Comentário denunciado apagado: @${report.username || 'usuario'}`);
+          draw();
+        } catch (error) {
+          toast(error.message || 'Não foi possível apagar o comentário.', 'err');
+          button.disabled = false;
+        }
+      });
+
+      document.querySelectorAll('[data-report-ban]').forEach(button => button.onclick = async () => {
+        const report = reports.find(item => String(item.report_id || item.reportId || '') === String(button.dataset.reportBan));
+        if (!report) return;
+        const profile = profileForReport(report);
+        let reason = await askBanReason(profile);
+        if (reason === null) return;
+        if (!String(reason || '').trim()) {
+          const reportReason = COMMENT_REPORT_REASON_LABELS[String(report.reason || '')] || 'Comentário denunciado';
+          reason = `Denúncia de comentário: ${reportReason}`;
+        }
+        button.disabled = true;
+        try {
+          const payload = await adminUserRequest('ban', profile.id, { reason });
+          const persisted = await db.get('users', profile.id).catch(() => null);
+          const existingIndex = allUsers.findIndex(item => String(item.id) === String(profile.id));
+          const nextProfile = persisted ? { ...persisted, banned: userProfileIsBanned(persisted) } : { ...profile, banned: true, bannedAt: payload.bannedAt || now(), banReason: payload.reason || reason };
+          if (existingIndex >= 0) allUsers[existingIndex] = { ...allUsers[existingIndex], ...nextProfile };
+          else allUsers.push(nextProfile);
+          const { error: resolveError } = await adminClient.rpc('admin_resolve_comment_reports_for_user', { p_user_id: profile.id });
+          if (resolveError) console.warn('O banimento foi aplicado, mas não foi possível arquivar todas as denúncias:', resolveError.message || resolveError);
+          reports = reports.filter(item => String(item.reported_user_id || item.reportedUserId || '') !== String(profile.id));
+          toast('Usuário banido e denúncia arquivada.');
+          await logAction('user_banned_from_report', 'users', profile.id, `Usuário banido a partir de denúncia: @${report.username || profile.username || 'usuario'}`);
+          draw();
+        } catch (error) {
+          toast(error.message || 'Não foi possível banir o usuário.', 'err');
+          button.disabled = false;
+        }
+      });
+
+      document.querySelectorAll('[data-moderation-unban]').forEach(button => button.onclick = async () => {
+        const profile = allUsers.find(item => String(item.id) === String(button.dataset.moderationUnban));
+        if (!profile || !confirm(`Desbanir ${profile.displayName || (profile.username ? '@' + profile.username : profile.email) || 'este usuário'}?`)) return;
+        button.disabled = true;
+        try {
+          await adminUserRequest('unban', profile.id);
+          const persisted = await db.get('users', profile.id).catch(() => null);
+          if (persisted) Object.assign(profile, persisted, { banned: userProfileIsBanned(persisted) });
+          else Object.assign(profile, { banned: false, bannedAt: '', banReason: '' });
+          toast('Acesso restaurado.');
+          await logAction('user_unbanned', 'users', profile.id, `Usuário desbanido: ${profile.email || profile.id}`);
+          draw();
+        } catch (error) {
+          toast(error.message || 'Não foi possível desbanir o usuário.', 'err');
+          button.disabled = false;
+        }
+      });
+    };
+
+    draw();
+  }
+
   async function usersPage() {
     const content = $('#adminContent');
     content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando usuários…</div>';
@@ -1692,7 +1884,8 @@ body.admin-preview-open{overflow:hidden}
       isFeaturedFan:featuredFanIds.has(String(item.id))
     }));
 
-    content.innerHTML = `<div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte os dados e controle o acesso das contas cadastradas.</p></div><div class="users-total"><strong>${items.length}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
+    content.innerHTML = `<div class="users-moderation-entry"><button type="button" id="openUsersModeration" class="users-moderation-entry-button"><span class="users-moderation-entry-icon">${moderationShieldIcon()}</span><span><strong>Denúncias e banimentos</strong><small>Revisar comentários denunciados e acessos bloqueados</small></span><i aria-hidden="true">›</i></button></div><div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte os dados e controle o acesso das contas cadastradas.</p></div><div class="users-total"><strong>${items.length}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
+    $('#openUsersModeration').onclick = () => openUsersModerationPanel();
 
     const draw = () => {
       const search = String($('#userSearch').value || '').trim().toLowerCase();
@@ -4435,6 +4628,78 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
         padding-right:11px!important;
         font-size:11px!important;
       }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+/* Painel de denúncias e banimentos dentro de Usuários. */
+(() => {
+  if (document.getElementById('be-admin-user-moderation-style')) return;
+  const style = document.createElement('style');
+  style.id = 'be-admin-user-moderation-style';
+  style.textContent = `
+    body.admin-mode .users-moderation-entry{margin:0 0 14px}
+    body.admin-mode .users-moderation-entry-button{
+      width:100%;min-height:68px;display:grid;grid-template-columns:46px minmax(0,1fr) 30px;align-items:center;gap:13px;
+      padding:10px 14px;border:1px solid rgba(125,181,255,.13);border-radius:17px;background:rgba(8,17,31,.68);color:#fff;
+      text-align:left;cursor:pointer;transition:.18s ease;box-shadow:0 10px 32px rgba(0,0,0,.14)
+    }
+    body.admin-mode .users-moderation-entry-button:hover{transform:translateY(-1px);border-color:rgba(125,181,255,.3);background:rgba(13,27,49,.82)}
+    body.admin-mode .users-moderation-entry-button>span:nth-child(2){display:grid;gap:3px;min-width:0}
+    body.admin-mode .users-moderation-entry-button strong{font-size:14px}
+    body.admin-mode .users-moderation-entry-button small{color:var(--a-muted);font-size:11.5px;line-height:1.4}
+    body.admin-mode .users-moderation-entry-button>i{justify-self:end;color:#7f91aa;font-style:normal;font-size:28px;font-weight:300}
+    body.admin-mode .users-moderation-entry-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:rgba(61,140,255,.12);color:#74abff}
+    body.admin-mode .users-moderation-entry-icon svg{width:21px;height:21px}
+    body.admin-mode .users-moderation-back-row{margin-bottom:12px}
+    body.admin-mode .users-moderation-back{display:inline-flex;align-items:center;gap:5px;padding:0;border:0;background:transparent;color:#8fa3bd;font-size:13px;font-weight:700;cursor:pointer}
+    body.admin-mode .users-moderation-back:hover{color:#fff}
+    body.admin-mode .users-moderation-back span{font-size:22px;font-weight:300;line-height:1}
+    body.admin-mode .users-moderation-title{align-items:center}
+    body.admin-mode .users-moderation-shield{width:52px;height:52px;display:grid;place-items:center;flex:0 0 auto;border:1px solid rgba(125,181,255,.14);border-radius:16px;background:rgba(61,140,255,.09);color:#79adff}
+    body.admin-mode .users-moderation-shield svg{width:25px;height:25px}
+    body.admin-mode .users-moderation-tabs{display:flex;gap:7px;margin:0 0 14px;padding:5px;border:1px solid rgba(125,181,255,.12);border-radius:15px;background:rgba(6,14,27,.72);width:max-content;max-width:100%}
+    body.admin-mode .users-moderation-tabs button{min-height:40px;display:flex;align-items:center;gap:8px;padding:0 14px;border:0;border-radius:11px;background:transparent;color:#8fa3bd;font-size:12.5px;font-weight:750;cursor:pointer}
+    body.admin-mode .users-moderation-tabs button.active{background:rgba(61,140,255,.15);color:#fff}
+    body.admin-mode .users-moderation-tabs button span{min-width:22px;height:22px;display:grid;place-items:center;padding:0 6px;border-radius:999px;background:rgba(255,255,255,.07);font-size:10px}
+    body.admin-mode .users-moderation-panel{border:1px solid rgba(125,181,255,.12);border-radius:20px;background:rgba(7,16,30,.66);overflow:hidden;box-shadow:0 18px 54px rgba(0,0,0,.16)}
+    body.admin-mode .moderation-report-list{display:grid}
+    body.admin-mode .moderation-report-card{padding:18px 19px;border-bottom:1px solid rgba(125,181,255,.1)}
+    body.admin-mode .moderation-report-card:last-child{border-bottom:0}
+    body.admin-mode .moderation-report-head{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:12px}
+    body.admin-mode .moderation-user-avatar{width:46px;height:46px;display:grid;place-items:center;overflow:hidden;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);color:#fff;font-weight:800}
+    body.admin-mode .moderation-user-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    body.admin-mode .moderation-report-user,body.admin-mode .moderation-ban-copy{display:grid;gap:4px;min-width:0}
+    body.admin-mode .moderation-report-user strong,body.admin-mode .moderation-ban-copy strong{font-size:14px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    body.admin-mode .moderation-report-user small,body.admin-mode .moderation-ban-copy small{font-size:11.5px;color:var(--a-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    body.admin-mode .moderation-banned-chip{padding:5px 8px;border-radius:999px;background:rgba(255,59,48,.12);color:#ff8b85;font-size:10px;font-weight:800}
+    body.admin-mode .moderation-comment-copy{margin:14px 0 0 58px;padding:13px 14px;border:1px solid rgba(255,255,255,.07);border-radius:14px;background:rgba(255,255,255,.025);color:#d9e2ee;font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+    body.admin-mode .moderation-report-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin:13px 0 0 58px}
+    body.admin-mode .moderation-report-actions .a-btn{min-height:38px}
+    body.admin-mode .moderation-ban-list{display:grid}
+    body.admin-mode .moderation-ban-card{min-height:74px;display:grid;grid-template-columns:46px minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid rgba(125,181,255,.1)}
+    body.admin-mode .moderation-ban-card:last-child{border-bottom:0}
+    body.admin-mode .moderation-ban-card .ban-reason-mail{margin:0}
+    body.admin-mode .moderation-empty{min-height:220px;display:grid;place-items:center;align-content:center;gap:7px;padding:30px;text-align:center}
+    body.admin-mode .moderation-empty strong{font-size:16px;color:#fff}
+    body.admin-mode .moderation-empty span{color:var(--a-muted);font-size:12.5px}
+    @media(max-width:700px){
+      body.admin-mode .users-moderation-entry-button{grid-template-columns:42px minmax(0,1fr) 22px;min-height:64px;padding:9px 11px}
+      body.admin-mode .users-moderation-entry-icon{width:38px;height:38px;border-radius:12px}
+      body.admin-mode .users-moderation-title{align-items:flex-start}
+      body.admin-mode .users-moderation-shield{width:46px;height:46px;border-radius:14px}
+      body.admin-mode .users-moderation-tabs{width:100%;display:grid;grid-template-columns:1fr 1fr}
+      body.admin-mode .users-moderation-tabs button{justify-content:center;padding:0 8px}
+      body.admin-mode .moderation-report-card{padding:15px 13px}
+      body.admin-mode .moderation-report-head{grid-template-columns:42px minmax(0,1fr);gap:10px}
+      body.admin-mode .moderation-user-avatar{width:42px;height:42px}
+      body.admin-mode .moderation-banned-chip{grid-column:2;justify-self:start}
+      body.admin-mode .moderation-comment-copy,body.admin-mode .moderation-report-actions{margin-left:52px}
+      body.admin-mode .moderation-report-actions{justify-content:flex-start}
+      body.admin-mode .moderation-report-actions .a-btn{flex:1 1 150px}
+      body.admin-mode .moderation-ban-card{grid-template-columns:42px minmax(0,1fr) auto;padding:12px}
+      body.admin-mode .moderation-ban-card>.a-btn{grid-column:2 / -1;width:100%}
     }
   `;
   document.head.appendChild(style);

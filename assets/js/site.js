@@ -3681,12 +3681,38 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `<img loading="lazy" decoding="async" src="${safeAssetUrl(source)}" alt="${escapeHtml(alt)}">`;
   }
 
+  const VIDEO_COMMENT_REPORT_REASONS = [
+    ['spam_abuse', 'Spam ou comportamento abusivo'],
+    ['impersonation', 'Falsidade de identidade'],
+    ['harassment', 'Assédio'],
+    ['hate_discrimination', 'Conteúdo discriminatório ou de ódio'],
+    ['illegal_activity', 'Atividade ilegal'],
+    ['malicious_link', 'Link malicioso ou tentativa de golpe'],
+    ['privacy_rights', 'Violação de privacidade ou direitos'],
+    ['harmful_other', 'Outro conteúdo prejudicial à comunidade']
+  ];
+
+  function detailCommentActionIcon(type) {
+    if (type === 'delete') {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v5M14 11v5"></path></svg>';
+    }
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"></path><path d="M5 5h11l-1.8 3L16 11H5"></path></svg>';
+  }
+
   function detailCommentMarkup(row) {
     const username = String(row?.username || '').trim().replace(/^@+/, '');
     const message = String(row?.message || '').trim();
+    const commentId = String(row?.comment_id || row?.commentId || '').trim();
+    const authorUserId = String(row?.author_user_id || row?.authorUserId || '').trim();
+    const currentUser = window.beBackend?.auth?.currentUser;
+    const currentUserId = String(currentUser?.uid || currentUser?.id || '').trim();
+    const isOwner = Boolean(commentId && authorUserId && currentUserId && authorUserId === currentUserId);
     const profileHref = username ? `/@${encodeURIComponent(username)}` : '#';
     const avatar = String(row?.avatar_url || row?.avatarUrl || '').trim();
-    return `<article class="detail-comment-item" data-comment-id="${escapeHtml(String(row?.comment_id || row?.commentId || ''))}">
+    const action = isOwner
+      ? `<button type="button" class="detail-comment-action danger" data-comment-delete="${escapeHtml(commentId)}" aria-label="${escapeHtml(localizedUiText('Apagar comentário'))}" title="${escapeHtml(localizedUiText('Apagar comentário'))}">${detailCommentActionIcon('delete')}</button>`
+      : `<button type="button" class="detail-comment-action" data-comment-report="${escapeHtml(commentId)}" data-comment-user="${escapeHtml(username)}" aria-label="${escapeHtml(localizedUiText('Denunciar comentário'))}" title="${escapeHtml(localizedUiText('Denunciar comentário'))}">${detailCommentActionIcon('report')}</button>`;
+    return `<article class="detail-comment-item" data-comment-id="${escapeHtml(commentId)}" data-comment-author-id="${escapeHtml(authorUserId)}">
       <a class="detail-comment-avatar" href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
         ${detailCommentAvatarMarkup(avatar, '')}
       </a>
@@ -3694,7 +3720,152 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <a class="detail-comment-user notranslate" translate="no" href="${escapeHtml(profileHref)}">@${escapeHtml(username || 'usuario')}</a>
         <p class="detail-comment-message notranslate" translate="no">${escapeHtml(message)}</p>
       </div>
+      <div class="detail-comment-actions">${action}</div>
     </article>`;
+  }
+
+  let detailCommentActionSheetKeydown = null;
+
+  function closeDetailCommentActionSheet() {
+    document.querySelector('.detail-comment-action-backdrop')?.remove();
+    if (detailCommentActionSheetKeydown) {
+      document.removeEventListener('keydown', detailCommentActionSheetKeydown);
+      detailCommentActionSheetKeydown = null;
+    }
+  }
+
+  function mountDetailCommentActionSheet(innerHtml) {
+    closeDetailCommentActionSheet();
+    const wrap = document.createElement('div');
+    wrap.className = 'detail-comment-action-backdrop';
+    wrap.innerHTML = `<section class="detail-comment-action-sheet" role="dialog" aria-modal="true">${innerHtml}</section>`;
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', event => {
+      if (event.target === wrap || event.target.closest('[data-comment-sheet-close]')) closeDetailCommentActionSheet();
+    });
+    detailCommentActionSheetKeydown = event => {
+      if (event.key === 'Escape') closeDetailCommentActionSheet();
+    };
+    document.addEventListener('keydown', detailCommentActionSheetKeydown);
+    return wrap;
+  }
+
+  async function deleteOwnVideoComment(commentId, trigger) {
+    const backend = window.beBackend;
+    if (!backend?.auth?.currentUser || !backend?.client || backend.mode !== 'supabase') return;
+    const wrap = mountDetailCommentActionSheet(`
+      <div class="detail-comment-sheet-handle" aria-hidden="true"></div>
+      <div class="detail-comment-sheet-head">
+        <span class="detail-comment-sheet-icon danger">${detailCommentActionIcon('delete')}</span>
+        <div><h3>${escapeHtml(localizedUiText('Apagar comentário?'))}</h3><p>${escapeHtml(localizedUiText('Essa ação não pode ser desfeita.'))}</p></div>
+      </div>
+      <div class="detail-comment-sheet-actions">
+        <button type="button" class="detail-comment-sheet-button" data-comment-sheet-close>${escapeHtml(localizedUiText('Cancelar'))}</button>
+        <button type="button" class="detail-comment-sheet-button danger" data-confirm-comment-delete>${escapeHtml(localizedUiText('Apagar comentário'))}</button>
+      </div>`);
+    const confirmButton = wrap.querySelector('[data-confirm-comment-delete]');
+    if (!confirmButton) return;
+    confirmButton.onclick = async () => {
+      confirmButton.disabled = true;
+      if (trigger) trigger.disabled = true;
+      try {
+        const { data, error } = await backend.client.rpc('delete_my_video_comment', { p_comment_id: commentId });
+        if (error) throw error;
+        if (data !== true) throw new Error('comment_delete_failed');
+        closeDetailCommentActionSheet();
+        if (activeDetailCommentsKey) await loadVideoComments(activeDetailCommentsKey, detailCommentsRequestToken);
+      } catch (error) {
+        console.warn('Não foi possível apagar o comentário:', error);
+        confirmButton.disabled = false;
+        if (trigger) trigger.disabled = false;
+        const head = wrap.querySelector('.detail-comment-sheet-head p');
+        if (head) head.textContent = localizedUiText('Não foi possível apagar o comentário.');
+      }
+    };
+  }
+
+  function openVideoCommentReport(commentId, username) {
+    const backend = window.beBackend;
+    if (!backend?.auth?.currentUser) {
+      mountDetailCommentActionSheet(`
+        <div class="detail-comment-sheet-handle" aria-hidden="true"></div>
+        <div class="detail-comment-sheet-head">
+          <span class="detail-comment-sheet-icon">${detailCommentActionIcon('report')}</span>
+          <div><h3>${escapeHtml(localizedUiText('Denunciar comentário'))}</h3><p>${escapeHtml(localizedUiText('Entre na sua conta para enviar uma denúncia.'))}</p></div>
+        </div>
+        <div class="detail-comment-sheet-actions single"><button type="button" class="detail-comment-sheet-button primary" data-comment-sheet-close>${escapeHtml(localizedUiText('Entendi'))}</button></div>`);
+      return;
+    }
+    if (!backend?.client || backend.mode !== 'supabase') return;
+
+    const wrap = mountDetailCommentActionSheet(`
+      <div class="detail-comment-sheet-handle" aria-hidden="true"></div>
+      <div class="detail-comment-sheet-head report">
+        <span class="detail-comment-sheet-icon">${detailCommentActionIcon('report')}</span>
+        <div><h3>${escapeHtml(localizedUiText('Denunciar comentário'))}</h3><p>${escapeHtml(localizedUiText('Selecione o motivo da denúncia. Ela será enviada para análise da moderação.'))}</p></div>
+      </div>
+      <div class="detail-comment-report-user notranslate" translate="no">@${escapeHtml(username || 'usuario')}</div>
+      <div class="detail-comment-report-options" role="radiogroup" aria-label="${escapeHtml(localizedUiText('Motivo da denúncia'))}">
+        ${VIDEO_COMMENT_REPORT_REASONS.map(([value, label]) => `<button type="button" class="detail-comment-report-option" data-report-reason="${escapeHtml(value)}" role="radio" aria-checked="false"><span>${escapeHtml(localizedUiText(label))}</span><i aria-hidden="true"></i></button>`).join('')}
+      </div>
+      <p class="detail-comment-report-status" data-report-status></p>
+      <div class="detail-comment-sheet-actions">
+        <button type="button" class="detail-comment-sheet-button" data-comment-sheet-close>${escapeHtml(localizedUiText('Cancelar'))}</button>
+        <button type="button" class="detail-comment-sheet-button primary" data-submit-comment-report disabled>${escapeHtml(localizedUiText('Enviar denúncia'))}</button>
+      </div>`);
+
+    let selectedReason = '';
+    const submit = wrap.querySelector('[data-submit-comment-report]');
+    const status = wrap.querySelector('[data-report-status]');
+    wrap.querySelectorAll('[data-report-reason]').forEach(button => {
+      button.onclick = () => {
+        selectedReason = button.dataset.reportReason || '';
+        wrap.querySelectorAll('[data-report-reason]').forEach(option => {
+          const selected = option === button;
+          option.classList.toggle('selected', selected);
+          option.setAttribute('aria-checked', selected ? 'true' : 'false');
+        });
+        if (submit) submit.disabled = !selectedReason;
+        if (status) status.textContent = '';
+      };
+    });
+
+    if (submit) submit.onclick = async () => {
+      if (!selectedReason) return;
+      submit.disabled = true;
+      if (status) status.textContent = localizedUiText('Enviando denúncia...');
+      try {
+        const { error } = await backend.client.rpc('report_video_comment', {
+          p_comment_id: commentId,
+          p_reason: selectedReason
+        });
+        if (error) throw error;
+        const sheet = wrap.querySelector('.detail-comment-action-sheet');
+        if (sheet) sheet.innerHTML = `
+          <div class="detail-comment-sheet-handle" aria-hidden="true"></div>
+          <div class="detail-comment-report-success">
+            <span class="detail-comment-report-success-icon" aria-hidden="true">✓</span>
+            <h3>${escapeHtml(localizedUiText('Denúncia enviada'))}</h3>
+            <p>${escapeHtml(localizedUiText('Obrigado. A moderação poderá revisar o comentário e tomar as medidas necessárias.'))}</p>
+            <button type="button" class="detail-comment-sheet-button primary" data-comment-sheet-close>${escapeHtml(localizedUiText('Concluir'))}</button>
+          </div>`;
+      } catch (error) {
+        console.warn('Não foi possível enviar a denúncia:', error);
+        if (status) status.textContent = localizedUiText('Não foi possível enviar a denúncia. Tente novamente.');
+        submit.disabled = false;
+      }
+    };
+  }
+
+  function setupDetailCommentItemActions() {
+    const list = document.getElementById('detailCommentsList');
+    if (!list) return;
+    list.querySelectorAll('[data-comment-delete]').forEach(button => {
+      button.onclick = () => deleteOwnVideoComment(button.dataset.commentDelete || '', button);
+    });
+    list.querySelectorAll('[data-comment-report]').forEach(button => {
+      button.onclick = () => openVideoCommentReport(button.dataset.commentReport || '', button.dataset.commentUser || '');
+    });
   }
 
   function setDetailCommentStatus(message) {
@@ -3784,6 +3955,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
       const rows = Array.isArray(data) ? data : [];
       list.innerHTML = rows.map(detailCommentMarkup).join('');
+      setupDetailCommentItemActions();
       empty.hidden = rows.length > 0;
       empty.textContent = localizedUiText('Ainda não há comentários.');
       setDetailCommentStatus('');
