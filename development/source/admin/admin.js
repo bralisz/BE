@@ -2134,6 +2134,12 @@ body.admin-preview-open{overflow:hidden}
   function movieStreamingEditorField(item = {}) {
     const selected = new Set(normalizeAdminStreamingAvailability(item.streamingAvailability));
     const links = normalizeAdminStreamingLinks(item.streamingLinks);
+    // Também entende os nomes individuais usados pelo rascunho do editor moderno.
+    for (const [serviceId, , inputName, linkName] of MOVIE_STREAMING_OPTIONS) {
+      if (item[inputName] === true || String(item[inputName] || '').toLowerCase() === 'true') selected.add(serviceId);
+      const draftUrl = String(item[linkName] || '').trim();
+      if (/^https:\/\//i.test(draftUrl)) links[serviceId] = draftUrl;
+    }
     const cards = MOVIE_STREAMING_OPTIONS.map(([serviceId, label, inputName, linkName]) => {
       const checked = selected.has(serviceId);
       return `<div class="movie-streaming-option-wrap" data-streaming-service="${esc(serviceId)}"><label class="movie-streaming-option"><input type="checkbox" name="${inputName}" value="true" data-streaming-toggle="${esc(serviceId)}" ${checked ? 'checked' : ''}><span class="movie-streaming-option-ui"><span class="movie-streaming-option-icon ${serviceId === 'disney-plus' ? 'disney' : ''}">${adminStreamingIcon(serviceId)}</span><span class="movie-streaming-option-name">${esc(label)}</span><span class="movie-streaming-option-check" aria-hidden="true">✓</span></span></label><div class="movie-streaming-link-field" data-streaming-link-field="${esc(serviceId)}" ${checked ? '' : 'hidden'}><label>Link do filme no ${esc(label)}</label><input class="a-input" type="url" inputmode="url" name="${linkName}" value="${esc(links[serviceId] || '')}" placeholder="https://..." ${checked ? 'required' : ''}><small>Cole o link direto da página do filme.</small></div></div>`;
@@ -2522,8 +2528,15 @@ body.admin-preview-open{overflow:hidden}
         </div>
       </section>
 
+      ${name === 'movies' ? `<section class="editor-field-group movie-streaming-editor-group">
+        <div class="editor-group-heading"><span>03</span><div><h3>Onde assistir</h3><p>Marque os streamings disponíveis e informe o link direto do filme em cada serviço.</p></div></div>
+        <div class="form-grid modern-form-grid">
+          ${movieStreamingEditorField(item)}
+        </div>
+      </section>` : ''}
+
       <section class="editor-field-group">
-        <div class="editor-group-heading"><span>03</span><div><h3>Publicação</h3><p>Complete os detalhes e escolha quando o item ficará visível.</p></div></div>
+        <div class="editor-group-heading"><span>${name === 'movies' ? '04' : '03'}</span><div><h3>Publicação</h3><p>Complete os detalhes e escolha quando o item ficará visível.</p></div></div>
         <div class="form-grid modern-form-grid compact-fields">
           <div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}" inputmode="numeric" placeholder="2026"></div>
           <div class="field"><label>Duração</label><input class="a-input" name="duration" value="${esc(item.duration || item.videoDuration || item.runtime || '')}" placeholder="1h 42min"></div>
@@ -3245,6 +3258,64 @@ body.admin-preview-open{overflow:hidden}
       return (Array.isArray(result.data) ? result.data : []).map(item => ({ ...item, tag_type: item.tag_type || item.tagType || 'community' }));
     };
 
+
+    const normalizeCommunityImageUrl = value => {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      if (/^\/assets\/[^\s]+$/i.test(raw)) return raw;
+      let url;
+      try { url = new URL(raw); }
+      catch (_) { throw new Error('Use um link de imagem válido.'); }
+      if (url.protocol !== 'https:') throw new Error('A imagem precisa usar https://.');
+      const host = String(url.hostname || '').toLowerCase().replace(/\.$/, '');
+      const isImgur = host === 'imgur.com' || host === 'www.imgur.com' || host === 'm.imgur.com' || host === 'i.imgur.com';
+      if (isImgur) {
+        const match = String(url.pathname || '').match(/^\/([^/]+)\.(png|jpe?g)$/i);
+        if (!match) throw new Error('No Imgur, use o link direto terminando em .png, .jpg ou .jpeg.');
+        url.hostname = 'i.imgur.com';
+        url.pathname = `/${match[1]}.${match[2].toLowerCase()}`;
+      }
+      url.hash = '';
+      return url.href;
+    };
+
+    const setupCommunityImageInputs = form => {
+      if (!form) return;
+      form.querySelectorAll('[data-community-image-url]').forEach(input => {
+        const validation = input.closest('.field')?.querySelector('[data-community-image-validation]');
+        const validate = ({ normalize = false } = {}) => {
+          const raw = String(input.value || '').trim();
+          if (validation) {
+            validation.textContent = '';
+            validation.classList.remove('ok', 'err');
+          }
+          if (!raw) return true;
+          try {
+            const normalized = normalizeCommunityImageUrl(raw);
+            if (normalize && normalized !== raw) input.value = normalized;
+            if (validation) {
+              const isImgur = /https:\/\/(?:i\.)?imgur\.com\//i.test(normalized);
+              validation.textContent = isImgur ? 'Link direto do Imgur válido.' : 'Link de imagem válido.';
+              validation.classList.add('ok');
+            }
+            input.setCustomValidity('');
+            return true;
+          } catch (error) {
+            const message = error?.message || 'Link de imagem inválido.';
+            if (validation) {
+              validation.textContent = message;
+              validation.classList.add('err');
+            }
+            input.setCustomValidity(message);
+            return false;
+          }
+        };
+        input.addEventListener('input', () => { input.setCustomValidity(''); if (validation) { validation.textContent = ''; validation.classList.remove('ok', 'err'); } });
+        input.addEventListener('blur', () => validate({ normalize: true }));
+        input._beValidateCommunityImage = validate;
+      });
+    };
+
     let communities = [];
     try {
       communities = await loadCommunities();
@@ -3288,6 +3359,7 @@ body.admin-preview-open{overflow:hidden}
         form.elements.tagType.value = item.tag_type || item.tagType || 'community';
         form.elements.sortOrder.value = Number(item.sort_order ?? item.sortOrder ?? 0);
         form.elements.active.checked = item.active !== false;
+        form.querySelectorAll('[data-community-image-url]').forEach(input => input._beValidateCommunityImage?.({ normalize: false }));
         $('#communityFormTitle').textContent = 'Editar comunidade';
         $('#communityCancelEdit').hidden = false;
         form.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3319,8 +3391,8 @@ body.admin-preview-open{overflow:hidden}
             <input type="hidden" name="id">
             <div class="form-grid">
               <div class="field full"><label>Nome da comunidade</label><input class="a-input" name="name" maxlength="120" required placeholder="Nome da comunidade"></div>
-              <div class="field full"><label>Ícone</label><input class="a-input" type="url" name="iconUrl" placeholder="https://..."><small>Imagem quadrada usada como avatar do card.</small></div>
-              <div class="field full"><label>Banner</label><input class="a-input" type="url" name="bannerUrl" placeholder="https://..."><small>Imagem horizontal usada no fundo do card.</small></div>
+              <div class="field full"><label>Ícone</label><input class="a-input" type="url" inputmode="url" name="iconUrl" data-community-image-url placeholder="https://i.imgur.com/arquivo.png"><small>Imagem quadrada usada como avatar do card. Aceita link direto do Imgur em <strong>.png</strong>, <strong>.jpg</strong> ou <strong>.jpeg</strong>.</small><small class="community-image-validation" data-community-image-validation aria-live="polite"></small></div>
+              <div class="field full"><label>Banner</label><input class="a-input" type="url" inputmode="url" name="bannerUrl" data-community-image-url placeholder="https://i.imgur.com/arquivo.jpg"><small>Imagem horizontal usada no fundo do card. Aceita link direto do Imgur em <strong>.png</strong>, <strong>.jpg</strong> ou <strong>.jpeg</strong>.</small><small class="community-image-validation" data-community-image-validation aria-live="polite"></small></div>
               <div class="field full"><label>Link da comunidade</label><input class="a-input" type="url" name="linkUrl" required pattern="https://.*" placeholder="https://..."></div>
               <div class="field full"><label>Tag</label><select class="a-select" name="tagType" required><option value="community">Community</option><option value="creator">Criador de conteúdo</option></select><small>Escolha qual tag será exibida abaixo do nome no site.</small></div>
               <div class="field"><label>Ordem</label><input class="a-input" type="number" name="sortOrder" min="-10000" max="10000" value="0"></div>
@@ -3335,6 +3407,8 @@ body.admin-preview-open{overflow:hidden}
         </div>
       </section>`;
 
+    setupCommunityImageInputs($('#communityForm'));
+
     const resetForm = () => {
       const form = $('#communityForm');
       form.reset();
@@ -3342,6 +3416,8 @@ body.admin-preview-open{overflow:hidden}
       form.elements.sortOrder.value = '0';
       form.elements.tagType.value = 'community';
       form.elements.active.checked = true;
+      form.querySelectorAll('[data-community-image-validation]').forEach(node => { node.textContent = ''; node.classList.remove('ok', 'err'); });
+      form.querySelectorAll('[data-community-image-url]').forEach(input => input.setCustomValidity(''));
       $('#communityFormTitle').textContent = 'Adicionar comunidade';
       $('#communityCancelEdit').hidden = true;
     };
@@ -3354,6 +3430,13 @@ body.admin-preview-open{overflow:hidden}
       saveButton.disabled = true;
       try {
         const values = Object.fromEntries(new FormData(form).entries());
+        let imagesValid = true;
+        form.querySelectorAll('[data-community-image-url]').forEach(input => {
+          if (input._beValidateCommunityImage && !input._beValidateCommunityImage({ normalize: true })) imagesValid = false;
+        });
+        if (!imagesValid || !form.reportValidity()) throw new Error('Revise os links de imagem da comunidade.');
+        values.iconUrl = normalizeCommunityImageUrl(values.iconUrl || '');
+        values.bannerUrl = normalizeCommunityImageUrl(values.bannerUrl || '');
         const { data, error } = await client.rpc('admin_upsert_fan_community_v2', {
           p_id: values.id || null,
           p_name: values.name,
@@ -3804,6 +3887,7 @@ body.admin-preview-open{overflow:hidden}
     .community-active-field{grid-column:1/-1;display:flex;align-items:center;gap:12px;min-height:62px;padding:12px 14px;border:1px solid var(--a-line);border-radius:14px;background:rgba(255,255,255,.025);cursor:pointer}
     .community-active-field input{width:19px;height:19px;accent-color:var(--a-blue)}
     .community-active-field span{display:grid;gap:3px}.community-active-field small{color:var(--a-muted)}
+    .community-image-validation{min-height:16px;font-size:11px;color:var(--a-muted)}.community-image-validation.ok{color:var(--a-ok)}.community-image-validation.err{color:var(--a-danger)}
     .community-admin-list{display:grid;gap:14px}
     .community-admin-card{position:relative;overflow:hidden;border:1px solid var(--a-line);border-radius:18px;background:rgba(2,8,19,.54)}
     .community-admin-banner{position:relative;height:118px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(135deg,#152238,#070b12);color:var(--a-muted);font-size:12px}
