@@ -3667,9 +3667,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function videoCommentKey(data) {
     const collection = String(data?.collection || 'videos').trim().toLowerCase();
-    if (collection !== 'videos') return '';
+    if (!['videos', 'movies'].includes(collection)) return '';
     const stableId = String(data?.recordId || data?.id || data?.itemId || '').trim();
-    return stableId ? `videos:${stableId}` : '';
+    return stableId ? `${collection}:${stableId}` : '';
   }
 
   function defaultCommentAvatar() {
