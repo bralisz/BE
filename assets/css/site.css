@@ -15430,3 +15430,43 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
     margin:0!important;
   }
 }
+
+/* 09/08/2026 — Perfil desktop: coração com o mesmo botão circular das demais ações. */
+@media (min-width:761px){
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike:hover,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike:active,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike.is-liked{
+    overflow:hidden!important;
+    border:1px solid rgba(255,255,255,.14)!important;
+    border-radius:50%!important;
+    background:rgba(21,22,24,.82)!important;
+    box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.055)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(120%)!important;
+    backdrop-filter:blur(14px) saturate(120%)!important;
+  }
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike:hover{
+    background:rgba(42,43,46,.92)!important;
+    border-color:rgba(255,255,255,.26)!important;
+  }
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike:active{
+    transform:scale(.94)!important;
+  }
+}
+
+/* 09/08/2026 — Mobile: Comentários sempre abaixo de Recomendações nos detalhes. */
+@media (max-width:760px){
+  body.detail-page-active #detailRecommendations:not([hidden]){
+    display:block!important;
+    visibility:visible!important;
+  }
+  body.detail-page-active #detailRecommendations:not([hidden]) #detailCommentsGroup{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    width:100%!important;
+    max-width:none!important;
+    margin-top:38px!important;
+    padding-top:28px!important;
+  }
+}
