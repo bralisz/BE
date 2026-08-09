@@ -487,7 +487,8 @@ as $$
     case
       when jsonb_typeof(sp.preferences -> 'profileSocialLinks') = 'object' then jsonb_build_object(
         'x', left(coalesce(sp.preferences #>> '{profileSocialLinks,x}', ''), 80),
-        'instagram', left(coalesce(sp.preferences #>> '{profileSocialLinks,instagram}', ''), 100)
+        'instagram', left(coalesce(sp.preferences #>> '{profileSocialLinks,instagram}', ''), 100),
+        'tiktok', left(coalesce(sp.preferences #>> '{profileSocialLinks,tiktok}', ''), 80)
       )
       else '{}'::jsonb
     end as social_links,
