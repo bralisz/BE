@@ -879,14 +879,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return hash.startsWith('#/admin') || callback === 'admin';
   }
 
+  const publicDataMemoryCache = new Map();
   async function readPublicData(name, id = '') {
-    const params = new URLSearchParams({ name: String(name || '') });
-    if (id) params.set('id', String(id));
-    const response = await fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
+    const normalizedName = String(name || '');
+    const normalizedId = String(id || '');
+    const cacheKey = `${normalizedName}:${normalizedId}`;
+    const nowMs = Date.now();
+    const cached = publicDataMemoryCache.get(cacheKey);
+    if (cached && cached.expiresAt > nowMs) return cached.promise;
+
+    const params = new URLSearchParams({ name: normalizedName });
+    if (normalizedId) params.set('id', normalizedId);
+    const ttl = normalizedName === 'settings' && normalizedId === 'site' ? 5000 : 20000;
+    const promise = fetch(`/api/public-data?${params.toString()}`, {
+      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+    }).then(response => {
+      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+      return response.json();
+    }).catch(error => {
+      publicDataMemoryCache.delete(cacheKey);
+      throw error;
     });
-    if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-    return response.json();
+    publicDataMemoryCache.set(cacheKey, { promise, expiresAt: nowMs + ttl });
+    return promise;
   }
 
   const supabaseData = {
@@ -2414,15 +2429,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.beRenderMarkdown = markdownToHtml;
   window.beMarkdownPlainText = markdownToPlainText;
 
-  window.addEventListener('load', async () => {
+  async function startDynamicContent() {
     setupHomeNavigation();
     setupDetailControls();
     try {
       if (!window.beBackend) return;
       await window.beBackend.ready;
-      await applySiteSettings();
-      await renderFeatured();
-      await renderVideoCatalog();
+      const contentTasks = await Promise.allSettled([
+        applySiteSettings(),
+        renderFeatured(),
+        renderVideoCatalog()
+      ]);
+      contentTasks.forEach(result => {
+        if (result.status === 'rejected') console.warn('Parte do conteúdo dinâmico não pôde ser carregada:', result.reason?.message || result.reason);
+      });
       setupHomeNavigation();
       setupDetailControls();
       await openContentDetailFromRoute();
@@ -2432,7 +2452,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.__beContentReady = true;
       window.dispatchEvent(new Event('be:content-ready'));
     }
-  });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startDynamicContent, { once: true });
+  else startDynamicContent();
 
   function normalizedFooterLink(value, network = 'website') {
     let raw = String(value || '').trim();
@@ -2488,40 +2510,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       .filter(item => item.active !== false && (item.contentId || item.videoId))
       .slice(0, 6);
 
-    featured = await Promise.all(featured.map(async item => {
-      try {
-        const collection = ['videos', 'movies', 'series'].includes(item.contentCollection || item.sourceCollection)
-          ? (item.contentCollection || item.sourceCollection)
-          : 'videos';
-        const sourceId = item.contentId || item.videoId;
-        const source = await beBackend.data.get(collection, sourceId);
-        if (!source || source.active === false) return null;
-        const thumbnail = source.thumbnailUrl || source.imageUrl || source.bannerUrl || item.imageUrl || item.bannerUrl || '';
-        const background = ['movies', 'series'].includes(collection)
-          ? thumbnail
-          : (source.bannerUrl || source.imageUrl || source.thumbnailUrl || item.bannerUrl || item.imageUrl || '');
-        return {
-          ...item,
-          id: source.id,
-          sourceId: source.id,
-          publicId: numericPublicId(source.publicId || source.id || source.title),
-          title: source.title || item.title,
-          description: source.description || item.description,
-          imageUrl: thumbnail,
-          bannerUrl: background,
-          contentUrl: source.videoUrl || source.contentUrl || source.link || item.contentUrl,
-          duration: source.duration || source.videoDuration || source.runtime || item.duration,
-          year: source.year || item.year,
-          logoUrl: source.logoUrl || item.logoUrl || '',
-          sectionId: source.sectionId || '',
-          sectionName: source.sectionName || '',
-          collection,
-          category: 'destaque'
-        };
-      } catch (_) {
-        return null;
-      }
-    })).then(items => items.filter(Boolean));
+    const featuredCollections = [...new Set(featured.map(item => {
+      const requested = item.contentCollection || item.sourceCollection;
+      return ['videos', 'movies', 'series'].includes(requested) ? requested : 'videos';
+    }))];
+    const featuredSourceEntries = await Promise.all(featuredCollections.map(async collection => {
+      const rows = await beBackend.data.list(collection).catch(() => []);
+      return [collection, new Map(rows.map(source => [String(source.id), source]))];
+    }));
+    const featuredSourceMaps = Object.fromEntries(featuredSourceEntries);
+    featured = featured.map(item => {
+      const requested = item.contentCollection || item.sourceCollection;
+      const collection = ['videos', 'movies', 'series'].includes(requested) ? requested : 'videos';
+      const sourceId = String(item.contentId || item.videoId || '');
+      const source = featuredSourceMaps[collection]?.get(sourceId);
+      if (!source || source.active === false) return null;
+      const thumbnail = source.thumbnailUrl || source.imageUrl || source.bannerUrl || item.imageUrl || item.bannerUrl || '';
+      const background = ['movies', 'series'].includes(collection)
+        ? thumbnail
+        : (source.bannerUrl || source.imageUrl || source.thumbnailUrl || item.bannerUrl || item.imageUrl || '');
+      return {
+        ...item,
+        id: source.id,
+        sourceId: source.id,
+        publicId: numericPublicId(source.publicId || source.id || source.title),
+        title: source.title || item.title,
+        description: source.description || item.description,
+        imageUrl: thumbnail,
+        bannerUrl: background,
+        contentUrl: source.videoUrl || source.contentUrl || source.link || item.contentUrl,
+        duration: source.duration || source.videoDuration || source.runtime || item.duration,
+        year: source.year || item.year,
+        logoUrl: source.logoUrl || item.logoUrl || '',
+        sectionId: source.sectionId || '',
+        sectionName: source.sectionName || '',
+        collection,
+        category: 'destaque'
+      };
+    }).filter(Boolean);
 
     if (!featured.length) {
       host.innerHTML = '';
@@ -2542,7 +2568,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ].join('');
       return `<div class="f-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
         <div class="f-info">
-          <div class="f-logo${preserveTitle ? ' notranslate' : ''}"${preserveTitle ? ' translate="no"' : ''}>${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
+          <div class="f-logo${preserveTitle ? ' notranslate' : ''}"${preserveTitle ? ' translate="no"' : ''}>${item.logoUrl ? (index === 0 ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : `<img decoding="async" data-featured-src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">`) : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
           <div class="f-meta">${meta}</div>
           <div class="f-desc be-markdown">${markdownToHtml(item.description || '')}</div>
           <div class="f-actions">
@@ -2568,7 +2594,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             </button>
           </div>
         </div>
-        <div class="f-media">${image ? `<img decoding="async" src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
+        <div class="f-media">${image ? (index === 0 ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">` : `<img data-featured-src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" decoding="async">`) : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
       </div>`;
     }).join('') + `<div class="f-dots" id="featuredDots">${featured.map((_, index) => `<button class="f-dot ${index === 0 ? 'active' : ''}" data-goto="${index}" aria-label="Ir para o destaque ${index + 1}"></button>`).join('')}</div>`;
 
@@ -2576,10 +2602,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const dots = Array.from(host.querySelectorAll('.f-dot'));
     let index = 0;
     let timer = null;
+    const hydrateFeaturedSlide = slide => {
+      if (!slide) return;
+      slide.querySelectorAll('img[data-featured-src]').forEach(image => {
+        const source = image.dataset.featuredSrc;
+        if (!source) return;
+        image.src = source;
+        image.removeAttribute('data-featured-src');
+      });
+    };
+    const scheduleNextFeatured = () => {
+      if (slides.length < 2) return;
+      const nextSlide = slides[(index + 1) % slides.length];
+      const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 700));
+      idle(() => hydrateFeaturedSlide(nextSlide), { timeout: 1800 });
+    };
     const go = next => {
       index = (next + slides.length) % slides.length;
+      hydrateFeaturedSlide(slides[index]);
       slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
       dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+      scheduleNextFeatured();
     };
     const stop = () => { if (timer) clearInterval(timer); timer = null; };
     const start = () => { stop(); if (slides.length > 1) timer = setInterval(() => go(index + 1), 10000); };
@@ -2587,6 +2630,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     host.addEventListener('mouseenter', stop);
     host.addEventListener('mouseleave', start);
     start();
+    scheduleNextFeatured();
     bindBannerImageFallbacks(host);
     setupFavoriteButtons(host);
     setupContentDetailInteractions(host);
@@ -2726,15 +2770,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const main = document.querySelector('main');
     if (!main) return;
 
-    const sections = (await beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }))
-      .filter(section => section.active !== false);
-    const [videoRows, movieRows, seriesRows, featuredRows, albumRows] = await Promise.all([
+    const [sectionRows, videoRows, movieRows, seriesRows, featuredRows, albumRows] = await Promise.all([
+      beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }).catch(() => []),
       beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
       beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => []),
       beBackend.data.list('series', { orderBy: 'order', direction: 'asc' }).catch(() => []),
       beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => []),
       beBackend.data.list('news', { orderBy: 'order', direction: 'asc' }).catch(() => [])
     ]);
+    const sections = sectionRows.filter(section => section.active !== false);
     const allVideos = videoRows.filter(video => video.active !== false);
     const allMovies = movieRows.filter(movie => movie.active !== false);
     const allSeries = seriesRows.filter(series => series.active !== false);
@@ -7826,7 +7870,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.innerHTML='<div class="'+(mode==='login'?'protected-admin-login-page':'protected-admin-system-page')+'">'+content+'</div>';
   }
   function showLogin(message){
-    adminFrame('<section class="protected-admin-login-shell" aria-label="Entrar no Dashboard Admin"><a class="protected-admin-login-logo" href="/" aria-label="Voltar ao site"><img src="/assets/images/brand/logo.png?v=20260807-betv-logo-v4" alt="BE"></a><div class="protected-admin-login-card"><button id="protectedAdminGoogle" class="protected-admin-google-button" type="button"><span class="protected-admin-google-icon" aria-hidden="true">G</span><span class="protected-admin-google-label">Conectar via Google</span></button></div></section>','login');
+    adminFrame('<section class="protected-admin-login-shell" aria-label="Entrar no Dashboard Admin"><a class="protected-admin-login-logo" href="/" aria-label="Voltar ao site"><img src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE"></a><div class="protected-admin-login-card"><button id="protectedAdminGoogle" class="protected-admin-google-button" type="button"><span class="protected-admin-google-icon" aria-hidden="true">G</span><span class="protected-admin-google-label">Conectar via Google</span></button></div></section>','login');
     var button=document.getElementById('protectedAdminGoogle');
     if(button)button.onclick=async function(){
       var label=button.querySelector('.protected-admin-google-label');

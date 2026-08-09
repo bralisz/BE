@@ -59,3 +59,5 @@ As versões abaixo devem permanecer no repositório para evitar o aviso **Remote
 
 Não renomeie, remova ou reutilize versões que já foram aplicadas no projeto remoto.
 As migrations marcadas como `noop` são registros históricos intencionais e precisam continuar no diretório local.
+
+- `20260809024935` — `add_tiktok_to_profile_socials` (registro remoto sincronizado; no-op local)

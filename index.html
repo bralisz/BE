@@ -5,7 +5,7 @@
 <script>
 (function(){
   window.__beSiteSkeletonStartedAt=Date.now();
-  window.__beSiteSkeletonMinimumMs=2000;
+  window.__beSiteSkeletonMinimumMs=650;
 })();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -30,6 +30,9 @@
 <meta name="twitter:image" content="https://i.imgur.com/tnBMpHr.png">
 <meta name="twitter:image:alt" content="Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar">
 <link rel="canonical" href="https://billieilishtv.site/">
+<link rel="preconnect" href="https://cxkevnnxibhezvospkce.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="//cxkevnnxibhezvospkce.supabase.co">
+<link rel="preload" href="/assets/images/brand/logo.webp?v=20260809-performance-v1" as="image" type="image/webp" fetchpriority="high">
 <link rel="icon" href="/assets/icons/favicon-home-pc.ico?v=20260807-home-site-v1" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-home-pc-32x32.png?v=20260807-home-site-v1">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-home-pc-16x16.png?v=20260807-home-site-v1">
@@ -126,19 +129,22 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 (function(){
   try{
     var mobile=window.matchMedia&&window.matchMedia('(max-width: 760px)').matches;
-    if(!mobile)return;
     var memory=Number(navigator.deviceMemory||0);
     var cores=Number(navigator.hardwareConcurrency||0);
     var saveData=Boolean(navigator.connection&&navigator.connection.saveData);
-    document.documentElement.classList.add('mobile-optimized');
-    if(saveData||(memory&&memory<=4)||(cores&&cores<=4))document.documentElement.classList.add('mobile-lite');
+    var lite=saveData||(memory&&memory<=4)||(cores&&cores<=4);
+    if(mobile)document.documentElement.classList.add('mobile-optimized');
+    if(lite){
+      document.documentElement.classList.add('performance-lite');
+      if(mobile)document.documentElement.classList.add('mobile-lite');
+    }
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260809-profile-actions-animation-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260809-performance-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260808-community-guidelines-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260809-profile-home-cleanup-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260809-performance-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -167,7 +173,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </div>
 <section id="authGate" aria-label="Entrar ou criar conta">
   <div class="login-bg-stack" id="loginBgStack" aria-hidden="true">
-    <div class="login-bg-slide active" style="background-image:url('/assets/images/auth/login-admin-banner.jpg')"></div>
+    <div class="login-bg-slide active" style="background-image:url('/assets/images/auth/login-admin-banner.webp')"></div>
     <div class="login-bg-slide" data-login-bg="/assets/images/auth/login-bg-1.webp"></div>
     <div class="login-bg-slide" data-login-bg="/assets/images/auth/login-bg-2.webp"></div>
     <div class="login-bg-slide" data-login-bg="/assets/images/auth/login-bg-3.webp"></div>
@@ -178,7 +184,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   </div>
   <div class="login-shell">
     <div class="login-topbar" aria-label="Ações de acesso">
-      <a class="login-brand" href="/login" aria-label="BE"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=20260807-betv-logo-v4" alt="BE"></a>
+      <a class="login-brand" href="/login" aria-label="BE"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE"></a>
       <button class="discord-connect-button" id="discordAuthButton" type="button" aria-label="Conectar Discord">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg>
         <span>Conectar Discord</span>
@@ -284,7 +290,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   <nav class="topbar home-topbar" id="topbar" aria-label="Navegação principal">
     <div class="home-nav-leading" id="homeNavLeading">
       <button class="logo-btn home-logo-pill active" id="logoBtn" type="button" aria-label="BE — voltar para a Home" aria-current="page" aria-pressed="true">
-        <img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=20260807-betv-logo-v4" alt="BE" class="logo-mark">
+        <img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE" class="logo-mark">
       </button>
       <div class="home-nav-links" id="homeNavLinks">
         <button class="home-nav-link" type="button" data-home-view="films">Filmes</button>
@@ -765,7 +771,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
       <aside class="billie-portrait-column">
         <figure class="billie-portrait-frame">
           <div class="billie-portrait-inner">
-            <img id="billiePagePortrait" src="/assets/images/pages/billie-portrait-default.webp" alt="Billie Eilish" loading="eager" decoding="async">
+            <img id="billiePagePortrait" src="/assets/images/pages/billie-portrait-default.webp" alt="Billie Eilish" loading="lazy" decoding="async">
           </div>
         </figure>
       </aside>
@@ -1063,7 +1069,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
         <img loading="eager" decoding="async" id="notificationPageAvatarImage" src="/assets/images/profile/default-avatar.png" alt="Avatar do usuário" data-avatar-fallback="/assets/images/profile/default-avatar.png">
         <span id="notificationPageAvatarFallback" aria-hidden="true" hidden>M</span>
       </button>
-      <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/assets/images/brand/logo.png?v=20260807-betv-logo-v4" alt="BETV"></button>
+      <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BETV"></button>
     </div>
     <div class="notification-page-heading"><strong>Notificações</strong></div>
     <button class="notification-page-close" id="notificationPageClose" type="button" aria-label="Fechar notificações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></button>
@@ -1142,7 +1148,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
       <span id="legalAvatarFallback">Entrar</span>
     </button>
     <button class="legal-home-button" id="legalHomeButton" type="button" aria-label="Voltar para a página inicial">
-      <img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=20260807-betv-logo-v4" alt="BETV">
+      <img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BETV">
     </button>
   </header>
   <div class="legal-page-wrap">

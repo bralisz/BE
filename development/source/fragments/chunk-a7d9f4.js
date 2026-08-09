@@ -281,14 +281,14 @@ body.admin-preview-open{overflow:hidden}
 
   function adminLoginBackgroundMarkup() {
     const backgrounds = [
-      '/assets/images/auth/login-admin-banner.jpg',
-      '/assets/images/auth/login-bg-1.png',
-      '/assets/images/auth/login-bg-2.png',
-      '/assets/images/auth/login-bg-3.png',
-      '/assets/images/auth/login-bg-4.png',
-      '/assets/images/auth/login-bg-5.png',
-      '/assets/images/auth/login-bg-6.png',
-      '/assets/images/auth/login-bg-7.png'
+      '/assets/images/auth/login-admin-banner.webp',
+      '/assets/images/auth/login-bg-1.webp',
+      '/assets/images/auth/login-bg-2.webp',
+      '/assets/images/auth/login-bg-3.webp',
+      '/assets/images/auth/login-bg-4.webp',
+      '/assets/images/auth/login-bg-5.webp',
+      '/assets/images/auth/login-bg-6.webp',
+      '/assets/images/auth/login-bg-7.webp'
     ];
     return `<div class="admin-login-bg" aria-hidden="true">${backgrounds.map((src, index) => `<div class="admin-login-bg-slide ${index === 0 ? 'active' : ''}" style="background-image:url('${src}')"></div>`).join('')}</div>`;
   }

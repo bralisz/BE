@@ -4598,7 +4598,7 @@ body.admin-mode{
   overflow:hidden;
   color:#fff;
   font-family:Inter,system-ui,sans-serif;
-  background:#05070b url('/assets/images/auth/login-bg-3.png') center center/cover no-repeat;
+  background:#05070b url('/assets/images/auth/login-bg-3.webp') center center/cover no-repeat;
 }
 .protected-admin-login-page::before{
   content:"";

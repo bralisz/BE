@@ -570,16 +570,16 @@ body.admin-preview-open{overflow:hidden}
 
   function adminLoginBackgroundMarkup() {
     const backgrounds = [
-      '/assets/login-admin-banner.jpg',
-      '/assets/login-bg-1.png',
-      '/assets/login-bg-2.png',
-      '/assets/login-bg-3.png',
-      '/assets/login-bg-4.png',
-      '/assets/login-bg-5.png',
-      '/assets/login-bg-6.png',
-      '/assets/login-bg-7.png'
+      '/assets/images/auth/login-admin-banner.webp',
+      '/assets/images/auth/login-bg-1.webp',
+      '/assets/images/auth/login-bg-2.webp',
+      '/assets/images/auth/login-bg-3.webp',
+      '/assets/images/auth/login-bg-4.webp',
+      '/assets/images/auth/login-bg-5.webp',
+      '/assets/images/auth/login-bg-6.webp',
+      '/assets/images/auth/login-bg-7.webp'
     ];
-    return `<div class="admin-login-bg" aria-hidden="true">${backgrounds.map((src, index) => `<div class="admin-login-bg-slide ${index === 0 ? 'active' : ''}" style="background-image:url('${src}')"></div>`).join('')}</div>`;
+    return `<div class="admin-login-bg" aria-hidden="true">${backgrounds.map((src, index) => `<div class="admin-login-bg-slide ${index === 0 ? 'active' : ''}" ${index === 0 ? `style="background-image:url('${src}')"` : `data-admin-bg-src="${src}"`}></div>`).join('')}</div>`;
   }
 
   function startAdminLoginBackground() {
@@ -587,6 +587,13 @@ body.admin-preview-open{overflow:hidden}
     const slides = [...document.querySelectorAll('.admin-login-bg-slide')];
     const dots = [...document.querySelectorAll('.admin-login-dot')];
     if (!slides.length) return;
+    const ensureLoaded = slide => {
+      if (!slide) return;
+      const source = slide.dataset.adminBgSrc || '';
+      if (!source) return;
+      slide.style.backgroundImage = `url('${source.replace(/'/g, "\\'")}')`;
+      delete slide.dataset.adminBgSrc;
+    };
     const randomIndex = except => {
       if (slides.length < 2) return 0;
       let next = except;
@@ -604,8 +611,11 @@ body.admin-preview-open{overflow:hidden}
     let active = randomIndex(-1);
     const show = index => {
       active = (index + slides.length) % slides.length;
+      ensureLoaded(slides[active]);
       slides.forEach((slide, slideIndex) => slide.classList.toggle('active', slideIndex === active));
       dots.forEach((dot, dotIndex) => dot.classList.toggle('active', dotIndex === active));
+      const idle = window.requestIdleCallback || (callback => setTimeout(callback, 900));
+      idle(() => ensureLoaded(slides[randomIndex(active)]), { timeout: 1800 });
     };
     const restart = () => {
       if (adminLoginBgTimer) clearInterval(adminLoginBgTimer);
@@ -781,7 +791,7 @@ body.admin-preview-open{overflow:hidden}
 
   async function renderLogin() {
     setAdminDocumentScroll(false);
-    document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="admin-login-topbar"><a class="admin-login-logo" href="/" aria-label="Voltar ao site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=6" alt="BE"></a></div><div class="login-card" aria-label="Acesso administrativo"><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span><span>Conectar via Google</span></button></div></div></div><div class="toast-area"></div>`;
+    document.body.innerHTML = `<div class="admin-login">${adminLoginBackgroundMarkup()}<div class="admin-login-content"><div class="admin-login-topbar"><a class="admin-login-logo" href="/" aria-label="Voltar ao site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE"></a></div><div class="login-card" aria-label="Acesso administrativo"><button id="googleLogin" class="a-btn primary google-btn"><span class="google-icon">G</span><span>Conectar via Google</span></button></div></div></div><div class="toast-area"></div>`;
     startAdminLoginBackground();
     $('#googleLogin').onclick = loginWithGoogle;
     const savedError = sessionStorage.getItem('adminAuthError');
@@ -860,7 +870,7 @@ body.admin-preview-open{overflow:hidden}
     const accountAvatar = activeAvatar
       ? `<img loading="lazy" decoding="async" src="${esc(media(activeAvatar))}" alt="Avatar escolhido por ${esc(user.displayName || 'usuário')}">`
       : `<span aria-label="Sem foto de perfil">${esc((user.displayName || 'U').charAt(0).toUpperCase())}</span>`;
-    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.png?v=6" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><div class="admin-avatar-button" id="adminAccountAvatar" aria-label="Avatar do administrador">${accountAvatar}</div></div></header><main class="admin-main"><nav class="admin-subnav" id="adminSubnav" aria-label="Subseções do painel" hidden></nav><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
+    document.body.innerHTML = `<div class="admin-shell"><header class="admin-topbar"><a class="admin-logo-button" href="/" aria-label="Ir para o site"><img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE"></a><nav class="admin-nav" aria-label="Navegação do painel">${routes.map(navButton).join('')}</nav><div class="admin-account"><div class="admin-avatar-button" id="adminAccountAvatar" aria-label="Avatar do administrador">${accountAvatar}</div></div></header><main class="admin-main"><nav class="admin-subnav" id="adminSubnav" aria-label="Subseções do painel" hidden></nav><section class="admin-content" id="adminContent"></section></main></div><div class="toast-area"></div>`;
     renderAdminSubnav();
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
     const accountAvatarElement = $('#adminAccountAvatar');

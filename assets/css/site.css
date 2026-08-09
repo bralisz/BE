@@ -4662,7 +4662,7 @@ body.admin-mode{
   overflow:hidden;
   color:#fff;
   font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
-  background:#05070b url('/assets/images/auth/login-bg-3.png') center center/cover no-repeat;
+  background:#05070b url('/assets/images/auth/login-bg-3.webp') center center/cover no-repeat;
 }
 .protected-admin-login-page::before{
   content:"";
@@ -14664,4 +14664,23 @@ body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover svg
   body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover svg{
     transform:none!important;
   }
+}
+
+
+/* Modo adaptativo para dispositivos com pouca memória/CPU ou economia de dados. */
+html.performance-lite *,
+html.performance-lite *::before,
+html.performance-lite *::after{
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+html.performance-lite .login-bg-slide,
+html.performance-lite .f-slide,
+html.performance-lite .video-card,
+html.performance-lite .profile-page-action,
+html.performance-lite .notification-page-action{
+  transition-duration:.18s!important;
+}
+html.performance-lite .skeleton-shimmer::after{
+  animation-duration:1.8s!important;
 }
