@@ -7896,7 +7896,7 @@ body.profile-page-active > footer{
 
 
 /* Correção: ações do perfil na base do banner, detalhes nas seções e ranking. */
-.profile-page-notifications{display:none}
+.profile-page-like{display:none}
 
 /* O detalhe precisa ficar visível mesmo quando foi aberto a partir de uma seção dedicada. */
 body.section-catalog-active.detail-page-active > main{
@@ -7918,7 +7918,7 @@ body.section-catalog-active.detail-page-active #dynamicSections.section-view-mod
   }
 
   body.profile-page-active .profile-page-home,
-  body.profile-page-active .profile-page-notifications,
+  body.profile-page-active .profile-page-like,
   body.profile-page-active .profile-page-more{
     display:grid!important;
     position:absolute!important;
@@ -7945,20 +7945,20 @@ body.section-catalog-active.detail-page-active #dynamicSections.section-view-mod
   body.profile-page-active .profile-page-home{
     right:calc(clamp(24px,3vw,46px) + 116px)!important;
   }
-  body.profile-page-active .profile-page-notifications{
+  body.profile-page-active .profile-page-like{
     right:calc(clamp(24px,3vw,46px) + 58px)!important;
   }
   body.profile-page-active .profile-page-more{
     right:clamp(24px,3vw,46px)!important;
   }
   body.profile-page-active .profile-page-home:hover,
-  body.profile-page-active .profile-page-notifications:hover,
+  body.profile-page-active .profile-page-like:hover,
   body.profile-page-active .profile-page-more:hover{
     background:rgba(42,43,46,.92)!important;
     border-color:rgba(255,255,255,.26)!important;
   }
   body.profile-page-active .profile-page-home svg,
-  body.profile-page-active .profile-page-notifications svg,
+  body.profile-page-active .profile-page-like svg,
   body.profile-page-active .profile-page-more svg{
     display:block!important;
     width:21px!important;
@@ -8210,7 +8210,7 @@ body.detail-page-active #detailRecommendations:not([hidden]){
 
 /* Perfil público compartilhável — 04/08/2026. */
 body.profile-page-active .profile-page-avatar[hidden],
-body.profile-page-active .profile-page-notifications[hidden],
+body.profile-page-active .profile-page-like[hidden],
 body.profile-page-active .profile-page-more[hidden]{
   display:none!important;
 }
@@ -8224,7 +8224,7 @@ body.profile-page-active .profile-public-empty{
   cursor:default!important;
   pointer-events:none!important;
 }
-body.profile-viewer-guest.profile-page-active .profile-page-notifications,
+body.profile-viewer-guest.profile-page-active .profile-page-like,
 body.profile-viewer-guest.profile-page-active .profile-page-more,
 body.profile-viewer-guest.profile-page-active .home-notification-menu,
 body.profile-viewer-guest.profile-page-active .mobile-header-actions,
@@ -11598,7 +11598,7 @@ body.profile-page-active .profile-page-share.is-copied{
 
 @media(min-width:761px){
   body.profile-page-active .profile-page-home,
-  body.profile-page-active .profile-page-notifications,
+  body.profile-page-active .profile-page-like,
   body.profile-page-active .profile-page-share,
   body.profile-page-active .profile-page-more{
     display:grid!important;
@@ -11624,18 +11624,18 @@ body.profile-page-active .profile-page-share.is-copied{
     z-index:8!important;
   }
   body.profile-page-active .profile-page-home{right:calc(clamp(24px,3vw,46px) + 174px)!important}
-  body.profile-page-active .profile-page-notifications{right:calc(clamp(24px,3vw,46px) + 116px)!important}
+  body.profile-page-active .profile-page-like{right:calc(clamp(24px,3vw,46px) + 116px)!important}
   body.profile-page-active .profile-page-share{right:calc(clamp(24px,3vw,46px) + 58px)!important}
   body.profile-page-active .profile-page-more{right:clamp(24px,3vw,46px)!important}
   body.profile-page-active .profile-page-home:hover,
-  body.profile-page-active .profile-page-notifications:hover,
+  body.profile-page-active .profile-page-like:hover,
   body.profile-page-active .profile-page-share:hover,
   body.profile-page-active .profile-page-more:hover{
     background:rgba(42,43,46,.92)!important;
     border-color:rgba(255,255,255,.26)!important;
   }
   body.profile-page-active .profile-page-home svg,
-  body.profile-page-active .profile-page-notifications svg,
+  body.profile-page-active .profile-page-like svg,
   body.profile-page-active .profile-page-share svg,
   body.profile-page-active .profile-page-more svg{
     display:block!important;
@@ -11732,7 +11732,7 @@ body.profile-page-active .profile-page-share svg{
 
 
 /* Ações finais do perfil: Home + notificações + compartilhar + configurações. */
-body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-like,
 body.profile-page-active:not(.profile-viewer-guest) .profile-page-more,
 body.profile-page-active .profile-page-home,
 body.profile-page-active .profile-page-share{
@@ -11741,7 +11741,7 @@ body.profile-page-active .profile-page-share{
   padding:0!important;
 }
 body.profile-page-active .profile-page-home svg,
-body.profile-page-active .profile-page-notifications svg,
+body.profile-page-active .profile-page-like svg,
 body.profile-page-active .profile-page-share svg,
 body.profile-page-active .profile-page-more svg{
   display:block!important;
@@ -11758,7 +11758,7 @@ body.profile-page-active .profile-page-share svg{
 
 @media(min-width:761px){
   body.profile-page-active .profile-page-home,
-  body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-like,
   body.profile-page-active .profile-page-share,
   body.profile-page-active:not(.profile-viewer-guest) .profile-page-more{
     position:absolute!important;
@@ -11778,7 +11778,7 @@ body.profile-page-active .profile-page-share svg{
   body.profile-page-active:not(.profile-viewer-guest) .profile-page-home{
     right:calc(clamp(24px,3vw,46px) + 174px)!important;
   }
-  body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications{
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-like{
     right:calc(clamp(24px,3vw,46px) + 116px)!important;
   }
   body.profile-page-active:not(.profile-viewer-guest) .profile-page-share{
@@ -11807,7 +11807,7 @@ body.profile-page-active .profile-page-share svg{
     display:none!important;
   }
   body.profile-page-active .profile-page-home,
-  body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-like,
   body.profile-page-active .profile-page-share,
   body.profile-page-active:not(.profile-viewer-guest) .profile-page-more{
     position:absolute!important;
@@ -11830,7 +11830,7 @@ body.profile-page-active .profile-page-share svg{
     left:var(--profile-mobile-action-edge)!important;
     right:auto!important;
   }
-  body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications{
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-like{
     right:calc(var(--profile-mobile-action-edge) + (var(--profile-mobile-action-size) + var(--profile-mobile-action-gap)) * 2)!important;
     left:auto!important;
   }
@@ -14619,7 +14619,7 @@ body.site-loading-active.notification-page-active > #notificationPage{
    As regras ficam no fim do CSS para não serem anuladas pelos ajustes
    responsivos posteriores de Notificações e Mais opções. */
 body.profile-page-active .profile-page-home,
-body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-like,
 body.profile-page-active .profile-page-share,
 body.profile-page-active:not(.profile-viewer-guest) .profile-page-more{
   transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s ease,border-color .2s ease,box-shadow .2s ease!important;
@@ -14627,7 +14627,7 @@ body.profile-page-active:not(.profile-viewer-guest) .profile-page-more{
   will-change:transform,background-color,border-color;
 }
 body.profile-page-active .profile-page-home:hover,
-body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:hover,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-like:hover,
 body.profile-page-active .profile-page-share:hover,
 body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover{
   background:rgba(42,43,46,.92)!important;
@@ -14635,33 +14635,33 @@ body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover{
   transform:scale(1.045)!important;
 }
 body.profile-page-active .profile-page-home:active,
-body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:active,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-like:active,
 body.profile-page-active .profile-page-share:active,
 body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:active{
   transform:scale(.94)!important;
   transition-duration:.09s!important;
 }
 body.profile-page-active .profile-page-home svg,
-body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications svg,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-like svg,
 body.profile-page-active .profile-page-share svg,
 body.profile-page-active:not(.profile-viewer-guest) .profile-page-more svg{
   transition:transform .2s cubic-bezier(.2,.8,.2,1)!important;
 }
 body.profile-page-active .profile-page-home:hover svg,
-body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:hover svg,
+body.profile-page-active:not(.profile-viewer-guest) .profile-page-like:hover svg,
 body.profile-page-active .profile-page-share:hover svg,
 body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover svg{
   transform:scale(1.06)!important;
 }
 @media (hover:none), (pointer:coarse){
   body.profile-page-active .profile-page-home:hover,
-  body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:hover,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-like:hover,
   body.profile-page-active .profile-page-share:hover,
   body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover{
     transform:none!important;
   }
   body.profile-page-active .profile-page-home:hover svg,
-  body.profile-page-active:not(.profile-viewer-guest) .profile-page-notifications:hover svg,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-like:hover svg,
   body.profile-page-active .profile-page-share:hover svg,
   body.profile-page-active:not(.profile-viewer-guest) .profile-page-more:hover svg{
     transform:none!important;
@@ -14737,5 +14737,68 @@ html.performance-lite body:not(.login-mode):not(.admin-mode) .home-topbar.search
   body.detail-page-active #detailRecommendations:not([hidden]){
     display:block!important;
     visibility:visible!important;
+  }
+}
+
+/* 09/08/2026 — Curtidas em perfis públicos.
+   Desktop: a contagem fica acima das ações do banner.
+   Mobile: a contagem fica logo abaixo dos ícones do topo. */
+body.profile-page-active .profile-page-likes-received{
+  position:absolute;
+  z-index:10022;
+  margin:0;
+  width:max-content;
+  max-width:calc(100% - 48px);
+  color:rgba(255,255,255,.78);
+  font-size:13px;
+  font-weight:650;
+  line-height:1.2;
+  letter-spacing:-.01em;
+  text-shadow:0 1px 14px rgba(0,0,0,.48);
+  pointer-events:none;
+}
+body.profile-page-active .profile-page-likes-received[hidden]{display:none!important}
+body.profile-page-active .profile-page-like.is-liked{
+  color:#ff6685!important;
+  border-color:rgba(255,102,133,.5)!important;
+  background:rgba(71,28,39,.86)!important;
+}
+body.profile-page-active .profile-page-like.is-liked svg{
+  fill:currentColor!important;
+  stroke:currentColor!important;
+}
+body.profile-page-active .profile-page-like:not(.is-liked) svg{fill:none!important}
+body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
+
+@media(min-width:761px){
+  body.profile-page-active .profile-page-likes-received{
+    right:clamp(24px,3vw,46px);
+    bottom:82px;
+    text-align:right;
+  }
+  /* No próprio perfil não existe botão de curtir; fecha o espaço vazio. */
+  body.profile-page-active.profile-view-own .profile-page-home{
+    right:calc(clamp(24px,3vw,46px) + 116px)!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-share{
+    right:calc(clamp(24px,3vw,46px) + 58px)!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-more{
+    right:clamp(24px,3vw,46px)!important;
+  }
+}
+
+@media(max-width:760px){
+  body.profile-page-active .profile-page-likes-received{
+    top:calc(var(--profile-mobile-action-top,calc(18px + env(safe-area-inset-top))) + var(--profile-mobile-action-size,46px) + 10px);
+    right:var(--profile-mobile-action-edge,24px);
+    text-align:right;
+    font-size:12px;
+  }
+  body.profile-page-active.profile-view-own .profile-page-share{
+    right:calc(var(--profile-mobile-action-edge,24px) + (var(--profile-mobile-action-size,46px) + var(--profile-mobile-action-gap,10px)))!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-more{
+    right:var(--profile-mobile-action-edge,24px)!important;
   }
 }

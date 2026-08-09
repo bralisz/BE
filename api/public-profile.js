@@ -93,7 +93,8 @@ function sanitizeProfile(row) {
     socialLinks: sanitizeSocialLinks(row.social_links || row.socialLinks),
     favorites: sanitizeList(row.favorites, 4),
     lovedAlbums: sanitizeList(row.loved_albums || row.lovedAlbums, 3),
-    savedContents: sanitizeList(row.saved_contents || row.savedContents, 20)
+    savedContents: sanitizeList(row.saved_contents || row.savedContents, 20),
+    likesReceived: Math.max(0, Math.floor(Number(row.likes_received ?? row.likesReceived ?? 0) || 0))
   };
 }
 

@@ -1138,7 +1138,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           socialLinks: preferenceData.profileSocialLinks && typeof preferenceData.profileSocialLinks === 'object' && !Array.isArray(preferenceData.profileSocialLinks) ? clone(preferenceData.profileSocialLinks) : {},
           favorites: Array.isArray(preferenceData.profileTopFavorites) ? clone(preferenceData.profileTopFavorites).slice(0, 4) : [],
           lovedAlbums: Array.isArray(preferenceData.profileLovedAlbums) ? clone(preferenceData.profileLovedAlbums).slice(0, 3) : [],
-          savedContents: Array.isArray(preferenceData.savedContents) ? clone(preferenceData.savedContents).slice(0, 20) : []
+          savedContents: Array.isArray(preferenceData.savedContents) ? clone(preferenceData.savedContents).slice(0, 20) : [],
+          likesReceived: 0
         };
       }
 
@@ -8169,7 +8170,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profilePageMetaLabel=document.getElementById('profilePageMetaLabel');
     var profilePageMemberSince=document.getElementById('profilePageMemberSince');
     var profilePageMore=document.getElementById('profilePageMore');
-    var profilePageNotifications=document.getElementById('profilePageNotifications');
+    var profilePageLike=document.getElementById('profilePageLike');
+    var profilePageLikesReceived=document.getElementById('profilePageLikesReceived');
     var profilePageLogout=document.getElementById('profilePageLogout');
     var profilePageHome=document.getElementById('profilePageHome');
     var profileFavoritesSection=document.getElementById('profileFavoritesSection');
@@ -8248,6 +8250,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var viewedProfile=null;
     var viewedProfileStatus='idle';
     var viewedProfileRequest=0;
+    var profileLikeRequest=0;
+    var profileLikeState={username:'',liked:false,count:0,loading:false};
     var onboardingShownFor='';
     var avatarPickerReturnView='';
     var bannerPickerReturnView='';
@@ -8719,7 +8723,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       // do profilePage depois da navegação e deixar parte do perfil renderizada
       // abaixo do catálogo da Home.
       viewedProfileRequest++;
-      document.body.classList.remove('profile-page-active','settings-page-active','profile-favorites-picker-active');
+      profileLikeRequest++;
+      document.body.classList.remove('profile-page-active','settings-page-active','profile-favorites-picker-active','profile-view-own');
       if(profilePage){
         profilePage.hidden=true;
         profilePage.setAttribute('hidden','');
@@ -8783,13 +8788,100 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var ownHandle=beBackend.normalizeUsername((currentProfile&&currentProfile.username)||'');
       return Boolean(viewedHandle&&ownHandle&&viewedHandle===ownHandle);
     }
+    function profileLikeCount(value){
+      var count=Number(value||0);
+      return Number.isFinite(count)&&count>0?Math.floor(count):0;
+    }
+    function currentViewedProfileHandle(){
+      return beBackend.normalizeUsername((viewedProfile&&viewedProfile.username)||profileRouteUsername()||(currentProfile&&currentProfile.username)||'');
+    }
+    function renderProfileLikeUi(){
+      var guest=!auth.currentUser;
+      var own=isOwnProfileView();
+      var ready=viewedProfileStatus==='ready'&&Boolean(viewedProfile);
+      var handle=currentViewedProfileHandle();
+      var stateMatches=Boolean(handle&&profileLikeState.username===handle);
+      var count=stateMatches?profileLikeCount(profileLikeState.count):profileLikeCount(viewedProfile&&viewedProfile.likesReceived);
+      var liked=stateMatches&&profileLikeState.liked===true;
+      var loading=stateMatches&&profileLikeState.loading===true;
+      if(profilePageLikesReceived){
+        profilePageLikesReceived.hidden=count<1;
+        if(count<1)profilePageLikesReceived.setAttribute('hidden','');else profilePageLikesReceived.removeAttribute('hidden');
+        profilePageLikesReceived.textContent=count===1?'1 curtida recebida':count+' curtidas recebidas';
+      }
+      if(profilePageLike){
+        var canLike=ready&&!guest&&!own;
+        profilePageLike.hidden=!canLike;
+        profilePageLike.setAttribute('aria-hidden',canLike?'false':'true');
+        profilePageLike.classList.toggle('is-liked',liked);
+        profilePageLike.setAttribute('aria-pressed',liked?'true':'false');
+        profilePageLike.setAttribute('aria-label',liked?'Remover curtida do perfil':'Curtir perfil');
+        profilePageLike.title=liked?'Remover curtida':'Curtir perfil';
+        profilePageLike.disabled=Boolean(loading);
+        profilePageLike.setAttribute('aria-busy',loading?'true':'false');
+      }
+    }
     function updateProfileActionVisibility(){
       var guest=!auth.currentUser;
       var browsingAsGuest=guest&&Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
       document.body.classList.toggle('profile-viewer-guest',guest);
-      if(profilePageNotifications){profilePageNotifications.hidden=guest;profilePageNotifications.setAttribute('aria-hidden',guest?'true':'false');}
+      document.body.classList.toggle('profile-view-own',!guest&&isOwnProfileView());
+      renderProfileLikeUi();
       if(profilePageMore){profilePageMore.hidden=guest;profilePageMore.setAttribute('aria-hidden',guest?'true':'false');}
       if(profilePageHome){profilePageHome.title=guest&&!browsingAsGuest?'Entrar':'Home';profilePageHome.setAttribute('aria-label',guest&&!browsingAsGuest?'Ir para o login':'Voltar para a Home');}
+    }
+    async function refreshProfileLikeState(){
+      var profile=viewedProfile;
+      var handle=currentViewedProfileHandle();
+      var requestId=++profileLikeRequest;
+      profileLikeState={username:handle,liked:false,count:profileLikeCount(profile&&profile.likesReceived),loading:Boolean(auth.currentUser&&handle)};
+      renderProfileLikeUi();
+      if(!auth.currentUser||!handle||!window.beBackend)return;
+      try{
+        await window.beBackend.ready;
+        var client=window.beBackend.client;
+        if(!client||typeof client.rpc!=='function')throw new Error('profile_like_rpc_unavailable');
+        var result=await client.rpc('get_profile_like_state',{p_username:handle});
+        if(result.error)throw result.error;
+        var row=Array.isArray(result.data)?result.data[0]:result.data;
+        if(requestId!==profileLikeRequest||handle!==currentViewedProfileHandle())return;
+        var count=profileLikeCount(row&&row.like_count);
+        profileLikeState={username:handle,liked:Boolean(row&&row.liked),count:count,loading:false};
+        if(viewedProfile&&beBackend.normalizeUsername(viewedProfile.username)===handle)viewedProfile={...viewedProfile,likesReceived:count};
+        if(isOwnProfileView()&&currentProfile)currentProfile={...currentProfile,likesReceived:count};
+        renderProfileLikeUi();
+      }catch(error){
+        if(requestId!==profileLikeRequest||handle!==currentViewedProfileHandle())return;
+        profileLikeState={...profileLikeState,loading:false};
+        renderProfileLikeUi();
+        console.warn('Não foi possível carregar as curtidas do perfil:',error);
+      }
+    }
+    async function toggleProfileLike(){
+      var handle=currentViewedProfileHandle();
+      if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}
+      if(!handle||isOwnProfileView()||profileLikeState.loading)return;
+      var requestId=++profileLikeRequest;
+      profileLikeState={username:handle,liked:profileLikeState.username===handle&&profileLikeState.liked===true,count:profileLikeState.username===handle?profileLikeCount(profileLikeState.count):profileLikeCount(viewedProfile&&viewedProfile.likesReceived),loading:true};
+      renderProfileLikeUi();
+      try{
+        await window.beBackend.ready;
+        var client=window.beBackend.client;
+        if(!client||typeof client.rpc!=='function')throw new Error('profile_like_rpc_unavailable');
+        var result=await client.rpc('toggle_profile_like',{p_username:handle});
+        if(result.error)throw result.error;
+        var row=Array.isArray(result.data)?result.data[0]:result.data;
+        if(requestId!==profileLikeRequest||handle!==currentViewedProfileHandle())return;
+        var count=profileLikeCount(row&&row.like_count);
+        profileLikeState={username:handle,liked:Boolean(row&&row.liked),count:count,loading:false};
+        if(viewedProfile)viewedProfile={...viewedProfile,likesReceived:count};
+        renderProfileLikeUi();
+      }catch(error){
+        if(requestId!==profileLikeRequest||handle!==currentViewedProfileHandle())return;
+        profileLikeState={...profileLikeState,loading:false};
+        renderProfileLikeUi();
+        console.error('Não foi possível atualizar a curtida do perfil:',error);
+      }
     }
     function setProfilePageAvatar(url){
       var avatar=String(url||'').trim()||window.BETV_DEFAULT_AVATAR;
@@ -8804,6 +8896,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profilePageMetaLabel.textContent='Perfil público';
       profilePageMemberSince.textContent=message||'';
       renderProfileSocials(null);
+      profileLikeState={username:handle||'',liked:false,count:0,loading:false};
+      renderProfileLikeUi();
       setProfilePageAvatar('');
       applyProfileBanner('');
       profileFavoritesSection.hidden=true;
@@ -9351,6 +9445,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profilePageMetaLabel.textContent='Perfil público';
       profilePageMemberSince.textContent='Membro desde '+publicProfileYear(profile);
       renderProfileSocials(profile);
+      if(profileLikeState.username!==beBackend.normalizeUsername(profile.username||handle))profileLikeState={username:beBackend.normalizeUsername(profile.username||handle),liked:false,count:profileLikeCount(profile.likesReceived),loading:false};
+      renderProfileLikeUi();
       setProfilePageAvatar(avatar);
       applyProfileBanner(banner);
       renderProfileFavorites();
@@ -9651,6 +9747,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         viewedProfile={...(currentProfile||{}),socialLinks:readProfileSocialLinks(auth.currentUser.uid),favorites:readProfileFavorites(),lovedAlbums:readProfileLovedAlbums(),savedContents:(typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[])};
         viewedProfileStatus='ready';
         renderProfilePage();
+        refreshProfileLikeState();
         window.scrollTo({top:0,behavior:'auto'});
         return;
       }
@@ -9658,7 +9755,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{
         var profile=await beBackend.profiles.getPublic(handle);
         if(requestId!==viewedProfileRequest||(!isProfileRoute()&&!document.body.classList.contains('profile-page-active')))return;
-        viewedProfile=profile;viewedProfileStatus=profile?'ready':'missing';renderProfilePage();
+        viewedProfile=profile;viewedProfileStatus=profile?'ready':'missing';renderProfilePage();if(profile)refreshProfileLikeState();
       }catch(error){
         if(requestId!==viewedProfileRequest||(!isProfileRoute()&&!document.body.classList.contains('profile-page-active')))return;
         console.error('Falha ao carregar perfil público:',error);viewedProfile=null;viewedProfileStatus='error';renderProfilePage();
@@ -9757,7 +9854,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     function openProfile(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}openPublicProfile(true,(currentProfile&&currentProfile.username)||'');}
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){if(auth.currentUser)openSettingsPage(true);else window.BETVPublicRoutes.go('/login');});if(profilePageNotifications)profilePageNotifications.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();window.dispatchEvent(new CustomEvent('be:open-notifications',{detail:{}}));});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});profilePageMore.addEventListener('click',function(){if(auth.currentUser)openSettingsPage(true);else window.BETVPublicRoutes.go('/login');});if(profilePageLike)profilePageLike.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileLike();});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
       if(event){event.preventDefault();event.stopPropagation();}
 
       // Fecha as configurações e troca primeiro a rota para a Home. Isso evita

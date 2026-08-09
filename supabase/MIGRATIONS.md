@@ -61,3 +61,5 @@ Não renomeie, remova ou reutilize versões que já foram aplicadas no projeto r
 As migrations marcadas como `noop` são registros históricos intencionais e precisam continuar no diretório local.
 
 - `20260809024935` — `add_tiktok_to_profile_socials` (registro remoto sincronizado; no-op local)
+
+- `20260809165626_profile_likes.sql`: adiciona curtidas entre perfis, contagem pública e RPCs autenticadas para consultar/alternar a curtida.
