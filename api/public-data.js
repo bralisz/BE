@@ -9,7 +9,7 @@ const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
   'mediaType', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
-  'sourceCollection', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
+  'sourceCollection', 'streamingAvailability', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
 ]);
 const MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl']);
@@ -125,6 +125,15 @@ function sanitizeItem(collection, row) {
   }
   for (const field of ['title', 'type', 'category', 'description', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? 4000 : 500);
+  }
+  if (Object.prototype.hasOwnProperty.call(source, 'streamingAvailability')) {
+    const allowedStreamingServices = new Set(['apple-tv', 'prime-video', 'paramount-plus', 'disney-plus']);
+    const rawStreaming = Array.isArray(source.streamingAvailability)
+      ? source.streamingAvailability
+      : String(source.streamingAvailability || '').split(',');
+    source.streamingAvailability = Array.from(new Set(rawStreaming
+      .map(value => String(value || '').trim().toLowerCase())
+      .filter(value => allowedStreamingServices.has(value))));
   }
   if (Object.prototype.hasOwnProperty.call(source, 'tracks')) {
     source.tracks = (Array.isArray(source.tracks) ? source.tracks : [])

@@ -3101,6 +3101,54 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return MUSIC_TITLE_SECTION_IDS_FRONTEND.has(sectionId) || ['live performances & tv','videoclipes'].includes(sectionName);
   }
 
+
+  const MOVIE_STREAMING_SERVICES = Object.freeze({
+    'apple-tv': { label:'Apple TV', url:'https://tv.apple.com/' },
+    'prime-video': { label:'Prime Video', url:'https://www.primevideo.com/' },
+    'paramount-plus': { label:'Paramount+', url:'https://www.paramountplus.com/' },
+    'disney-plus': { label:'Disney+', url:'https://www.disneyplus.com/' }
+  });
+
+  function normalizeMovieStreamingAvailability(value) {
+    const source = Array.isArray(value)
+      ? value
+      : String(value || '').split(',');
+    const seen = new Set();
+    return source.map(item => String(item || '').trim().toLowerCase())
+      .filter(item => MOVIE_STREAMING_SERVICES[item] && !seen.has(item) && seen.add(item));
+  }
+
+  function movieStreamingServiceIcon(serviceId) {
+    if (serviceId === 'apple-tv') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="3"></rect><path d="M9 10.2v3.6M9 12h3"></path><path d="M15.2 10.4 17 12l-1.8 1.6"></path></svg>';
+    if (serviceId === 'prime-video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z"></path><path d="M5 19c3.8 1.5 8.3 1.2 12-.8"></path></svg>';
+    if (serviceId === 'paramount-plus') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 5.2-7 2.7 3 2.8-4L20 17H4Z"></path><path d="M7 19h10"></path></svg>';
+    return '<span aria-hidden="true">D+</span>';
+  }
+
+  function syncMovieStreamingStore(collection, availability) {
+    const store = document.getElementById('detailStreamingStore');
+    const panel = document.getElementById('detailStreamingPanel');
+    const button = document.getElementById('detailStreamingButton');
+    const list = document.getElementById('detailStreamingList');
+    if (!store || !panel || !button || !list) return;
+    const services = String(collection || '').toLowerCase() === 'movies'
+      ? normalizeMovieStreamingAvailability(availability)
+      : [];
+    panel.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+    if (!services.length) {
+      store.hidden = true;
+      list.innerHTML = '';
+      return;
+    }
+    list.innerHTML = services.map(serviceId => {
+      const service = MOVIE_STREAMING_SERVICES[serviceId];
+      const iconClass = serviceId === 'disney-plus' ? ' disney' : serviceId === 'paramount-plus' ? ' paramount' : '';
+      return `<a class="detail-streaming-link" href="${safeUrl(service.url)}" target="_blank" rel="noopener" data-streaming-service="${escapeHtml(serviceId)}"><span class="detail-streaming-service-icon${iconClass}">${movieStreamingServiceIcon(serviceId)}</span><span class="detail-streaming-service-name">${escapeHtml(service.label)}</span><span class="detail-streaming-link-arrow" aria-hidden="true">›</span></a>`;
+    }).join('');
+    store.hidden = false;
+  }
+
   function videoCard(video) {
     const image = video.thumbnailUrl || video.imageUrl || video.bannerUrl || '';
     const contentHref = video.videoUrl || video.contentUrl || video.link || '#';
@@ -3138,6 +3186,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-collection="${escapeHtml(normalizeText(collection))}"
       data-section-id="${escapeHtml(String(video.sectionId || ''))}"
       data-section-name="${escapeHtml(String(video.sectionName || ''))}"
+      data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(video.streamingAvailability).join(','))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}">
       <img class="video-card-thumbnail" src="${safeAssetUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
       ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
@@ -3241,6 +3290,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             : (item.bannerUrl || item.imageUrl || item.thumbnailUrl || ''),
           logoUrl: item.logoUrl || '',
           category: item.category || item.type || '',
+          streamingAvailability: item.streamingAvailability || [],
           collection
         }, { updateRoute: false, instant: true });
         return true;
@@ -3622,6 +3672,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-source-section-title="${escapeHtml(data.sourceSectionTitle || '')}"
       data-section-id="${escapeHtml(String(data.sectionId || ''))}"
       data-section-name="${escapeHtml(String(data.sectionName || data.sourceSectionTitle || ''))}"
+      data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(data.streamingAvailability).join(','))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}"
       aria-label="Abrir ${escapeHtml(title)}">
       <span class="detail-reco-thumb">${image && image !== '#' ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">` : '<span class="ph ph-wide" style="height:100%"></span>'}</span>
@@ -6929,6 +6980,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const section = document.getElementById('contentDetailSection');
     const back = document.getElementById('detailBackButton');
     const share = document.getElementById('contentDetailShare');
+    const streamingStore = document.getElementById('detailStreamingStore');
+    const streamingButton = document.getElementById('detailStreamingButton');
+    const streamingPanel = document.getElementById('detailStreamingPanel');
+    if (streamingButton && streamingButton.dataset.bound !== 'true') {
+      streamingButton.dataset.bound = 'true';
+      streamingButton.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!streamingPanel || streamingStore?.hidden) return;
+        const open = streamingPanel.hidden;
+        streamingPanel.hidden = !open;
+        streamingButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', event => {
+        if (!streamingPanel || streamingPanel.hidden || streamingStore?.contains(event.target)) return;
+        streamingPanel.hidden = true;
+        streamingButton.setAttribute('aria-expanded', 'false');
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape' || !streamingPanel || streamingPanel.hidden) return;
+        streamingPanel.hidden = true;
+        streamingButton.setAttribute('aria-expanded', 'false');
+        streamingButton.focus();
+      });
+    }
     if (back && back.dataset.bound !== 'true') {
       back.dataset.bound = 'true';
       back.addEventListener('click', () => {
@@ -7063,6 +7139,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     share.classList.remove('is-copied');
     share.setAttribute('title', 'Compartilhar');
     share.setAttribute('aria-label', 'Compartilhar');
+    syncMovieStreamingStore(collection, data.streamingAvailability);
 
     list.dataset.favoriteId = canonicalFavoriteId;
     list.dataset.itemId = itemId;
@@ -7103,6 +7180,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const featuredSection = document.getElementById('featuredSection');
     const randomFeaturedSection = document.getElementById('randomFeaturedSection');
     if (section) section.hidden = true;
+    syncMovieStreamingStore('', []);
     closeVideoComments();
     document.body.classList.remove('detail-page-active');
     if (updateRoute && detailRouteId()) {
@@ -7526,6 +7604,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       collection,
       sectionId:String(data?.sectionId || ''),
       sectionName:String(data?.sectionName || data?.sourceSectionTitle || ''),
+      streamingAvailability:normalizeMovieStreamingAvailability(data?.streamingAvailability),
       preserveTitle:data?.preserveTitle === true || String(data?.preserveTitle || '').toLowerCase() === 'true' || preservesOriginalMusicTitle(data),
       savedAt:String(data?.savedAt || new Date().toISOString())
     };
@@ -7554,6 +7633,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       collection:dataset.collection || element.dataset?.collection || 'videos',
       sectionId:dataset.sectionId || element.dataset?.sectionId || '',
       sectionName:dataset.sectionName || dataset.sourceSectionTitle || element.dataset?.sectionName || '',
+      streamingAvailability:dataset.streamingAvailability || element.dataset?.streamingAvailability || '',
       preserveTitle:dataset.preserveTitle || element.dataset?.preserveTitle || ''
     });
   }

@@ -141,10 +141,10 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260809-comment-heart-desktop-rotation-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=movie-streaming-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/assets/js/i18n.js?rev=20260808-community-guidelines-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260809-search-close-detail-v1"></script>
+<script defer src="/assets/js/site.js?rev=movie-streaming-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
@@ -541,6 +541,15 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
           </button>
         </div>
         <p class="detail-desc" id="contentDetailDesc"></p>
+      </div>
+      <div class="detail-streaming-store" id="detailStreamingStore" hidden>
+        <div class="detail-streaming-panel" id="detailStreamingPanel" hidden role="dialog" aria-label="Disponível em">
+          <span class="detail-streaming-panel-title">Disponível em</span>
+          <div class="detail-streaming-list" id="detailStreamingList"></div>
+        </div>
+        <button class="detail-streaming-button" id="detailStreamingButton" type="button" aria-label="Onde assistir" title="Onde assistir" aria-expanded="false" aria-controls="detailStreamingPanel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 8.5h11l1 11h-13l1-11Z"></path><path d="M9 9V6.8a3 3 0 0 1 6 0V9"></path></svg>
+        </button>
       </div>
     </div>
   </section>

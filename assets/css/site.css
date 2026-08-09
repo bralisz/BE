@@ -15634,3 +15634,153 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
     transform:none!important;
   }
 }
+
+
+/* Mobile: catálogo de seções com 2 cards lado a lado, visual mais limpo. */
+@media (max-width: 760px){
+  body.section-catalog-active #dynamicSections.section-view-mode{
+    padding: 104px 16px 72px !important;
+  }
+  body.section-catalog-active .section-view-active > .video-rail-title{
+    margin: 0 0 22px !important;
+    padding-right: 64px !important;
+    font-size: clamp(24px, 7vw, 32px) !important;
+    line-height: 1.06 !important;
+  }
+  body.section-catalog-active .section-view-active .video-rail{
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px 12px !important;
+    align-items: start !important;
+  }
+  body.section-catalog-active .section-view-active .video-card{
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    aspect-ratio: 16 / 10 !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    border: 2px solid rgba(50, 71, 117, .48) !important;
+    background: #080b14 !important;
+    box-shadow: none !important;
+  }
+  body.section-catalog-active .section-view-active .video-card::after{
+    background: linear-gradient(180deg, transparent 62%, rgba(4, 8, 20, .18)) !important;
+  }
+}
+@media (max-width: 430px){
+  body.section-catalog-active #dynamicSections.section-view-mode{
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+  body.section-catalog-active .section-view-active .video-rail{
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px 10px !important;
+  }
+  body.section-catalog-active .section-view-active .video-card{
+    aspect-ratio: 16 / 10 !important;
+    border-radius: 14px !important;
+  }
+}
+
+
+/* Filmes: botão desktop "Onde assistir" e painel de streamings. */
+.detail-streaming-store[hidden],
+.detail-streaming-panel[hidden]{display:none!important}
+.detail-streaming-store{display:none}
+@media (min-width:761px){
+  body.detail-page-active .detail-streaming-store:not([hidden]){
+    position:absolute;
+    right:clamp(30px,4vw,68px);
+    bottom:clamp(40px,6vh,66px);
+    z-index:6;
+    display:block;
+  }
+  .detail-streaming-button{
+    width:50px;
+    height:50px;
+    display:grid;
+    place-items:center;
+    padding:0;
+    border:1px solid rgba(255,255,255,.18);
+    border-radius:50%;
+    background:rgba(16,17,18,.68);
+    color:#fff;
+    -webkit-backdrop-filter:blur(16px);
+    backdrop-filter:blur(16px);
+    box-shadow:0 10px 30px rgba(0,0,0,.2);
+    cursor:pointer;
+    transition:transform .18s ease,background .18s ease,border-color .18s ease;
+  }
+  .detail-streaming-button:hover,
+  .detail-streaming-button[aria-expanded="true"]{
+    transform:translateY(-1px);
+    background:rgba(38,39,41,.88);
+    border-color:rgba(255,255,255,.3);
+  }
+  .detail-streaming-button svg{
+    width:22px;
+    height:22px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .detail-streaming-panel{
+    position:absolute;
+    right:0;
+    bottom:calc(100% + 12px);
+    width:242px;
+    padding:9px;
+    border:1px solid rgba(255,255,255,.13);
+    border-radius:18px;
+    background:rgba(14,15,17,.94);
+    -webkit-backdrop-filter:blur(22px);
+    backdrop-filter:blur(22px);
+    box-shadow:0 20px 54px rgba(0,0,0,.42);
+    transform-origin:right bottom;
+  }
+  .detail-streaming-panel-title{
+    display:block;
+    padding:6px 8px 8px;
+    color:rgba(255,255,255,.58);
+    font:700 10px/1.2 var(--font-sans);
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  .detail-streaming-list{display:grid;gap:3px}
+  .detail-streaming-link{
+    min-height:48px;
+    display:grid;
+    grid-template-columns:34px minmax(0,1fr) 18px;
+    align-items:center;
+    gap:10px;
+    padding:6px 8px;
+    border-radius:12px;
+    color:#fff;
+    text-decoration:none;
+    transition:background .16s ease;
+  }
+  .detail-streaming-link:hover{background:rgba(255,255,255,.075)}
+  .detail-streaming-service-icon{
+    width:34px;
+    height:34px;
+    display:grid;
+    place-items:center;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:10px;
+    background:#090a0c;
+    color:#fff;
+    font:800 11px/1 var(--font-sans);
+    letter-spacing:-.03em;
+  }
+  .detail-streaming-service-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .detail-streaming-service-icon.disney{font-size:12px;letter-spacing:-.08em}
+  .detail-streaming-service-icon.paramount svg{width:20px;height:20px}
+  .detail-streaming-service-name{font:650 13px/1.2 var(--font-sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .detail-streaming-link-arrow{color:rgba(255,255,255,.42);font-size:19px;line-height:1;text-align:center}
+}
+@media (max-width:760px){
+  .detail-streaming-store{display:none!important}
+}

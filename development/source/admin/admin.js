@@ -1682,9 +1682,6 @@ body.admin-preview-open{overflow:hidden}
     harmful_other: 'Outro conteúdo prejudicial à comunidade'
   };
 
-  function moderationShieldIcon() {
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.8 2.8 8 7 10 4.2-2 7-5.2 7-10V6l-7-3Z"></path><path d="M9.5 12.2 11 13.7l3.5-3.7"></path></svg>';
-  }
 
   async function openUsersModerationPanel(initialTab = 'reports') {
     const content = $('#adminContent');
@@ -1772,7 +1769,7 @@ body.admin-preview-open{overflow:hidden}
 
     const draw = () => {
       content.innerHTML = `<div class="users-moderation-back-row"><button type="button" class="users-moderation-back" id="usersModerationBack" aria-label="Voltar para Usuários"><span aria-hidden="true">‹</span> Usuários</button></div>
-        <div class="admin-title-row users-moderation-title"><div><span class="dashboard-kicker">Moderação</span><h1>Denúncias e banimentos</h1><p>Revise denúncias de comentários e gerencie contas banidas sem alterar as opções existentes em Usuários.</p></div><span class="users-moderation-shield">${moderationShieldIcon()}</span></div>
+        <div class="admin-title-row users-moderation-title"><div><span class="dashboard-kicker">Moderação</span><h1>Denúncias e banimentos</h1><p>Revise denúncias de comentários e gerencie contas banidas sem alterar as opções existentes em Usuários.</p></div></div>
         <nav class="users-moderation-tabs" aria-label="Denúncias e banimentos">
           <button type="button" data-moderation-tab="reports" class="${activeTab === 'reports' ? 'active' : ''}">Denúncias <span>${reports.length}</span></button>
           <button type="button" data-moderation-tab="bans" class="${activeTab === 'bans' ? 'active' : ''}">Banimentos <span>${bannedUsers().length}</span></button>
@@ -1884,7 +1881,7 @@ body.admin-preview-open{overflow:hidden}
       isFeaturedFan:featuredFanIds.has(String(item.id))
     }));
 
-    content.innerHTML = `<div class="users-moderation-entry"><button type="button" id="openUsersModeration" class="users-moderation-entry-button"><span class="users-moderation-entry-icon">${moderationShieldIcon()}</span><span><strong>Denúncias e banimentos</strong><small>Revisar comentários denunciados e acessos bloqueados</small></span><i aria-hidden="true">›</i></button></div><div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte os dados e controle o acesso das contas cadastradas.</p></div><div class="users-total"><strong>${items.length}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
+    content.innerHTML = `<div class="users-moderation-entry"><button type="button" id="openUsersModeration" class="users-moderation-entry-button"><span><strong>Denúncias e banimentos</strong><small>Revisar comentários denunciados e acessos bloqueados</small></span><i aria-hidden="true">›</i></button></div><div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte os dados e controle o acesso das contas cadastradas.</p></div><div class="users-total"><strong>${items.length}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
     $('#openUsersModeration').onclick = () => openUsersModerationPanel();
 
     const draw = () => {
@@ -2101,6 +2098,33 @@ body.admin-preview-open{overflow:hidden}
     return `<div class="field full image-url-field"${directMedia ? ' data-direct-media="true"' : ''}${festivalsShowsOnly ? ' data-festivals-shows-logo-field' : ''}${hidden ? ' hidden' : ''}><label>${label}</label><div class="image-source-hint">Cole uma URL pública (https://...) ou use um arquivo publicado em <code>/assets/...</code>.</div><div class="image-input-row"><input class="a-input image-url-input" name="${name}" value="${safe}" placeholder="/assets/banners/exemplo.webp ou https://..."><button class="a-btn image-clear" type="button">Limpar</button></div><div class="image-validation" aria-live="polite"></div><div class="image-preview-wrap" ${value ? '' : 'hidden'}><img loading="lazy" decoding="async" referrerpolicy="no-referrer" class="preview image-live-preview" src="${esc(previewSource)}" alt="Prévia de ${esc(label)}"></div>${help ? `<small>${esc(help)}</small>` : ''}</div>`;
   }
 
+
+  const MOVIE_STREAMING_OPTIONS = Object.freeze([
+    ['apple-tv', 'Apple TV', 'streamingAppleTv'],
+    ['prime-video', 'Prime Video', 'streamingPrimeVideo'],
+    ['paramount-plus', 'Paramount+', 'streamingParamountPlus'],
+    ['disney-plus', 'Disney+', 'streamingDisneyPlus']
+  ]);
+
+  function normalizeAdminStreamingAvailability(value) {
+    const source = Array.isArray(value) ? value : String(value || '').split(',');
+    const allowed = new Set(MOVIE_STREAMING_OPTIONS.map(option => option[0]));
+    return Array.from(new Set(source.map(item => String(item || '').trim().toLowerCase()).filter(item => allowed.has(item))));
+  }
+
+  function adminStreamingIcon(serviceId) {
+    if (serviceId === 'apple-tv') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="3"></rect><path d="M9 10.2v3.6M9 12h3"></path><path d="M15.2 10.4 17 12l-1.8 1.6"></path></svg>';
+    if (serviceId === 'prime-video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z"></path><path d="M5 19c3.8 1.5 8.3 1.2 12-.8"></path></svg>';
+    if (serviceId === 'paramount-plus') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 5.2-7 2.7 3 2.8-4L20 17H4Z"></path><path d="M7 19h10"></path></svg>';
+    return '<span aria-hidden="true">D+</span>';
+  }
+
+  function movieStreamingEditorField(item = {}) {
+    const selected = new Set(normalizeAdminStreamingAvailability(item.streamingAvailability));
+    const cards = MOVIE_STREAMING_OPTIONS.map(([serviceId, label, inputName]) => `<label class="movie-streaming-option"><input type="checkbox" name="${inputName}" value="true" ${selected.has(serviceId) ? 'checked' : ''}><span class="movie-streaming-option-ui"><span class="movie-streaming-option-icon ${serviceId === 'disney-plus' ? 'disney' : ''}">${adminStreamingIcon(serviceId)}</span><span class="movie-streaming-option-name">${esc(label)}</span><span class="movie-streaming-option-check" aria-hidden="true">✓</span></span></label>`).join('');
+    return `<div class="field full movie-streaming-field"><label>Disponível em</label><div class="movie-streaming-options">${cards}</div><small>Marque os streamings em que o filme está disponível. Essa informação aparece somente no desktop.</small></div>`;
+  }
+
   function editorFields(name, item = {}, context = {}) {
     if (name === 'ongs') {
       const minimumDonationCents = Number.isInteger(Number(item.minimumDonationCents)) && Number(item.minimumDonationCents) >= 100
@@ -2131,6 +2155,7 @@ body.admin-preview-open{overflow:hidden}
     const titleLabel = ['movies','series'].includes(name) ? 'Título interno / busca *' : 'Título *';
     const titleHelp = ['movies','series'].includes(name) ? '<small>Este texto serve para busca, acessibilidade e administração. No site, o título visual será a logo cadastrada.</small>' : '';
     const logoField = ['movies','series'].includes(name) ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : (name === 'featured' ? imageField('Logo do conteúdo', 'logoUrl', item.logoUrl || '') : '');
+    const streamingAvailabilityField = name === 'movies' ? movieStreamingEditorField(item) : '';
     const featuredFields = name === 'featured' ? `<div class="field full featured-content-field"><label>Selecionar conteúdo publicado *</label><input type="hidden" name="contentId" id="featuredContentId" value="${esc(selectedFeaturedId)}"><input type="hidden" name="contentCollection" id="featuredContentCollection" value="${esc(selectedFeaturedCollection)}"><input type="hidden" name="videoId" id="featuredLegacyVideoId" value="${esc(selectedFeaturedCollection === 'videos' ? selectedFeaturedId : '')}"><input type="hidden" name="order" value="${esc(item.order ?? 0)}"><input type="hidden" name="active" value="${item.active === false ? 'false' : 'true'}"><div class="featured-picker" id="featuredContentPicker"><div class="featured-picker-toolbar"><label class="featured-picker-search" aria-label="Buscar conteúdo"><span aria-hidden="true">⌕</span><input type="search" id="featuredContentSearch" placeholder="Buscar por título, tipo ou ano…" autocomplete="off"></label><div class="featured-picker-tabs" role="tablist" aria-label="Filtrar tipo de conteúdo"><button type="button" class="active" data-featured-filter="all">Todos</button><button type="button" data-featured-filter="videos">Vídeos</button><button type="button" data-featured-filter="movies">Filmes</button><button type="button" data-featured-filter="series">Séries</button></div></div><div class="featured-selected" id="featuredSelectedSummary"><div class="featured-selected-empty"><span>▣</span><div><strong>Nenhum conteúdo selecionado</strong><small>Escolha um item da lista abaixo.</small></div></div></div><div class="featured-picker-list" id="featuredContentList" role="listbox" aria-label="Conteúdos publicados"></div><div class="featured-picker-empty" id="featuredContentEmpty" hidden>Nenhum conteúdo encontrado com esse filtro.</div></div><small>Você pode pesquisar e selecionar qualquer vídeo, filme ou série já publicado. A logo cadastrada no filme ou na série será usada como título visual no destaque.</small></div>` : '';
     if (name === 'featured') {
       return `<div class="form-grid featured-only-grid">${featuredFields}</div>`;
@@ -2142,7 +2167,7 @@ body.admin-preview-open{overflow:hidden}
     }
     const optionalDetails = name === 'sections' ? '' : `<div class="field full"><label>Descrição </label><textarea class="a-textarea" rows="4" maxlength="1000" name="description">${esc(item.description || '')}</textarea></div>`;
     const publicationDetails = name === 'sections' ? '' : `<div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div><div class="field"><label>Duração</label><input class="a-input" name="duration" value="${esc(item.duration || item.videoDuration || item.runtime || '')}" placeholder="Ex.: 24 min ou 1h 42min"></div><div class="field"><label>Ano</label><input class="a-input" name="year" value="${esc(item.year || '')}"></div>`;
-    return `<div class="form-grid">${featuredFields}<div class="field full"><label>${titleLabel}</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}">${titleHelp}</div>${typeField}<div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>${sectionFields}${contentSectionFields}${videoFields}${optionalDetails}${showMedia ? `${imageField(['movies','series'].includes(name) ? 'Imagem / thumbnail (usada também como fundo)' : 'Imagem / thumbnail', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}${['videos','movies','series'].includes(name) ? '' : imageField('Banner', 'bannerUrl', item.bannerUrl || '')}${logoField}${name === 'videos' ? '' : `<div class="field full"><label>Link do conteúdo</label><input class="a-input" name="contentUrl" value="${esc(item.contentUrl || item.link || '')}" placeholder="https://... ou /pagina"></div>`}` : ''}${publicationDetails}</div>`;
+    return `<div class="form-grid">${featuredFields}<div class="field full"><label>${titleLabel}</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}">${titleHelp}</div>${typeField}<div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>${sectionFields}${contentSectionFields}${videoFields}${optionalDetails}${showMedia ? `${imageField(['movies','series'].includes(name) ? 'Imagem / thumbnail (usada também como fundo)' : 'Imagem / thumbnail', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}${['videos','movies','series'].includes(name) ? '' : imageField('Banner', 'bannerUrl', item.bannerUrl || '')}${logoField}${name === 'videos' ? '' : `<div class="field full"><label>Link do conteúdo</label><input class="a-input" name="contentUrl" value="${esc(item.contentUrl || item.link || '')}" placeholder="https://... ou /pagina"></div>`}` : ''}${streamingAvailabilityField}${publicationDetails}</div>`;
   }
 
   function featuredCollectionLabel(collection) {
@@ -2894,6 +2919,18 @@ body.admin-preview-open{overflow:hidden}
           data.order = Number(item?.order) || 0;
           delete data.contentUrl;
           delete data.link;
+        }
+        if (name === 'movies') {
+          const streamingAvailability = [];
+          if (data.streamingAppleTv === 'true') streamingAvailability.push('apple-tv');
+          if (data.streamingPrimeVideo === 'true') streamingAvailability.push('prime-video');
+          if (data.streamingParamountPlus === 'true') streamingAvailability.push('paramount-plus');
+          if (data.streamingDisneyPlus === 'true') streamingAvailability.push('disney-plus');
+          data.streamingAvailability = streamingAvailability;
+          delete data.streamingAppleTv;
+          delete data.streamingPrimeVideo;
+          delete data.streamingParamountPlus;
+          delete data.streamingDisneyPlus;
         }
         if (['movies','series'].includes(name) && !String(data.logoUrl || '').trim()) {
           throw new Error('Adicione a logo do título. Filmes e séries usam a logo no lugar do texto do cabeçalho.');
@@ -4641,24 +4678,20 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
   style.textContent = `
     body.admin-mode .users-moderation-entry{margin:0 0 14px}
     body.admin-mode .users-moderation-entry-button{
-      width:100%;min-height:68px;display:grid;grid-template-columns:46px minmax(0,1fr) 30px;align-items:center;gap:13px;
+      width:100%;min-height:68px;display:grid;grid-template-columns:minmax(0,1fr) 30px;align-items:center;gap:13px;
       padding:10px 14px;border:1px solid rgba(125,181,255,.13);border-radius:17px;background:rgba(8,17,31,.68);color:#fff;
       text-align:left;cursor:pointer;transition:.18s ease;box-shadow:0 10px 32px rgba(0,0,0,.14)
     }
     body.admin-mode .users-moderation-entry-button:hover{transform:translateY(-1px);border-color:rgba(125,181,255,.3);background:rgba(13,27,49,.82)}
-    body.admin-mode .users-moderation-entry-button>span:nth-child(2){display:grid;gap:3px;min-width:0}
+    body.admin-mode .users-moderation-entry-button>span:first-child{display:grid;gap:3px;min-width:0}
     body.admin-mode .users-moderation-entry-button strong{font-size:14px}
     body.admin-mode .users-moderation-entry-button small{color:var(--a-muted);font-size:11.5px;line-height:1.4}
     body.admin-mode .users-moderation-entry-button>i{justify-self:end;color:#7f91aa;font-style:normal;font-size:28px;font-weight:300}
-    body.admin-mode .users-moderation-entry-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:rgba(61,140,255,.12);color:#74abff}
-    body.admin-mode .users-moderation-entry-icon svg{width:21px;height:21px}
     body.admin-mode .users-moderation-back-row{margin-bottom:12px}
     body.admin-mode .users-moderation-back{display:inline-flex;align-items:center;gap:5px;padding:0;border:0;background:transparent;color:#8fa3bd;font-size:13px;font-weight:700;cursor:pointer}
     body.admin-mode .users-moderation-back:hover{color:#fff}
     body.admin-mode .users-moderation-back span{font-size:22px;font-weight:300;line-height:1}
     body.admin-mode .users-moderation-title{align-items:center}
-    body.admin-mode .users-moderation-shield{width:52px;height:52px;display:grid;place-items:center;flex:0 0 auto;border:1px solid rgba(125,181,255,.14);border-radius:16px;background:rgba(61,140,255,.09);color:#79adff}
-    body.admin-mode .users-moderation-shield svg{width:25px;height:25px}
     body.admin-mode .users-moderation-tabs{display:flex;gap:7px;margin:0 0 14px;padding:5px;border:1px solid rgba(125,181,255,.12);border-radius:15px;background:rgba(6,14,27,.72);width:max-content;max-width:100%}
     body.admin-mode .users-moderation-tabs button{min-height:40px;display:flex;align-items:center;gap:8px;padding:0 14px;border:0;border-radius:11px;background:transparent;color:#8fa3bd;font-size:12.5px;font-weight:750;cursor:pointer}
     body.admin-mode .users-moderation-tabs button.active{background:rgba(61,140,255,.15);color:#fff}
@@ -4686,9 +4719,7 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
     body.admin-mode .moderation-empty span{color:var(--a-muted);font-size:12.5px}
     @media(max-width:700px){
       body.admin-mode .users-moderation-entry-button{grid-template-columns:42px minmax(0,1fr) 22px;min-height:64px;padding:9px 11px}
-      body.admin-mode .users-moderation-entry-icon{width:38px;height:38px;border-radius:12px}
       body.admin-mode .users-moderation-title{align-items:flex-start}
-      body.admin-mode .users-moderation-shield{width:46px;height:46px;border-radius:14px}
       body.admin-mode .users-moderation-tabs{width:100%;display:grid;grid-template-columns:1fr 1fr}
       body.admin-mode .users-moderation-tabs button{justify-content:center;padding:0 8px}
       body.admin-mode .moderation-report-card{padding:15px 13px}
@@ -4701,6 +4732,32 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
       body.admin-mode .moderation-ban-card{grid-template-columns:42px minmax(0,1fr) auto;padding:12px}
       body.admin-mode .moderation-ban-card>.a-btn{grid-column:2 / -1;width:100%}
     }
+  `;
+  document.head.appendChild(style);
+})();
+
+
+/* Seletor de disponibilidade de streaming em Filmes. */
+(() => {
+  if (document.getElementById('be-admin-movie-streaming-style')) return;
+  const style = document.createElement('style');
+  style.id = 'be-admin-movie-streaming-style';
+  style.textContent = `
+    body.admin-mode .movie-streaming-field{margin-top:2px}
+    body.admin-mode .movie-streaming-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+    body.admin-mode .movie-streaming-option{display:block;cursor:pointer;user-select:none}
+    body.admin-mode .movie-streaming-option>input{position:absolute;opacity:0;pointer-events:none}
+    body.admin-mode .movie-streaming-option-ui{min-height:62px;display:grid;grid-template-columns:34px minmax(0,1fr) 22px;align-items:center;gap:9px;padding:8px 10px;border:1px solid rgba(125,181,255,.14);border-radius:14px;background:rgba(3,10,21,.68);color:#d8e3f1;transition:.16s ease}
+    body.admin-mode .movie-streaming-option:hover .movie-streaming-option-ui{border-color:rgba(125,181,255,.32);background:rgba(10,24,43,.82)}
+    body.admin-mode .movie-streaming-option>input:checked+.movie-streaming-option-ui{border-color:rgba(67,209,158,.55);background:rgba(35,155,113,.14);box-shadow:inset 0 0 0 1px rgba(67,209,158,.08)}
+    body.admin-mode .movie-streaming-option-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.055);color:#fff;font:800 10px/1 Inter,system-ui,sans-serif}
+    body.admin-mode .movie-streaming-option-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    body.admin-mode .movie-streaming-option-icon.disney{font-size:12px}
+    body.admin-mode .movie-streaming-option-name{min-width:0;font-size:12px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    body.admin-mode .movie-streaming-option-check{width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.06);color:transparent;font-size:11px;font-weight:900}
+    body.admin-mode .movie-streaming-option>input:checked+.movie-streaming-option-ui .movie-streaming-option-check{background:#43d19e;color:#052217}
+    @media(max-width:920px){body.admin-mode .movie-streaming-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:520px){body.admin-mode .movie-streaming-options{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
 })();
