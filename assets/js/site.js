@@ -3188,24 +3188,40 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else history.pushState(detailState, '', url);
   }
 
+  let detailRouteRequestToken = 0;
+
   async function openContentDetailFromRoute() {
+    const requestToken = ++detailRouteRequestToken;
     const itemId = detailRouteId();
     if (!itemId) {
       if (document.body.classList.contains('detail-page-active')) closeContentDetail(false, false);
       return false;
     }
 
+    // A URL já é de um vídeo: isola a tela de detalhes imediatamente, antes
+    // de qualquer consulta assíncrona. Isso impede a Home de reaparecer entre
+    // Notificações -> Voltar -> Detalhes em aparelhos mais lentos.
+    document.body.classList.remove('notification-page-active');
+    document.body.classList.add('detail-page-active');
+    window.dispatchEvent(new CustomEvent('be:close-notifications'));
+
     const cards = Array.from(document.querySelectorAll('[data-open-detail="true"]'));
     const card = cards.find(item => String(item.dataset.itemId || '') === itemId);
     if (card) {
+      if (requestToken !== detailRouteRequestToken || detailRouteId() !== itemId) return false;
       openContentDetail(cardDataWithSection(card), { updateRoute: false, instant: true });
       return true;
     }
 
-    if (!window.beBackend) return false;
+    if (!window.beBackend) {
+      if (requestToken === detailRouteRequestToken && detailRouteId() === itemId) closeContentDetail(false, false);
+      return false;
+    }
     for (const collection of ['videos', 'movies', 'series', 'contents']) {
       try {
         const items = await beBackend.data.list(collection, { orderBy: 'order', direction: 'asc' });
+        // Se o usuário já mudou de rota, ignora esta resposta atrasada.
+        if (requestToken !== detailRouteRequestToken || detailRouteId() !== itemId) return false;
         const item = (items || []).find(candidate => {
           const candidateId = numericPublicId(candidate.publicId || candidate.id || candidate.title);
           return String(candidate.id || '') === itemId || candidateId === itemId;
@@ -3230,6 +3246,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return true;
       } catch (_) {}
     }
+    if (requestToken === detailRouteRequestToken && detailRouteId() === itemId) closeContentDetail(false, false);
     return false;
   }
 
@@ -6399,6 +6416,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function closeContentDetail(scrollHome = false, updateRoute = true) {
+    detailRouteRequestToken += 1;
     window.dispatchEvent(new Event('be:close-drive-player'));
     window.dispatchEvent(new Event('be:close-external-video-players'));
     const section = document.getElementById('contentDetailSection');
@@ -10106,7 +10124,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
   function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
   function showDonateRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','support-page-active','fans-page-active','album-page-active','section-catalog-active');document.body.classList.add('donate-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-donate-page'));window.scrollTo(0,0);}
-  function showNotificationsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
+  function showNotificationsRoute(){window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:true}}));document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
   function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
   function showFansRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','album-page-active');document.body.classList.add('fans-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:open-fans-page'));window.scrollTo(0,0);}
   function showAlbumsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('album-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-album-page'));window.scrollTo(0,0);}
@@ -11384,7 +11402,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function openPage(id,updateRoute){
     closeMenus();
-    document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','support-page-active','detail-page-active');
+    // Esconde o detalhe de verdade antes de abrir a caixa de Notificações.
+    // preserveRoute evita criar uma entrada Home extra no histórico.
+    window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:true}}));
+    document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','support-page-active','detail-page-active','section-catalog-active');
     document.body.classList.add('notification-page-active');
     page.hidden=false;
     page.setAttribute('aria-hidden','false');
