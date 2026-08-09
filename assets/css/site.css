@@ -14935,3 +14935,50 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
     right:var(--profile-mobile-action-edge,24px)!important;
   }
 }
+
+/* 2026-08-09 — Configurações > Perfil: prévia completa em telas desktop largas/baixas. */
+@media (min-width:1024px){
+  body.settings-page-active .settings-profile-panel .settings-panel-card{
+    min-width:0;
+  }
+  body.settings-page-active .settings-profile-panel .settings-banner-preview{
+    width:100%!important;
+    height:clamp(160px,22vh,230px)!important;
+    min-height:160px!important;
+    max-height:230px!important;
+    aspect-ratio:auto!important;
+    flex:0 0 auto;
+  }
+  body.settings-page-active .settings-profile-panel .settings-banner-preview img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    object-position:center center!important;
+  }
+}
+
+/* Em notebooks/monitores com pouca altura, mantém banner + avatar visíveis no mesmo quadro. */
+@media (min-width:1024px) and (max-height:800px){
+  body.settings-page-active .settings-profile-panel > h1{
+    margin-top:8px!important;
+  }
+  body.settings-page-active .settings-profile-panel > .settings-panel-lead{
+    margin-bottom:24px!important;
+  }
+  body.settings-page-active .settings-profile-panel .settings-panel-card{
+    padding:22px!important;
+  }
+  body.settings-page-active .settings-profile-panel .settings-banner-preview{
+    height:clamp(150px,21vh,180px)!important;
+    min-height:150px!important;
+    max-height:180px!important;
+    margin-bottom:18px!important;
+  }
+  body.settings-page-active .settings-profile-panel .settings-avatar-preview{
+    width:76px!important;
+    height:76px!important;
+  }
+  body.settings-page-active .settings-profile-panel .settings-btn-row{
+    margin-top:16px!important;
+  }
+}
