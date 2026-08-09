@@ -4909,8 +4909,10 @@ body.settings-page-active #mobileNotificationPopover{
     -webkit-backdrop-filter:none!important;
     backdrop-filter:none!important;
   }
+  /* Em aparelhos fracos, remover o blur sem inventar um fundo sólido.
+     A área superior da Home continua transparente como no layout original. */
   html.mobile-lite .home-topbar,
-  html.mobile-lite .mobile-app-bar{background:rgba(12,14,15,.96)!important}
+  html.mobile-lite .mobile-app-bar{background:transparent!important}
   html.mobile-lite .user-dropdown,
   html.mobile-lite .notification-dropdown,
   html.mobile-lite .mobile-notification-popover{background:#080a0c!important}
@@ -14683,4 +14685,18 @@ html.performance-lite .notification-page-action{
 }
 html.performance-lite .skeleton-shimmer::after{
   animation-duration:1.8s!important;
+}
+
+
+/* 09/08/2026 — Performance Lite: preservar transparências do layout.
+   O modo leve pode remover blur/backdrop-filter, mas nunca deve criar um
+   preenchimento sólido onde a Home usa fundo transparente. */
+html.performance-lite body:not(.login-mode):not(.admin-mode) .topbar-wrap,
+html.performance-lite body:not(.login-mode):not(.admin-mode) .home-topbar,
+html.performance-lite body:not(.login-mode):not(.admin-mode) .mobile-app-bar{
+  background:transparent!important;
+  box-shadow:none!important;
+}
+html.performance-lite body:not(.login-mode):not(.admin-mode) .home-topbar.search-open{
+  background:transparent!important;
 }
