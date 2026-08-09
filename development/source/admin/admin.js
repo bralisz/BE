@@ -13,6 +13,27 @@ document.head.appendChild(s);
   style.id = 'be-admin-content-editor-v3';
   style.textContent = `
 /* Editor de conteúdo v3 — formulário amplo + preview sob demanda */
+/* Markdown na prévia do editor: usa o mesmo conjunto seguro da página pública. */
+.editor-preview-description{
+  max-width:470px;
+  min-height:44px;
+  max-height:76px;
+  margin:13px 0 20px;
+  color:#c2c7ce;
+  font-size:12px;
+  line-height:1.55;
+  overflow:hidden;
+}
+.editor-preview-description>:first-child{margin-top:0!important}
+.editor-preview-description>:last-child{margin-bottom:0!important}
+.editor-preview-description p{margin:0 0 .5em}
+.editor-preview-description h1,.editor-preview-description h2,.editor-preview-description h3,.editor-preview-description h4{margin:0 0 .4em;color:#fff;font-size:1em;line-height:1.35}
+.editor-preview-description ul,.editor-preview-description ol{margin:.25em 0 .5em;padding-left:1.25em}
+.editor-preview-description blockquote{margin:.3em 0;padding-left:.65em;border-left:2px solid rgba(112,173,255,.65)}
+.editor-preview-description code{padding:.1em .3em;border-radius:4px;background:rgba(255,255,255,.1);font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.editor-preview-description pre{margin:.35em 0;overflow:hidden;white-space:pre-wrap}
+.editor-preview-description a{color:#70adff;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere;word-break:break-word}
+.editor-preview-description hr{height:1px;margin:.45em 0;border:0;background:rgba(255,255,255,.16)}
 body.admin-preview-open{overflow:hidden}
 .content-editor-layout{position:relative;display:flex;min-height:0;flex:1;overflow:hidden}
 .content-editor-fields{
@@ -336,6 +357,119 @@ body.admin-preview-open{overflow:hidden}
 
   const $ = (selector, root = document) => root.querySelector(selector);
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+  function adminMarkdownInline(value) {
+    let source = String(value ?? '');
+    const tokens = [];
+    const token = html => `@@BETVADMINMD${tokens.push(html) - 1}@@`;
+
+    source = source.replace(/`([^`\n]+)`/g, (_, code) => token(`<code>${esc(code)}</code>`));
+    source = source.replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^\s)]+)\)/gi, (_, label, url) => {
+      const external = /^https?:\/\//i.test(url);
+      return token(`<a href="${esc(url)}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${esc(label)}</a>`);
+    });
+
+    source = source.replace(/(?:https?:\/\/|www\.)[^\s<]+/gi, rawUrl => {
+      let visible = rawUrl;
+      let trailing = '';
+      while (/[),.!?;:]$/.test(visible)) {
+        trailing = visible.slice(-1) + trailing;
+        visible = visible.slice(0, -1);
+      }
+      if (!visible) return rawUrl;
+      const href = /^www\./i.test(visible) ? `https://${visible}` : visible;
+      return token(`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(visible)}</a>`) + trailing;
+    });
+
+    let html = esc(source);
+    html = html
+      .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/__([^_\n]+)__/g, '<strong>$1</strong>')
+      .replace(/~~([^~\n]+)~~/g, '<del>$1</del>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+
+    return html.replace(/@@BETVADMINMD(\d+)@@/g, (_, index) => tokens[Number(index)] || '');
+  }
+
+  function adminMarkdownToHtml(value) {
+    const source = String(value ?? '').replace(/\r\n?/g, '\n').trim();
+    if (!source) return '';
+    const lines = source.split('\n');
+    const blocks = [];
+    let index = 0;
+
+    while (index < lines.length) {
+      const line = lines[index];
+      if (!line.trim()) { index += 1; continue; }
+
+      if (/^```/.test(line.trim())) {
+        const code = [];
+        index += 1;
+        while (index < lines.length && !/^```/.test(lines[index].trim())) {
+          code.push(lines[index]);
+          index += 1;
+        }
+        if (index < lines.length) index += 1;
+        blocks.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`);
+        continue;
+      }
+
+      const heading = line.match(/^(#{1,4})\s+(.+)$/);
+      if (heading) {
+        const level = heading[1].length;
+        blocks.push(`<h${level}>${adminMarkdownInline(heading[2])}</h${level}>`);
+        index += 1;
+        continue;
+      }
+
+      if (/^\s*[-*+]\s+/.test(line)) {
+        const items = [];
+        while (index < lines.length && /^\s*[-*+]\s+/.test(lines[index])) {
+          items.push(`<li>${adminMarkdownInline(lines[index].replace(/^\s*[-*+]\s+/, ''))}</li>`);
+          index += 1;
+        }
+        blocks.push(`<ul>${items.join('')}</ul>`);
+        continue;
+      }
+
+      if (/^\s*\d+[.)]\s+/.test(line)) {
+        const items = [];
+        while (index < lines.length && /^\s*\d+[.)]\s+/.test(lines[index])) {
+          items.push(`<li>${adminMarkdownInline(lines[index].replace(/^\s*\d+[.)]\s+/, ''))}</li>`);
+          index += 1;
+        }
+        blocks.push(`<ol>${items.join('')}</ol>`);
+        continue;
+      }
+
+      if (/^>\s?/.test(line)) {
+        const quotes = [];
+        while (index < lines.length && /^>\s?/.test(lines[index])) {
+          quotes.push(adminMarkdownInline(lines[index].replace(/^>\s?/, '')));
+          index += 1;
+        }
+        blocks.push(`<blockquote>${quotes.join('<br>')}</blockquote>`);
+        continue;
+      }
+
+      if (/^\s*(?:---|___|\*\*\*)\s*$/.test(line)) {
+        blocks.push('<hr>');
+        index += 1;
+        continue;
+      }
+
+      const paragraph = [line];
+      index += 1;
+      while (index < lines.length && lines[index].trim() &&
+        !/^(?:```|#{1,4}\s+|\s*[-*+]\s+|\s*\d+[.)]\s+|>\s?|\s*(?:---|___|\*\*\*)\s*$)/.test(lines[index])) {
+        paragraph.push(lines[index]);
+        index += 1;
+      }
+      blocks.push(`<p>${paragraph.map(adminMarkdownInline).join('<br>')}</p>`);
+    }
+
+    return blocks.join('');
+  }
   const media = value => {
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -2171,7 +2305,7 @@ body.admin-preview-open{overflow:hidden}
             <span class="editor-preview-type">${label}</span>
             <div class="editor-preview-logo" data-preview-logo>Seu título</div>
             <div class="editor-preview-meta"><span data-preview-duration>Duração</span><b></b><span data-preview-year>Ano</span></div>
-            <p data-preview-description>A descrição aparecerá aqui conforme você digitar.</p>
+            <div class="editor-preview-description" data-preview-description>A descrição aparecerá aqui conforme você digitar.</div>
             <button type="button" tabindex="-1"><span>▶</span> Assistir</button>
           </div>
         </div>
@@ -2251,7 +2385,7 @@ body.admin-preview-open{overflow:hidden}
       } else {
         previewLogo.textContent = title;
       }
-      if (previewDescription) previewDescription.textContent = descriptionText;
+      if (previewDescription) previewDescription.innerHTML = adminMarkdownToHtml(descriptionText);
       previewYear.textContent = year;
       previewDuration.textContent = duration;
       if (descriptionCount && description) descriptionCount.textContent = String(description.value.length);
