@@ -2125,10 +2125,9 @@ body.admin-preview-open{overflow:hidden}
   }
 
   function adminStreamingIcon(serviceId) {
-    if (serviceId === 'apple-tv') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="3"></rect><path d="M9 10.2v3.6M9 12h3"></path><path d="M15.2 10.4 17 12l-1.8 1.6"></path></svg>';
-    if (serviceId === 'prime-video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z"></path><path d="M5 19c3.8 1.5 8.3 1.2 12-.8"></path></svg>';
-    if (serviceId === 'paramount-plus') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 5.2-7 2.7 3 2.8-4L20 17H4Z"></path><path d="M7 19h10"></path></svg>';
-    return '<span aria-hidden="true">D+</span>';
+    const allowed = new Set(MOVIE_STREAMING_OPTIONS.map(option => option[0]));
+    if (!allowed.has(serviceId)) return '';
+    return `<img src="/assets/images/streaming/${esc(serviceId)}.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">`;
   }
 
   function movieStreamingEditorField(item = {}) {
@@ -4802,8 +4801,9 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
     body.admin-mode .movie-streaming-option-ui{min-height:62px;display:grid;grid-template-columns:34px minmax(0,1fr) 22px;align-items:center;gap:9px;padding:8px 10px;border:1px solid rgba(125,181,255,.14);border-radius:14px;background:rgba(3,10,21,.68);color:#d8e3f1;transition:.16s ease}
     body.admin-mode .movie-streaming-option:hover .movie-streaming-option-ui{border-color:rgba(125,181,255,.32);background:rgba(10,24,43,.82)}
     body.admin-mode .movie-streaming-option>input:checked+.movie-streaming-option-ui{border-color:rgba(67,209,158,.55);background:rgba(35,155,113,.14);box-shadow:inset 0 0 0 1px rgba(67,209,158,.08)}
-    body.admin-mode .movie-streaming-option-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:rgba(255,255,255,.055);color:#fff;font:800 10px/1 Inter,system-ui,sans-serif}
+    body.admin-mode .movie-streaming-option-icon{width:34px;height:34px;display:grid;place-items:center;overflow:hidden;border-radius:10px;background:rgba(255,255,255,.055);color:#fff;font:800 10px/1 Inter,system-ui,sans-serif}
     body.admin-mode .movie-streaming-option-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    body.admin-mode .movie-streaming-option-icon img{width:100%;height:100%;display:block;object-fit:contain}
     body.admin-mode .movie-streaming-option-icon.disney{font-size:12px}
     body.admin-mode .movie-streaming-option-name{min-width:0;font-size:12px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     body.admin-mode .movie-streaming-option-check{width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.06);color:transparent;font-size:11px;font-weight:900}
