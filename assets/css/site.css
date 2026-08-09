@@ -14700,3 +14700,42 @@ html.performance-lite body:not(.login-mode):not(.admin-mode) .mobile-app-bar{
 html.performance-lite body:not(.login-mode):not(.admin-mode) .home-topbar.search-open{
   background:transparent!important;
 }
+
+/* 09/08/2026 — Mobile: isolar a página de detalhes do conteúdo.
+   Evita que Destaques, catálogo/cards ou rodapé da Home reapareçam por
+   regras responsivas/estado de aba enquanto um vídeo está aberto. */
+@media (max-width:760px){
+  body.detail-page-active #featuredSection,
+  body.detail-page-active #randomFeaturedSection,
+  body.detail-page-active #dynamicSections,
+  body.detail-page-active > footer{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+
+  body.detail-page-active > main{
+    display:block!important;
+    width:100%!important;
+    min-height:0!important;
+    height:auto!important;
+    flex:initial!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+
+  body.detail-page-active > main > section:not(#contentDetailSection):not(#detailRecommendations){
+    display:none!important;
+  }
+
+  body.detail-page-active #contentDetailSection{
+    display:block!important;
+    visibility:visible!important;
+  }
+
+  body.detail-page-active #detailRecommendations:not([hidden]){
+    display:block!important;
+    visibility:visible!important;
+  }
+}
