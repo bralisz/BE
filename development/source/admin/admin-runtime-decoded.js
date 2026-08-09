@@ -66,7 +66,7 @@ body.admin-preview-open{overflow:hidden}
   right:max(18px,env(safe-area-inset-right));
   bottom:max(18px,env(safe-area-inset-bottom));
   z-index:142;
-  width:min(660px,calc(100vw - 36px));
+  width:min(1120px,calc(100vw - 72px));
   min-height:0;
   max-height:none;
   overflow:auto;
