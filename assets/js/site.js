@@ -7329,6 +7329,113 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('resize', () => positionSharedTabIndicator(activeTabButton), { passive: true });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => positionSharedTabIndicator(activeTabButton));
 
+    const userSearchCache = new Map();
+    let userSearchTimer = 0;
+    let userSearchRequest = 0;
+
+    const isUserSearchQuery = value => String(value || '').trim().startsWith('@');
+    const normalizeUserSearchQuery = value => String(value || '')
+      .trim()
+      .replace(/^@+/, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9._]/g, '')
+      .slice(0, 20);
+
+    const userSearchHost = (() => {
+      let host = document.getElementById('publicUserSearchResults');
+      if (host) return host;
+      host = document.createElement('div');
+      host.id = 'publicUserSearchResults';
+      host.className = 'public-user-search-results';
+      host.setAttribute('role', 'listbox');
+      host.setAttribute('aria-label', localizedUiText('Resultados de usuários'));
+      host.setAttribute('aria-live', 'polite');
+      host.hidden = true;
+      document.body.appendChild(host);
+      return host;
+    })();
+
+    const closeUserSearchResults = () => {
+      window.clearTimeout(userSearchTimer);
+      userSearchRequest += 1;
+      userSearchHost.hidden = true;
+      userSearchHost.innerHTML = '';
+      userSearchHost.removeAttribute('aria-busy');
+    };
+
+    const renderUserSearchState = message => {
+      userSearchHost.innerHTML = `<div class="public-user-search-state" role="status">${escapeHtml(message)}</div>`;
+      userSearchHost.hidden = false;
+    };
+
+    const renderUserSearchResults = rows => {
+      const profiles = Array.isArray(rows) ? rows : [];
+      if (!profiles.length) {
+        renderUserSearchState(localizedUiText('Nenhum usuário encontrado.'));
+        return;
+      }
+      userSearchHost.innerHTML = profiles.map(profile => {
+        const username = String(profile?.username || '').trim().replace(/^@+/, '');
+        if (!username) return '';
+        const rawAvatar = String(profile?.avatar_url || profile?.avatarUrl || '').trim();
+        const avatar = window.BETVResolveAvatar ? window.BETVResolveAvatar(rawAvatar) : (rawAvatar || '/assets/images/profile/default-avatar.png');
+        return `<button class="public-user-search-item" type="button" role="option" data-profile-username="${escapeHtml(username)}">
+          <span class="public-user-search-avatar"><img loading="lazy" decoding="async" src="${escapeHtml(avatar)}" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt=""></span>
+          <strong class="notranslate" translate="no">@${escapeHtml(username)}</strong>
+        </button>`;
+      }).join('');
+      userSearchHost.hidden = !userSearchHost.children.length;
+    };
+
+    const fetchUserSearchResults = async rawQuery => {
+      const query = normalizeUserSearchQuery(rawQuery);
+      const requestId = ++userSearchRequest;
+      if (!query) {
+        renderUserSearchState(localizedUiText('Digite o @ do usuário.'));
+        return;
+      }
+
+      const cached = userSearchCache.get(query);
+      if (cached && Date.now() - cached.ts < 15000) {
+        renderUserSearchResults(cached.rows);
+        return;
+      }
+
+      userSearchHost.setAttribute('aria-busy', 'true');
+      renderUserSearchState(localizedUiText('Pesquisando usuários...'));
+      try {
+        if (window.beBackend?.ready) await window.beBackend.ready;
+        const client = window.beBackend?.client;
+        if (!client?.rpc) throw new Error('profile_search_unavailable');
+        const { data, error } = await client.rpc('search_public_profiles', { p_query: query, p_limit: 8 });
+        if (error) throw error;
+        if (requestId !== userSearchRequest || !isUserSearchQuery(input.value)) return;
+        const rows = Array.isArray(data) ? data : [];
+        userSearchCache.set(query, { ts: Date.now(), rows });
+        renderUserSearchResults(rows);
+      } catch (error) {
+        if (requestId !== userSearchRequest) return;
+        console.warn('Não foi possível pesquisar perfis:', error?.message || error);
+        renderUserSearchState(localizedUiText('Não foi possível pesquisar usuários.'));
+      } finally {
+        if (requestId === userSearchRequest) userSearchHost.removeAttribute('aria-busy');
+      }
+    };
+
+    const scheduleUserSearch = rawQuery => {
+      window.clearTimeout(userSearchTimer);
+      if (!isUserSearchQuery(rawQuery)) {
+        closeUserSearchResults();
+        return;
+      }
+      const query = normalizeUserSearchQuery(rawQuery);
+      if (!query) {
+        fetchUserSearchResults(rawQuery);
+        return;
+      }
+      userSearchTimer = window.setTimeout(() => fetchUserSearchResults(rawQuery), 170);
+    };
+
     const setSearchOpen = open => {
       topbar.classList.toggle('search-open', open);
       toggle.setAttribute('aria-expanded', String(open));
@@ -7338,12 +7445,33 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         requestAnimationFrame(() => input.focus({ preventScroll: true }));
       } else {
         input.value = '';
+        closeUserSearchResults();
         applyCatalogFilter();
         toggle.focus({ preventScroll: true });
       }
     };
 
+    if (userSearchHost.dataset.bound !== 'true') {
+      userSearchHost.dataset.bound = 'true';
+      userSearchHost.addEventListener('click', event => {
+        const item = event.target?.closest?.('[data-profile-username]');
+        if (!item) return;
+        const username = String(item.dataset.profileUsername || '').trim();
+        if (!username) return;
+        closeUserSearchResults();
+        if (topbar.classList.contains('search-open')) setSearchOpen(false);
+        window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
+        const route = `/@${encodeURIComponent(username)}`;
+        if (window.BETVPublicRoutes && typeof window.BETVPublicRoutes.go === 'function') {
+          window.BETVPublicRoutes.go(route);
+        } else {
+          location.assign(window.BETVLocaleURL ? window.BETVLocaleURL(route) : route);
+        }
+      });
+    }
+
     window.addEventListener('be:close-public-search', () => {
+      closeUserSearchResults();
       if (topbar.classList.contains('search-open')) setSearchOpen(false);
     });
 
@@ -7381,14 +7509,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const applyCatalogFilter = (refreshFeatured = false) => {
       const rawQuery = String(input.value || '');
-      if (document.body.classList.contains('album-page-active')) {
+      const userSearchMode = isUserSearchQuery(rawQuery);
+      if (document.body.classList.contains('album-page-active') && !userSearchMode) {
         window.dispatchEvent(new CustomEvent('be:album-search', { detail:{ query:rawQuery } }));
         return;
       }
-      prepareCatalogForSearch(rawQuery);
+      if (!userSearchMode) prepareCatalogForSearch(rawQuery);
       const host = document.getElementById('dynamicSections');
       if (!host) return;
-      const query = normalizeSearchText(rawQuery);
+      const query = userSearchMode ? '' : normalizeSearchText(rawQuery);
       const sections = Array.from(host.querySelectorAll('.video-rail-section'));
       const billieSpotlight = host.querySelector('.billie-home-spotlight');
       const donateSpotlight = host.querySelector('.donate-home-spotlight');
@@ -7468,12 +7597,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         empty.setAttribute('role', 'status');
         host.prepend(empty);
       }
-      if (query) {
-        empty.innerHTML = `<strong>Nenhum conteúdo encontrado para “${escapeHtml(input.value.trim())}”.</strong><span>Não encontrou o que procurava? <a href="/suporte" data-public-action="support" data-support-target="contact">Relate para o suporte</a>.</span>`;
+      if (userSearchMode) {
+        empty.textContent = '';
+        empty.classList.remove('show');
       } else {
-        empty.textContent = 'Nenhum filme ou série publicado.';
+        if (query) {
+          empty.innerHTML = `<strong>Nenhum conteúdo encontrado para “${escapeHtml(input.value.trim())}”.</strong><span>Não encontrou o que procurava? <a href="/suporte" data-public-action="support" data-support-target="contact">Relate para o suporte</a>.</span>`;
+        } else {
+          empty.textContent = 'Nenhum filme ou série publicado.';
+        }
+        empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && Boolean(query));
       }
-      empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && Boolean(query));
     };
 
     const leaveAlbumsForCatalog = nextView => {
@@ -7555,7 +7689,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
 
     toggle.addEventListener('click', () => setSearchOpen(!topbar.classList.contains('search-open')));
-    input.addEventListener('input', applyCatalogFilter);
+    input.addEventListener('input', () => {
+      const rawQuery = String(input.value || '');
+      if (isUserSearchQuery(rawQuery)) scheduleUserSearch(rawQuery);
+      else closeUserSearchResults();
+      applyCatalogFilter();
+    });
     input.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -7797,7 +7936,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <button class="mobile-notification-button" id="mobileNotificationButton" type="button" aria-label="Abrir notificações" aria-expanded="false">${icon('bell')}<span class="notification-unread-dot" id="mobileNotificationUnreadDot" hidden></span></button>
         <div class="mobile-search-control" id="mobileSearchControl">
           <label class="sr-only" for="mobileSearchInput">Pesquisar conteúdos</label>
-          <input id="mobileSearchInput" type="search" autocomplete="off" placeholder="Pesquisar filmes e vídeos" aria-label="Pesquisar filmes e vídeos">
+          <input id="mobileSearchInput" type="search" autocomplete="off" placeholder="Pesquisar filmes, vídeos, shows e @usuários" aria-label="Pesquisar filmes, vídeos, shows e @usuários">
           <button class="mobile-search-button" id="mobileSearchButton" type="button" aria-label="Abrir pesquisa" aria-expanded="false">
             <span class="mobile-search-icon">${icon('search')}</span>
             <span class="mobile-search-close-icon">${icon('close')}</span>
@@ -13808,7 +13947,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function setSearchContext(active){
     var desktop=document.getElementById('homeSearchInput');
     var mobileInput=document.getElementById('mobileSearchInput');
-    var placeholder=active?t('Pesquisar álbuns'):t('Pesquisar filmes e vídeos');
+    var placeholder=active?t('Pesquisar álbuns'):t('Pesquisar filmes, vídeos, shows e @usuários');
     [desktop,mobileInput].forEach(function(field){if(!field)return;field.placeholder=placeholder;field.setAttribute('aria-label',placeholder);});
   }
 
