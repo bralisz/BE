@@ -3664,6 +3664,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   let activeDetailCommentsKey = '';
   let detailCommentProfile = null;
   let detailCommentPosting = false;
+  let detailCommentsRealtimeChannel = null;
+  let detailCommentsRealtimeKey = '';
+  let detailCommentsRealtimeRefreshTimer = null;
+  let detailCommentsRealtimeStartToken = 0;
 
   function videoCommentKey(data) {
     const collection = String(data?.collection || 'videos').trim().toLowerCase();
@@ -3977,14 +3981,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     syncDetailCommentSubmit();
   }
 
-  async function loadVideoComments(videoKey, requestToken = detailCommentsRequestToken) {
+  async function loadVideoComments(videoKey, requestToken = detailCommentsRequestToken, options = {}) {
     const list = document.getElementById('detailCommentsList');
     const empty = document.getElementById('detailCommentsEmpty');
     if (!list || !empty || !videoKey) return;
+    const silent = options && options.silent === true;
 
-    list.innerHTML = '';
-    empty.hidden = true;
-    setDetailCommentStatus(localizedUiText('Carregando comentários...'));
+    if (!silent) {
+      list.innerHTML = '';
+      empty.hidden = true;
+      setDetailCommentStatus(localizedUiText('Carregando comentários...'));
+    }
 
     const backend = window.beBackend;
     if (backend?.ready) {
@@ -3994,9 +4001,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     try {
       if (!backend?.client || backend.mode !== 'supabase') {
-        empty.hidden = false;
-        empty.textContent = localizedUiText('Ainda não há comentários.');
-        setDetailCommentStatus('');
+        if (!silent) {
+          empty.hidden = false;
+          empty.textContent = localizedUiText('Ainda não há comentários.');
+          setDetailCommentStatus('');
+        }
         return;
       }
       const { data, error } = await backend.client.rpc('get_video_comments', {
@@ -4010,14 +4019,78 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setupDetailCommentItemActions();
       empty.hidden = rows.length > 0;
       empty.textContent = localizedUiText('Ainda não há comentários.');
-      setDetailCommentStatus('');
+      if (!silent) setDetailCommentStatus('');
     } catch (error) {
       console.warn('Não foi possível carregar os comentários:', error);
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+      if (silent) return;
       list.innerHTML = '';
       empty.hidden = false;
       empty.textContent = localizedUiText('Não foi possível carregar os comentários.');
       setDetailCommentStatus('');
+    }
+  }
+
+  function stopDetailCommentsRealtime() {
+    detailCommentsRealtimeStartToken += 1;
+    if (detailCommentsRealtimeRefreshTimer) {
+      clearTimeout(detailCommentsRealtimeRefreshTimer);
+      detailCommentsRealtimeRefreshTimer = null;
+    }
+
+    const channel = detailCommentsRealtimeChannel;
+    detailCommentsRealtimeChannel = null;
+    detailCommentsRealtimeKey = '';
+    const client = window.beBackend?.client;
+    if (channel && client?.removeChannel) {
+      try {
+        const removal = client.removeChannel(channel);
+        if (removal && typeof removal.catch === 'function') removal.catch(() => {});
+      } catch (_) {}
+    }
+  }
+
+  function scheduleDetailCommentsRealtimeRefresh(videoKey, requestToken, delay = 90) {
+    if (!videoKey || videoKey !== activeDetailCommentsKey || requestToken !== detailCommentsRequestToken) return;
+    if (detailCommentsRealtimeRefreshTimer) clearTimeout(detailCommentsRealtimeRefreshTimer);
+    detailCommentsRealtimeRefreshTimer = setTimeout(() => {
+      detailCommentsRealtimeRefreshTimer = null;
+      if (videoKey !== activeDetailCommentsKey || requestToken !== detailCommentsRequestToken) return;
+      loadVideoComments(videoKey, requestToken, { silent: true });
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  async function startDetailCommentsRealtime(videoKey, requestToken) {
+    stopDetailCommentsRealtime();
+    if (!videoKey || requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+
+    const startToken = detailCommentsRealtimeStartToken;
+    const backend = window.beBackend;
+    if (backend?.ready) {
+      try { await backend.ready; } catch (_) {}
+    }
+    if (startToken !== detailCommentsRealtimeStartToken || requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+    if (!backend?.client || backend.mode !== 'supabase' || typeof backend.client.channel !== 'function') return;
+
+    try {
+      if (typeof ensureRealtimeAuth === 'function') await ensureRealtimeAuth();
+      if (startToken !== detailCommentsRealtimeStartToken || requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+
+      const channel = backend.client
+        .channel(`comment-sync:${videoKey}`, { config: { private: true } })
+        .on('broadcast', { event: 'refresh' }, () => {
+          scheduleDetailCommentsRealtimeRefresh(videoKey, requestToken);
+        });
+
+      detailCommentsRealtimeChannel = channel;
+      detailCommentsRealtimeKey = videoKey;
+      channel.subscribe(status => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('A sincronização dos comentários foi interrompida:', status);
+        }
+      });
+    } catch (error) {
+      console.warn('Não foi possível iniciar a sincronização dos comentários:', error?.message || error);
     }
   }
 
@@ -4088,9 +4161,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
       });
     }
+    if (document.documentElement.dataset.detailCommentsResumeSync !== 'true') {
+      document.documentElement.dataset.detailCommentsResumeSync = 'true';
+      const refreshActiveComments = () => {
+        if (document.visibilityState && document.visibilityState !== 'visible') return;
+        const key = activeDetailCommentsKey;
+        const token = detailCommentsRequestToken;
+        if (!key) return;
+        scheduleDetailCommentsRealtimeRefresh(key, token, 0);
+        if (!detailCommentsRealtimeChannel || detailCommentsRealtimeKey !== key) {
+          startDetailCommentsRealtime(key, token);
+        }
+      };
+      document.addEventListener('visibilitychange', refreshActiveComments);
+      window.addEventListener('online', refreshActiveComments);
+    }
   }
 
   function closeVideoComments() {
+    stopDetailCommentsRealtime();
     detailCommentsRequestToken += 1;
     activeDetailCommentsKey = '';
     detailCommentProfile = null;
@@ -4122,6 +4211,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     group.setAttribute('aria-hidden', 'false');
     syncDetailCommentComposer(requestToken);
     loadVideoComments(videoKey, requestToken);
+    startDetailCommentsRealtime(videoKey, requestToken);
   }
 
   function googleDriveFileId(value) {
@@ -4402,11 +4492,78 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
 
-  // Mantém os players mobile livres para acompanhar a rotação física do aparelho.
-  // O unlock é best-effort (alguns navegadores não expõem a API) e o viewport
-  // visual é sincronizado para evitar dimensões antigas após portrait <-> landscape.
+  // Fora dos players, o site mobile tenta permanecer em retrato.
+  // Durante Drive/VK/YouTube, a trava e liberada para acompanhar a rotacao fisica.
+  // A Screen Orientation API e best-effort: navegadores que nao permitem lock fora
+  // de PWA/tela cheia simplesmente ignoram a tentativa sem quebrar a navegacao.
+  let mobilePortraitRestoreTimer = 0;
+
+  function isMobileOrientationDevice() {
+    try {
+      if (navigator.userAgentData?.mobile === true) return true;
+    } catch (_) {}
+    const ua = String(navigator.userAgent || '');
+    if (/iPhone|iPod|Android.*Mobile|Windows Phone|Mobile/i.test(ua)) return true;
+    try {
+      return window.matchMedia('(pointer: coarse)').matches && Math.min(screen.width || 9999, screen.height || 9999) <= 600;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function anyMobileMediaPlayerOpen() {
+    return ['drivePlayerOverlay', 'driveVideoPlayerOverlay', 'externalNativePlayerOverlay'].some(id => {
+      const overlay = document.getElementById(id);
+      return Boolean(overlay && !overlay.hidden && overlay.classList.contains('is-open'));
+    });
+  }
+
+  function requestMobilePortraitLock() {
+    if (!isMobileOrientationDevice() || anyMobileMediaPlayerOpen()) return;
+    const root = document.documentElement;
+    root.dataset.mobileOrientationMode = 'portrait';
+    try {
+      const orientation = window.screen?.orientation;
+      if (orientation && typeof orientation.lock === 'function') {
+        const promise = orientation.lock('portrait-primary');
+        if (promise && typeof promise.catch === 'function') promise.catch(() => {});
+      }
+    } catch (_) {}
+  }
+
+  function restoreMobileSitePortraitLock(delay = 90) {
+    window.clearTimeout(mobilePortraitRestoreTimer);
+    mobilePortraitRestoreTimer = window.setTimeout(() => {
+      if (!anyMobileMediaPlayerOpen()) requestMobilePortraitLock();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  function setupMobileSiteOrientationLock() {
+    const root = document.documentElement;
+    if (root.dataset.mobileOrientationLockBound === 'true') return;
+    root.dataset.mobileOrientationLockBound = 'true';
+
+    const reinforcePortrait = () => {
+      if (!anyMobileMediaPlayerOpen()) restoreMobileSitePortraitLock(40);
+    };
+
+    requestMobilePortraitLock();
+    window.addEventListener('pageshow', reinforcePortrait, { passive: true });
+    window.addEventListener('orientationchange', reinforcePortrait, { passive: true });
+    document.addEventListener('pointerdown', reinforcePortrait, { passive: true, capture: true });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) reinforcePortrait();
+    });
+  }
+
+  // Mantem os players mobile livres para acompanhar a rotacao fisica do aparelho.
+  // O viewport visual tambem e sincronizado para evitar dimensoes antigas apos
+  // portrait <-> landscape.
   function enableMobilePlayerRotation() {
     const root = document.documentElement;
+    window.clearTimeout(mobilePortraitRestoreTimer);
+    root.dataset.mobileOrientationMode = 'player';
+
     const syncViewport = () => {
       const viewport = window.visualViewport;
       const width = Math.max(1, Math.round(Number(viewport?.width) || window.innerWidth || root.clientWidth || 1));
@@ -4417,11 +4574,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     syncViewport();
-    try {
-      if (window.screen?.orientation && typeof window.screen.orientation.unlock === 'function') {
-        window.screen.orientation.unlock();
-      }
-    } catch (_) {}
+    if (isMobileOrientationDevice()) {
+      try {
+        if (window.screen?.orientation && typeof window.screen.orientation.unlock === 'function') {
+          window.screen.orientation.unlock();
+        }
+      } catch (_) {}
+    }
 
     if (root.dataset.playerRotationBound === 'true') return;
     root.dataset.playerRotationBound = 'true';
@@ -4440,6 +4599,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.visualViewport.addEventListener('resize', scheduleSync, { passive: true });
     }
   }
+
+  setupMobileSiteOrientationLock();
 
 
   function externalVideoPlayersMarkup() {
@@ -4793,6 +4954,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       syncBodyLock();
       if (restoreFocus && previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
       previousFocus = null;
+      restoreMobileSitePortraitLock();
     };
 
     const openExternalPlayer = (provider, info, context = {}) => {
@@ -5262,6 +5424,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setInteractive(false);
       if (restoreFocus && previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
       previousFocus = null;
+      restoreMobileSitePortraitLock();
     };
 
     const openPlayer = (fileId, resourceKey = '', context = {}) => {
@@ -6203,6 +6366,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setPlayerInteractive(false);
       if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
       previousFocus = null;
+      restoreMobileSitePortraitLock();
     };
 
     supportLink.addEventListener('click', () => {
