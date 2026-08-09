@@ -9833,10 +9833,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
-  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false;
+  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false;
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
   function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
   function donateVisualReady(){var donatePage=q('donatePage');return !isDonateRoute()||Boolean(donatePage&&donatePage.dataset&&donatePage.dataset.visualReady==='true');}
+  function notificationsVisualReady(){return !isNotificationsRoute()||window.__beNotificationsReady===true;}
   function waitForDonateVisualBeforeReveal(){
     if(donateVisualWaitBound)return;
     donateVisualWaitBound=true;
@@ -9845,7 +9846,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(isDonateRoute())hideSiteSkeleton();
     },{once:true});
   }
+  function waitForNotificationsVisualBeforeReveal(){
+    if(notificationVisualWaitBound)return;
+    notificationVisualWaitBound=true;
+    window.addEventListener('be:notifications-ready',function(){
+      notificationVisualWaitBound=false;
+      if(isNotificationsRoute())hideSiteSkeleton();
+    },{once:true});
+  }
   function hideSiteSkeleton(){
+    if(isNotificationsRoute()&&!notificationsVisualReady()){waitForNotificationsVisualBeforeReveal();return;}
     if(isDonateRoute()&&!donateVisualReady()){waitForDonateVisualBeforeReveal();return;}
     if(initialSkeletonPending){
       var remaining=Math.max(0,SITE_SKELETON_MIN_MS-(Date.now()-siteSkeletonStartedAt));
@@ -11180,14 +11190,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         loaded=true;
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);
-        window.dispatchEvent(new CustomEvent('be:notifications-ready',{detail:{count:notifications.length}}));
       }catch(error){
         console.warn('Não foi possível carregar as notificações:',error);
         notifications=[];
         loaded=true;
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage('');
-      }finally{loadingPromise=null;}
+      }finally{
+        window.__beNotificationsReady=true;
+        window.dispatchEvent(new CustomEvent('be:notifications-ready',{detail:{count:notifications.length}}));
+        loadingPromise=null;
+      }
       return notifications;
     })();
     return loadingPromise;

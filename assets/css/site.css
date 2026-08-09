@@ -11513,10 +11513,10 @@ body.profile-page-active .profile-page-social-link:focus-visible{
 }
 body.profile-page-active .profile-page-social-link.is-static{cursor:default;opacity:.72}
 body.profile-page-active .profile-page-social-link.is-static:hover{transform:none;color:rgba(255,255,255,.78)}
-body.profile-page-active .profile-page-social-link svg{display:block;width:20px;height:20px;flex:0 0 20px;vertical-align:middle}
+body.profile-page-active .profile-page-social-link svg{display:block;width:20px;height:20px}
 body.profile-page-active .profile-page-social-link.is-x svg{fill:currentColor;stroke:none}
 body.profile-page-active .profile-page-social-link.is-instagram svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-body.profile-page-active .profile-page-social-link.is-tiktok svg{width:19px;height:19px;fill:currentColor;stroke:none;transform:translateY(-.5px)}
+body.profile-page-active .profile-page-social-link.is-tiktok svg{width:22px;height:22px;fill:currentColor;stroke:none;transform:translateY(-.5px)}
 
 /* Conexões e redes sociais dentro da mesma área de Configurações. */
 .settings-connections-panel .settings-panel-card + .settings-panel-card{margin-top:18px}
@@ -11531,7 +11531,7 @@ body.profile-page-active .profile-page-social-link.is-tiktok svg{width:19px;heig
 .settings-social-brand svg{display:block;width:16px;height:16px}
 .settings-social-brand.is-x svg{fill:currentColor;stroke:none}
 .settings-social-brand.is-instagram svg{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.settings-social-brand.is-tiktok svg{width:15px;height:15px;fill:currentColor;stroke:none;transform:translateY(-.4px)}
+.settings-social-brand.is-tiktok svg{width:17.5px;height:17.5px;fill:currentColor;stroke:none;transform:translateY(-.35px)}
 .settings-social-input-wrap{
   min-height:50px;
   display:flex;
@@ -11577,6 +11577,7 @@ body.profile-page-active .profile-page-social-link.is-tiktok svg{width:19px;heig
   body.profile-page-active .profile-page-socials{gap:9px;margin:4px 0 1px}
   body.profile-page-active .profile-page-social-link{width:21px;height:21px;flex-basis:21px}
   body.profile-page-active .profile-page-social-link svg{width:19px;height:19px}
+  body.profile-page-active .profile-page-social-link.is-tiktok svg{width:21px;height:21px;transform:translateY(-.5px)}
   .settings-social-heading{margin-bottom:18px}
   .settings-social-actions .settings-button{width:100%;min-width:0}
 }
