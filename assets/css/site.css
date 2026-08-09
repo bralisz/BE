@@ -15362,3 +15362,71 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
     display:none!important;
   }
 }
+
+/* 09/08/2026 — correção definitiva das ações do perfil no desktop.
+   Home sempre visível ao lado do coração; coração sem fundo residual. */
+@media (min-width:761px){
+  body.profile-page-active #profilePageHome,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike,
+  body.profile-page-active #profilePageShare,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageMore{
+    position:absolute!important;
+    top:auto!important;
+    bottom:22px!important;
+    left:auto!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    margin:0!important;
+    padding:0!important;
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    place-items:center!important;
+    pointer-events:auto!important;
+    z-index:10060!important;
+  }
+
+  /* Ordem, da esquerda para a direita: Home → coração → compartilhar → mais. */
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageMore{
+    right:clamp(24px,3vw,46px)!important;
+  }
+  body.profile-page-active #profilePageShare{
+    right:calc(clamp(24px,3vw,46px) + 58px)!important;
+  }
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike{
+    right:calc(clamp(24px,3vw,46px) + 116px)!important;
+  }
+  body.profile-page-active #profilePageHome{
+    right:calc(clamp(24px,3vw,46px) + 174px)!important;
+  }
+
+  /* Coração: somente o ícone, sem círculo/fundo/sombra atrás. */
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike:hover,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike:active,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike.is-liked{
+    background:transparent!important;
+    border-color:transparent!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    overflow:visible!important;
+  }
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike::before,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike::after{
+    content:none!important;
+    display:none!important;
+  }
+
+  body.profile-page-active #profilePageHome svg,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike svg,
+  body.profile-page-active #profilePageShare svg,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageMore svg{
+    display:block!important;
+    width:21px!important;
+    height:21px!important;
+    margin:0!important;
+  }
+}
