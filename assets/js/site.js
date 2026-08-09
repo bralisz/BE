@@ -3676,9 +3676,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return String(window.BETV_DEFAULT_AVATAR || '/assets/images/profile/default-avatar.png');
   }
 
-  function detailCommentAvatarMarkup(url, alt = '') {
+  function detailCommentAvatarMarkup(url, alt = '', eager = false) {
     const source = String(url || '').trim() || defaultCommentAvatar();
-    return `<img loading="lazy" decoding="async" src="${safeAssetUrl(source)}" alt="${escapeHtml(alt)}">`;
+    const resolved = window.BETVResolveAvatar
+      ? window.BETVResolveAvatar(source)
+      : safeAssetUrlValue(source);
+    const fallback = defaultCommentAvatar();
+    return `<img loading="${eager ? 'eager' : 'lazy'}" decoding="async" src="${escapeHtml(resolved || fallback)}" data-avatar-fallback="${escapeHtml(fallback)}" alt="${escapeHtml(alt)}">`;
   }
 
   const VIDEO_COMMENT_REPORT_REASONS = [
@@ -3699,7 +3703,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"></path><path d="M5 5h11l-1.8 3L16 11H5"></path></svg>';
   }
 
-  function detailCommentMarkup(row) {
+  function detailCommentLikeIcon() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"></path></svg>';
+  }
+
+  function detailCommentMarkup(row, index = 0) {
     const username = String(row?.username || '').trim().replace(/^@+/, '');
     const message = String(row?.message || '').trim();
     const commentId = String(row?.comment_id || row?.commentId || '').trim();
@@ -3709,18 +3717,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const isOwner = Boolean(commentId && authorUserId && currentUserId && authorUserId === currentUserId);
     const profileHref = username ? `/@${encodeURIComponent(username)}` : '#';
     const avatar = String(row?.avatar_url || row?.avatarUrl || '').trim();
-    const action = isOwner
+    const likesCount = Math.max(0, Number(row?.likes_count ?? row?.likesCount ?? 0) || 0);
+    const likedByMe = row?.liked_by_me === true || row?.likedByMe === true;
+    const likeLabel = localizedUiText(likedByMe ? 'Remover curtida do comentário' : 'Curtir comentário');
+    const likeAction = `<button type="button" class="detail-comment-like${likedByMe ? ' is-liked' : ''}" data-comment-like="${escapeHtml(commentId)}" aria-pressed="${likedByMe ? 'true' : 'false'}" aria-label="${escapeHtml(likeLabel)}" title="${escapeHtml(likeLabel)}">${detailCommentLikeIcon()}<span class="detail-comment-like-count"${likesCount > 0 ? '' : ' hidden'}>${likesCount}</span></button>`;
+    const moderationAction = isOwner
       ? `<button type="button" class="detail-comment-action danger" data-comment-delete="${escapeHtml(commentId)}" aria-label="${escapeHtml(localizedUiText('Apagar comentário'))}" title="${escapeHtml(localizedUiText('Apagar comentário'))}">${detailCommentActionIcon('delete')}</button>`
       : `<button type="button" class="detail-comment-action" data-comment-report="${escapeHtml(commentId)}" data-comment-user="${escapeHtml(username)}" aria-label="${escapeHtml(localizedUiText('Denunciar comentário'))}" title="${escapeHtml(localizedUiText('Denunciar comentário'))}">${detailCommentActionIcon('report')}</button>`;
     return `<article class="detail-comment-item" data-comment-id="${escapeHtml(commentId)}" data-comment-author-id="${escapeHtml(authorUserId)}">
       <a class="detail-comment-avatar" href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
-        ${detailCommentAvatarMarkup(avatar, '')}
+        ${detailCommentAvatarMarkup(avatar, '', index < 8)}
       </a>
       <div class="detail-comment-body">
         <a class="detail-comment-user notranslate" translate="no" href="${escapeHtml(profileHref)}">@${escapeHtml(username || 'usuario')}</a>
         <p class="detail-comment-message notranslate" translate="no">${escapeHtml(message)}</p>
       </div>
-      <div class="detail-comment-actions">${action}</div>
+      <div class="detail-comment-actions">${likeAction}${moderationAction}</div>
     </article>`;
   }
 
@@ -3857,9 +3869,49 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
   }
 
+  async function toggleVideoCommentLike(commentId, button) {
+    const backend = window.beBackend;
+    if (!commentId || !button || button.disabled) return;
+    if (!backend?.auth?.currentUser) {
+      setDetailCommentStatus(localizedUiText('Entre para curtir comentários.'));
+      return;
+    }
+    if (!backend?.client || backend.mode !== 'supabase') return;
+
+    button.disabled = true;
+    try {
+      const { data, error } = await backend.client.rpc('toggle_video_comment_like', {
+        p_comment_id: commentId
+      });
+      if (error) throw error;
+      const state = Array.isArray(data) ? (data[0] || {}) : (data || {});
+      const liked = state.liked === true;
+      const count = Math.max(0, Number(state.likes_count ?? state.likesCount ?? 0) || 0);
+      const label = localizedUiText(liked ? 'Remover curtida do comentário' : 'Curtir comentário');
+      button.classList.toggle('is-liked', liked);
+      button.setAttribute('aria-pressed', liked ? 'true' : 'false');
+      button.setAttribute('aria-label', label);
+      button.setAttribute('title', label);
+      const countNode = button.querySelector('.detail-comment-like-count');
+      if (countNode) {
+        countNode.textContent = String(count);
+        countNode.hidden = count < 1;
+      }
+      setDetailCommentStatus('');
+    } catch (error) {
+      console.warn('Não foi possível atualizar a curtida do comentário:', error);
+      setDetailCommentStatus(localizedUiText('Não foi possível curtir o comentário.'));
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function setupDetailCommentItemActions() {
     const list = document.getElementById('detailCommentsList');
     if (!list) return;
+    list.querySelectorAll('[data-comment-like]').forEach(button => {
+      button.onclick = () => toggleVideoCommentLike(button.dataset.commentLike || '', button);
+    });
     list.querySelectorAll('[data-comment-delete]').forEach(button => {
       button.onclick = () => deleteOwnVideoComment(button.dataset.commentDelete || '', button);
     });
@@ -3898,7 +3950,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const user = backend?.auth?.currentUser;
     if (!user) {
-      avatar.innerHTML = detailCommentAvatarMarkup(defaultCommentAvatar(), '');
+      avatar.innerHTML = detailCommentAvatarMarkup(defaultCommentAvatar(), '', true);
       input.value = '';
       input.disabled = true;
       input.placeholder = localizedUiText('Entre para comentar.');
@@ -3916,7 +3968,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const profileAvatar = String(detailCommentProfile?.avatarUrl || user.photoURL || '').trim();
     const username = String(detailCommentProfile?.username || '').trim().replace(/^@+/, '');
-    avatar.innerHTML = detailCommentAvatarMarkup(profileAvatar, username ? `@${username}` : '');
+    avatar.innerHTML = detailCommentAvatarMarkup(profileAvatar, username ? `@${username}` : '', true);
     input.disabled = !username;
     input.placeholder = username
       ? localizedUiText('Escreva um comentário...')
@@ -3954,7 +4006,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (error) throw error;
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
       const rows = Array.isArray(data) ? data : [];
-      list.innerHTML = rows.map(detailCommentMarkup).join('');
+      list.innerHTML = rows.map((row, index) => detailCommentMarkup(row, index)).join('');
       setupDetailCommentItemActions();
       empty.hidden = rows.length > 0;
       empty.textContent = localizedUiText('Ainda não há comentários.');

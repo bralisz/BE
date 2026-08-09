@@ -69,3 +69,5 @@ As migrations marcadas como `noop` são registros históricos intencionais e pre
 - `20260809172456_public_profile_search.sql`: adiciona pesquisa pública de perfis por prefixo de `@`, retornando somente avatar e nome de usuário, com limite de 8 resultados e índice para manter a busca rápida.
 
 - `20260809173734_video_comment_moderation.sql` — adiciona exclusão do próprio comentário, denúncias de comentários e moderação administrativa de denúncias.
+
+- `20260809181425_video_comment_likes.sql` — adiciona curtidas nos comentários, contador público e estado de curtida do usuário autenticado.

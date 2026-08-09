@@ -2773,6 +2773,8 @@
     height:100%;
     display:block;
     object-fit:cover;
+    opacity:1;
+    visibility:visible;
   }
   .detail-comment-form{
     flex:1 1 auto;
@@ -15104,6 +15106,30 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
 .detail-comment-action.danger:focus-visible{background:rgba(255,69,58,.11);color:#ff746c}
 .detail-comment-action:active{transform:scale(.92)}
 .detail-comment-action:disabled{opacity:.35;cursor:default;transform:none}
+.detail-comment-like{
+  min-width:34px;
+  height:34px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:0 7px;
+  border:0;
+  border-radius:999px;
+  background:transparent;
+  color:rgba(255,255,255,.48);
+  cursor:pointer;
+  transition:background .18s ease,color .18s ease,transform .18s ease,opacity .18s ease;
+}
+.detail-comment-like svg{width:18px;height:18px;display:block;flex:0 0 auto}
+.detail-comment-like-count{min-width:8px;font-size:12px;font-weight:700;line-height:1;color:currentColor}
+.detail-comment-like-count[hidden]{display:none!important}
+.detail-comment-like:hover,
+.detail-comment-like:focus-visible{outline:none;background:rgba(255,255,255,.075);color:rgba(255,255,255,.92)}
+.detail-comment-like.is-liked{color:#fff}
+.detail-comment-like.is-liked svg{fill:currentColor}
+.detail-comment-like:active{transform:scale(.92)}
+.detail-comment-like:disabled{opacity:.48;cursor:default;transform:none}
 
 .detail-comment-action-backdrop{
   position:fixed;
@@ -15456,6 +15482,26 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
 
 /* 09/08/2026 — Mobile: Comentários sempre abaixo de Recomendações nos detalhes. */
 @media (max-width:760px){
+  body.detail-page-active .detail-comment-avatar,
+  body.detail-page-active .detail-comment-composer-avatar{
+    display:block!important;
+    flex:0 0 38px!important;
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+    opacity:1!important;
+    visibility:visible!important;
+  }
+  body.detail-page-active .detail-comment-avatar img,
+  body.detail-page-active .detail-comment-composer-avatar img{
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    opacity:1!important;
+    visibility:visible!important;
+  }
+  body.detail-page-active .detail-comment-like{min-width:32px;height:32px;padding:0 6px}
+  body.detail-page-active .detail-comment-like svg{width:17px;height:17px}
   body.detail-page-active #detailRecommendations:not([hidden]){
     display:block!important;
     visibility:visible!important;
