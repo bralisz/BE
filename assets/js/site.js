@@ -725,6 +725,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
+  const ORIGINAL_TITLE_COLLECTIONS_BACKEND = new Set(['contents','featured','movies','series','videos','ongs','news']);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
 
   function activeLocaleSlug() {
@@ -747,33 +748,54 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function localizeContentRecord(record) {
+  function preservesSourceRecordTitle(collection, record) {
+    const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
+    return record?.preserveTitle === true
+      || String(record?.preserveTitle || '').toLowerCase() === 'true'
+      || ORIGINAL_TITLE_COLLECTIONS_BACKEND.has(normalizedCollection);
+  }
+
+  function protectSourceRecordTitle(record) {
+    if (!record || !window.BETVI18n || typeof window.BETVI18n.protectExact !== 'function') return;
+    if (Object.prototype.hasOwnProperty.call(record, 'title')) window.BETVI18n.protectExact(record.title);
+    if (Object.prototype.hasOwnProperty.call(record, 'name')) window.BETVI18n.protectExact(record.name);
+  }
+
+  function localizeContentRecord(record, collection = '') {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
+    if (preservesSourceRecordTitle(collection, record)) {
+      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
+      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
+      result.preserveTitle = true;
+      protectSourceRecordTitle(record);
+    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
     return result;
   }
 
-  function recordNeedsTranslation(record, slug) {
+  function recordNeedsTranslation(record, slug, collection = '') {
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
-    return !localized || typeof localized !== 'object';
+    if (!localized || typeof localized !== 'object') return true;
+    return preservesSourceRecordTitle(collection, record)
+      && (Object.prototype.hasOwnProperty.call(localized, 'title') || Object.prototype.hasOwnProperty.call(localized, 'name'));
   }
 
   async function ensureTranslatedRecords(collection, records) {
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
     if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(localizeContentRecord);
+      return values.map(record => localizeContentRecord(record, collection));
     }
-    const missing = values.filter(record => recordNeedsTranslation(record, slug));
+    const missing = values.filter(record => recordNeedsTranslation(record, slug, collection));
     if (missing.length) {
       try {
         const translatedById = new Map();
@@ -798,7 +820,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
       }
     }
-    return values.map(localizeContentRecord);
+    return values.map(record => localizeContentRecord(record, collection));
   }
 
   function queueRecordTranslation(collection, id) {
@@ -977,7 +999,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const publicValue = await readPublicData(name, id);
           if (!publicValue) return null;
           const translated = await ensureTranslatedRecords(name, [publicValue]);
-          return translated[0] || localizeContentRecord(publicValue);
+          return translated[0] || localizeContentRecord(publicValue, name);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -990,7 +1012,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value);
+          return translated[0] || localizeContentRecord(value, name);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -1002,7 +1024,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value);
+        return translated[0] || localizeContentRecord(value, name);
       } catch (error) {
         throw mapAuthError(error);
       }
@@ -10050,7 +10072,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var publicReady=viewedProfileStatus==='ready'&&viewedProfile;
       profileFavoritesSection.hidden=!publicReady;
       if(!publicReady){profileFavoritesItems=[];profileFavoritesContent.innerHTML='';if(profileFavoritesEdit)profileFavoritesEdit.hidden=true;return;}
-      profileFavoritesItems=ownProfile?readProfileFavorites():(Array.isArray(viewedProfile.favorites)?viewedProfile.favorites.map(normalizeProfileFavorite).slice(0,4):[]);
+      profileFavoritesItems=(ownProfile?readProfileFavorites():(Array.isArray(viewedProfile.favorites)?viewedProfile.favorites.map(normalizeProfileFavorite).slice(0,4):[])).map(function(item){return normalizeProfileFavorite(trustedProfileContent(item));});
       if(profileFavoritesEdit)profileFavoritesEdit.hidden=!ownProfile||profileFavoritesItems.length!==4;
       if(ownProfile&&profileFavoritesItems.length!==4){
         profileFavoritesContent.innerHTML='<button class="profile-favorites-empty" id="profileFavoritesAdd" type="button"><span class="profile-favorites-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><strong>Adicionar favoritos</strong><span>Escolha quatro conteúdos que representam o seu gosto.</span></button>';
@@ -10072,7 +10094,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           +'<span class="profile-favorite-rank" aria-hidden="true">'+rankSvg+'</span>'
           +'<span class="profile-favorite-poster">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
           +'<span class="profile-favorite-type">'+profileFavoriteCollectionLabel(item)+'</span>'
-          +'<span class="profile-favorite-title">'+escapePublic(item.title||'Conteúdo')+'</span></span>'
+          +'<span class="profile-favorite-title notranslate" translate="no">'+escapePublic(item.title||'Conteúdo')+'</span></span>'
           +'</button>';
       }).join('')+'</div>';
     }
@@ -10302,7 +10324,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return '<button class="profile-favorites-option'+(selected?' selected':'')+'" type="button" data-profile-favorite-option="'+catalogIndex+'" data-no-content-open="true" aria-pressed="'+String(selected)+'">'
             +'<span class="profile-favorites-option-media">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
             +'<span class="profile-favorites-option-order">'+(selected?selectedIndex+1:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>')+'</span></span>'
-            +'<span class="profile-favorites-option-copy"><strong>'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
+            +'<span class="profile-favorites-option-copy"><strong class="notranslate" translate="no">'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
             +'</button>';
         }).join('')+'</div><p class="profile-favorites-search-hint"><strong>Não achou o vídeo que queria?</strong><span>Pesquise pelo nome na barra acima.</span></p>';
       }
@@ -10458,6 +10480,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(ownProfile){
         try{profileSavedItems=typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[];}catch(error){console.warn('Não foi possível carregar os conteúdos salvos:',error);profileSavedItems=[];}
       }else profileSavedItems=Array.isArray(viewedProfile.savedContents)?viewedProfile.savedContents.map(normalizeProfileFavorite).slice(0,20):[];
+      profileSavedItems=profileSavedItems.map(function(item){return normalizeProfileFavorite(trustedProfileContent(item));});
       if(profileSavedCount)profileSavedCount.textContent=profileSavedItems.length?(profileSavedItems.length+' '+(profileSavedItems.length===1?'salvo':'salvos')):'';
       if(!profileSavedItems.length){
         profileSavedGrid.innerHTML='<div class="profile-saved-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg><strong>Nenhum conteúdo salvo ainda</strong><span>'+(ownProfile?'Os conteúdos e álbuns em que você tocar no coração aparecerão aqui.':'Esta pessoa ainda não possui conteúdos salvos no perfil.')+'</span></div>';
@@ -10469,7 +10492,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var meta=[isAlbum?'Álbum':'',item.year,item.duration].filter(Boolean).join(' • ');
         return '<button class="profile-saved-card'+(isAlbum?' is-album':'')+'" type="button" data-saved-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'conteúdo salvo')+'">'
           +'<span class="profile-saved-thumb">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-saved-placeholder" aria-hidden="true"></span>')+'<span class="profile-saved-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7Z"></path></svg></span></span>'
-          +'<span class="profile-saved-copy"><strong>'+escapePublic(item.title||'Conteúdo salvo')+'</strong>'+(meta?'<small>'+escapePublic(meta)+'</small>':'')+'</span>'
+          +'<span class="profile-saved-copy"><strong class="notranslate" translate="no">'+escapePublic(item.title||'Conteúdo salvo')+'</strong>'+(meta?'<small>'+escapePublic(meta)+'</small>':'')+'</span>'
           +'</button>';
       }).join('');
     }
