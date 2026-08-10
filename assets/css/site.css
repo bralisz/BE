@@ -15776,7 +15776,6 @@ body.detail-streaming-mobile-open{overflow:hidden}
     height:34px;
     display:grid;
     place-items:center;
-    overflow:hidden;
     border:1px solid rgba(255,255,255,.1);
     border-radius:10px;
     background:#090a0c;
@@ -15784,7 +15783,6 @@ body.detail-streaming-mobile-open{overflow:hidden}
     font:800 11px/1 var(--font-sans);
     letter-spacing:-.03em;
   }
-  .detail-streaming-service-icon img{width:100%;height:100%;display:block;object-fit:contain}
   .detail-streaming-service-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .detail-streaming-service-icon.disney{font-size:12px;letter-spacing:-.08em}
   .detail-streaming-service-icon.paramount svg{width:20px;height:20px}
@@ -15873,7 +15871,6 @@ body.detail-streaming-mobile-open{overflow:hidden}
     height:40px;
     display:grid;
     place-items:center;
-    overflow:hidden;
     border:1px solid rgba(255,255,255,.1);
     border-radius:12px;
     background:#090a0c;
@@ -15881,7 +15878,6 @@ body.detail-streaming-mobile-open{overflow:hidden}
     font:800 12px/1 var(--font-sans);
     letter-spacing:-.03em;
   }
-  .detail-streaming-mobile-list .detail-streaming-service-icon img{width:100%;height:100%;display:block;object-fit:contain}
   .detail-streaming-mobile-list .detail-streaming-service-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .detail-streaming-mobile-list .detail-streaming-service-icon.disney{font-size:13px;letter-spacing:-.08em}
   .detail-streaming-mobile-list .detail-streaming-service-icon.paramount svg{width:22px;height:22px}
@@ -15920,5 +15916,51 @@ body.detail-streaming-mobile-open{overflow:hidden}
   body.section-catalog-active .section-view-active .video-card{
     aspect-ratio:16/11!important;
     border-radius:13px!important;
+  }
+}
+
+
+/* 10/08/2026 — Mobile: cards do catálogo maiores e melhor aproveitamento horizontal. */
+@media (max-width:760px){
+  body.section-catalog-active #dynamicSections.section-view-mode{
+    padding-left:3px!important;
+    padding-right:3px!important;
+  }
+  body.section-catalog-active #dynamicSections.section-view-mode > .section-view-active{
+    width:100%!important;
+    max-width:none!important;
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+  body.section-catalog-active .section-view-active > .video-rail-title{
+    margin-left:7px!important;
+  }
+  body.section-catalog-active .section-view-active .video-rail{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    column-gap:5px!important;
+    row-gap:8px!important;
+    width:100%!important;
+  }
+  body.section-catalog-active .section-view-active .video-card{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    aspect-ratio:16/11.25!important;
+    border-width:1px!important;
+    border-radius:13px!important;
+  }
+}
+@media (max-width:430px){
+  body.section-catalog-active #dynamicSections.section-view-mode{
+    padding-left:2px!important;
+    padding-right:2px!important;
+  }
+  body.section-catalog-active .section-view-active .video-rail{
+    column-gap:4px!important;
+    row-gap:7px!important;
+  }
+  body.section-catalog-active .section-view-active .video-card{
+    aspect-ratio:16/11.4!important;
+    border-radius:12px!important;
   }
 }
