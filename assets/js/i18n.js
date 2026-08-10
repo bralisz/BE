@@ -20,13 +20,18 @@
   var PROTECTED_EXACT=new Set([
     'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Discord','Google','Instagram','TikTok','Twitter / X','Spotify','YouTube',
     'Apple TV','Prime Video','Paramount+','Disney+','Stripe','Supabase','CC BY-SA 4.0','LGPD','DMCA','HTTPS','BRL','USD',
-    'Ocean Eyes','WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','Happier Than Ever','HIT ME HARD AND SOFT',
-    'localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
+    'WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','HIT ME HARD AND SOFT','Happier Than Ever','dont smile at me','Guitar Songs',
+    'all the good girls go to hell','bad guy','Bellyache','BIRDS OF A FEATHER','Bored','bury a friend','CHIHIRO','everything i wanted',
+    'Guess','hostage','idontwannabeyouanymore','Lo Vas A Olvidar','Lost Cause','lovely','LUNCH','Male Fantasy','my future','NDA',
+    'Never Felt So Alone','No Time To Die','Ocean Eyes','ocean eyes','Therefore I Am','watch','What Was I Made For?',
+    "when the party's over",'xanny','you should see me in a crown','Your Power','THE GREATEST','SKINNY',"L'AMOUR DE MA VIE",
+    'Billie Bossa Nova','Getting Older','TV','bitches broken hearts','listen before i go','come out and play','One Less Lonely Girl',
+    'Have Yourself A Merry Little Christmas','localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
   ]);
-  var MUSIC_TITLE_SECTION_IDS=new Set(['14386598-4978-403a-8548-db0ee582e291','18db9515-179c-4bad-9646-1fcda63df14a','e995b960-503c-4d67-8d7c-87cbd6eda6a2','76295393-0c1d-483f-a48c-eea38f1057df']);
-  var MUSIC_TITLE_SECTION_NAMES=new Set(['live performances & tv','live performances','performances ao vivo','presentaciones en vivo','videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','concert','concerts','concerto','concertos','concierto','conciertos','show','shows']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v7-spanish-music-titles';
-  var STATIC_REV='20260810-spanish-music-titles-v1';
+  var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a']);
+  var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux']);
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v8-es-native-music-only';
+  var STATIC_REV='20260810-es-native-music-only-v3';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
@@ -147,7 +152,7 @@
     var sectionId=String(record.sectionId||'').trim();
     var sectionName=String(record.sectionName||record.sourceSectionTitle||'').trim().toLowerCase();
     var explicit=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true';
-    var keepTitle=slug==='es'&&(explicit||['albums','albuns','álbuns'].includes(collection)||(collection==='videos'&&(MUSIC_TITLE_SECTION_IDS.has(sectionId)||MUSIC_TITLE_SECTION_NAMES.has(sectionName))));
+    var keepTitle=['es','fr'].includes(slug)&&(explicit||['albums','albuns','álbuns'].includes(collection)||(collection==='videos'&&(MUSIC_TITLE_SECTION_IDS.has(sectionId)||MUSIC_TITLE_SECTION_NAMES.has(sectionName))));
     if(keepTitle){
       if(Object.prototype.hasOwnProperty.call(record,'title')){merged.title=record.title;protectExact(record.title);}
       if(Object.prototype.hasOwnProperty.call(record,'name')){merged.name=record.name;protectExact(record.name);}

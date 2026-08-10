@@ -725,18 +725,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
-  const SPANISH_MUSIC_TITLE_SECTION_IDS_BACKEND = new Set([
-    '14386598-4978-403a-8548-db0ee582e291',
-    '18db9515-179c-4bad-9646-1fcda63df14a',
-    'e995b960-503c-4d67-8d7c-87cbd6eda6a2',
-    '76295393-0c1d-483f-a48c-eea38f1057df'
+  const MUSIC_TITLE_SECTION_IDS_BACKEND = new Set([
+    '18db9515-179c-4bad-9646-1fcda63df14a'
   ]);
-  const SPANISH_MUSIC_TITLE_SECTION_NAMES_BACKEND = new Set([
-    'live performances & tv','live performances','performances ao vivo','presentaciones en vivo',
-    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux',
-    'concert','concerts','concerto','concertos','concierto','conciertos','show','shows'
+  const MUSIC_TITLE_SECTION_NAMES_BACKEND = new Set([
+    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux'
   ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
+  const SPANISH_TRANSLATION_REV = '20260810-es-native-music-only-v3';
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
@@ -760,15 +756,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function preservesSourceRecordTitle(collection, record, requestedSlug = activeLocaleSlug()) {
     const slug = String(requestedSlug || 'pt-br').toLowerCase();
-    if (slug !== 'es') return false;
+    if (!['es','fr'].includes(slug)) return false;
     if (record?.preserveTitle === true || String(record?.preserveTitle || '').toLowerCase() === 'true') return true;
     const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
     if (['albums','albuns','álbuns'].includes(normalizedCollection)) return true;
     if (normalizedCollection !== 'videos') return false;
     const sectionId = String(record?.sectionId || '').trim();
     const sectionName = String(record?.sectionName || record?.sourceSectionTitle || '').trim().toLowerCase();
-    return SPANISH_MUSIC_TITLE_SECTION_IDS_BACKEND.has(sectionId)
-      || SPANISH_MUSIC_TITLE_SECTION_NAMES_BACKEND.has(sectionName);
+    return MUSIC_TITLE_SECTION_IDS_BACKEND.has(sectionId)
+      || MUSIC_TITLE_SECTION_NAMES_BACKEND.has(sectionName);
   }
 
   function protectSourceRecordTitle(record) {
@@ -801,9 +797,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || (slug === 'en-us' ? translations.en : null);
     if (!localized || typeof localized !== 'object') return true;
-    if (slug === 'es' && !preservesSourceRecordTitle(collection, record, slug)) {
-      if (Object.prototype.hasOwnProperty.call(record, 'title') && !Object.prototype.hasOwnProperty.call(localized, 'title')) return true;
-      if (Object.prototype.hasOwnProperty.call(record, 'name') && !Object.prototype.hasOwnProperty.call(localized, 'name')) return true;
+    if (slug === 'es') {
+      // Traduções antigas podem conter português ou ter sido salvas quando seções inteiras
+      // eram bloqueadas. Só considera o cache espanhol válido na revisão atual.
+      if (String(localized.revision || '') !== SPANISH_TRANSLATION_REV) return true;
+      if (!preservesSourceRecordTitle(collection, record, slug)) {
+        if (Object.prototype.hasOwnProperty.call(record, 'title') && !Object.prototype.hasOwnProperty.call(localized, 'title')) return true;
+        if (Object.prototype.hasOwnProperty.call(record, 'name') && !Object.prototype.hasOwnProperty.call(localized, 'name')) return true;
+      }
     }
     return false;
   }
@@ -3172,19 +3173,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
-    '14386598-4978-403a-8548-db0ee582e291',
-    '18db9515-179c-4bad-9646-1fcda63df14a',
-    'e995b960-503c-4d67-8d7c-87cbd6eda6a2',
-    '76295393-0c1d-483f-a48c-eea38f1057df'
+    '18db9515-179c-4bad-9646-1fcda63df14a'
   ]);
   const MUSIC_TITLE_SECTION_NAMES_FRONTEND = new Set([
-    'live performances & tv','live performances','performances ao vivo','presentaciones en vivo',
-    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux',
-    'concert','concerts','concerto','concertos','concierto','conciertos','show','shows'
+    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux'
   ]);
   function preservesOriginalMusicTitle(data) {
     const locale = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
-    if (locale !== 'es') return false;
+    if (!['es','fr'].includes(locale)) return false;
     const collection = String(data?.collection || 'videos').toLowerCase();
     if (data?.preserveTitle === true || String(data?.preserveTitle || '').toLowerCase() === 'true') return true;
     if (['albums','albuns','álbuns'].includes(collection)) return true;
