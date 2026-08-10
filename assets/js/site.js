@@ -3925,7 +3925,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       </a>
       <div class="detail-comment-body">
         <a class="detail-comment-user notranslate" translate="no" href="${escapeHtml(profileHref)}">@${escapeHtml(username || 'usuario')}</a>
-        <p class="detail-comment-message" data-i18n-user-comment>${escapeHtml(message)}</p>
+        <p class="detail-comment-message notranslate" translate="no">${escapeHtml(message)}</p>
       </div>
       <div class="detail-comment-actions">${likeAction}${moderationAction}</div>
     </article>`;
@@ -4207,12 +4207,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
       const rows = Array.isArray(data) ? data : [];
       list.innerHTML = rows.map((row, index) => detailCommentMarkup(row, index)).join('');
-      // Comentários são conteúdo do usuário, mas podem ser traduzidos apenas na exibição.
-      // O texto original continua intacto no banco; o i18n detecta o idioma e traduz
-      // automaticamente para o idioma selecionado (en-us, es ou fr).
-      if (window.BETVI18n && typeof window.BETVI18n.apply === 'function') {
-        window.BETVI18n.apply(list);
-      }
       setupDetailCommentItemActions();
       empty.hidden = rows.length > 0;
       empty.textContent = localizedUiText('Ainda não há comentários.');
