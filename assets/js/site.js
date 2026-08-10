@@ -2522,7 +2522,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function applySiteSettings() {
     const data = await beBackend.data.get('settings', 'site');
     if (!data) return;
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
     if (data.description) {
       let meta = document.querySelector('meta[name="description"]');
       if (!meta) {
@@ -11630,7 +11630,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }else if(window.BETVI18n&&typeof window.BETVI18n.apply==='function'&&legalPage){
       window.BETVI18n.apply(legalPage);
     }
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
     window.scrollTo(0,0);
     return true;
   }
@@ -11638,7 +11638,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     history.pushState({beRoute:'home'},'','/'+(location.search||''));
     document.body.classList.remove('legal-page-active');
     if(legalPage)legalPage.hidden=true;
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
     window.dispatchEvent(new PopStateEvent('popstate'));
     window.scrollTo(0,0);
   }
@@ -11842,7 +11842,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(dropdown)dropdown.classList.remove('open');
     if(chip)chip.setAttribute('aria-expanded','false');
     setSupportTab(true);
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
     window.scrollTo(0,0);
     if(updateRoute!==false){
       window.requestAnimationFrame(function(){
@@ -11861,7 +11861,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       history.pushState(nextState,'',publicUrlWithoutSupportRoute());
     }
     if(resetTab!==false)setSupportTab(false);
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
   }
 
   function filterFaq(){
@@ -12446,7 +12446,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     page.hidden=false;
     page.setAttribute('aria-hidden','false');
     selectedId=String(id||'');
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
     syncPageAvatar();
     if(updateRoute!==false)setNotificationRoute(selectedId,false);else if(routeInfo().legacy)setNotificationRoute(selectedId,true);
     window.dispatchEvent(new CustomEvent('be:close-support'));
@@ -12467,7 +12467,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       url.hash='';
       history.pushState({beRoute:'home'},'',url.pathname+(url.search||''));
     }
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
   }
 
   function closeAccountMenu(){
@@ -13465,7 +13465,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderWikipediaAttribution(payload);
       wikipediaAttribution.hidden=false;
       /* A atualização do texto nunca substitui a foto padrão definida pelo site. */
-      document.title='Billie Eilish TV - Feito de Fã pra Fã';
+      document.title='Billie Eilish TV';
     }catch(error){
       if(token!==loadToken)return;
       wikipediaError.textContent=copy.loadingError;
@@ -13494,7 +13494,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.classList.add('billie-page-active');
     page.hidden=false;page.setAttribute('aria-hidden','false');
     syncAvatar();syncUnread();
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
     window.scrollTo({top:0,left:0,behavior:'auto'});
     loadSettings();
   }
@@ -13502,7 +13502,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     loadToken+=1;
     document.body.classList.remove('billie-page-active');
     page.hidden=true;page.setAttribute('aria-hidden','true');
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
   }
   function renderRoute(){
     if(isBillieRoute()){
@@ -14237,7 +14237,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     syncUnread();
     if(loaded)signalDonateVisualReady();else load(false);
     if(supportersLoaded)observeSupportersEnd();
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
   }
 
   function close(){
@@ -14246,7 +14246,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.classList.remove('donate-page-active');
     page.hidden=true;
     page.setAttribute('aria-hidden','true');
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
   }
 
   document.addEventListener('click',function(event){
@@ -14506,9 +14506,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(page);
     syncAccount();
     load(false);
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
   }
-  function close(){disconnect();document.body.classList.remove('fans-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV - Feito de Fã pra Fã';}
+  function close(){disconnect();document.body.classList.remove('fans-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV';}
   function navigate(path,replace){var target=localized(path);var url=new URL(target,location.origin);var state={beRoute:path};history[replace?'replaceState':'pushState'](state,'',url.pathname+(location.search||''));window.dispatchEvent(new PopStateEvent('popstate',{state:state}));}
   function goHome(replace){navigate('/',Boolean(replace));}
 
@@ -14638,7 +14638,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     tracks.innerHTML=albumTracks.length?albumTracks.map(function(track,index){return '<li><span class="album-track-index">'+(index+1)+'</span><strong class="notranslate" translate="no">'+esc(track&&track.title||'')+'</strong><small>'+esc(track&&track.duration||'')+'</small></li>';}).join(''):'<li class="album-track-empty">'+esc(t('Nenhuma faixa cadastrada.'))+'</li>';
     status.hidden=true;detail.hidden=false;
     renderRail(album.id);
-    document.title='Billie Eilish TV - Feito de Fã pra Fã';
+    document.title='Billie Eilish TV';
     if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(page);
   }
 
@@ -14669,8 +14669,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return loading;
   }
 
-  function open(){document.body.classList.add('album-page-active');page.hidden=false;page.setAttribute('aria-hidden','false');document.title='Billie Eilish TV - Feito de Fã pra Fã';setSearchContext(true);var field=document.getElementById('homeSearchInput');activeSearch=field?String(field.value||''):'';load(false);}
-  function close(){document.body.classList.remove('album-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV - Feito de Fã pra Fã';activeSearch='';currentAlbum=null;setSearchContext(false);}
+  function open(){document.body.classList.add('album-page-active');page.hidden=false;page.setAttribute('aria-hidden','false');document.title='Billie Eilish TV';setSearchContext(true);var field=document.getElementById('homeSearchInput');activeSearch=field?String(field.value||''):'';load(false);}
+  function close(){document.body.classList.remove('album-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title='Billie Eilish TV';activeSearch='';currentAlbum=null;setSearchContext(false);}
 
   if(back)back.addEventListener('click',function(){navigate('/',false);});
   favorite.addEventListener('click',function(){

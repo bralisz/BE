@@ -631,7 +631,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   const canonical = `${origin}${canonicalPath}`;
   const noindex = isNoindexRoute(routeInfo);
 
-  let documentTitle = copy.title;
+  const documentTitle = siteTitle;
   let socialTitle = copy.title;
   let socialDescription = copy.description;
   let image = FIXED_SHARE_IMAGE_URL;
@@ -642,7 +642,6 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     const displayName = String(publicProfile.displayName || publicProfile.username).trim().slice(0, 80);
     const username = PUBLIC_PROFILE_API.normalizeUsername(publicProfile.username);
     const version = profileShareVersion(publicProfile);
-    documentTitle = `${displayName} — ${siteTitle}`;
     socialTitle = `${displayName} (@${username})`;
     socialDescription = profileDescription(displayName);
     imageAlt = profileImageAlt(displayName);
@@ -692,7 +691,7 @@ ${process.env.GOOGLE_SITE_VERIFICATION ? `<meta name="google-site-verification" 
 ${alternates}`;
 
   html = html.replace('</title>', `</title>${metadata}`);
-  return injectStructuredData(html, origin, canonical, routeInfo, { ...copy, title: documentTitle, description: socialDescription }, seoRecord, publicProfile);
+  return injectStructuredData(html, origin, canonical, routeInfo, { ...copy, title: socialTitle, description: socialDescription }, seoRecord, publicProfile);
 }
 
 module.exports = async function sitePage(req, res) {
