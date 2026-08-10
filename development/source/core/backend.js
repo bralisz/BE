@@ -526,14 +526,31 @@
     }
   };
 
+  const SUPABASE_PROFILE_PAGE_SIZE = 500;
+
+  async function listAllSupabaseProfiles() {
+    const rows = [];
+    for (let offset = 0; ; offset += SUPABASE_PROFILE_PAGE_SIZE) {
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .order('id', { ascending: true })
+        .range(offset, offset + SUPABASE_PROFILE_PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = Array.isArray(data) ? data : [];
+      rows.push(...page);
+      if (page.length < SUPABASE_PROFILE_PAGE_SIZE) break;
+    }
+    return rows;
+  }
+
   const supabaseData = {
     async list(name, options = {}) {
       try {
         let items = [];
         if (name === 'users') {
-          const { data, error } = await supabaseClient.from('profiles').select('*');
-          if (error) throw error;
-          items = (data || []).map(profileFromRow);
+          const rows = await listAllSupabaseProfiles();
+          items = rows.map(profileFromRow);
         } else if (name === 'settings') {
           const { data, error } = await supabaseClient.from('site_settings').select('*');
           if (error) throw error;
