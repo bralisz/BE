@@ -754,6 +754,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
+    const preserveTitle = preservesOriginalMusicTitle(record);
+    if (preserveTitle) {
+      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
+      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
+    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
@@ -764,7 +769,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
-    return !localized || typeof localized !== 'object';
+    if (!localized || typeof localized !== 'object') return true;
+    if (!preservesOriginalMusicTitle(record)) {
+      for (const field of ['title','name']) {
+        const source = String(record[field] || '').trim();
+        if (source && !String(localized[field] || '').trim()) return true;
+      }
+    }
+    return false;
   }
 
   async function ensureTranslatedRecords(collection, records) {
@@ -3139,17 +3151,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     '14386598-4978-403a-8548-db0ee582e291',
     '18db9515-179c-4bad-9646-1fcda63df14a'
   ]);
+  function normalizeMusicTitleContext(value) {
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/&/g, ' and ');
+  }
+  function looksLikeMusicPerformanceTitle(data) {
+    const title = normalizeMusicTitleContext(data?.title || data?.name || '');
+    if (!title) return false;
+    return /\b(live from|live at|live on|live session|live performance|ao vivo em|ao vivo no|ao vivo na|en vivo desde|en vivo en|performance at|performed at)\b/.test(title)
+      || /\b(official music video|official video|music video|lyric video|official audio|audio oficial|visualizer|visualiser)\b/.test(title);
+  }
   function preservesOriginalMusicTitle(data) {
     const collection = String(data?.collection || 'videos').toLowerCase();
     if (collection === 'albums' || collection === 'shows') return true;
     if (collection === 'news' && Array.isArray(data?.tracks)) return true;
     if (collection !== 'videos') return false;
     const sectionId = String(data?.sectionId || '').trim();
-    const context = String([data?.sectionName, data?.sourceSectionTitle, data?.category, data?.type, data?.contentType].filter(Boolean).join(' '))
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const context = normalizeMusicTitleContext([data?.sectionName, data?.sourceSectionTitle, data?.category, data?.type, data?.contentType].filter(Boolean).join(' '));
     return MUSIC_TITLE_SECTION_IDS_FRONTEND.has(sectionId)
       || /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?|music|musica|song|songs|tracks?|faixa|faixas)\b/.test(context)
-      || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live|concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);
+      || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live|concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context)
+      || looksLikeMusicPerformanceTitle(data);
   }
 
 
