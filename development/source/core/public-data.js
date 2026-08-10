@@ -58,7 +58,7 @@
   async function applySiteSettings() {
     const data = await beBackend.data.get('settings', 'site');
     if (!data) return;
-    document.title = 'Billie Eilish TV';
+    if (data.siteName) document.title = data.siteName;
     if (data.description) {
       let meta = document.querySelector('meta[name="description"]');
       if (!meta) {

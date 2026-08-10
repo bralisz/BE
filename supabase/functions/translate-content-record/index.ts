@@ -4,17 +4,11 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 const SITE_ORIGIN = "https://billieilishtv.site";
 const PUBLIC_COLLECTIONS = new Set(["contents","featured","movies","notifications","ongs","sections","series","videos"]);
 const PUBLIC_SETTINGS = new Set(["site","billie-eilish","ong"]);
-const TARGETS: Record<string,string> = {"en-us":"en",es:"es",fr:"fr"};
+const TARGETS: Record<string,string> = {"en-us":"en",es:"es"};
 const FIELDS = ["title","name","description","subtitle","body","summary","buttonLabel","buttonText","actionLabel","ctaLabel","label","text","manualBio","kicker","footerText","sectionName","siteName"];
 const DURATION_FIELDS = ["duration","runtime","videoDuration"];
-const MUSIC_SECTION_IDS = new Set(["14386598-4978-403a-8548-db0ee582e291","18db9515-179c-4bad-9646-1fcda63df14a"]);
-const PROTECTED_TERMS = [
-  "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?","HIT ME HARD AND SOFT","Happier Than Ever","Ocean Eyes",
-  "Billie Eilish TV","Billie Eilish","Prime Video","Apple TV","Paramount+","Disney+","Twitter / X",
-  "CC BY-SA 4.0","SameSite=Lax","localStorage","sessionStorage","be_site_preferences","be_cookie_ack",
-  "FINNEAS","Discord","Google","Instagram","TikTok","Spotify","YouTube","Stripe","Supabase",
-  "BETV","DMCA","LGPD","HTTPS","BRL","USD","BE"
-].sort((a,b)=>b.length-a.length);
+const MUSIC_SECTION_IDS = new Set(["14386598-4978-403a-8548-db0ee582e291","18db9515-179c-4bad-9646-1fcda63df14a","e995b960-503c-4d67-8d7c-87cbd6eda6a2","76295393-0c1d-483f-a48c-eea38f1057df"]);
+const MUSIC_SECTION_NAMES = new Set(["live performances & tv","videoclipes","concert","concierto","behind the scenes","detrás de escena","detras de escena"]);
 const GOOGLE_JSON = "https://translate.googleapis.com/translate_a/single";
 const GOOGLE_MOBILE = "https://translate.google.com/m";
 const MAX_RECORDS = 50;
@@ -34,106 +28,24 @@ function text(value:unknown,max=8000){return String(value??"").trim().slice(0,ma
 function decode(value:string){return value.replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/&nbsp;/gi," ").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&amp;/gi,"&");}
 function htmlResult(html:string){for(const re of [/<div[^>]*class=["'][^"']*\bresult-container\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,/<div[^>]*class=["'][^"']*\bt0\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i]){const m=html.match(re);if(m){const out=decode(m[1].replace(/<br\s*\/?\s*>/gi,"\n").replace(/<[^>]+>/g,"")).trim();if(out)return out;}}return "";}
 function sleep(ms:number){return new Promise(r=>setTimeout(r,ms));}
-function escapeRegex(value:string){return value.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
-function protectNonTranslatables(input:string){
-  const values:string[]=[];
-  const keep=(value:string)=>{const index=values.push(value)-1;return `[[[${index}]]]`;};
-  let value=input;
-  const patterns=[
-    /⟦\s*BETV\d+_\d+\s*⟧/gi,
-    /https?:\/\/[^\s<>()]+/gi,
-    /[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi,
-    /\{[a-zA-Z0-9_]+\}/g,
-    /\$\{[^}]+\}/g,
-    /@[a-zA-Z0-9_.-]+/g,
-    /#[a-zA-Z0-9_.-]+/g,
-    /\bbe_[a-z0-9_]+\b/gi
-  ];
-  for(const pattern of patterns)value=value.replace(pattern,match=>keep(match));
-  for(const term of PROTECTED_TERMS){
-    const pattern=new RegExp(`(^|[^\\p{L}\\p{N}])(${escapeRegex(term)})(?=$|[^\\p{L}\\p{N}])`,"giu");
-    value=value.replace(pattern,(_match,prefix,matched)=>`${prefix}${keep(matched)}`);
-  }
-  return {
-    value,
-    restore(output:string){return output.replace(/\[\s*\[\s*\[\s*(\d+)\s*\]\s*\]\s*\]/g,(_match,index)=>values[Number(index)]??_match);}
-  };
-}
-function replaceAll(value:string,replacements:[RegExp,string][]){let output=value;for(const [pattern,replacement] of replacements)output=output.replace(pattern,replacement);return output;}
-function naturalizeSpanish(value:string){
-  let output=replaceAll(value,[
-    [/\bUsted puede\b/g,"Puedes"],[/\busted puede\b/g,"puedes"],[/\bUsted debe\b/g,"Debes"],[/\busted debe\b/g,"debes"],
-    [/\bUsted tiene\b/g,"Tienes"],[/\busted tiene\b/g,"tienes"],[/\bUsted está\b/g,"Estás"],[/\busted está\b/g,"estás"],
-    [/\bUsted quiere\b/g,"Quieres"],[/\busted quiere\b/g,"quieres"],
-    [/\bSeleccione\b/g,"Selecciona"],[/\bseleccione\b/g,"selecciona"],[/\bElija\b/g,"Elige"],[/\belija\b/g,"elige"],
-    [/\bIntroduzca\b/g,"Ingresa"],[/\bintroduzca\b/g,"ingresa"],[/\bIngrese\b/g,"Ingresa"],[/\bingrese\b/g,"ingresa"],
-    [/\bCompruebe\b/g,"Revisa"],[/\bcompruebe\b/g,"revisa"],[/\bVerifique\b/g,"Revisa"],[/\bverifique\b/g,"revisa"],
-    [/\bInténtelo\b/g,"Inténtalo"],[/\binténtelo\b/g,"inténtalo"],[/\bVuelva\b/g,"Vuelve"],[/\bvuelva\b/g,"vuelve"],
-    [/\bEspere\b/g,"Espera"],[/\bespere\b/g,"espera"],[/\bActualice\b/g,"Actualiza"],[/\bactualice\b/g,"actualiza"],
-    [/\bAbra\b/g,"Abre"],[/\babra\b/g,"abre"],[/\bUtilice\b/g,"Usa"],[/\butilice\b/g,"usa"],
-    [/\bConsulte\b/g,"Consulta"],[/\bconsulte\b/g,"consulta"],[/\bToque\b/g,"Toca"],[/\btoque\b/g,"toca"],
-    [/\bHaga clic\b/g,"Haz clic"],[/\bhaga clic\b/g,"haz clic"],[/\bConfirme\b/g,"Confirma"],[/\bconfirme\b/g,"confirma"],
-    [/\bimporte\b/gi,"monto"],[/\bimportes\b/gi,"montos"],[/\bcostes\b/gi,"costos"],[/\bvídeo\b/gi,"video"],[/\bvídeos\b/gi,"videos"],
-    [/\bordenador\b/gi,"computadora"],[/\bmóvil\b/gi,"celular"],[/\bIntroduce\b/g,"Ingresa"],[/\bintroduce\b/g,"ingresa"],
-    [/\bComprueba\b/g,"Revisa"],[/\bcomprueba\b/g,"revisa"],[/\bPulsa\b/g,"Toca"],[/\bpulsa\b/g,"toca"]
-  ]);
-  const singular="cuenta|perfil|contraseña|correo|e-mail|nombre|usuario|sesión|navegador|dispositivo|pago|donación|duda|problema|identidad|imagen|avatar|banner|preferencia|solicitud|moneda|dirección|conexión";
-  const plural="datos|preferencias|favoritos|contenidos|videos|álbumes|credenciales|cambios|notificaciones|derechos";
-  output=output.replace(new RegExp(`\\bsu (${singular})\\b`,"gi"),(match,noun)=>`${/^Su /.test(match)?"Tu":"tu"} ${noun}`);
-  output=output.replace(new RegExp(`\\bsus (${plural})\\b`,"gi"),(match,noun)=>`${/^Sus /.test(match)?"Tus":"tus"} ${noun}`);
-  return output;
-}
-function naturalizeFrench(value:string){
-  let output=replaceAll(value,[
-    [/\bVeuillez\s+/g,""],[/\bveuillez\s+/g,""],[/\bVous pouvez\b/g,"Tu peux"],[/\bvous pouvez\b/g,"tu peux"],
-    [/\bVous devez\b/g,"Tu dois"],[/\bvous devez\b/g,"tu dois"],[/\bVous avez\b/g,"Tu as"],[/\bvous avez\b/g,"tu as"],
-    [/\bVous êtes\b/g,"Tu es"],[/\bvous êtes\b/g,"tu es"],[/\bVous voulez\b/g,"Tu veux"],[/\bvous voulez\b/g,"tu veux"],
-    [/\bVous souhaitez\b/g,"Tu souhaites"],[/\bvous souhaitez\b/g,"tu souhaites"],[/\bVous devrez\b/g,"Tu devras"],[/\bvous devrez\b/g,"tu devras"],
-    [/\bVous pourrez\b/g,"Tu pourras"],[/\bvous pourrez\b/g,"tu pourras"],[/\bvous connecter\b/g,"te connecter"],[/\bvous déconnecter\b/g,"te déconnecter"],
-    [/\bVous choisissez\b/g,"Tu choisis"],[/\bvous choisissez\b/g,"tu choisis"],[/\bVous utilisez\b/g,"Tu utilises"],[/\bvous utilisez\b/g,"tu utilises"],
-    [/\bVous acceptez\b/g,"Tu acceptes"],[/\bvous acceptez\b/g,"tu acceptes"],[/\bVous contactez\b/g,"Tu contactes"],[/\bvous contactez\b/g,"tu contactes"],
-    [/\bVous saisissez\b/g,"Tu saisis"],[/\bvous saisissez\b/g,"tu saisis"],[/\bVous partagez\b/g,"Tu partages"],[/\bvous partagez\b/g,"tu partages"],
-    [/\bVous ouvrez\b/g,"Tu ouvres"],[/\bvous ouvrez\b/g,"tu ouvres"],[/\bVous vérifiez\b/g,"Tu vérifies"],[/\bvous vérifiez\b/g,"tu vérifies"],
-    [/\bVous confirmez\b/g,"Tu confirmes"],[/\bvous confirmez\b/g,"tu confirmes"],[/\bVous sélectionnez\b/g,"Tu sélectionnes"],[/\bvous sélectionnez\b/g,"tu sélectionnes"],
-    [/\bVous revenez\b/g,"Tu reviens"],[/\bvous revenez\b/g,"tu reviens"],[/\bVous attendez\b/g,"Tu attends"],[/\bvous attendez\b/g,"tu attends"],
-    [/\bVous essayez\b/g,"Tu essaies"],[/\bvous essayez\b/g,"tu essaies"],[/\bVous recevez\b/g,"Tu reçois"],[/\bvous recevez\b/g,"tu reçois"],
-    [/\bVous préférez\b/g,"Tu préfères"],[/\bvous préférez\b/g,"tu préfères"],[/\bVous gardez\b/g,"Tu gardes"],[/\bvous gardez\b/g,"tu gardes"],
-    [/\bpour vous\b/g,"pour toi"],[/\bà vous\b/g,"à toi"],[/\bde vous\b/g,"de toi"],[/\bnous vous\b/g,"nous te"],
-    [/\bChoisissez\b/g,"Choisis"],[/\bchoisissez\b/g,"choisis"],[/\bSélectionnez\b/g,"Sélectionne"],[/\bsélectionnez\b/g,"sélectionne"],
-    [/\bSaisissez\b/g,"Saisis"],[/\bsaisissez\b/g,"saisis"],[/\bEntrez\b/g,"Entre"],[/\bentrez\b/g,"entre"],
-    [/\bOuvrez\b/g,"Ouvre"],[/\bouvrez\b/g,"ouvre"],[/\bUtilisez\b/g,"Utilise"],[/\butilisez\b/g,"utilise"],
-    [/\bVérifiez\b/g,"Vérifie"],[/\bvérifiez\b/g,"vérifie"],[/\bConsultez\b/g,"Consulte"],[/\bconsultez\b/g,"consulte"],
-    [/\bRéessayez\b/g,"Réessaie"],[/\bréessayez\b/g,"réessaie"],[/\bRevenez\b/g,"Reviens"],[/\brevenez\b/g,"reviens"],
-    [/\bAttendez\b/g,"Attends"],[/\battendez\b/g,"attends"],[/\bRafraîchissez\b/g,"Actualise"],[/\brafraîchissez\b/g,"actualise"],
-    [/\bActualisez\b/g,"Actualise"],[/\bactualisez\b/g,"actualise"],[/\bCliquez\b/g,"Clique"],[/\bcliquez\b/g,"clique"],
-    [/\bAppuyez\b/g,"Appuie"],[/\bappuyez\b/g,"appuie"],[/\bTouchez\b/g,"Touche"],[/\btouchez\b/g,"touche"],
-    [/\bContactez\b/g,"Contacte"],[/\bcontactez\b/g,"contacte"],[/\bIndiquez\b/g,"Indique"],[/\bindiquez\b/g,"indique"],
-    [/\bAjoutez\b/g,"Ajoute"],[/\bajoutez\b/g,"ajoute"],[/\bSupprimez\b/g,"Supprime"],[/\bsupprimez\b/g,"supprime"],
-    [/\bLisez\b/g,"Lis"],[/\blisez\b/g,"lis"],[/\bConfirmez\b/g,"Confirme"],[/\bconfirmez\b/g,"confirme"],
-    [/\bSignalez\b/g,"Signale"],[/\bsignalez\b/g,"signale"],[/\bTéléchargez\b/g,"Télécharge"],[/\btéléchargez\b/g,"télécharge"]
-  ]);
-  const masculine="compte|profil|mot de passe|e-mail|email|navigateur|appareil|paiement|don|problème|avatar|choix|nom|contenu|lien|identifiant";
-  const feminine="adresse|session|question|identité|image|bannière|préférence|demande|monnaie|banque|connexion|information";
-  const plural="données|informations|identifiants|favoris|contenus|vidéos|albums|préférences|droits|notifications|modifications";
-  output=output.replace(new RegExp(`\\bvotre (${masculine})\\b`,"gi"),(match,noun)=>`${/^Votre /.test(match)?"Ton":"ton"} ${noun}`);
-  output=output.replace(new RegExp(`\\bvotre (${feminine})\\b`,"gi"),(match,noun)=>`${/^Votre /.test(match)?"Ta":"ta"} ${noun}`);
-  output=output.replace(new RegExp(`\\bvos (${plural})\\b`,"gi"),(match,noun)=>`${/^Vos /.test(match)?"Tes":"tes"} ${noun}`);
-  return output;
-}
-function naturalizeTranslation(value:string,target:string){
-  if(target==="es")return naturalizeSpanish(value);
-  if(target==="fr")return naturalizeFrench(value);
-  if(target==="en")return value.replace(/(^|[.!?]\s+)Please\s+/g,"$1");
-  return value;
+const OFFICIAL_HMHAS_TITLE = "Hit Me Hard and Soft";
+function preserveOfficialAlbumTitle(value:string,source:string,target:string){
+  if(target!=="es"||!/hit me hard and soft/i.test(source))return value;
+  const sourceTrimmed=source.trim();
+  if(/^hit me hard and soft(?:\s*:\s*the tour)?$/i.test(sourceTrimmed))return sourceTrimmed.replace(/^hit me hard and soft/i,OFFICIAL_HMHAS_TITLE);
+  return value
+    .replace(/p[eé]game\s+(?:fuerte|duro)\s+y\s+suave/gi,OFFICIAL_HMHAS_TITLE)
+    .replace(/golp[eé]ame\s+(?:fuerte|duro)\s+y\s+suave/gi,OFFICIAL_HMHAS_TITLE)
+    .replace(/g[eé]lame\s+duro\s+y\s+suave/gi,OFFICIAL_HMHAS_TITLE)
+    .replace(/hit me hard and soft/gi,OFFICIAL_HMHAS_TITLE);
 }
 function chunks(value:string){const out:string[]=[];let rest=value;while(rest.length>1800){const sample=rest.slice(0,1801);const cut=Math.max(sample.lastIndexOf("\n"),sample.lastIndexOf(". "),sample.lastIndexOf(" "));const size=cut>950?cut+1:1800;out.push(rest.slice(0,size));rest=rest.slice(size);}if(rest)out.push(rest);return out;}
-async function translateChunk(input:string,target:string){
-  if(!input.trim())return input;
-  const protectedInput=protectNonTranslatables(input),source=protectedInput.value;
+async function translateChunk(source:string,target:string){
+  if(!source.trim())return source;
   try{
     const u=new URL(GOOGLE_JSON);u.searchParams.set("client","gtx");u.searchParams.set("sl","auto");u.searchParams.set("tl",target);u.searchParams.set("dt","t");u.searchParams.set("q",source);
     const r=await fetch(u,{signal:AbortSignal.timeout(15000),headers:{"Accept":"application/json","User-Agent":"Mozilla/5.0 BETV-Translator/2.0"}});
-    if(r.ok){const p=await r.json();if(Array.isArray(p)&&Array.isArray(p[0])){const result=p[0].map((part:unknown)=>Array.isArray(part)?String(part[0]||""):"").join("").trim();if(result)return protectedInput.restore(result);}}
+    if(r.ok){const p=await r.json();if(Array.isArray(p)&&Array.isArray(p[0])){const result=p[0].map((part:unknown)=>Array.isArray(part)?String(part[0]||""):"").join("").trim();if(result)return result;}}
   }catch{}
   const u=new URL(GOOGLE_MOBILE);u.searchParams.set("sl","auto");u.searchParams.set("tl",target);u.searchParams.set("hl",target);u.searchParams.set("q",source);
   for(let attempt=1;attempt<=3;attempt++){
@@ -141,7 +53,7 @@ async function translateChunk(input:string,target:string){
       const r=await fetch(u,{signal:AbortSignal.timeout(15000),headers:{"Accept":"text/html,application/xhtml+xml","User-Agent":"Mozilla/5.0 BETV-Translator/2.0"}});
       if(r.status===429)throw new Error("rate_limited");
       if(!r.ok)throw new Error(`http_${r.status}`);
-      const result=htmlResult(await r.text());if(result)return protectedInput.restore(result);
+      const result=htmlResult(await r.text());if(result)return result;
       throw new Error("translation_not_found");
     }catch(error){if(attempt===3)throw error;await sleep(400*attempt);}
   }
@@ -167,22 +79,12 @@ ${item.source}`).join("\n");
     }
     await sleep(60);
   }
-  values.forEach((_source,index)=>{const output=pieces.filter(piece=>piece.index===index).sort((a,b)=>a.part-b.part).map(piece=>translated.get(`${piece.index}:${piece.part}`)||piece.source).join("").trim();result[index]=naturalizeTranslation(output,target);});
+  values.forEach((source,index)=>{const output=pieces.filter(piece=>piece.index===index).sort((a,b)=>a.part-b.part).map(piece=>translated.get(`${piece.index}:${piece.part}`)||piece.source).join("").trim();result[index]=preserveOfficialAlbumTitle(output,source,target);});
   return result;
 }
 function active(value:unknown){return value!==false&&String(value??"true").toLowerCase()!=="false";}
 function normalizeTitleContext(value:unknown){return text(value,600).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/&/g," and ").replace(/[^a-z0-9]+/g," ").trim();}
-function preserveTitle(collection:string,data:Record<string,unknown>){
-  if(data.preserveTitle===true||text(data.preserveTitle,10).toLowerCase()==="true")return true;
-  if(collection==="albums"||collection==="shows")return true;
-  const context=normalizeTitleContext([data.sectionName,data.sourceSectionTitle,data.category,data.type,data.contentType].filter(Boolean).join(" "));
-  if(collection==="news")return Array.isArray(data.tracks)||/\b(album|single|ep|disco|albumes|albums|musica|music)\b/.test(context);
-  if(collection!=="videos")return false;
-  if(MUSIC_SECTION_IDS.has(text(data.sectionId,120)))return true;
-  return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?|musica|music|song|songs|faixa|faixas|tracks?)\b/.test(context)
-    || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live)\b/.test(context)
-    || /\b(concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);
-}
+function preserveTitle(collection:string,data:Record<string,unknown>){if(data.preserveTitle===true||text(data.preserveTitle,10).toLowerCase()==="true")return true;if(collection==="albums"||collection==="shows")return true;const context=normalizeTitleContext([data.sectionName,data.sourceSectionTitle,data.category,data.type,data.contentType].filter(Boolean).join(" "));if(collection==="news")return Array.isArray(data.tracks)||/\b(album|single|ep|disco|albumes|albums|musica|music)\b/.test(context);if(collection!=="videos")return false;if(MUSIC_SECTION_IDS.has(text(data.sectionId,120)))return true;return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?|musica|music|song|songs|faixa|faixas|tracks?)\b/.test(context)||/\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live|concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);}
 function duration(value:unknown,locale:string){const raw=text(value,120);if(!raw)return raw;const h=raw.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i);const m=raw.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);if(!h&&!m)return raw;return [h?(locale==="en-us"?`${Number(h[1])} hr`:`${Number(h[1])} h`):"",m?`${Number(m[1])} min`:""].filter(Boolean).join(" ");}
 function sourceSignature(data:Record<string,unknown>){const source:Record<string,unknown>={};for(const field of [...FIELDS,...DURATION_FIELDS])if(Object.prototype.hasOwnProperty.call(data,field))source[field]=data[field];const serialized=JSON.stringify(source);let hash=2166136261;for(let i=0;i<serialized.length;i++){hash^=serialized.charCodeAt(i);hash=Math.imul(hash,16777619);}return `src-${(hash>>>0).toString(16)}`;}
 
@@ -198,7 +100,7 @@ Deno.serve(async(req:Request)=>{
     const locale=text(body.locale,10).toLowerCase(),target=TARGETS[locale];
     const texts=Array.from(new Set((Array.isArray(body.texts)?body.texts:[]).map(v=>text(v,1800)).filter(v=>v&&/\p{L}/u.test(v)))).slice(0,60);
     if(!target||!texts.length||texts.reduce((s,v)=>s+v.length,0)>9000)return reply(req,400,{error:"Solicitação de tradução inválida."});
-    try{return reply(req,200,{locale,style:"informal-native",translations:await translateValues(texts,target),provider:"google-web-natural-v1"});}catch(error){console.error("UI translation failed",text((error as Error)?.message,160));return reply(req,503,{error:"Tradução temporariamente indisponível."});}
+    try{return reply(req,200,{locale,translations:await translateValues(texts,target),provider:"deep-translator-google-web"});}catch(error){console.error("UI translation failed",text((error as Error)?.message,160));return reply(req,503,{error:"Tradução temporariamente indisponível."});}
   }
 
   const collection=text(body.collection,40).toLowerCase();
@@ -225,19 +127,19 @@ Deno.serve(async(req:Request)=>{
   let total=0;const responseRecords:Record<string,unknown>[]=[];
   try{
     for(const row of rows as any[]){
-      const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);const keepTitle=preserveTitle(collection,data);
+      const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);const keepTitle=collection==="ongs"||preserveTitle(collection,data);
       for(const locale of locales){
         const existing=translations[locale];if(!force&&existing&&existing.sourceUpdatedAt===signature){const cached={...existing};if(keepTitle){delete cached.title;delete cached.name;translations[locale]=cached;}responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
         const fields=FIELDS.filter(field=>!(keepTitle&&(field==="title"||field==="name"))).filter(field=>typeof data[field]==="string"&&text(data[field])&&!/^https?:\/\//i.test(text(data[field])));
         total+=fields.reduce((sum,field)=>sum+text(data[field]).length,0);if(total>MAX_CHARS)return reply(req,413,{error:"Conteúdo excede o limite por solicitação."});
         const values=await translateValues(fields.map(field=>text(data[field])),TARGETS[locale]);
-        const translated:Record<string,unknown>={sourceUpdatedAt:signature,translatedAt:new Date().toISOString(),style:"informal-native",provider:"google-web-natural-v1"};
+        const translated:Record<string,unknown>={sourceUpdatedAt:signature,translatedAt:new Date().toISOString(),provider:"deep-translator-google-web"};
         fields.forEach((field,index)=>translated[field]=values[index]||data[field]);
         DURATION_FIELDS.forEach(field=>{if(typeof data[field]==="string"&&text(data[field]))translated[field]=duration(data[field],locale);});
         translations[locale]=translated;responseRecords.push({id:row.id,locale,translation:translated,cached:false});
       }
       data.translations=translations;const {error}=await adminClient.from(table).update({data}).eq("id",row.id);if(error)throw new Error(`save_${error.code}`);
     }
-    return reply(req,200,{records:responseRecords,translatedRecords:rows.length,locales,style:"informal-native",provider:"google-web-natural-v1"});
+    return reply(req,200,{records:responseRecords,translatedRecords:rows.length,locales,provider:"deep-translator-google-web"});
   }catch(error){console.error("Translation failed",text((error as Error)?.message,160));return reply(req,503,{error:"A tradução automática está temporariamente indisponível."});}
 });

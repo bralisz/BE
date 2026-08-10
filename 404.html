@@ -151,19 +151,18 @@
   <script>
     (function(){
       var first=String(location.pathname.split('/')[1]||'').toLowerCase();
-      var slug=['pt-br','en-us','es','fr'].includes(first)?first:'';
+      var slug=['pt-br','en-us','es'].includes(first)?first:'';
       if(!slug){
         try{slug=String(localStorage.getItem('betvPreferredLocale')||'').toLowerCase();}catch(_){slug='';}
       }
-      if(!['pt-br','en-us','es','fr'].includes(slug)){
+      if(!['pt-br','en-us','es'].includes(slug)){
         var lang=String(navigator.language||'').toLowerCase();
-        slug=lang.indexOf('es')===0?'es':lang.indexOf('fr')===0?'fr':lang.indexOf('en')===0?'en-us':'pt-br';
+        slug=lang.indexOf('es')===0?'es':lang.indexOf('en')===0?'en-us':'pt-br';
       }
       var copy={
         'pt-br':{lang:'pt-BR',title:'Essa página saiu do roteiro.',description:'O endereço pode ter mudado, sido removido ou nunca ter existido. Volte ao início para continuar explorando o site.',home:'Voltar ao início',back:'Página anterior'},
-        'en-us':{lang:'en-US',title:'This page went off script.',description:'This address may have changed, been removed, or never existed. Head back home to keep exploring.',home:'Back to home',back:'Previous page'},
-        'es':{lang:'es',title:'Esta página se salió del guion.',description:'La dirección puede haber cambiado, haber sido eliminada o no haber existido nunca. Vuelve al inicio para seguir explorando el sitio.',home:'Volver al inicio',back:'Página anterior'},
-        'fr':{lang:'fr-FR',title:'Cette page est sortie du scénario.',description:'Cette adresse a peut-être changé, été supprimée ou n’a jamais existé. Reviens à l’accueil pour continuer ta visite.',home:'Retour à l’accueil',back:'Page précédente'}
+        'en-us':{lang:'en-US',title:'This page left the script.',description:'The address may have changed, been removed, or never existed. Return home to keep exploring the site.',home:'Back to home',back:'Previous page'},
+        'es':{lang:'es',title:'Esta página se salió del guion.',description:'La dirección puede haber cambiado, haber sido eliminada o no haber existido nunca. Vuelve al inicio para seguir explorando el sitio.',home:'Volver al inicio',back:'Página anterior'}
       }[slug];
       document.documentElement.lang=copy.lang;
       document.getElementById('error-title').textContent=copy.title;

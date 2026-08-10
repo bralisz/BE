@@ -378,16 +378,12 @@
 
 
   const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
-  const MUSIC_TITLE_SECTION_IDS_BACKEND = new Set([
-    '14386598-4978-403a-8548-db0ee582e291',
-    '18db9515-179c-4bad-9646-1fcda63df14a'
-  ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
     const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
-    return ['en-us','es','fr'].includes(slug) ? slug : 'pt-br';
+    return ['en-us','es'].includes(slug) ? slug : 'pt-br';
   }
 
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
@@ -404,88 +400,58 @@
     return parts.join(' ');
   }
 
-  function normalizeTitleTranslationContext(value) {
-    return String(value || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/&/g, ' and ')
-      .replace(/[^a-z0-9]+/g, ' ')
-      .trim();
-  }
-
-  function isMusicAlbumOrConcertTitle(collection, record) {
-    const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
-    if (normalizedCollection === 'albums' || normalizedCollection === 'shows') return true;
-
-    const context = normalizeTitleTranslationContext([
-      record?.sectionName,
-      record?.sourceSectionTitle,
-      record?.category,
-      record?.type,
-      record?.contentType
-    ].filter(Boolean).join(' '));
-
-    if (normalizedCollection === 'news') {
-      return Array.isArray(record?.tracks)
-        || /\b(album|single|ep|disco|albumes|albums|musica|music)\b/.test(context);
-    }
-
-    if (normalizedCollection !== 'videos') return false;
-    const sectionId = String(record?.sectionId || '').trim();
-    if (MUSIC_TITLE_SECTION_IDS_BACKEND.has(sectionId)) return true;
-
-    return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?|musica|music|song|songs|faixa|faixas|tracks?)\b/.test(context)
-      || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live)\b/.test(context)
-      || /\b(concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);
-  }
-
-  function preservesSourceRecordTitle(collection, record) {
-    return record?.preserveTitle === true
-      || String(record?.preserveTitle || '').toLowerCase() === 'true'
-      || isMusicAlbumOrConcertTitle(collection, record);
-  }
-
-  function protectSourceRecordTitle(record) {
-    if (!record || !window.BETVI18n || typeof window.BETVI18n.protectExact !== 'function') return;
-    if (Object.prototype.hasOwnProperty.call(record, 'title')) window.BETVI18n.protectExact(record.title);
-    if (Object.prototype.hasOwnProperty.call(record, 'name')) window.BETVI18n.protectExact(record.name);
-  }
-
-  function localizeContentRecord(record, collection = '') {
+  function localizeContentRecord(record) {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
-    if (preservesSourceRecordTitle(collection, record)) {
-      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
-      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
-      result.preserveTitle = true;
-      protectSourceRecordTitle(record);
-    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
     return result;
   }
 
-  function recordNeedsTranslation(record, slug, collection = '') {
+  function recordNeedsTranslation(record, slug) {
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
-    if (!localized || typeof localized !== 'object') return true;
-    return preservesSourceRecordTitle(collection, record)
-      && (Object.prototype.hasOwnProperty.call(localized, 'title') || Object.prototype.hasOwnProperty.call(localized, 'name'));
+    return !localized || typeof localized !== 'object';
   }
 
   async function ensureTranslatedRecords(collection, records) {
-    // A tradução nunca pode bloquear o carregamento do catálogo. As traduções
-    // persistidas são aplicadas imediatamente e qualquer tradução ausente fica
-    // a cargo do worker/fluxo de atualização, sem segurar Home, filmes ou vídeos.
+    const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
-    return values.map(record => localizeContentRecord(record, collection));
+    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
+      return values.map(localizeContentRecord);
+    }
+    const missing = values.filter(record => recordNeedsTranslation(record, slug));
+    if (missing.length) {
+      try {
+        const translatedById = new Map();
+        for (let offset = 0; offset < missing.length; offset += 20) {
+          const batch = missing.slice(offset, offset + 20);
+          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+            body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
+          });
+          if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
+            console.warn('Um lote de tradução não foi concluído:', result?.error?.message || 'resposta inválida');
+            continue;
+          }
+          result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
+        }
+        values.forEach(record => {
+          const translation = translatedById.get(String(record.id));
+          if (!translation || typeof translation !== 'object') return;
+          if (!record.translations || typeof record.translations !== 'object') record.translations = {};
+          record.translations[slug] = translation;
+        });
+      } catch (error) {
+        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
+      }
+    }
+    return values.map(localizeContentRecord);
   }
 
   function queueRecordTranslation(collection, id) {
@@ -493,7 +459,7 @@
     if (collection !== 'settings' && !TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) return;
     window.setTimeout(() => {
       supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-        body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es','fr'], force: true }
+        body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es'], force: true }
       }).then(result => {
         if (result?.error) console.warn('Não foi possível atualizar as traduções automáticas:', result.error.message || result.error);
       }).catch(error => console.warn('Não foi possível atualizar as traduções automáticas:', error?.message || error));
@@ -625,7 +591,7 @@
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value, name);
+          return translated[0] || localizeContentRecord(value);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -637,7 +603,7 @@
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value, name);
+        return translated[0] || localizeContentRecord(value);
       } catch (error) {
         throw mapAuthError(error);
       }

@@ -13,10 +13,6 @@
       "destination": "/api/meta?handler=deployment-version"
     },
     {
-      "source": "/api/account-status",
-      "destination": "/api/meta?handler=account-status"
-    },
-    {
       "source": "/api/robots",
       "destination": "/api/meta?handler=robots"
     },

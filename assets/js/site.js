@@ -725,16 +725,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
-  const MUSIC_TITLE_SECTION_IDS_BACKEND = new Set([
-    '14386598-4978-403a-8548-db0ee582e291',
-    '18db9515-179c-4bad-9646-1fcda63df14a'
-  ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
     const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
-    return ['en-us','es','fr'].includes(slug) ? slug : 'pt-br';
+    return ['en-us','es'].includes(slug) ? slug : 'pt-br';
   }
 
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
@@ -751,88 +747,58 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function normalizeTitleTranslationContext(value) {
-    return String(value || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/&/g, ' and ')
-      .replace(/[^a-z0-9]+/g, ' ')
-      .trim();
-  }
-
-  function isMusicAlbumOrConcertTitle(collection, record) {
-    const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
-    if (normalizedCollection === 'albums' || normalizedCollection === 'shows') return true;
-
-    const context = normalizeTitleTranslationContext([
-      record?.sectionName,
-      record?.sourceSectionTitle,
-      record?.category,
-      record?.type,
-      record?.contentType
-    ].filter(Boolean).join(' '));
-
-    if (normalizedCollection === 'news') {
-      return Array.isArray(record?.tracks)
-        || /\b(album|single|ep|disco|albumes|albums|musica|music)\b/.test(context);
-    }
-
-    if (normalizedCollection !== 'videos') return false;
-    const sectionId = String(record?.sectionId || '').trim();
-    if (MUSIC_TITLE_SECTION_IDS_BACKEND.has(sectionId)) return true;
-
-    return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?|musica|music|song|songs|faixa|faixas|tracks?)\b/.test(context)
-      || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live)\b/.test(context)
-      || /\b(concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);
-  }
-
-  function preservesSourceRecordTitle(collection, record) {
-    return record?.preserveTitle === true
-      || String(record?.preserveTitle || '').toLowerCase() === 'true'
-      || isMusicAlbumOrConcertTitle(collection, record);
-  }
-
-  function protectSourceRecordTitle(record) {
-    if (!record || !window.BETVI18n || typeof window.BETVI18n.protectExact !== 'function') return;
-    if (Object.prototype.hasOwnProperty.call(record, 'title')) window.BETVI18n.protectExact(record.title);
-    if (Object.prototype.hasOwnProperty.call(record, 'name')) window.BETVI18n.protectExact(record.name);
-  }
-
-  function localizeContentRecord(record, collection = '') {
+  function localizeContentRecord(record) {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
-    if (preservesSourceRecordTitle(collection, record)) {
-      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
-      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
-      result.preserveTitle = true;
-      protectSourceRecordTitle(record);
-    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
     return result;
   }
 
-  function recordNeedsTranslation(record, slug, collection = '') {
+  function recordNeedsTranslation(record, slug) {
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
-    if (!localized || typeof localized !== 'object') return true;
-    return preservesSourceRecordTitle(collection, record)
-      && (Object.prototype.hasOwnProperty.call(localized, 'title') || Object.prototype.hasOwnProperty.call(localized, 'name'));
+    return !localized || typeof localized !== 'object';
   }
 
   async function ensureTranslatedRecords(collection, records) {
-    // A tradução nunca pode bloquear o carregamento do catálogo. As traduções
-    // persistidas são aplicadas imediatamente e qualquer tradução ausente fica
-    // a cargo do worker/fluxo de atualização, sem segurar Home, filmes ou vídeos.
+    const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
-    return values.map(record => localizeContentRecord(record, collection));
+    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
+      return values.map(localizeContentRecord);
+    }
+    const missing = values.filter(record => recordNeedsTranslation(record, slug));
+    if (missing.length) {
+      try {
+        const translatedById = new Map();
+        for (let offset = 0; offset < missing.length; offset += 20) {
+          const batch = missing.slice(offset, offset + 20);
+          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+            body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
+          });
+          if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
+            console.warn('Um lote de tradução não foi concluído:', result?.error?.message || 'resposta inválida');
+            continue;
+          }
+          result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
+        }
+        values.forEach(record => {
+          const translation = translatedById.get(String(record.id));
+          if (!translation || typeof translation !== 'object') return;
+          if (!record.translations || typeof record.translations !== 'object') record.translations = {};
+          record.translations[slug] = translation;
+        });
+      } catch (error) {
+        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
+      }
+    }
+    return values.map(localizeContentRecord);
   }
 
   function queueRecordTranslation(collection, id) {
@@ -840,7 +806,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (collection !== 'settings' && !TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) return;
     window.setTimeout(() => {
       supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-        body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es','fr'], force: true }
+        body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es'], force: true }
       }).then(result => {
         if (result?.error) console.warn('Não foi possível atualizar as traduções automáticas:', result.error.message || result.error);
       }).catch(error => console.warn('Não foi possível atualizar as traduções automáticas:', error?.message || error));
@@ -949,6 +915,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     publicDataMemoryCache.delete(exact);
   }
 
+
   async function listAllProfileRows() {
     const rows = [];
     const pageSize = 500;
@@ -976,13 +943,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try {
         let items = [];
         if (!usesProtectedAdminData() && name !== 'users' && name !== 'admin_logs') {
-          try {
-            const publicItems = await readPublicData(name);
-            const translatedItems = await ensureTranslatedRecords(name, Array.isArray(publicItems) ? publicItems : []);
-            return sortAndFilter(translatedItems, options);
-          } catch (publicError) {
-            console.warn('API pública indisponível; tentando carregar o conteúdo diretamente:', publicError?.message || publicError);
-          }
+          const publicItems = await readPublicData(name);
+          const translatedItems = await ensureTranslatedRecords(name, Array.isArray(publicItems) ? publicItems : []);
+          return sortAndFilter(translatedItems, options);
         }
         if (name === 'users') {
           const data = await listAllProfileRows();
@@ -1012,14 +975,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async get(name, id) {
       try {
         if (!usesProtectedAdminData() && name !== 'users' && name !== 'admin_logs') {
-          try {
-            const publicValue = await readPublicData(name, id);
-            if (!publicValue) return null;
-            const translated = await ensureTranslatedRecords(name, [publicValue]);
-            return translated[0] || localizeContentRecord(publicValue, name);
-          } catch (publicError) {
-            console.warn('API pública indisponível; tentando carregar o conteúdo diretamente:', publicError?.message || publicError);
-          }
+          const publicValue = await readPublicData(name, id);
+          if (!publicValue) return null;
+          const translated = await ensureTranslatedRecords(name, [publicValue]);
+          return translated[0] || localizeContentRecord(publicValue);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -1032,7 +991,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value, name);
+          return translated[0] || localizeContentRecord(value);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -1044,7 +1003,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value, name);
+        return translated[0] || localizeContentRecord(value);
       } catch (error) {
         throw mapAuthError(error);
       }
@@ -2000,7 +1959,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },
     async sendPasswordReset(email) {
       const locale = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
-      const safeLocale = ['pt-br', 'en-us', 'es', 'fr'].includes(locale) ? locale : 'pt-br';
+      const safeLocale = ['pt-br', 'en-us', 'es'].includes(locale) ? locale : 'pt-br';
       const redirectTo = `${location.origin}/${safeLocale}/reset-password`;
       const { error } = await supabaseClient.auth.resetPasswordForEmail(String(email || '').trim().toLowerCase(), { redirectTo });
       if (error) throw mapAuthError(error);
@@ -2564,7 +2523,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function applySiteSettings() {
     const data = await beBackend.data.get('settings', 'site');
     if (!data) return;
-    document.title='Billie Eilish TV';
+    document.title = 'Billie Eilish TV';
     if (data.description) {
       let meta = document.querySelector('meta[name="description"]');
       if (!meta) {
@@ -3176,9 +3135,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (image) image.addEventListener('error', () => spotlight.remove(), { once:true });
   }
 
+  const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a'
+  ]);
   function preservesOriginalMusicTitle(data) {
     const collection = String(data?.collection || 'videos').toLowerCase();
-    return preservesSourceRecordTitle(collection, data);
+    if (collection === 'albums' || collection === 'shows') return true;
+    if (collection === 'news' && Array.isArray(data?.tracks)) return true;
+    if (collection !== 'videos') return false;
+    const sectionId = String(data?.sectionId || '').trim();
+    const context = String([data?.sectionName, data?.sourceSectionTitle, data?.category, data?.type, data?.contentType].filter(Boolean).join(' '))
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return MUSIC_TITLE_SECTION_IDS_FRONTEND.has(sectionId)
+      || /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?|music|musica|song|songs|tracks?|faixa|faixas)\b/.test(context)
+      || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live|concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);
   }
 
 
@@ -3220,6 +3191,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function serializeMovieStreamingLinks(value) {
     try { return encodeURIComponent(JSON.stringify(normalizeMovieStreamingLinks(value))); }
     catch (_) { return ''; }
+  }
+
+  function movieStreamingServiceIcon(serviceId) {
+    if (serviceId === 'apple-tv') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="3"></rect><path d="M9 10.2v3.6M9 12h3"></path><path d="M15.2 10.4 17 12l-1.8 1.6"></path></svg>';
+    if (serviceId === 'prime-video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z"></path><path d="M5 19c3.8 1.5 8.3 1.2 12-.8"></path></svg>';
+    if (serviceId === 'paramount-plus') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 5.2-7 2.7 3 2.8-4L20 17H4Z"></path><path d="M7 19h10"></path></svg>';
+    return '<span aria-hidden="true">D+</span>';
   }
 
   function closeMobileMovieStreamingSheet(options = {}) {
@@ -3269,7 +3247,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     const markup = services.map(serviceId => {
       const service = MOVIE_STREAMING_SERVICES[serviceId];
-      return `<a class="detail-streaming-link" href="${safeUrl(directLinks[serviceId] || service.url)}" target="_blank" rel="noopener" data-streaming-service="${escapeHtml(serviceId)}"><span class="detail-streaming-service-icon" data-streaming-icon="${escapeHtml(serviceId)}" aria-hidden="true"></span><span class="detail-streaming-service-name">${escapeHtml(service.label)}</span><span class="detail-streaming-link-arrow" aria-hidden="true">›</span></a>`;
+      const iconClass = serviceId === 'disney-plus' ? ' disney' : serviceId === 'paramount-plus' ? ' paramount' : '';
+      return `<a class="detail-streaming-link" href="${safeUrl(directLinks[serviceId] || service.url)}" target="_blank" rel="noopener" data-streaming-service="${escapeHtml(serviceId)}"><span class="detail-streaming-service-icon${iconClass}">${movieStreamingServiceIcon(serviceId)}</span><span class="detail-streaming-service-name">${escapeHtml(service.label)}</span><span class="detail-streaming-link-arrow" aria-hidden="true">›</span></a>`;
     }).join('');
     list.innerHTML = markup;
     if (mobileList) mobileList.innerHTML = markup;
@@ -10076,7 +10055,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var publicReady=viewedProfileStatus==='ready'&&viewedProfile;
       profileFavoritesSection.hidden=!publicReady;
       if(!publicReady){profileFavoritesItems=[];profileFavoritesContent.innerHTML='';if(profileFavoritesEdit)profileFavoritesEdit.hidden=true;return;}
-      profileFavoritesItems=(ownProfile?readProfileFavorites():(Array.isArray(viewedProfile.favorites)?viewedProfile.favorites.map(normalizeProfileFavorite).slice(0,4):[])).map(function(item){return normalizeProfileFavorite(trustedProfileContent(item));});
+      profileFavoritesItems=ownProfile?readProfileFavorites():(Array.isArray(viewedProfile.favorites)?viewedProfile.favorites.map(normalizeProfileFavorite).slice(0,4):[]);
       if(profileFavoritesEdit)profileFavoritesEdit.hidden=!ownProfile||profileFavoritesItems.length!==4;
       if(ownProfile&&profileFavoritesItems.length!==4){
         profileFavoritesContent.innerHTML='<button class="profile-favorites-empty" id="profileFavoritesAdd" type="button"><span class="profile-favorites-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><strong>Adicionar favoritos</strong><span>Escolha quatro conteúdos que representam o seu gosto.</span></button>';
@@ -10098,7 +10077,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           +'<span class="profile-favorite-rank" aria-hidden="true">'+rankSvg+'</span>'
           +'<span class="profile-favorite-poster">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
           +'<span class="profile-favorite-type">'+profileFavoriteCollectionLabel(item)+'</span>'
-          +'<span class="profile-favorite-title notranslate" translate="no">'+escapePublic(item.title||'Conteúdo')+'</span></span>'
+          +'<span class="profile-favorite-title">'+escapePublic(item.title||'Conteúdo')+'</span></span>'
           +'</button>';
       }).join('')+'</div>';
     }
@@ -10328,7 +10307,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return '<button class="profile-favorites-option'+(selected?' selected':'')+'" type="button" data-profile-favorite-option="'+catalogIndex+'" data-no-content-open="true" aria-pressed="'+String(selected)+'">'
             +'<span class="profile-favorites-option-media">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
             +'<span class="profile-favorites-option-order">'+(selected?selectedIndex+1:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>')+'</span></span>'
-            +'<span class="profile-favorites-option-copy"><strong class="notranslate" translate="no">'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
+            +'<span class="profile-favorites-option-copy"><strong>'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
             +'</button>';
         }).join('')+'</div><p class="profile-favorites-search-hint"><strong>Não achou o vídeo que queria?</strong><span>Pesquise pelo nome na barra acima.</span></p>';
       }
@@ -10484,7 +10463,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(ownProfile){
         try{profileSavedItems=typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[];}catch(error){console.warn('Não foi possível carregar os conteúdos salvos:',error);profileSavedItems=[];}
       }else profileSavedItems=Array.isArray(viewedProfile.savedContents)?viewedProfile.savedContents.map(normalizeProfileFavorite).slice(0,20):[];
-      profileSavedItems=profileSavedItems.map(function(item){return normalizeProfileFavorite(trustedProfileContent(item));});
       if(profileSavedCount)profileSavedCount.textContent=profileSavedItems.length?(profileSavedItems.length+' '+(profileSavedItems.length===1?'salvo':'salvos')):'';
       if(!profileSavedItems.length){
         profileSavedGrid.innerHTML='<div class="profile-saved-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg><strong>Nenhum conteúdo salvo ainda</strong><span>'+(ownProfile?'Os conteúdos e álbuns em que você tocar no coração aparecerão aqui.':'Esta pessoa ainda não possui conteúdos salvos no perfil.')+'</span></div>';
@@ -10496,7 +10474,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var meta=[isAlbum?'Álbum':'',item.year,item.duration].filter(Boolean).join(' • ');
         return '<button class="profile-saved-card'+(isAlbum?' is-album':'')+'" type="button" data-saved-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'conteúdo salvo')+'">'
           +'<span class="profile-saved-thumb">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-saved-placeholder" aria-hidden="true"></span>')+'<span class="profile-saved-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7Z"></path></svg></span></span>'
-          +'<span class="profile-saved-copy"><strong class="notranslate" translate="no">'+escapePublic(item.title||'Conteúdo salvo')+'</strong>'+(meta?'<small>'+escapePublic(meta)+'</small>':'')+'</span>'
+          +'<span class="profile-saved-copy"><strong>'+escapePublic(item.title||'Conteúdo salvo')+'</strong>'+(meta?'<small>'+escapePublic(meta)+'</small>':'')+'</span>'
           +'</button>';
       }).join('');
     }
@@ -10580,7 +10558,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner e o avatar do seu perfil.</p><div class="settings-panel-card"><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview">'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div></div></section>'
         +    '<section class="settings-section-panel settings-connections-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões e Redes Sociais</h1><p class="settings-panel-lead">Gerencie sua conexão de conta e as redes exibidas no perfil público.</p><div class="settings-panel-card"><div class="settings-social-heading"><h2>Conexões conectadas</h2><p>Gerencie os serviços vinculados à sua conta.</p></div><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div><div class="settings-panel-card settings-social-card"><div class="settings-social-heading"><h2>Redes sociais</h2><p>Adicione as redes que devem aparecer ao lado do seu nome no perfil público.</p></div><form id="settingsSocialForm"><div class="settings-social-fields"><div class="settings-social-field"><label for="settingsSocialX"><span class="settings-social-brand is-x">'+profileSocialIcon('x')+'</span><span>X</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">x.com/</span><input id="settingsSocialX" name="x" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.x||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialInstagram"><span class="settings-social-brand is-instagram">'+profileSocialIcon('instagram')+'</span><span>Instagram</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">instagram.com/</span><input id="settingsSocialInstagram" name="instagram" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.instagram||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialTikTok"><span class="settings-social-brand is-tiktok">'+profileSocialIcon('tiktok')+'</span><span>TikTok</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">tiktok.com/@</span><input id="settingsSocialTikTok" name="tiktok" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.tiktok||'')+'" placeholder="usuario"></div></div></div><div class="settings-status" id="settingsSocialStatus"></div><div class="settings-btn-row settings-social-actions"><button class="settings-button primary" type="submit">Salvar redes sociais</button></div></form></div></section>'
         +    '<section class="settings-section-panel settings-data-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Meus Dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-data-actions settings-data-actions-outside"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><a class="settings-data-privacy-button" href="/privacy">Ver Termos de Privacidade</a></div><div class="settings-status settings-data-status" id="settingsExportStatus"></div></section>'
-        +    '<section class="settings-section-panel settings-language-panel" data-settings-panel="language"'+(settingsActiveTab==='language'?'':' hidden')+'><h1>Idioma</h1><p class="settings-panel-lead">Escolha o idioma usado em todas as áreas públicas do site.</p><div class="settings-panel-card"><div class="settings-language-options" role="radiogroup" aria-label="Idioma do site"><button class="settings-language-option" type="button" data-settings-language="pt-br" role="radio"><strong>Português (Brasil)</strong><span>Português</span></button><button class="settings-language-option" type="button" data-settings-language="en-us" role="radio"><strong>English (United States)</strong><span>Inglês</span></button><button class="settings-language-option" type="button" data-settings-language="es" role="radio"><strong>Español</strong><span>Espanhol</span></button><button class="settings-language-option" type="button" data-settings-language="fr" role="radio"><strong>Français</strong><span>Francês</span></button></div><p class="settings-muted settings-language-note">A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.</p></div></section>'
+        +    '<section class="settings-section-panel settings-language-panel" data-settings-panel="language"'+(settingsActiveTab==='language'?'':' hidden')+'><h1>Idioma</h1><p class="settings-panel-lead">Escolha o idioma usado em todas as áreas públicas do site.</p><div class="settings-panel-card"><div class="settings-language-options" role="radiogroup" aria-label="Idioma do site"><button class="settings-language-option" type="button" data-settings-language="pt-br" role="radio"><strong>Português (Brasil)</strong><span>Português</span></button><button class="settings-language-option" type="button" data-settings-language="en-us" role="radio"><strong>English (United States)</strong><span>Inglês</span></button><button class="settings-language-option" type="button" data-settings-language="es" role="radio"><strong>Español</strong><span>Espanhol</span></button></div><p class="settings-muted settings-language-note">A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.</p></div></section>'
         +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input class="notranslate" translate="no" name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input class="notranslate" translate="no" name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="'+escapePublic(localizedProfileText('seunome'))+'"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div><div class="settings-session-section"><h1>Sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></div></section>'
         +  '</main>'
         +'</div>';
@@ -12645,14 +12623,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var UPDATE_COPY = {
     'pt-br': { available:'Atualização disponível', ready:'Uma nova versão do site está pronta.', action:'Atualizar', updating:'Atualizando a nova versão' },
     'en-us': { available:'Update available', ready:'A new version of the site is ready.', action:'Update', updating:'Updating to the new version' },
-    'es': { available:'Actualización disponible', ready:'Hay una nueva versión del sitio lista.', action:'Actualizar', updating:'Actualizando a la nueva versión' },
-    'fr': { available:'Mise à jour disponible', ready:'Une nouvelle version du site est prête.', action:'Mettre à jour', updating:'Mise à jour vers la nouvelle version' }
+    'es': { available:'Actualización disponible', ready:'Hay una nueva versión del sitio lista.', action:'Actualizar', updating:'Actualizando a la nueva versión' }
   };
 
   function updateLocaleSlug() {
     var configured = String(window.BETVLocale && window.BETVLocale.slug || '').toLowerCase();
     if (UPDATE_COPY[configured]) return configured;
-    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es|fr)(?:\/|$)/);
+    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es)(?:\/|$)/);
     return match && UPDATE_COPY[match[1]] ? match[1] : 'pt-br';
   }
 
@@ -13319,7 +13296,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   function currentLocaleSlug(){
     var value=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
-    return value==='en-us'||value==='es'||value==='fr'?value:'pt-br';
+    return value==='en-us'||value==='es'?value:'pt-br';
   }
   function wikipediaLocaleCopy(){
     var slug=currentLocaleSlug();
@@ -13333,17 +13310,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       suffix:'available under the',
       licenseSuffix:'license.',
       licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/deed.en'
-    };
-    if(slug==='fr')return {
-      loadingError:'Les informations ne peuvent pas être chargées pour le moment. La biographie enregistrée sur le site est affichée à la place.',
-      prepareError:'L’article Wikipédia n’a pas pu être préparé pour l’affichage.',
-      requestError:'L’article Wikipédia n’a pas pu être chargé.',
-      summary:'Sources et crédits',
-      prefix:'Contenu adapté de',
-      sourceLabel:'Wikipédia en français',
-      suffix:'disponible sous la',
-      licenseSuffix:'licence.',
-      licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/deed.fr'
     };
     if(slug==='es')return {
       loadingError:'La información no se pudo cargar en este momento. Se muestra en su lugar la biografía guardada en el sitio.',
@@ -13505,7 +13471,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var payload=await response.json().catch(function(){return {};});
       if(!response.ok||!payload||!payload.html)throw new Error(payload.error||copy.requestError);
       if(token!==loadToken)return;
-      wikipediaOrigin=String(payload.wikipediaOrigin||({'en-us':'https://en.wikipedia.org','es':'https://es.wikipedia.org','fr':'https://fr.wikipedia.org'}[localeSlug])||'https://pt.wikipedia.org');
+      wikipediaOrigin=String(payload.wikipediaOrigin||({'en-us':'https://en.wikipedia.org','es':'https://es.wikipedia.org'}[localeSlug])||'https://pt.wikipedia.org');
       var cleaned=normalizeWikipediaHtml(payload.html,wikipediaOrigin);
       if(!cleaned.html)throw new Error(copy.prepareError);
       wikipediaContent.innerHTML=cleaned.html;
@@ -14485,9 +14451,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var locale=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
     var tag='';
     if(community){
-      tag=locale==='es'?'Comunidad':(locale==='fr'?'Communauté':'Community');
+      tag=locale==='es'?'Comunidad':'Community';
     }else if(creator){
-      tag=locale==='en-us'?'Content Creator':(locale==='es'?'Creador de contenido':(locale==='fr'?'Créateur de contenu':'Criador de conteúdo'));
+      tag=locale==='en-us'?'Content Creator':(locale==='es'?'Creador de contenido':'Criador de conteúdo');
     }
     return '<a class="donate-supporter-card '+(creator?'is-creator':(community?'is-community':'is-user'))+'" href="'+esc(href)+'"'+attributes+' aria-label="'+esc(label)+'">'+
       '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
@@ -14751,7 +14717,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function currentProfileUrl(){
     try{
       var url=new URL(window.location.href);
-      if(/^\/@[^/?#]+$/i.test(url.pathname)||/^\/(?:pt-br|en-us|es|fr)\/@[^/?#]+$/i.test(url.pathname)){
+      if(/^\/@[^/?#]+$/i.test(url.pathname)||/^\/(?:pt-br|en-us|es)\/@[^/?#]+$/i.test(url.pathname)){
         url.search='';
         url.hash='';
       }

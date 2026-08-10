@@ -653,7 +653,7 @@
     syncUnread();
     load(false);
     if(supportersLoaded)observeSupportersEnd();
-    document.title='Billie Eilish TV';
+    document.title='Apoie uma ONG — Billie Eilish TV';
   }
 
   function close(){
