@@ -414,13 +414,9 @@
       .trim();
   }
 
-  function isMusicAlbumOrShowTitle(collection, record) {
+  function isMusicAlbumOrConcertTitle(collection, record) {
     const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
-    if (['news', 'albums', 'shows'].includes(normalizedCollection)) return true;
-    if (normalizedCollection !== 'videos') return false;
-
-    const sectionId = String(record?.sectionId || '').trim();
-    if (MUSIC_TITLE_SECTION_IDS_BACKEND.has(sectionId)) return true;
+    if (normalizedCollection === 'albums' || normalizedCollection === 'shows') return true;
 
     const context = normalizeTitleTranslationContext([
       record?.sectionName,
@@ -429,9 +425,17 @@
       record?.type,
       record?.contentType
     ].filter(Boolean).join(' '));
-    if (!context) return false;
 
-    return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?)\b/.test(context)
+    if (normalizedCollection === 'news') {
+      return Array.isArray(record?.tracks)
+        || /\b(album|single|ep|disco|albumes|albums|musica|music)\b/.test(context);
+    }
+
+    if (normalizedCollection !== 'videos') return false;
+    const sectionId = String(record?.sectionId || '').trim();
+    if (MUSIC_TITLE_SECTION_IDS_BACKEND.has(sectionId)) return true;
+
+    return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?|musica|music|song|songs|faixa|faixas|tracks?)\b/.test(context)
       || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live)\b/.test(context)
       || /\b(concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);
   }
@@ -439,7 +443,7 @@
   function preservesSourceRecordTitle(collection, record) {
     return record?.preserveTitle === true
       || String(record?.preserveTitle || '').toLowerCase() === 'true'
-      || isMusicAlbumOrShowTitle(collection, record);
+      || isMusicAlbumOrConcertTitle(collection, record);
   }
 
   function protectSourceRecordTitle(record) {
@@ -472,18 +476,8 @@
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
     if (!localized || typeof localized !== 'object') return true;
-
-    const keepTitle = preservesSourceRecordTitle(collection, record);
-    if (keepTitle) {
-      return Object.prototype.hasOwnProperty.call(localized, 'title')
-        || Object.prototype.hasOwnProperty.call(localized, 'name');
-    }
-
-    const titleMissing = typeof record.title === 'string' && record.title.trim()
-      && !(typeof localized.title === 'string' && localized.title.trim());
-    const nameMissing = typeof record.name === 'string' && record.name.trim()
-      && !(typeof localized.name === 'string' && localized.name.trim());
-    return Boolean(titleMissing || nameMissing);
+    return preservesSourceRecordTitle(collection, record)
+      && (Object.prototype.hasOwnProperty.call(localized, 'title') || Object.prototype.hasOwnProperty.call(localized, 'name'));
   }
 
   async function ensureTranslatedRecords(collection, records) {

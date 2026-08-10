@@ -174,11 +174,12 @@ function active(value:unknown){return value!==false&&String(value??"true").toLow
 function normalizeTitleContext(value:unknown){return text(value,600).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/&/g," and ").replace(/[^a-z0-9]+/g," ").trim();}
 function preserveTitle(collection:string,data:Record<string,unknown>){
   if(data.preserveTitle===true||text(data.preserveTitle,10).toLowerCase()==="true")return true;
-  if(collection==="news"||collection==="albums"||collection==="shows")return true;
+  if(collection==="albums"||collection==="shows")return true;
+  const context=normalizeTitleContext([data.sectionName,data.sourceSectionTitle,data.category,data.type,data.contentType].filter(Boolean).join(" "));
+  if(collection==="news")return Array.isArray(data.tracks)||/\b(album|single|ep|disco|albumes|albums|musica|music)\b/.test(context);
   if(collection!=="videos")return false;
   if(MUSIC_SECTION_IDS.has(text(data.sectionId,120)))return true;
-  const context=normalizeTitleContext([data.sectionName,data.sourceSectionTitle,data.category,data.type,data.contentType].filter(Boolean).join(" "));
-  return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?)\b/.test(context)
+  return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?|musica|music|song|songs|faixa|faixas|tracks?)\b/.test(context)
     || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live)\b/.test(context)
     || /\b(concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);
 }
@@ -226,9 +227,7 @@ Deno.serve(async(req:Request)=>{
     for(const row of rows as any[]){
       const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);const keepTitle=preserveTitle(collection,data);
       for(const locale of locales){
-        const existing=translations[locale];
-        const missingRequiredTitle=!keepTitle&&existing&&(["title","name"] as const).some(field=>typeof data[field]==="string"&&text(data[field])&&!(typeof existing[field]==="string"&&text(existing[field])));
-        if(!force&&existing&&existing.sourceUpdatedAt===signature&&!missingRequiredTitle){const cached={...existing};if(keepTitle){delete cached.title;delete cached.name;translations[locale]=cached;}responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
+        const existing=translations[locale];if(!force&&existing&&existing.sourceUpdatedAt===signature){const cached={...existing};if(keepTitle){delete cached.title;delete cached.name;translations[locale]=cached;}responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
         const fields=FIELDS.filter(field=>!(keepTitle&&(field==="title"||field==="name"))).filter(field=>typeof data[field]==="string"&&text(data[field])&&!/^https?:\/\//i.test(text(data[field])));
         total+=fields.reduce((sum,field)=>sum+text(data[field]).length,0);if(total>MAX_CHARS)return reply(req,413,{error:"Conteúdo excede o limite por solicitação."});
         const values=await translateValues(fields.map(field=>text(data[field])),TARGETS[locale]);
