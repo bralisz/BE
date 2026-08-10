@@ -4,7 +4,7 @@
   var localeApi=window.BETVLocale||{slug:'pt-br',locale:'pt-BR',target:'pt'};
   var slug=String(localeApi.slug||'pt-br').toLowerCase();
   var locale=String(localeApi.locale||'pt-BR');
-  var target=String(localeApi.target||({'en-us':'en','es':'es'}[slug]||'pt'));
+  var target=String(localeApi.target||({'en-us':'en','es':'es','fr':'fr'}[slug]||'pt'));
   var map=Object.create(null);
   var readyResolve;
   var ready=new Promise(function(resolve){readyResolve=resolve;});
@@ -17,8 +17,15 @@
   var translatedThisSession=new Set();
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v4';
-  var STATIC_REV='20260809-streaming-available-i18n-v1';
+  var PROTECTED_EXACT=new Set([
+    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Discord','Google','Instagram','TikTok','Twitter / X','Spotify','YouTube',
+    'Apple TV','Prime Video','Paramount+','Disney+','Stripe','Supabase','CC BY-SA 4.0','LGPD','DMCA','HTTPS','BRL','USD',
+    'Ocean Eyes','WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','Happier Than Ever','HIT ME HARD AND SOFT',
+    'localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
+  ]);
+  var ORIGINAL_TITLE_COLLECTIONS=new Set(['contents','featured','movies','series','videos','ongs','news']);
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v5-informal';
+  var STATIC_REV='20260810-native-informal-v2';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
@@ -36,10 +43,14 @@
     var element=node&&node.nodeType===1?node:node&&node.parentElement;
     return Boolean(element&&element.closest&&element.closest(SKIP_SELECTOR));
   }
+  function protectedText(value){
+    var key=normalize(value);
+    return PROTECTED_EXACT.has(key)||/^https?:\/\//i.test(key)||/^[@#][\w.-]+$/.test(key)||/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(key)||/^be_[a-z0-9_]+$/i.test(key);
+  }
   function eligibleText(value){
     var key=normalize(value);
     if(!key||key.length<2||key.length>1800||!/\p{L}/u.test(key))return false;
-    if(/^https?:\/\//i.test(key)||/^[@#][\w.-]+$/.test(key))return false;
+    if(protectedText(key))return false;
     return true;
   }
   function rememberMissing(value){
@@ -121,7 +132,15 @@
     if(!record||typeof record!=='object'||slug==='pt-br')return record;
     var translations=record.translations&&typeof record.translations==='object'?record.translations:{};
     var localized=translations[slug]||translations[target]||null;
-    return localized&&typeof localized==='object'?Object.assign({},record,localized):record;
+    if(!localized||typeof localized!=='object')return record;
+    var merged=Object.assign({},record,localized);
+    var collection=String(record.collection||'').toLowerCase();
+    var keepTitle=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true'||ORIGINAL_TITLE_COLLECTIONS.has(collection);
+    if(keepTitle){
+      if(Object.prototype.hasOwnProperty.call(record,'title'))merged.title=record.title;
+      if(Object.prototype.hasOwnProperty.call(record,'name'))merged.name=record.name;
+    }
+    return merged;
   }
   function regionalCurrency(){
     var value=window.BETVRegional&&window.BETVRegional.currency;
@@ -171,7 +190,7 @@
         mode:'cors',
         credentials:'omit',
         headers:headers,
-        body:JSON.stringify({mode:'texts',locale:slug,texts:batch})
+        body:JSON.stringify({mode:'texts',locale:slug,style:'informal-native',texts:batch})
       });
       var payload=await response.json().catch(function(){return null;});
       if(!response.ok||!payload||!Array.isArray(payload.translations))throw new Error(payload&&payload.error||'translation_failed');
