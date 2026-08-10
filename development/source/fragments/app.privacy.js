@@ -3367,6 +3367,10 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     if(chip)chip.setAttribute('aria-expanded','false');
   }
   function currentAccount(){return window.beBackend&&beBackend.auth?beBackend.auth.currentUser:null;}
+  function closeSearchOverlays(){
+    window.dispatchEvent(new CustomEvent('be:close-public-search'));
+    window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
+  }
   async function profileHandle(account){
     var label=document.getElementById('ddUsername');
     var value=label?String(label.textContent||'').replace(/^@/,'').trim():'';
@@ -3380,6 +3384,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     return value||'perfil';
   }
   function activateSettings(){
+    closeSearchOverlays();
     history.pushState({beRoute:'config'},'', '/config'+(location.search||''));
     window.dispatchEvent(new CustomEvent('be:open-config'));
     window.setTimeout(function(){
@@ -3387,6 +3392,7 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     },180);
   }
   async function activateProfile(account){
+    closeSearchOverlays();
     var handle=await profileHandle(account);
     var path='/@'+encodeURIComponent(handle);
     history.pushState({beRoute:'profile'},'',path+(location.search||''));
