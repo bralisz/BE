@@ -7,10 +7,11 @@ const PUBLIC_SETTINGS = new Set(["site","billie-eilish","ong"]);
 const TARGETS: Record<string,string> = {"en-us":"en",es:"es",fr:"fr"};
 const FIELDS = ["title","name","description","subtitle","body","summary","buttonLabel","buttonText","actionLabel","ctaLabel","label","text","manualBio","kicker","footerText","sectionName","siteName"];
 const DURATION_FIELDS = ["duration","runtime","videoDuration"];
-const MUSIC_SECTION_IDS = new Set(["14386598-4978-403a-8548-db0ee582e291","18db9515-179c-4bad-9646-1fcda63df14a","e995b960-503c-4d67-8d7c-87cbd6eda6a2","76295393-0c1d-483f-a48c-eea38f1057df"]);
-const MUSIC_SECTION_NAMES = new Set(["live performances & tv","live performances","performances ao vivo","presentaciones en vivo","videoclipes","videoclips","music videos","music video","videos musicais","vídeos musicais","videos musicales","vídeos musicales","vidéos musicales","vidéos musicaux","concert","concerts","concerto","concertos","concierto","conciertos","show","shows"]);
+const MUSIC_VIDEO_SECTION_ID = "18db9515-179c-4bad-9646-1fcda63df14a";
+const MUSIC_VIDEO_SECTION_NAMES = new Set(["videoclipes","videoclips","music videos","music video","videos musicais","vídeos musicais","videos musicales","vídeos musicales","vidéos musicales","vidéos musicaux"]);
 const PROTECTED_TERMS = [
-  "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?","HIT ME HARD AND SOFT","Happier Than Ever","Ocean Eyes",
+  "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?","HIT ME HARD AND SOFT","Happier Than Ever","dont smile at me","Guitar Songs",
+  "all the good girls go to hell","bad guy","Bellyache","BIRDS OF A FEATHER","Bored","bury a friend","CHIHIRO","everything i wanted","Guess","hostage","idontwannabeyouanymore","Lo Vas A Olvidar","Lost Cause","lovely","LUNCH","Male Fantasy","my future","NDA","Never Felt So Alone","No Time To Die","ocean eyes","Therefore I Am","watch","What Was I Made For?","when the party's over","xanny","you should see me in a crown","Your Power","THE GREATEST","SKINNY","L'AMOUR DE MA VIE","Billie Bossa Nova","Getting Older","TV","bitches broken hearts","listen before i go","come out and play","One Less Lonely Girl","Have Yourself A Merry Little Christmas",
   "Billie Eilish TV","Billie Eilish","Prime Video","Apple TV","Paramount+","Disney+","Twitter / X",
   "CC BY-SA 4.0","SameSite=Lax","localStorage","sessionStorage","be_site_preferences","be_cookie_ack",
   "FINNEAS","Discord","Google","Instagram","TikTok","Spotify","YouTube","Stripe","Supabase",
@@ -172,7 +173,7 @@ ${item.source}`).join("\n");
   return result;
 }
 function active(value:unknown){return value!==false&&String(value??"true").toLowerCase()!=="false";}
-function preserveTitle(collection:string,data:Record<string,unknown>,locale:string){if(locale!=="es")return false;if(data.preserveTitle===true||text(data.preserveTitle,10).toLowerCase()==="true")return true;if(["albums","albuns","álbuns"].includes(collection))return true;if(collection!=="videos")return false;const sectionName=text(data.sectionName||data.sourceSectionTitle,160).toLowerCase();return MUSIC_SECTION_IDS.has(text(data.sectionId,120))||MUSIC_SECTION_NAMES.has(sectionName);}
+function preserveTitle(collection:string,data:Record<string,unknown>,locale:string){if(!["es","fr"].includes(locale))return false;if(data.preserveTitle===true||text(data.preserveTitle,10).toLowerCase()==="true")return true;if(["albums","albuns","álbuns"].includes(collection))return true;if(collection!=="videos")return false;const sectionName=text(data.sectionName||data.sourceSectionTitle,160).toLowerCase();return text(data.sectionId,120)===MUSIC_VIDEO_SECTION_ID||MUSIC_VIDEO_SECTION_NAMES.has(sectionName);}
 function duration(value:unknown,locale:string){const raw=text(value,120);if(!raw)return raw;const h=raw.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i);const m=raw.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);if(!h&&!m)return raw;return [h?(locale==="en-us"?`${Number(h[1])} hr`:`${Number(h[1])} h`):"",m?`${Number(m[1])} min`:""].filter(Boolean).join(" ");}
 function sourceSignature(data:Record<string,unknown>){const source:Record<string,unknown>={};for(const field of [...FIELDS,...DURATION_FIELDS])if(Object.prototype.hasOwnProperty.call(data,field))source[field]=data[field];const serialized=JSON.stringify(source);let hash=2166136261;for(let i=0;i<serialized.length;i++){hash^=serialized.charCodeAt(i);hash=Math.imul(hash,16777619);}return `src-${(hash>>>0).toString(16)}`;}
 
@@ -188,7 +189,7 @@ Deno.serve(async(req:Request)=>{
     const locale=text(body.locale,10).toLowerCase(),target=TARGETS[locale];
     const texts=Array.from(new Set((Array.isArray(body.texts)?body.texts:[]).map(v=>text(v,1800)).filter(v=>v&&/\p{L}/u.test(v)))).slice(0,60);
     if(!target||!texts.length||texts.reduce((s,v)=>s+v.length,0)>9000)return reply(req,400,{error:"Solicitação de tradução inválida."});
-    try{return reply(req,200,{locale,style:"informal-native",translations:await translateValues(texts,target),provider:"google-web-natural-v1"});}catch(error){console.error("UI translation failed",text((error as Error)?.message,160));return reply(req,503,{error:"Tradução temporariamente indisponível."});}
+    try{return reply(req,200,{locale,style:"informal-native",translations:await translateValues(texts,target),provider:"google-web-natural-v2"});}catch(error){console.error("UI translation failed",text((error as Error)?.message,160));return reply(req,503,{error:"Tradução temporariamente indisponível."});}
   }
 
   const collection=text(body.collection,40).toLowerCase();
@@ -224,13 +225,13 @@ Deno.serve(async(req:Request)=>{
         const fields=FIELDS.filter(field=>!(keepTitle&&(field==="title"||field==="name"))).filter(field=>typeof data[field]==="string"&&text(data[field])&&!/^https?:\/\//i.test(text(data[field])));
         total+=fields.reduce((sum,field)=>sum+text(data[field]).length,0);if(total>MAX_CHARS)return reply(req,413,{error:"Conteúdo excede o limite por solicitação."});
         const values=await translateValues(fields.map(field=>text(data[field])),TARGETS[locale]);
-        const translated:Record<string,unknown>={sourceUpdatedAt:signature,translatedAt:new Date().toISOString(),style:"informal-native",provider:"google-web-natural-v1"};
+        const translated:Record<string,unknown>={sourceUpdatedAt:signature,translatedAt:new Date().toISOString(),style:"informal-native",provider:"google-web-natural-v2"};
         fields.forEach((field,index)=>translated[field]=values[index]||data[field]);
         DURATION_FIELDS.forEach(field=>{if(typeof data[field]==="string"&&text(data[field]))translated[field]=duration(data[field],locale);});
         translations[locale]=translated;responseRecords.push({id:row.id,locale,translation:translated,cached:false});
       }
       data.translations=translations;const {error}=await adminClient.from(table).update({data}).eq("id",row.id);if(error)throw new Error(`save_${error.code}`);
     }
-    return reply(req,200,{records:responseRecords,translatedRecords:rows.length,locales,style:"informal-native",provider:"google-web-natural-v1"});
+    return reply(req,200,{records:responseRecords,translatedRecords:rows.length,locales,style:"informal-native",provider:"google-web-natural-v2"});
   }catch(error){console.error("Translation failed",text((error as Error)?.message,160));return reply(req,503,{error:"A tradução automática está temporariamente indisponível."});}
 });
