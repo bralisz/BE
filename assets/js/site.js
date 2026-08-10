@@ -9090,6 +9090,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(chip)chip.setAttribute('aria-expanded','false');
   }
   function currentAccount(){return window.beBackend&&beBackend.auth?beBackend.auth.currentUser:null;}
+  function closeSearchOverlays(){
+    window.dispatchEvent(new CustomEvent('be:close-public-search'));
+    window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
+  }
   async function profileHandle(account){
     var label=document.getElementById('ddUsername');
     var value=label?String(label.textContent||'').replace(/^@/,'').trim():'';
@@ -9103,6 +9107,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return value||'perfil';
   }
   function activateSettings(){
+    closeSearchOverlays();
     history.pushState({beRoute:'config'},'', '/config'+(location.search||''));
     window.dispatchEvent(new CustomEvent('be:open-config'));
     window.setTimeout(function(){
@@ -9110,6 +9115,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },180);
   }
   async function activateProfile(account){
+    closeSearchOverlays();
     var handle=await profileHandle(account);
     var path='/@'+encodeURIComponent(handle);
     history.pushState({beRoute:'profile'},'',path+(location.search||''));
@@ -10828,6 +10834,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.dispatchEvent(new CustomEvent('be:close-album-page'));
     }
     async function openPublicProfile(updateRoute,requestedUsername){
+      window.dispatchEvent(new CustomEvent('be:close-public-search'));
+      window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
       closeDetailBeforeDedicatedPage();
       window.dispatchEvent(new CustomEvent('be:close-section-view'));
       document.body.classList.remove('section-catalog-active');
@@ -13431,6 +13439,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     /* As tabelas da filmografia da Wikipédia não fazem parte do layout do BETV. */
     parser.querySelectorAll('table').forEach(function(node){node.remove();});
     var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia','awards and nominations','see also','references','external links','filmography','premios y nominaciones','vease tambien','enlaces externos','filmografia','distinctions','prix et nominations','voir aussi','notes et references','references','liens externes','filmographie'];
+    if(currentLocaleSlug()==='fr')blocked.push('podcast','podcasts');
     Array.from(parser.querySelectorAll('h2,h3,h4')).forEach(function(heading){
       if(!heading.isConnected)return;
       var label=normalizedSectionLabel(heading.textContent);
