@@ -15693,6 +15693,16 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
 .detail-streaming-mobile-sheet[hidden]{display:none!important}
 .detail-streaming-store{display:none}
 body.detail-streaming-mobile-open{overflow:hidden}
+.detail-streaming-service-icon{
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:cover;
+  overflow:hidden;
+}
+.detail-streaming-service-icon[data-streaming-icon="apple-tv"]{background-image:url('/assets/images/streaming/apple-tv.webp')}
+.detail-streaming-service-icon[data-streaming-icon="prime-video"]{background-image:url('/assets/images/streaming/prime-video.webp')}
+.detail-streaming-service-icon[data-streaming-icon="paramount-plus"]{background-image:url('/assets/images/streaming/paramount-plus.webp')}
+.detail-streaming-service-icon[data-streaming-icon="disney-plus"]{background-image:url('/assets/images/streaming/disney-plus.webp')}
 @media (min-width:761px){
   .detail-streaming-mobile-button,
   .detail-streaming-mobile-sheet{display:none!important}
@@ -15779,13 +15789,11 @@ body.detail-streaming-mobile-open{overflow:hidden}
     border:1px solid rgba(255,255,255,.1);
     border-radius:10px;
     background:#090a0c;
-    color:#fff;
-    font:800 11px/1 var(--font-sans);
-    letter-spacing:-.03em;
+    background-position:center;
+    background-repeat:no-repeat;
+    background-size:cover;
+    overflow:hidden;
   }
-  .detail-streaming-service-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .detail-streaming-service-icon.disney{font-size:12px;letter-spacing:-.08em}
-  .detail-streaming-service-icon.paramount svg{width:20px;height:20px}
   .detail-streaming-service-name{font:650 13px/1.2 var(--font-sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .detail-streaming-link-arrow{color:rgba(255,255,255,.42);font-size:19px;line-height:1;text-align:center}
 }
@@ -15873,14 +15881,8 @@ body.detail-streaming-mobile-open{overflow:hidden}
     place-items:center;
     border:1px solid rgba(255,255,255,.1);
     border-radius:12px;
-    background:#090a0c;
-    color:#fff;
-    font:800 12px/1 var(--font-sans);
-    letter-spacing:-.03em;
+    background-color:#090a0c;
   }
-  .detail-streaming-mobile-list .detail-streaming-service-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .detail-streaming-mobile-list .detail-streaming-service-icon.disney{font-size:13px;letter-spacing:-.08em}
-  .detail-streaming-mobile-list .detail-streaming-service-icon.paramount svg{width:22px;height:22px}
   .detail-streaming-mobile-list .detail-streaming-service-name{font:700 14px/1.2 var(--font-sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .detail-streaming-mobile-list .detail-streaming-link-arrow{color:rgba(255,255,255,.42);font-size:19px;line-height:1;text-align:center}
 }

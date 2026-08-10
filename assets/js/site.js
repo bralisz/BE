@@ -915,6 +915,28 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     publicDataMemoryCache.delete(exact);
   }
 
+  async function listAllProfileRows() {
+    const rows = [];
+    const pageSize = 500;
+    let from = 0;
+
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+
+      const page = Array.isArray(data) ? data : [];
+      rows.push(...page);
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return rows;
+  }
+
   const supabaseData = {
     async list(name, options = {}) {
       try {
@@ -925,9 +947,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return sortAndFilter(translatedItems, options);
         }
         if (name === 'users') {
-          const { data, error } = await supabaseClient.from('profiles').select('*');
-          if (error) throw error;
-          items = (data || []).map(profileFromRow);
+          const data = await listAllProfileRows();
+          items = data.map(profileFromRow);
         } else if (name === 'settings') {
           const { data, error } = await supabaseClient.from('site_settings').select('*');
           if (error) throw error;
@@ -3165,13 +3186,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     catch (_) { return ''; }
   }
 
-  function movieStreamingServiceIcon(serviceId) {
-    if (serviceId === 'apple-tv') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="3"></rect><path d="M9 10.2v3.6M9 12h3"></path><path d="M15.2 10.4 17 12l-1.8 1.6"></path></svg>';
-    if (serviceId === 'prime-video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z"></path><path d="M5 19c3.8 1.5 8.3 1.2 12-.8"></path></svg>';
-    if (serviceId === 'paramount-plus') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 5.2-7 2.7 3 2.8-4L20 17H4Z"></path><path d="M7 19h10"></path></svg>';
-    return '<span aria-hidden="true">D+</span>';
-  }
-
   function closeMobileMovieStreamingSheet(options = {}) {
     const sheet = document.getElementById('detailStreamingMobileSheet');
     const button = document.getElementById('detailStreamingButtonMobile');
@@ -3219,8 +3233,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     const markup = services.map(serviceId => {
       const service = MOVIE_STREAMING_SERVICES[serviceId];
-      const iconClass = serviceId === 'disney-plus' ? ' disney' : serviceId === 'paramount-plus' ? ' paramount' : '';
-      return `<a class="detail-streaming-link" href="${safeUrl(directLinks[serviceId] || service.url)}" target="_blank" rel="noopener" data-streaming-service="${escapeHtml(serviceId)}"><span class="detail-streaming-service-icon${iconClass}">${movieStreamingServiceIcon(serviceId)}</span><span class="detail-streaming-service-name">${escapeHtml(service.label)}</span><span class="detail-streaming-link-arrow" aria-hidden="true">›</span></a>`;
+      return `<a class="detail-streaming-link" href="${safeUrl(directLinks[serviceId] || service.url)}" target="_blank" rel="noopener" data-streaming-service="${escapeHtml(serviceId)}"><span class="detail-streaming-service-icon" data-streaming-icon="${escapeHtml(serviceId)}" aria-hidden="true"></span><span class="detail-streaming-service-name">${escapeHtml(service.label)}</span><span class="detail-streaming-link-arrow" aria-hidden="true">›</span></a>`;
     }).join('');
     list.innerHTML = markup;
     if (mobileList) mobileList.innerHTML = markup;

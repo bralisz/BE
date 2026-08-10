@@ -4,6 +4,7 @@
 // Public URLs remain unchanged through rewrites in vercel.json.
 
 const crypto = require('crypto');
+const accountStatus = require('../server/api-handlers/account-status');
 
 const PAGE_TITLE = 'Billie_Eilish';
 const USER_AGENT = 'BETV/1.1 (+https://billieilishtv.site; contato: billieilishtv@gmail.com)';
@@ -369,6 +370,7 @@ async function sitemap(req, res) {
 };
 
 const handlers = Object.freeze({
+  'account-status': accountStatus,
   'deployment-version': deploymentVersionHandler,
   robots: robots,
   sitemap: sitemap,
