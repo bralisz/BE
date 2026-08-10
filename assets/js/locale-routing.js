@@ -5,16 +5,18 @@
     'pt-br':{locale:'pt-BR',slug:'pt-br',target:'pt'},
     'en-us':{locale:'en-US',slug:'en-us',target:'en'},
     'us':{locale:'en-US',slug:'en-us',target:'en',alias:true},
-    'es':{locale:'es-ES',slug:'es',target:'es'}
+    'es':{locale:'es-ES',slug:'es',target:'es'},
+    'fr':{locale:'fr-FR',slug:'fr',target:'fr'}
   };
-  var SUPPORTED=['pt-br','en-us','es'];
+  var SUPPORTED=['pt-br','en-us','es','fr'];
   var ROUTE_SLUGS={
     'pt-br':{'/comunidade':'/comunidade','/fãs':'/fãs'},
     'en-us':{'/comunidade':'/community','/fãs':'/fans'},
-    'es':{'/comunidade':'/comunidad','/fãs':'/fans'}
+    'es':{'/comunidade':'/comunidad','/fãs':'/fans'},
+    'fr':{'/comunidade':'/communaute','/fãs':'/fans'}
   };
   var ROUTE_ALIASES={
-    '/comunidade':'/comunidade','/community':'/comunidade','/comunidad':'/comunidade',
+    '/comunidade':'/comunidade','/community':'/comunidade','/comunidad':'/comunidade','/communaute':'/comunidade',
     '/fãs':'/fãs','/fas':'/fãs','/fans':'/fãs'
   };
   var RESERVED=/^\/(?:api|assets|oauth\/consent|site\.webmanifest|favicon(?:\.ico)?|404)(?:\/|$)/i;
@@ -79,6 +81,7 @@
       var language=languages[index].toLowerCase();
       if(language.indexOf('pt')===0)return 'pt-br';
       if(language.indexOf('es')===0)return 'es';
+      if(language.indexOf('fr')===0)return 'fr';
       if(language.indexOf('en')===0)return 'en-us';
     }
     return 'en-us';
@@ -128,7 +131,7 @@
     try{localStorage.setItem(LOCALE_STORAGE_KEY,config.slug);}catch(_){ }
   }
 
-  if(!prefix&&/^\/(?:auth\/callback|oauth\/consent)(?:\/|$)/i.test(logicalAtBoot)&&/^\/(?:pt-br|en-us|es)$/.test(storedPrefix)){
+  if(!prefix&&/^\/(?:auth\/callback|oauth\/consent)(?:\/|$)/i.test(logicalAtBoot)&&/^\/(?:pt-br|en-us|es|fr)$/.test(storedPrefix)){
     prefix=storedPrefix;
     var storedSlug=storedPrefix.slice(1);
     locale=(LOCALES[storedSlug]&&LOCALES[storedSlug].locale)||locale;
