@@ -747,16 +747,45 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function localizeContentRecord(record) {
+  const MUSIC_TITLE_SECTION_IDS_LOCALIZATION = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a',
+    'e995b960-503c-4d67-8d7c-87cbd6eda6a2',
+    '76295393-0c1d-483f-a48c-eea38f1057df'
+  ]);
+
+  function normalizeMusicTitleForLocalization(value) {
+    return String(value || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  function preserveOriginalMusicTitleDuringLocalization(collection, data) {
+    const normalizedCollection = String(collection || '').toLowerCase();
+    if (normalizedCollection === 'albums' || normalizedCollection === 'shows') return true;
+    if (normalizedCollection !== 'videos') return false;
+
+    const sectionId = String(data?.sectionId || '').trim();
+    const sectionName = normalizeMusicTitleForLocalization(data?.sectionName || data?.sourceSectionTitle || '');
+    const title = normalizeMusicTitleForLocalization(data?.title || data?.name || '');
+    const protectedSection = /^(live performances?( and | )tv|videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux|concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)$/.test(sectionName);
+    const protectedTitle = /\b(live from|live at|live on|live session|live performance|ao vivo em|ao vivo no|ao vivo na|en vivo desde|en vivo en|performance at|performed at)\b/.test(title)
+      || /\b(official music video|official video|music video|lyric video|official audio|audio oficial|visualizer|visualiser)\b/.test(title);
+
+    return MUSIC_TITLE_SECTION_IDS_LOCALIZATION.has(sectionId) || protectedSection || protectedTitle;
+  }
+
+  function localizeContentRecord(record, collection = '') {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
-    // Music/song/show titles must stay exactly as stored in the original record.
-    // This only changes the displayed title; it never triggers or waits for a translation request.
-    if (preservesOriginalMusicTitle(record)) {
+    // Restore only music/album/show titles from the original record. This helper
+    // lives in the same backend scope, so it cannot break site initialization.
+    if (preserveOriginalMusicTitleDuringLocalization(collection, record)) {
       if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
       if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
     }
@@ -777,7 +806,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
     if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(localizeContentRecord);
+      return values.map(record => localizeContentRecord(record, collection));
     }
     const missing = values.filter(record => recordNeedsTranslation(record, slug));
     if (missing.length) {
@@ -804,7 +833,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
       }
     }
-    return values.map(localizeContentRecord);
+    return values.map(record => localizeContentRecord(record, collection));
   }
 
   function queueRecordTranslation(collection, id) {
@@ -984,7 +1013,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const publicValue = await readPublicData(name, id);
           if (!publicValue) return null;
           const translated = await ensureTranslatedRecords(name, [publicValue]);
-          return translated[0] || localizeContentRecord(publicValue);
+          return translated[0] || localizeContentRecord(publicValue, name);
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();
@@ -997,7 +1026,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value);
+          return translated[0] || localizeContentRecord(value, name);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -1009,7 +1038,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value);
+        return translated[0] || localizeContentRecord(value, name);
       } catch (error) {
         throw mapAuthError(error);
       }
