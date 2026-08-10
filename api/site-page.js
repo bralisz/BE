@@ -12,21 +12,23 @@ const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUB
 const SETTINGS_CACHE_TTL_MS = 60000;
 const SEO_CATALOG_CACHE_TTL_MS = 60000;
 const SEO_CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents', 'news']);
-const I18N_REV = '20260808-community-guidelines-v1';
+const I18N_REV = '20260810-native-informal-v2';
 const LOCALIZED_ROUTE_SLUGS = Object.freeze({
   'pt-br': Object.freeze({ '/comunidade': '/comunidade', '/fãs': '/fãs' }),
   'en-us': Object.freeze({ '/comunidade': '/community', '/fãs': '/fans' }),
-  es: Object.freeze({ '/comunidade': '/comunidad', '/fãs': '/fans' })
+  es: Object.freeze({ '/comunidade': '/comunidad', '/fãs': '/fans' }),
+  fr: Object.freeze({ '/comunidade': '/communaute', '/fãs': '/fans' })
 });
 const LOCALIZED_ROUTE_ALIASES = Object.freeze({
-  '/comunidade': '/comunidade', '/community': '/comunidade', '/comunidad': '/comunidade',
+  '/comunidade': '/comunidade', '/community': '/comunidade', '/comunidad': '/comunidade', '/communaute': '/comunidade', '/communauté': '/comunidade',
   '/fãs': '/fãs', '/fas': '/fãs', '/fans': '/fãs'
 });
 const LOCALE_PREFIXES = Object.freeze({
   'pt-br': { locale: 'pt-BR', ogLocale: 'pt_BR', slug: 'pt-br' },
   'en-us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
   'us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
-  'es': { locale: 'es', ogLocale: 'es_ES', slug: 'es' }
+  'es': { locale: 'es', ogLocale: 'es_ES', slug: 'es' },
+  'fr': { locale: 'fr-FR', ogLocale: 'fr_FR', slug: 'fr' }
 });
 let cachedTemplate = '';
 let settingsCache = { value: {}, expiresAt: 0, promise: null };
@@ -362,12 +364,21 @@ function seoRecordFromRoute(routeInfo, catalog) {
   return null;
 }
 
+const ORIGINAL_TITLE_COLLECTIONS = new Set(['contents', 'featured', 'movies', 'series', 'videos', 'ongs', 'news']);
+
 function localizedRecord(record, slug) {
   if (!record) return null;
   const base = record.data && typeof record.data === 'object' ? record.data : {};
   const translations = base.translations && typeof base.translations === 'object' ? base.translations : {};
   const translated = translations[slug] && typeof translations[slug] === 'object' ? translations[slug] : null;
-  return { ...record, data: translated ? { ...base, ...translated } : { ...base } };
+  const data = translated ? { ...base, ...translated } : { ...base };
+  const collection = String(record.collection || base.collection || '').toLowerCase();
+  const keepTitle = base.preserveTitle === true || String(base.preserveTitle || '').toLowerCase() === 'true' || ORIGINAL_TITLE_COLLECTIONS.has(collection);
+  if (keepTitle) {
+    if (Object.prototype.hasOwnProperty.call(base, 'title')) data.title = base.title;
+    if (Object.prototype.hasOwnProperty.call(base, 'name')) data.name = base.name;
+  }
+  return { ...record, data };
 }
 
 function canonicalPathForRoute(routeInfo) {
@@ -400,7 +411,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
   const siteTitle = 'Billie Eilish TV';
   const copies = {
     'pt-br': {
-      homeTitle: 'Billie Eilish TV — Vídeos, filmes, séries e mais',
+      homeTitle: 'Billie Eilish TV — Feito de fã pra fã',
       homeDescription: 'Explore vídeos, shows, filmes, séries, álbuns e outros conteúdos sobre Billie Eilish em um projeto de fãs reunido em um só lugar.',
       billieTitle: `Billie Eilish — Biografia e informações | ${siteTitle}`,
       billieDescription: 'Conheça Billie Eilish, sua trajetória, informações e redes sociais reunidas pela Billie Eilish TV, um projeto de fãs.',
@@ -423,7 +434,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Projeto de fãs não oficial dedicado a organizar conteúdo e informações sobre Billie Eilish.'
     },
     'en-us': {
-      homeTitle: 'Billie Eilish TV — Videos, films, series and more',
+      homeTitle: 'Billie Eilish TV — Made by fans, for fans',
       homeDescription: 'Explore videos, performances, films, series, albums and more Billie Eilish content in one fan-made project.',
       billieTitle: `Billie Eilish — Biography and information | ${siteTitle}`,
       billieDescription: 'Learn about Billie Eilish, her journey, information and social links gathered by Billie Eilish TV, a fan-made project.',
@@ -445,14 +456,37 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fansDescription: 'Meet fans and communities that help Billie Eilish TV by sharing and supporting the project.',
       fanProject: 'Unofficial fan-made project dedicated to organizing content and information about Billie Eilish.'
     },
+    fr: {
+      homeTitle: 'Billie Eilish TV — Par des fans, pour des fans',
+      homeDescription: 'Explore des vidéos, concerts, films, séries, albums et d’autres contenus sur Billie Eilish dans un projet créé par des fans.',
+      billieTitle: `Billie Eilish — Biographie et informations | ${siteTitle}`,
+      billieDescription: 'Découvre Billie Eilish, son parcours, ses informations et ses réseaux sociaux réunis par Billie Eilish TV, un projet de fans.',
+      albumsTitle: `Albums et singles de Billie Eilish | ${siteTitle}`,
+      albumsDescription: 'Explore les albums, singles et titres de Billie Eilish réunis par Billie Eilish TV.',
+      ongTitle: `Soutenir des associations | ${siteTitle}`,
+      ongDescription: 'Découvre les associations présentées par Billie Eilish TV et les moyens de soutenir les initiatives sélectionnées sur le site.',
+      supportTitle: `Assistance | ${siteTitle}`,
+      supportDescription: 'Centre d’assistance de Billie Eilish TV avec des réponses aux questions fréquentes et des moyens de contact.',
+      updatesTitle: `Mises à jour | ${siteTitle}`,
+      updatesDescription: 'Suis les nouveautés et mises à jour publiées par Billie Eilish TV.',
+      termsTitle: `Conditions générales | ${siteTitle}`,
+      privacyTitle: `Politique de confidentialité | ${siteTitle}`,
+      cookiesTitle: `Politique relative aux cookies | ${siteTitle}`,
+      dmcaTitle: `DMCA et droits d’auteur | ${siteTitle}`,
+      communityTitle: `Règles de la communauté | ${siteTitle}`,
+      communityDescription: 'Consulte les règles de la page des fans de Billie Eilish TV, la manière dont les profils et communautés peuvent apparaître, les informations publiques qui peuvent être affichées et la procédure de retrait.',
+      fansTitle: `Fans qui ont aidé le site | ${siteTitle}`,
+      fansDescription: 'Découvre les fans et communautés qui aident Billie Eilish TV en partageant et en soutenant le projet.',
+      fanProject: 'Projet non officiel créé par des fans pour organiser du contenu et des informations sur Billie Eilish.'
+    },
     es: {
-      homeTitle: 'Billie Eilish TV — Videos, películas, series y más',
+      homeTitle: 'Billie Eilish TV — Hecho por fans, para fans',
       homeDescription: 'Explora videos, conciertos, películas, series, álbumes y más contenido de Billie Eilish en un proyecto creado por fans.',
       billieTitle: `Billie Eilish — Biografía e información | ${siteTitle}`,
       billieDescription: 'Conoce a Billie Eilish, su trayectoria, información y redes sociales reunidas por Billie Eilish TV, un proyecto de fans.',
       albumsTitle: `Álbumes y singles de Billie Eilish | ${siteTitle}`,
       albumsDescription: 'Explora álbumes, singles y canciones de Billie Eilish reunidos por Billie Eilish TV.',
-      ongTitle: `Apoya a ONG | ${siteTitle}`,
+      ongTitle: `Apoya a una ONG | ${siteTitle}`,
       ongDescription: 'Conoce las ONG presentadas por Billie Eilish TV y formas de apoyar iniciativas seleccionadas en el sitio.',
       supportTitle: `Soporte | ${siteTitle}`,
       supportDescription: 'Centro de soporte de Billie Eilish TV con respuestas a preguntas frecuentes y opciones de contacto.',
@@ -535,7 +569,9 @@ function pageCopy(routeInfo, settings, seoRecord) {
         ? `Explore ${recordTitle} and more Billie Eilish content on Billie Eilish TV.`
         : routeInfo.slug === 'es'
           ? `Explora ${recordTitle} y más contenido de Billie Eilish en Billie Eilish TV.`
-          : `Explore ${recordTitle} e outros conteúdos de Billie Eilish na Billie Eilish TV.`;
+          : routeInfo.slug === 'fr'
+            ? `Explore ${recordTitle} et d’autres contenus sur Billie Eilish sur Billie Eilish TV.`
+            : `Explore ${recordTitle} e outros conteúdos de Billie Eilish na Billie Eilish TV.`;
     }
     pageType = 'ItemPage';
   }
@@ -552,7 +588,7 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
     name: 'Billie Eilish TV',
     alternateName: 'BETV',
     description: copy.fanProject,
-    inLanguage: ['pt-BR', 'en-US', 'es']
+    inLanguage: ['pt-BR', 'en-US', 'es', 'fr-FR']
   });
 
   const page = {
@@ -613,17 +649,20 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   const fallbackImageAlt = {
     'pt-br': 'Billie Eilish TV — projeto de fãs sobre Billie Eilish',
     'en-us': 'Billie Eilish TV — a fan-made Billie Eilish project',
-    es: 'Billie Eilish TV — proyecto de fans sobre Billie Eilish'
+    es: 'Billie Eilish TV — proyecto de fans sobre Billie Eilish',
+    fr: 'Billie Eilish TV — projet de fans consacré à Billie Eilish'
   }[routeInfo.slug] || 'Billie Eilish TV';
   const profileDescription = {
     'pt-br': name => `Veja os quatro conteúdos favoritos de ${name} na Billie Eilish TV.`,
     'en-us': name => `See ${name}'s four favorite picks on Billie Eilish TV.`,
-    es: name => `Mira los cuatro contenidos favoritos de ${name} en Billie Eilish TV.`
+    es: name => `Mira los cuatro contenidos favoritos de ${name} en Billie Eilish TV.`,
+    fr: name => `Découvre les quatre contenus préférés de ${name} sur Billie Eilish TV.`
   }[routeInfo.slug] || (name => `Perfil de ${name} na Billie Eilish TV.`);
   const profileImageAlt = {
     'pt-br': name => `Perfil de ${name} com seus conteúdos favoritos na Billie Eilish TV`,
     'en-us': name => `${name}'s profile with favorite picks on Billie Eilish TV`,
-    es: name => `Perfil de ${name} con sus contenidos favoritos en Billie Eilish TV`
+    es: name => `Perfil de ${name} con sus contenidos favoritos en Billie Eilish TV`,
+    fr: name => `Profil de ${name} avec ses contenus préférés sur Billie Eilish TV`
   }[routeInfo.slug] || (name => `Perfil de ${name}`);
 
   const copy = pageCopy(routeInfo, settings, seoRecord);
@@ -631,7 +670,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   const canonical = `${origin}${canonicalPath}`;
   const noindex = isNoindexRoute(routeInfo);
 
-  let documentTitle = copy.title;
+  const documentTitle = siteTitle;
   let socialTitle = copy.title;
   let socialDescription = copy.description;
   let image = FIXED_SHARE_IMAGE_URL;
@@ -642,7 +681,6 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     const displayName = String(publicProfile.displayName || publicProfile.username).trim().slice(0, 80);
     const username = PUBLIC_PROFILE_API.normalizeUsername(publicProfile.username);
     const version = profileShareVersion(publicProfile);
-    documentTitle = `${displayName} — ${siteTitle}`;
     socialTitle = `${displayName} (@${username})`;
     socialDescription = profileDescription(displayName);
     imageAlt = profileImageAlt(displayName);
@@ -664,6 +702,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     `<link rel="alternate" hreflang="pt-BR" href="${attr(localizedRouteUrl(origin, 'pt-br', logical))}">`,
     `<link rel="alternate" hreflang="en-US" href="${attr(localizedRouteUrl(origin, 'en-us', logical))}">`,
     `<link rel="alternate" hreflang="es" href="${attr(localizedRouteUrl(origin, 'es', logical))}">`,
+    `<link rel="alternate" hreflang="fr" href="${attr(localizedRouteUrl(origin, 'fr', logical))}">`,
     `<link rel="alternate" hreflang="x-default" href="${attr(xDefaultRouteUrl(origin, logical))}">`
   ].join('\n');
 
@@ -692,7 +731,7 @@ ${process.env.GOOGLE_SITE_VERIFICATION ? `<meta name="google-site-verification" 
 ${alternates}`;
 
   html = html.replace('</title>', `</title>${metadata}`);
-  return injectStructuredData(html, origin, canonical, routeInfo, { ...copy, title: documentTitle, description: socialDescription }, seoRecord, publicProfile);
+  return injectStructuredData(html, origin, canonical, routeInfo, { ...copy, title: socialTitle, description: socialDescription }, seoRecord, publicProfile);
 }
 
 module.exports = async function sitePage(req, res) {

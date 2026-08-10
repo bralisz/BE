@@ -61,16 +61,16 @@
   <main class="card">
     <img loading="eager" decoding="async" fetchpriority="high" class="logo" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE">
     <section id="loading">
-      <h1>Carregando autorização…</h1>
-      <p class="lead">Estamos verificando sua conta e o aplicativo solicitante.</p>
+      <h1 id="loadingTitle">Carregando autorização…</h1>
+      <p class="lead" id="loadingLead">Estamos verificando sua conta e o aplicativo solicitante.</p>
     </section>
     <section id="consent" hidden>
-      <h1>Autorizar <span id="clientName">aplicativo</span>?</h1>
-      <p class="lead">Este aplicativo está pedindo permissão para usar sua conta.</p>
+      <h1><span id="authorizePrefix">Autorizar</span> <span id="clientName">aplicativo</span>?</h1>
+      <p class="lead" id="consentLead">Este aplicativo está pedindo permissão para usar sua conta.</p>
       <div class="details">
-        <div class="row"><span class="label">Aplicativo</span><span class="value" id="clientValue"></span></div>
-        <div class="row"><span class="label">Endereço de retorno</span><span class="value" id="redirectUri"></span></div>
-        <div class="row" id="scopeRow"><span class="label">Permissões solicitadas</span><ul class="scopes" id="scopeList"></ul></div>
+        <div class="row"><span class="label" id="appLabel">Aplicativo</span><span class="value" id="clientValue"></span></div>
+        <div class="row"><span class="label" id="redirectLabel">Endereço de retorno</span><span class="value" id="redirectUri"></span></div>
+        <div class="row" id="scopeRow"><span class="label" id="scopesLabel">Permissões solicitadas</span><ul class="scopes" id="scopeList"></ul></div>
       </div>
       <div class="actions">
         <button class="deny" id="deny" type="button">Negar</button>
@@ -78,9 +78,9 @@
       </div>
     </section>
     <section id="error" hidden>
-      <h1>Não foi possível continuar</h1>
+      <h1 id="errorTitle">Não foi possível continuar</h1>
       <p class="lead" id="errorText">A solicitação de autorização é inválida ou expirou.</p>
-      <a class="back" href="/">Voltar ao site</a>
+      <a class="back" id="backLink" href="/">Voltar ao site</a>
     </section>
     <div class="status" id="status" aria-live="polite"></div>
   </main>
@@ -94,9 +94,38 @@
   <script>
   (async function(){
     'use strict';
+    var first=String(location.pathname.split('/')[1]||'').toLowerCase();
+    var locale=['pt-br','en-us','es','fr'].includes(first)?first:'';
+    if(!locale){try{locale=String(localStorage.getItem('betvPreferredLocale')||'').toLowerCase();}catch(_){locale='';}}
+    if(!['pt-br','en-us','es','fr'].includes(locale)){
+      var browserLanguage=String(navigator.language||'').toLowerCase();
+      locale=browserLanguage.indexOf('es')===0?'es':browserLanguage.indexOf('fr')===0?'fr':browserLanguage.indexOf('en')===0?'en-us':'pt-br';
+    }
+    var copies={
+      'pt-br':{lang:'pt-BR',loadingTitle:'Carregando autorização…',loadingLead:'Estamos verificando sua conta e o aplicativo solicitante.',authorize:'Autorizar',app:'aplicativo',consentLead:'Este aplicativo quer usar sua conta.',appLabel:'Aplicativo',redirectLabel:'Endereço de retorno',scopesLabel:'Permissões solicitadas',deny:'Negar',approve:'Autorizar',errorTitle:'Não foi possível continuar',invalid:'A solicitação de autorização é inválida ou expirou.',back:'Voltar ao site',identity:'Confirmar sua identidade',email:'Ver seu endereço de e-mail',profile:'Ver seu perfil básico',notProvided:'Não informado',approving:'Autorizando…',denying:'Negando acesso…',decisionFailed:'Não foi possível concluir. Tente novamente.'},
+      'en-us':{lang:'en-US',loadingTitle:'Loading authorization…',loadingLead:'We’re checking your account and the app making the request.',authorize:'Allow',app:'app',consentLead:'This app wants to use your account.',appLabel:'App',redirectLabel:'Return address',scopesLabel:'Requested permissions',deny:'Deny',approve:'Allow',errorTitle:'Couldn’t continue',invalid:'This authorization request is invalid or has expired.',back:'Back to the site',identity:'Confirm your identity',email:'View your email address',profile:'View your basic profile',notProvided:'Not provided',approving:'Allowing access…',denying:'Denying access…',decisionFailed:'Couldn’t finish. Try again.'},
+      'es':{lang:'es',loadingTitle:'Cargando autorización…',loadingLead:'Estamos revisando tu cuenta y la aplicación que hizo la solicitud.',authorize:'Autorizar',app:'aplicación',consentLead:'Esta aplicación quiere usar tu cuenta.',appLabel:'Aplicación',redirectLabel:'Dirección de retorno',scopesLabel:'Permisos solicitados',deny:'Denegar',approve:'Autorizar',errorTitle:'No pudimos continuar',invalid:'Esta solicitud de autorización no es válida o ya venció.',back:'Volver al sitio',identity:'Confirmar tu identidad',email:'Ver tu correo electrónico',profile:'Ver tu perfil básico',notProvided:'No informado',approving:'Autorizando…',denying:'Denegando acceso…',decisionFailed:'No pudimos completar la acción. Inténtalo de nuevo.'},
+      'fr':{lang:'fr-FR',loadingTitle:'Chargement de l’autorisation…',loadingLead:'On vérifie ton compte et l’application à l’origine de la demande.',authorize:'Autoriser',app:'application',consentLead:'Cette application souhaite utiliser ton compte.',appLabel:'Application',redirectLabel:'Adresse de retour',scopesLabel:'Autorisations demandées',deny:'Refuser',approve:'Autoriser',errorTitle:'Impossible de continuer',invalid:'Cette demande d’autorisation est invalide ou a expiré.',back:'Retour au site',identity:'Confirmer ton identité',email:'Voir ton adresse e-mail',profile:'Voir ton profil de base',notProvided:'Non renseigné',approving:'Autorisation en cours…',denying:'Refus en cours…',decisionFailed:'Impossible de terminer. Réessaie.'}
+    };
+    var copy=copies[locale];
+    document.documentElement.lang=copy.lang;
+    document.getElementById('loadingTitle').textContent=copy.loadingTitle;
+    document.getElementById('loadingLead').textContent=copy.loadingLead;
+    document.getElementById('authorizePrefix').textContent=copy.authorize;
+    document.getElementById('clientName').textContent=copy.app;
+    document.getElementById('consentLead').textContent=copy.consentLead;
+    document.getElementById('appLabel').textContent=copy.appLabel;
+    document.getElementById('redirectLabel').textContent=copy.redirectLabel;
+    document.getElementById('scopesLabel').textContent=copy.scopesLabel;
+    document.getElementById('deny').textContent=copy.deny;
+    document.getElementById('approve').textContent=copy.approve;
+    document.getElementById('errorTitle').textContent=copy.errorTitle;
+    document.getElementById('errorText').textContent=copy.invalid;
+    document.getElementById('backLink').textContent=copy.back;
+    document.getElementById('backLink').href='/'+locale;
     var loading=document.getElementById('loading'),consent=document.getElementById('consent'),errorBox=document.getElementById('error'),errorText=document.getElementById('errorText'),status=document.getElementById('status');
-    function fail(message){loading.hidden=true;consent.hidden=true;errorBox.hidden=false;errorText.textContent=message||'A solicitação de autorização é inválida ou expirou.';}
-    function scopeLabel(scope){var labels={openid:'Confirmar sua identidade',email:'Ver seu endereço de e-mail',profile:'Ver seu perfil básico'};return labels[scope]||scope;}
+    function fail(){loading.hidden=true;consent.hidden=true;errorBox.hidden=false;errorText.textContent=copy.invalid;}
+    function scopeLabel(scope){var labels={openid:copy.identity,email:copy.email,profile:copy.profile};return labels[scope]||scope;}
     try{
       var config=window.BE_SUPABASE_CONFIG||{};
       if(!window.supabase||!config.url||!config.publishableKey)throw new Error('A conexão com o Supabase não foi configurada.');
@@ -116,25 +145,25 @@
       var details=result.data;
       if(!details)throw new Error('A solicitação de autorização não foi encontrada.');
       if(!Object.prototype.hasOwnProperty.call(details,'authorization_id')&&details.redirect_url){location.replace(details.redirect_url);return;}
-      var name=(details.client&&details.client.name)||'aplicativo';
+      var name=(details.client&&details.client.name)||copy.app;
       document.getElementById('clientName').textContent=name;
       document.getElementById('clientValue').textContent=name;
-      document.getElementById('redirectUri').textContent=details.redirect_uri||'Não informado';
+      document.getElementById('redirectUri').textContent=details.redirect_uri||copy.notProvided;
       var scopes=String(details.scope||'').trim().split(/\s+/).filter(Boolean),scopeList=document.getElementById('scopeList');
       if(scopes.length){scopes.forEach(function(scope){var item=document.createElement('li');item.className='scope';item.textContent=scopeLabel(scope);scopeList.appendChild(item);});}else{document.getElementById('scopeRow').hidden=true;}
       loading.hidden=true;consent.hidden=false;
       async function decide(approved){
-        var approve=document.getElementById('approve'),deny=document.getElementById('deny');approve.disabled=true;deny.disabled=true;status.className='status';status.textContent=approved?'Autorizando…':'Negando acesso…';
+        var approve=document.getElementById('approve'),deny=document.getElementById('deny');approve.disabled=true;deny.disabled=true;status.className='status';status.textContent=approved?copy.approving:copy.denying;
         try{
           var response=approved?await client.auth.oauth.approveAuthorization(authorizationId):await client.auth.oauth.denyAuthorization(authorizationId);
           if(response.error)throw response.error;
           if(!response.data||!response.data.redirect_url)throw new Error('O Supabase não retornou o endereço de redirecionamento.');
           location.assign(response.data.redirect_url);
-        }catch(decisionError){status.textContent=decisionError.message||'Não foi possível concluir a decisão.';approve.disabled=false;deny.disabled=false;}
+        }catch(decisionError){status.textContent=copy.decisionFailed;console.error('OAuth decision failed:',decisionError);approve.disabled=false;deny.disabled=false;}
       }
       document.getElementById('approve').onclick=function(){decide(true)};
       document.getElementById('deny').onclick=function(){decide(false)};
-    }catch(err){fail(err&&err.message);console.error('Falha no consentimento OAuth:',err);}
+    }catch(err){fail();console.error('Falha no consentimento OAuth:',err);}
   })();
   </script>
   <script defer src="/assets/js/lazy-loading.js?v=1"></script>
