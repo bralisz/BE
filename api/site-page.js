@@ -411,7 +411,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
   const siteTitle = 'Billie Eilish TV';
   const copies = {
     'pt-br': {
-      homeTitle: 'Billie Eilish TV — Feito de fã pra fã',
+      homeTitle: 'Billie Eilish TV',
       homeDescription: 'Explore vídeos, shows, filmes, séries, álbuns e outros conteúdos sobre Billie Eilish em um projeto de fãs reunido em um só lugar.',
       billieTitle: `Billie Eilish — Biografia e informações | ${siteTitle}`,
       billieDescription: 'Conheça Billie Eilish, sua trajetória, informações e redes sociais reunidas pela Billie Eilish TV, um projeto de fãs.',
@@ -434,7 +434,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Projeto de fãs não oficial dedicado a organizar conteúdo e informações sobre Billie Eilish.'
     },
     'en-us': {
-      homeTitle: 'Billie Eilish TV — Made by fans, for fans',
+      homeTitle: 'Billie Eilish TV',
       homeDescription: 'Explore videos, performances, films, series, albums and more Billie Eilish content in one fan-made project.',
       billieTitle: `Billie Eilish — Biography and information | ${siteTitle}`,
       billieDescription: 'Learn about Billie Eilish, her journey, information and social links gathered by Billie Eilish TV, a fan-made project.',
@@ -457,7 +457,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Unofficial fan-made project dedicated to organizing content and information about Billie Eilish.'
     },
     fr: {
-      homeTitle: 'Billie Eilish TV — Par des fans, pour des fans',
+      homeTitle: 'Billie Eilish TV',
       homeDescription: 'Explore des vidéos, concerts, films, séries, albums et d’autres contenus sur Billie Eilish dans un projet créé par des fans.',
       billieTitle: `Billie Eilish — Biographie et informations | ${siteTitle}`,
       billieDescription: 'Découvre Billie Eilish, son parcours, ses informations et ses réseaux sociaux réunis par Billie Eilish TV, un projet de fans.',
@@ -480,7 +480,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Projet non officiel créé par des fans pour organiser du contenu et des informations sur Billie Eilish.'
     },
     es: {
-      homeTitle: 'Billie Eilish TV — Hecho por fans, para fans',
+      homeTitle: 'Billie Eilish TV',
       homeDescription: 'Explora videos, conciertos, películas, series, álbumes y más contenido de Billie Eilish en un proyecto creado por fans.',
       billieTitle: `Billie Eilish — Biografía e información | ${siteTitle}`,
       billieDescription: 'Conoce a Billie Eilish, su trayectoria, información y redes sociales reunidas por Billie Eilish TV, un proyecto de fans.',
@@ -670,7 +670,8 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   const canonical = `${origin}${canonicalPath}`;
   const noindex = isNoindexRoute(routeInfo);
 
-  const documentTitle = siteTitle;
+  const logicalPath = String(routeInfo.logicalPath || '/').replace(/\/+$/, '') || '/';
+  let documentTitle = logicalPath === '/' ? siteTitle : copy.title;
   let socialTitle = copy.title;
   let socialDescription = copy.description;
   let image = FIXED_SHARE_IMAGE_URL;
@@ -682,6 +683,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     const username = PUBLIC_PROFILE_API.normalizeUsername(publicProfile.username);
     const version = profileShareVersion(publicProfile);
     socialTitle = `${displayName} (@${username})`;
+    documentTitle = `${displayName} (@${username}) | ${siteTitle}`;
     socialDescription = profileDescription(displayName);
     imageAlt = profileImageAlt(displayName);
     image = `${origin}/api/profile-share-image?username=${encodeURIComponent(username)}&v=${encodeURIComponent(version)}`;
@@ -712,6 +714,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
 ${process.env.GOOGLE_SITE_VERIFICATION ? `<meta name="google-site-verification" content="${attr(process.env.GOOGLE_SITE_VERIFICATION)}">` : ''}
 <meta property="og:type" content="${attr(ogType)}">
 <meta property="og:locale" content="${attr(routeInfo.ogLocale)}">
+${Object.values(LOCALE_PREFIXES).filter((value, index, list) => !value.alias && value.ogLocale !== routeInfo.ogLocale && list.findIndex(item => item.ogLocale === value.ogLocale) === index).map(value => `<meta property="og:locale:alternate" content="${attr(value.ogLocale)}">`).join('\n')}
 <meta property="og:site_name" content="${attr(siteTitle)}">
 <meta property="og:title" content="${attr(socialTitle)}">
 <meta property="og:description" content="${attr(socialDescription)}">

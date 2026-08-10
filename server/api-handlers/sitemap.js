@@ -3,13 +3,14 @@
 const SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
 const DEFAULT_SUPABASE_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const LOCALES = ['pt-br', 'en-us', 'es'];
+const LOCALES = ['pt-br', 'en-us', 'es', 'fr'];
 const CONTENT_COLLECTIONS = ['videos', 'movies', 'series', 'contents'];
 const STATIC_PATHS = ['/', '/billie-eilish', '/albuns', '/ong', '/suporte', '/comunidade', '/fãs'];
 const LOCALIZED_ROUTE_SLUGS = Object.freeze({
   'pt-br': Object.freeze({ '/comunidade': '/comunidade', '/fãs': '/fãs' }),
   'en-us': Object.freeze({ '/comunidade': '/community', '/fãs': '/fans' }),
-  es: Object.freeze({ '/comunidade': '/comunidad', '/fãs': '/fans' })
+  es: Object.freeze({ '/comunidade': '/comunidad', '/fãs': '/fans' }),
+  fr: Object.freeze({ '/comunidade': '/communaute', '/fãs': '/fans' })
 });
 
 function supabaseConfig() {

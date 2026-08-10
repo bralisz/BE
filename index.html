@@ -30,6 +30,11 @@
 <meta name="twitter:image" content="https://i.imgur.com/tnBMpHr.png">
 <meta name="twitter:image:alt" content="Billie Eilish TV — todo o conteúdo da Billie Eilish em um só lugar">
 <link rel="canonical" href="https://billieilishtv.site/">
+<link rel="alternate" hreflang="pt-BR" href="https://billieilishtv.site/pt-br">
+<link rel="alternate" hreflang="en-US" href="https://billieilishtv.site/en-us">
+<link rel="alternate" hreflang="es" href="https://billieilishtv.site/es">
+<link rel="alternate" hreflang="fr" href="https://billieilishtv.site/fr">
+<link rel="alternate" hreflang="x-default" href="https://billieilishtv.site/">
 <link rel="preconnect" href="https://cxkevnnxibhezvospkce.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="//cxkevnnxibhezvospkce.supabase.co">
 <link rel="preload" href="/assets/images/brand/logo.webp?v=20260809-performance-v1" as="image" type="image/webp" fetchpriority="high">
@@ -56,7 +61,7 @@
 (function(){
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
-    if(slug!=='en-us'&&slug!=='es')return;
+    if(slug!=='en-us'&&slug!=='es'&&slug!=='fr')return;
     var href='/assets/i18n/'+slug+'.json?rev=20260808-community-guidelines-v1';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
@@ -171,7 +176,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     </section>
   </div>
 </div>
-<section id="authGate" aria-label="Entrar ou criar conta">
+<section id="authGate" aria-label="Entrar ou criar conta" data-nosnippet>
   <div class="login-bg-stack" id="loginBgStack" aria-hidden="true">
     <div class="login-bg-slide active" style="background-image:url('/assets/images/auth/login-admin-banner.webp')"></div>
     <div class="login-bg-slide" data-login-bg="/assets/images/auth/login-bg-1.webp"></div>
@@ -194,7 +199,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
       <section class="login-card" id="authCard" aria-label="Acessar ou criar conta">
         <section class="auth-step email-start" id="emailStep" aria-labelledby="emailStepTitle">
           <header class="auth-step-header">
-            <h2 id="emailStepTitle">Insira seu e-mail para começar a explorar.</h2>
+            <div class="auth-step-title" id="emailStepTitle">Insira seu e-mail para começar a explorar.</div>
           </header>
           <form class="auth-form" id="emailLookupForm">
             <div class="auth-field">

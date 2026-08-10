@@ -16005,3 +16005,18 @@ body.profile-page-active .profile-page-likes-received{
     width:46px!important;
   }
 }
+
+/* 10/08/2026 — SEO: o texto de acesso não é um heading da página.
+   Mantém exatamente a mesma aparência do antigo h2 para não alterar o layout. */
+#emailStepTitle.auth-step-title{
+  max-width:440px;
+  margin:0;
+  font:700 clamp(22px,2.1vw,29px)/1.25 var(--font-display);
+  letter-spacing:-.035em;
+  color:#fff;
+  text-align:left;
+  text-wrap:balance;
+}
+@media (max-width:520px){
+  #emailStepTitle.auth-step-title{font-size:21px}
+}
