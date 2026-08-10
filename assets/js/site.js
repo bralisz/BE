@@ -3925,7 +3925,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       </a>
       <div class="detail-comment-body">
         <a class="detail-comment-user notranslate" translate="no" href="${escapeHtml(profileHref)}">@${escapeHtml(username || 'usuario')}</a>
-        <p class="detail-comment-message notranslate" translate="no">${escapeHtml(message)}</p>
+        <p class="detail-comment-message" data-i18n-user-comment>${escapeHtml(message)}</p>
       </div>
       <div class="detail-comment-actions">${likeAction}${moderationAction}</div>
     </article>`;
@@ -4207,6 +4207,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
       const rows = Array.isArray(data) ? data : [];
       list.innerHTML = rows.map((row, index) => detailCommentMarkup(row, index)).join('');
+      // Comentários são conteúdo do usuário, mas podem ser traduzidos apenas na exibição.
+      // O texto original continua intacto no banco; o i18n detecta o idioma e traduz
+      // automaticamente para o idioma selecionado (en-us, es ou fr).
+      if (window.BETVI18n && typeof window.BETVI18n.apply === 'function') {
+        window.BETVI18n.apply(list);
+      }
       setupDetailCommentItemActions();
       empty.hidden = rows.length > 0;
       empty.textContent = localizedUiText('Ainda não há comentários.');
@@ -9090,10 +9096,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(chip)chip.setAttribute('aria-expanded','false');
   }
   function currentAccount(){return window.beBackend&&beBackend.auth?beBackend.auth.currentUser:null;}
-  function closeSearchOverlays(){
-    window.dispatchEvent(new CustomEvent('be:close-public-search'));
-    window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
-  }
   async function profileHandle(account){
     var label=document.getElementById('ddUsername');
     var value=label?String(label.textContent||'').replace(/^@/,'').trim():'';
@@ -9107,7 +9109,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return value||'perfil';
   }
   function activateSettings(){
-    closeSearchOverlays();
     history.pushState({beRoute:'config'},'', '/config'+(location.search||''));
     window.dispatchEvent(new CustomEvent('be:open-config'));
     window.setTimeout(function(){
@@ -9115,7 +9116,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },180);
   }
   async function activateProfile(account){
-    closeSearchOverlays();
     var handle=await profileHandle(account);
     var path='/@'+encodeURIComponent(handle);
     history.pushState({beRoute:'profile'},'',path+(location.search||''));
@@ -10834,8 +10834,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.dispatchEvent(new CustomEvent('be:close-album-page'));
     }
     async function openPublicProfile(updateRoute,requestedUsername){
-      window.dispatchEvent(new CustomEvent('be:close-public-search'));
-      window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
       closeDetailBeforeDedicatedPage();
       window.dispatchEvent(new CustomEvent('be:close-section-view'));
       document.body.classList.remove('section-catalog-active');
@@ -13438,7 +13436,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     parser.querySelectorAll('sup,.reference,.mw-ref,.reflist,ol.references,[role="note"],a[href^="#cite_note"]').forEach(function(node){node.remove();});
     /* As tabelas da filmografia da Wikipédia não fazem parte do layout do BETV. */
     parser.querySelectorAll('table').forEach(function(node){node.remove();});
-    var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia','awards and nominations','see also','references','external links','filmography','premios y nominaciones','vease tambien','enlaces externos','filmografia'];
+    var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia','awards and nominations','see also','references','external links','filmography','premios y nominaciones','vease tambien','enlaces externos','filmografia','distinctions','prix et nominations','voir aussi','notes et references','references','liens externes','filmographie'];
     Array.from(parser.querySelectorAll('h2,h3,h4')).forEach(function(heading){
       if(!heading.isConnected)return;
       var label=normalizedSectionLabel(heading.textContent);
@@ -13455,7 +13453,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return normalizedSectionLabel(item.textContent);
       }).filter(Boolean);
       if(!labels.length)return;
-      var externalLabels=['commons','wikinoticias','wikinews','pagina oficial','official website','sitio web oficial','billie eilish no facebook','billie eilish on facebook','billie eilish en facebook','billie eilish no x','billie eilish on x','billie eilish en x','billie eilish no instagram','billie eilish on instagram','billie eilish en instagram','canal de billie eilish no youtube','billie eilish youtube channel','canal de billie eilish en youtube'];
+      var externalLabels=['commons','wikinoticias','wikinews','pagina oficial','official website','sitio web oficial','site officiel','billie eilish no facebook','billie eilish on facebook','billie eilish en facebook','billie eilish sur facebook','billie eilish no x','billie eilish on x','billie eilish en x','billie eilish sur x','billie eilish no instagram','billie eilish on instagram','billie eilish en instagram','billie eilish sur instagram','canal de billie eilish no youtube','billie eilish youtube channel','canal de billie eilish en youtube','chaine youtube de billie eilish'];
       var matches=labels.filter(function(label){
         return externalLabels.some(function(item){return label===item||label.startsWith(item+' ');});
       }).length;
