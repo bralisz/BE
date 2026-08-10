@@ -2647,6 +2647,7 @@
   .detail-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .detail-play,
   .detail-list,
+  .detail-streaming-mobile-button,
   .detail-share{
     display:inline-flex;
     align-items:center;
@@ -2667,6 +2668,7 @@
   }
   .detail-play svg{fill:#101112;width:16px;height:16px}
   .detail-list,
+  .detail-streaming-mobile-button,
   .detail-share{
     width:46px;
     min-width:46px;
@@ -2677,10 +2679,11 @@
     -webkit-backdrop-filter:blur(14px);
     backdrop-filter:blur(14px);
   }
-  .detail-list svg,.detail-share svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .detail-list svg,.detail-streaming-mobile-button svg,.detail-share svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .detail-list.active svg{fill:currentColor}
-  .detail-play:hover,.detail-list:hover,.detail-share:hover{transform:translateY(-1px);}
-  .detail-list.active,.detail-share.is-copied{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3)}
+  .detail-streaming-mobile-button{display:none}
+  .detail-play:hover,.detail-list:hover,.detail-streaming-mobile-button:hover,.detail-share:hover{transform:translateY(-1px);}
+  .detail-list.active,.detail-streaming-mobile-button[aria-expanded="true"],.detail-share.is-copied{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3)}
   .detail-desc{
     max-width:540px;
     color:rgba(255,255,255,.86);
@@ -2900,7 +2903,7 @@
     .detail-desc{font-size:13.5px;max-width:95%}
     .detail-actions{gap:10px}
     .detail-play{height:43px;padding:0 18px;font-size:14px}
-    .detail-list,.detail-share{width:43px;min-width:43px;height:43px;padding:0}
+    .detail-list,.detail-streaming-mobile-button,.detail-share{width:43px;min-width:43px;height:43px;padding:0}
     .detail-recommendations{padding:28px 18px 54px}
     .detail-reco-rail{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
     .detail-reco-rail::-webkit-scrollbar{display:none}
@@ -15686,9 +15689,14 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
 
 /* Filmes: botão desktop "Onde assistir" e painel de streamings. */
 .detail-streaming-store[hidden],
-.detail-streaming-panel[hidden]{display:none!important}
+.detail-streaming-panel[hidden],
+.detail-streaming-mobile-sheet[hidden]{display:none!important}
 .detail-streaming-store{display:none}
+body.detail-streaming-mobile-open{overflow:hidden}
 @media (min-width:761px){
+  .detail-streaming-mobile-button,
+  .detail-streaming-mobile-sheet{display:none!important}
+
   body.detail-page-active .detail-streaming-store:not([hidden]){
     position:absolute;
     right:clamp(30px,4vw,68px);
@@ -15768,7 +15776,6 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
     height:34px;
     display:grid;
     place-items:center;
-    overflow:hidden;
     border:1px solid rgba(255,255,255,.1);
     border-radius:10px;
     background:#090a0c;
@@ -15776,7 +15783,6 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
     font:800 11px/1 var(--font-sans);
     letter-spacing:-.03em;
   }
-  .detail-streaming-service-icon img{width:100%;height:100%;display:block;object-fit:contain}
   .detail-streaming-service-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .detail-streaming-service-icon.disney{font-size:12px;letter-spacing:-.08em}
   .detail-streaming-service-icon.paramount svg{width:20px;height:20px}
@@ -15785,7 +15791,100 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
 }
 @media (max-width:760px){
   .detail-streaming-store{display:none!important}
+  .detail-streaming-mobile-button:not([hidden]){display:inline-flex}
+  .detail-streaming-mobile-sheet{
+    position:fixed;
+    inset:0;
+    z-index:1400;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:16px 12px max(16px,env(safe-area-inset-bottom));
+  }
+  .detail-streaming-mobile-backdrop{
+    position:absolute;
+    inset:0;
+    border:0;
+    background:rgba(1,2,5,.58);
+    padding:0;
+  }
+  .detail-streaming-mobile-dialog{
+    position:relative;
+    width:min(100%,420px);
+    max-height:min(74vh,560px);
+    overflow:auto;
+    padding:12px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:24px;
+    background:rgba(12,13,15,.98);
+    -webkit-backdrop-filter:blur(22px);
+    backdrop-filter:blur(22px);
+    box-shadow:0 22px 60px rgba(0,0,0,.4);
+  }
+  .detail-streaming-mobile-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:4px 4px 10px;
+  }
+  .detail-streaming-mobile-title{
+    color:#fff;
+    font:800 16px/1.2 var(--font-sans);
+    letter-spacing:-.02em;
+  }
+  .detail-streaming-mobile-close{
+    width:36px;
+    height:36px;
+    display:grid;
+    place-items:center;
+    padding:0;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:50%;
+    background:rgba(255,255,255,.06);
+    color:#fff;
+  }
+  .detail-streaming-mobile-close svg{
+    width:18px;
+    height:18px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .detail-streaming-mobile-list{display:grid;gap:6px}
+  .detail-streaming-mobile-list .detail-streaming-link{
+    min-height:56px;
+    display:grid;
+    grid-template-columns:40px minmax(0,1fr) 18px;
+    align-items:center;
+    gap:12px;
+    padding:8px 10px;
+    border-radius:16px;
+    color:#fff;
+    text-decoration:none;
+    background:rgba(255,255,255,.03);
+  }
+  .detail-streaming-mobile-list .detail-streaming-service-icon{
+    width:40px;
+    height:40px;
+    display:grid;
+    place-items:center;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:12px;
+    background:#090a0c;
+    color:#fff;
+    font:800 12px/1 var(--font-sans);
+    letter-spacing:-.03em;
+  }
+  .detail-streaming-mobile-list .detail-streaming-service-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .detail-streaming-mobile-list .detail-streaming-service-icon.disney{font-size:13px;letter-spacing:-.08em}
+  .detail-streaming-mobile-list .detail-streaming-service-icon.paramount svg{width:22px;height:22px}
+  .detail-streaming-mobile-list .detail-streaming-service-name{font:700 14px/1.2 var(--font-sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .detail-streaming-mobile-list .detail-streaming-link-arrow{color:rgba(255,255,255,.42);font-size:19px;line-height:1;text-align:center}
 }
+
 
 /* 09/08/2026 — Mobile: cards maiores mantendo 2 por linha. */
 @media (max-width: 760px){

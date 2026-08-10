@@ -3166,8 +3166,32 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function movieStreamingServiceIcon(serviceId) {
-    if (!MOVIE_STREAMING_SERVICES[serviceId]) return '';
-    return `<img src="/assets/images/streaming/${escapeHtml(serviceId)}.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">`;
+    if (serviceId === 'apple-tv') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="3"></rect><path d="M9 10.2v3.6M9 12h3"></path><path d="M15.2 10.4 17 12l-1.8 1.6"></path></svg>';
+    if (serviceId === 'prime-video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z"></path><path d="M5 19c3.8 1.5 8.3 1.2 12-.8"></path></svg>';
+    if (serviceId === 'paramount-plus') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 5.2-7 2.7 3 2.8-4L20 17H4Z"></path><path d="M7 19h10"></path></svg>';
+    return '<span aria-hidden="true">D+</span>';
+  }
+
+  function closeMobileMovieStreamingSheet(options = {}) {
+    const sheet = document.getElementById('detailStreamingMobileSheet');
+    const button = document.getElementById('detailStreamingButtonMobile');
+    if (sheet) sheet.hidden = true;
+    document.body.classList.remove('detail-streaming-mobile-open');
+    if (button) {
+      button.setAttribute('aria-expanded', 'false');
+      if (options.focusButton) button.focus();
+    }
+  }
+
+  function closeDesktopMovieStreamingPanel(options = {}) {
+    const store = document.getElementById('detailStreamingStore');
+    const panel = document.getElementById('detailStreamingPanel');
+    const button = document.getElementById('detailStreamingButton');
+    if (panel) panel.hidden = true;
+    if (button) {
+      button.setAttribute('aria-expanded', 'false');
+      if (options.focusButton && !(store && store.hidden)) button.focus();
+    }
   }
 
   function syncMovieStreamingStore(collection, availability, streamingLinks) {
@@ -3175,24 +3199,33 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const panel = document.getElementById('detailStreamingPanel');
     const button = document.getElementById('detailStreamingButton');
     const list = document.getElementById('detailStreamingList');
+    const mobileButton = document.getElementById('detailStreamingButtonMobile');
+    const mobileList = document.getElementById('detailStreamingMobileList');
+    const mobileSheet = document.getElementById('detailStreamingMobileSheet');
     if (!store || !panel || !button || !list) return;
     const services = String(collection || '').toLowerCase() === 'movies'
       ? normalizeMovieStreamingAvailability(availability)
       : [];
     const directLinks = normalizeMovieStreamingLinks(streamingLinks);
-    panel.hidden = true;
-    button.setAttribute('aria-expanded', 'false');
+    closeDesktopMovieStreamingPanel();
+    closeMobileMovieStreamingSheet();
+    if (mobileButton) mobileButton.hidden = true;
     if (!services.length) {
       store.hidden = true;
       list.innerHTML = '';
+      if (mobileList) mobileList.innerHTML = '';
+      if (mobileSheet) mobileSheet.hidden = true;
       return;
     }
-    list.innerHTML = services.map(serviceId => {
+    const markup = services.map(serviceId => {
       const service = MOVIE_STREAMING_SERVICES[serviceId];
       const iconClass = serviceId === 'disney-plus' ? ' disney' : serviceId === 'paramount-plus' ? ' paramount' : '';
       return `<a class="detail-streaming-link" href="${safeUrl(directLinks[serviceId] || service.url)}" target="_blank" rel="noopener" data-streaming-service="${escapeHtml(serviceId)}"><span class="detail-streaming-service-icon${iconClass}">${movieStreamingServiceIcon(serviceId)}</span><span class="detail-streaming-service-name">${escapeHtml(service.label)}</span><span class="detail-streaming-link-arrow" aria-hidden="true">›</span></a>`;
     }).join('');
+    list.innerHTML = markup;
+    if (mobileList) mobileList.innerHTML = markup;
     store.hidden = false;
+    if (mobileButton) mobileButton.hidden = false;
   }
 
   function videoCard(video) {
@@ -7032,26 +7065,65 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const streamingStore = document.getElementById('detailStreamingStore');
     const streamingButton = document.getElementById('detailStreamingButton');
     const streamingPanel = document.getElementById('detailStreamingPanel');
+    const streamingMobileButton = document.getElementById('detailStreamingButtonMobile');
+    const streamingMobileSheet = document.getElementById('detailStreamingMobileSheet');
+    const streamingMobileBackdrop = document.getElementById('detailStreamingMobileBackdrop');
+    const streamingMobileClose = document.getElementById('detailStreamingMobileClose');
     if (streamingButton && streamingButton.dataset.bound !== 'true') {
       streamingButton.dataset.bound = 'true';
       streamingButton.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
         if (!streamingPanel || streamingStore?.hidden) return;
+        closeMobileMovieStreamingSheet();
         const open = streamingPanel.hidden;
         streamingPanel.hidden = !open;
         streamingButton.setAttribute('aria-expanded', open ? 'true' : 'false');
       });
       document.addEventListener('click', event => {
         if (!streamingPanel || streamingPanel.hidden || streamingStore?.contains(event.target)) return;
-        streamingPanel.hidden = true;
-        streamingButton.setAttribute('aria-expanded', 'false');
+        closeDesktopMovieStreamingPanel();
       });
       document.addEventListener('keydown', event => {
-        if (event.key !== 'Escape' || !streamingPanel || streamingPanel.hidden) return;
-        streamingPanel.hidden = true;
-        streamingButton.setAttribute('aria-expanded', 'false');
-        streamingButton.focus();
+        if (event.key !== 'Escape') return;
+        if (streamingMobileSheet && !streamingMobileSheet.hidden) {
+          closeMobileMovieStreamingSheet({ focusButton: true });
+          return;
+        }
+        if (!streamingPanel || streamingPanel.hidden) return;
+        closeDesktopMovieStreamingPanel({ focusButton: true });
+      });
+    }
+    if (streamingMobileButton && streamingMobileButton.dataset.bound !== 'true') {
+      streamingMobileButton.dataset.bound = 'true';
+      streamingMobileButton.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (streamingMobileButton.hidden || !streamingMobileSheet) return;
+        closeDesktopMovieStreamingPanel();
+        const open = streamingMobileSheet.hidden;
+        if (!open) {
+          closeMobileMovieStreamingSheet({ focusButton: true });
+          return;
+        }
+        streamingMobileSheet.hidden = false;
+        streamingMobileButton.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('detail-streaming-mobile-open');
+      });
+    }
+    if (streamingMobileBackdrop && streamingMobileBackdrop.dataset.bound !== 'true') {
+      streamingMobileBackdrop.dataset.bound = 'true';
+      streamingMobileBackdrop.addEventListener('click', () => closeMobileMovieStreamingSheet());
+    }
+    if (streamingMobileClose && streamingMobileClose.dataset.bound !== 'true') {
+      streamingMobileClose.dataset.bound = 'true';
+      streamingMobileClose.addEventListener('click', () => closeMobileMovieStreamingSheet({ focusButton: true }));
+    }
+    if (streamingMobileSheet && streamingMobileSheet.dataset.bound !== 'true') {
+      streamingMobileSheet.dataset.bound = 'true';
+      streamingMobileSheet.addEventListener('click', event => {
+        const link = event.target.closest?.('.detail-streaming-link');
+        if (link) closeMobileMovieStreamingSheet();
       });
     }
     if (back && back.dataset.bound !== 'true') {
