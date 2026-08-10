@@ -400,7 +400,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
   const siteTitle = 'Billie Eilish TV';
   const copies = {
     'pt-br': {
-      homeTitle: 'Billie Eilish TV — Vídeos, filmes, séries e mais',
+      homeTitle: 'Billie Eilish TV - Feito de Fã pra Fã',
       homeDescription: 'Explore vídeos, shows, filmes, séries, álbuns e outros conteúdos sobre Billie Eilish em um projeto de fãs reunido em um só lugar.',
       billieTitle: `Billie Eilish — Biografia e informações | ${siteTitle}`,
       billieDescription: 'Conheça Billie Eilish, sua trajetória, informações e redes sociais reunidas pela Billie Eilish TV, um projeto de fãs.',
@@ -423,7 +423,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Projeto de fãs não oficial dedicado a organizar conteúdo e informações sobre Billie Eilish.'
     },
     'en-us': {
-      homeTitle: 'Billie Eilish TV — Videos, films, series and more',
+      homeTitle: 'Billie Eilish TV - Feito de Fã pra Fã',
       homeDescription: 'Explore videos, performances, films, series, albums and more Billie Eilish content in one fan-made project.',
       billieTitle: `Billie Eilish — Biography and information | ${siteTitle}`,
       billieDescription: 'Learn about Billie Eilish, her journey, information and social links gathered by Billie Eilish TV, a fan-made project.',
@@ -446,7 +446,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Unofficial fan-made project dedicated to organizing content and information about Billie Eilish.'
     },
     es: {
-      homeTitle: 'Billie Eilish TV — Videos, películas, series y más',
+      homeTitle: 'Billie Eilish TV - Feito de Fã pra Fã',
       homeDescription: 'Explora videos, conciertos, películas, series, álbumes y más contenido de Billie Eilish en un proyecto creado por fans.',
       billieTitle: `Billie Eilish — Biografía e información | ${siteTitle}`,
       billieDescription: 'Conoce a Billie Eilish, su trayectoria, información y redes sociales reunidas por Billie Eilish TV, un proyecto de fans.',
