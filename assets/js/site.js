@@ -915,24 +915,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     publicDataMemoryCache.delete(exact);
   }
 
-  const SUPABASE_PROFILE_PAGE_SIZE = 500;
-
-  async function listAllSupabaseProfiles() {
-    const rows = [];
-    for (let offset = 0; ; offset += SUPABASE_PROFILE_PAGE_SIZE) {
-      const { data, error } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .order('id', { ascending: true })
-        .range(offset, offset + SUPABASE_PROFILE_PAGE_SIZE - 1);
-      if (error) throw error;
-      const page = Array.isArray(data) ? data : [];
-      rows.push(...page);
-      if (page.length < SUPABASE_PROFILE_PAGE_SIZE) break;
-    }
-    return rows;
-  }
-
   const supabaseData = {
     async list(name, options = {}) {
       try {
@@ -943,8 +925,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return sortAndFilter(translatedItems, options);
         }
         if (name === 'users') {
-          const rows = await listAllSupabaseProfiles();
-          items = rows.map(profileFromRow);
+          const { data, error } = await supabaseClient.from('profiles').select('*');
+          if (error) throw error;
+          items = (data || []).map(profileFromRow);
         } else if (name === 'settings') {
           const { data, error } = await supabaseClient.from('site_settings').select('*');
           if (error) throw error;
@@ -3183,10 +3166,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function movieStreamingServiceIcon(serviceId) {
-    if (serviceId === 'apple-tv') return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="3"></rect><path d="M9 10.2v3.6M9 12h3"></path><path d="M15.2 10.4 17 12l-1.8 1.6"></path></svg>';
-    if (serviceId === 'prime-video') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7 8 5-8 5V7Z"></path><path d="M5 19c3.8 1.5 8.3 1.2 12-.8"></path></svg>';
-    if (serviceId === 'paramount-plus') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 17 5.2-7 2.7 3 2.8-4L20 17H4Z"></path><path d="M7 19h10"></path></svg>';
-    return '<span aria-hidden="true">D+</span>';
+    if (!MOVIE_STREAMING_SERVICES[serviceId]) return '';
+    return `<img src="/assets/images/streaming/${escapeHtml(serviceId)}.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">`;
   }
 
   function closeMobileMovieStreamingSheet(options = {}) {

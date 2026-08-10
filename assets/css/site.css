@@ -15776,6 +15776,7 @@ body.detail-streaming-mobile-open{overflow:hidden}
     height:34px;
     display:grid;
     place-items:center;
+    overflow:hidden;
     border:1px solid rgba(255,255,255,.1);
     border-radius:10px;
     background:#090a0c;
@@ -15783,6 +15784,7 @@ body.detail-streaming-mobile-open{overflow:hidden}
     font:800 11px/1 var(--font-sans);
     letter-spacing:-.03em;
   }
+  .detail-streaming-service-icon img{width:100%;height:100%;display:block;object-fit:contain}
   .detail-streaming-service-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .detail-streaming-service-icon.disney{font-size:12px;letter-spacing:-.08em}
   .detail-streaming-service-icon.paramount svg{width:20px;height:20px}
@@ -15871,6 +15873,7 @@ body.detail-streaming-mobile-open{overflow:hidden}
     height:40px;
     display:grid;
     place-items:center;
+    overflow:hidden;
     border:1px solid rgba(255,255,255,.1);
     border-radius:12px;
     background:#090a0c;
@@ -15878,6 +15881,7 @@ body.detail-streaming-mobile-open{overflow:hidden}
     font:800 12px/1 var(--font-sans);
     letter-spacing:-.03em;
   }
+  .detail-streaming-mobile-list .detail-streaming-service-icon img{width:100%;height:100%;display:block;object-fit:contain}
   .detail-streaming-mobile-list .detail-streaming-service-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .detail-streaming-mobile-list .detail-streaming-service-icon.disney{font-size:13px;letter-spacing:-.08em}
   .detail-streaming-mobile-list .detail-streaming-service-icon.paramount svg{width:22px;height:22px}
