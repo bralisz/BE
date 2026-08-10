@@ -828,36 +828,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function ensureTranslatedRecords(collection, records) {
-    const slug = activeLocaleSlug();
+    // A tradução nunca pode bloquear o carregamento do catálogo. As traduções
+    // persistidas são aplicadas imediatamente e qualquer tradução ausente fica
+    // a cargo do worker/fluxo de atualização, sem segurar Home, filmes ou vídeos.
     const values = Array.isArray(records) ? records : [];
-    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(record => localizeContentRecord(record, collection));
-    }
-    const missing = values.filter(record => recordNeedsTranslation(record, slug, collection));
-    if (missing.length) {
-      try {
-        const translatedById = new Map();
-        for (let offset = 0; offset < missing.length; offset += 20) {
-          const batch = missing.slice(offset, offset + 20);
-          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-            body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
-          });
-          if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
-            console.warn('Um lote de tradução não foi concluído:', result?.error?.message || 'resposta inválida');
-            continue;
-          }
-          result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
-        }
-        values.forEach(record => {
-          const translation = translatedById.get(String(record.id));
-          if (!translation || typeof translation !== 'object') return;
-          if (!record.translations || typeof record.translations !== 'object') record.translations = {};
-          record.translations[slug] = translation;
-        });
-      } catch (error) {
-        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
-      }
-    }
     return values.map(record => localizeContentRecord(record, collection));
   }
 
@@ -1002,9 +976,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try {
         let items = [];
         if (!usesProtectedAdminData() && name !== 'users' && name !== 'admin_logs') {
-          const publicItems = await readPublicData(name);
-          const translatedItems = await ensureTranslatedRecords(name, Array.isArray(publicItems) ? publicItems : []);
-          return sortAndFilter(translatedItems, options);
+          try {
+            const publicItems = await readPublicData(name);
+            const translatedItems = await ensureTranslatedRecords(name, Array.isArray(publicItems) ? publicItems : []);
+            return sortAndFilter(translatedItems, options);
+          } catch (publicError) {
+            console.warn('API pública indisponível; tentando carregar o conteúdo diretamente:', publicError?.message || publicError);
+          }
         }
         if (name === 'users') {
           const data = await listAllProfileRows();
@@ -1034,10 +1012,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async get(name, id) {
       try {
         if (!usesProtectedAdminData() && name !== 'users' && name !== 'admin_logs') {
-          const publicValue = await readPublicData(name, id);
-          if (!publicValue) return null;
-          const translated = await ensureTranslatedRecords(name, [publicValue]);
-          return translated[0] || localizeContentRecord(publicValue, name);
+          try {
+            const publicValue = await readPublicData(name, id);
+            if (!publicValue) return null;
+            const translated = await ensureTranslatedRecords(name, [publicValue]);
+            return translated[0] || localizeContentRecord(publicValue, name);
+          } catch (publicError) {
+            console.warn('API pública indisponível; tentando carregar o conteúdo diretamente:', publicError?.message || publicError);
+          }
         }
         if (name === 'users') {
           const { data, error } = await supabaseClient.from('profiles').select('*').eq('id', id).maybeSingle();
