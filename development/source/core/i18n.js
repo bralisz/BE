@@ -24,8 +24,8 @@
     'localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
   ]);
   var ORIGINAL_TITLE_COLLECTIONS=new Set(['contents','featured','movies','series','videos','ongs','news']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v5-informal';
-  var STATIC_REV='20260810-native-informal-v2';
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v6-original-titles';
+  var STATIC_REV='20260810-original-titles-v3';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
@@ -46,6 +46,14 @@
   function protectedText(value){
     var key=normalize(value);
     return PROTECTED_EXACT.has(key)||/^https?:\/\//i.test(key)||/^[@#][\w.-]+$/.test(key)||/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(key)||/^be_[a-z0-9_]+$/i.test(key);
+  }
+  function protectExact(value){
+    var key=normalize(value);
+    if(!key)return;
+    PROTECTED_EXACT.add(key);
+    map[key]=key;
+    missingTexts.delete(key);
+    translatedThisSession.delete(key);
   }
   function eligibleText(value){
     var key=normalize(value);
@@ -137,8 +145,8 @@
     var collection=String(record.collection||'').toLowerCase();
     var keepTitle=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true'||ORIGINAL_TITLE_COLLECTIONS.has(collection);
     if(keepTitle){
-      if(Object.prototype.hasOwnProperty.call(record,'title'))merged.title=record.title;
-      if(Object.prototype.hasOwnProperty.call(record,'name'))merged.name=record.name;
+      if(Object.prototype.hasOwnProperty.call(record,'title')){merged.title=record.title;protectExact(record.title);}
+      if(Object.prototype.hasOwnProperty.call(record,'name')){merged.name=record.name;protectExact(record.name);}
     }
     return merged;
   }
@@ -247,6 +255,7 @@
     t:t,
     apply:apply,
     translateExact:translateExact,
+    protectExact:protectExact,
     localizeRecord:recordTranslation,
     currency:regionalCurrency,
     switchLanguage:function(nextSlug){return Boolean(window.BETVLocale&&window.BETVLocale.switchTo&&window.BETVLocale.switchTo(nextSlug));},

@@ -378,12 +378,13 @@
 
 
   const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
+  const ORIGINAL_TITLE_COLLECTIONS_BACKEND = new Set(['contents','featured','movies','series','videos','ongs','news']);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
     const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
-    return ['en-us','es'].includes(slug) ? slug : 'pt-br';
+    return ['en-us','es','fr'].includes(slug) ? slug : 'pt-br';
   }
 
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
@@ -400,33 +401,54 @@
     return parts.join(' ');
   }
 
-  function localizeContentRecord(record) {
+  function preservesSourceRecordTitle(collection, record) {
+    const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
+    return record?.preserveTitle === true
+      || String(record?.preserveTitle || '').toLowerCase() === 'true'
+      || ORIGINAL_TITLE_COLLECTIONS_BACKEND.has(normalizedCollection);
+  }
+
+  function protectSourceRecordTitle(record) {
+    if (!record || !window.BETVI18n || typeof window.BETVI18n.protectExact !== 'function') return;
+    if (Object.prototype.hasOwnProperty.call(record, 'title')) window.BETVI18n.protectExact(record.title);
+    if (Object.prototype.hasOwnProperty.call(record, 'name')) window.BETVI18n.protectExact(record.name);
+  }
+
+  function localizeContentRecord(record, collection = '') {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
+    if (preservesSourceRecordTitle(collection, record)) {
+      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
+      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
+      result.preserveTitle = true;
+      protectSourceRecordTitle(record);
+    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
     return result;
   }
 
-  function recordNeedsTranslation(record, slug) {
+  function recordNeedsTranslation(record, slug, collection = '') {
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
-    return !localized || typeof localized !== 'object';
+    if (!localized || typeof localized !== 'object') return true;
+    return preservesSourceRecordTitle(collection, record)
+      && (Object.prototype.hasOwnProperty.call(localized, 'title') || Object.prototype.hasOwnProperty.call(localized, 'name'));
   }
 
   async function ensureTranslatedRecords(collection, records) {
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
     if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(localizeContentRecord);
+      return values.map(record => localizeContentRecord(record, collection));
     }
-    const missing = values.filter(record => recordNeedsTranslation(record, slug));
+    const missing = values.filter(record => recordNeedsTranslation(record, slug, collection));
     if (missing.length) {
       try {
         const translatedById = new Map();
@@ -451,7 +473,7 @@
         console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
       }
     }
-    return values.map(localizeContentRecord);
+    return values.map(record => localizeContentRecord(record, collection));
   }
 
   function queueRecordTranslation(collection, id) {
@@ -459,7 +481,7 @@
     if (collection !== 'settings' && !TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) return;
     window.setTimeout(() => {
       supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-        body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es'], force: true }
+        body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es','fr'], force: true }
       }).then(result => {
         if (result?.error) console.warn('Não foi possível atualizar as traduções automáticas:', result.error.message || result.error);
       }).catch(error => console.warn('Não foi possível atualizar as traduções automáticas:', error?.message || error));
@@ -591,7 +613,7 @@
           const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.created_at, updatedAt: data.updated_at } : null;
           if (!value) return null;
           const translated = await ensureTranslatedRecords(name, [value]);
-          return translated[0] || localizeContentRecord(value);
+          return translated[0] || localizeContentRecord(value, name);
         }
         if (name === 'admin_logs') {
           const { data, error } = await supabaseClient.from('admin_logs').select('*').eq('id', id).maybeSingle();
@@ -603,7 +625,7 @@
         const value = data ? { id: data.id, ...(data.data || {}), createdAt: data.data?.createdAt || data.created_at, updatedAt: data.data?.updatedAt || data.updated_at } : null;
         if (!value) return null;
         const translated = await ensureTranslatedRecords(name, [value]);
-        return translated[0] || localizeContentRecord(value);
+        return translated[0] || localizeContentRecord(value, name);
       } catch (error) {
         throw mapAuthError(error);
       }

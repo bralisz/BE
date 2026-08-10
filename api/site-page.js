@@ -12,7 +12,7 @@ const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUB
 const SETTINGS_CACHE_TTL_MS = 60000;
 const SEO_CATALOG_CACHE_TTL_MS = 60000;
 const SEO_CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents', 'news']);
-const I18N_REV = '20260810-native-informal-v2';
+const I18N_REV = '20260810-original-titles-v3';
 const LOCALIZED_ROUTE_SLUGS = Object.freeze({
   'pt-br': Object.freeze({ '/comunidade': '/comunidade', '/fãs': '/fãs' }),
   'en-us': Object.freeze({ '/comunidade': '/community', '/fãs': '/fans' }),
