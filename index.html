@@ -62,7 +62,7 @@
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es'&&slug!=='fr')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260808-community-guidelines-v1';
+    var href='/assets/i18n/'+slug+'.json?rev=20260810-profile-likes-i18n-v1';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -148,8 +148,8 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260810-seo-fr-wiki-v2">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/i18n.js?rev=20260810-seo-fr-wiki-v2"></script>
-<script defer src="/assets/js/site.js?rev=20260810-seo-fr-wiki-v2"></script>
+<script defer src="/assets/js/i18n.js?rev=20260810-profile-likes-i18n-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260810-profile-likes-i18n-v1"></script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">

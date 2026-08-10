@@ -9285,8 +9285,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profileLovedAlbumsSection=document.getElementById('profileLovedAlbumsSection');
     var profileLovedAlbumsContent=document.getElementById('profileLovedAlbumsContent');
     var profileLovedAlbumsEdit=document.getElementById('profileLovedAlbumsEdit');
-    function localizedProfileText(source){
-      return window.BETVI18n&&typeof window.BETVI18n.t==='function'?window.BETVI18n.t(source):source;
+    function localizedProfileText(source,variables){
+      return window.BETVI18n&&typeof window.BETVI18n.t==='function'?window.BETVI18n.t(source,variables||{}):String(source||'').replace(/\{([a-zA-Z0-9_]+)\}/g,function(_,key){return variables&&Object.prototype.hasOwnProperty.call(variables,key)?String(variables[key]):_;});
     }
     function setLiteralText(element,value){
       if(!element)return;
@@ -9304,6 +9304,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function syncProfileLanguage(){
       if(profileFavoritesEdit)profileFavoritesEdit.textContent=localizedProfileText('Editar favoritos');
       if(profileLovedAlbumsEdit)profileLovedAlbumsEdit.textContent=localizedProfileText('Editar álbuns');
+      if(profileLikeState&&typeof renderProfileLikeUi==='function')renderProfileLikeUi();
     }
     syncProfileLanguage();
     window.addEventListener('be:i18n-ready',syncProfileLanguage);
@@ -9912,7 +9913,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(profilePageLikesReceived){
         profilePageLikesReceived.hidden=count<1;
         if(count<1)profilePageLikesReceived.setAttribute('hidden','');else profilePageLikesReceived.removeAttribute('hidden');
-        profilePageLikesReceived.textContent=count===1?'1 curtida recebida':count+' curtidas recebidas';
+        profilePageLikesReceived.textContent=count===1?localizedProfileText('1 curtida recebida'):localizedProfileText('{count} curtidas recebidas',{count:count});
       }
       if(profilePageLike){
         var canLike=ready&&!guest&&!own;
