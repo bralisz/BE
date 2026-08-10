@@ -725,7 +725,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
-  const ORIGINAL_TITLE_COLLECTIONS_BACKEND = new Set(['contents','featured','movies','series','videos','ongs','news']);
+  const SPANISH_MUSIC_TITLE_SECTION_IDS_BACKEND = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a',
+    'e995b960-503c-4d67-8d7c-87cbd6eda6a2',
+    '76295393-0c1d-483f-a48c-eea38f1057df'
+  ]);
+  const SPANISH_MUSIC_TITLE_SECTION_NAMES_BACKEND = new Set([
+    'live performances & tv','live performances','performances ao vivo','presentaciones en vivo',
+    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux',
+    'concert','concerts','concerto','concertos','concierto','conciertos','show','shows'
+  ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
 
   function activeLocaleSlug() {
@@ -748,11 +758,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function preservesSourceRecordTitle(collection, record) {
+  function preservesSourceRecordTitle(collection, record, requestedSlug = activeLocaleSlug()) {
+    const slug = String(requestedSlug || 'pt-br').toLowerCase();
+    if (slug !== 'es') return false;
+    if (record?.preserveTitle === true || String(record?.preserveTitle || '').toLowerCase() === 'true') return true;
     const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
-    return record?.preserveTitle === true
-      || String(record?.preserveTitle || '').toLowerCase() === 'true'
-      || ORIGINAL_TITLE_COLLECTIONS_BACKEND.has(normalizedCollection);
+    if (['albums','albuns','álbuns'].includes(normalizedCollection)) return true;
+    if (normalizedCollection !== 'videos') return false;
+    const sectionId = String(record?.sectionId || '').trim();
+    const sectionName = String(record?.sectionName || record?.sourceSectionTitle || '').trim().toLowerCase();
+    return SPANISH_MUSIC_TITLE_SECTION_IDS_BACKEND.has(sectionId)
+      || SPANISH_MUSIC_TITLE_SECTION_NAMES_BACKEND.has(sectionName);
   }
 
   function protectSourceRecordTitle(record) {
@@ -783,44 +799,43 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function recordNeedsTranslation(record, slug, collection = '') {
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
-    const localized = translations[slug];
+    const localized = translations[slug] || (slug === 'en-us' ? translations.en : null);
     if (!localized || typeof localized !== 'object') return true;
-    return preservesSourceRecordTitle(collection, record)
-      && (Object.prototype.hasOwnProperty.call(localized, 'title') || Object.prototype.hasOwnProperty.call(localized, 'name'));
+    if (slug === 'es' && !preservesSourceRecordTitle(collection, record, slug)) {
+      if (Object.prototype.hasOwnProperty.call(record, 'title') && !Object.prototype.hasOwnProperty.call(localized, 'title')) return true;
+      if (Object.prototype.hasOwnProperty.call(record, 'name') && !Object.prototype.hasOwnProperty.call(localized, 'name')) return true;
+    }
+    return false;
   }
 
   async function ensureTranslatedRecords(collection, records) {
     const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
+    const localizedNow = values.map(record => localizeContentRecord(record, collection));
     if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return values.map(record => localizeContentRecord(record, collection));
+      return localizedNow;
     }
+
     const missing = values.filter(record => recordNeedsTranslation(record, slug, collection));
     if (missing.length) {
-      try {
-        const translatedById = new Map();
-        for (let offset = 0; offset < missing.length; offset += 20) {
-          const batch = missing.slice(offset, offset + 20);
-          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-            body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
-          });
-          if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
-            console.warn('Um lote de tradução não foi concluído:', result?.error?.message || 'resposta inválida');
-            continue;
+      // Nunca bloqueia a renderização do site esperando a API de tradução.
+      // A tradução ausente é aquecida em segundo plano e entra normalmente no próximo carregamento;
+      // o i18n do DOM também traduz textos visíveis nesta sessão quando necessário.
+      window.setTimeout(async () => {
+        try {
+          for (let offset = 0; offset < missing.length; offset += 20) {
+            const batch = missing.slice(offset, offset + 20);
+            const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+              body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
+            });
+            if (result?.error) console.warn('Um lote de tradução não foi concluído:', result.error.message || result.error);
           }
-          result.data.records.forEach(item => translatedById.set(String(item.id), item.translation || {}));
+        } catch (error) {
+          console.warn('Tradução automática indisponível; o conteúdo continua carregando normalmente:', error?.message || error);
         }
-        values.forEach(record => {
-          const translation = translatedById.get(String(record.id));
-          if (!translation || typeof translation !== 'object') return;
-          if (!record.translations || typeof record.translations !== 'object') record.translations = {};
-          record.translations[slug] = translation;
-        });
-      } catch (error) {
-        console.warn('Tradução automática indisponível; mantendo o texto em português:', error?.message || error);
-      }
+      }, 0);
     }
-    return values.map(record => localizeContentRecord(record, collection));
+    return localizedNow;
   }
 
   function queueRecordTranslation(collection, id) {
@@ -3162,15 +3177,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     'e995b960-503c-4d67-8d7c-87cbd6eda6a2',
     '76295393-0c1d-483f-a48c-eea38f1057df'
   ]);
-  const ORIGINAL_TITLE_COLLECTIONS_FRONTEND = new Set(['contents','featured','movies','series','videos','ongs','news']);
   const MUSIC_TITLE_SECTION_NAMES_FRONTEND = new Set([
-    'live performances & tv','videoclipes','concert','concerts','concerto','concertos','concierto','conciertos','shows',
-    'behind the scenes','bastidores','detrás de escena','detras de escena','coulisses','vidéos musicales','vidéos musicaux'
+    'live performances & tv','live performances','performances ao vivo','presentaciones en vivo',
+    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux',
+    'concert','concerts','concerto','concertos','concierto','conciertos','show','shows'
   ]);
   function preservesOriginalMusicTitle(data) {
+    const locale = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+    if (locale !== 'es') return false;
     const collection = String(data?.collection || 'videos').toLowerCase();
     if (data?.preserveTitle === true || String(data?.preserveTitle || '').toLowerCase() === 'true') return true;
-    if (ORIGINAL_TITLE_COLLECTIONS_FRONTEND.has(collection)) return true;
+    if (['albums','albuns','álbuns'].includes(collection)) return true;
     if (collection !== 'videos') return false;
     const sectionId = String(data?.sectionId || '').trim();
     const sectionName = String(data?.sectionName || data?.sourceSectionTitle || '').trim().toLowerCase();

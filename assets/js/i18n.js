@@ -23,9 +23,10 @@
     'Ocean Eyes','WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','Happier Than Ever','HIT ME HARD AND SOFT',
     'localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
   ]);
-  var ORIGINAL_TITLE_COLLECTIONS=new Set(['contents','featured','movies','series','videos','ongs','news']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v6-original-titles';
-  var STATIC_REV='20260810-original-titles-v3';
+  var MUSIC_TITLE_SECTION_IDS=new Set(['14386598-4978-403a-8548-db0ee582e291','18db9515-179c-4bad-9646-1fcda63df14a','e995b960-503c-4d67-8d7c-87cbd6eda6a2','76295393-0c1d-483f-a48c-eea38f1057df']);
+  var MUSIC_TITLE_SECTION_NAMES=new Set(['live performances & tv','live performances','performances ao vivo','presentaciones en vivo','videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','concert','concerts','concerto','concertos','concierto','conciertos','show','shows']);
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v7-spanish-music-titles';
+  var STATIC_REV='20260810-spanish-music-titles-v1';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
@@ -143,7 +144,10 @@
     if(!localized||typeof localized!=='object')return record;
     var merged=Object.assign({},record,localized);
     var collection=String(record.collection||'').toLowerCase();
-    var keepTitle=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true'||ORIGINAL_TITLE_COLLECTIONS.has(collection);
+    var sectionId=String(record.sectionId||'').trim();
+    var sectionName=String(record.sectionName||record.sourceSectionTitle||'').trim().toLowerCase();
+    var explicit=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true';
+    var keepTitle=slug==='es'&&(explicit||['albums','albuns','álbuns'].includes(collection)||(collection==='videos'&&(MUSIC_TITLE_SECTION_IDS.has(sectionId)||MUSIC_TITLE_SECTION_NAMES.has(sectionName))));
     if(keepTitle){
       if(Object.prototype.hasOwnProperty.call(record,'title')){merged.title=record.title;protectExact(record.title);}
       if(Object.prototype.hasOwnProperty.call(record,'name')){merged.name=record.name;protectExact(record.name);}
