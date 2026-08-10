@@ -407,11 +407,6 @@
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
-    const preserveTitle = preservesOriginalMusicTitle(record);
-    if (preserveTitle) {
-      if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
-      if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
-    }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
     });
@@ -422,14 +417,7 @@
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
-    if (!localized || typeof localized !== 'object') return true;
-    if (!preservesOriginalMusicTitle(record)) {
-      for (const field of ['title','name']) {
-        const source = String(record[field] || '').trim();
-        if (source && !String(localized[field] || '').trim()) return true;
-      }
-    }
-    return false;
+    return !localized || typeof localized !== 'object';
   }
 
   async function ensureTranslatedRecords(collection, records) {
