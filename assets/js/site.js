@@ -725,7 +725,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
-  const ORIGINAL_TITLE_COLLECTIONS_BACKEND = new Set(['contents','featured','movies','series','videos','ongs','news']);
+  const MUSIC_TITLE_SECTION_IDS_BACKEND = new Set([
+    '14386598-4978-403a-8548-db0ee582e291',
+    '18db9515-179c-4bad-9646-1fcda63df14a'
+  ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
 
   function activeLocaleSlug() {
@@ -748,11 +751,42 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return parts.join(' ');
   }
 
-  function preservesSourceRecordTitle(collection, record) {
+  function normalizeTitleTranslationContext(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  }
+
+  function isMusicAlbumOrShowTitle(collection, record) {
     const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
+    if (['news', 'albums', 'shows'].includes(normalizedCollection)) return true;
+    if (normalizedCollection !== 'videos') return false;
+
+    const sectionId = String(record?.sectionId || '').trim();
+    if (MUSIC_TITLE_SECTION_IDS_BACKEND.has(sectionId)) return true;
+
+    const context = normalizeTitleTranslationContext([
+      record?.sectionName,
+      record?.sourceSectionTitle,
+      record?.category,
+      record?.type,
+      record?.contentType
+    ].filter(Boolean).join(' '));
+    if (!context) return false;
+
+    return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?)\b/.test(context)
+      || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live)\b/.test(context)
+      || /\b(concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);
+  }
+
+  function preservesSourceRecordTitle(collection, record) {
     return record?.preserveTitle === true
       || String(record?.preserveTitle || '').toLowerCase() === 'true'
-      || ORIGINAL_TITLE_COLLECTIONS_BACKEND.has(normalizedCollection);
+      || isMusicAlbumOrShowTitle(collection, record);
   }
 
   function protectSourceRecordTitle(record) {
@@ -785,8 +819,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug];
     if (!localized || typeof localized !== 'object') return true;
-    return preservesSourceRecordTitle(collection, record)
-      && (Object.prototype.hasOwnProperty.call(localized, 'title') || Object.prototype.hasOwnProperty.call(localized, 'name'));
+
+    const keepTitle = preservesSourceRecordTitle(collection, record);
+    if (keepTitle) {
+      return Object.prototype.hasOwnProperty.call(localized, 'title')
+        || Object.prototype.hasOwnProperty.call(localized, 'name');
+    }
+
+    const titleMissing = typeof record.title === 'string' && record.title.trim()
+      && !(typeof localized.title === 'string' && localized.title.trim());
+    const nameMissing = typeof record.name === 'string' && record.name.trim()
+      && !(typeof localized.name === 'string' && localized.name.trim());
+    return Boolean(titleMissing || nameMissing);
   }
 
   async function ensureTranslatedRecords(collection, records) {
@@ -3156,25 +3200,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (image) image.addEventListener('error', () => spotlight.remove(), { once:true });
   }
 
-  const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
-    '14386598-4978-403a-8548-db0ee582e291',
-    '18db9515-179c-4bad-9646-1fcda63df14a',
-    'e995b960-503c-4d67-8d7c-87cbd6eda6a2',
-    '76295393-0c1d-483f-a48c-eea38f1057df'
-  ]);
-  const ORIGINAL_TITLE_COLLECTIONS_FRONTEND = new Set(['contents','featured','movies','series','videos','ongs','news']);
-  const MUSIC_TITLE_SECTION_NAMES_FRONTEND = new Set([
-    'live performances & tv','videoclipes','concert','concerts','concerto','concertos','concierto','conciertos','shows',
-    'behind the scenes','bastidores','detrás de escena','detras de escena','coulisses','vidéos musicales','vidéos musicaux'
-  ]);
   function preservesOriginalMusicTitle(data) {
     const collection = String(data?.collection || 'videos').toLowerCase();
-    if (data?.preserveTitle === true || String(data?.preserveTitle || '').toLowerCase() === 'true') return true;
-    if (ORIGINAL_TITLE_COLLECTIONS_FRONTEND.has(collection)) return true;
-    if (collection !== 'videos') return false;
-    const sectionId = String(data?.sectionId || '').trim();
-    const sectionName = String(data?.sectionName || data?.sourceSectionTitle || '').trim().toLowerCase();
-    return MUSIC_TITLE_SECTION_IDS_FRONTEND.has(sectionId) || MUSIC_TITLE_SECTION_NAMES_FRONTEND.has(sectionName);
+    return preservesSourceRecordTitle(collection, data);
   }
 
 

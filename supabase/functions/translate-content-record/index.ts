@@ -7,9 +7,7 @@ const PUBLIC_SETTINGS = new Set(["site","billie-eilish","ong"]);
 const TARGETS: Record<string,string> = {"en-us":"en",es:"es",fr:"fr"};
 const FIELDS = ["title","name","description","subtitle","body","summary","buttonLabel","buttonText","actionLabel","ctaLabel","label","text","manualBio","kicker","footerText","sectionName","siteName"];
 const DURATION_FIELDS = ["duration","runtime","videoDuration"];
-const ORIGINAL_TITLE_COLLECTIONS = new Set(["contents","featured","movies","series","videos","ongs","news"]);
-const MUSIC_SECTION_IDS = new Set(["14386598-4978-403a-8548-db0ee582e291","18db9515-179c-4bad-9646-1fcda63df14a","e995b960-503c-4d67-8d7c-87cbd6eda6a2","76295393-0c1d-483f-a48c-eea38f1057df"]);
-const MUSIC_SECTION_NAMES = new Set(["live performances & tv","videoclipes","concert","concerts","concerto","concertos","concierto","conciertos","shows","behind the scenes","bastidores","detrás de escena","detras de escena","coulisses","vidéos musicales","vidéos musicaux"]);
+const MUSIC_SECTION_IDS = new Set(["14386598-4978-403a-8548-db0ee582e291","18db9515-179c-4bad-9646-1fcda63df14a"]);
 const PROTECTED_TERMS = [
   "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?","HIT ME HARD AND SOFT","Happier Than Ever","Ocean Eyes",
   "Billie Eilish TV","Billie Eilish","Prime Video","Apple TV","Paramount+","Disney+","Twitter / X",
@@ -173,7 +171,17 @@ ${item.source}`).join("\n");
   return result;
 }
 function active(value:unknown){return value!==false&&String(value??"true").toLowerCase()!=="false";}
-function preserveTitle(collection:string,data:Record<string,unknown>){if(ORIGINAL_TITLE_COLLECTIONS.has(collection))return true;if(collection!=="videos")return false;const sectionName=text(data.sectionName||data.sourceSectionTitle,160).toLowerCase();return MUSIC_SECTION_IDS.has(text(data.sectionId,120))||MUSIC_SECTION_NAMES.has(sectionName);}
+function normalizeTitleContext(value:unknown){return text(value,600).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/&/g," and ").replace(/[^a-z0-9]+/g," ").trim();}
+function preserveTitle(collection:string,data:Record<string,unknown>){
+  if(data.preserveTitle===true||text(data.preserveTitle,10).toLowerCase()==="true")return true;
+  if(collection==="news"||collection==="albums"||collection==="shows")return true;
+  if(collection!=="videos")return false;
+  if(MUSIC_SECTION_IDS.has(text(data.sectionId,120)))return true;
+  const context=normalizeTitleContext([data.sectionName,data.sourceSectionTitle,data.category,data.type,data.contentType].filter(Boolean).join(" "));
+  return /\b(videoclipes?|video clips?|music videos?|videos musicales|clips? musicaux?)\b/.test(context)
+    || /\b(live performances?|performances? ao vivo|presentaciones? en vivo|performances? live)\b/.test(context)
+    || /\b(concerts?|concertos?|conciertos?|shows?|festivals?|festivais?)\b/.test(context);
+}
 function duration(value:unknown,locale:string){const raw=text(value,120);if(!raw)return raw;const h=raw.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i);const m=raw.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);if(!h&&!m)return raw;return [h?(locale==="en-us"?`${Number(h[1])} hr`:`${Number(h[1])} h`):"",m?`${Number(m[1])} min`:""].filter(Boolean).join(" ");}
 function sourceSignature(data:Record<string,unknown>){const source:Record<string,unknown>={};for(const field of [...FIELDS,...DURATION_FIELDS])if(Object.prototype.hasOwnProperty.call(data,field))source[field]=data[field];const serialized=JSON.stringify(source);let hash=2166136261;for(let i=0;i<serialized.length;i++){hash^=serialized.charCodeAt(i);hash=Math.imul(hash,16777619);}return `src-${(hash>>>0).toString(16)}`;}
 
@@ -218,7 +226,9 @@ Deno.serve(async(req:Request)=>{
     for(const row of rows as any[]){
       const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);const keepTitle=preserveTitle(collection,data);
       for(const locale of locales){
-        const existing=translations[locale];if(!force&&existing&&existing.sourceUpdatedAt===signature){const cached={...existing};if(keepTitle){delete cached.title;delete cached.name;translations[locale]=cached;}responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
+        const existing=translations[locale];
+        const missingRequiredTitle=!keepTitle&&existing&&(["title","name"] as const).some(field=>typeof data[field]==="string"&&text(data[field])&&!(typeof existing[field]==="string"&&text(existing[field])));
+        if(!force&&existing&&existing.sourceUpdatedAt===signature&&!missingRequiredTitle){const cached={...existing};if(keepTitle){delete cached.title;delete cached.name;translations[locale]=cached;}responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
         const fields=FIELDS.filter(field=>!(keepTitle&&(field==="title"||field==="name"))).filter(field=>typeof data[field]==="string"&&text(data[field])&&!/^https?:\/\//i.test(text(data[field])));
         total+=fields.reduce((sum,field)=>sum+text(data[field]).length,0);if(total>MAX_CHARS)return reply(req,413,{error:"Conteúdo excede o limite por solicitação."});
         const values=await translateValues(fields.map(field=>text(data[field])),TARGETS[locale]);
