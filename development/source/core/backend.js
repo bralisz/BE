@@ -526,21 +526,26 @@
     }
   };
 
-  const SUPABASE_PROFILE_PAGE_SIZE = 500;
 
-  async function listAllSupabaseProfiles() {
+  async function listAllProfileRows() {
     const rows = [];
-    for (let offset = 0; ; offset += SUPABASE_PROFILE_PAGE_SIZE) {
+    const pageSize = 500;
+    let from = 0;
+
+    while (true) {
       const { data, error } = await supabaseClient
         .from('profiles')
         .select('*')
-        .order('id', { ascending: true })
-        .range(offset, offset + SUPABASE_PROFILE_PAGE_SIZE - 1);
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
       if (error) throw error;
+
       const page = Array.isArray(data) ? data : [];
       rows.push(...page);
-      if (page.length < SUPABASE_PROFILE_PAGE_SIZE) break;
+      if (page.length < pageSize) break;
+      from += pageSize;
     }
+
     return rows;
   }
 
@@ -549,8 +554,8 @@
       try {
         let items = [];
         if (name === 'users') {
-          const rows = await listAllSupabaseProfiles();
-          items = rows.map(profileFromRow);
+          const data = await listAllProfileRows();
+          items = data.map(profileFromRow);
         } else if (name === 'settings') {
           const { data, error } = await supabaseClient.from('site_settings').select('*');
           if (error) throw error;

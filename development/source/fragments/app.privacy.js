@@ -459,14 +459,36 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     }
   };
 
+
+  async function listAllProfileRows() {
+    const rows = [];
+    const pageSize = 500;
+    let from = 0;
+
+    while (true) {
+      const { data, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) throw error;
+
+      const page = Array.isArray(data) ? data : [];
+      rows.push(...page);
+      if (page.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return rows;
+  }
+
   const supabaseData = {
     async list(name, options = {}) {
       try {
         let items = [];
         if (name === 'users') {
-          const { data, error } = await supabaseClient.from('profiles').select('*');
-          if (error) throw error;
-          items = (data || []).map(profileFromRow);
+          const data = await listAllProfileRows();
+          items = data.map(profileFromRow);
         } else if (name === 'settings') {
           const { data, error } = await supabaseClient.from('site_settings').select('*');
           if (error) throw error;
