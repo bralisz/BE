@@ -193,6 +193,14 @@
       "destination": "/api/site-page"
     },
     {
+      "source": "/fr",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/fr/:path*",
+      "destination": "/api/site-page"
+    },
+    {
       "source": "/",
       "destination": "/api/site-page"
     },
@@ -330,6 +338,40 @@
     }
   ],
   "headers": [
+    {
+      "source": "/fr/reset-password/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/fr/reset-password",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
     {
       "source": "/reset-password/",
       "headers": [
