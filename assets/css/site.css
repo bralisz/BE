@@ -11042,9 +11042,10 @@ body.fans-page-active > footer > .footer-card{width:min(100%,1390px)!important;m
   .fans-page-intro{margin-bottom:32px}
   .fans-page-kicker{font-size:11px}
   .fans-page-intro h1{
-    white-space:normal!important;
-    font-size:clamp(34px,11vw,52px)!important;
+    white-space:nowrap!important;
+    font-size:clamp(25px,7.2vw,34px)!important;
     line-height:1!important;
+    letter-spacing:-.045em;
   }
   .fans-page-intro>p:last-child{margin-top:18px;font-size:15px;line-height:1.55}
   .fans-page-list{grid-template-columns:1fr;gap:12px}

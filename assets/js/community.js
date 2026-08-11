@@ -156,6 +156,23 @@
     if(logo){logo.dataset.beHistoryMode='none';logo.click();delete logo.dataset.beHistoryMode;}
   }
 
+  function preserveCommunitySurfaceForHeaderUtility(){
+    var shouldRestore=document.body.classList.contains('community-page-active')||document.body.dataset.homeView==='community';
+    if(!shouldRestore)return;
+    window.requestAnimationFrame(function(){
+      var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('legal-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('donate-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active');
+      if(dedicated)return;
+      createPage();
+      if(!page)return;
+      document.body.classList.add('community-page-active');
+      document.body.dataset.homeView='community';
+      page.hidden=false;
+      toggleCatalogVisibility(true);
+      setCommunityNavActive(true);
+      setHomeTab('community');
+    });
+  }
+
   function openCommunity(){
     closeMobileAccountMenu();
     establishCatalogBase();
@@ -448,6 +465,8 @@
     }
     setTimeout(syncDetailWatchTimer,0);
     document.addEventListener('click',function(event){
+      var headerUtility=event.target&&event.target.closest?event.target.closest('#userChip,#notificationButton,#mobileProfileButton,#mobileNotificationButton'):null;
+      if(headerUtility)preserveCommunitySurfaceForHeaderUtility();
       if(document.body.classList.contains('mobile-account-menu-open')){var trigger=event.target&&event.target.closest?event.target.closest('#mobileProfileButton'):null;if(!trigger&&mobileMenu&&!mobileMenu.contains(event.target))closeMobileAccountMenu();}
       var profileRoute=event.target&&event.target.closest?event.target.closest('[data-public-action="profile"],[data-public-action="settings"]'):null;
       if(profileRoute&&document.body.classList.contains('community-page-active'))closeCommunity(false);
