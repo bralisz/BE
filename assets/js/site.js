@@ -733,6 +733,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
   const SPANISH_TRANSLATION_REV = '20260810-music-album-lock-v4';
+  const RECORD_TRANSLATION_FIELDS = ['title','name','description','subtitle','body','summary','buttonLabel','buttonText','actionLabel','ctaLabel','label','text','manualBio','kicker','footerText','sectionName','siteName'];
   const translationWarmupInFlight = new Set();
 
   function activeLocaleSlug() {
@@ -793,11 +794,41 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return result;
   }
 
+  function recordSourceSignature(record) {
+    const source = {};
+    [...RECORD_TRANSLATION_FIELDS,'duration','runtime','videoDuration'].forEach(field => {
+      if (Object.prototype.hasOwnProperty.call(record || {}, field)) source[field] = record[field];
+    });
+    const serialized = JSON.stringify(source);
+    let hash = 2166136261;
+    for (let index = 0; index < serialized.length; index += 1) {
+      hash ^= serialized.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `src-${(hash >>> 0).toString(16)}`;
+  }
+
+  function recordTranslationIsComplete(record, localized, collection = '', slug = activeLocaleSlug()) {
+    if (!localized || typeof localized !== 'object') return false;
+    const keepTitle = preservesSourceRecordTitle(collection, record, slug);
+    for (const field of RECORD_TRANSLATION_FIELDS) {
+      if (keepTitle && (field === 'title' || field === 'name')) continue;
+      const sourceValue = record && record[field];
+      if (typeof sourceValue !== 'string' || !sourceValue.trim() || /^https?:\/\//i.test(sourceValue.trim())) continue;
+      if (typeof localized[field] !== 'string' || !localized[field].trim()) return false;
+    }
+    return true;
+  }
+
   function recordNeedsTranslation(record, slug, collection = '') {
     if (!record || !record.id || slug === 'pt-br') return false;
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || (slug === 'en-us' ? translations.en : null);
     if (!localized || typeof localized !== 'object') return true;
+    if (!recordTranslationIsComplete(record, localized, collection, slug)) return true;
+    if (slug === 'fr' && String(collection || '').toLowerCase() === 'notifications') {
+      if (String(localized.sourceUpdatedAt || '') !== recordSourceSignature(record)) return true;
+    }
     if (slug === 'es') {
       // Traduções antigas podem conter português ou ter sido salvas quando seções inteiras
       // eram bloqueadas. Só considera o cache espanhol válido na revisão atual.
@@ -812,11 +843,51 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function ensureTranslatedRecords(collection, records) {
     const values = Array.isArray(records) ? records : [];
-    // Public visitors only consume translations already persisted in Supabase.
-    // New/edited records are translated by the database trigger, and admins can
-    // still force a refresh via queueRecordTranslation. This prevents every
-    // visitor from invoking the Edge Function for the same records.
-    return values.map(record => localizeContentRecord(record, collection));
+    const slug = activeLocaleSlug();
+    const normalizedCollection = String(collection || '').toLowerCase();
+
+    // O francês das notificações é reparado sob demanda uma única vez quando
+    // encontramos um registro antigo, incompleto ou desatualizado. A Edge Function
+    // persiste a tradução inteira no Supabase; os próximos acessos usam o cache salvo.
+    if (slug === 'fr' && normalizedCollection === 'notifications' && supabaseClient?.functions?.invoke) {
+      const missing = values.filter(record => recordNeedsTranslation(record, slug, normalizedCollection));
+      const pending = missing.filter(record => {
+        const key = `${normalizedCollection}:${record.id}:${slug}`;
+        if (translationWarmupInFlight.has(key)) return false;
+        translationWarmupInFlight.add(key);
+        return true;
+      });
+      if (pending.length) {
+        try {
+          for (let offset = 0; offset < pending.length; offset += 20) {
+            const batch = pending.slice(offset, offset + 20);
+            const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+              body: { collection: normalizedCollection, ids: batch.map(record => String(record.id)), locales: ['fr'] }
+            });
+            if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
+              console.warn('Não foi possível completar a tradução francesa das notificações:', result?.error?.message || 'resposta inválida');
+              continue;
+            }
+            const translatedById = new Map();
+            result.data.records.forEach(item => {
+              if (item && item.id && item.translation && typeof item.translation === 'object') translatedById.set(String(item.id), item.translation);
+            });
+            batch.forEach(record => {
+              const translation = translatedById.get(String(record.id));
+              if (!translation) return;
+              if (!record.translations || typeof record.translations !== 'object') record.translations = {};
+              record.translations.fr = translation;
+            });
+          }
+        } catch (error) {
+          console.warn('Tradução francesa das notificações indisponível; mantendo o conteúdo original:', error?.message || error);
+        } finally {
+          pending.forEach(record => translationWarmupInFlight.delete(`${normalizedCollection}:${record.id}:${slug}`));
+        }
+      }
+    }
+
+    return values.map(record => localizeContentRecord(record, normalizedCollection));
   }
 
   function queueRecordTranslation(collection, id) {
@@ -12475,7 +12546,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return items.slice(0,3).map(function(item){
       return '<button class="notification-preview-item" type="button" data-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
-        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(notificationPlainText(item.description),100)||'Confira esta atualização.')+'</span></span>'+
+        '<span class="notification-preview-copy notranslate" translate="no"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(notificationPlainText(item.description),100)||'Confira esta atualização.')+'</span></span>'+
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
       '</button>';
     }).join('');
@@ -12505,7 +12576,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     selectedId=String(active.id||'');
     pageNav.innerHTML=notifications.map(function(item){
       var selected=String(item.id)===selectedId;
-      return '<button class="notification-page-link '+(selected?'active':'')+'" type="button" data-notification-page-id="'+esc(item.id)+'" aria-current="'+(selected?'page':'false')+'">'+
+      return '<button class="notification-page-link notranslate '+(selected?'active':'')+'" translate="no" type="button" data-notification-page-id="'+esc(item.id)+'" aria-current="'+(selected?'page':'false')+'">'+
         '<strong>'+esc(item.title||'Atualização')+'</strong>'+
         '<span>'+esc(trimText(notificationPlainText(item.description),92)||'Confira esta atualização.')+'</span>'+
       '</button>';
@@ -12513,7 +12584,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     pageNav.querySelectorAll('[data-notification-page-id]').forEach(function(button){
       button.addEventListener('click',function(){openPage(button.dataset.notificationPageId,true);});
     });
-    pageContent.innerHTML='<article class="notification-article">'+
+    pageContent.innerHTML='<article class="notification-article notranslate" translate="no">'+
       '<h1>'+esc(active.title||'Atualização')+'</h1>'+
       '<p class="notification-article-date" data-i18n-ignore>'+esc(formatDate(active))+'</p>'+
       '<div class="notification-article-body be-markdown">'+renderNotificationMarkdown(active.description||'')+'</div>'+
@@ -14278,7 +14349,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     notificationPreviewList.innerHTML=visibleItems.slice(0,3).map(function(item){
       return '<button class="notification-preview-item" type="button" data-donate-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+ 
-        '<span class="notification-preview-copy"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimNotification(item.description,100)||'Confira esta atualização.')+'</span></span>'+ 
+        '<span class="notification-preview-copy notranslate" translate="no"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimNotification(item.description,100)||'Confira esta atualização.')+'</span></span>'+ 
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+ 
       '</button>';
     }).join('');
