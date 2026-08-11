@@ -247,3 +247,58 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 
 /* Garante a primeira letra maiúscula no título da seção Continue assistindo em qualquer idioma. */
 #communityContinueSection .community-section-head h2::first-letter{text-transform:uppercase}
+
+/* Comunidade 2026-08-11 — regras/tags compactas e foscas */
+.community-rules-panel{
+  width:min(360px,calc(100vw - 48px));
+  padding:10px 12px;
+  border-color:rgba(255,255,255,.10);
+  border-radius:13px;
+  background:rgba(17,20,25,.88);
+  -webkit-backdrop-filter:blur(18px) saturate(110%);
+  backdrop-filter:blur(18px) saturate(110%);
+  box-shadow:0 12px 28px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.035);
+  color:rgba(255,255,255,.62);
+  font-size:12px;
+  line-height:1.45;
+}
+.community-rules-panel p{margin:0 0 8px}
+.community-rules-panel p:last-of-type{margin-bottom:10px}
+.community-rules-tags{gap:7px}
+.community-rules-tag-row{
+  gap:10px;
+  min-height:46px;
+  padding:7px 10px;
+  border-color:rgba(255,255,255,.075);
+  border-radius:14px;
+  background:rgba(255,255,255,.035);
+  box-shadow:none;
+}
+.community-rules-place{
+  min-width:58px;
+  color:rgba(255,255,255,.72);
+  font-size:11.5px;
+  font-weight:780;
+}
+.community-award-tag{
+  min-height:28px;
+  padding:0 11px;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:999px;
+  color:#17191d;
+  font-size:11.5px;
+  font-weight:850;
+  text-shadow:none;
+  box-shadow:none;
+}
+.community-award-tag::before{display:none}
+.community-award-tag.is-avocado{background:#7da6de;border-color:rgba(0,0,0,.08)}
+.community-award-tag.is-eyelash{background:#d8b657;border-color:rgba(0,0,0,.08)}
+.community-award-tag.is-blohsh{background:#70b27a;border-color:rgba(0,0,0,.08)}
+.community-rank-copy .community-award-tag{min-height:23px;padding:0 9px;font-size:10.5px}
+@media(max-width:760px){
+  .community-rules-panel{width:min(330px,calc(100vw - 40px));padding:9px 10px;font-size:11.5px}
+  .community-rules-tag-row{min-height:42px;gap:8px;padding:6px 9px;border-radius:13px}
+  .community-rules-place{min-width:54px;font-size:11px}
+  .community-award-tag{min-height:27px;padding:0 10px;font-size:11px}
+}
