@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Billie Eilish TV</title>
+  <title>Autorização Billie Eilish TV</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico?v=20260807-home-site-v1">
   <style>
     :root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eff6ff;background:#030a14}
@@ -65,8 +65,8 @@
       <p class="lead" id="loadingLead">Estamos verificando sua conta e o aplicativo solicitante.</p>
     </section>
     <section id="consent" hidden>
-      <h1><span id="authorizePrefix">Autorizar</span> <span id="clientName">aplicativo</span>?</h1>
-      <p class="lead" id="consentLead">Este aplicativo está pedindo permissão para usar sua conta.</p>
+      <h1 id="consentTitle">Autorização Billie Eilish TV</h1>
+      <p class="lead" id="consentLead">Esta página é operada pelo Billie Eilish TV (BETV). Ao autorizar, o aplicativo solicitante poderá acessar somente as informações da sua conta BETV listadas abaixo.</p>
       <div class="details">
         <div class="row"><span class="label" id="appLabel">Aplicativo</span><span class="value" id="clientValue"></span></div>
         <div class="row"><span class="label" id="redirectLabel">Endereço de retorno</span><span class="value" id="redirectUri"></span></div>
@@ -102,17 +102,16 @@
       locale=browserLanguage.indexOf('es')===0?'es':browserLanguage.indexOf('fr')===0?'fr':browserLanguage.indexOf('en')===0?'en-us':'pt-br';
     }
     var copies={
-      'pt-br':{lang:'pt-BR',loadingTitle:'Carregando autorização…',loadingLead:'Estamos verificando sua conta e o aplicativo solicitante.',authorize:'Autorizar',app:'aplicativo',consentLead:'Este aplicativo quer usar sua conta.',appLabel:'Aplicativo',redirectLabel:'Endereço de retorno',scopesLabel:'Permissões solicitadas',deny:'Negar',approve:'Autorizar',errorTitle:'Não foi possível continuar',invalid:'A solicitação de autorização é inválida ou expirou.',back:'Voltar ao site',identity:'Confirmar sua identidade',email:'Ver seu endereço de e-mail',profile:'Ver seu perfil básico',notProvided:'Não informado',approving:'Autorizando…',denying:'Negando acesso…',decisionFailed:'Não foi possível concluir. Tente novamente.'},
-      'en-us':{lang:'en-US',loadingTitle:'Loading authorization…',loadingLead:'We’re checking your account and the app making the request.',authorize:'Allow',app:'app',consentLead:'This app wants to use your account.',appLabel:'App',redirectLabel:'Return address',scopesLabel:'Requested permissions',deny:'Deny',approve:'Allow',errorTitle:'Couldn’t continue',invalid:'This authorization request is invalid or has expired.',back:'Back to the site',identity:'Confirm your identity',email:'View your email address',profile:'View your basic profile',notProvided:'Not provided',approving:'Allowing access…',denying:'Denying access…',decisionFailed:'Couldn’t finish. Try again.'},
-      'es':{lang:'es',loadingTitle:'Cargando autorización…',loadingLead:'Estamos revisando tu cuenta y la aplicación que hizo la solicitud.',authorize:'Autorizar',app:'aplicación',consentLead:'Esta aplicación quiere usar tu cuenta.',appLabel:'Aplicación',redirectLabel:'Dirección de retorno',scopesLabel:'Permisos solicitados',deny:'Denegar',approve:'Autorizar',errorTitle:'No pudimos continuar',invalid:'Esta solicitud de autorización no es válida o ya venció.',back:'Volver al sitio',identity:'Confirmar tu identidad',email:'Ver tu correo electrónico',profile:'Ver tu perfil básico',notProvided:'No informado',approving:'Autorizando…',denying:'Denegando acceso…',decisionFailed:'No pudimos completar la acción. Inténtalo de nuevo.'},
-      'fr':{lang:'fr-FR',loadingTitle:'Chargement de l’autorisation…',loadingLead:'On vérifie ton compte et l’application à l’origine de la demande.',authorize:'Autoriser',app:'application',consentLead:'Cette application souhaite utiliser ton compte.',appLabel:'Application',redirectLabel:'Adresse de retour',scopesLabel:'Autorisations demandées',deny:'Refuser',approve:'Autoriser',errorTitle:'Impossible de continuer',invalid:'Cette demande d’autorisation est invalide ou a expiré.',back:'Retour au site',identity:'Confirmer ton identité',email:'Voir ton adresse e-mail',profile:'Voir ton profil de base',notProvided:'Non renseigné',approving:'Autorisation en cours…',denying:'Refus en cours…',decisionFailed:'Impossible de terminer. Réessaie.'}
+      'pt-br':{lang:'pt-BR',loadingTitle:'Carregando autorização…',loadingLead:'Estamos verificando sua conta e o aplicativo solicitante.',consentTitle:'Autorização Billie Eilish TV',app:'aplicativo',consentLead:'Esta página é operada pelo Billie Eilish TV (BETV). Ao autorizar, o aplicativo solicitante poderá acessar somente as informações da sua conta BETV listadas abaixo.',appLabel:'Aplicativo',redirectLabel:'Endereço de retorno',scopesLabel:'Permissões solicitadas',deny:'Negar',approve:'Autorizar',errorTitle:'Não foi possível continuar',invalid:'A solicitação de autorização é inválida ou expirou.',back:'Voltar ao site',identity:'Confirmar sua identidade',email:'Ver seu endereço de e-mail',profile:'Ver seu perfil básico',notProvided:'Não informado',approving:'Autorizando…',denying:'Negando acesso…',decisionFailed:'Não foi possível concluir. Tente novamente.'},
+      'en-us':{lang:'en-US',loadingTitle:'Loading authorization…',loadingLead:'We’re checking your account and the app making the request.',consentTitle:'Billie Eilish TV Authorization',app:'app',consentLead:'This page is operated by Billie Eilish TV (BETV). By allowing access, the requesting app may access only the BETV account information listed below.',appLabel:'App',redirectLabel:'Return address',scopesLabel:'Requested permissions',deny:'Deny',approve:'Allow',errorTitle:'Couldn’t continue',invalid:'This authorization request is invalid or has expired.',back:'Back to the site',identity:'Confirm your identity',email:'View your email address',profile:'View your basic profile',notProvided:'Not provided',approving:'Allowing access…',denying:'Denying access…',decisionFailed:'Couldn’t finish. Try again.'},
+      'es':{lang:'es',loadingTitle:'Cargando autorización…',loadingLead:'Estamos revisando tu cuenta y la aplicación que hizo la solicitud.',consentTitle:'Autorización de Billie Eilish TV',app:'aplicación',consentLead:'Esta página es operada por Billie Eilish TV (BETV). Al autorizar, la aplicación solicitante podrá acceder únicamente a la información de tu cuenta BETV que aparece a continuación.',appLabel:'Aplicación',redirectLabel:'Dirección de retorno',scopesLabel:'Permisos solicitados',deny:'Denegar',approve:'Autorizar',errorTitle:'No pudimos continuar',invalid:'Esta solicitud de autorización no es válida o ya venció.',back:'Volver al sitio',identity:'Confirmar tu identidad',email:'Ver tu correo electrónico',profile:'Ver tu perfil básico',notProvided:'No informado',approving:'Autorizando…',denying:'Denegando acceso…',decisionFailed:'No pudimos completar la acción. Inténtalo de nuevo.'},
+      'fr':{lang:'fr-FR',loadingTitle:'Chargement de l’autorisation…',loadingLead:'On vérifie ton compte et l’application à l’origine de la demande.',consentTitle:'Autorisation Billie Eilish TV',app:'application',consentLead:'Cette page est exploitée par Billie Eilish TV (BETV). En autorisant l’accès, l’application demandeuse pourra accéder uniquement aux informations de ton compte BETV indiquées ci-dessous.',appLabel:'Application',redirectLabel:'Adresse de retour',scopesLabel:'Autorisations demandées',deny:'Refuser',approve:'Autoriser',errorTitle:'Impossible de continuer',invalid:'Cette demande d’autorisation est invalide ou a expiré.',back:'Retour au site',identity:'Confirmer ton identité',email:'Voir ton adresse e-mail',profile:'Voir ton profil de base',notProvided:'Non renseigné',approving:'Autorisation en cours…',denying:'Refus en cours…',decisionFailed:'Impossible de terminer. Réessaie.'}
     };
     var copy=copies[locale];
     document.documentElement.lang=copy.lang;
     document.getElementById('loadingTitle').textContent=copy.loadingTitle;
     document.getElementById('loadingLead').textContent=copy.loadingLead;
-    document.getElementById('authorizePrefix').textContent=copy.authorize;
-    document.getElementById('clientName').textContent=copy.app;
+    document.getElementById('consentTitle').textContent=copy.consentTitle;
     document.getElementById('consentLead').textContent=copy.consentLead;
     document.getElementById('appLabel').textContent=copy.appLabel;
     document.getElementById('redirectLabel').textContent=copy.redirectLabel;
@@ -146,7 +145,6 @@
       if(!details)throw new Error('A solicitação de autorização não foi encontrada.');
       if(!Object.prototype.hasOwnProperty.call(details,'authorization_id')&&details.redirect_url){location.replace(details.redirect_url);return;}
       var name=(details.client&&details.client.name)||copy.app;
-      document.getElementById('clientName').textContent=name;
       document.getElementById('clientValue').textContent=name;
       document.getElementById('redirectUri').textContent=details.redirect_uri||copy.notProvided;
       var scopes=String(details.scope||'').trim().split(/\s+/).filter(Boolean),scopeList=document.getElementById('scopeList');
