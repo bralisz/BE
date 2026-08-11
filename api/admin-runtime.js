@@ -19,19 +19,26 @@ function __bootAdminCommunityTags(){
     var style=document.createElement('style');
     style.id='be-admin-community-tag-style';
     style.textContent='body.admin-mode .user-actions{flex-wrap:wrap;align-items:flex-start}'+
-      'body.admin-mode .user-tag-assign{position:relative;display:inline-flex;flex-direction:column;align-items:stretch;gap:6px}'+
-      'body.admin-mode .user-tag-toggle{min-width:142px;display:inline-flex;align-items:center;justify-content:space-between;gap:12px;padding-right:12px}'+
+      'body.admin-mode .user-tag-assign{position:relative;display:inline-flex;flex-direction:column;align-items:stretch;gap:7px}'+
+      'body.admin-mode .user-tag-toggle{min-width:168px;display:inline-flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px}'+
+      'body.admin-mode .user-tag-toggle-copy{display:flex;align-items:center;gap:9px;min-width:0;color:#fff;font-size:12px;font-weight:800}'+
+      'body.admin-mode .user-tag-toggle-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
       'body.admin-mode .user-tag-toggle-arrow{font-size:12px;opacity:.76;transition:transform .18s ease}'+
       'body.admin-mode .user-tag-assign.is-open .user-tag-toggle-arrow{transform:rotate(180deg)}'+
-      'body.admin-mode .user-tag-panel{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:35;min-width:210px;padding:10px;border:1px solid rgba(125,181,255,.18);border-radius:16px;background:rgba(7,16,32,.98);box-shadow:0 20px 40px rgba(0,0,0,.34);backdrop-filter:blur(18px)}'+
+      'body.admin-mode .user-tag-panel{display:none;position:absolute;top:calc(100% + 7px);left:0;z-index:35;min-width:214px;padding:10px;border:1px solid rgba(125,181,255,.16);border-radius:18px;background:linear-gradient(180deg,rgba(10,17,33,.98),rgba(7,13,25,.98));box-shadow:0 20px 42px rgba(0,0,0,.34);backdrop-filter:blur(18px)}'+
       'body.admin-mode .user-tag-assign.is-open .user-tag-panel{display:grid;gap:8px}'+
-      'body.admin-mode .user-tag-choice{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03);color:#fff;font-size:12px;font-weight:700;cursor:pointer}'+
-      'body.admin-mode .user-tag-choice:hover{background:rgba(61,140,255,.12);border-color:rgba(125,181,255,.24)}'+
-      'body.admin-mode .user-tag-choice.is-active{border-color:rgba(125,181,255,.34);background:rgba(61,140,255,.14)}'+
-      'body.admin-mode .user-tag-chip{display:inline-flex;align-items:center;justify-content:center;min-height:25px;padding:0 11px;border-radius:999px;font-size:11px;font-weight:800;line-height:1;color:#fff;white-space:nowrap}'+
-      'body.admin-mode .user-tag-chip.is-avocado{background:linear-gradient(180deg,#6aa7ff,#3b7dff)}'+
-      'body.admin-mode .user-tag-chip.is-eyelash{background:linear-gradient(180deg,#f0c85a,#d8a920)}'+
-      'body.admin-mode .user-tag-chip.is-blohsh{background:linear-gradient(180deg,#62c56f,#2e9d49)}'+
+      'body.admin-mode .user-tag-choice,body.admin-mode .user-tag-clear{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid rgba(255,255,255,.065);border-radius:11px;background:rgba(255,255,255,.022);color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:.16s ease}'+
+      'body.admin-mode .user-tag-choice:hover,body.admin-mode .user-tag-clear:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.11)}'+
+      'body.admin-mode .user-tag-choice.is-active{border-color:rgba(93,174,255,.28);background:rgba(55,130,205,.09);box-shadow:inset 0 0 0 1px rgba(93,174,255,.05)}'+
+      'body.admin-mode .user-tag-choice-label{display:flex;align-items:center;gap:8px;min-width:0;color:rgba(255,255,255,.92)}'+
+      'body.admin-mode .user-tag-choice-label small{display:block;color:rgba(255,255,255,.42);font-size:10px;font-weight:700;letter-spacing:.01em;text-transform:uppercase}'+
+      'body.admin-mode .user-tag-clear{justify-content:center;color:rgba(255,255,255,.74);font-weight:800}'+
+      'body.admin-mode .user-tag-clear[hidden]{display:none!important}'+
+      'body.admin-mode .user-tag-chip{display:inline-flex;align-items:center;justify-content:center;min-height:19px;padding:0 7px;border:1px solid transparent;border-radius:6px;font-size:9.5px;font-weight:850;line-height:1;letter-spacing:-.01em;white-space:nowrap;box-shadow:none}'+
+      'body.admin-mode .user-tag-chip::before{display:none}'+
+      'body.admin-mode .user-tag-chip.is-avocado{color:#75c4ff;background:#10283d;border-color:rgba(93,174,255,.18)}'+
+      'body.admin-mode .user-tag-chip.is-eyelash{color:#f3cf63;background:#332b12;border-color:rgba(243,207,99,.17)}'+
+      'body.admin-mode .user-tag-chip.is-blohsh{color:#74d995;background:#153121;border-color:rgba(116,217,149,.16)}'+
       'body.admin-mode .user-cell-copy{display:flex;flex-direction:column;gap:4px}'+
       'body.admin-mode .user-tag-current{display:flex;align-items:center;gap:6px;margin-top:2px}'+
       'body.admin-mode .user-tag-current[hidden]{display:none!important}'+
@@ -118,7 +125,30 @@ function __bootAdminCommunityTags(){
   }
 
   function closeOtherPanels(except){
-    document.querySelectorAll('.user-tag-assign.is-open').forEach(function(node){if(node!==except)node.classList.remove('is-open');});
+    document.querySelectorAll('.user-tag-assign.is-open').forEach(function(node){
+      if(node!==except){
+        node.classList.remove('is-open');
+        var toggle=node.querySelector('.user-tag-toggle');
+        if(toggle)toggle.setAttribute('aria-expanded','false');
+      }
+    });
+  }
+
+  function syncControlState(wrap,userId){
+    if(!wrap)return;
+    var meta=currentMeta(userId);
+    var toggle=wrap.querySelector('.user-tag-toggle');
+    var clearButton=wrap.querySelector('.user-tag-clear');
+    if(toggle){
+      toggle.innerHTML='<span class="user-tag-toggle-copy">'+(meta?'<span class="user-tag-toggle-meta">'+meta.label+'</span><span class="user-tag-chip '+meta.className+'">'+meta.label+'</span>':'<span class="user-tag-toggle-meta">Adotar Tag</span>')+'</span><span class="user-tag-toggle-arrow">▾</span>';
+    }
+    if(clearButton)clearButton.hidden=!meta;
+    wrap.dataset.currentTag=meta?meta.key:'';
+    wrap.querySelectorAll('.user-tag-choice').forEach(function(button){
+      var active=!!meta && button.dataset.tagValue===meta.key;
+      button.classList.toggle('is-active',active);
+      button.setAttribute('aria-pressed',active?'true':'false');
+    });
   }
 
   async function saveTag(userId, tagKey, row, wrap){
@@ -133,9 +163,12 @@ function __bootAdminCommunityTags(){
       tagMap[String(userId)]=tagKey;
       tagMapLoaded=true;
       renderSummary(row,userId);
-      wrap.querySelectorAll('.user-tag-choice').forEach(function(button){button.classList.toggle('is-active', button.dataset.tagValue===tagKey);});
+      syncControlState(wrap,userId);
+      wrap.dataset.currentTag=tagKey||'';
       wrap.classList.remove('is-open');
-      toast('Tag atualizada com sucesso.');
+      var toggle=wrap.querySelector('.user-tag-toggle');
+      if(toggle)toggle.setAttribute('aria-expanded','false');
+      toast(tagKey?'Tag atualizada com sucesso.':'Tag removida com sucesso.');
     }catch(error){
       toast((error && error.message) || 'Não foi possível atualizar a tag.', true);
     }finally{
@@ -147,15 +180,23 @@ function __bootAdminCommunityTags(){
   function buildAssignControl(userId,row){
     var wrap=document.createElement('div');
     wrap.className='user-tag-assign';
-    wrap.innerHTML='<button type="button" class="a-btn user-tag-toggle" aria-expanded="false">Adotar Tag <span class="user-tag-toggle-arrow">▾</span></button><div class="user-tag-panel"></div>';
+    wrap.innerHTML='<button type="button" class="a-btn user-tag-toggle" aria-expanded="false"><span class="user-tag-toggle-copy"><span class="user-tag-toggle-meta">Adotar Tag</span></span><span class="user-tag-toggle-arrow">▾</span></button><div class="user-tag-panel"><button type="button" class="user-tag-clear" hidden>Remover tag</button></div>';
     var toggle=wrap.querySelector('.user-tag-toggle');
     var panel=wrap.querySelector('.user-tag-panel');
+    var clearButton=wrap.querySelector('.user-tag-clear');
+    clearButton.addEventListener('click', function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      if(wrap.dataset.saving==='1')return;
+      saveTag(userId, '', row, wrap);
+    });
     TAGS.forEach(function(tag){
       var button=document.createElement('button');
       button.type='button';
       button.className='user-tag-choice';
       button.dataset.tagValue=tag.key;
-      button.innerHTML='<span>'+tag.label+'</span><span class="user-tag-chip '+tag.className+'">'+tag.label+'</span>';
+      button.innerHTML='<span class="user-tag-choice-label"><span>'+tag.label+'</span></span><span class="user-tag-chip '+tag.className+'">'+tag.label+'</span>';
+      button.setAttribute('aria-pressed','false');
       button.addEventListener('click', function(event){
         event.preventDefault();
         event.stopPropagation();
@@ -172,6 +213,7 @@ function __bootAdminCommunityTags(){
       wrap.classList.toggle('is-open', willOpen);
       toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     });
+    syncControlState(wrap,userId);
     return wrap;
   }
 
@@ -184,7 +226,11 @@ function __bootAdminCommunityTags(){
       var userId=anchor.dataset.userExport || anchor.dataset.userFan || anchor.dataset.userBan || anchor.dataset.userDelete || '';
       if(!userId)return;
       renderSummary(row,userId);
-      if(row.querySelector('.user-tag-assign'))return;
+      var existingControl=row.querySelector('.user-tag-assign');
+      if(existingControl){
+        syncControlState(existingControl,userId);
+        return;
+      }
       var actions=row.querySelector('.row-actions.user-actions');
       if(!actions)return;
       var control=buildAssignControl(userId,row);
@@ -192,9 +238,8 @@ function __bootAdminCommunityTags(){
       if(fanButton && fanButton.nextSibling)actions.insertBefore(control, fanButton.nextSibling);
       else actions.appendChild(control);
       var meta=currentMeta(userId);
-      if(meta){
-        control.querySelectorAll('.user-tag-choice').forEach(function(button){button.classList.toggle('is-active', button.dataset.tagValue===meta.key);});
-      }
+      control.dataset.currentTag=meta?meta.key:'';
+      syncControlState(control,userId);
     });
   }
 

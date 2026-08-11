@@ -16109,33 +16109,13 @@ body.profile-page-active .profile-page-likes-received{
 
 
 /* Perfil 2026-08-11 — tag de comunidade */
-.profile-page-award-tags{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:5px;margin-bottom:2px}
+.profile-page-award-tags{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:4px;margin-bottom:2px}
 .profile-page-award-tags[hidden]{display:none!important}
-.profile-award-tag{position:relative;display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 15px;border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:12.5px;font-weight:900;line-height:1;color:#fff;letter-spacing:-.01em;text-shadow:0 1px 0 rgba(0,0,0,.18);box-shadow:0 14px 26px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.14)}
-.profile-award-tag::before{content:'';position:absolute;inset:1px auto auto 1px;width:calc(100% - 2px);height:48%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,0));pointer-events:none}
-.profile-award-tag.is-avocado{background:linear-gradient(180deg,#74adff 0%,#4d8cff 45%,#2d6ef1 100%);border-color:rgba(145,189,255,.55)}
-.profile-award-tag.is-eyelash{background:linear-gradient(180deg,#f6d468 0%,#edc442 48%,#d8a41e 100%);border-color:rgba(255,223,132,.55)}
-.profile-award-tag.is-blohsh{background:linear-gradient(180deg,#6ad17a 0%,#47b95d 48%,#2e9545 100%);border-color:rgba(152,238,172,.45)}
+.profile-award-tag{display:inline-flex;align-items:center;justify-content:center;min-height:20px;padding:0 8px;border:1px solid transparent;border-radius:6px;font-size:10px;font-weight:850;line-height:1;letter-spacing:-.01em;box-shadow:none;white-space:nowrap}
+.profile-award-tag.is-avocado{color:#75c4ff;background:#10283d;border-color:rgba(93,174,255,.18)}
+.profile-award-tag.is-eyelash{color:#f3cf63;background:#332b12;border-color:rgba(243,207,99,.17)}
+.profile-award-tag.is-blohsh{color:#74d995;background:#153121;border-color:rgba(116,217,149,.16)}
 @media(max-width:760px){
-  .profile-page-award-tags{margin-top:2px}
-  .profile-award-tag{min-height:31px;padding:0 13px;font-size:11.8px}
-}
-
-/* Perfil 2026-08-11 — tags de comunidade compactas e foscas */
-.profile-award-tag{
-  min-height:28px;
-  padding:0 11px;
-  border:1px solid rgba(0,0,0,.08);
-  color:#17191d;
-  font-size:11.5px;
-  font-weight:850;
-  text-shadow:none;
-  box-shadow:none;
-}
-.profile-award-tag::before{display:none}
-.profile-award-tag.is-avocado{background:#7da6de;border-color:rgba(0,0,0,.08)}
-.profile-award-tag.is-eyelash{background:#d8b657;border-color:rgba(0,0,0,.08)}
-.profile-award-tag.is-blohsh{background:#70b27a;border-color:rgba(0,0,0,.08)}
-@media(max-width:760px){
-  .profile-award-tag{min-height:27px;padding:0 10px;font-size:11px}
+  .profile-page-award-tags{margin-top:2px;gap:5px}
+  .profile-award-tag{min-height:19px;padding:0 7px;font-size:9.5px}
 }
