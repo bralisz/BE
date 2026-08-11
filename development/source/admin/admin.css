@@ -1644,3 +1644,292 @@ body.admin-mode .admin-logo-button img{
   body.admin-mode .admin-logo-button{width:86px!important;min-width:86px!important;height:44px!important;border-radius:0!important;background:none!important}
   body.admin-mode .admin-logo-button img{width:80px!important;max-width:80px!important;height:auto!important;max-height:44px!important}
 }
+
+
+/* 11/08/2026 — Admin mobile compacto estilo iPhone: navegação completa + Home */
+.admin-mobile-home-button{display:none}
+@media(max-width:800px){
+  html body.admin-mode{
+    padding-bottom:0!important;
+    background:#05070b!important;
+  }
+  body.admin-mode .admin-shell{background:#05070b!important}
+  body.admin-mode .admin-topbar{
+    position:sticky!important;
+    top:0!important;
+    z-index:120!important;
+    width:100%!important;
+    min-height:0!important;
+    height:auto!important;
+    margin:0!important;
+    padding:8px 12px 7px!important;
+    display:grid!important;
+    grid-template-columns:48px minmax(0,1fr) 48px!important;
+    grid-template-rows:46px auto!important;
+    gap:6px 10px!important;
+    align-items:center!important;
+    border:0!important;
+    border-radius:0!important;
+    background:rgba(5,7,11,.94)!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:blur(22px) saturate(145%)!important;
+    backdrop-filter:blur(22px) saturate(145%)!important;
+  }
+  body.admin-mode .admin-mobile-home-button{
+    grid-column:1!important;
+    grid-row:1!important;
+    display:grid!important;
+    place-items:center!important;
+    width:44px!important;
+    height:44px!important;
+    padding:0!important;
+    border:1px solid rgba(255,255,255,.13)!important;
+    border-radius:50%!important;
+    background:rgba(255,255,255,.075)!important;
+    color:#f5f5f7!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important;
+    -webkit-tap-highlight-color:transparent!important;
+  }
+  body.admin-mode .admin-mobile-home-button svg{width:22px!important;height:22px!important}
+  body.admin-mode .admin-mobile-home-button:active{transform:scale(.96)}
+  body.admin-mode .admin-logo-button{
+    grid-column:2!important;
+    grid-row:1!important;
+    justify-self:center!important;
+    width:82px!important;
+    min-width:0!important;
+    height:42px!important;
+    padding:0!important;
+    border:0!important;
+    background:transparent!important;
+  }
+  body.admin-mode .admin-logo-button img{
+    width:78px!important;
+    max-width:78px!important;
+    height:auto!important;
+    max-height:42px!important;
+    object-fit:contain!important;
+    object-position:center!important;
+  }
+  body.admin-mode .admin-account{
+    grid-column:3!important;
+    grid-row:1!important;
+    justify-self:end!important;
+    width:44px!important;
+    height:44px!important;
+  }
+  body.admin-mode .admin-avatar-button{width:44px!important;height:44px!important}
+
+  /* todas as opções do desktop ficam disponíveis no mobile */
+  body.admin-mode .admin-topbar .admin-nav{
+    grid-column:1/-1!important;
+    grid-row:2!important;
+    position:static!important;
+    inset:auto!important;
+    z-index:auto!important;
+    width:100%!important;
+    max-width:none!important;
+    height:auto!important;
+    min-height:46px!important;
+    margin:0!important;
+    padding:2px 0 3px!important;
+    display:flex!important;
+    justify-content:flex-start!important;
+    align-items:center!important;
+    gap:5px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scrollbar-width:none!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    scroll-snap-type:x proximity!important;
+  }
+  body.admin-mode .admin-topbar .admin-nav::-webkit-scrollbar{display:none!important}
+  html body.admin-mode .admin-topbar .admin-nav button,
+  html body.admin-mode .admin-topbar .admin-nav button:not([data-route="dashboard"]):not([data-route="notifications"]){
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    flex:0 0 auto!important;
+    width:auto!important;
+    min-width:max-content!important;
+    min-height:42px!important;
+    padding:0 12px!important;
+    flex-direction:row!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    border:1px solid transparent!important;
+    border-radius:14px!important;
+    background:transparent!important;
+    color:rgba(235,235,245,.58)!important;
+    box-shadow:none!important;
+    font-size:11px!important;
+    font-weight:700!important;
+    scroll-snap-align:start!important;
+  }
+  body.admin-mode .admin-topbar .admin-nav button.active{
+    background:rgba(255,255,255,.11)!important;
+    border-color:rgba(255,255,255,.08)!important;
+    color:#fff!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important;
+  }
+  body.admin-mode .admin-topbar .admin-nav button:active{transform:scale(.98)!important}
+  body.admin-mode .admin-tab-icon{width:20px!important;height:20px!important;flex:0 0 20px!important}
+  body.admin-mode .admin-tab-icon svg{width:20px!important;height:20px!important;stroke-width:1.9!important}
+  body.admin-mode .admin-tab-label{display:block!important;max-width:none!important;overflow:visible!important;font-size:11px!important}
+
+  body.admin-mode .admin-main{min-width:0!important}
+  body.admin-mode .admin-subnav{
+    position:relative!important;
+    top:auto!important;
+    width:calc(100% - 20px)!important;
+    max-width:none!important;
+    min-height:48px!important;
+    margin:8px 10px 4px!important;
+    padding:4px!important;
+    display:flex!important;
+    gap:4px!important;
+    overflow-x:auto!important;
+    border:1px solid rgba(255,255,255,.10)!important;
+    border-radius:17px!important;
+    background:rgba(255,255,255,.035)!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:blur(16px)!important;
+    backdrop-filter:blur(16px)!important;
+    scrollbar-width:none!important;
+  }
+  body.admin-mode .admin-subnav[hidden]{display:none!important}
+  body.admin-mode .admin-subnav::-webkit-scrollbar{display:none!important}
+  body.admin-mode .admin-subnav button{
+    flex:1 0 max-content!important;
+    min-height:38px!important;
+    padding:0 13px!important;
+    border-radius:13px!important;
+    font-size:11px!important;
+    white-space:nowrap!important;
+  }
+  body.admin-mode .admin-subnav button.active{background:rgba(255,255,255,.12)!important;color:#fff!important}
+
+  /* conteúdo mais compacto: evita cartões enormes e aproveita melhor a largura */
+  body.admin-mode .admin-content{
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:12px 12px 28px!important;
+  }
+  body.admin-mode .admin-title-row{
+    margin:0 0 10px!important;
+    padding:8px 3px 12px!important;
+    gap:10px!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  body.admin-mode .admin-title-row h1{font-size:28px!important;line-height:1.08!important;letter-spacing:-.035em!important}
+  body.admin-mode .admin-title-row p{font-size:12px!important;line-height:1.45!important;margin-top:6px!important}
+  body.admin-mode .admin-title-row .a-btn{width:100%!important;min-height:44px!important;border-radius:14px!important}
+  body.admin-mode .dashboard-kicker{font-size:10px!important}
+  body.admin-mode .a-card{
+    padding:15px!important;
+    border-radius:20px!important;
+    background:rgba(255,255,255,.035)!important;
+    border-color:rgba(255,255,255,.085)!important;
+    box-shadow:none!important;
+  }
+  body.admin-mode .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;margin:10px 0 16px!important}
+  body.admin-mode .stat{min-height:92px!important;padding:14px!important;border-radius:18px!important}
+  body.admin-mode .stat strong{font-size:25px!important;margin-top:5px!important}
+  body.admin-mode .dashboard-workspace,
+  body.admin-mode .a-grid,
+  body.admin-mode .analytics-grid,
+  body.admin-mode .community-admin-layout{grid-template-columns:1fr!important;gap:12px!important}
+
+  /* página Billie / formulários: um fluxo simples, sem caixas aninhadas gigantes */
+  body.admin-mode .billie-admin-layout{display:block!important}
+  body.admin-mode .billie-admin-form-card{
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  body.admin-mode .billie-admin-form{gap:15px!important}
+  body.admin-mode .billie-admin-source{
+    grid-template-columns:1fr!important;
+    gap:11px!important;
+    padding:14px!important;
+    border-radius:18px!important;
+    background:rgba(255,255,255,.035)!important;
+    border-color:rgba(255,255,255,.085)!important;
+  }
+  body.admin-mode .billie-admin-source .a-btn{width:100%!important;min-height:44px!important;margin:0!important;border-radius:14px!important}
+  body.admin-mode .billie-admin-social-heading{padding-top:4px!important}
+  body.admin-mode .billie-admin-social-heading strong{padding-top:14px!important;font-size:18px!important}
+  body.admin-mode .form-grid{grid-template-columns:1fr!important;gap:11px!important}
+  body.admin-mode .field.full{grid-column:auto!important}
+  body.admin-mode .field{gap:6px!important}
+  body.admin-mode .a-input,
+  body.admin-mode .a-select{min-height:46px!important;padding:10px 12px!important;border-radius:14px!important;font-size:16px!important}
+  body.admin-mode .a-textarea{min-height:84px!important;padding:11px 12px!important;border-radius:14px!important;font-size:16px!important}
+  body.admin-mode .modal-actions{gap:8px!important;margin-top:14px!important}
+  body.admin-mode .modal-actions .a-btn{min-height:44px!important;border-radius:14px!important}
+
+  /* gerenciadores de conteúdo continuam completos, mas sem desperdício de espaço */
+  body.admin-mode .content-manager{display:block!important}
+  body.admin-mode .content-category-sidebar{
+    display:flex!important;
+    position:static!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    gap:5px!important;
+    margin:0 0 10px!important;
+    padding:5px!important;
+    border-radius:16px!important;
+    scrollbar-width:none!important;
+  }
+  body.admin-mode .content-category-sidebar::-webkit-scrollbar{display:none!important}
+  body.admin-mode .content-category-sidebar h2{display:none!important}
+  body.admin-mode .content-category-list{display:flex!important;gap:5px!important}
+  body.admin-mode .content-category-link{flex:0 0 auto!important;min-height:42px!important;padding:0 12px!important}
+  body.admin-mode .content-category-panel{padding:10px 0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+  body.admin-mode .content-category-panel .toolbar{grid-template-columns:1fr!important;gap:8px!important}
+  body.admin-mode .toolbar .a-input,body.admin-mode .toolbar .a-select{max-width:none!important;width:100%!important}
+  body.admin-mode .table-wrap{border-radius:16px!important}
+
+  /* editor mobile acompanha o novo topo (nav não fica mais no rodapé) */
+  body.admin-mode .admin-content.admin-editor-active{padding:8px 8px 16px!important}
+  body.admin-mode .admin-content.admin-editor-active .content-editor-modal.inline{
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    border-radius:20px!important;
+  }
+  body.admin-mode .admin-content.admin-editor-active .content-editor-fields{
+    max-height:none!important;
+    overflow:visible!important;
+    padding:10px!important;
+  }
+  body.admin-mode .content-editor-actions{
+    position:sticky!important;
+    bottom:0!important;
+    z-index:12!important;
+    padding:9px 10px calc(9px + env(safe-area-inset-bottom))!important;
+    border-radius:16px 16px 0 0!important;
+    background:rgba(18,18,20,.94)!important;
+    -webkit-backdrop-filter:blur(18px)!important;
+    backdrop-filter:blur(18px)!important;
+  }
+}
+@media(max-width:420px){
+  body.admin-mode .admin-topbar{padding-left:9px!important;padding-right:9px!important;gap:5px 7px!important}
+  body.admin-mode .admin-topbar .admin-nav button,
+  html body.admin-mode .admin-topbar .admin-nav button:not([data-route="dashboard"]):not([data-route="notifications"]){padding:0 10px!important;gap:6px!important}
+  body.admin-mode .admin-tab-label{font-size:10.5px!important}
+  body.admin-mode .admin-content{padding-left:10px!important;padding-right:10px!important}
+}
