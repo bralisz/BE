@@ -6,6 +6,7 @@
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
+  var detailWatch={sessionId:'',contentId:'',armedContentId:'',timer:null,inFlight:false};
 
   function t(source,vars){
     if(window.BETVI18n&&typeof window.BETVI18n.t==='function')return window.BETVI18n.t(source,vars||{});
@@ -333,9 +334,83 @@
   }
 
   async function recordWatchFromPlay(play){
-    var user=currentUser();if(!user||!play)return;
-    var recordId=String(play.dataset.recordId||'');if(!validUuid(recordId))return;
-    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;state.lastPayload=null;}catch(error){console.warn('Não foi possível registrar o conteúdo recente:',error&&error.message?error.message:error);}
+    var user=currentUser();if(!user||!play)return false;
+    var recordId=String(play.dataset.recordId||'');if(!validUuid(recordId))return false;
+    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;state.lastPayload=null;return result&&result.data!==false;}catch(error){console.warn('Não foi possível registrar o conteúdo recente:',error&&error.message?error.message:error);return false;}
+  }
+
+  function armDetailWatchFromPlay(play){
+    if(!play)return;
+    var recordId=String(play.dataset.recordId||'');
+    if(!validUuid(recordId)||!currentUser())return;
+    recordWatchFromPlay(play).then(function(saved){
+      if(!saved)return;
+      var current=document.getElementById('contentDetailPlay');
+      if(!current||String(current.dataset.recordId||'')!==recordId||!document.body.classList.contains('detail-page-active'))return;
+      detailWatch.armedContentId=recordId;
+      syncDetailWatchTimer();
+    });
+  }
+
+  function createWatchSessionId(){
+    try{if(window.crypto&&typeof window.crypto.randomUUID==='function')return window.crypto.randomUUID();}catch(_){ }
+    var bytes=new Uint8Array(16);try{window.crypto.getRandomValues(bytes);}catch(_){for(var i=0;i<bytes.length;i+=1)bytes[i]=Math.floor(Math.random()*256);}
+    bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+    var hex=Array.prototype.map.call(bytes,function(value){return value.toString(16).padStart(2,'0');}).join('');
+    return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
+  }
+
+  function detailWatchContext(){
+    var play=document.getElementById('contentDetailPlay');
+    if(!play||!currentUser()||!document.body.classList.contains('detail-page-active'))return null;
+    var recordId=String(play.dataset.recordId||'');
+    if(!validUuid(recordId))return null;
+    return {recordId:recordId,visible:document.visibilityState==='visible'};
+  }
+
+  async function sendDetailWatchHeartbeat(contentId,sessionId,finish){
+    if(!validUuid(contentId)||!validUuid(sessionId))return;
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')return;
+      var result=await client.rpc('heartbeat_community_watch',{p_content_id:contentId,p_session_id:sessionId,p_finish:Boolean(finish)});
+      if(result&&result.error)throw result.error;
+      state.lastPayload=null;
+    }catch(error){console.warn('Não foi possível atualizar o tempo assistido:',error&&error.message?error.message:error);}
+  }
+
+  function stopDetailWatchTimer(sendFinal){
+    if(detailWatch.timer){clearInterval(detailWatch.timer);detailWatch.timer=null;}
+    var contentId=detailWatch.contentId;
+    var sessionId=detailWatch.sessionId;
+    detailWatch.contentId='';detailWatch.sessionId='';detailWatch.inFlight=false;
+    if(sendFinal&&contentId&&sessionId)sendDetailWatchHeartbeat(contentId,sessionId,true);
+  }
+
+  function startDetailWatchTimer(context){
+    if(!context||!context.recordId)return;
+    if(detailWatch.sessionId&&detailWatch.contentId===context.recordId)return;
+    stopDetailWatchTimer(true);
+    detailWatch.contentId=context.recordId;
+    detailWatch.sessionId=createWatchSessionId();
+    sendDetailWatchHeartbeat(detailWatch.contentId,detailWatch.sessionId,false);
+    detailWatch.timer=setInterval(function(){
+      if(detailWatch.inFlight||!detailWatch.sessionId)return;
+      var current=detailWatchContext();
+      if(!current||current.recordId!==detailWatch.contentId){syncDetailWatchTimer();return;}
+      detailWatch.inFlight=true;
+      var contentId=detailWatch.contentId,sessionId=detailWatch.sessionId;
+      sendDetailWatchHeartbeat(contentId,sessionId,false).finally(function(){if(detailWatch.sessionId===sessionId)detailWatch.inFlight=false;});
+    },5000);
+  }
+
+  function syncDetailWatchTimer(){
+    var context=detailWatchContext();
+    if(!context){stopDetailWatchTimer(true);detailWatch.armedContentId='';return;}
+    if(detailWatch.armedContentId!==context.recordId){stopDetailWatchTimer(true);detailWatch.armedContentId='';return;}
+    if(!context.visible){stopDetailWatchTimer(true);return;}
+    if(detailWatch.contentId!==context.recordId||!detailWatch.sessionId)startDetailWatchTimer(context);
   }
 
   function createMobileAccountMenu(){
@@ -371,9 +446,21 @@
     var play=document.getElementById('contentDetailPlay');
     if(play&&play.dataset.communityWatchBound!=='true'){
       play.dataset.communityWatchBound='true';
-      play.addEventListener('pointerup',function(){recordWatchFromPlay(play);});
-      play.addEventListener('keydown',function(event){if(event.key==='Enter')recordWatchFromPlay(play);});
+      play.addEventListener('pointerup',function(){armDetailWatchFromPlay(play);});
+      play.addEventListener('keydown',function(event){if(event.key==='Enter')armDetailWatchFromPlay(play);});
     }
+    if(play&&play.dataset.communityDwellObserved!=='true'){
+      play.dataset.communityDwellObserved='true';
+      new MutationObserver(function(){syncDetailWatchTimer();}).observe(play,{attributes:true,attributeFilter:['data-record-id','data-duration']});
+    }
+    if(document.body.dataset.communityDwellObserved!=='true'){
+      document.body.dataset.communityDwellObserved='true';
+      new MutationObserver(function(){syncDetailWatchTimer();}).observe(document.body,{attributes:true,attributeFilter:['class']});
+      document.addEventListener('visibilitychange',syncDetailWatchTimer);
+      window.addEventListener('pagehide',function(){stopDetailWatchTimer(true);detailWatch.armedContentId='';});
+      window.addEventListener('be:detail-close',function(){stopDetailWatchTimer(true);detailWatch.armedContentId='';});
+    }
+    setTimeout(syncDetailWatchTimer,0);
     document.addEventListener('click',function(event){
       if(document.body.classList.contains('mobile-account-menu-open')){var trigger=event.target&&event.target.closest?event.target.closest('#mobileProfileButton'):null;if(!trigger&&mobileMenu&&!mobileMenu.contains(event.target))closeMobileAccountMenu();}
       var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;if(nav&&!nav.matches('[data-community-tab]'))closeCommunity(false);
@@ -389,7 +476,7 @@
     window.addEventListener('be:open-config',function(){setTimeout(injectPrivacySettings,0);});
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
     window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});
-    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(){setTimeout(injectPrivacySettings,50);if(document.body.classList.contains('community-page-active'))refreshCommunity();});
+    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(){setTimeout(injectPrivacySettings,50);syncDetailWatchTimer();if(document.body.classList.contains('community-page-active'))refreshCommunity();});
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
