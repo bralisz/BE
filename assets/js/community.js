@@ -2,7 +2,7 @@
   'use strict';
   if(String(location.hash||'').startsWith('#/admin')) return;
 
-  var state={period:'month',loading:false,lastPayload:null,requestId:0};
+  var state={period:'month',loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false};
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
@@ -36,6 +36,7 @@
     return true;
   }
   function writeRankingPreference(userId,value){try{localStorage.setItem(rankingPreferenceKey(userId),value?'true':'false');}catch(_){ }}
+  function setHomeTab(tab){try{window.dispatchEvent(new CustomEvent('be:set-home-tab',{detail:{tab:String(tab||'home')}}));}catch(_){ }}
 
   async function loadCommunityOngBanner(){
     var spotlight=document.getElementById('communityOngSpotlight');
@@ -65,48 +66,31 @@
     page.id='communityPage';
     page.className='community-page';
     page.hidden=true;
-    page.setAttribute('aria-label','Comunidade');
+    page.setAttribute('aria-label','Comunidade dos Avocados');
     page.innerHTML=''
       +'<div class="community-page-inner">'
-      +  '<header class="community-page-heading"><h1>Comunidade</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
+      +  '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
       +  '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +  '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
-      +  '<section class="community-section"><div class="community-section-head"><h2>Perfis em destaque</h2></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
+      +  '<section class="community-section"><div class="community-section-head"><h2>Perfis em destaque</h2><button class="community-rules-button" id="communityProfileRulesButton" type="button" aria-expanded="false" aria-controls="communityProfileRules">Regras</button></div><div class="community-rules-panel" id="communityProfileRules" hidden>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Você pode compartilhar seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
       +  '<section class="community-section"><div class="community-section-head"><h2>Quem mais assistiu</h2><div class="community-watch-toolbar" role="group" aria-label="Período do ranking"><button class="community-watch-filter active" type="button" data-community-period="month">Este mês</button><button class="community-watch-filter" type="button" data-community-period="all">Todos os tempos</button></div></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityWatchRanking"></div><div class="community-ranking-own" id="communityOwnWatch" hidden></div></div></section>'
       +  '<div class="community-supporters-cta-wrap"><button class="community-supporters-cta" id="communitySupportersButton" type="button">Ver fãs que apoiam o site</button></div>'
       +  '<section class="community-ong-spotlight" id="communityOngSpotlight" hidden aria-label="Apoie uma ONG"><div class="community-ong-spotlight-frame"><img id="communityOngSpotlightImage" alt="Apoie uma ONG" loading="lazy" decoding="async"><div class="community-ong-spotlight-overlay" aria-hidden="true"></div><a class="community-ong-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a></div></section>'
       +'</div>';
     main.appendChild(page);
-    page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(true);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
-    var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(true);});
+    page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
+    var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
     loadCommunityOngBanner();
-    page.querySelectorAll('[data-community-period]').forEach(function(button){button.addEventListener('click',function(){state.period=button.dataset.communityPeriod==='all'?'all':'month';page.querySelectorAll('[data-community-period]').forEach(function(item){item.classList.toggle('active',item===button);});refreshCommunity();});});
+    var rulesButton=page.querySelector('#communityProfileRulesButton');var rulesPanel=page.querySelector('#communityProfileRules');
+    if(rulesButton&&rulesPanel)rulesButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();var opening=rulesPanel.hidden;rulesPanel.hidden=!opening;rulesButton.setAttribute('aria-expanded',opening?'true':'false');});
+    page.querySelectorAll('[data-community-period]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();document.body.classList.add('community-page-active');if(page)page.hidden=false;state.period=button.dataset.communityPeriod==='all'?'all':'month';page.querySelectorAll('[data-community-period]').forEach(function(item){item.classList.toggle('active',item===button);});setHomeTab('community');refreshCommunity();});});
     applyI18n(page);
     return page;
   }
 
-  function positionCommunityIndicator(button){
-    var leading=document.getElementById('homeNavLeading');
-    if(!leading||!button)return;
-    window.requestAnimationFrame(function(){
-      var leadingRect=leading.getBoundingClientRect();
-      var buttonRect=button.getBoundingClientRect();
-      if(!buttonRect.width||!buttonRect.height)return;
-      leading.style.setProperty('--home-tab-x',Math.max(0,buttonRect.left-leadingRect.left)+'px');
-      leading.style.setProperty('--home-tab-y',Math.max(0,buttonRect.top-leadingRect.top)+'px');
-      leading.style.setProperty('--home-tab-width',buttonRect.width+'px');
-      leading.style.setProperty('--home-tab-height',buttonRect.height+'px');
-    });
-  }
-
-  function syncCurrentIndicator(){
-    var active=document.querySelector('#topbar .home-nav-link.active,#topbar #logoBtn.active');
-    if(active)positionCommunityIndicator(active);
-  }
-
   function setCommunityNavActive(active){
     var communityButton=document.querySelector('[data-community-tab]');
-    if(communityButton){communityButton.classList.toggle('active',Boolean(active));if(active){communityButton.setAttribute('aria-current','page');communityButton.setAttribute('aria-pressed','true');positionCommunityIndicator(communityButton);}else{communityButton.removeAttribute('aria-current');communityButton.removeAttribute('aria-pressed');window.requestAnimationFrame(syncCurrentIndicator);}}
+    if(communityButton){communityButton.classList.toggle('active',Boolean(active));if(active){communityButton.setAttribute('aria-current','page');communityButton.setAttribute('aria-pressed','true');setHomeTab('community');}else{communityButton.removeAttribute('aria-current');communityButton.setAttribute('aria-pressed','false');}}
     document.querySelectorAll('[data-mobile-destination]').forEach(function(button){
       if(button.dataset.mobileDestination==='community'){
         button.classList.toggle('active',Boolean(active));
@@ -155,13 +139,15 @@
     }
   }
 
-  function closeCommunity(resetView){
-    if(!document.body.classList.contains('community-page-active'))return;
-    document.body.classList.remove('community-page-active');
-    toggleCatalogVisibility(false);
-    if(page)page.hidden=true;
+  function closeCommunity(resetView,tabAfter){
+    if(document.body.classList.contains('community-page-active')){
+      document.body.classList.remove('community-page-active');
+      toggleCatalogVisibility(false);
+      if(page)page.hidden=true;
+    }
     setCommunityNavActive(false);
     if(resetView!==false&&document.body.dataset.homeView==='community')document.body.dataset.homeView='home';
+    if(tabAfter)setHomeTab(tabAfter);
   }
 
   function establishCatalogBase(){
@@ -189,6 +175,8 @@
   }
   window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity};
   window.addEventListener('be:open-community',openCommunity);
+  ['be:open-profile-route','be:open-config','be:open-notifications','be:open-support','be:open-donate-page','be:open-fans-page','be:open-billie-page','be:open-album-page','be:open-legal-route'].forEach(function(name){window.addEventListener(name,function(){state.detailReturnToCommunity=false;closeCommunity(false);});});
+  window.addEventListener('be:home-entered',function(){state.detailReturnToCommunity=false;closeCommunity(true,'home');});
 
   function catalogData(row){
     row=row&&typeof row==='object'?row:{};
@@ -216,7 +204,7 @@
     var image=document.createElement('img');image.className='video-card-thumbnail';image.loading='lazy';image.decoding='async';image.alt=data.title;image.src=mediaUrl(data.imageUrl||data.bannerUrl||'/assets/images/pages/billie-home-banner-default.webp');card.appendChild(image);
     if(data.logoUrl&&data.logoUrl!=='#'&&String(data.collection).toLowerCase()!=='videos'){var logoSlot=document.createElement('span');logoSlot.className='video-card-logo-slot';logoSlot.setAttribute('aria-hidden','true');var logo=document.createElement('img');logo.className='video-card-logo';logo.loading='lazy';logo.decoding='async';logo.alt='';logo.src=mediaUrl(data.logoUrl);logo.addEventListener('error',function(){logoSlot.remove();},{once:true});logoSlot.appendChild(logo);card.appendChild(logoSlot);}
     if(Number(row&&row.saves)>0){var social=document.createElement('span');social.className='community-favorite-social';social.setAttribute('aria-label',t('{count} curtidas',{count:Number(row.saves)||0}));var faces=document.createElement('span');faces.className='community-favorite-faces';var avatars=Array.isArray(row.fanAvatars)?row.fanAvatars.slice(0,3):[];avatars.forEach(function(person){var face=document.createElement('span');face.className='community-favorite-face';var faceImg=document.createElement('img');faceImg.loading='lazy';faceImg.decoding='async';faceImg.alt='';faceImg.src=window.BETVResolveAvatar?window.BETVResolveAvatar(person&&person.avatarUrl):mediaUrl(person&&person.avatarUrl||'/assets/images/profile/default-avatar.png');face.appendChild(faceImg);faces.appendChild(face);});social.appendChild(faces);var extra=Math.max(0,(Number(row.saves)||0)-avatars.length);var count=document.createElement('span');count.className='community-favorite-count';count.textContent=extra>0?'+'+extra:String(Number(row.saves)||0);social.appendChild(count);card.appendChild(social);}
-    card.addEventListener('click',function(event){event.preventDefault();closeCommunity(true);if(typeof window.beOpenSavedContent==='function')window.beOpenSavedContent(data);else location.assign('/'+encodeURIComponent(data.itemId));});
+    card.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();state.detailReturnToCommunity=true;closeCommunity(false,'community');if(typeof window.beOpenSavedContent==='function')window.beOpenSavedContent(data);else location.assign('/'+encodeURIComponent(data.itemId));});
     return card;
   }
 
@@ -263,7 +251,7 @@
       button.appendChild(createRankAvatar(item.avatarUrl,item.displayName));
       var copy=document.createElement('span');copy.className='community-rank-copy';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');var handle=document.createElement('span');handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.append(strong,handle);button.appendChild(copy);
       var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});button.appendChild(value);
-      button.addEventListener('click',function(){closeCommunity(true);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});
+      button.addEventListener('click',function(){closeCommunity(false);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});
       host.appendChild(button);
     });
   }
@@ -290,7 +278,7 @@
       var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position||'—');button.appendChild(pos);button.appendChild(createRankAvatar(item.avatarUrl,item.displayName));
       var copy=document.createElement('span');copy.className='community-rank-copy';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');var handle=document.createElement('span');handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.append(strong,handle);button.appendChild(copy);
       var value=document.createElement('span');value.className='community-rank-value';value.textContent=formatWatchTime(item.watchSeconds);button.appendChild(value);
-      button.addEventListener('click',function(){closeCommunity(true);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});host.appendChild(button);
+      button.addEventListener('click',function(){closeCommunity(false);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});host.appendChild(button);
     });
     renderOwnRanking('communityOwnWatch',myPosition,'watch',visibility,hideBecauseListed);
   }
@@ -463,16 +451,21 @@
     setTimeout(syncDetailWatchTimer,0);
     document.addEventListener('click',function(event){
       if(document.body.classList.contains('mobile-account-menu-open')){var trigger=event.target&&event.target.closest?event.target.closest('#mobileProfileButton'):null;if(!trigger&&mobileMenu&&!mobileMenu.contains(event.target))closeMobileAccountMenu();}
-      var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;if(nav&&!nav.matches('[data-community-tab]'))closeCommunity(false);
+      var profileRoute=event.target&&event.target.closest?event.target.closest('[data-public-action="profile"],[data-public-action="settings"]'):null;
+      if(profileRoute&&document.body.classList.contains('community-page-active'))closeCommunity(false);
+      var notificationHome=event.target&&event.target.closest?event.target.closest('#notificationPageClose,#notificationPageHome'):null;
+      if(notificationHome)setHomeTab('home');
+      var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;
+      if(nav&&!nav.matches('[data-community-tab]')){var target='home';if(nav.dataset&&nav.dataset.homeView)target=nav.dataset.homeView;else if(nav.matches('[data-public-action="support"]'))target='support';closeCommunity(false,target);}
     },true);
     window.addEventListener('be:toggle-mobile-account-menu',toggleMobileAccountMenu);
     window.addEventListener('be:close-notification-menus',closeMobileAccountMenu);
-    window.addEventListener('popstate',function(){closeMobileAccountMenu();if(document.body.classList.contains('community-page-active'))closeCommunity(false);});
+    window.addEventListener('popstate',function(){closeMobileAccountMenu();if(document.body.classList.contains('community-page-active'))closeCommunity(false);window.setTimeout(function(){if(state.detailReturnToCommunity&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')){state.detailReturnToCommunity=false;openCommunity();return;}if(!document.body.classList.contains('community-page-active')&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active'))setHomeTab('home');},0);});
     window.addEventListener('hashchange',closeMobileAccountMenu);
     window.addEventListener('resize',function(){if(!window.matchMedia('(max-width:760px)').matches)closeMobileAccountMenu();else if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();});
     document.addEventListener('keydown',function(event){if(event.key==='Escape')closeMobileAccountMenu();});
     var settingsBody=document.getElementById('settingsPageBody');if(settingsBody){new MutationObserver(function(){injectPrivacySettings();}).observe(settingsBody,{childList:true,subtree:true});}
-    window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('community-page-active')){toggleCatalogVisibility(true);var tab=document.querySelector('[data-community-tab]');if(tab)positionCommunityIndicator(tab);}});
+    window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('community-page-active')){toggleCatalogVisibility(true);setHomeTab('community');}});
     window.addEventListener('be:open-config',function(){setTimeout(injectPrivacySettings,0);});
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
     window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});

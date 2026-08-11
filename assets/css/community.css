@@ -14,14 +14,20 @@ body.support-page-active .home-nav-link[data-community-tab]{display:none!importa
   padding:clamp(112px,12vw,148px) 0 72px;
 }
 .community-page-inner{width:100%;margin:0 auto}
-.community-page-heading{margin:0 clamp(24px,4vw,68px) 34px}
-.community-page-heading h1{margin:0;color:#fff;font-size:clamp(28px,4vw,46px);line-height:1.05;letter-spacing:-.035em;font-weight:800}
-.community-page-heading p{max-width:680px;margin:10px 0 0;color:rgba(255,255,255,.56);font-size:14px;line-height:1.55}
+.community-page-heading{max-width:980px;margin:0 auto clamp(42px,5vw,68px);padding:0 24px;text-align:center}
+.community-page-heading h1{margin:0;color:#fff;font:800 clamp(42px,6vw,76px)/.98 var(--font-display);letter-spacing:-.055em}
+.community-page-heading p{max-width:620px;margin:22px auto 0;color:rgba(255,255,255,.62);font-size:clamp(15px,1.4vw,18px);line-height:1.6}
 .community-section{margin:0 0 42px}
 .community-section-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 clamp(24px,4vw,68px) 12px}
 .community-section-head h2{margin:0;color:#fff;font-size:18px;line-height:1.2;font-weight:760;letter-spacing:-.015em}
 .community-section-action{border:0;background:transparent;color:#78b4ff;font-family:inherit;font-size:13px;font-weight:700;line-height:1.2;cursor:pointer;padding:7px 0}
 .community-section-action:hover{color:#fff}
+.community-rules-button{border:0;background:transparent;color:#4f9dff;font-family:inherit;font-size:13px;font-weight:800;line-height:1.2;cursor:pointer;padding:7px 0}
+.community-rules-button:hover{color:#8fc2ff}
+.community-rules-button[aria-expanded="true"]{color:#fff}
+.community-rules-panel{margin:-2px clamp(24px,4vw,68px) 12px;padding:12px 14px;border:1px solid rgba(79,157,255,.22);border-radius:14px;background:rgba(45,127,249,.08);color:rgba(255,255,255,.68);font-size:13px;line-height:1.5}
+.community-rules-panel[hidden]{display:none!important}
+body.community-page-active #footerFansLink,body.community-page-active #mobileFooterFansLink{display:none!important}
 .community-rail{display:flex;gap:12px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:none;padding:0 clamp(24px,4vw,68px) 10px;scroll-padding-left:clamp(24px,4vw,68px)}
 .community-rail::-webkit-scrollbar{display:none}
 .community-rail .video-card{flex:0 0 clamp(190px,18vw,270px)}
@@ -70,12 +76,13 @@ body.support-page-active .home-nav-link[data-community-tab]{display:none!importa
 
 @media(max-width:760px){
   .community-page{padding:88px 0 48px}
-  .community-page-heading{margin:0 20px 28px}
-  .community-page-heading h1{font-size:30px}
-  .community-page-heading p{font-size:13px}
+  .community-page-heading{margin-bottom:32px;padding:0 20px}
+  .community-page-heading h1{white-space:normal!important;font-size:clamp(34px,11vw,52px)!important;line-height:1!important}
+  .community-page-heading p{margin-top:18px;font-size:15px;line-height:1.55}
   .community-section{margin-bottom:32px}
   .community-section-head{margin:0 20px 10px;align-items:flex-end}
   .community-section-head h2{font-size:17px}
+  .community-rules-panel{margin-left:20px;margin-right:20px}
   .community-rail{padding-left:20px;padding-right:20px;scroll-padding-left:20px;gap:11px}
   .community-rail .video-card{flex-basis:min(78vw,310px)!important}
   .community-empty,.community-ranking-wrap{margin-left:20px;margin-right:20px}

@@ -7971,7 +7971,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const logo = document.getElementById('logoBtn');
     const viewButtons = Array.from(document.querySelectorAll('button[data-home-view],a[data-home-view]'));
     const supportButton = topbar.querySelector('[data-public-action="support"]');
-    const tabButtons = [logo, ...viewButtons, supportButton].filter(Boolean);
+    const communityButton = topbar.querySelector('[data-community-tab]');
+    const tabButtons = [logo, ...viewButtons, communityButton, supportButton].filter(Boolean);
     if (!topbar || !toggle || !input || topbar.dataset.homeReady === 'true') return;
     topbar.dataset.homeReady = 'true';
 
@@ -8029,6 +8030,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     setActiveTab(logo);
+    window.addEventListener('be:set-home-tab', event => {
+      const requested = String(event?.detail?.tab || '').toLowerCase();
+      let button = null;
+      if (requested === 'community') button = communityButton;
+      else if (requested === 'films') button = viewButtons.find(item => item.dataset.homeView === 'films');
+      else if (requested === 'videos') button = viewButtons.find(item => item.dataset.homeView === 'videos');
+      else if (requested === 'support') button = supportButton;
+      else if (requested === 'home') button = logo;
+      if (button) setActiveTab(button);
+    });
     window.addEventListener('resize', () => positionSharedTabIndicator(activeTabButton), { passive: true });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => positionSharedTabIndicator(activeTabButton));
 
