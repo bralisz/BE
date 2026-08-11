@@ -1,0 +1,121 @@
+/* Billie Eilish TV — Comunidade */
+#communityPage[hidden]{display:none!important}
+body.community-page-active main > :not(#communityPage){display:none!important}
+body.community-page-active #communityPage{display:block!important}
+body.community-page-active .home-nav-link.active:not([data-community-tab]),
+body.community-page-active #logoBtn.active{background:transparent!important;color:rgba(255,255,255,.72)!important;box-shadow:none!important}
+body.community-page-active .home-nav-link[data-community-tab]{background:#fff!important;color:#151616!important;box-shadow:0 7px 22px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.96)!important}
+body.support-page-active .home-nav-link[data-community-tab]{display:none!important}
+
+.community-page{
+  width:100%;
+  min-height:70vh;
+  padding:clamp(112px,12vw,148px) 0 72px;
+}
+.community-page-inner{width:100%;margin:0 auto}
+.community-page-heading{margin:0 clamp(24px,4vw,68px) 34px}
+.community-page-heading h1{margin:0;color:#fff;font-size:clamp(28px,4vw,46px);line-height:1.05;letter-spacing:-.035em;font-weight:800}
+.community-page-heading p{max-width:680px;margin:10px 0 0;color:rgba(255,255,255,.56);font-size:14px;line-height:1.55}
+.community-section{margin:0 0 42px}
+.community-section-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 clamp(24px,4vw,68px) 12px}
+.community-section-head h2{margin:0;color:#fff;font-size:18px;line-height:1.2;font-weight:760;letter-spacing:-.015em}
+.community-section-action{border:0;background:transparent;color:#78b4ff;font-family:inherit;font-size:13px;font-weight:700;line-height:1.2;cursor:pointer;padding:7px 0}
+.community-section-action:hover{color:#fff}
+.community-rail{display:flex;gap:12px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:none;padding:0 clamp(24px,4vw,68px) 10px;scroll-padding-left:clamp(24px,4vw,68px)}
+.community-rail::-webkit-scrollbar{display:none}
+.community-rail .video-card{flex:0 0 clamp(190px,18vw,270px)}
+.community-empty{margin:0 clamp(24px,4vw,68px);padding:20px 22px;border:1px solid rgba(255,255,255,.09);border-radius:18px;background:rgba(255,255,255,.035);color:rgba(255,255,255,.54);font-size:13px;line-height:1.5}
+
+.community-ranking-wrap{margin:0 clamp(24px,4vw,68px)}
+.community-ranking-card{overflow:hidden;border:1px solid rgba(255,255,255,.11);border-radius:22px;background:rgba(10,13,19,.68);box-shadow:0 18px 45px rgba(0,0,0,.2);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.community-ranking-row{width:100%;min-height:68px;display:grid;grid-template-columns:34px 44px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 16px;border:0;border-bottom:1px solid rgba(255,255,255,.075);background:transparent;color:#fff;text-align:left;text-decoration:none;cursor:pointer}
+.community-ranking-row:last-child{border-bottom:0}
+.community-ranking-row:hover{background:rgba(255,255,255,.045)}
+.community-rank-number{font-size:14px;font-weight:820;color:rgba(255,255,255,.44);text-align:center}
+.community-ranking-row.top-three .community-rank-number{color:#9bc8ff}
+.community-rank-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10)}
+.community-rank-avatar img{width:100%;height:100%;display:block;object-fit:cover}
+.community-rank-avatar svg{width:22px;height:22px;opacity:.55}
+.community-rank-copy{min-width:0;display:flex;flex-direction:column;gap:3px}
+.community-rank-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:760}
+.community-rank-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.48);font-size:12px}
+.community-rank-value{font-size:13px;font-weight:760;color:rgba(255,255,255,.78);white-space:nowrap}
+.community-ranking-own{margin-top:10px;padding:13px 16px;border:1px solid rgba(76,151,255,.18);border-radius:16px;background:rgba(45,127,249,.08);color:rgba(255,255,255,.72);font-size:13px;font-weight:650}
+.community-ranking-own[hidden]{display:none!important}
+.community-ranking-empty{padding:22px;color:rgba(255,255,255,.52);font-size:13px;text-align:center}
+.community-watch-toolbar{display:flex;align-items:center;gap:6px;padding:4px;border:1px solid rgba(255,255,255,.09);border-radius:999px;background:rgba(255,255,255,.04)}
+.community-watch-filter{height:30px;padding:0 11px;border:0;border-radius:999px;background:transparent;color:rgba(255,255,255,.58);font-size:12px;font-weight:720;cursor:pointer}
+.community-watch-filter.active{background:#fff;color:#111}
+
+.mobile-account-popover{display:none}
+
+.community-privacy-card{margin-top:18px}
+.community-privacy-card .community-privacy-copy{display:flex;flex-direction:column;gap:5px}
+.community-privacy-card .community-privacy-copy h2{margin:0;font-size:16px;color:#fff}
+.community-privacy-card .community-privacy-copy p{margin:0;color:rgba(255,255,255,.52);font-size:13px;line-height:1.48}
+.community-privacy-toggle{margin-top:18px;display:flex;align-items:center;justify-content:space-between;gap:18px;cursor:pointer}
+.community-privacy-toggle span{color:rgba(255,255,255,.78);font-size:13px;line-height:1.4}
+.community-privacy-switch{position:relative;flex:0 0 48px;width:48px;height:28px}
+.community-privacy-switch input{position:absolute;opacity:0;pointer-events:none}
+.community-privacy-switch i{position:absolute;inset:0;border-radius:999px;background:rgba(255,255,255,.14);transition:.2s ease;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.community-privacy-switch i::after{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.34);transition:.2s ease}
+.community-privacy-switch input:checked + i{background:#0a84ff}
+.community-privacy-switch input:checked + i::after{transform:translateX(20px)}
+.community-privacy-status{min-height:18px;margin-top:9px;color:rgba(255,255,255,.5);font-size:12px}
+.community-privacy-status.ok{color:#81dba1}.community-privacy-status.err{color:#ff9c9c}
+
+@media(max-width:760px){
+  .community-page{padding:88px 0 48px}
+  .community-page-heading{margin:0 20px 28px}
+  .community-page-heading h1{font-size:30px}
+  .community-page-heading p{font-size:13px}
+  .community-section{margin-bottom:32px}
+  .community-section-head{margin:0 20px 10px;align-items:flex-end}
+  .community-section-head h2{font-size:17px}
+  .community-rail{padding-left:20px;padding-right:20px;scroll-padding-left:20px;gap:11px}
+  .community-rail .video-card{flex-basis:min(78vw,310px)!important}
+  .community-empty,.community-ranking-wrap{margin-left:20px;margin-right:20px}
+  .community-ranking-card{border-radius:18px}
+  .community-ranking-row{grid-template-columns:28px 40px minmax(0,1fr) auto;gap:10px;min-height:62px;padding:9px 12px}
+  .community-rank-avatar{width:40px;height:40px}
+  .community-rank-copy strong{font-size:13.5px}
+  .community-rank-value{font-size:12px}
+  .community-watch-toolbar{max-width:100%}
+  .community-watch-filter{height:28px;padding:0 9px;font-size:11px}
+
+  .mobile-account-popover{
+    position:fixed;
+    top:66px;
+    left:12px;
+    z-index:10080;
+    width:min(260px,calc(100vw - 24px));
+    padding:7px;
+    display:block;
+    visibility:hidden;
+    opacity:0;
+    transform:translateY(-8px) scale(.98);
+    transform-origin:top left;
+    pointer-events:none;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:22px;
+    background:rgba(15,17,20,.86);
+    box-shadow:0 24px 64px rgba(0,0,0,.58),inset 0 1px 0 rgba(255,255,255,.06);
+    -webkit-backdrop-filter:blur(28px) saturate(145%);
+    backdrop-filter:blur(28px) saturate(145%);
+    transition:opacity .17s ease,transform .17s ease,visibility .17s step-end;
+  }
+  body.mobile-account-menu-open .mobile-account-popover{visibility:visible;opacity:1;transform:translateY(0) scale(1);pointer-events:auto;transition:opacity .17s ease,transform .17s ease,visibility 0s}
+  .mobile-account-popover button{width:100%;min-height:44px;display:flex;align-items:center;padding:0 14px;border:0;border-radius:14px;background:transparent;color:#fff;font:650 14px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,sans-serif;text-align:left;cursor:pointer}
+  .mobile-account-popover button:active{background:rgba(255,255,255,.09);transform:scale(.985)}
+  .mobile-account-popover .danger{color:#ff6961}
+  .mobile-account-divider{height:1px;margin:6px 7px;background:rgba(255,255,255,.10)}
+  html.mobile-lite .mobile-account-popover{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(12,14,17,.98)}
+}
+
+@media(min-width:761px){
+  .home-nav-link[data-community-tab]{width:104px;min-width:104px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .mobile-account-popover,.community-privacy-switch i,.community-privacy-switch i::after{transition:none!important}
+}

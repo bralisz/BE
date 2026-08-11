@@ -78,6 +78,9 @@
     } else if (destination === 'videos') {
       clickHomeView('videos');
       document.body.dataset.mobileCollection = 'videos';
+    } else if (destination === 'community') {
+      window.dispatchEvent(new CustomEvent('be:open-community'));
+      document.body.dataset.mobileCollection = 'community';
     } else if (destination === 'support') {
       document.querySelector('.home-nav-link[data-public-action="support"]')?.click();
     }
@@ -162,6 +165,7 @@
         <button class="mobile-drawer-link active" type="button" data-mobile-destination="home">${icon('home')}<span>Home</span></button>
         <button class="mobile-drawer-link" type="button" data-mobile-destination="films">${icon('film')}<span>Filmes</span></button>
         <button class="mobile-drawer-link" type="button" data-mobile-destination="videos">${icon('video')}<span>Vídeos</span></button>
+        <button class="mobile-drawer-link" type="button" data-mobile-destination="community">${icon('fans')}<span>Comunidade</span></button>
         <button class="mobile-drawer-link" type="button" data-mobile-destination="support">${icon('support')}<span>Suporte</span></button>
       </nav>
       <div class="mobile-drawer-footer">
@@ -218,7 +222,7 @@
 
     bindActivation(document.getElementById('mobileDrawerClose'), () => openDrawer(false));
     bindActivation(document.getElementById('mobileDrawerBackdrop'), () => openDrawer(false));
-    bindActivation(document.getElementById('mobileProfileButton'), openProfile);
+    bindActivation(document.getElementById('mobileProfileButton'), () => window.dispatchEvent(new CustomEvent('be:toggle-mobile-account-menu')));
     bindActivation(document.getElementById('mobileDrawerProfile'), openProfile);
     bindActivation(document.getElementById('mobileLogoutButton'), logout);
     document.querySelectorAll('[data-mobile-destination]').forEach(button => {
@@ -280,6 +284,10 @@
   }
 
   function syncActiveFromPublicView() {
+    if (document.body.classList.contains('community-page-active')) {
+      setActiveDestination('community');
+      return;
+    }
     const view = document.body.dataset.homeView || 'home';
     setActiveDestination(view === 'films' ? 'films' : view === 'videos' ? 'videos' : 'home');
   }

@@ -8580,6 +8580,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     } else if (destination === 'videos') {
       clickHomeView('videos');
       document.body.dataset.mobileCollection = 'videos';
+    } else if (destination === 'community') {
+      window.dispatchEvent(new CustomEvent('be:open-community'));
+      document.body.dataset.mobileCollection = 'community';
     } else if (destination === 'support') {
       document.querySelector('.home-nav-link[data-public-action="support"]')?.click();
     } else if (destination === 'fans') {
@@ -8670,6 +8673,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <button class="mobile-drawer-link active" type="button" data-mobile-destination="home">${icon('home')}<span>Home</span></button>
         <button class="mobile-drawer-link" type="button" data-mobile-destination="films">${icon('film')}<span>Filmes</span></button>
         <button class="mobile-drawer-link" type="button" data-mobile-destination="videos">${icon('video')}<span>Vídeos</span></button>
+        <button class="mobile-drawer-link" type="button" data-mobile-destination="community">${icon('fans')}<span>Comunidade</span></button>
         <button class="mobile-drawer-link" type="button" data-mobile-destination="support">${icon('support')}<span>Suporte</span></button>
         <button class="mobile-drawer-link" type="button" data-mobile-destination="fans">${icon('fans')}<span>Fãs que ajudaram o site</span></button>
       </nav>
@@ -8731,7 +8735,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     bindActivation(document.getElementById('mobileDrawerClose'), () => openDrawer(false));
     bindActivation(document.getElementById('mobileDrawerBackdrop'), () => openDrawer(false));
-    bindActivation(document.getElementById('mobileProfileButton'), openProfile);
+    bindActivation(document.getElementById('mobileProfileButton'), () => window.dispatchEvent(new CustomEvent('be:toggle-mobile-account-menu')));
     bindActivation(document.getElementById('mobileDrawerProfile'), openProfile);
     bindActivation(document.getElementById('mobileLogoutButton'), logout);
     document.querySelectorAll('[data-mobile-destination]').forEach(button => {
@@ -8804,6 +8808,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function syncActiveFromPublicView() {
+    if (document.body.classList.contains('community-page-active')) {
+      setActiveDestination('community');
+      return;
+    }
     const view = document.body.dataset.homeView || 'home';
     setActiveDestination(view === 'films' ? 'films' : view === 'videos' ? 'videos' : 'home');
   }
@@ -9534,6 +9542,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileTopFavorites:uniqueSyncRecords(source.profileTopFavorites,4),
         profileLovedAlbums:uniqueSyncRecords(source.profileLovedAlbums,3),
         profileSocialLinks:normalizeProfileSocialLinks(source.profileSocialLinks),
+        communityRankingsPublic:Object.prototype.hasOwnProperty.call(source,'communityRankingsPublic')?(source.communityRankingsPublic!==false&&String(source.communityRankingsPublic).toLowerCase()!=='false'):null,
         updatedAt:String(source.updatedAt||'')
       };
     }
@@ -9545,6 +9554,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileTopFavorites:readStorageJson('beProfileTopFavorites:'+String(userId||'guest'),[]),
         profileLovedAlbums:readStorageJson('beProfileLovedAlbums:'+String(userId||'guest'),[]),
         profileSocialLinks:readProfileSocialLinks(userId),
+        communityRankingsPublic:(function(){try{return localStorage.getItem('beCommunityRankingsPublic:'+String(userId||'guest'))!=='false';}catch(_){return true;}})(),
         updatedAt:beBackend.now()
       });
     }
@@ -9557,6 +9567,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileTopFavorites:remote.profileTopFavorites.concat(local.profileTopFavorites),
         profileLovedAlbums:remote.profileLovedAlbums.concat(local.profileLovedAlbums),
         profileSocialLinks:hasProfileSocialLinks(remote.profileSocialLinks)?remote.profileSocialLinks:local.profileSocialLinks,
+        communityRankingsPublic:remote.communityRankingsPublic===null?local.communityRankingsPublic:remote.communityRankingsPublic!==false,
         updatedAt:beBackend.now()
       });
     }
@@ -9591,6 +9602,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.setItem('beProfileTopFavorites:'+userId,JSON.stringify(data.profileTopFavorites));
         localStorage.setItem('beProfileLovedAlbums:'+userId,JSON.stringify(data.profileLovedAlbums));
         localStorage.setItem(profileSocialStorageKey(userId),JSON.stringify(data.profileSocialLinks));
+        localStorage.setItem('beCommunityRankingsPublic:'+String(userId),data.communityRankingsPublic===false?'false':'true');
         localStorage.setItem(syncedUserCacheKey(userId),JSON.stringify({data:data,updatedAt:data.updatedAt||beBackend.now()}));
         localStorage.setItem('beSyncedDataOwner',String(userId));
       }catch(error){console.warn('Não foi possível atualizar o cache sincronizado:',error);}
@@ -10704,6 +10716,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           try{localData.profileTopFavorites=JSON.parse(localStorage.getItem('beProfileTopFavorites:'+user.uid)||'[]');}catch(_){localData.profileTopFavorites=[];}
           try{localData.profileLovedAlbums=JSON.parse(localStorage.getItem('beProfileLovedAlbums:'+user.uid)||'[]');}catch(_){localData.profileLovedAlbums=[];}
           localData.profileSocialLinks=readProfileSocialLinks(user.uid);
+          try{localData.communityRankingsPublic=localStorage.getItem('beCommunityRankingsPublic:'+user.uid)!=='false';}catch(_){localData.communityRankingsPublic=true;}
           localData.crossDeviceSync={enabled:beBackend.mode==='supabase',state:settingsSyncState,lastMessage:settingsSyncMessage};
           var exportData={
             exportedAt:payload.exportedAt||beBackend.now(),

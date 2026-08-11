@@ -71,3 +71,5 @@ As migrations marcadas como `noop` são registros históricos intencionais e pre
 - `20260809173734_video_comment_moderation.sql` — adiciona exclusão do próprio comentário, denúncias de comentários e moderação administrativa de denúncias.
 
 - `20260809181425_video_comment_likes.sql` — adiciona curtidas nos comentários, contador público e estado de curtida do usuário autenticado.
+- `20260811031200_community_hub.sql` — adiciona a aba Comunidade: histórico privado de conteúdos iniciados, favoritos agregados, rankings públicos com opt-out e RPCs seguras para leitura/gravação.
+
