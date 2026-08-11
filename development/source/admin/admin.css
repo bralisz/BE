@@ -2038,3 +2038,151 @@ body.admin-mode .admin-logo-button img{
 }
 @media(max-width:900px){body.admin-mode .gallery-desktop-actions{display:none!important}}
 
+
+
+/* 11/08/2026 — correções finais de Galeria e editor de Conteúdos no mobile. */
+@media(max-width:800px){
+  /* Galeria: igual ao desktop, só botões de texto e sem cards/ícones de criação. */
+  body.admin-mode .gallery-title-row{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+    align-items:start!important;
+  }
+  body.admin-mode .gallery-title-row>div:first-child p,
+  body.admin-mode .gallery-title-row>div:first-child .dashboard-kicker{display:none!important}
+  body.admin-mode .gallery-desktop-actions{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    width:100%!important;
+    margin:0!important;
+    gap:8px!important;
+  }
+  body.admin-mode .gallery-desktop-actions .gallery-header-action{
+    width:100%!important;
+    min-width:0!important;
+    min-height:44px!important;
+    margin:0!important;
+    padding:0 10px!important;
+    border-radius:13px!important;
+    font-size:12px!important;
+    white-space:nowrap!important;
+  }
+  body.admin-mode .gallery-create-panel{display:none!important}
+
+  /* Editor de vídeos/conteúdo: tabs sempre legíveis e grupos ocultos respeitam a etapa ativa. */
+  body.admin-mode .ios-editor-stepbar-wrap{
+    width:100%!important;
+    min-width:0!important;
+    padding:7px 8px 9px!important;
+    overflow:hidden!important;
+  }
+  body.admin-mode .ios-editor-stepbar{
+    display:grid!important;
+    grid-auto-flow:column!important;
+    grid-auto-columns:minmax(108px,1fr)!important;
+    width:100%!important;
+    min-width:0!important;
+    gap:6px!important;
+    padding:0!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-snap-type:x proximity!important;
+    scrollbar-width:none!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  body.admin-mode .ios-editor-stepbar::-webkit-scrollbar{display:none!important}
+  body.admin-mode .ios-editor-stepbar button{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:44px!important;
+    padding:6px 9px!important;
+    gap:0!important;
+    border:1px solid rgba(255,255,255,.07)!important;
+    border-radius:12px!important;
+    background:rgba(255,255,255,.035)!important;
+    color:rgba(235,235,245,.68)!important;
+    scroll-snap-align:start!important;
+    overflow:hidden!important;
+  }
+  body.admin-mode .ios-editor-stepbar button>span{display:none!important}
+  body.admin-mode .ios-editor-stepbar button strong{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    color:inherit!important;
+    opacity:1!important;
+    font-size:11px!important;
+    font-weight:700!important;
+    line-height:1.15!important;
+    text-align:center!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  body.admin-mode .ios-editor-stepbar button.active{
+    border-color:rgba(10,132,255,.32)!important;
+    background:rgba(10,132,255,.16)!important;
+    color:#fff!important;
+  }
+  body.admin-mode .content-editor-fields>.editor-field-group[hidden]{display:none!important}
+  body.admin-mode .content-editor-fields>.editor-field-group.is-step-active{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+  body.admin-mode .admin-content.admin-editor-active .content-editor-fields{
+    width:100%!important;
+    min-width:0!important;
+    padding:10px!important;
+    overflow:visible!important;
+  }
+  body.admin-mode .content-editor-fields>.editor-field-group{
+    width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:15px 13px!important;
+  }
+  body.admin-mode .content-editor-action-buttons{
+    display:grid!important;
+    grid-template-columns:1fr 1fr 1.2fr!important;
+    width:100%!important;
+    gap:7px!important;
+  }
+  body.admin-mode .content-editor-action-buttons .a-btn,
+  body.admin-mode .content-editor-action-buttons .editor-cancel-button,
+  body.admin-mode #footerCancelButton{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:44px!important;
+    padding:0 8px!important;
+    color:#fff!important;
+    opacity:1!important;
+    font-size:12px!important;
+    font-weight:700!important;
+    line-height:1!important;
+    text-indent:0!important;
+    white-space:nowrap!important;
+  }
+  body.admin-mode .content-editor-action-buttons .editor-footer-preview-button{
+    background:#fff!important;
+    border-color:#fff!important;
+    color:#111!important;
+  }
+  body.admin-mode .content-editor-action-buttons .editor-save-button{
+    background:#0a84ff!important;
+    border-color:#0a84ff!important;
+    color:#fff!important;
+  }
+}
+@media(max-width:420px){
+  body.admin-mode .ios-editor-stepbar{grid-auto-columns:minmax(102px,1fr)!important}
+  body.admin-mode .gallery-desktop-actions .gallery-header-action{font-size:11.5px!important;padding:0 7px!important}
+}
