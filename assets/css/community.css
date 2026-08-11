@@ -218,7 +218,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 .community-page-inner{width:min(100%,1920px);margin:0 auto}
 .community-hero-banner{margin:0 0 18px}
 .community-hero-banner-frame{position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.12);border-radius:0 0 34px 34px;background:#080a0f;box-shadow:0 24px 70px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.06)}
-.community-hero-banner-frame>img{display:block;width:100%;height:clamp(320px,44vw,700px);object-fit:cover;object-position:center 38%}
+.community-hero-banner-frame>img{display:block;width:100%;height:clamp(360px,47vw,760px);object-fit:cover;object-position:center 31%}
 .community-hero-banner-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(2,4,7,.10) 0%,rgba(2,4,7,.30) 56%,rgba(2,4,7,.82) 100%);pointer-events:none}
 .community-content-shell{position:relative;z-index:2;width:min(100%,1840px);margin:-72px auto 0;padding:34px 0 0;border-radius:34px 34px 0 0;background:linear-gradient(180deg,rgba(4,6,9,.98) 0%,#020406 100%);box-shadow:0 -10px 42px rgba(0,0,0,.22)}
 .community-page-heading{position:relative;z-index:3}
@@ -238,7 +238,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
   .community-page{padding-top:0}
   .community-hero-banner{margin:0 0 14px}
   .community-hero-banner-frame{border-radius:0 0 26px 26px}
-  .community-hero-banner-frame>img{height:250px;object-position:center}
+  .community-hero-banner-frame>img{height:280px;object-position:center 34%}
   .community-content-shell{margin:-40px auto 0;padding-top:24px;border-radius:26px 26px 0 0}
   .community-rules-tag-row{gap:10px;padding:11px 12px}
   .community-rules-place{min-width:62px;font-size:12px}
