@@ -1475,9 +1475,12 @@ body.admin-preview-open{overflow:hidden}
 
     const normalizeSectionMatchValue = value => String(value || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const videoMatchesSection = (item, section) => {
-      if (String(item?.sectionId || '') && String(item.sectionId) === String(section?.id || '')) return true;
+      const sectionId = String(item?.sectionId || '').trim();
+      if (sectionId) return sectionId === String(section?.id || '').trim();
       const aliases = [section?.id, section?.title, section?.category, section?.slug, section?.name].map(normalizeSectionMatchValue).filter(Boolean);
-      return [item?.type, item?.category, item?.sectionName, item?.sectionSearch].map(normalizeSectionMatchValue).filter(Boolean).some(value => aliases.includes(value));
+      // Para a lista “Sem seção”, só considere vínculos explícitos/legados de seção.
+      // Campos genéricos como type/category podem coincidir por acaso com o nome da seção.
+      return [item?.sectionName, item?.sectionSearch].map(normalizeSectionMatchValue).filter(Boolean).some(value => aliases.includes(value));
     };
     let unlinkedCountData = null;
     try {
