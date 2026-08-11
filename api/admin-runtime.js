@@ -12,6 +12,7 @@ function __bootAdminCommunityTags(){
   ];
   var tagMapLoaded=false;
   var tagMap={};
+  var enhanceQueued=false;
 
   function injectStyles(){
     if(document.getElementById('be-admin-community-tag-style'))return;
@@ -97,8 +98,22 @@ function __bootAdminCommunityTags(){
     var summary=currentSummaryElement(row);
     if(!summary)return;
     var meta=currentMeta(userId);
-    if(!meta){summary.innerHTML='';summary.hidden=true;return;}
-    summary.innerHTML='<span class="user-tag-chip '+meta.className+'">'+meta.label+'</span>';
+    var nextKey=meta?meta.key:'';
+    if(String(summary.dataset.communityTag||'')===nextKey){
+      if(meta && summary.hidden)summary.hidden=false;
+      if(!meta && !summary.hidden)summary.hidden=true;
+      return;
+    }
+    summary.dataset.communityTag=nextKey;
+    if(!meta){
+      if(summary.firstChild)summary.replaceChildren();
+      summary.hidden=true;
+      return;
+    }
+    var chip=document.createElement('span');
+    chip.className='user-tag-chip '+meta.className;
+    chip.textContent=meta.label;
+    summary.replaceChildren(chip);
     summary.hidden=false;
   }
 
@@ -109,6 +124,8 @@ function __bootAdminCommunityTags(){
   async function saveTag(userId, tagKey, row, wrap){
     var client=getClient();
     if(!client){toast('Não foi possível conectar ao banco.', true);return;}
+    if(wrap.dataset.saving==='1')return;
+    wrap.dataset.saving='1';
     wrap.querySelectorAll('.user-tag-choice, .user-tag-toggle').forEach(function(button){button.disabled=true;});
     try{
       var response=await client.rpc('admin_set_community_tag',{p_user_id:userId,p_tag:tagKey});
@@ -122,7 +139,8 @@ function __bootAdminCommunityTags(){
     }catch(error){
       toast((error && error.message) || 'Não foi possível atualizar a tag.', true);
     }finally{
-      wrap.querySelectorAll('.user-tag-choice, .user-tag-toggle').forEach(function(button){button.disabled=false;});
+      delete wrap.dataset.saving;
+      if(wrap.isConnected)wrap.querySelectorAll('.user-tag-choice, .user-tag-toggle').forEach(function(button){button.disabled=false;});
     }
   }
 
@@ -138,7 +156,12 @@ function __bootAdminCommunityTags(){
       button.className='user-tag-choice';
       button.dataset.tagValue=tag.key;
       button.innerHTML='<span>'+tag.label+'</span><span class="user-tag-chip '+tag.className+'">'+tag.label+'</span>';
-      button.addEventListener('click', function(){saveTag(userId, tag.key, row, wrap);});
+      button.addEventListener('click', function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        if(wrap.dataset.saving==='1')return;
+        saveTag(userId, tag.key, row, wrap);
+      });
       panel.appendChild(button);
     });
     toggle.addEventListener('click', function(event){
@@ -175,10 +198,28 @@ function __bootAdminCommunityTags(){
     });
   }
 
+  function scheduleEnhance(){
+    if(enhanceQueued)return;
+    enhanceQueued=true;
+    requestAnimationFrame(function(){
+      enhanceQueued=false;
+      enhanceRows();
+    });
+  }
+
   function boot(){
     injectStyles();
-    loadTagMap().finally(function(){ enhanceRows(); });
-    var observer=new MutationObserver(function(){ enhanceRows(); });
+    loadTagMap().finally(scheduleEnhance);
+    var observer=new MutationObserver(function(records){
+      var relevant=records.some(function(record){
+        return Array.prototype.some.call(record.addedNodes||[],function(node){
+          if(!node||node.nodeType!==1)return false;
+          if(node.matches&&node.matches('.user-tag-current,.user-tag-assign,.user-tag-chip'))return false;
+          return Boolean((node.matches&&node.matches('.users-table,.users-table tbody,.users-table tr'))||(node.querySelector&&node.querySelector('.users-table,.users-table tbody,.users-table tr')));
+        });
+      });
+      if(relevant)scheduleEnhance();
+    });
     observer.observe(document.body,{childList:true,subtree:true});
     document.addEventListener('click', function(event){
       if(event.target && event.target.closest('.user-tag-assign'))return;
