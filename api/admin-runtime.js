@@ -334,8 +334,34 @@ module.exports = async function protectedAdminRuntime(req, res) {
       },
       body: '{}'
     });
-    const allowed = await json(adminResponse);
-    if (!adminResponse.ok || allowed !== true) return res.status(404).end();
+    const rpcAllowed = await json(adminResponse);
+    let allowed = adminResponse.ok && rpcAllowed === true;
+
+    // Mantém a mesma tolerância do front-end: se a RPC is_admin estiver
+    // temporariamente indisponível (por exemplo, cache de schema/migração),
+    // confirma a role diretamente no perfil do próprio usuário. A consulta
+    // continua autenticada pelo token do usuário e respeita as políticas RLS.
+    if (!allowed && !adminResponse.ok) {
+      const profileResponse = await fetch(
+        `${url}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=role&limit=1`,
+        {
+          headers: {
+            apikey: publishableKey,
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json'
+          }
+        }
+      );
+      const profileRows = await json(profileResponse);
+      allowed = Boolean(
+        profileResponse.ok &&
+        Array.isArray(profileRows) &&
+        profileRows[0] &&
+        profileRows[0].role === 'admin'
+      );
+    }
+
+    if (!allowed) return res.status(404).end();
 
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     if (req.method === 'HEAD') return res.status(200).end();
