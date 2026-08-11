@@ -363,6 +363,14 @@ body.admin-preview-open{overflow:hidden}
     series: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="13" rx="3"></rect><path d="m9 21 3-3 3 3"></path><path d="M8 9h8M8 13h5"></path></svg>',
     news: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V6l10-2v12"></path><circle cx="6" cy="18" r="3"></circle><circle cx="16" cy="16" r="3"></circle></svg>'
   };
+  const ADMIN_DASHBOARD_ICONS = {
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+    saved: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg>',
+    viewed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+    donations: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path><path d="m9.5 12 1.7 1.7 3.6-4"></path></svg>',
+    update: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path></svg>'
+  };
+
   const CONTENT_CATEGORIES = [
     ['videos','Vídeos',ADMIN_CONTENT_ICONS.videos],
     ['movies','Filmes',ADMIN_CONTENT_ICONS.movies],
@@ -1168,23 +1176,23 @@ body.admin-preview-open{overflow:hidden}
           <h1>Painel de conteúdo</h1>
           <div class="dashboard-metrics-grid dashboard-metrics-grid-four">
             <article class="dashboard-metric-card primary-metric">
-              <div class="dashboard-metric-label"><i>♙</i><span>Novos usuários hoje</span></div>
+              <div class="dashboard-metric-label"><i>${ADMIN_DASHBOARD_ICONS.users}</i><span>Novos usuários hoje</span></div>
               <strong class="dashboard-metric-big-number">${Number(dashboardMetrics?.todayUsers || 0).toLocaleString('pt-BR')}</strong>
               <small>contas criadas hoje</small>
             </article>
 
-            ${contentMetricCard('Mais salvo', overallMetric('topSaved'), 'salvamentos', '♡')}
-            ${contentMetricCard('Mais visto', overallMetric('topViewed'), 'visualizações', '◉')}
+            ${contentMetricCard('Mais salvo', overallMetric('topSaved'), 'salvamentos', ADMIN_DASHBOARD_ICONS.saved)}
+            ${contentMetricCard('Mais visto', overallMetric('topViewed'), 'visualizações', ADMIN_DASHBOARD_ICONS.viewed)}
 
             <article class="dashboard-metric-card donation-approved-card">
-              <div class="dashboard-metric-label"><i>✓</i><span>Doações para ONGs</span></div>
+              <div class="dashboard-metric-label"><i>${ADMIN_DASHBOARD_ICONS.donations}</i><span>Doações para ONGs</span></div>
               <span class="dashboard-approved-badge">Aprovado</span>
               <strong class="dashboard-metric-big-number">${Number(dashboardMetrics?.approvedDonations || 0).toLocaleString('pt-BR')}</strong>
               <small>doações confirmadas com sucesso</small>
             </article>
 
             <article class="dashboard-metric-card dashboard-update-release-card ${currentDeploymentReleased ? 'is-released' : ''}">
-              <div class="dashboard-metric-label"><i>↻</i><span>Atualização do site</span></div>
+              <div class="dashboard-metric-label"><i>${ADMIN_DASHBOARD_ICONS.update}</i><span>Atualização do site</span></div>
               <label class="dashboard-update-checkbox" for="dashboardReleaseUpdate">
                 <input id="dashboardReleaseUpdate" type="checkbox" ${currentDeploymentReleased ? 'checked' : ''} ${hasStagedDeployment ? '' : 'disabled'}>
                 <span class="dashboard-update-checkbox-box" aria-hidden="true"></span>
@@ -5858,6 +5866,151 @@ body.admin-mode .admin-logo-button img{
 @media(max-width:430px){
   body.admin-mode .users-mobile-moderation-actions{grid-template-columns:1fr!important}
   body.admin-mode .users-mobile-moderation-actions>button{min-height:56px!important}
+}
+`;
+  document.head.appendChild(style);
+})();
+
+
+/* 11/08/2026 — Dashboard mobile horizontal, editor mobile legível e preview centralizado */
+(()=>{
+  'use strict';
+  if(document.getElementById('be-admin-dashboard-mobile-preview-final-20260811')) return;
+  const style=document.createElement('style');
+  style.id='be-admin-dashboard-mobile-preview-final-20260811';
+  style.textContent=`
+/* Ícones das métricas: traço iOS consistente */
+body.admin-mode .dashboard-metric-label i{
+  width:32px!important;height:32px!important;flex:0 0 32px!important;
+  display:grid!important;place-items:center!important;border-radius:10px!important;
+  background:rgba(10,132,255,.15)!important;color:#67a8ff!important;
+}
+body.admin-mode .dashboard-metric-label i svg{width:17px!important;height:17px!important;display:block!important;stroke:currentColor!important}
+
+/* Preview de Conteúdos: sempre centralizado e inteiramente dentro da viewport */
+body.admin-mode .content-live-preview{
+  position:fixed!important;
+  inset:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))!important;
+  width:auto!important;height:auto!important;max-width:1180px!important;max-height:none!important;
+  margin:auto!important;padding:16px!important;box-sizing:border-box!important;
+  overflow-x:hidden!important;overflow-y:auto!important;
+  border-radius:24px!important;
+  transform:none!important;transform-origin:center!important;
+}
+body.admin-mode .admin-content.content-preview-open .content-live-preview{transform:none!important}
+body.admin-mode .preview-pane-heading{
+  position:sticky!important;top:-16px!important;z-index:12!important;
+  margin:-16px -16px 14px!important;padding:16px!important;
+  min-width:0!important;background:rgba(20,20,22,.96)!important;
+  -webkit-backdrop-filter:blur(18px)!important;backdrop-filter:blur(18px)!important;
+  border-bottom:1px solid rgba(255,255,255,.08)!important;
+}
+body.admin-mode .preview-pane-heading>div{min-width:0!important}
+body.admin-mode .preview-pane-actions{flex:0 0 auto!important;min-width:0!important}
+body.admin-mode .editor-site-preview{width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;box-sizing:border-box!important}
+body.admin-mode .editor-preview-hero,body.admin-mode .editor-preview-rail{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
+body.admin-mode .editor-preview-copy{width:min(88%,560px)!important;max-width:100%!important;box-sizing:border-box!important}
+body.admin-mode .editor-preview-logo{max-width:100%!important;overflow-wrap:anywhere!important}
+
+@media(max-width:800px){
+  /* Visão geral: cards em carrossel horizontal, sem empilhar */
+  body.admin-mode .dashboard-metrics-grid.dashboard-metrics-grid-four{
+    display:flex!important;grid-template-columns:none!important;
+    width:calc(100% + 12px)!important;margin-right:-12px!important;
+    gap:10px!important;overflow-x:auto!important;overflow-y:hidden!important;
+    padding:2px 12px 10px 0!important;
+    scroll-snap-type:x mandatory!important;scroll-padding-left:0!important;
+    -webkit-overflow-scrolling:touch!important;scrollbar-width:none!important;
+  }
+  body.admin-mode .dashboard-metrics-grid.dashboard-metrics-grid-four::-webkit-scrollbar{display:none!important}
+  body.admin-mode .dashboard-metrics-grid-four .dashboard-metric-card{
+    flex:0 0 min(82vw,310px)!important;width:min(82vw,310px)!important;
+    min-height:172px!important;padding:14px!important;border-radius:20px!important;
+    scroll-snap-align:start!important;scroll-snap-stop:always!important;
+  }
+  body.admin-mode .dashboard-metric-media{height:84px!important}
+  body.admin-mode .dashboard-metric-big-number{font-size:31px!important}
+
+  /* Editor de Conteúdos: opções/etapas visíveis como tabs, sem botões vazios */
+  body.admin-mode .admin-content.admin-editor-active{padding:8px 8px 18px!important}
+  body.admin-mode .admin-content.admin-editor-active .content-editor-modal.inline{
+    width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;
+    overflow:hidden!important;border-radius:20px!important;
+  }
+  body.admin-mode .content-editor-header{min-height:auto!important;padding:14px 14px 10px!important}
+  body.admin-mode .content-editor-heading h2{font-size:22px!important}
+  body.admin-mode .content-editor-heading p{display:none!important}
+  body.admin-mode .ios-editor-stepbar-wrap{
+    padding:7px 8px 8px!important;overflow:hidden!important;
+    border-bottom:1px solid rgba(255,255,255,.07)!important;
+  }
+  body.admin-mode .ios-editor-stepbar{
+    display:flex!important;width:100%!important;gap:6px!important;
+    overflow-x:auto!important;overflow-y:hidden!important;padding:0!important;
+    scrollbar-width:none!important;-webkit-overflow-scrolling:touch!important;
+  }
+  body.admin-mode .ios-editor-stepbar::-webkit-scrollbar{display:none!important}
+  body.admin-mode .ios-editor-stepbar button{
+    flex:0 0 auto!important;min-height:38px!important;padding:0 10px!important;gap:7px!important;
+    border-radius:12px!important;background:rgba(255,255,255,.035)!important;
+    color:rgba(235,235,245,.62)!important;
+  }
+  body.admin-mode .ios-editor-stepbar button strong{display:block!important;font-size:10.5px!important;max-width:150px!important;white-space:nowrap!important}
+  body.admin-mode .ios-editor-stepbar button>span{width:22px!important;height:22px!important;flex:0 0 22px!important}
+  body.admin-mode .ios-editor-stepbar button.active{background:rgba(10,132,255,.16)!important;color:#fff!important}
+  body.admin-mode .admin-content.admin-editor-active .modern-content-form{height:auto!important;overflow:visible!important}
+  body.admin-mode .admin-content.admin-editor-active .content-editor-layout{height:auto!important;min-height:0!important;overflow:visible!important}
+  body.admin-mode .admin-content.admin-editor-active .content-editor-fields{
+    height:auto!important;max-height:none!important;overflow:visible!important;padding:10px!important;
+  }
+  body.admin-mode .content-editor-fields>.editor-field-group{
+    width:100%!important;min-height:0!important;margin:0!important;padding:15px 13px!important;
+    border-radius:18px!important;gap:14px!important;
+  }
+  body.admin-mode .content-editor-actions{
+    position:sticky!important;bottom:0!important;z-index:20!important;min-height:auto!important;
+    margin-top:8px!important;padding:8px!important;border-radius:16px!important;
+  }
+  body.admin-mode .content-editor-action-buttons{
+    display:grid!important;grid-template-columns:1fr 1fr 1.25fr!important;gap:7px!important;width:100%!important;
+  }
+  body.admin-mode .content-editor-action-buttons .a-btn,
+  body.admin-mode .content-editor-action-buttons .editor-cancel-button{
+    width:100%!important;min-width:0!important;min-height:44px!important;flex:auto!important;
+    padding:0 8px!important;font-size:11px!important;color:#fff!important;
+  }
+  body.admin-mode .content-editor-action-buttons .editor-cancel-button{
+    font-size:11px!important;background:rgba(255,255,255,.07)!important;
+  }
+  body.admin-mode .content-editor-action-buttons .editor-cancel-button:before{content:none!important;display:none!important}
+  body.admin-mode .content-editor-action-buttons .editor-footer-preview-button{background:#fff!important;color:#111!important;border-color:#fff!important}
+
+  /* Preview mobile: viewport completa, sem corte lateral */
+  body.admin-mode .content-live-preview{
+    inset:0!important;
+    width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;
+    margin:0!important;padding:10px!important;border:0!important;border-radius:0!important;
+    transform:none!important;box-sizing:border-box!important;overflow-y:auto!important;
+  }
+  body.admin-mode .admin-content.content-preview-open .content-live-preview{transform:none!important}
+  body.admin-mode .preview-pane-heading{
+    top:-10px!important;margin:-10px -10px 12px!important;padding:12px 10px!important;
+  }
+  body.admin-mode .preview-pane-heading span{font-size:9px!important}
+  body.admin-mode .preview-pane-heading strong{font-size:15px!important;line-height:1.2!important}
+  body.admin-mode .preview-pane-heading i{display:none!important}
+  body.admin-mode .preview-drawer-close{width:38px!important;height:38px!important;flex:0 0 38px!important}
+  body.admin-mode .editor-site-preview{border-radius:18px!important}
+  body.admin-mode .editor-preview-hero{min-height:360px!important}
+  body.admin-mode .editor-preview-copy{width:100%!important;max-width:100%!important;padding:22px 18px!important}
+  body.admin-mode .editor-preview-logo{font-size:clamp(30px,10vw,44px)!important;line-height:.98!important}
+  body.admin-mode .editor-preview-rail{padding:16px!important}
+  body.admin-mode .editor-preview-card{width:100%!important;max-width:330px!important}
+}
+@media(max-width:430px){
+  body.admin-mode .dashboard-metrics-grid-four .dashboard-metric-card{flex-basis:84vw!important;width:84vw!important}
+  body.admin-mode .ios-editor-stepbar button strong{max-width:122px!important}
+  body.admin-mode .content-editor-action-buttons{grid-template-columns:.9fr 1fr 1.2fr!important}
 }
 `;
   document.head.appendChild(style);
