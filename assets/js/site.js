@@ -8020,7 +8020,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       positionSharedTabIndicator(activeTabButton);
     };
 
-    setActiveTab(logo);
+    // Não força a Home quando a navegação é inicializada depois de uma rota pública.
+    // Em conexões mais lentas, o Suporte pode abrir antes do catálogo terminar de
+    // preparar a topbar; nesse caso o antigo setActiveTab(logo) movia o indicador
+    // branco de volta para a logo.
+    const initialTabButton = document.body.classList.contains('support-page-active')
+      ? supportButton
+      : (document.body.classList.contains('community-page-active') ? communityButton : logo);
+    setActiveTab(initialTabButton || logo);
     window.addEventListener('be:set-home-tab', event => {
       const requested = String(event?.detail?.tab || '').toLowerCase();
       let button = null;
