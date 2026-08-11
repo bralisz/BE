@@ -218,9 +218,9 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 .community-page-inner{width:min(100%,1920px);margin:0 auto}
 .community-hero-banner{margin:0 0 18px}
 .community-hero-banner-frame{position:relative;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.12);border-radius:0 0 34px 34px;background:#080a0f;box-shadow:0 24px 70px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.06)}
-.community-hero-banner-frame>img{display:block;width:100%;height:clamp(330px,35vw,560px);object-fit:cover;object-position:center 27%}
+.community-hero-banner-frame>img{display:block;width:100%;height:clamp(330px,35vw,560px);object-fit:cover;object-position:center 42%}
 .community-hero-banner-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(2,4,7,.10) 0%,rgba(2,4,7,.30) 56%,rgba(2,4,7,.82) 100%);pointer-events:none}
-.community-content-shell{position:relative;z-index:2;width:min(100%,1840px);margin:-138px auto 0;padding:18px 0 0;border-radius:34px 34px 0 0;background:linear-gradient(180deg,rgba(4,6,9,.98) 0%,#020406 100%);box-shadow:0 -10px 42px rgba(0,0,0,.22)}
+.community-content-shell{position:relative;z-index:2;width:min(100%,1840px);margin:-165px auto 0;padding:18px 0 0;border-radius:34px 34px 0 0;background:linear-gradient(180deg,rgba(4,6,9,.98) 0%,#020406 100%);box-shadow:0 -10px 42px rgba(0,0,0,.22)}
 .community-page-heading{position:relative;z-index:3;margin-top:-10px;margin-bottom:clamp(28px,3vw,42px)}
 .community-rules-panel p{margin:0 0 9px}
 .community-rules-panel p:last-of-type{margin-bottom:11px}
