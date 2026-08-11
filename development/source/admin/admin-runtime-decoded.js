@@ -17,6 +17,21 @@ body.admin-mode .admin-topbar .admin-nav{background:transparent!important;border
 `;
 document.head.appendChild(beAdminTopbarCleanStyle);
 
+const beAdminGalleryDesktopActionsStyle=document.createElement('style');
+beAdminGalleryDesktopActionsStyle.id='be-admin-gallery-desktop-actions';
+beAdminGalleryDesktopActionsStyle.textContent=`
+.gallery-desktop-actions{display:none}
+@media(min-width:901px){
+  body.admin-mode .gallery-title-row{align-items:center!important}
+  body.admin-mode .gallery-desktop-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-left:auto}
+  body.admin-mode .gallery-header-action{min-height:42px;padding:0 17px;border-radius:13px;white-space:nowrap;background:rgba(255,255,255,.065);border:1px solid rgba(255,255,255,.11);box-shadow:none}
+  body.admin-mode .gallery-header-action:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.17);transform:none}
+  body.admin-mode .gallery-create-panel{display:none!important}
+}
+@media(max-width:900px){body.admin-mode .gallery-desktop-actions{display:none!important}}
+`;
+document.head.appendChild(beAdminGalleryDesktopActionsStyle);
+
 
 /* Layout v3 do editor de conteúdo */
 (() => {
@@ -2100,9 +2115,12 @@ body.admin-preview-open{overflow:hidden}
 
   async function galleryPage() {
     const content = $('#adminContent');
-    content.innerHTML = `<div class="admin-title-row gallery-title-row"><div><span class="dashboard-kicker">Imagens dos perfis</span><h1>Galeria</h1><p>Adicione avatares e banners diretamente pelo painel superior.</p></div></div><section class="gallery-create-panel"><button type="button" class="gallery-create-card" id="newGalleryAvatar"><i>◯</i><span><strong>Adicionar avatar</strong><small>Imagem quadrada para o perfil</small></span><b>＋</b></button><button type="button" class="gallery-create-card is-banner" id="newGalleryBanner"><i>▰</i><span><strong>Adicionar banner</strong><small>Imagem horizontal de fundo</small></span><b>＋</b></button></section><div class="gallery-admin-toolbar"><input class="a-input" id="gallerySearch" placeholder="Buscar categoria…"><select class="a-select" id="galleryStatus"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="galleryAdminBoard"><div class="admin-inline-skeleton"><i></i><i></i><i></i></div></div>`;
-    $('#newGalleryAvatar').onclick = () => openEditor('gallery', null, { itemType: 'avatar' });
-    $('#newGalleryBanner').onclick = () => openEditor('gallery', null, { itemType: 'banner', category: 'Banners de perfil' });
+    content.innerHTML = `<div class="admin-title-row gallery-title-row"><div><span class="dashboard-kicker">Imagens dos perfis</span><h1>Galeria</h1><p>Adicione avatares e banners diretamente pelo painel superior.</p></div><div class="gallery-desktop-actions" aria-label="Adicionar imagens à galeria"><button type="button" class="a-btn gallery-header-action" data-gallery-create="avatar">Adicionar avatar</button><button type="button" class="a-btn gallery-header-action" data-gallery-create="banner">Adicionar banner</button></div></div><section class="gallery-create-panel"><button type="button" class="gallery-create-card" data-gallery-create="avatar"><i>◯</i><span><strong>Adicionar avatar</strong><small>Imagem quadrada para o perfil</small></span><b>＋</b></button><button type="button" class="gallery-create-card is-banner" data-gallery-create="banner"><i>▰</i><span><strong>Adicionar banner</strong><small>Imagem horizontal de fundo</small></span><b>＋</b></button></section><div class="gallery-admin-toolbar"><input class="a-input" id="gallerySearch" placeholder="Buscar categoria…"><select class="a-select" id="galleryStatus"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="galleryAdminBoard"><div class="admin-inline-skeleton"><i></i><i></i><i></i></div></div>`;
+    content.querySelectorAll('[data-gallery-create]').forEach(button => {
+      button.onclick = () => button.dataset.galleryCreate === 'banner'
+        ? openEditor('gallery', null, { itemType: 'banner', category: 'Banners de perfil' })
+        : openEditor('gallery', null, { itemType: 'avatar' });
+    });
     const items = await db.list('gallery', { orderBy: 'order', direction: 'asc' });
     const itemType = item => String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
     const draw = () => {

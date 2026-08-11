@@ -2027,3 +2027,14 @@ body.admin-mode .admin-logo-button img{
   body.admin-mode .users-mobile-moderation-actions>button{min-height:56px!important}
 }
 
+/* 11/08/2026 — Galeria: ações compactas dentro do cabeçalho no desktop */
+.gallery-desktop-actions{display:none}
+@media(min-width:901px){
+  body.admin-mode .gallery-title-row{align-items:center!important}
+  body.admin-mode .gallery-desktop-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-left:auto}
+  body.admin-mode .gallery-header-action{min-height:42px;padding:0 17px;border-radius:13px;white-space:nowrap;background:rgba(255,255,255,.065);border:1px solid rgba(255,255,255,.11);box-shadow:none}
+  body.admin-mode .gallery-header-action:hover{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.17);transform:none}
+  body.admin-mode .gallery-create-panel{display:none!important}
+}
+@media(max-width:900px){body.admin-mode .gallery-desktop-actions{display:none!important}}
+
