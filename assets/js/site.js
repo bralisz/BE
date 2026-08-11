@@ -11904,6 +11904,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         else button.removeAttribute('aria-current');
       }
     });
+    // Keep the shared desktop tab indicator in sync with the support route.
+    // The main navigation controller owns the white capsule; updating only the
+    // local classes lets it snap back to Home on resize/content-ready events.
+    window.dispatchEvent(new CustomEvent('be:set-home-tab',{detail:{tab:active?'support':'home'}}));
     positionIndicator(active?supportButton:logoButton);
   }
 
