@@ -1509,6 +1509,12 @@ body.admin-preview-open{overflow:hidden}
       return mainButton + unlinkedButton;
     }).join('')}</div>`;
     const featuredBlock = `<div class="content-featured-block"><small>Vitrine da home</small><button class="content-category-link featured-link ${isFeatured ? 'active' : ''}" data-content-category="featured"><i>★</i><span>Destaque</span><b>${counts.featured || 0}</b></button></div>`;
+    const activeCategoryMeta = isFeatured
+      ? ['featured', 'Destaque', '★']
+      : isUnlinkedVideos
+        ? ['unlinked', 'Sem seção', '⌁']
+        : (CONTENT_CATEGORIES.find(([key]) => key === active) || CONTENT_CATEGORIES[0]);
+    const mobileCategoryToggle = `<button type="button" class="content-mobile-category-toggle" id="contentMobileCategoryToggle" aria-expanded="false"><span class="content-mobile-category-current"><i>${activeCategoryMeta[2]}</i><strong>${esc(activeCategoryMeta[1])}</strong></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>`;
     const pageDescription = isFeatured
       ? 'Escolha os conteúdos que aparecem no destaque principal da home.'
       : isAlbums
@@ -1518,8 +1524,15 @@ body.admin-preview-open{overflow:hidden}
           : isVideoFolders
             ? 'Os vídeos estão organizados pelas seções às quais foram vinculados.'
             : 'Gerencie os conteúdos separados por categoria.';
-    content.innerHTML = `<div class="admin-title-row content-title-row"><div><span class="dashboard-kicker">Conteúdos</span><h1>${esc(label)}</h1><p>${pageDescription}</p></div><button class="a-btn primary" id="newContent">${buttonText}</button></div><section class="content-manager"><aside class="content-category-sidebar"><h2>Categorias</h2>${sidebarCategories}${featuredBlock}</aside><div class="content-category-panel"><div class="toolbar"><input class="a-input" id="search" placeholder="${isFeatured ? 'Buscar destaque…' : (isVideoFolders ? 'Buscar seção ou vídeo…' : (isUnlinkedVideos ? 'Buscar vídeo sem seção…' : 'Buscar por título…'))}"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="admin-inline-skeleton"><i></i><i></i><i></i></div></div></div></section>`;
+    content.innerHTML = `<div class="admin-title-row content-title-row"><div><span class="dashboard-kicker">Conteúdos</span><h1>${esc(label)}</h1><p>${pageDescription}</p></div><button class="a-btn primary" id="newContent">${buttonText}</button></div><section class="content-manager"><aside class="content-category-sidebar"><h2>Categorias</h2>${mobileCategoryToggle}<div class="content-mobile-category-options">${sidebarCategories}${featuredBlock}</div></aside><div class="content-category-panel"><div class="toolbar"><input class="a-input" id="search" placeholder="${isFeatured ? 'Buscar destaque…' : (isVideoFolders ? 'Buscar seção ou vídeo…' : (isUnlinkedVideos ? 'Buscar vídeo sem seção…' : 'Buscar por título…'))}"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div><div id="list"><div class="admin-inline-skeleton"><i></i><i></i><i></i></div></div></div></section>`;
     if ($('#newContent')) $('#newContent').onclick = () => isFeatured ? openEditor('featured') : (isAlbums ? openEditor('news') : (isUnlinkedVideos ? openEditor('videos') : chooseContentCategory()));
+    const categorySidebar = content.querySelector('.content-category-sidebar');
+    const categoryToggle = $('#contentMobileCategoryToggle');
+    if (categorySidebar && categoryToggle) categoryToggle.onclick = () => {
+      const willOpen = !categorySidebar.classList.contains('mobile-open');
+      categorySidebar.classList.toggle('mobile-open', willOpen);
+      categoryToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    };
     document.querySelectorAll('[data-content-category]').forEach(button => button.onclick = () => {
       const next = button.dataset.contentCategory;
       go(next === 'featured' ? 'featured' : 'contents/' + next);
@@ -1939,11 +1952,17 @@ body.admin-preview-open{overflow:hidden}
     const content = $('#adminContent');
     content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando usuários…</div>';
     const adminClient = beBackend && beBackend.client;
-    const [rawUsers, featuredFanResult] = await Promise.all([
+    const [rawUsers, featuredFanResult, reportCountResult] = await Promise.all([
       db.list('users', { orderBy: 'createdAt', direction: 'desc' }),
       adminClient && typeof adminClient.rpc === 'function'
         ? (async () => {
             try { return await adminClient.rpc('get_admin_featured_fans'); }
+            catch (error) { return { data: [], error }; }
+          })()
+        : Promise.resolve({ data: [], error: null }),
+      adminClient && typeof adminClient.rpc === 'function'
+        ? (async () => {
+            try { return await adminClient.rpc('get_admin_comment_reports', { p_limit: 250 }); }
             catch (error) { return { data: [], error }; }
           })()
         : Promise.resolve({ data: [], error: null })
@@ -1955,9 +1974,21 @@ body.admin-preview-open{overflow:hidden}
       banned:userProfileIsBanned(item),
       isFeaturedFan:featuredFanIds.has(String(item.id))
     }));
+    const reportCount = Array.isArray(reportCountResult?.data) ? reportCountResult.data.length : 0;
+    const bannedCount = () => items.filter(item => userProfileIsBanned(item)).length;
+    const usersMobileOverview = `<section class="users-mobile-overview" aria-label="Resumo de usuários"><div class="users-mobile-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1></div><div class="users-mobile-members" aria-label="Total de membros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><strong data-users-member-count>${items.length}</strong><span>membros</span></div></div><div class="users-mobile-moderation-actions"><button type="button" data-users-moderation="reports" aria-label="Abrir denúncias"><span class="users-mobile-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path><path d="M12 7v4"></path><path d="M12 15h.01"></path></svg></span><span><strong>Denúncias</strong><small>Reports</small></span><b>${reportCount}</b></button><button type="button" data-users-moderation="bans" aria-label="Abrir banimentos"><span class="users-mobile-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m8.5 15.5 7-7"></path></svg></span><span><strong>Banimentos</strong><small>Acessos</small></span><b data-users-ban-count>${bannedCount()}</b></button></div></section>`;
 
-    content.innerHTML = `<div class="users-moderation-entry"><button type="button" id="openUsersModeration" class="users-moderation-entry-button"><span><strong>Denúncias e banimentos</strong><small>Revisar comentários denunciados e acessos bloqueados</small></span><i aria-hidden="true">›</i></button></div><div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte os dados e controle o acesso das contas cadastradas.</p></div><div class="users-total"><strong>${items.length}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
+    content.innerHTML = `${usersMobileOverview}<div class="users-moderation-entry"><button type="button" id="openUsersModeration" class="users-moderation-entry-button"><span><strong>Denúncias e banimentos</strong><small>Revisar comentários denunciados e acessos bloqueados</small></span><i aria-hidden="true">›</i></button></div><div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte os dados e controle o acesso das contas cadastradas.</p></div><div class="users-total"><strong>${items.length}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
     $('#openUsersModeration').onclick = () => openUsersModerationPanel();
+    document.querySelectorAll('[data-users-moderation]').forEach(button => button.onclick = () => openUsersModerationPanel(button.dataset.usersModeration));
+    const refreshUsersOverview = () => {
+      const memberCount = content.querySelector('[data-users-member-count]');
+      const banCount = content.querySelector('[data-users-ban-count]');
+      if (memberCount) memberCount.textContent = String(items.length);
+      if (banCount) banCount.textContent = String(bannedCount());
+      const desktopCount = content.querySelector('.users-total strong');
+      if (desktopCount) desktopCount.textContent = String(items.length);
+    };
 
     const draw = () => {
       const search = String($('#userSearch').value || '').trim().toLowerCase();
@@ -2033,6 +2064,7 @@ body.admin-preview-open{overflow:hidden}
           const persistedProfile = await db.get('users', profile.id).catch(() => null);
           if (persistedProfile) Object.assign(profile, persistedProfile, { banned:userProfileIsBanned(persistedProfile) });
           draw();
+          refreshUsersOverview();
           toast(profile.banned ? 'Usuário banido.' : 'Acesso restaurado.');
           await logAction(profile.banned ? 'user_banned' : 'user_unbanned', 'users', profile.id, `${profile.banned ? 'Usuário banido' : 'Usuário desbanido'}: ${profile.email || profile.id}`);
           if (payload.warning) console.warn(payload.warning);
@@ -2050,7 +2082,7 @@ body.admin-preview-open{overflow:hidden}
           await adminUserRequest('delete', profile.id);
           items = items.filter(item => String(item.id) !== String(profile.id));
           draw();
-          $('.users-total strong').textContent = String(items.length);
+          refreshUsersOverview();
           toast('Conta apagada permanentemente.');
           await logAction('user_deleted', 'users', profile.id, `Conta apagada: ${profile.email || profile.id}`);
         } catch (error) {
@@ -2063,6 +2095,7 @@ body.admin-preview-open{overflow:hidden}
     $('#userSearch').oninput = draw;
     $('#userStatus').onchange = draw;
     draw();
+    refreshUsersOverview();
   }
 
   async function galleryPage() {
@@ -5699,6 +5732,107 @@ body.admin-mode .admin-logo-button img{
   html body.admin-mode .admin-topbar .admin-nav button:not([data-route="dashboard"]):not([data-route="notifications"]){padding:0 10px!important;gap:6px!important}
   body.admin-mode .admin-tab-label{font-size:10.5px!important}
   body.admin-mode .admin-content{padding-left:10px!important;padding-right:10px!important}
+}
+`;
+  document.head.appendChild(style);
+})();
+
+
+/* Runtime overrides: conteúdo expansível e usuários mobile */
+(() => {
+  if (document.getElementById('be-admin-mobile-content-users-20260811')) return;
+  const style = document.createElement('style');
+  style.id = 'be-admin-mobile-content-users-20260811';
+  style.textContent = `
+/* 11/08/2026 — Conteúdo mobile em menu expansível + resumo compacto de Usuários */
+.content-mobile-category-toggle{display:none}
+.content-mobile-category-options{display:contents}
+.users-mobile-overview{display:none}
+@media(max-width:800px){
+  /* Conteúdos: uma linha iOS com seta; opções aparecem somente ao tocar */
+  body.admin-mode .content-category-sidebar{
+    display:block!important;
+    overflow:visible!important;
+    margin:0 0 12px!important;
+    padding:6px!important;
+    border:1px solid rgba(255,255,255,.10)!important;
+    border-radius:20px!important;
+    background:rgba(28,28,30,.74)!important;
+    -webkit-backdrop-filter:blur(20px) saturate(140%)!important;
+    backdrop-filter:blur(20px) saturate(140%)!important;
+  }
+  body.admin-mode .content-mobile-category-toggle{
+    width:100%!important;
+    min-height:58px!important;
+    padding:7px 10px!important;
+    border:0!important;
+    border-radius:15px!important;
+    background:rgba(255,255,255,.07)!important;
+    color:#fff!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    text-align:left!important;
+    font:inherit!important;
+    cursor:pointer!important;
+    -webkit-tap-highlight-color:transparent!important;
+  }
+  body.admin-mode .content-mobile-category-current{display:flex!important;align-items:center!important;gap:11px!important;min-width:0!important}
+  body.admin-mode .content-mobile-category-current>i{
+    width:38px!important;height:38px!important;flex:0 0 38px!important;display:grid!important;place-items:center!important;
+    border-radius:11px!important;background:#0a84ff!important;color:#fff!important;font-style:normal!important;font-size:17px!important
+  }
+  body.admin-mode .content-mobile-category-current>strong{font-size:16px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+  body.admin-mode .content-mobile-category-toggle>svg{width:20px!important;height:20px!important;flex:0 0 20px!important;color:#a9a9af!important;transition:transform .22s ease!important}
+  body.admin-mode .content-category-sidebar.mobile-open .content-mobile-category-toggle>svg{transform:rotate(180deg)!important}
+  body.admin-mode .content-mobile-category-options{display:none!important;padding:6px 2px 2px!important}
+  body.admin-mode .content-category-sidebar.mobile-open .content-mobile-category-options{display:block!important}
+  body.admin-mode .content-mobile-category-options .content-category-list{display:grid!important;grid-template-columns:1fr!important;gap:3px!important;width:100%!important;padding-top:5px!important}
+  body.admin-mode .content-mobile-category-options .content-category-link{
+    width:100%!important;min-width:0!important;min-height:48px!important;padding:0 11px!important;border-radius:13px!important;display:grid!important;
+    grid-template-columns:34px minmax(0,1fr) auto!important;gap:10px!important;text-align:left!important
+  }
+  body.admin-mode .content-mobile-category-options .content-category-link i{width:34px!important;height:34px!important;border-radius:10px!important;display:grid!important;place-items:center!important;background:rgba(255,255,255,.07)!important}
+  body.admin-mode .content-mobile-category-options .content-category-link.active{background:rgba(10,132,255,.15)!important}
+  body.admin-mode .content-mobile-category-options .content-category-link.active i{background:#0a84ff!important}
+  body.admin-mode .content-mobile-category-options .content-featured-block{margin-top:5px!important;padding-top:5px!important;border-top:1px solid rgba(255,255,255,.08)!important}
+  body.admin-mode .content-mobile-category-options .content-featured-block>small{display:block!important;padding:5px 10px!important;color:rgba(235,235,245,.5)!important;font-size:10px!important;text-transform:uppercase!important;letter-spacing:.07em!important}
+
+  /* Usuários: remove o card enorme de moderação e usa atalhos compactos */
+  body.admin-mode .users-moderation-entry,
+  body.admin-mode .users-title-row{display:none!important}
+  body.admin-mode .users-mobile-overview{display:block!important;margin:2px 0 12px!important}
+  body.admin-mode .users-mobile-title-row{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:12px!important;padding:2px 2px 10px!important}
+  body.admin-mode .users-mobile-title-row h1{margin:3px 0 0!important;font-size:30px!important;line-height:1!important;letter-spacing:-.04em!important}
+  body.admin-mode .users-mobile-members{
+    min-width:104px!important;height:48px!important;padding:0 11px!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:15px!important;
+    display:grid!important;grid-template-columns:22px auto!important;grid-template-rows:24px 14px!important;column-gap:7px!important;align-content:center!important;
+    background:rgba(255,255,255,.055)!important;color:#fff!important
+  }
+  body.admin-mode .users-mobile-members svg{grid-row:1/3!important;width:20px!important;height:20px!important;align-self:center!important;color:#a8a8ae!important}
+  body.admin-mode .users-mobile-members strong{font-size:15px!important;line-height:24px!important}
+  body.admin-mode .users-mobile-members span{font-size:9px!important;line-height:12px!important;color:#8e8e93!important;text-transform:uppercase!important;letter-spacing:.04em!important}
+  body.admin-mode .users-mobile-moderation-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  body.admin-mode .users-mobile-moderation-actions>button{
+    min-height:62px!important;padding:8px 10px!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:17px!important;
+    display:grid!important;grid-template-columns:38px minmax(0,1fr) auto!important;align-items:center!important;gap:9px!important;
+    background:rgba(255,255,255,.045)!important;color:#fff!important;text-align:left!important;font:inherit!important;cursor:pointer!important;
+    -webkit-tap-highlight-color:transparent!important
+  }
+  body.admin-mode .users-mobile-moderation-actions>button:active{transform:scale(.985)!important;background:rgba(255,255,255,.08)!important}
+  body.admin-mode .users-mobile-action-icon{width:38px!important;height:38px!important;border-radius:12px!important;display:grid!important;place-items:center!important;background:rgba(10,132,255,.15)!important;color:#5aa7ff!important}
+  body.admin-mode .users-mobile-action-icon svg{width:20px!important;height:20px!important}
+  body.admin-mode .users-mobile-moderation-actions>button>span:nth-child(2){display:grid!important;gap:2px!important;min-width:0!important}
+  body.admin-mode .users-mobile-moderation-actions>button strong{font-size:12px!important;white-space:nowrap!important}
+  body.admin-mode .users-mobile-moderation-actions>button small{font-size:9px!important;color:#8e8e93!important}
+  body.admin-mode .users-mobile-moderation-actions>button>b{min-width:24px!important;height:24px!important;padding:0 6px!important;border-radius:999px!important;display:grid!important;place-items:center!important;background:rgba(255,255,255,.08)!important;color:#d8d8dc!important;font-size:10px!important}
+  body.admin-mode .users-admin-card{padding:10px 0 0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+  body.admin-mode .users-toolbar{gap:8px!important;margin-bottom:12px!important}
+}
+@media(max-width:430px){
+  body.admin-mode .users-mobile-moderation-actions{grid-template-columns:1fr!important}
+  body.admin-mode .users-mobile-moderation-actions>button{min-height:56px!important}
 }
 `;
   document.head.appendChild(style);
