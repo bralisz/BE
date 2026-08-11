@@ -2,7 +2,7 @@
   'use strict';
   if(String(location.hash||'').startsWith('#/admin')) return;
 
-  var state={period:'month',profileExpanded:false,loading:false,lastPayload:null,requestId:0};
+  var state={period:'month',loading:false,lastPayload:null,requestId:0};
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
@@ -50,11 +50,12 @@
       +  '<header class="community-page-heading"><h1>Comunidade</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
       +  '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +  '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
-      +  '<section class="community-section"><div class="community-section-head"><h2>Perfis em destaque</h2><button class="community-section-action" id="communityProfileExpand" type="button">Ver ranking completo</button></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div></div></section>'
+      +  '<section class="community-section"><div class="community-section-head"><h2>Perfis em destaque</h2></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
       +  '<section class="community-section"><div class="community-section-head"><h2>Quem mais assistiu</h2><div class="community-watch-toolbar" role="group" aria-label="Período do ranking"><button class="community-watch-filter active" type="button" data-community-period="month">Este mês</button><button class="community-watch-filter" type="button" data-community-period="all">Todos os tempos</button></div></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityWatchRanking"></div><div class="community-ranking-own" id="communityOwnWatch" hidden></div></div></section>'
+      +  '<div class="community-supporters-cta-wrap"><button class="community-supporters-cta" id="communitySupportersButton" type="button">Ver fãs que apoiam o site</button></div>'
       +'</div>';
     main.appendChild(page);
-    page.querySelector('#communityProfileExpand').addEventListener('click',function(){state.profileExpanded=!state.profileExpanded;this.textContent=t(state.profileExpanded?'Mostrar menos':'Ver ranking completo');refreshCommunity();});
+    page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(true);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
     page.querySelectorAll('[data-community-period]').forEach(function(button){button.addEventListener('click',function(){state.period=button.dataset.communityPeriod==='all'?'all':'month';page.querySelectorAll('[data-community-period]').forEach(function(item){item.classList.toggle('active',item===button);});refreshCommunity();});});
     applyI18n(page);
     return page;
@@ -132,6 +133,7 @@
     card.dataset.itemId=data.itemId;card.dataset.recordId=data.recordId;card.dataset.openDetail='true';card.dataset.title=data.title;card.dataset.description=data.description;card.dataset.year=data.year;card.dataset.duration=data.duration;card.dataset.contentUrl=data.contentUrl;card.dataset.imageUrl=data.imageUrl;card.dataset.bannerUrl=data.bannerUrl;card.dataset.logoUrl=data.logoUrl;card.dataset.collection=data.collection;card.dataset.sectionId=data.sectionId;card.dataset.sectionName=data.sectionName;card.dataset.category=data.category||'';card.dataset.contentType=data.contentType||'';card.dataset.mediaType=data.mediaType||'';card.dataset.streamingAvailability=Array.isArray(data.streamingAvailability)?data.streamingAvailability.join(','):String(data.streamingAvailability||'');card.dataset.streamingLinks=typeof data.streamingLinks==='string'?data.streamingLinks:JSON.stringify(data.streamingLinks||{});card.dataset.preserveTitle=data.preserveTitle?'true':'false';
     var image=document.createElement('img');image.className='video-card-thumbnail';image.loading='lazy';image.decoding='async';image.alt=data.title;image.src=mediaUrl(data.imageUrl||data.bannerUrl||'/assets/images/pages/billie-home-banner-default.webp');card.appendChild(image);
     if(data.logoUrl&&data.logoUrl!=='#'&&String(data.collection).toLowerCase()!=='videos'){var logoSlot=document.createElement('span');logoSlot.className='video-card-logo-slot';logoSlot.setAttribute('aria-hidden','true');var logo=document.createElement('img');logo.className='video-card-logo';logo.loading='lazy';logo.decoding='async';logo.alt='';logo.src=mediaUrl(data.logoUrl);logo.addEventListener('error',function(){logoSlot.remove();},{once:true});logoSlot.appendChild(logo);card.appendChild(logoSlot);}
+    if(Number(row&&row.saves)>0){var social=document.createElement('span');social.className='community-favorite-social';social.setAttribute('aria-label',t('{count} curtidas',{count:Number(row.saves)||0}));var faces=document.createElement('span');faces.className='community-favorite-faces';var avatars=Array.isArray(row.fanAvatars)?row.fanAvatars.slice(0,3):[];avatars.forEach(function(person){var face=document.createElement('span');face.className='community-favorite-face';var faceImg=document.createElement('img');faceImg.loading='lazy';faceImg.decoding='async';faceImg.alt='';faceImg.src=window.BETVResolveAvatar?window.BETVResolveAvatar(person&&person.avatarUrl):mediaUrl(person&&person.avatarUrl||'/assets/images/profile/default-avatar.png');face.appendChild(faceImg);faces.appendChild(face);});social.appendChild(faces);var extra=Math.max(0,(Number(row.saves)||0)-avatars.length);var count=document.createElement('span');count.className='community-favorite-count';count.textContent=extra>0?'+'+extra:String(Number(row.saves)||0);social.appendChild(count);card.appendChild(social);}
     card.addEventListener('click',function(event){event.preventDefault();closeCommunity(true);if(typeof window.beOpenSavedContent==='function')window.beOpenSavedContent(data);else location.assign('/'+encodeURIComponent(data.itemId));});
     return card;
   }
@@ -162,8 +164,22 @@
     });
   }
 
+  function renderOwnRanking(hostId,item,kind,visibility){
+    var own=document.getElementById(hostId);if(!own)return;own.innerHTML='';
+    if(!currentUser()){own.hidden=true;return;}
+    if(visibility===false){own.hidden=false;own.className='community-ranking-own is-message';own.textContent=t('Você não está participando dos rankings públicos.');return;}
+    if(!item||!item.position){own.hidden=false;own.className='community-ranking-own is-message';own.textContent=kind==='watch'?t('Sua posição aparecerá aqui após você assistir a algum conteúdo.'):t('Ainda não há perfis suficientes para este ranking.');return;}
+    own.hidden=false;own.className='community-ranking-own';
+    var row=document.createElement('div');row.className='community-ranking-own-row';
+    var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position);row.appendChild(pos);
+    row.appendChild(createRankAvatar(item.avatarUrl,item.displayName));
+    var copy=document.createElement('span');copy.className='community-rank-copy';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');copy.appendChild(strong);row.appendChild(copy);
+    var value=document.createElement('span');value.className='community-rank-value';value.textContent=kind==='watch'?formatWatchTime(item.watchSeconds):(Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0}));row.appendChild(value);
+    own.appendChild(row);
+  }
+
   function renderWatchRanking(rows,myPosition,visibility){
-    var host=document.getElementById('communityWatchRanking');var own=document.getElementById('communityOwnWatch');if(!host||!own)return;host.innerHTML='';
+    var host=document.getElementById('communityWatchRanking');if(!host)return;host.innerHTML='';
     if(!Array.isArray(rows)||!rows.length){var empty=document.createElement('div');empty.className='community-ranking-empty';empty.textContent=t('Ainda não há atividade suficiente para este ranking.');host.appendChild(empty);}
     else rows.forEach(function(item){
       var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+(Number(item.position)<=3?' top-three':'');
@@ -172,10 +188,7 @@
       var value=document.createElement('span');value.className='community-rank-value';value.textContent=formatWatchTime(item.watchSeconds);button.appendChild(value);
       button.addEventListener('click',function(){closeCommunity(true);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});host.appendChild(button);
     });
-    if(!currentUser()){own.hidden=true;own.textContent='';return;}
-    if(visibility===false){own.hidden=false;own.textContent=t('Você não está participando dos rankings públicos.');return;}
-    if(myPosition&&myPosition.position){own.hidden=false;own.textContent=t('Sua posição: #{position} · {time}',{position:myPosition.position,time:formatWatchTime(myPosition.watchSeconds)});return;}
-    own.hidden=false;own.textContent=t('Sua posição aparecerá aqui após você assistir a algum conteúdo.');
+    renderOwnRanking('communityOwnWatch',myPosition,'watch',visibility);
   }
 
   function renderPayload(payload){
@@ -185,6 +198,7 @@
     renderRail('communityContinueContent',user?(payload.recent||[]):[],recentEmpty);
     renderRail('communityFavoritesContent',payload.fanFavorites||[],t('Os favoritos da comunidade aparecerão aqui.'));
     renderProfileRanking(payload.profileRanking||[]);
+    renderOwnRanking('communityOwnProfile',payload.myProfilePosition,'profile',payload.rankingVisibility!==false);
     renderWatchRanking(payload.watchRanking||[],payload.myWatchPosition,payload.rankingVisibility!==false);
     if(user&&payload.rankingVisibility!==null&&payload.rankingVisibility!==undefined)writeRankingPreference(user.uid,payload.rankingVisibility!==false);
     applyI18n(page);
@@ -195,12 +209,12 @@
     var requestId=++state.requestId;
     state.loading=true;
     var period=state.period;
-    var profileLimit=state.profileExpanded?5000:5;
+    var profileLimit=30;
     try{
       await Promise.resolve(window.beBackend&&window.beBackend.ready);
       var client=window.beBackend&&window.beBackend.client;
       if(!client||typeof client.rpc!=='function')throw new Error('community_backend_unavailable');
-      var result=await client.rpc('get_community_overview',{p_watch_period:period,p_profile_limit:profileLimit,p_watch_limit:5});
+      var result=await client.rpc('get_community_overview',{p_watch_period:period,p_profile_limit:profileLimit,p_watch_limit:30});
       if(result&&result.error)throw result.error;
       if(requestId!==state.requestId||!document.body.classList.contains('community-page-active'))return;
       renderPayload(result&&result.data&&typeof result.data==='object'?result.data:{});
@@ -209,7 +223,7 @@
       console.warn('Comunidade:',error&&error.message?error.message:error);
       renderRail('communityContinueContent',[],currentUser()?t('Não foi possível carregar seu histórico agora.'):t('Entre na sua conta para ver os vídeos assistidos recentemente.'));
       renderRail('communityFavoritesContent',[],t('Não foi possível carregar os favoritos da comunidade agora.'));
-      renderProfileRanking([]);renderWatchRanking([],null,readRankingPreference(currentUser()&&currentUser().uid));
+      renderProfileRanking([]);renderOwnRanking('communityOwnProfile',null,'profile',readRankingPreference(currentUser()&&currentUser().uid));renderWatchRanking([],null,readRankingPreference(currentUser()&&currentUser().uid));
     }finally{if(requestId===state.requestId)state.loading=false;}
   }
 
