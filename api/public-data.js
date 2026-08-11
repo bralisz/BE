@@ -25,6 +25,34 @@ const BILLIE_SETTING_FIELDS = new Set([
   'sourceMode', 'spotify', 'title', 'translations', 'website', 'xUrl', 'youtube'
 ]);
 
+const upstreamResponseCache = new Map();
+
+function normalizeLocale(value) {
+  const locale = String(value || 'pt-br').trim().toLowerCase();
+  if (locale === 'en' || locale === 'en-us') return 'en-us';
+  if (locale === 'es') return 'es';
+  if (locale === 'fr') return 'fr';
+  return 'pt-br';
+}
+
+function upstreamTtl(name, id) {
+  if (name === 'settings' && id === 'site') return 30 * 1000;
+  if (name === 'movies') return 2 * 60 * 1000;
+  return 5 * 60 * 1000;
+}
+
+async function cachedUpstream(key, ttl, loader) {
+  const now = Date.now();
+  const cached = upstreamResponseCache.get(key);
+  if (cached && cached.expiresAt > now) return cached.promise;
+  const promise = Promise.resolve().then(loader).catch(error => {
+    upstreamResponseCache.delete(key);
+    throw error;
+  });
+  upstreamResponseCache.set(key, { promise, expiresAt: now + ttl });
+  return promise;
+}
+
 function config() {
   return {
     url: String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL).replace(/\/$/, ''),
@@ -256,39 +284,52 @@ async function fetchLegacyRows(name, id) {
   return Array.isArray(rows) ? rows : [];
 }
 
-async function fetchRows(name, id) {
+async function fetchRowsUncached(name, id, locale) {
   if (name === 'settings') {
     if (!id || !['site', 'billie-eilish', 'ong'].includes(id)) throw new Error('invalid_setting');
     try {
-      const privateSetting = await fetchPrivateSettingWithServiceRole(id);
-      if (privateSetting) {
-        const sanitized = sanitizeSettings(id, privateSetting);
-        return sanitized ? [sanitized] : [];
-      }
-    } catch (_) {}
-    try {
-      const payload = await callRpc('get_public_site_setting', { p_id: id });
+      const payload = await callRpc('get_public_site_setting_v2', { p_id: id, p_locale: locale });
       const value = Array.isArray(payload) ? payload[0] : payload;
       const sanitized = sanitizeSettings(id, value);
       return sanitized ? [sanitized] : [];
     } catch (_) {
-      // Compatibilidade temporária para permitir publicar o código antes da migration de segurança.
-      const rows = await fetchLegacyRows(name, id);
-      const value = rows[0]?.data || null;
-      const sanitized = sanitizeSettings(id, value);
-      return sanitized ? [sanitized] : [];
+      try {
+        const payload = await callRpc('get_public_site_setting', { p_id: id });
+        const value = Array.isArray(payload) ? payload[0] : payload;
+        const sanitized = sanitizeSettings(id, value);
+        return sanitized ? [sanitized] : [];
+      } catch (_) {
+        const rows = await fetchLegacyRows(name, id);
+        const value = rows[0]?.data || null;
+        const sanitized = sanitizeSettings(id, value);
+        return sanitized ? [sanitized] : [];
+      }
     }
   }
   if (!ALLOWED_COLLECTIONS.has(name)) throw new Error('invalid_collection');
   try {
-    const payload = await callRpc('get_public_content_items', { p_collection: name, p_id: id || null });
+    const payload = await callRpc('get_public_content_items_v2', {
+      p_collection: name,
+      p_id: id || null,
+      p_locale: locale
+    });
     const rows = Array.isArray(payload) ? payload : [];
     return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
   } catch (_) {
-    // Depois que a migration for aplicada, este fallback deixa de ter acesso pela RLS.
-    const rows = await fetchLegacyRows(name, id);
-    return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
+    try {
+      const payload = await callRpc('get_public_content_items', { p_collection: name, p_id: id || null });
+      const rows = Array.isArray(payload) ? payload : [];
+      return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
+    } catch (_) {
+      const rows = await fetchLegacyRows(name, id);
+      return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
+    }
   }
+}
+
+async function fetchRows(name, id, locale) {
+  const key = `${name}:${id || ''}:${locale}`;
+  return cachedUpstream(key, upstreamTtl(name, id), () => fetchRowsUncached(name, id, locale));
 }
 
 module.exports = async function publicData(req, res) {
@@ -299,18 +340,21 @@ module.exports = async function publicData(req, res) {
   try {
     const name = String(Array.isArray(req.query?.name) ? req.query.name[0] : req.query?.name || '').trim().toLowerCase();
     const id = String(Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id || '').trim();
+    const locale = normalizeLocale(Array.isArray(req.query?.locale) ? req.query.locale[0] : req.query?.locale);
     if (!name || name.length > 40 || id.length > 100) return res.status(400).end();
-    const rows = await fetchRows(name, id);
+    const rows = await fetchRows(name, id, locale);
     const payload = id ? (rows[0] || null) : rows;
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     // Nunca mantém uma resposta vazia em cache: um vazio transitório fazia a Home
     // interpretar que não existiam seções e ocultar todo o catálogo.
     const isSiteReleaseSetting = name === 'settings' && id === 'site';
-    res.setHeader('Cache-Control', isSiteReleaseSetting
-      ? 'no-store, no-cache, must-revalidate'
-      : name === 'movies'
-        ? (rows.length ? 'public, max-age=0, s-maxage=5, stale-while-revalidate=10' : 'no-store')
-        : (rows.length ? 'public, max-age=0, s-maxage=60, stale-while-revalidate=300' : 'no-store'));
+    res.setHeader('Cache-Control', rows.length
+      ? (isSiteReleaseSetting
+          ? 'public, max-age=0, s-maxage=30, stale-while-revalidate=60'
+          : name === 'movies'
+            ? 'public, max-age=0, s-maxage=120, stale-while-revalidate=300'
+            : 'public, max-age=0, s-maxage=300, stale-while-revalidate=600')
+      : 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     if (req.method === 'HEAD') return res.status(200).end();

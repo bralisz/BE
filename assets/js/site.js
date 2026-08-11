@@ -811,42 +811,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function ensureTranslatedRecords(collection, records) {
-    const slug = activeLocaleSlug();
     const values = Array.isArray(records) ? records : [];
-    const localizedNow = values.map(record => localizeContentRecord(record, collection));
-    if (slug === 'pt-br' || !TRANSLATABLE_COLLECTIONS.has(String(collection || '')) || !supabaseClient?.functions?.invoke) {
-      return localizedNow;
-    }
-
-    const pending = [];
-    values.forEach(record => {
-      if (!recordNeedsTranslation(record, slug, collection)) return;
-      const key = `${String(collection)}:${slug}:${String(record.id)}`;
-      if (translationWarmupInFlight.has(key)) return;
-      translationWarmupInFlight.add(key);
-      pending.push({ record, key });
-    });
-    if (pending.length) {
-      // Nunca bloqueia a renderização do site esperando a API de tradução.
-      // Também evita enfileirar o mesmo registro várias vezes quando diferentes
-      // componentes pedem a mesma coleção durante o carregamento da página.
-      window.setTimeout(async () => {
-        try {
-          for (let offset = 0; offset < pending.length; offset += 20) {
-            const batch = pending.slice(offset, offset + 20);
-            const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-              body: { collection: String(collection), ids: batch.map(item => String(item.record.id)), locales: [slug] }
-            });
-            if (result?.error) console.warn('Um lote de tradução não foi concluído:', result.error.message || result.error);
-          }
-        } catch (error) {
-          console.warn('Tradução automática indisponível; o conteúdo continua carregando normalmente:', error?.message || error);
-        } finally {
-          pending.forEach(item => translationWarmupInFlight.delete(item.key));
-        }
-      }, 0);
-    }
-    return localizedNow;
+    // Public visitors only consume translations already persisted in Supabase.
+    // New/edited records are translated by the database trigger, and admins can
+    // still force a refresh via queueRecordTranslation. This prevents every
+    // visitor from invoking the Edge Function for the same records.
+    return values.map(record => localizeContentRecord(record, collection));
   }
 
   function queueRecordTranslation(collection, id) {
@@ -931,18 +901,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function readPublicData(name, id = '') {
     const normalizedName = String(name || '');
     const normalizedId = String(id || '');
-    const cacheKey = `${normalizedName}:${normalizedId}`;
+    const locale = activeLocaleSlug();
+    const cacheKey = `${normalizedName}:${normalizedId}:${locale}`;
     const nowMs = Date.now();
     const cached = publicDataMemoryCache.get(cacheKey);
     if (cached && cached.expiresAt > nowMs) return cached.promise;
 
-    const params = new URLSearchParams({ name: normalizedName });
+    const params = new URLSearchParams({ name: normalizedName, locale });
     if (normalizedId) params.set('id', normalizedId);
+    // Keep one response per collection/locale in memory. Public-data also has an
+    // edge cache, so reloads and simultaneous visitors do not fan out into many
+    // identical Supabase reads.
     const ttl = normalizedName === 'settings' && normalizedId === 'site'
       ? 30000
       : normalizedName === 'movies'
-        ? 30000
-        : 120000;
+        ? 120000
+        : 300000;
     const promise = fetch(`/api/public-data?${params.toString()}`, {
       method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
@@ -957,10 +931,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function invalidatePublicDataCache(name, id = '') {
-    const prefix = `${String(name || '')}:`;
-    const exact = `${prefix}${String(id || '')}`;
-    publicDataMemoryCache.delete(prefix);
-    publicDataMemoryCache.delete(exact);
+    const normalizedName = String(name || '');
+    const normalizedId = String(id || '');
+    for (const key of Array.from(publicDataMemoryCache.keys())) {
+      if (!key.startsWith(`${normalizedName}:`)) continue;
+      if (normalizedId && !key.startsWith(`${normalizedName}:${normalizedId}:`)) continue;
+      publicDataMemoryCache.delete(key);
+    }
   }
 
   async function listAllProfileRows() {
