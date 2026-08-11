@@ -6757,25 +6757,19 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
   transform:none!important;
 }
 
-/* Suporte: estado visual determinístico da aba ativa.
-   O indicador compartilhado usa variáveis calculadas por JS; caso outro módulo
-   atualize essas variáveis no mesmo frame, ele podia permanecer em x=0 (logo).
-   Na rota de Suporte, a própria aba recebe o pill branco e o indicador móvel é
-   ocultado, eliminando a disputa visual. */
+/* Suporte: mantém o mesmo indicador compartilhado das outras abas.
+   Assim o pill branco desliza de Comunidade/Filmes/Vídeos até Suporte em vez
+   de desaparecer e reaparecer diretamente sobre o botão. O JS continua
+   sincronizando Suporte como a aba ativa, evitando o retorno indevido à logo. */
 body.support-page-active .home-nav-leading::before{
-  opacity:0!important;
+  opacity:1!important;
 }
 body.support-page-active #logoBtn,
-body.support-page-active #logoBtn.active{
-  background:transparent!important;
-  box-shadow:none!important;
-}
+body.support-page-active #logoBtn.active,
 body.support-page-active .home-nav-link[data-public-action="support"],
 body.support-page-active .home-nav-link[data-public-action="support"].active{
-  background:#fff!important;
-  color:#151616!important;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)!important;
-  border-radius:999px!important;
+  background:transparent!important;
+  box-shadow:none!important;
 }
 
 /* Perfil mobile 2.118: banner compacto, avatar sobreposto, ações e conteúdos salvos. */

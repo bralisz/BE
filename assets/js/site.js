@@ -12589,6 +12589,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       url.pathname='/';
       url.hash='';
       history.pushState({beRoute:'home'},'',url.pathname+(url.search||''));
+
+      // O X da página de notificações navega para a Home. Sincroniza também
+      // o estado interno e o indicador compartilhado da navbar, evitando que
+      // "Comunidade" continue marcada depois que o catálogo da Home reaparece.
+      document.body.dataset.homeView='home';
+      try{window.dispatchEvent(new CustomEvent('be:home-entered'));}catch(_){ }
+      try{window.dispatchEvent(new CustomEvent('be:set-home-tab',{detail:{tab:'home'}}));}catch(_){ }
     }
     document.title='Billie Eilish TV';
   }
