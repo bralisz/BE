@@ -15011,7 +15011,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function restoreCatalogView(snapshot) {
     var view = String(snapshot && snapshot.homeView || '').toLowerCase();
     if (!view || view === 'home') return;
-    if (!['films','movies','series','videos'].includes(view)) return;
+    if (!['films','movies','series','videos','community'].includes(view)) return;
     if (document.body.classList.contains('detail-page-active') ||
         document.body.classList.contains('section-catalog-active') ||
         document.body.classList.contains('profile-page-active') ||
@@ -15021,7 +15021,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         document.body.classList.contains('legal-page-active') ||
         document.body.classList.contains('billie-page-active') ||
         document.body.classList.contains('login-mode')) return;
-    if (String(document.body.dataset.homeView || '').toLowerCase() === view) return;
+    if (String(document.body.dataset.homeView || '').toLowerCase() === view &&
+        (view !== 'community' || document.body.classList.contains('community-page-active'))) return;
+
+    // A Comunidade é uma superfície SPA e não usa um botão data-home-view.
+    // Ao aplicar uma atualização, restaura explicitamente essa superfície em
+    // vez de deixar o boot padrão da Home prevalecer.
+    if (view === 'community') {
+      try {
+        if (window.BETVCommunity && typeof window.BETVCommunity.open === 'function') window.BETVCommunity.open();
+        else window.dispatchEvent(new CustomEvent('be:open-community'));
+      } catch (_) {}
+      return;
+    }
+
     var button = document.querySelector('[data-home-view="' + view + '"]');
     if (!button || typeof button.click !== 'function') return;
     try { button.dataset.beHistoryMode = 'none'; } catch (_) {}
