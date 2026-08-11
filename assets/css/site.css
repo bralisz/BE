@@ -16109,13 +16109,13 @@ body.profile-page-active .profile-page-likes-received{
 
 
 /* Perfil 2026-08-11 — tag de comunidade */
-.profile-page-award-tags{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:4px;margin-bottom:2px}
+.profile-page-award-tags{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:5px;margin-bottom:2px}
 .profile-page-award-tags[hidden]{display:none!important}
-.profile-award-tag{display:inline-flex;align-items:center;justify-content:center;min-height:20px;padding:0 8px;border:1px solid transparent;border-radius:6px;font-size:10px;font-weight:850;line-height:1;letter-spacing:-.01em;box-shadow:none;white-space:nowrap}
+.profile-award-tag{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:0 10px;border:1px solid transparent;border-radius:7px;font-size:12px;font-weight:850;line-height:1;letter-spacing:-.01em;box-shadow:none;white-space:nowrap}
 .profile-award-tag.is-avocado{color:#75c4ff;background:#10283d;border-color:rgba(93,174,255,.18)}
 .profile-award-tag.is-eyelash{color:#f3cf63;background:#332b12;border-color:rgba(243,207,99,.17)}
 .profile-award-tag.is-blohsh{color:#74d995;background:#153121;border-color:rgba(116,217,149,.16)}
 @media(max-width:760px){
-  .profile-page-award-tags{margin-top:2px;gap:5px}
-  .profile-award-tag{min-height:19px;padding:0 7px;font-size:9.5px}
+  .profile-page-award-tags{margin-top:3px;gap:6px}
+  .profile-award-tag{min-height:22px;padding:0 9px;font-size:11px}
 }
