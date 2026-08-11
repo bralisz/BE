@@ -77,9 +77,86 @@ async function deleteWithServiceRole(url, serviceRoleKey, userId) {
   } catch (_) {}
 }
 
+
+async function accountStatusHandler(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Método não permitido.' });
+  }
+
+  const { url, publishableKey, serviceRoleKey } = getConfig();
+  const authorization = String(req.headers.authorization || '');
+  const accessToken = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
+
+  if (!accessToken) {
+    return res.status(200).json({ ok: true, authenticated: false, banned: false, reason: '', bannedAt: '' });
+  }
+
+  try {
+    const { response: userResponse, payload: sessionUser } = await getAuthenticatedUser(url, publishableKey, accessToken);
+    if (!userResponse.ok || !sessionUser?.id) {
+      const authCode = String(sessionUser?.code || sessionUser?.error_code || '').toLowerCase();
+      const authMessage = String(sessionUser?.msg || sessionUser?.message || '').toLowerCase();
+      const isBanned = authCode === 'user_banned' || authMessage.includes('banned');
+      if (isBanned) {
+        return res.status(200).json({ ok: true, authenticated: true, banned: true, reason: '', bannedAt: '' });
+      }
+      return res.status(200).json({ ok: true, authenticated: false, banned: false, reason: '', bannedAt: '' });
+    }
+
+    if (serviceRoleKey) {
+      const adminResponse = await fetch(`${url}/auth/v1/admin/users/${encodeURIComponent(sessionUser.id)}`, {
+        headers: serviceHeaders(serviceRoleKey)
+      });
+      const account = await readJson(adminResponse);
+      if (adminResponse.ok && account?.id) {
+        const banned = Boolean(account.app_metadata?.banned) || (
+          account.banned_until && new Date(account.banned_until).getTime() > Date.now()
+        );
+        if (banned) {
+          return res.status(200).json({
+            ok: true,
+            authenticated: true,
+            banned: true,
+            bannedAt: account.app_metadata?.banned_at || '',
+            reason: account.app_metadata?.ban_reason || ''
+          });
+        }
+      }
+    }
+
+    const profileResponse = await fetch(
+      `${url}/rest/v1/profiles?id=eq.${encodeURIComponent(sessionUser.id)}&select=*`,
+      {
+        headers: {
+          apikey: publishableKey,
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json'
+        }
+      }
+    );
+    const profiles = await readJson(profileResponse);
+    const profile = profileResponse.ok && Array.isArray(profiles) ? profiles[0] : null;
+    return res.status(200).json({
+      ok: true,
+      authenticated: true,
+      banned: Boolean(profile?.banned),
+      bannedAt: profile?.banned_at || '',
+      reason: profile?.ban_reason || '',
+      checkAvailable: profileResponse.ok
+    });
+  } catch (_) {
+    return res.status(200).json({ ok: true, authenticated: null, banned: false, checkAvailable: false });
+  }
+}
+
 module.exports = async function deleteAccountHandler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   res.setHeader('Pragma', 'no-cache');
+
+  if (String(req.query?.action || '') === 'status') {
+    return accountStatusHandler(req, res);
+  }
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');

@@ -41,6 +41,10 @@
       "destination": "/api/media?mode=supabase-runtime"
     },
     {
+      "source": "/api/account-status",
+      "destination": "/api/delete-account?action=status"
+    },
+    {
       "source": "/pt-br/terms",
       "destination": "/api/site-page"
     },
