@@ -36,6 +36,26 @@
   }
   function writeRankingPreference(userId,value){try{localStorage.setItem(rankingPreferenceKey(userId),value?'true':'false');}catch(_){ }}
 
+  async function loadCommunityOngBanner(){
+    var spotlight=document.getElementById('communityOngSpotlight');
+    var image=document.getElementById('communityOngSpotlightImage');
+    if(!spotlight||!image)return;
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var dataApi=window.beBackend&&window.beBackend.data;
+      if(!dataApi||typeof dataApi.get!=='function')return;
+      var settings=await dataApi.get('settings','ong');
+      var raw=String(settings&&settings.bannerUrl||'').trim();
+      if(!raw)return;
+      var banner=mediaUrl(raw);
+      if(!banner||banner==='#')return;
+      image.src=banner;
+      image.addEventListener('load',function(){spotlight.hidden=false;},{once:true});
+      image.addEventListener('error',function(){spotlight.hidden=true;image.removeAttribute('src');},{once:true});
+      if(image.complete&&image.naturalWidth>0)spotlight.hidden=false;
+    }catch(_){spotlight.hidden=true;}
+  }
+
   function createPage(){
     if(document.getElementById('communityPage')){page=document.getElementById('communityPage');return page;}
     var main=document.querySelector('body > main');
@@ -53,9 +73,12 @@
       +  '<section class="community-section"><div class="community-section-head"><h2>Perfis em destaque</h2></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
       +  '<section class="community-section"><div class="community-section-head"><h2>Quem mais assistiu</h2><div class="community-watch-toolbar" role="group" aria-label="Período do ranking"><button class="community-watch-filter active" type="button" data-community-period="month">Este mês</button><button class="community-watch-filter" type="button" data-community-period="all">Todos os tempos</button></div></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityWatchRanking"></div><div class="community-ranking-own" id="communityOwnWatch" hidden></div></div></section>'
       +  '<div class="community-supporters-cta-wrap"><button class="community-supporters-cta" id="communitySupportersButton" type="button">Ver fãs que apoiam o site</button></div>'
+      +  '<section class="community-ong-spotlight" id="communityOngSpotlight" hidden aria-label="Apoie uma ONG"><div class="community-ong-spotlight-frame"><img id="communityOngSpotlightImage" alt="Apoie uma ONG" loading="lazy" decoding="async"><div class="community-ong-spotlight-overlay" aria-hidden="true"></div><a class="community-ong-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a></div></section>'
       +'</div>';
     main.appendChild(page);
     page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(true);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
+    var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(true);});
+    loadCommunityOngBanner();
     page.querySelectorAll('[data-community-period]').forEach(function(button){button.addEventListener('click',function(){state.period=button.dataset.communityPeriod==='all'?'all':'month';page.querySelectorAll('[data-community-period]').forEach(function(item){item.classList.toggle('active',item===button);});refreshCommunity();});});
     applyI18n(page);
     return page;
@@ -209,12 +232,12 @@
     var requestId=++state.requestId;
     state.loading=true;
     var period=state.period;
-    var profileLimit=30;
+    var profileLimit=15;
     try{
       await Promise.resolve(window.beBackend&&window.beBackend.ready);
       var client=window.beBackend&&window.beBackend.client;
       if(!client||typeof client.rpc!=='function')throw new Error('community_backend_unavailable');
-      var result=await client.rpc('get_community_overview',{p_watch_period:period,p_profile_limit:profileLimit,p_watch_limit:30});
+      var result=await client.rpc('get_community_overview',{p_watch_period:period,p_profile_limit:profileLimit,p_watch_limit:15});
       if(result&&result.error)throw result.error;
       if(requestId!==state.requestId||!document.body.classList.contains('community-page-active'))return;
       renderPayload(result&&result.data&&typeof result.data==='object'?result.data:{});
