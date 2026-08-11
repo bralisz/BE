@@ -1,10 +1,11 @@
 /* Billie Eilish TV — Comunidade */
 #communityPage[hidden]{display:none!important}
 body.community-page-active main > :not(#communityPage){display:none!important}
+body.community-page-active #dynamicSections{display:none!important}
 body.community-page-active #communityPage{display:block!important}
 body.community-page-active .home-nav-link.active:not([data-community-tab]),
 body.community-page-active #logoBtn.active{background:transparent!important;color:rgba(255,255,255,.72)!important;box-shadow:none!important}
-body.community-page-active .home-nav-link[data-community-tab]{background:#fff!important;color:#151616!important;box-shadow:0 7px 22px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.96)!important}
+body.community-page-active .home-nav-link[data-community-tab]{background:transparent!important;color:#151616!important;box-shadow:none!important}
 body.support-page-active .home-nav-link[data-community-tab]{display:none!important}
 
 .community-page{
@@ -33,6 +34,9 @@ body.support-page-active .home-nav-link[data-community-tab]{display:none!importa
 .community-ranking-row:hover{background:rgba(255,255,255,.045)}
 .community-rank-number{font-size:14px;font-weight:820;color:rgba(255,255,255,.44);text-align:center}
 .community-ranking-row.top-three .community-rank-number{color:#9bc8ff}
+.community-ranking-row.rank-first .community-rank-number{color:#d8b04f}
+.community-ranking-row.rank-second .community-rank-number{color:#c2c7d1}
+.community-ranking-row.rank-third .community-rank-number{color:#8a5c40}
 .community-rank-avatar{width:44px;height:44px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10)}
 .community-rank-avatar img{width:100%;height:100%;display:block;object-fit:cover}
 .community-rank-avatar svg{width:22px;height:22px;opacity:.55}

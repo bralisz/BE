@@ -84,9 +84,28 @@
     return page;
   }
 
+  function positionCommunityIndicator(button){
+    var leading=document.getElementById('homeNavLeading');
+    if(!leading||!button)return;
+    window.requestAnimationFrame(function(){
+      var leadingRect=leading.getBoundingClientRect();
+      var buttonRect=button.getBoundingClientRect();
+      if(!buttonRect.width||!buttonRect.height)return;
+      leading.style.setProperty('--home-tab-x',Math.max(0,buttonRect.left-leadingRect.left)+'px');
+      leading.style.setProperty('--home-tab-y',Math.max(0,buttonRect.top-leadingRect.top)+'px');
+      leading.style.setProperty('--home-tab-width',buttonRect.width+'px');
+      leading.style.setProperty('--home-tab-height',buttonRect.height+'px');
+    });
+  }
+
+  function syncCurrentIndicator(){
+    var active=document.querySelector('#topbar .home-nav-link.active,#topbar #logoBtn.active');
+    if(active)positionCommunityIndicator(active);
+  }
+
   function setCommunityNavActive(active){
     var communityButton=document.querySelector('[data-community-tab]');
-    if(communityButton){communityButton.classList.toggle('active',Boolean(active));if(active){communityButton.setAttribute('aria-current','page');communityButton.setAttribute('aria-pressed','true');}else{communityButton.removeAttribute('aria-current');communityButton.removeAttribute('aria-pressed');}}
+    if(communityButton){communityButton.classList.toggle('active',Boolean(active));if(active){communityButton.setAttribute('aria-current','page');communityButton.setAttribute('aria-pressed','true');positionCommunityIndicator(communityButton);}else{communityButton.removeAttribute('aria-current');communityButton.removeAttribute('aria-pressed');window.requestAnimationFrame(syncCurrentIndicator);}}
     document.querySelectorAll('[data-mobile-destination]').forEach(function(button){
       if(button.dataset.mobileDestination==='community'){
         button.classList.toggle('active',Boolean(active));
@@ -98,9 +117,47 @@
     });
   }
 
+  function toggleCatalogVisibility(showCommunity){
+    var main=document.querySelector('body > main');
+    if(main){
+      Array.prototype.slice.call(main.children||[]).forEach(function(child){
+        if(child===page){
+          child.hidden=!showCommunity;
+          if(showCommunity)child.style.setProperty('display','block','important');
+          else child.style.removeProperty('display');
+          return;
+        }
+        if(showCommunity){
+          child.dataset.communityPrevHidden=child.hidden?'1':'0';
+          child.hidden=true;
+          child.style.setProperty('display','none','important');
+        }else if(Object.prototype.hasOwnProperty.call(child.dataset||{},'communityPrevHidden')){
+          child.hidden=child.dataset.communityPrevHidden==='1';
+          delete child.dataset.communityPrevHidden;
+          child.style.removeProperty('display');
+        }else child.style.removeProperty('display');
+      });
+    }
+    var catalog=document.getElementById('dynamicSections');
+    if(catalog){
+      if(showCommunity){
+        catalog.dataset.communityPrevHidden=catalog.hidden?'1':'0';
+        catalog.hidden=true;
+        catalog.style.setProperty('display','none','important');
+      }else{
+        if(Object.prototype.hasOwnProperty.call(catalog.dataset||{},'communityPrevHidden')){
+          catalog.hidden=catalog.dataset.communityPrevHidden==='1';
+          delete catalog.dataset.communityPrevHidden;
+        }
+        catalog.style.removeProperty('display');
+      }
+    }
+  }
+
   function closeCommunity(resetView){
     if(!document.body.classList.contains('community-page-active'))return;
     document.body.classList.remove('community-page-active');
+    toggleCatalogVisibility(false);
     if(page)page.hidden=true;
     setCommunityNavActive(false);
     if(resetView!==false&&document.body.dataset.homeView==='community')document.body.dataset.homeView='home';
@@ -122,6 +179,7 @@
     document.body.classList.add('community-page-active');
     document.body.dataset.homeView='community';
     page.hidden=false;
+    toggleCatalogVisibility(true);
     document.querySelectorAll('.home-nav-link.active,#logoBtn.active').forEach(function(button){if(!button.matches('[data-community-tab]')){button.classList.remove('active');button.removeAttribute('aria-current');button.setAttribute('aria-pressed','false');}});
     setCommunityNavActive(true);
     try{window.dispatchEvent(new CustomEvent('be:close-public-search'));window.dispatchEvent(new CustomEvent('be:close-mobile-search'));}catch(_){ }
@@ -173,11 +231,33 @@
     var img=document.createElement('img');img.loading='lazy';img.decoding='async';img.alt='';img.src=window.BETVResolveAvatar?window.BETVResolveAvatar(url):mediaUrl(url||'/assets/images/profile/default-avatar.png');avatar.appendChild(img);return avatar;
   }
 
+  function sameRankingUser(left,right){
+    var leftId=String(left&&(left.userId||left.user_id||left.uid)||'').trim();
+    var rightId=String(right&&(right.userId||right.user_id||right.uid)||'').trim();
+    if(leftId&&rightId)return leftId===rightId;
+    var leftUsername=String(left&&left.username||'').replace(/^@/,'').trim().toLowerCase();
+    var rightUsername=String(right&&right.username||'').replace(/^@/,'').trim().toLowerCase();
+    return Boolean(leftUsername&&rightUsername&&leftUsername===rightUsername);
+  }
+
+  function rankingContainsUser(rows,item){
+    if(!item||!item.position||!Array.isArray(rows)||!rows.length)return false;
+    return rows.some(function(row){return sameRankingUser(row,item)||Number(row.position||0)===Number(item.position||0);});
+  }
+
+  function rankToneClass(item){
+    var position=Number(item&&item.position||0);
+    if(position===1)return ' rank-first';
+    if(position===2)return ' rank-second';
+    if(position===3)return ' rank-third';
+    return position>0&&position<=3?' top-three':'';
+  }
+
   function renderProfileRanking(rows){
     var host=document.getElementById('communityProfileRanking');if(!host)return;host.innerHTML='';
     if(!Array.isArray(rows)||!rows.length){var empty=document.createElement('div');empty.className='community-ranking-empty';empty.textContent=t('Ainda não há perfis suficientes para este ranking.');host.appendChild(empty);return;}
     rows.forEach(function(item){
-      var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+(Number(item.position)<=3?' top-three':'');
+      var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+rankToneClass(item);
       var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position||'—');button.appendChild(pos);
       button.appendChild(createRankAvatar(item.avatarUrl,item.displayName));
       var copy=document.createElement('span');copy.className='community-rank-copy';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');var handle=document.createElement('span');handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.append(strong,handle);button.appendChild(copy);
@@ -187,9 +267,9 @@
     });
   }
 
-  function renderOwnRanking(hostId,item,kind,visibility){
+  function renderOwnRanking(hostId,item,kind,visibility,hideBecauseListed){
     var own=document.getElementById(hostId);if(!own)return;own.innerHTML='';
-    if(!currentUser()){own.hidden=true;return;}
+    if(!currentUser()||hideBecauseListed){own.hidden=true;return;}
     if(visibility===false){own.hidden=false;own.className='community-ranking-own is-message';own.textContent=t('Você não está participando dos rankings públicos.');return;}
     if(!item||!item.position){own.hidden=false;own.className='community-ranking-own is-message';own.textContent=kind==='watch'?t('Sua posição aparecerá aqui após você assistir a algum conteúdo.'):t('Ainda não há perfis suficientes para este ranking.');return;}
     own.hidden=false;own.className='community-ranking-own';
@@ -201,17 +281,17 @@
     own.appendChild(row);
   }
 
-  function renderWatchRanking(rows,myPosition,visibility){
+  function renderWatchRanking(rows,myPosition,visibility,hideBecauseListed){
     var host=document.getElementById('communityWatchRanking');if(!host)return;host.innerHTML='';
     if(!Array.isArray(rows)||!rows.length){var empty=document.createElement('div');empty.className='community-ranking-empty';empty.textContent=t('Ainda não há atividade suficiente para este ranking.');host.appendChild(empty);}
     else rows.forEach(function(item){
-      var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+(Number(item.position)<=3?' top-three':'');
+      var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+rankToneClass(item);
       var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position||'—');button.appendChild(pos);button.appendChild(createRankAvatar(item.avatarUrl,item.displayName));
       var copy=document.createElement('span');copy.className='community-rank-copy';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');var handle=document.createElement('span');handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.append(strong,handle);button.appendChild(copy);
       var value=document.createElement('span');value.className='community-rank-value';value.textContent=formatWatchTime(item.watchSeconds);button.appendChild(value);
       button.addEventListener('click',function(){closeCommunity(true);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});host.appendChild(button);
     });
-    renderOwnRanking('communityOwnWatch',myPosition,'watch',visibility);
+    renderOwnRanking('communityOwnWatch',myPosition,'watch',visibility,hideBecauseListed);
   }
 
   function renderPayload(payload){
@@ -220,9 +300,11 @@
     var recentEmpty=user?t('Os vídeos que você assistir aparecerão aqui.'):t('Entre na sua conta para ver os vídeos assistidos recentemente.');
     renderRail('communityContinueContent',user?(payload.recent||[]):[],recentEmpty);
     renderRail('communityFavoritesContent',payload.fanFavorites||[],t('Os favoritos da comunidade aparecerão aqui.'));
-    renderProfileRanking(payload.profileRanking||[]);
-    renderOwnRanking('communityOwnProfile',payload.myProfilePosition,'profile',payload.rankingVisibility!==false);
-    renderWatchRanking(payload.watchRanking||[],payload.myWatchPosition,payload.rankingVisibility!==false);
+    var profileRows=payload.profileRanking||[];
+    var watchRows=payload.watchRanking||[];
+    renderProfileRanking(profileRows);
+    renderOwnRanking('communityOwnProfile',payload.myProfilePosition,'profile',payload.rankingVisibility!==false,rankingContainsUser(profileRows,payload.myProfilePosition));
+    renderWatchRanking(watchRows,payload.myWatchPosition,payload.rankingVisibility!==false,rankingContainsUser(watchRows,payload.myWatchPosition));
     if(user&&payload.rankingVisibility!==null&&payload.rankingVisibility!==undefined)writeRankingPreference(user.uid,payload.rankingVisibility!==false);
     applyI18n(page);
   }
@@ -246,7 +328,7 @@
       console.warn('Comunidade:',error&&error.message?error.message:error);
       renderRail('communityContinueContent',[],currentUser()?t('Não foi possível carregar seu histórico agora.'):t('Entre na sua conta para ver os vídeos assistidos recentemente.'));
       renderRail('communityFavoritesContent',[],t('Não foi possível carregar os favoritos da comunidade agora.'));
-      renderProfileRanking([]);renderOwnRanking('communityOwnProfile',null,'profile',readRankingPreference(currentUser()&&currentUser().uid));renderWatchRanking([],null,readRankingPreference(currentUser()&&currentUser().uid));
+      renderProfileRanking([]);renderOwnRanking('communityOwnProfile',null,'profile',readRankingPreference(currentUser()&&currentUser().uid),false);renderWatchRanking([],null,readRankingPreference(currentUser()&&currentUser().uid),false);
     }finally{if(requestId===state.requestId)state.loading=false;}
   }
 
@@ -303,6 +385,7 @@
     window.addEventListener('resize',function(){if(!window.matchMedia('(max-width:760px)').matches)closeMobileAccountMenu();else if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();});
     document.addEventListener('keydown',function(event){if(event.key==='Escape')closeMobileAccountMenu();});
     var settingsBody=document.getElementById('settingsPageBody');if(settingsBody){new MutationObserver(function(){injectPrivacySettings();}).observe(settingsBody,{childList:true,subtree:true});}
+    window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('community-page-active')){toggleCatalogVisibility(true);var tab=document.querySelector('[data-community-tab]');if(tab)positionCommunityIndicator(tab);}});
     window.addEventListener('be:open-config',function(){setTimeout(injectPrivacySettings,0);});
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
     window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});
