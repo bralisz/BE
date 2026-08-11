@@ -80,6 +80,25 @@
     main.appendChild(page);
     page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
     var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
+    var rulesDetails=page.querySelector('.community-rules-details');
+    var rulesButton=page.querySelector('.community-rules-button');
+    if(rulesDetails&&rulesButton)rulesButton.addEventListener('click',function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      rulesDetails.open=!rulesDetails.open;
+      document.body.classList.add('community-page-active');
+      page.hidden=false;
+      setHomeTab('community');
+    });
+    page.addEventListener('click',function(event){
+      var interactive=event.target&&event.target.closest?event.target.closest('a,button,summary,input,select,textarea,[role="button"],.video-card,.community-ranking-row'):null;
+      if(interactive)return;
+      event.preventDefault();
+      event.stopPropagation();
+      document.body.classList.add('community-page-active');
+      page.hidden=false;
+      setHomeTab('community');
+    });
     loadCommunityOngBanner();
     page.querySelectorAll('[data-community-period]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();document.body.classList.add('community-page-active');if(page)page.hidden=false;state.period=button.dataset.communityPeriod==='all'?'all':'month';page.querySelectorAll('[data-community-period]').forEach(function(item){item.classList.toggle('active',item===button);});setHomeTab('community');refreshCommunity();});});
     applyI18n(page);
@@ -465,6 +484,12 @@
     }
     setTimeout(syncDetailWatchTimer,0);
     document.addEventListener('click',function(event){
+      var insideCommunity=event.target&&event.target.closest?event.target.closest('#communityPage'):null;
+      if(insideCommunity&&document.body.classList.contains('community-page-active')){
+        if(page)page.hidden=false;
+        setHomeTab('community');
+        return;
+      }
       var headerUtility=event.target&&event.target.closest?event.target.closest('#userChip,#notificationButton,#mobileProfileButton,#mobileNotificationButton'):null;
       if(headerUtility)preserveCommunitySurfaceForHeaderUtility();
       if(document.body.classList.contains('mobile-account-menu-open')){var trigger=event.target&&event.target.closest?event.target.closest('#mobileProfileButton'):null;if(!trigger&&mobileMenu&&!mobileMenu.contains(event.target))closeMobileAccountMenu();}
