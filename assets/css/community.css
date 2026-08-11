@@ -211,3 +211,29 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
   .community-ong-spotlight-frame{height:230px;border-radius:26px}
   .community-ong-spotlight-button{left:20px;bottom:18px}
 }
+
+
+/* Comunidade 2026-08-11 — banner principal e tags mensais */
+.community-hero-banner{margin:0 clamp(24px,4vw,68px) 34px}
+.community-hero-banner-frame{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.14);border-radius:28px;background:#080a0f;box-shadow:0 22px 54px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.08)}
+.community-hero-banner-frame>img{display:block;width:100%;height:clamp(250px,30vw,390px);object-fit:cover;object-position:center}
+.community-hero-banner-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,8,12,.16),rgba(5,8,12,.54));pointer-events:none}
+.community-rules-panel p{margin:0 0 10px}
+.community-rules-panel p:last-of-type{margin-bottom:12px}
+.community-rules-tags{display:grid;gap:10px}
+.community-rules-tag-row{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:10px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.035)}
+.community-rules-place{min-width:60px;color:#fff;font-size:12px;font-weight:800}
+.community-rules-tag-row small{color:rgba(255,255,255,.54);font-size:11px;line-height:1.35}
+.community-award-tag{display:inline-flex;align-items:center;justify-content:center;min-height:29px;padding:0 12px;border-radius:999px;font-size:12px;font-weight:800;line-height:1;letter-spacing:.01em;color:#fff;box-shadow:0 10px 24px rgba(0,0,0,.16);white-space:nowrap}
+.community-award-tag.is-avocado{background:linear-gradient(180deg,#6aa7ff,#3b7dff)}
+.community-award-tag.is-eyelash{background:linear-gradient(180deg,#f0c85a,#d8a920)}
+.community-award-tag.is-blohsh{background:linear-gradient(180deg,#62c56f,#2e9d49)}
+.community-rank-tag{display:flex;align-items:center}
+.community-rank-copy .community-award-tag{align-self:flex-start;min-height:24px;padding:0 10px;font-size:11px}
+@media(max-width:760px){
+  .community-hero-banner{margin:0 20px 26px}
+  .community-hero-banner-frame{border-radius:24px}
+  .community-hero-banner-frame>img{height:230px}
+  .community-rules-tag-row{grid-template-columns:1fr;align-items:flex-start;gap:7px}
+  .community-rules-place{min-width:0}
+}

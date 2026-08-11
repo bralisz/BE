@@ -89,6 +89,7 @@ function sanitizeProfile(row) {
     username,
     avatarUrl: safeAsset(row.avatar_url || row.avatarUrl),
     bannerUrl: safeAsset(row.banner_url || row.bannerUrl),
+    communityTag: safeText(row.community_tag || row.communityTag, 20).toLowerCase(),
     createdAt: safeText(row.created_at || row.createdAt, 40),
     socialLinks: sanitizeSocialLinks(row.social_links || row.socialLinks),
     favorites: sanitizeList(row.favorites, 4),

@@ -30,6 +30,23 @@
   function writeRankingPreference(userId,value){try{localStorage.setItem(rankingPreferenceKey(userId),value?'true':'false');}catch(_){ }}
   function setHomeTab(tab){try{window.dispatchEvent(new CustomEvent('be:set-home-tab',{detail:{tab:String(tab||'home')}}));}catch(_){ }}
 
+  function normalizeCommunityTag(value){
+    var normalized=String(value||'').trim().toLowerCase();
+    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'?normalized:'';
+  }
+  function communityTagMeta(value){
+    var tag=normalizeCommunityTag(value);
+    if(tag==='avocado')return {key:'avocado',label:'Avocado',className:'is-avocado'};
+    if(tag==='eyelash')return {key:'eyelash',label:'Eyelash',className:'is-eyelash'};
+    if(tag==='blohsh')return {key:'blohsh',label:'Blohsh',className:'is-blohsh'};
+    return null;
+  }
+  function communityTagMarkup(value){
+    var meta=communityTagMeta(value);
+    if(!meta)return '';
+    return '<span class="community-award-tag '+meta.className+'">'+meta.label+'</span>';
+  }
+
   async function loadCommunityOngBanner(){
     var spotlight=document.getElementById('communityOngSpotlight');
     var image=document.getElementById('communityOngSpotlightImage');
@@ -62,9 +79,10 @@
     page.innerHTML=''
       +'<div class="community-page-inner">'
       +  '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
+      +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/assets/images/community/community-hero-banner.jpg" alt="Banner da comunidade dos Avocados" loading="lazy" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +  '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
-      +  '<section class="community-section"><div class="community-section-head"><h2>Perfis em destaque</h2><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules">Este ranking mostra os perfis que mais receberam curtidas da comunidade. Você pode compartilhar seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
+      +  '<section class="community-section"><div class="community-section-head"><h2>Perfis em destaque</h2><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado">Avocado</span><small>Azul com nome branco</small></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash">Eyelash</span><small>Amarelo com nome branco</small></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh">Blohsh</span><small>Verde com nome branco</small></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
       +  '<div class="community-supporters-cta-wrap"><button class="community-supporters-cta" id="communitySupportersButton" type="button">Ver fãs que apoiam o site</button></div>'
       +  '<section class="community-ong-spotlight" id="communityOngSpotlight" hidden aria-label="Apoie uma ONG"><div class="community-ong-spotlight-frame"><img id="communityOngSpotlightImage" alt="Apoie uma ONG" loading="lazy" decoding="async"><div class="community-ong-spotlight-overlay" aria-hidden="true"></div><a class="community-ong-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a></div></section>'
       +'</div>';
@@ -276,7 +294,7 @@
       var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+rankToneClass(item);
       var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position||'—');button.appendChild(pos);
       button.appendChild(createRankAvatar(item.avatarUrl,item.displayName));
-      var copy=document.createElement('span');copy.className='community-rank-copy';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');var handle=document.createElement('span');handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.append(strong,handle);button.appendChild(copy);
+      var copy=document.createElement('span');copy.className='community-rank-copy';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');copy.appendChild(strong);var tagMarkup=communityTagMarkup(item&&item.communityTag);if(tagMarkup){var tagWrap=document.createElement('span');tagWrap.className='community-rank-tag';tagWrap.innerHTML=tagMarkup;copy.appendChild(tagWrap);}var handle=document.createElement('span');handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.appendChild(handle);button.appendChild(copy);
       var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});button.appendChild(value);
       button.addEventListener('click',function(){closeCommunity(false);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});
       host.appendChild(button);
@@ -292,7 +310,7 @@
     var row=document.createElement('div');row.className='community-ranking-own-row';
     var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position);row.appendChild(pos);
     row.appendChild(createRankAvatar(item.avatarUrl,item.displayName));
-    var copy=document.createElement('span');copy.className='community-rank-copy';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');copy.appendChild(strong);row.appendChild(copy);
+    var copy=document.createElement('span');copy.className='community-rank-copy';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');copy.appendChild(strong);var ownTagMarkup=communityTagMarkup(item&&item.communityTag);if(ownTagMarkup){var ownTag=document.createElement('span');ownTag.className='community-rank-tag';ownTag.innerHTML=ownTagMarkup;copy.appendChild(ownTag);}row.appendChild(copy);
     var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});row.appendChild(value);
     own.appendChild(row);
   }
