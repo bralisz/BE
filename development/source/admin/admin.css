@@ -1551,3 +1551,64 @@ body.admin-mode .content-category-panel .toolbar .a-select{max-width:none!import
   body.admin-mode .content-manager{grid-template-columns:1fr!important}
   body.admin-mode .content-category-panel .toolbar{grid-template-columns:1fr!important}
 }
+
+
+/* 11/08/2026 — topo realmente sem fundo + logo BE TV corrigida */
+body.admin-mode .admin-topbar{
+  width:100%!important;
+  max-width:none!important;
+  height:auto!important;
+  min-height:72px!important;
+  margin:0!important;
+  padding:10px 22px!important;
+  grid-template-columns:120px minmax(0,1fr) 56px!important;
+  top:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+body.admin-mode .admin-topbar::before,
+body.admin-mode .admin-topbar::after{display:none!important;content:none!important}
+body.admin-mode .admin-logo-button{
+  width:108px!important;
+  height:50px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  overflow:visible!important;
+}
+body.admin-mode .admin-logo-button img{
+  display:block!important;
+  width:98px!important;
+  height:50px!important;
+  max-width:none!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+  filter:none!important;
+}
+body.admin-mode .admin-topbar .admin-nav{
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+@media(max-width:760px){
+  body.admin-mode .admin-topbar{
+    min-height:64px!important;
+    padding:8px 12px!important;
+    grid-template-columns:82px minmax(0,1fr) 46px!important;
+  }
+  body.admin-mode .admin-logo-button{width:76px!important;height:42px!important}
+  body.admin-mode .admin-logo-button img{width:72px!important;height:42px!important}
+}
