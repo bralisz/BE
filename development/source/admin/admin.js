@@ -801,6 +801,17 @@ body.admin-preview-open{overflow:hidden}
     }
   }
 
+  function adminNavIcon(key) {
+    const icons = {
+      dashboard: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="2"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="2"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="2"></rect></svg>',
+      notifications: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7"></path><path d="M10 20h4"></path></svg>',
+      siteHub: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3.5 12h17M12 3c2.3 2.4 3.5 5.4 3.5 9S14.3 18.6 12 21M12 3C9.7 5.4 8.5 8.4 8.5 12s1.2 6.6 3.5 9"></path></svg>',
+      contentHub: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="m10 9 5 3-5 3V9Z"></path></svg>',
+      users: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.5-3.2 2.6-5 5.5-5s5 1.8 5.5 5"></path><circle cx="17.5" cy="9" r="2.3"></circle><path d="M15.5 14.6c2.7-.7 5 .8 5.5 3.4"></path></svg>'
+    };
+    return icons[key] || '';
+  }
+
   function navButton(key) {
     const current = route();
     const contentRoutes = ['billie','featured','contents','gallery'];
@@ -821,7 +832,7 @@ body.admin-preview-open{overflow:hidden}
       active = current === 'featured' || current === 'contents' || current.startsWith('contents/');
     }
 
-    return `<button data-route="${target}" class="${active ? 'active' : ''}">${LABELS[key]}</button>`;
+    return `<button data-route="${target}" class="${active ? 'active' : ''}" aria-label="${esc(LABELS[key])}"><span class="admin-tab-icon">${adminNavIcon(key)}</span><span class="admin-tab-label">${esc(LABELS[key])}</span></button>`;
   }
 
   function renderAdminSubnav() {
@@ -1410,9 +1421,10 @@ body.admin-preview-open{overflow:hidden}
   function chooseContentCategory() {
     const wrap = document.createElement('div');
     wrap.className = 'modal-backdrop';
-    wrap.innerHTML = `<div class="modal category-modal"><h2>Adicionar conteúdo</h2><p class="category-help">Escolha em qual categoria o novo conteúdo será cadastrado.</p><div class="category-picker">${CONTENT_CATEGORIES.map(([key,label,icon]) => `<button type="button" data-category="${key}"><i>${icon}</i><span>${label}</span><small>${key === 'news' ? 'Adicionar álbum ou single' : 'Criar novo item'}</small></button>`).join('')}</div><div class="modal-actions"><button type="button" class="a-btn" id="cancelCategory">Cancelar</button></div></div>`;
+    wrap.innerHTML = `<div class="modal category-modal ios-admin-sheet" role="dialog" aria-modal="true" aria-labelledby="categorySheetTitle"><div class="ios-sheet-handle" aria-hidden="true"></div><header class="ios-sheet-header"><div><span class="ios-sheet-kicker">Novo conteúdo</span><h2 id="categorySheetTitle">O que você quer adicionar?</h2><p class="category-help">Escolha uma categoria para continuar. Você preencherá o conteúdo em etapas simples.</p></div><button type="button" class="ios-sheet-close" id="cancelCategoryTop" aria-label="Fechar">×</button></header><div class="category-picker">${CONTENT_CATEGORIES.map(([key,label,icon]) => `<button type="button" data-category="${key}"><i>${icon}</i><span><strong>${label}</strong><small>${key === 'news' ? 'Álbum ou single' : 'Criar novo item'}</small></span><b aria-hidden="true">›</b></button>`).join('')}</div><div class="modal-actions ios-sheet-actions"><button type="button" class="a-btn" id="cancelCategory">Cancelar</button></div></div>`;
     document.body.append(wrap);
     $('#cancelCategory').onclick = () => wrap.remove();
+    $('#cancelCategoryTop').onclick = () => wrap.remove();
     wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
     wrap.querySelectorAll('[data-category]').forEach(button => button.onclick = () => {
       const category = button.dataset.category;
@@ -2712,6 +2724,92 @@ body.admin-preview-open{overflow:hidden}
   }
 
 
+  function setupContentEditorStepper(root) {
+    const form = $('#editorForm', root);
+    const stepbar = $('[data-editor-stepbar]', root);
+    const groups = Array.from(root.querySelectorAll('.content-editor-fields > .editor-field-group'));
+    const backButton = $('#editorStepBack', root);
+    const nextButton = $('#editorStepNext', root);
+    const submitButton = $('[data-editor-submit]', root);
+    const title = $('[data-editor-step-title]', root);
+    const status = $('[data-editor-step-status]', root);
+    if (!form || !stepbar || !groups.length || !backButton || !nextButton || !submitButton) return;
+
+    let current = 0;
+    const labels = groups.map((group, index) => group.querySelector('.editor-group-heading h3')?.textContent?.trim() || `Etapa ${index + 1}`);
+    stepbar.innerHTML = labels.map((label, index) => `<button type="button" data-editor-step="${index}" aria-label="Ir para ${esc(label)}"><span>${index + 1}</span><strong>${esc(label)}</strong></button>`).join('');
+
+    const firstInvalid = group => Array.from(group.querySelectorAll('input,select,textarea')).find(control => !control.disabled && !control.checkValidity());
+    const validateCurrent = () => {
+      const invalid = firstInvalid(groups[current]);
+      if (!invalid) return true;
+      invalid.reportValidity();
+      requestAnimationFrame(() => invalid.focus({ preventScroll: true }));
+      return false;
+    };
+
+    const render = (focus = false) => {
+      groups.forEach((group, index) => {
+        const active = index === current;
+        group.hidden = !active;
+        group.classList.toggle('is-step-active', active);
+        group.setAttribute('aria-hidden', String(!active));
+      });
+      stepbar.querySelectorAll('[data-editor-step]').forEach((button, index) => {
+        button.classList.toggle('active', index === current);
+        button.classList.toggle('done', index < current);
+        button.setAttribute('aria-current', index === current ? 'step' : 'false');
+      });
+      backButton.hidden = current === 0;
+      nextButton.hidden = current === groups.length - 1;
+      submitButton.hidden = current !== groups.length - 1;
+      if (title) title.textContent = labels[current];
+      if (status) status.textContent = `Etapa ${current + 1} de ${groups.length} · ${current === groups.length - 1 ? 'Revise e salve quando estiver tudo certo.' : 'Complete esta etapa e toque em Continuar.'}`;
+      root.style.setProperty('--editor-step-progress', `${((current + 1) / groups.length) * 100}%`);
+      form.dataset.editorStep = String(current);
+      form.dataset.editorStepFinal = String(current === groups.length - 1);
+      if (focus) {
+        const target = groups[current].querySelector('input:not([type="hidden"]),select,textarea,button');
+        requestAnimationFrame(() => target?.focus({ preventScroll: true }));
+      }
+      const scroller = $('.content-editor-fields', root);
+      if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    nextButton.addEventListener('click', () => {
+      if (!validateCurrent()) return;
+      if (current < groups.length - 1) {
+        current += 1;
+        render(true);
+      }
+    });
+    backButton.addEventListener('click', () => {
+      if (current > 0) {
+        current -= 1;
+        render(false);
+      }
+    });
+    stepbar.addEventListener('click', event => {
+      const button = event.target.closest('[data-editor-step]');
+      if (!button) return;
+      const target = Number(button.dataset.editorStep);
+      if (!Number.isInteger(target) || target === current || target < 0 || target >= groups.length) return;
+      if (target > current && !validateCurrent()) return;
+      if (target > current + 1) return;
+      current = target;
+      render(false);
+    });
+    form.addEventListener('invalid', event => {
+      const index = groups.findIndex(group => group.contains(event.target));
+      if (index >= 0 && index !== current) {
+        current = index;
+        render(false);
+      }
+    }, true);
+    render(false);
+  }
+
+
   function setupAlbumTrackEditor(root) {
     const form = $('#editorForm', root);
     const editor = $('[data-album-track-editor]', root);
@@ -2837,7 +2935,7 @@ body.admin-preview-open{overflow:hidden}
       }
       const content = $('#adminContent');
       content.classList.add('admin-editor-active');
-      content.innerHTML = `<section class="content-editor-inline-shell"><div class="content-editor-modal inline"><header class="content-editor-header"><div><span class="dashboard-kicker">${item ? 'Editar conteúdo' : 'Novo conteúdo'}</span><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><p>Organize as informações e visualize o resultado quando quiser.</p></div><button type="button" class="editor-header-preview-button" data-preview-toggle aria-expanded="false" aria-controls="contentLivePreview">Ver Preview</button></header><form id="editorForm" class="modern-content-form"><div class="content-editor-layout content-editor-layout-${esc(name)}">${modernContentEditorFields(name, draft, context)}${modernContentPreview(name)}</div><button type="button" class="content-preview-backdrop" data-preview-backdrop aria-label="Fechar preview"></button><div class="content-editor-actions"><div><strong>${item ? 'Alterações ainda não publicadas' : 'Novo conteúdo não publicado'}</strong><small>Salvar publica os dados no banco. O rascunho local evita perdas.</small></div><div class="content-editor-action-buttons"><button type="button" class="a-btn" id="footerCancelButton">Cancelar</button><button class="a-btn primary" type="submit">${item ? 'Salvar alterações' : 'Publicar conteúdo'}</button></div></div></form></div></section>`;
+      content.innerHTML = `<section class="content-editor-inline-shell"><div class="content-editor-modal inline"><header class="content-editor-header"><div class="content-editor-heading"><span class="dashboard-kicker">${item ? 'Editar conteúdo' : 'Novo conteúdo'}</span><h2>${item ? 'Editar' : 'Adicionar'} ${esc(LABELS[name] || name)}</h2><p>Preencha uma etapa de cada vez. Seu rascunho continua salvo automaticamente.</p></div><button type="button" class="editor-header-preview-button" data-preview-toggle aria-expanded="false" aria-controls="contentLivePreview"><span aria-hidden="true">◉</span> Preview</button></header><div class="ios-editor-stepbar-wrap"><nav class="ios-editor-stepbar" data-editor-stepbar aria-label="Etapas do cadastro"></nav></div><form id="editorForm" class="modern-content-form"><div class="content-editor-layout content-editor-layout-${esc(name)}">${modernContentEditorFields(name, draft, context)}${modernContentPreview(name)}</div><button type="button" class="content-preview-backdrop" data-preview-backdrop aria-label="Fechar preview"></button><div class="content-editor-actions"><div class="editor-step-summary"><strong data-editor-step-title>Etapa 1</strong><small data-editor-step-status>Complete os campos desta etapa para continuar.</small></div><div class="content-editor-action-buttons"><button type="button" class="a-btn editor-cancel-button" id="footerCancelButton">Cancelar</button><button type="button" class="a-btn" id="editorStepBack" hidden>Voltar</button><button type="button" class="a-btn primary" id="editorStepNext">Continuar</button><button class="a-btn primary" type="submit" data-editor-submit hidden>${item ? 'Salvar alterações' : 'Publicar conteúdo'}</button></div></div></form></div></section>`;
       root = content;
       window.scrollTo({ top: 0, behavior: 'instant' });
     } else {
@@ -2886,10 +2984,16 @@ body.admin-preview-open{overflow:hidden}
       syncSection();
     }
 
+    if (modernEditor) setupContentEditorStepper(root);
 
     $('#editorForm', root).onsubmit = async event => {
       event.preventDefault();
-      const button = event.submitter;
+      if (modernEditor && event.currentTarget.dataset.editorStepFinal !== 'true') {
+        $('#editorStepNext', root)?.click();
+        return;
+      }
+      const button = event.submitter || $('[data-editor-submit]', root);
+      if (!button) return;
       button.disabled = true;
       button.textContent = 'Salvando…';
       try {
@@ -4811,5 +4915,351 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
     @media(max-width:920px){body.admin-mode .movie-streaming-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:520px){body.admin-mode .movie-streaming-options{grid-template-columns:1fr}}
   `;
+  document.head.appendChild(style);
+})();
+
+
+/* Admin iOS 2026 — layout glass e editor por etapas. */
+(() => {
+  if (document.getElementById('be-admin-ios-2026-style')) return;
+  const style = document.createElement('style');
+  style.id = 'be-admin-ios-2026-style';
+  style.textContent = `
+/* ============================================================
+   ADMIN iOS 2026 — glass tabs, cards e editor por etapas
+   ============================================================ */
+:root{
+  --ios-admin-bg:#050506;
+  --ios-admin-surface:rgba(28,28,30,.72);
+  --ios-admin-surface-strong:rgba(36,36,38,.88);
+  --ios-admin-glass:rgba(35,35,38,.58);
+  --ios-admin-line:rgba(255,255,255,.11);
+  --ios-admin-line-strong:rgba(255,255,255,.18);
+  --ios-admin-label:#f5f5f7;
+  --ios-admin-secondary:rgba(235,235,245,.60);
+  --ios-admin-tertiary:rgba(235,235,245,.30);
+  --ios-admin-blue:#0a84ff;
+  --ios-admin-blue-pressed:#0071e3;
+  --ios-admin-green:#30d158;
+  --ios-admin-red:#ff453a;
+  --ios-admin-radius:24px;
+}
+html body.admin-mode{
+  background:
+    radial-gradient(900px 520px at 50% -180px,rgba(10,132,255,.10),transparent 72%),
+    var(--ios-admin-bg)!important;
+  color:var(--ios-admin-label)!important;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",Inter,system-ui,sans-serif!important;
+  -webkit-font-smoothing:antialiased;
+}
+body.admin-mode .admin-shell{min-height:100dvh;background:transparent!important}
+body.admin-mode .admin-main{min-width:0}
+body.admin-mode .admin-topbar{
+  width:min(1440px,calc(100% - 28px))!important;
+  height:72px!important;
+  min-height:72px!important;
+  margin:14px auto 0!important;
+  padding:8px 10px!important;
+  display:grid!important;
+  grid-template-columns:56px minmax(0,1fr) 56px!important;
+  align-items:center!important;
+  position:sticky!important;
+  top:12px!important;
+  z-index:80!important;
+  border:1px solid var(--ios-admin-line)!important;
+  border-radius:26px!important;
+  background:linear-gradient(180deg,rgba(44,44,46,.74),rgba(28,28,30,.62))!important;
+  -webkit-backdrop-filter:blur(30px) saturate(170%)!important;
+  backdrop-filter:blur(30px) saturate(170%)!important;
+  box-shadow:0 18px 50px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+body.admin-mode .admin-logo-button{width:48px!important;height:48px!important;border-radius:15px!important;background:rgba(255,255,255,.055)!important;border:1px solid rgba(255,255,255,.07)!important}
+body.admin-mode .admin-logo-button img{width:34px!important;height:34px!important}
+body.admin-mode .admin-topbar .admin-nav{
+  width:max-content!important;
+  max-width:100%!important;
+  justify-self:center!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:4px!important;
+  padding:4px!important;
+  margin:0!important;
+  overflow:auto hidden!important;
+  border:1px solid rgba(255,255,255,.08)!important;
+  border-radius:18px!important;
+  background:rgba(0,0,0,.20)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important;
+}
+body.admin-mode .admin-topbar .admin-nav button{
+  min-width:92px!important;
+  min-height:48px!important;
+  padding:6px 12px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  border:0!important;
+  border-radius:14px!important;
+  background:transparent!important;
+  color:var(--ios-admin-secondary)!important;
+  box-shadow:none!important;
+  font-size:12px!important;
+  font-weight:650!important;
+  white-space:nowrap!important;
+  transition:background .18s ease,color .18s ease,transform .18s ease!important;
+}
+body.admin-mode .admin-topbar .admin-nav button:hover{background:rgba(255,255,255,.07)!important;color:#fff!important;transform:none!important}
+body.admin-mode .admin-topbar .admin-nav button.active{
+  background:rgba(255,255,255,.13)!important;
+  color:#fff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 5px 16px rgba(0,0,0,.20)!important;
+}
+body.admin-mode .admin-tab-icon{width:20px;height:20px;display:grid;place-items:center;flex:0 0 20px}
+body.admin-mode .admin-tab-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+body.admin-mode .admin-tab-label{line-height:1}
+body.admin-mode .admin-account{justify-self:end!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+body.admin-mode .admin-avatar-button{width:46px!important;height:46px!important;border-radius:50%!important;border:1px solid rgba(255,255,255,.12)!important;background:rgba(255,255,255,.07)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important}
+body.admin-mode .admin-avatar-button img{width:100%!important;height:100%!important;border-radius:inherit!important}
+body.admin-mode .admin-subnav{
+  width:max-content;
+  max-width:calc(100% - 28px);
+  margin:14px auto 0!important;
+  padding:4px!important;
+  display:flex!important;
+  gap:3px!important;
+  overflow-x:auto!important;
+  border:1px solid var(--ios-admin-line)!important;
+  border-radius:16px!important;
+  background:rgba(28,28,30,.58)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+  backdrop-filter:blur(22px) saturate(150%);
+  box-shadow:0 10px 28px rgba(0,0,0,.16)!important;
+}
+body.admin-mode .admin-subnav[hidden]{display:none!important}
+body.admin-mode .admin-subnav button{
+  min-height:38px!important;padding:0 14px!important;border:0!important;border-radius:12px!important;
+  background:transparent!important;color:var(--ios-admin-secondary)!important;font-size:12px!important;font-weight:650!important;white-space:nowrap!important
+}
+body.admin-mode .admin-subnav button.active{background:rgba(255,255,255,.12)!important;color:#fff!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important}
+body.admin-mode .admin-content{max-width:1440px!important;padding:30px 22px 64px!important}
+body.admin-mode .admin-title-row{
+  margin-bottom:18px!important;padding:22px 24px!important;border:1px solid var(--ios-admin-line)!important;border-radius:var(--ios-admin-radius)!important;
+  background:linear-gradient(145deg,rgba(44,44,46,.68),rgba(22,22,24,.62))!important;
+  -webkit-backdrop-filter:blur(24px) saturate(145%)!important;backdrop-filter:blur(24px) saturate(145%)!important;
+  box-shadow:0 16px 48px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.065)!important
+}
+body.admin-mode .admin-title-row h1{font-size:clamp(25px,3vw,34px)!important;letter-spacing:-.03em!important}
+body.admin-mode .admin-title-row p{color:var(--ios-admin-secondary)!important;line-height:1.5!important}
+body.admin-mode .stat,body.admin-mode .a-card,body.admin-mode .content-category-sidebar,body.admin-mode .content-category-panel,
+body.admin-mode .gallery-category-panel,body.admin-mode .activity-log,body.admin-mode .analytics-card,body.admin-mode .users-admin-card{
+  border:1px solid var(--ios-admin-line)!important;border-radius:var(--ios-admin-radius)!important;
+  background:linear-gradient(145deg,rgba(44,44,46,.62),rgba(20,20,22,.58))!important;
+  -webkit-backdrop-filter:blur(24px) saturate(145%)!important;backdrop-filter:blur(24px) saturate(145%)!important;
+  box-shadow:0 18px 52px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.06)!important
+}
+body.admin-mode .a-input,body.admin-mode .a-select,body.admin-mode .a-textarea{
+  min-height:50px!important;padding:12px 14px!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:14px!important;
+  background:rgba(118,118,128,.16)!important;color:#fff!important;font:500 15px/1.3 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important
+}
+body.admin-mode .a-textarea{min-height:118px!important;line-height:1.45!important}
+body.admin-mode .a-input::placeholder,body.admin-mode .a-textarea::placeholder{color:rgba(235,235,245,.34)!important}
+body.admin-mode .a-input:focus,body.admin-mode .a-select:focus,body.admin-mode .a-textarea:focus{border-color:rgba(10,132,255,.72)!important;box-shadow:0 0 0 3px rgba(10,132,255,.16)!important}
+body.admin-mode .field label,body.admin-mode .field>span{color:rgba(235,235,245,.72)!important;font-size:12px!important;font-weight:650!important}
+body.admin-mode .field small{color:rgba(235,235,245,.44)!important;line-height:1.45!important}
+body.admin-mode .a-btn{
+  min-height:46px!important;padding:0 17px!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:14px!important;
+  background:rgba(118,118,128,.22)!important;color:#fff!important;font-weight:700!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.055)!important
+}
+body.admin-mode .a-btn:hover{background:rgba(118,118,128,.30)!important;border-color:rgba(255,255,255,.14)!important;transform:none!important}
+body.admin-mode .a-btn.primary{background:var(--ios-admin-blue)!important;border-color:transparent!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)!important}
+body.admin-mode .a-btn.primary:hover{background:var(--ios-admin-blue-pressed)!important}
+body.admin-mode .a-btn.danger{background:rgba(255,69,58,.10)!important;color:#ff6961!important;border-color:rgba(255,69,58,.18)!important}
+body.admin-mode .table-wrap{border:1px solid var(--ios-admin-line)!important;border-radius:18px!important;background:rgba(0,0,0,.12)!important}
+body.admin-mode .a-table th{background:rgba(255,255,255,.035)!important;color:var(--ios-admin-secondary)!important}
+body.admin-mode .a-table th,body.admin-mode .a-table td{border-color:rgba(255,255,255,.07)!important}
+
+/* Seletor de categoria como sheet do iOS */
+body.admin-mode .modal-backdrop{background:rgba(0,0,0,.56)!important;-webkit-backdrop-filter:blur(9px)!important;backdrop-filter:blur(9px)!important}
+body.admin-mode .ios-admin-sheet{
+  width:min(620px,100%)!important;max-height:min(760px,88dvh)!important;padding:10px 18px 18px!important;border:1px solid var(--ios-admin-line-strong)!important;border-radius:30px!important;
+  background:linear-gradient(180deg,rgba(44,44,46,.94),rgba(24,24,26,.94))!important;
+  box-shadow:0 32px 90px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.08)!important;
+  -webkit-backdrop-filter:blur(34px) saturate(170%)!important;backdrop-filter:blur(34px) saturate(170%)!important
+}
+body.admin-mode .ios-sheet-handle{width:38px;height:5px;margin:0 auto 12px;border-radius:999px;background:rgba(235,235,245,.22)}
+body.admin-mode .ios-sheet-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:4px 4px 14px}
+body.admin-mode .ios-sheet-kicker{display:block;margin-bottom:5px;color:var(--ios-admin-blue);font-size:11px;font-weight:750;letter-spacing:.02em}
+body.admin-mode .ios-sheet-header h2{margin:0!important;font-size:27px!important;letter-spacing:-.035em!important}
+body.admin-mode .ios-sheet-header p{margin:7px 0 0!important;color:var(--ios-admin-secondary)!important;line-height:1.45!important}
+body.admin-mode .ios-sheet-close{width:34px;height:34px;flex:0 0 34px;border:0;border-radius:50%;background:rgba(118,118,128,.22);color:rgba(235,235,245,.78);font-size:22px;line-height:1;cursor:pointer}
+body.admin-mode .category-picker{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;margin-top:4px!important}
+body.admin-mode .category-picker button{
+  width:100%!important;min-height:70px!important;padding:10px 12px!important;display:grid!important;grid-template-columns:46px minmax(0,1fr) 22px!important;grid-template-rows:1fr!important;align-items:center!important;gap:12px!important;
+  border:1px solid rgba(255,255,255,.08)!important;border-radius:17px!important;background:rgba(118,118,128,.10)!important;color:#fff!important;text-align:left!important;box-shadow:none!important
+}
+body.admin-mode .category-picker button:hover{background:rgba(118,118,128,.18)!important;border-color:rgba(255,255,255,.12)!important;transform:none!important}
+body.admin-mode .category-picker button>i{grid-row:auto!important;width:46px!important;height:46px!important;border-radius:13px!important;background:rgba(10,132,255,.15)!important;color:#5ac8fa!important;font-style:normal!important;font-size:20px!important}
+body.admin-mode .category-picker button>span{display:grid!important;gap:3px!important;min-width:0!important}
+body.admin-mode .category-picker button>span strong{font-size:15px!important}
+body.admin-mode .category-picker button>span small{color:var(--ios-admin-secondary)!important;font-size:11px!important}
+body.admin-mode .category-picker button>b{justify-self:end;color:rgba(235,235,245,.30);font-size:27px;font-weight:400}
+body.admin-mode .ios-sheet-actions{margin-top:14px!important}
+
+/* Editor por etapas */
+body.admin-mode .admin-content.admin-editor-active{max-width:1180px!important;padding-top:22px!important}
+body.admin-mode .content-editor-modal.inline{
+  overflow:hidden!important;border:1px solid var(--ios-admin-line)!important;border-radius:30px!important;
+  background:linear-gradient(145deg,rgba(36,36,38,.82),rgba(16,16,18,.84))!important;
+  box-shadow:0 28px 80px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.07)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(150%)!important;backdrop-filter:blur(28px) saturate(150%)!important
+}
+body.admin-mode .admin-content.admin-editor-active .content-editor-modal.inline{height:calc(100dvh - 144px)!important;max-height:calc(100dvh - 144px)!important;min-height:560px!important}
+body.admin-mode .content-editor-header{min-height:88px!important;padding:18px 22px!important;border-bottom:1px solid rgba(255,255,255,.07)!important;background:rgba(20,20,22,.48)!important}
+body.admin-mode .content-editor-heading h2{margin:3px 0 5px!important;font-size:28px!important;letter-spacing:-.035em!important}
+body.admin-mode .content-editor-heading p{margin:0!important;color:var(--ios-admin-secondary)!important;font-size:12px!important}
+body.admin-mode .editor-header-preview-button{min-height:42px!important;padding:0 14px!important;display:inline-flex!important;align-items:center!important;gap:7px!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:13px!important;background:rgba(118,118,128,.16)!important;color:#fff!important;font-weight:650!important}
+body.admin-mode .editor-header-preview-button span{color:#5ac8fa}
+body.admin-mode .ios-editor-stepbar-wrap{position:relative;padding:10px 18px 11px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(12,12,14,.30)}
+body.admin-mode .ios-editor-stepbar-wrap:after{content:"";position:absolute;left:18px;right:18px;bottom:-1px;height:2px;background:linear-gradient(90deg,var(--ios-admin-blue) 0 var(--editor-step-progress,25%),transparent var(--editor-step-progress,25%) 100%);transition:.25s ease}
+body.admin-mode .ios-editor-stepbar{display:flex;align-items:center;gap:7px;overflow-x:auto;scrollbar-width:none}
+body.admin-mode .ios-editor-stepbar::-webkit-scrollbar{display:none}
+body.admin-mode .ios-editor-stepbar button{
+  flex:0 0 auto;min-height:38px;display:inline-flex;align-items:center;gap:8px;padding:0 11px;border:0;border-radius:12px;background:transparent;color:var(--ios-admin-secondary);font:650 11px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,sans-serif;white-space:nowrap;cursor:pointer
+}
+body.admin-mode .ios-editor-stepbar button>span{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:rgba(118,118,128,.20);font-size:10px}
+body.admin-mode .ios-editor-stepbar button.active{background:rgba(10,132,255,.12);color:#fff}
+body.admin-mode .ios-editor-stepbar button.active>span{background:var(--ios-admin-blue);color:#fff}
+body.admin-mode .ios-editor-stepbar button.done{color:rgba(235,235,245,.72)}
+body.admin-mode .ios-editor-stepbar button.done>span{background:rgba(48,209,88,.18);color:#55e978}
+body.admin-mode .admin-content.admin-editor-active .modern-content-form{height:100%!important;min-height:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+body.admin-mode .admin-content.admin-editor-active .content-editor-layout{display:flex!important;flex:1 1 auto!important;min-height:0!important;overflow:hidden!important}
+body.admin-mode .admin-content.admin-editor-active .content-editor-fields{
+  width:100%!important;height:100%!important;min-height:0!important;overflow:auto!important;display:block!important;padding:24px clamp(18px,4vw,44px) 30px!important;border:0!important
+}
+body.admin-mode .content-editor-fields>.editor-field-group{
+  width:min(820px,100%)!important;min-height:100%!important;margin:0 auto!important;padding:26px!important;display:grid!important;align-content:start!important;gap:22px!important;
+  border:1px solid rgba(255,255,255,.09)!important;border-radius:24px!important;background:rgba(118,118,128,.075)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)!important
+}
+body.admin-mode .content-editor-fields>.editor-field-group[hidden]{display:none!important}
+body.admin-mode .editor-group-heading{display:flex!important;align-items:flex-start!important;gap:13px!important}
+body.admin-mode .editor-group-heading>span{width:36px!important;height:36px!important;flex:0 0 36px!important;display:grid!important;place-items:center!important;border-radius:12px!important;background:rgba(10,132,255,.14)!important;color:#64d2ff!important;font-size:11px!important;font-weight:750!important}
+body.admin-mode .editor-group-heading h3{margin:0 0 4px!important;font-size:19px!important;letter-spacing:-.02em!important}
+body.admin-mode .editor-group-heading p{margin:0!important;color:var(--ios-admin-secondary)!important;font-size:12px!important;line-height:1.45!important}
+body.admin-mode .modern-form-grid{gap:15px!important}
+body.admin-mode .content-editor-actions{
+  min-height:76px!important;padding:12px 18px!important;border-top:1px solid rgba(255,255,255,.07)!important;background:rgba(20,20,22,.82)!important;
+  -webkit-backdrop-filter:blur(26px) saturate(150%);backdrop-filter:blur(26px) saturate(150%);box-shadow:0 -12px 32px rgba(0,0,0,.20)!important
+}
+body.admin-mode .editor-step-summary strong{font-size:12px!important}
+body.admin-mode .editor-step-summary small{margin-top:3px!important;color:var(--ios-admin-secondary)!important;font-size:10px!important}
+body.admin-mode .content-editor-action-buttons{display:flex!important;align-items:center!important;gap:8px!important}
+body.admin-mode .content-editor-action-buttons .a-btn{min-width:104px!important}
+body.admin-mode .content-editor-action-buttons [hidden]{display:none!important}
+body.admin-mode .content-live-preview{background:linear-gradient(145deg,rgba(36,36,38,.98),rgba(14,14,16,.98))!important;border-color:rgba(255,255,255,.12)!important}
+body.admin-mode .content-preview-toggle{background:rgba(36,36,38,.82)!important;border-color:rgba(255,255,255,.12)!important;-webkit-backdrop-filter:blur(24px) saturate(160%)!important;backdrop-filter:blur(24px) saturate(160%)!important}
+
+/* Conteúdo: categorias como tabs de vidro */
+body.admin-mode .content-category-sidebar{padding:9px!important}
+body.admin-mode .content-category-sidebar h2{padding:5px 7px 8px!important;color:var(--ios-admin-secondary)!important;font-size:11px!important;text-transform:uppercase!important;letter-spacing:.08em!important}
+body.admin-mode .content-category-link{min-height:50px!important;border:0!important;border-radius:14px!important;background:transparent!important;box-shadow:none!important}
+body.admin-mode .content-category-link:hover{background:rgba(255,255,255,.06)!important}
+body.admin-mode .content-category-link.active{background:rgba(255,255,255,.11)!important;color:#fff!important}
+
+@media(max-width:800px){
+  html body.admin-mode{padding-bottom:calc(88px + env(safe-area-inset-bottom))!important}
+  body.admin-mode .admin-topbar{
+    width:calc(100% - 20px)!important;height:62px!important;min-height:62px!important;margin-top:10px!important;padding:6px 8px!important;
+    grid-template-columns:48px minmax(0,1fr) 48px!important;top:8px!important;border-radius:22px!important
+  }
+  body.admin-mode .admin-logo-button{width:42px!important;height:42px!important;border-radius:13px!important}
+  body.admin-mode .admin-logo-button img{width:30px!important;height:30px!important}
+  body.admin-mode .admin-avatar-button{width:40px!important;height:40px!important}
+  body.admin-mode .admin-topbar .admin-nav{
+    position:fixed!important;left:10px!important;right:10px!important;bottom:max(10px,env(safe-area-inset-bottom))!important;z-index:120!important;
+    width:auto!important;max-width:none!important;height:68px!important;padding:5px!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:2px!important;
+    overflow:visible!important;border-radius:23px!important;background:rgba(28,28,30,.78)!important;border:1px solid rgba(255,255,255,.12)!important;
+    -webkit-backdrop-filter:blur(30px) saturate(180%)!important;backdrop-filter:blur(30px) saturate(180%)!important;
+    box-shadow:0 18px 48px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.08)!important
+  }
+  body.admin-mode .admin-topbar .admin-nav button,
+  body.admin-mode .admin-nav button:not([data-route="dashboard"]):not([data-route="notifications"]){
+    display:flex!important;width:100%!important;min-width:0!important;min-height:56px!important;padding:5px 2px!important;flex-direction:column!important;gap:4px!important;border-radius:18px!important;font-size:9px!important
+  }
+  body.admin-mode .admin-topbar .admin-nav button.active{background:rgba(10,132,255,.15)!important;color:#5ac8fa!important;box-shadow:none!important}
+  body.admin-mode .admin-tab-icon{width:23px;height:23px;flex-basis:23px}
+  body.admin-mode .admin-tab-icon svg{width:22px;height:22px;stroke-width:1.9}
+  body.admin-mode .admin-tab-label{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  body.admin-mode .admin-subnav{max-width:calc(100% - 20px);margin-top:10px!important}
+  body.admin-mode .admin-content{padding:20px 10px 28px!important}
+  body.admin-mode .admin-title-row{padding:18px!important;border-radius:22px!important}
+  body.admin-mode .admin-title-row h1{font-size:27px!important}
+  body.admin-mode .stats{gap:10px!important}
+  body.admin-mode .stat{border-radius:20px!important;padding:16px!important}
+  body.admin-mode .content-manager{display:block!important}
+  body.admin-mode .content-category-sidebar{display:flex!important;position:static!important;overflow-x:auto!important;gap:5px!important;margin-bottom:10px!important;padding:6px!important;border-radius:18px!important}
+  body.admin-mode .content-category-sidebar h2{display:none!important}
+  body.admin-mode .content-category-list{display:flex!important;gap:5px!important}
+  body.admin-mode .content-category-link{flex:0 0 auto!important;min-width:120px!important;min-height:44px!important}
+  body.admin-mode .content-category-panel{padding:12px!important;border-radius:20px!important}
+  body.admin-mode .toolbar{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+  body.admin-mode .toolbar .a-input,body.admin-mode .toolbar .a-select{max-width:none!important;width:100%!important}
+  body.admin-mode .row-actions{flex-wrap:wrap!important}
+  body.admin-mode .row-actions .a-btn{min-height:40px!important;padding:0 12px!important}
+  body.admin-mode .content-preview-toggle{bottom:calc(88px + env(safe-area-inset-bottom))!important;left:12px!important}
+
+  body.admin-mode .modal-backdrop{padding:0!important;place-items:end center!important}
+  body.admin-mode .ios-admin-sheet{
+    width:100%!important;max-width:none!important;max-height:86dvh!important;margin:0!important;padding:8px 12px calc(14px + env(safe-area-inset-bottom))!important;
+    border-radius:30px 30px 0 0!important;border-left:0!important;border-right:0!important;border-bottom:0!important
+  }
+  body.admin-mode .ios-sheet-header{padding:4px 4px 12px!important}
+  body.admin-mode .ios-sheet-header h2{font-size:24px!important}
+  body.admin-mode .category-picker button{min-height:66px!important;border-radius:16px!important}
+  body.admin-mode .ios-sheet-actions .a-btn{width:100%!important}
+
+  body.admin-mode .admin-content.admin-editor-active{padding:12px 8px 8px!important}
+  body.admin-mode .admin-content.admin-editor-active .content-editor-modal.inline{
+    height:calc(100dvh - 152px)!important;max-height:calc(100dvh - 152px)!important;min-height:0!important;border-radius:24px!important
+  }
+  body.admin-mode .content-editor-header{min-height:72px!important;padding:14px 14px 12px!important;gap:10px!important}
+  body.admin-mode .content-editor-heading h2{font-size:23px!important}
+  body.admin-mode .content-editor-heading p{display:none!important}
+  body.admin-mode .editor-header-preview-button{min-height:40px!important;padding:0 11px!important;font-size:11px!important}
+  body.admin-mode .ios-editor-stepbar-wrap{padding:7px 9px 8px!important}
+  body.admin-mode .ios-editor-stepbar-wrap:after{left:9px;right:9px}
+  body.admin-mode .ios-editor-stepbar button{min-height:34px!important;padding:0 8px!important;gap:6px!important}
+  body.admin-mode .ios-editor-stepbar button strong{display:none!important}
+  body.admin-mode .ios-editor-stepbar button>span{width:24px;height:24px}
+  body.admin-mode .admin-content.admin-editor-active .content-editor-fields{padding:12px 10px 18px!important}
+  body.admin-mode .content-editor-fields>.editor-field-group{min-height:100%!important;padding:17px 14px!important;border-radius:20px!important;gap:17px!important}
+  body.admin-mode .editor-group-heading h3{font-size:17px!important}
+  body.admin-mode .editor-group-heading p{font-size:11px!important}
+  body.admin-mode .modern-form-grid{grid-template-columns:1fr!important;gap:11px!important}
+  body.admin-mode .field.full{grid-column:auto!important}
+  body.admin-mode .a-input,body.admin-mode .a-select{min-height:48px!important;font-size:16px!important}
+  body.admin-mode .a-textarea{font-size:16px!important}
+  body.admin-mode .content-editor-actions{
+    min-height:auto!important;padding:9px 10px!important;display:block!important;background:rgba(20,20,22,.92)!important
+  }
+  body.admin-mode .editor-step-summary{display:none!important}
+  body.admin-mode .content-editor-action-buttons{width:100%!important;display:flex!important;align-items:center!important;gap:7px!important}
+  body.admin-mode .content-editor-action-buttons .a-btn{flex:1 1 0;width:auto!important;min-width:0!important;min-height:46px!important;padding:0 10px!important}
+  body.admin-mode .content-editor-action-buttons .editor-cancel-button{flex:0 0 46px!important;width:46px!important;font-size:0!important;padding:0!important}
+  body.admin-mode .content-editor-action-buttons .editor-cancel-button:before{content:"×";font-size:22px;font-weight:500}
+  body.admin-mode .content-editor-action-buttons #editorStepNext,body.admin-mode .content-editor-action-buttons [data-editor-submit]{flex-grow:1.35!important}
+  body.admin-mode .content-live-preview{inset:0!important;width:100vw!important;height:100dvh!important;border-radius:0!important}
+}
+@media(max-width:430px){
+  body.admin-mode .admin-topbar .admin-nav{left:6px!important;right:6px!important;bottom:max(6px,env(safe-area-inset-bottom))!important}
+  body.admin-mode .admin-topbar .admin-nav button{font-size:8.5px!important}
+  body.admin-mode .admin-tab-icon{width:21px;height:21px;flex-basis:21px}
+  body.admin-mode .admin-tab-icon svg{width:20px;height:20px}
+  body.admin-mode .admin-title-row{padding:16px!important}
+  body.admin-mode .stats{grid-template-columns:1fr 1fr!important}
+  body.admin-mode .content-editor-header{padding-left:12px!important;padding-right:12px!important}
+  body.admin-mode .content-editor-heading h2{font-size:21px!important}
+}
+`;
   document.head.appendChild(style);
 })();
