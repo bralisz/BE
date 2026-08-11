@@ -5246,3 +5246,109 @@ body.admin-mode .content-category-link.active{background:rgba(255,255,255,.11)!i
 `;
   document.head.appendChild(style);
 })();
+
+
+/* Correção final do cabeçalho administrativo — carregada por último para vencer os estilos iOS anteriores. */
+(() => {
+  const old = document.getElementById('be-admin-topbar-final-fix');
+  if (old) old.remove();
+  const style = document.createElement('style');
+  style.id = 'be-admin-topbar-final-fix';
+  style.textContent = `
+body.admin-mode .admin-topbar{
+  width:100%!important;
+  max-width:none!important;
+  min-height:74px!important;
+  height:auto!important;
+  margin:0!important;
+  padding:10px 24px!important;
+  grid-template-columns:124px minmax(0,1fr) 56px!important;
+  top:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  background-color:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+body.admin-mode .admin-topbar::before,
+body.admin-mode .admin-topbar::after{
+  content:none!important;
+  display:none!important;
+}
+body.admin-mode .admin-logo-button{
+  width:116px!important;
+  height:54px!important;
+  min-width:116px!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  background-color:transparent!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+  overflow:visible!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+}
+body.admin-mode .admin-logo-button img{
+  display:block!important;
+  width:100px!important;
+  height:auto!important;
+  max-width:100px!important;
+  max-height:54px!important;
+  object-fit:contain!important;
+  object-position:left center!important;
+  filter:none!important;
+  transform:none!important;
+}
+@media(min-width:801px){
+  body.admin-mode .admin-topbar .admin-nav{
+    width:auto!important;
+    max-width:max-content!important;
+    justify-self:center!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:none!important;
+    background-color:transparent!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+    overflow:visible!important;
+  }
+}
+@media(max-width:800px){
+  body.admin-mode .admin-topbar{
+    width:100%!important;
+    min-height:64px!important;
+    margin:0!important;
+    padding:8px 12px!important;
+    grid-template-columns:92px minmax(0,1fr) 46px!important;
+    top:0!important;
+    border-radius:0!important;
+    background:none!important;
+    box-shadow:none!important;
+  }
+  body.admin-mode .admin-logo-button{
+    width:86px!important;
+    min-width:86px!important;
+    height:44px!important;
+    border-radius:0!important;
+    background:none!important;
+  }
+  body.admin-mode .admin-logo-button img{
+    width:80px!important;
+    max-width:80px!important;
+    height:auto!important;
+    max-height:44px!important;
+  }
+}
+`;
+  document.head.appendChild(style);
+})();
