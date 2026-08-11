@@ -12340,15 +12340,35 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function getMobileButton(){return document.getElementById('mobileNotificationButton');}
 
-  function closeDesktop(){
-    if(desktopDropdown)desktopDropdown.classList.remove('open');
-    if(desktopButton)desktopButton.setAttribute('aria-expanded','false');
+  var restoreCommunityAfterDesktopClose=false;
+  var restoreCommunityAfterMobileClose=false;
+
+  function communitySurfaceActive(){
+    return document.body.classList.contains('community-page-active')||document.body.dataset.homeView==='community';
   }
 
-  function closeMobile(){
+  function requestCommunitySurfaceRestore(shouldRestore){
+    if(!shouldRestore)return;
+    try{window.dispatchEvent(new CustomEvent('be:restore-community-surface'));}catch(_){ }
+  }
+
+  function closeDesktop(options){
+    options=options&&typeof options==='object'?options:{};
+    var shouldRestore=Boolean(options.restoreCommunity&&restoreCommunityAfterDesktopClose);
+    restoreCommunityAfterDesktopClose=false;
+    if(desktopDropdown)desktopDropdown.classList.remove('open');
+    if(desktopButton)desktopButton.setAttribute('aria-expanded','false');
+    requestCommunitySurfaceRestore(shouldRestore);
+  }
+
+  function closeMobile(options){
+    options=options&&typeof options==='object'?options:{};
+    var shouldRestore=Boolean(options.restoreCommunity&&restoreCommunityAfterMobileClose);
+    restoreCommunityAfterMobileClose=false;
     if(mobilePopover)mobilePopover.hidden=true;
     var button=getMobileButton();
     if(button)button.setAttribute('aria-expanded','false');
+    requestCommunitySurfaceRestore(shouldRestore);
   }
 
   function closeMenus(){closeDesktop();closeMobile();}
@@ -12585,6 +12605,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!desktopDropdown||!desktopButton)return;
     var open=!desktopDropdown.classList.contains('open');
     if(open){
+      restoreCommunityAfterDesktopClose=communitySurfaceActive();
       window.dispatchEvent(new CustomEvent('be:close-public-search'));
       window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
     }
@@ -12600,6 +12621,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!mobilePopover)return;
     var open=mobilePopover.hidden;
     if(open){
+      restoreCommunityAfterMobileClose=communitySurfaceActive();
       window.dispatchEvent(new CustomEvent('be:close-public-search'));
       window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
       document.body.classList.remove('mobile-account-menu-open');
@@ -12616,12 +12638,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   if(desktopDropdown)desktopDropdown.addEventListener('click',function(event){event.stopPropagation();});
   if(desktopMarkAll)desktopMarkAll.addEventListener('click',function(event){event.stopPropagation();markAllRead();});
-  if(desktopClose)desktopClose.addEventListener('click',function(event){event.stopPropagation();closeDesktop();});
+  if(desktopClose)desktopClose.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();closeDesktop({restoreCommunity:true});});
   if(mobileMarkAll)mobileMarkAll.addEventListener('click',function(event){event.stopPropagation();markAllRead();});
   if(desktopViewAll)desktopViewAll.addEventListener('click',function(){openPage('',true);});
   if(mobilePopover)mobilePopover.addEventListener('click',function(event){event.stopPropagation();});
   if(mobileViewAll)mobileViewAll.addEventListener('click',function(){openPage('',true);});
-  if(mobileClose)mobileClose.addEventListener('click',closeMobile);
+  if(mobileClose)mobileClose.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}closeMobile({restoreCommunity:true});});
   if(pageHome)pageHome.addEventListener('click',function(){closePage(true);});
   if(pageAvatar)pageAvatar.addEventListener('click',openProfileFromPage);
   if(pageClose)pageClose.addEventListener('click',function(){closePage(true);});
@@ -12643,7 +12665,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   document.addEventListener('keydown',function(event){
     if(event.key!=='Escape')return;
     if(document.body.classList.contains('notification-page-active'))closePage(true);
-    else closeMenus();
+    else{closeDesktop({restoreCommunity:true});closeMobile({restoreCommunity:true});}
   });
 
   document.addEventListener('click',function(event){

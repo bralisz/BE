@@ -219,6 +219,9 @@
   }
   window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity};
   window.addEventListener('be:open-community',openCommunity);
+  // Fechar o pop-up de notificações não é navegação. Se ele foi aberto sobre a
+  // Comunidade, restaura a superfície da Comunidade sem mudar URL, rolagem ou aba.
+  window.addEventListener('be:restore-community-surface',function(){preserveCommunitySurfaceForHeaderUtility();});
   ['be:open-profile-route','be:open-config','be:open-notifications','be:open-support','be:open-donate-page','be:open-fans-page','be:open-billie-page','be:open-album-page','be:open-legal-route'].forEach(function(name){window.addEventListener(name,function(){state.detailReturnToCommunity=false;closeCommunity(false);});});
   window.addEventListener('be:home-entered',function(){state.detailReturnToCommunity=false;closeCommunity(true,'home');});
 
