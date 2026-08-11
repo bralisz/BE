@@ -61,11 +61,21 @@ function isLocalAsset(value) {
   return /^\/(?!\/)/.test(String(value || '').trim());
 }
 
+function encodeBase64Url(value) {
+  return Buffer.from(String(value || ''), 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
 function mediaReference(collection, id, field, value) {
   const raw = String(value || '').trim();
   if (!raw || isLocalAsset(raw)) return raw;
   if (!/^https:\/\//i.test(raw)) return '';
-  const params = new URLSearchParams({ c: collection, id: String(id), f: field });
+  // The public response already knows the validated source URL. Carry it to the
+  // media proxy instead of making /api/media query Supabase again for every card image.
+  const params = new URLSearchParams({ u: encodeBase64Url(raw) });
   return `/api/media?${params.toString()}`;
 }
 
@@ -88,9 +98,9 @@ function safeLink(value, allowLocal = true) {
 
 function sanitizeTranslations(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-  const allowedFields = new Set(['title','name','description','subtitle','body','summary','buttonLabel','buttonText','actionLabel','ctaLabel','label','text','manualBio','kicker','footerText','sectionName','siteName','duration','runtime','videoDuration','sourceUpdatedAt','translatedAt','provider']);
+  const allowedFields = new Set(['title','name','description','subtitle','body','summary','buttonLabel','buttonText','actionLabel','ctaLabel','label','text','manualBio','kicker','footerText','sectionName','siteName','duration','runtime','videoDuration','sourceUpdatedAt','translatedAt','provider','revision','style']);
   const result = {};
-  for (const locale of ['en-us','es']) {
+  for (const locale of ['en-us','es','fr']) {
     const source = value[locale];
     if (!source || typeof source !== 'object' || Array.isArray(source)) continue;
     const translation = {};
@@ -300,7 +310,7 @@ module.exports = async function publicData(req, res) {
       ? 'no-store, no-cache, must-revalidate'
       : name === 'movies'
         ? (rows.length ? 'public, max-age=0, s-maxage=5, stale-while-revalidate=10' : 'no-store')
-        : (rows.length ? 'public, max-age=0, s-maxage=20, stale-while-revalidate=120' : 'no-store'));
+        : (rows.length ? 'public, max-age=0, s-maxage=60, stale-while-revalidate=300' : 'no-store'));
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     if (req.method === 'HEAD') return res.status(200).end();

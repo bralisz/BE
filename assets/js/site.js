@@ -330,8 +330,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   let accountStatusUserId = '';
   let accountStatusCache = { banned: false, reason: '', bannedAt: '' };
   let supabaseClient = null;
-  const PROFILE_CACHE_TTL_MS = 15000;
-  const PREFERENCE_CACHE_TTL_MS = 10000;
+  const PROFILE_CACHE_TTL_MS = 300000;
+  const PREFERENCE_CACHE_TTL_MS = 300000;
   const profileCache = new Map();
   const profileEnsurePromises = new Map();
   const preferenceCache = new Map();
@@ -732,7 +732,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux'
   ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
-  const SPANISH_TRANSLATION_REV = '20260810-es-native-music-only-v3';
+  const SPANISH_TRANSLATION_REV = '20260810-music-album-lock-v4';
+  const translationWarmupInFlight = new Set();
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
@@ -817,22 +818,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return localizedNow;
     }
 
-    const missing = values.filter(record => recordNeedsTranslation(record, slug, collection));
-    if (missing.length) {
+    const pending = [];
+    values.forEach(record => {
+      if (!recordNeedsTranslation(record, slug, collection)) return;
+      const key = `${String(collection)}:${slug}:${String(record.id)}`;
+      if (translationWarmupInFlight.has(key)) return;
+      translationWarmupInFlight.add(key);
+      pending.push({ record, key });
+    });
+    if (pending.length) {
       // Nunca bloqueia a renderização do site esperando a API de tradução.
-      // A tradução ausente é aquecida em segundo plano e entra normalmente no próximo carregamento;
-      // o i18n do DOM também traduz textos visíveis nesta sessão quando necessário.
+      // Também evita enfileirar o mesmo registro várias vezes quando diferentes
+      // componentes pedem a mesma coleção durante o carregamento da página.
       window.setTimeout(async () => {
         try {
-          for (let offset = 0; offset < missing.length; offset += 20) {
-            const batch = missing.slice(offset, offset + 20);
+          for (let offset = 0; offset < pending.length; offset += 20) {
+            const batch = pending.slice(offset, offset + 20);
             const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-              body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
+              body: { collection: String(collection), ids: batch.map(item => String(item.record.id)), locales: [slug] }
             });
             if (result?.error) console.warn('Um lote de tradução não foi concluído:', result.error.message || result.error);
           }
         } catch (error) {
           console.warn('Tradução automática indisponível; o conteúdo continua carregando normalmente:', error?.message || error);
+        } finally {
+          pending.forEach(item => translationWarmupInFlight.delete(item.key));
         }
       }, 0);
     }
@@ -929,10 +939,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const params = new URLSearchParams({ name: normalizedName });
     if (normalizedId) params.set('id', normalizedId);
     const ttl = normalizedName === 'settings' && normalizedId === 'site'
-      ? 5000
+      ? 30000
       : normalizedName === 'movies'
-        ? 5000
-        : 20000;
+        ? 30000
+        : 120000;
     const promise = fetch(`/api/public-data?${params.toString()}`, {
       method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
@@ -1702,6 +1712,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!currentUser || currentUser.uid !== userId) throw backendError('auth/not-authenticated', 'Faça login para sincronizar suas preferências.');
       const normalized = normalizePreferencePayload(payload);
       if (MODE === 'supabase') {
+        const cached = readCachedPreference(userId, Number.POSITIVE_INFINITY);
+        if (cached && JSON.stringify(cached.data) === JSON.stringify(normalized)) {
+          return clone(cached);
+        }
         try {
           const { data: rows, error } = await supabaseClient
             .from('user_preferences')
@@ -8541,6 +8555,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     desktopInput.dispatchEvent(new Event('input', { bubbles:true }));
   }
 
+  function closeMobileAccountPopover() {
+    document.body.classList.remove('mobile-account-menu-open');
+    const profileButton = document.getElementById('mobileProfileButton');
+    if (profileButton) profileButton.setAttribute('aria-expanded', 'false');
+  }
+
   function openMobileSearch(open, clearOnClose = true) {
     const shouldOpen = Boolean(open) && isMobile();
     const input = document.getElementById('mobileSearchInput');
@@ -8551,6 +8571,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       button.setAttribute('aria-label', shouldOpen ? 'Fechar pesquisa' : 'Abrir pesquisa');
     }
     if (shouldOpen) {
+      closeMobileAccountPopover();
       window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
       openDrawer(false);
       window.requestAnimationFrame(() => input?.focus({ preventScroll:true }));
@@ -8746,7 +8767,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     bindActivation(document.getElementById('mobileDrawerClose'), () => openDrawer(false));
     bindActivation(document.getElementById('mobileDrawerBackdrop'), () => openDrawer(false));
-    bindActivation(document.getElementById('mobileProfileButton'), () => window.dispatchEvent(new CustomEvent('be:toggle-mobile-account-menu')));
+    bindActivation(document.getElementById('mobileProfileButton'), () => {
+      const accountWasOpen = document.body.classList.contains('mobile-account-menu-open');
+      if (!accountWasOpen) {
+        window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
+        openMobileSearch(false);
+      }
+      window.dispatchEvent(new CustomEvent('be:toggle-mobile-account-menu'));
+    });
     bindActivation(document.getElementById('mobileDrawerProfile'), openProfile);
     bindActivation(document.getElementById('mobileLogoutButton'), logout);
     document.querySelectorAll('[data-mobile-destination]').forEach(button => {
@@ -12581,6 +12609,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(open){
       window.dispatchEvent(new CustomEvent('be:close-public-search'));
       window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
+      document.body.classList.remove('mobile-account-menu-open');
+      var mobileProfileButton=document.getElementById('mobileProfileButton');
+      if(mobileProfileButton)mobileProfileButton.setAttribute('aria-expanded','false');
     }
     closeDesktop();
     closeAccountMenu();
