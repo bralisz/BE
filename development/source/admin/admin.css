@@ -1445,3 +1445,109 @@ body.admin-mode .content-editor-action-buttons .editor-save-button{background:#0
   body.admin-mode .content-editor-action-buttons .editor-cancel-button{font-size:11px!important;flex:auto!important}
   body.admin-mode .content-editor-action-buttons .editor-cancel-button:before{display:none!important;content:none!important}
 }
+
+/* Ajuste final — topo sem fundo e editor de conteúdo usando toda a largura disponível */
+body.admin-mode .admin-topbar{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+body.admin-mode .admin-topbar:before,
+body.admin-mode .admin-topbar:after{display:none!important}
+body.admin-mode .admin-logo-button{
+  background:transparent!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+}
+body.admin-mode .admin-topbar .admin-nav{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  -webkit-backdrop-filter:none!important;
+  backdrop-filter:none!important;
+}
+
+/* Editor: aproveita a tela inteira, mantendo cada aba como uma seção única e compacta */
+body.admin-mode .admin-content.admin-editor-active{
+  width:100%!important;
+  max-width:1600px!important;
+  margin:0 auto!important;
+  padding:18px clamp(18px,2.6vw,42px) 34px!important;
+}
+body.admin-mode .content-editor-inline-shell{
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+}
+body.admin-mode .admin-content.admin-editor-active .content-editor-modal.inline{
+  width:100%!important;
+  max-width:none!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:calc(100dvh - 138px)!important;
+  border-radius:24px!important;
+}
+body.admin-mode .admin-content.admin-editor-active .content-editor-fields{
+  width:100%!important;
+  max-height:calc(100dvh - 330px)!important;
+  padding:14px 18px 18px!important;
+  overflow:auto!important;
+}
+body.admin-mode .content-editor-fields>.editor-field-group{
+  width:100%!important;
+  max-width:none!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:16px 4px 18px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+body.admin-mode .modern-form-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:11px 13px!important;
+  align-items:start!important;
+}
+body.admin-mode .modern-form-grid .field.full{grid-column:1/-1!important}
+body.admin-mode .content-editor-fields .field{min-width:0!important}
+body.admin-mode .content-editor-fields .a-textarea{max-height:104px!important}
+body.admin-mode .content-editor-actions{
+  padding:10px 18px 14px!important;
+}
+body.admin-mode .content-editor-action-buttons .a-btn{min-width:108px!important}
+
+/* Listagem de conteúdo também ocupa melhor o espaço horizontal */
+body.admin-mode .content-title-row,
+body.admin-mode .content-manager{width:100%!important;max-width:none!important}
+body.admin-mode .content-manager{
+  grid-template-columns:minmax(190px,230px) minmax(0,1fr)!important;
+  gap:14px!important;
+}
+body.admin-mode .content-category-panel{min-width:0!important}
+body.admin-mode .content-category-panel .toolbar{
+  display:grid!important;
+  grid-template-columns:minmax(260px,1fr) 190px!important;
+  align-items:center!important;
+}
+body.admin-mode .content-category-panel .toolbar .a-input,
+body.admin-mode .content-category-panel .toolbar .a-select{max-width:none!important;width:100%!important}
+
+@media(max-width:1180px){
+  body.admin-mode .modern-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  body.admin-mode .modern-form-grid .field.full{grid-column:1/-1!important}
+}
+@media(max-width:800px){
+  body.admin-mode .admin-topbar{background:transparent!important;border:0!important;box-shadow:none!important}
+  body.admin-mode .admin-content.admin-editor-active{padding:10px 8px 88px!important;max-width:none!important}
+  body.admin-mode .admin-content.admin-editor-active .content-editor-modal.inline{max-height:calc(100dvh - 110px)!important}
+  body.admin-mode .admin-content.admin-editor-active .content-editor-fields{max-height:calc(100dvh - 320px)!important;padding:10px 12px 14px!important}
+  body.admin-mode .content-editor-fields>.editor-field-group{padding:12px 0 14px!important}
+  body.admin-mode .modern-form-grid{grid-template-columns:1fr!important;gap:9px!important}
+  body.admin-mode .modern-form-grid .field.full{grid-column:auto!important}
+  body.admin-mode .content-manager{grid-template-columns:1fr!important}
+  body.admin-mode .content-category-panel .toolbar{grid-template-columns:1fr!important}
+}
