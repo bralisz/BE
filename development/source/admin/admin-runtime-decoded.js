@@ -356,11 +356,18 @@ body.admin-preview-open{overflow:hidden}
   const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','ongs','users','notifications'];
   const LABELS = {dashboard:'Visão geral',notifications:'Notificações',contentHub:'Conteúdo',siteHub:'Site',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',unlinked:'Vídeos sem seção',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',ongs:'Apoie uma ONG',users:'Usuários',settings:'Comunidade'};
   const LOCAL_ADMIN_EMAIL = 'admin@local.invalid';
+  const ADMIN_CONTENT_ICONS = {
+    videos: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="m10 9 5 3-5 3Z"></path></svg>',
+    unlinked: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 14.5 8 16a4 4 0 0 1-5.7-5.6l3-3A4 4 0 0 1 11 7"></path><path d="M14.5 9.5 16 8a4 4 0 0 1 5.7 5.6l-3 3A4 4 0 0 1 13 17"></path><path d="m4 4 16 16"></path></svg>',
+    movies: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16v12H4z"></path><path d="m4 7 2-4h14l-2 4"></path><path d="M8 3 6 7m7-4-2 4m7-4-2 4"></path></svg>',
+    series: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="13" rx="3"></rect><path d="m9 21 3-3 3 3"></path><path d="M8 9h8M8 13h5"></path></svg>',
+    news: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V6l10-2v12"></path><circle cx="6" cy="18" r="3"></circle><circle cx="16" cy="16" r="3"></circle></svg>'
+  };
   const CONTENT_CATEGORIES = [
-    ['videos','Vídeos','▣'],
-    ['movies','Filmes','▤'],
-    ['series','Séries','▥'],
-    ['news','Álbuns','▦']
+    ['videos','Vídeos',ADMIN_CONTENT_ICONS.videos],
+    ['movies','Filmes',ADMIN_CONTENT_ICONS.movies],
+    ['series','Séries',ADMIN_CONTENT_ICONS.series],
+    ['news','Álbuns',ADMIN_CONTENT_ICONS.news]
   ];
 
   let auth, db, user = null, authReady = false, loginBusy = false, adminLoginBgTimer = null;
@@ -1519,7 +1526,7 @@ body.admin-preview-open{overflow:hidden}
     const sidebarCategories = `<div class="content-category-list">${CONTENT_CATEGORIES.map(([key,categoryLabel,icon]) => {
       const mainButton = `<button class="content-category-link ${key === active ? 'active' : ''}" data-content-category="${key}"><i>${icon}</i><span>${categoryLabel}</span><b>${counts[key] || 0}</b></button>`;
       const unlinkedButton = key === 'videos'
-        ? `<button class="content-category-link ${isUnlinkedVideos ? 'active' : ''}" data-content-category="unlinked"><i>⌁</i><span>Sem seção</span><b>${counts.unlinked || 0}</b></button>`
+        ? `<button class="content-category-link ${isUnlinkedVideos ? 'active' : ''}" data-content-category="unlinked"><i>${ADMIN_CONTENT_ICONS.unlinked}</i><span>Sem seção</span><b>${counts.unlinked || 0}</b></button>`
         : '';
       return mainButton + unlinkedButton;
     }).join('')}</div>`;
@@ -1527,7 +1534,7 @@ body.admin-preview-open{overflow:hidden}
     const activeCategoryMeta = isFeatured
       ? ['featured', 'Destaque', '★']
       : isUnlinkedVideos
-        ? ['unlinked', 'Sem seção', '⌁']
+        ? ['unlinked', 'Sem seção', ADMIN_CONTENT_ICONS.unlinked]
         : (CONTENT_CATEGORIES.find(([key]) => key === active) || CONTENT_CATEGORIES[0]);
     const mobileCategoryToggle = `<button type="button" class="content-mobile-category-toggle" id="contentMobileCategoryToggle" aria-expanded="false"><span class="content-mobile-category-current"><i>${activeCategoryMeta[2]}</i><strong>${esc(activeCategoryMeta[1])}</strong></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>`;
     const pageDescription = isFeatured
