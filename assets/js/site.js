@@ -683,7 +683,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       bannedAt: row.banned_at || '',
       banReason: row.ban_reason || '',
       role: row.role || 'member',
-      communityTag: row.community_tag || '',
       profileComplete: row.profile_complete !== false,
       createdAt: row.created_at || '',
       updatedAt: row.updated_at || '',
@@ -712,7 +711,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const mappings = {
       email: 'email', displayName: 'display_name', username: 'username', bio: 'bio',
       avatarUrl: 'avatar_url', avatarId: 'avatar_id', bannerUrl: 'banner_url', bannerId: 'banner_id',
-      banned: 'banned', bannedAt: 'banned_at', banReason: 'ban_reason', role: 'role', communityTag: 'community_tag',
+      banned: 'banned', bannedAt: 'banned_at', banReason: 'ban_reason', role: 'role',
       profileComplete: 'profile_complete', createdAt: 'created_at',
       updatedAt: 'updated_at', lastLoginAt: 'last_login_at'
     };
@@ -1199,7 +1198,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           avatarUrl: profile.avatarUrl ? String(profile.avatarUrl) : '',
           bannerUrl: profile.bannerId && profile.bannerUrl ? String(profile.bannerUrl) : '',
           createdAt: String(profile.createdAt || ''),
-          communityTag: String(profile.communityTag || ''),
           socialLinks: preferenceData.profileSocialLinks && typeof preferenceData.profileSocialLinks === 'object' && !Array.isArray(preferenceData.profileSocialLinks) ? clone(preferenceData.profileSocialLinks) : {},
           favorites: Array.isArray(preferenceData.profileTopFavorites) ? clone(preferenceData.profileTopFavorites).slice(0, 4) : [],
           lovedAlbums: Array.isArray(preferenceData.profileLovedAlbums) ? clone(preferenceData.profileLovedAlbums).slice(0, 3) : [],
@@ -9301,7 +9299,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profilePageHandle=document.getElementById('profilePageHandle');
     var profilePageBadge=document.getElementById('profilePageBadge');
     var profilePageSocials=document.getElementById('profilePageSocials');
-    var profilePageAwardTags=document.getElementById('profilePageAwardTags');
     var profilePageMetaLabel=document.getElementById('profilePageMetaLabel');
     var profilePageMemberSince=document.getElementById('profilePageMemberSince');
     var profilePageMore=document.getElementById('profilePageMore');
@@ -9473,26 +9470,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(network==='instagram')return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><path d="M17.5 6.5h.01"></path></svg>';
       if(network==='tiktok')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.35 2.4h3.08c.22 1.2.7 2.2 1.45 3.03A6.1 6.1 0 0 0 22 7.2v3.13a9.02 9.02 0 0 1-4.47-1.47v6.2a6.66 6.66 0 1 1-5.75-6.6v3.2a3.5 3.5 0 1 0 2.57 3.37V2.4Z"></path></svg>';
       return '';
-    }
-
-    function normalizeCommunityTag(value){
-      var normalized=String(value||'').trim().toLowerCase();
-      return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'?normalized:'';
-    }
-    function getCommunityTagMeta(value){
-      var tag=normalizeCommunityTag(value);
-      if(tag==='avocado')return {key:'avocado',label:'Avocado',className:'is-avocado'};
-      if(tag==='eyelash')return {key:'eyelash',label:'Eyelash',className:'is-eyelash'};
-      if(tag==='blohsh')return {key:'blohsh',label:'Blohsh',className:'is-blohsh'};
-      return null;
-    }
-    function renderProfileAwardTags(profile){
-      if(!profilePageAwardTags)return;
-      var meta=getCommunityTagMeta(profile&&profile.communityTag);
-      if(!meta){profilePageAwardTags.innerHTML='';profilePageAwardTags.hidden=true;profilePageAwardTags.setAttribute('hidden','');return;}
-      profilePageAwardTags.innerHTML='<span class="profile-award-tag '+meta.className+'">'+escapePublic(meta.label)+'</span>';
-      profilePageAwardTags.hidden=false;
-      profilePageAwardTags.removeAttribute('hidden');
     }
     function renderProfileSocials(profile){
       if(!profilePageSocials)return;
@@ -10602,7 +10579,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var banner=ownProfile&&auth.currentUser?resolvedProfileBanner(auth.currentUser).bannerUrl:String(profile.bannerUrl||'');
       setLiteralText(profilePageName,displayName);
       setLiteralText(profilePageHandle,'@'+(profile.username||handle||'perfil'));
-      renderProfileAwardTags(profile);
       profilePageBadge.textContent='Perfil';
       profilePageMetaLabel.textContent='Perfil público';
       profilePageMemberSince.textContent='Membro desde '+publicProfileYear(profile);
@@ -11904,11 +11880,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         else button.removeAttribute('aria-current');
       }
     });
-    // Keep the shared desktop tab indicator in sync with the support route.
-    // The main navigation controller owns the white capsule; updating only the
-    // local classes lets it snap back to Home on resize/content-ready events.
-    window.dispatchEvent(new CustomEvent('be:set-home-tab',{detail:{tab:active?'support':'home'}}));
     positionIndicator(active?supportButton:logoButton);
+    // Sincroniza também o estado central da barra. Sem isso, o indicador
+    // compartilhado podia voltar para a aba anterior depois de resize/fontes.
+    try{window.dispatchEvent(new CustomEvent('be:set-home-tab',{detail:{tab:active?'support':'home'}}));}catch(_){ }
   }
 
   function setSupportRoute(replace){
@@ -15011,7 +14986,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function restoreCatalogView(snapshot) {
     var view = String(snapshot && snapshot.homeView || '').toLowerCase();
     if (!view || view === 'home') return;
-    if (!['films','movies','series','videos','community'].includes(view)) return;
+
+    // A Comunidade é uma superfície SPA e normalmente permanece na URL da Home.
+    // Por isso, a URL sozinha não basta para restaurá-la depois de uma atualização.
+    if (view === 'community') {
+      if (document.body.classList.contains('community-page-active')) return;
+      try {
+        if (window.BETVCommunity && typeof window.BETVCommunity.open === 'function') {
+          window.BETVCommunity.open();
+          return;
+        }
+        window.dispatchEvent(new CustomEvent('be:open-community'));
+      } catch (_) {}
+      return;
+    }
+
+    if (!['films','movies','series','videos'].includes(view)) return;
     if (document.body.classList.contains('detail-page-active') ||
         document.body.classList.contains('section-catalog-active') ||
         document.body.classList.contains('profile-page-active') ||
@@ -15021,20 +15011,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         document.body.classList.contains('legal-page-active') ||
         document.body.classList.contains('billie-page-active') ||
         document.body.classList.contains('login-mode')) return;
-    if (String(document.body.dataset.homeView || '').toLowerCase() === view &&
-        (view !== 'community' || document.body.classList.contains('community-page-active'))) return;
-
-    // A Comunidade é uma superfície SPA e não usa um botão data-home-view.
-    // Ao aplicar uma atualização, restaura explicitamente essa superfície em
-    // vez de deixar o boot padrão da Home prevalecer.
-    if (view === 'community') {
-      try {
-        if (window.BETVCommunity && typeof window.BETVCommunity.open === 'function') window.BETVCommunity.open();
-        else window.dispatchEvent(new CustomEvent('be:open-community'));
-      } catch (_) {}
-      return;
-    }
-
+    if (String(document.body.dataset.homeView || '').toLowerCase() === view) return;
     var button = document.querySelector('[data-home-view="' + view + '"]');
     if (!button || typeof button.click !== 'function') return;
     try { button.dataset.beHistoryMode = 'none'; } catch (_) {}

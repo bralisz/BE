@@ -254,3 +254,24 @@ body.community-page-active > footer,
 body.community-page-active .site-footer{
   background:#020406!important;
 }
+
+
+/* Comunidade 2026-08-11 — continuidade visual até o rodapé no desktop */
+@media (min-width:761px){
+  body.community-page-active,
+  body.community-page-active > main,
+  body.community-page-active #communityPage,
+  body.community-page-active .community-page,
+  body.community-page-active .community-page-inner,
+  body.community-page-active .community-content-shell,
+  body.community-page-active > footer,
+  body.community-page-active .site-footer{
+    background:#020406!important;
+  }
+  body.community-page-active .community-page{
+    padding-bottom:0!important;
+  }
+  body.community-page-active > footer{
+    padding-top:0!important;
+  }
+}
