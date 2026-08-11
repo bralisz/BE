@@ -8038,6 +8038,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       else if (requested === 'home') button = logo;
       if (button) setActiveTab(button);
     });
+    // A rota de Suporte também sincroniza diretamente a barra principal.
+    // Isso evita que qualquer outro módulo que atualize a navegação no mesmo
+    // ciclo de eventos deixe o indicador compartilhado preso na logo.
+    window.addEventListener('be:open-support', () => {
+      if (supportButton) setActiveTab(supportButton);
+    });
     window.addEventListener('resize', () => positionSharedTabIndicator(activeTabButton), { passive: true });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => positionSharedTabIndicator(activeTabButton));
 
