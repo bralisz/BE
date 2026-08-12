@@ -20,6 +20,9 @@ body.support-page-active .home-nav-link[data-community-tab]{display:none!importa
 .community-section{margin:0 0 42px}
 .community-section-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 clamp(24px,4vw,68px) 12px}
 .community-section-head h2{margin:0;color:#fff;font-size:18px;line-height:1.2;font-weight:760;letter-spacing:-.015em}
+.community-featured-head{align-items:flex-start}
+.community-section-title{min-width:0;display:flex;flex-direction:column;gap:5px}
+.community-section-subtitle{margin:0;color:rgba(255,255,255,.48);font-size:13px;line-height:1.45;font-weight:500}
 .community-section-action{border:0;background:transparent;color:#78b4ff;font-family:inherit;font-size:13px;font-weight:700;line-height:1.2;cursor:pointer;padding:7px 0}
 .community-section-action:hover{color:#fff}
 .community-rules-details{position:relative;margin:0;padding:0}.community-rules-button{list-style:none;border:0;background:transparent;color:#4f9dff;font-family:inherit;font-size:13px;font-weight:800;line-height:1.2;cursor:pointer;padding:7px 0}.community-rules-button::-webkit-details-marker{display:none}
@@ -82,6 +85,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
   .community-section{margin-bottom:32px}
   .community-section-head{margin:0 20px 10px;align-items:flex-end}
   .community-section-head h2{font-size:17px}
+  .community-section-subtitle{font-size:12.5px;line-height:1.42}
   .community-rules-panel{right:0;width:min(340px,calc(100vw - 40px));margin:4px 0 0;padding:10px 11px}
   .community-rail{padding-left:20px;padding-right:20px;scroll-padding-left:20px;gap:11px}
   .community-rail .video-card{flex-basis:min(78vw,310px)!important}

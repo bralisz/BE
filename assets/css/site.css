@@ -17808,3 +17808,32 @@ body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsS
     inset:258px 0 auto!important;
   }
 }
+
+/* 12/08/2026 — correção: botão de curtir visível no perfil mobile.
+   Mantém oculto para visitantes e no próprio perfil, como definido pelo JS. */
+@media(max-width:760px){
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) #profilePageLike:not([hidden]){
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    position:absolute!important;
+    top:var(--profile-mobile-action-top,calc(12px + env(safe-area-inset-top)))!important;
+    right:calc(var(--profile-mobile-action-edge,12px) + (var(--profile-mobile-action-size,42px) + var(--profile-mobile-action-gap,8px)) * 2)!important;
+    left:auto!important;
+    width:var(--profile-mobile-action-size,42px)!important;
+    height:var(--profile-mobile-action-size,42px)!important;
+    min-width:var(--profile-mobile-action-size,42px)!important;
+    min-height:var(--profile-mobile-action-size,42px)!important;
+    margin:0!important;
+    padding:0!important;
+    place-items:center!important;
+    z-index:10080!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) #profilePageLike:not([hidden]) svg{
+    display:block!important;
+    width:21px!important;
+    height:21px!important;
+    margin:0!important;
+  }
+}
