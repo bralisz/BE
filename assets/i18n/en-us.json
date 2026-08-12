@@ -764,5 +764,15 @@
   "Verde com nome branco": "Green with white text",
   "Projeto independente e feito por fãs, não somos afiliados, operados ou administrados por Billie Eilish ou sua equipe.": "Independent fan-made project; we are not affiliated with, operated by, or administered by Billie Eilish or her team.",
   "Senha da sua conta BETV": "Your BETV account password",
-  "Digite a senha da sua conta BETV": "Enter your BETV account password"
+  "Digite a senha da sua conta BETV": "Enter your BETV account password",
+  "Cor do perfil": "Profile color",
+  "Cor da borda de avatar": "Avatar border color",
+  "Personalizado": "Custom",
+  "PRÉVIA": "PREVIEW",
+  "Restaurar padrão": "Restore default",
+  "Escolha uma cor para personalizar o visual do seu perfil.": "Choose a color to personalize the look of your profile.",
+  "Escolha a cor do aro exibido ao redor do seu avatar.": "Choose the ring color shown around your avatar.",
+  "Escolha o banner, o avatar e as cores do seu perfil.": "Choose your profile banner, avatar, and colors.",
+  "Selecionar tom e intensidade": "Select shade and intensity",
+  "Matiz": "Hue"
 }

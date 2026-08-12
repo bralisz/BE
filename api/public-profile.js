@@ -26,6 +26,11 @@ function safeText(value, maxLength) {
   return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, maxLength);
 }
 
+function safeColor(value) {
+  const normalized = String(value || '').trim().toUpperCase();
+  return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : '';
+}
+
 function safeAsset(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -90,6 +95,8 @@ function sanitizeProfile(row) {
     avatarUrl: safeAsset(row.avatar_url || row.avatarUrl),
     bannerUrl: safeAsset(row.banner_url || row.bannerUrl),
     communityTag: safeText(row.community_tag || row.communityTag, 20).toLowerCase(),
+    profileColor: safeColor(row.profile_color || row.profileColor),
+    avatarBorderColor: safeColor(row.avatar_border_color || row.avatarBorderColor),
     createdAt: safeText(row.created_at || row.createdAt, 40),
     socialLinks: sanitizeSocialLinks(row.social_links || row.socialLinks),
     favorites: sanitizeList(row.favorites, 4),
