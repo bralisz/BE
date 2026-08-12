@@ -1,0 +1,3 @@
+-- Keeps the local migration directory aligned with the already-applied remote history. The resulting catalog state is superseded by later translation-rule migrations.
+-- Intentionally contains no SQL: it records an immutable migration that is already
+-- present in the linked production database and prevents local/remote history drift.

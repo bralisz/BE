@@ -1,0 +1,2 @@
+-- Historical no-op migration retained to keep local and remote migration history aligned.
+-- 20260806174315: remove_noop_preserve_music_titles

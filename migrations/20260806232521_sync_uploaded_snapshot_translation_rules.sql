@@ -1,0 +1,3 @@
+-- Remote history marker for synchronization with the uploaded source snapshot.
+-- Intentionally contains no SQL: it records an immutable migration that is already
+-- present in the linked production database and prevents local/remote history drift.
