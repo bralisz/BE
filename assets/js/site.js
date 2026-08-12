@@ -985,9 +985,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     // identical Supabase reads.
     const ttl = normalizedName === 'settings' && normalizedId === 'site'
       ? 30000
-      : normalizedName === 'movies'
-        ? 120000
-        : 300000;
+      : normalizedName === 'notifications'
+        ? 15000
+        : normalizedName === 'movies'
+          ? 120000
+          : 300000;
     const promise = fetch(`/api/public-data?${params.toString()}`, {
       method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
@@ -10212,6 +10214,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileSocialLinks:normalizeProfileSocialLinks(source.profileSocialLinks),
         profileColor:normalizeProfileColorValue(source.profileColor),
         profileAvatarBorderColor:normalizeProfileColorValue(source.profileAvatarBorderColor),
+        profileShareCampaignSeen:String(source.profileShareCampaignSeen||'').slice(0,120),
         communityRankingsPublic:Object.prototype.hasOwnProperty.call(source,'communityRankingsPublic')?(source.communityRankingsPublic!==false&&String(source.communityRankingsPublic).toLowerCase()!=='false'):null,
         updatedAt:String(source.updatedAt||'')
       };
@@ -10226,6 +10229,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileSocialLinks:readProfileSocialLinks(userId),
         profileColor:readProfileColorValue(userId,'profile'),
         profileAvatarBorderColor:readProfileColorValue(userId,'avatar-border'),
+        profileShareCampaignSeen:(function(){try{return String(localStorage.getItem('beProfileShareCampaignSeen:'+String(userId||'guest'))||'');}catch(_){return '';}})(),
         communityRankingsPublic:(function(){try{return localStorage.getItem('beCommunityRankingsPublic:'+String(userId||'guest'))!=='false';}catch(_){return true;}})(),
         updatedAt:beBackend.now()
       });
@@ -10244,6 +10248,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileSocialLinks:hasProfileSocialLinks(remote.profileSocialLinks)?remote.profileSocialLinks:local.profileSocialLinks,
         profileColor:remoteHasProfileColor?remote.profileColor:local.profileColor,
         profileAvatarBorderColor:remoteHasAvatarBorder?remote.profileAvatarBorderColor:local.profileAvatarBorderColor,
+        profileShareCampaignSeen:remote.profileShareCampaignSeen||local.profileShareCampaignSeen,
         communityRankingsPublic:remote.communityRankingsPublic===null?local.communityRankingsPublic:remote.communityRankingsPublic!==false,
         updatedAt:beBackend.now()
       });
@@ -10271,6 +10276,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function applyCrossDeviceData(value,userId,source){
       if(!userId)return;
       var data=normalizeCrossDeviceData(value);
+      try{if(!data.profileShareCampaignSeen)data.profileShareCampaignSeen=String(localStorage.getItem('beProfileShareCampaignSeen:'+String(userId))||'');}catch(_){ }
       if(pendingProfileColorSync&&pendingProfileColorSync.userId===String(userId)){
         var remoteMatchesPending=data.profileColor===pendingProfileColorSync.profileColor&&data.profileAvatarBorderColor===pendingProfileColorSync.profileAvatarBorderColor;
         if(remoteMatchesPending){
@@ -10290,6 +10296,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.setItem(profileSocialStorageKey(userId),JSON.stringify(data.profileSocialLinks));
         if(data.profileColor)localStorage.setItem(profileColorStorageKey(userId,'profile'),data.profileColor);else localStorage.removeItem(profileColorStorageKey(userId,'profile'));
         if(data.profileAvatarBorderColor)localStorage.setItem(profileColorStorageKey(userId,'avatar-border'),data.profileAvatarBorderColor);else localStorage.removeItem(profileColorStorageKey(userId,'avatar-border'));
+        if(data.profileShareCampaignSeen)localStorage.setItem('beProfileShareCampaignSeen:'+String(userId),data.profileShareCampaignSeen);else localStorage.removeItem('beProfileShareCampaignSeen:'+String(userId));
         localStorage.setItem('beCommunityRankingsPublic:'+String(userId),data.communityRankingsPublic===false?'false':'true');
         localStorage.setItem(syncedUserCacheKey(userId),JSON.stringify({data:data,updatedAt:data.updatedAt||beBackend.now()}));
         localStorage.setItem('beSyncedDataOwner',String(userId));
@@ -13203,7 +13210,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(!window.beBackend)throw new Error('Backend indisponível.');
         await window.beBackend.ready;
         var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
-        notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&String(item.title||'').trim();}).sort(compareNewest);
+        notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&String(item.type||'')!=='profile-share-campaign'&&String(item.title||'').trim();}).sort(compareNewest);
         loaded=true;
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);
@@ -15584,6 +15591,181 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   });
 })();
 
+
+
+;/* Convite especial de compartilhamento de perfil — disparado pelo Admin. */
+(function(){
+  'use strict';
+  if(String(location.hash||'').startsWith('#/admin'))return;
+
+  var checking=false;
+  var activeCampaign=null;
+  var activeUserId='';
+  var retryTimer=0;
+  var pollTimer=0;
+
+  function t(source,vars){
+    if(window.BETVI18n&&typeof window.BETVI18n.t==='function')return window.BETVI18n.t(source,vars||{});
+    return String(source||'').replace(/\{([a-zA-Z0-9_]+)\}/g,function(_,key){return vars&&Object.prototype.hasOwnProperty.call(vars,key)?String(vars[key]):_;});
+  }
+  function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});}
+  function storageKey(userId){return 'beProfileShareCampaignSeen:'+String(userId||'guest');}
+  function readSeen(userId){try{return String(localStorage.getItem(storageKey(userId))||'');}catch(_){return '';}}
+  function writeSeen(userId,campaignId){try{localStorage.setItem(storageKey(userId),String(campaignId||''));}catch(_){ }}
+  function readFavorites(userId){
+    try{var value=JSON.parse(localStorage.getItem('beProfileTopFavorites:'+String(userId||'guest'))||'[]');return Array.isArray(value)?value.slice(0,4):[];}catch(_){return [];}
+  }
+  function cleanFavoriteImage(item){
+    var raw=String((item&&(item.imageUrl||item.thumbnailUrl||item.bannerUrl||item.logoUrl))||'').trim();
+    if(!raw)return '';
+    try{return window.beMediaUrl?window.beMediaUrl(raw):raw;}catch(_){return raw;}
+  }
+  function shouldWaitForOtherUi(){
+    var body=document.body;
+    return !body||body.classList.contains('login-mode')||body.classList.contains('profile-onboarding-active')||body.classList.contains('admin-mode')||document.documentElement.classList.contains('site-loading-active');
+  }
+  function removePrompt(){
+    var node=document.getElementById('profileShareCampaignPrompt');
+    if(node)node.remove();
+    document.body&&document.body.classList.remove('profile-share-campaign-open');
+    activeCampaign=null;
+  }
+  function rememberChoice(userId,campaignId){
+    writeSeen(userId,campaignId);
+    if(window.beScheduleUserDataSync)window.beScheduleUserDataSync('profile-share-campaign');
+  }
+  async function claimTag(){
+    try{
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')return;
+      var result=await client.rpc('claim_billie_fan_tag');
+      if(result&&result.error)throw result.error;
+    }catch(error){console.warn('Não foi possível aplicar a tag Fã da Billie:',error&&error.message?error.message:error);}
+  }
+  function profileUrl(username){
+    var path='/@'+String(username||'').replace(/^@/,'');
+    var localized=window.BETVLocaleURL?window.BETVLocaleURL(path):path;
+    try{return new URL(localized,location.origin).href;}catch(_){return location.origin+localized;}
+  }
+  function copyText(text){
+    if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function')return navigator.clipboard.writeText(text);
+    return new Promise(function(resolve,reject){
+      try{var field=document.createElement('textarea');field.value=text;field.setAttribute('readonly','');field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();var ok=document.execCommand('copy');field.remove();ok?resolve():reject(new Error('copy_failed'));}catch(error){reject(error);}
+    });
+  }
+  async function shareProfile(profile,user){
+    var username=String(profile&&profile.username||'').trim();
+    if(!username)return;
+    var url=profileUrl(username);
+    var title=String(profile&&profile.displayName||user&&user.displayName||username||'Perfil').trim()||'Perfil';
+    try{
+      if(navigator.share){await navigator.share({title:title,url:url});return;}
+      await copyText(url);
+    }catch(error){if(error&&error.name==='AbortError')return;try{await copyText(url);}catch(_){ }}
+  }
+  function openFavorites(){
+    var profileAction=document.querySelector('[data-public-action="profile"]');
+    if(profileAction)profileAction.click();
+    else if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/perfil');
+    [350,750,1300].forEach(function(delay){
+      window.setTimeout(function(){
+        var button=document.getElementById('profileFavoritesAdd')||document.getElementById('profileFavoritesEdit');
+        if(button&&button.offsetParent!==null)button.click();
+      },delay);
+    });
+  }
+  function favoriteCards(favorites){
+    return favorites.slice(0,4).map(function(item){
+      var src=cleanFavoriteImage(item);
+      var title=String(item&&item.title||'Favorito');
+      return '<div class="profile-share-campaign-favorite" title="'+esc(title)+'">'+(src?'<img loading="lazy" decoding="async" src="'+esc(src)+'" alt="'+esc(title)+'">':'<span aria-hidden="true"></span>')+'</div>';
+    }).join('');
+  }
+  function buildPrompt(campaign,user,profile,favorites){
+    removePrompt();
+    var uid=String(user.uid||'');
+    var campaignId=String(campaign.id||'');
+    var avatar='';
+    try{avatar=String(localStorage.getItem('beSelectedAvatar:'+uid)||'').trim();}catch(_){ }
+    avatar=avatar||String(profile&&profile.avatarUrl||user.photoURL||'').trim();
+    var name=String(profile&&profile.displayName||user.displayName||profile&&profile.username||'Usuário').trim()||'Usuário';
+    var needsFavorites=favorites.length<4;
+    var wrap=document.createElement('div');
+    wrap.id='profileShareCampaignPrompt';
+    wrap.className='profile-share-campaign-backdrop';
+    wrap.setAttribute('role','dialog');
+    wrap.setAttribute('aria-modal','true');
+    wrap.setAttribute('aria-label',t('Compartilhe seu perfil e ganhe uma tag'));
+    wrap.innerHTML='<section class="profile-share-campaign-card">'+
+      '<div class="profile-share-campaign-handle" aria-hidden="true"></div>'+
+      '<div class="profile-share-campaign-person">'+
+        '<div class="profile-share-campaign-avatar">'+(avatar?'<img src="'+esc(avatar)+'" alt="">':'<span>'+esc(name.slice(0,1).toUpperCase())+'</span>')+'</div>'+
+        '<strong class="profile-share-campaign-name">'+esc(name)+'</strong>'+
+      '</div>'+
+      (favorites.length?'<div class="profile-share-campaign-favorites">'+favoriteCards(favorites)+'</div>':'')+
+      '<div class="profile-share-campaign-copy">'+
+        '<div class="profile-share-campaign-title-row"><h2>'+esc(t('Compartilhe seu perfil e ganhe uma tag'))+'</h2><span class="profile-share-campaign-tag notranslate" translate="no">Fã da Billie</span></div>'+
+        '<p>'+esc(t('Compartilhe seu perfil aos seus amigos para receber curtidas, verem suas redes sociais e os vídeos/álbuns que você mais gosta!'))+'</p>'+
+      '</div>'+
+      '<div class="profile-share-campaign-actions">'+
+        (needsFavorites?'<button type="button" class="profile-share-campaign-button secondary" data-profile-campaign-add>'+esc(t('Adicione 4 vídeos favoritos'))+'</button>':'')+
+        '<button type="button" class="profile-share-campaign-button primary" data-profile-campaign-share>'+esc(t('Compartilhar'))+'</button>'+
+      '</div>'+
+    '</section>';
+    document.body.appendChild(wrap);
+    document.body.classList.add('profile-share-campaign-open');
+    activeCampaign=campaign;
+    activeUserId=uid;
+    var add=wrap.querySelector('[data-profile-campaign-add]');
+    var share=wrap.querySelector('[data-profile-campaign-share]');
+    if(add)add.addEventListener('click',function(){rememberChoice(uid,campaignId);removePrompt();openFavorites();});
+    if(share)share.addEventListener('click',function(){rememberChoice(uid,campaignId);removePrompt();claimTag();shareProfile(profile,user);});
+  }
+  async function loadProfileSnapshot(user){
+    var profile=null,prefs=null;
+    try{profile=await window.beBackend.profiles.get(user.uid);}catch(_){ }
+    if(!profile||!String(profile.username||'').trim())return null;
+    try{prefs=await window.beBackend.preferences.get(user.uid);}catch(_){ }
+    var favorites=prefs&&prefs.data&&Array.isArray(prefs.data.profileTopFavorites)?prefs.data.profileTopFavorites.slice(0,4):readFavorites(user.uid);
+    return {profile:profile,favorites:favorites};
+  }
+  async function latestCampaign(){
+    var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
+    return (Array.isArray(items)?items:[]).find(function(item){return item&&item.active!==false&&String(item.type||'')==='profile-share-campaign';})||null;
+  }
+  async function check(){
+    if(checking||String(location.hash||'').startsWith('#/admin'))return;
+    if(!window.beBackend)return;
+    var user=window.beBackend.auth&&window.beBackend.auth.currentUser;
+    if(!user||!user.uid){removePrompt();return;}
+    if(shouldWaitForOtherUi()){schedule(1600);return;}
+    checking=true;
+    try{
+      await window.beBackend.ready;
+      var campaign=await latestCampaign();
+      if(!campaign)return;
+      var campaignId=String(campaign.id||'');
+      if(!campaignId||readSeen(user.uid)===campaignId)return;
+      var snapshot=await loadProfileSnapshot(user);
+      if(!snapshot){schedule(2500);return;}
+      buildPrompt(campaign,user,snapshot.profile,snapshot.favorites);
+    }catch(error){console.warn('Não foi possível verificar o convite de perfil:',error&&error.message?error.message:error);}
+    finally{checking=false;}
+  }
+  function schedule(delay){window.clearTimeout(retryTimer);retryTimer=window.setTimeout(check,Number(delay)||600);}
+  function boot(){
+    if(!window.beBackend){schedule(500);return;}
+    Promise.resolve(window.beBackend.ready).then(function(){
+      if(window.beBackend.auth&&typeof window.beBackend.auth.onChange==='function')window.beBackend.auth.onChange(function(){schedule(900);});
+      schedule(1200);
+      window.clearInterval(pollTimer);pollTimer=window.setInterval(function(){if(!document.hidden)check();},30000);
+    }).catch(function(){schedule(1500);});
+  }
+  window.addEventListener('be:notifications-ready',function(){schedule(250);});
+  window.addEventListener('be:user-data-synced',function(){if(activeCampaign&&activeUserId)schedule(150);});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)schedule(250);});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
 
 ;/* Preserva rota/contexto/scroll após recarregar a página ou aplicar atualização. */
 (function () {

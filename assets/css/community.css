@@ -236,6 +236,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 .community-award-tag.is-avocado{color:#75c4ff;background:#10283d;border-color:rgba(93,174,255,.18)}
 .community-award-tag.is-eyelash{color:#f3cf63;background:#332b12;border-color:rgba(243,207,99,.17)}
 .community-award-tag.is-blohsh{color:#74d995;background:#153121;border-color:rgba(116,217,149,.16)}
+.community-award-tag.is-billie-fan{color:#dceaff;background:#17365f;border-color:#234f86}
 .community-rank-tag{display:flex;align-items:center}
 .community-rank-copy .community-award-tag{align-self:flex-start;min-height:18px;padding:0 6px;font-size:9px;font-weight:850}
 @media(max-width:760px){

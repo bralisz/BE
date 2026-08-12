@@ -37,6 +37,7 @@ function normalizeLocale(value) {
 
 function upstreamTtl(name, id) {
   if (name === 'settings' && id === 'site') return 30 * 1000;
+  if (name === 'notifications') return 15 * 1000;
   if (name === 'movies') return 2 * 60 * 1000;
   return 5 * 60 * 1000;
 }
@@ -351,9 +352,11 @@ module.exports = async function publicData(req, res) {
     res.setHeader('Cache-Control', rows.length
       ? (isSiteReleaseSetting
           ? 'public, max-age=0, s-maxage=30, stale-while-revalidate=60'
-          : name === 'movies'
-            ? 'public, max-age=0, s-maxage=120, stale-while-revalidate=300'
-            : 'public, max-age=0, s-maxage=300, stale-while-revalidate=600')
+          : name === 'notifications'
+            ? 'public, max-age=0, s-maxage=15, stale-while-revalidate=30'
+            : name === 'movies'
+              ? 'public, max-age=0, s-maxage=120, stale-while-revalidate=300'
+              : 'public, max-age=0, s-maxage=300, stale-while-revalidate=600')
       : 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');

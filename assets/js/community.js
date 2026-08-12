@@ -32,13 +32,14 @@
 
   function normalizeCommunityTag(value){
     var normalized=String(value||'').trim().toLowerCase();
-    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'?normalized:'';
+    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'?normalized:'';
   }
   function communityTagMeta(value){
     var tag=normalizeCommunityTag(value);
     if(tag==='avocado')return {key:'avocado',label:'Avocado',className:'is-avocado'};
     if(tag==='eyelash')return {key:'eyelash',label:'Eyelash',className:'is-eyelash'};
     if(tag==='blohsh')return {key:'blohsh',label:'Blohsh',className:'is-blohsh'};
+    if(tag==='billie_fan')return {key:'billie_fan',label:'Fã da Billie',className:'is-billie-fan'};
     return null;
   }
   function communityTagMarkup(value){

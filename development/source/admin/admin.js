@@ -3293,6 +3293,8 @@ body.admin-preview-open{overflow:hidden}
     content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando notificações…</div>';
 
     let items = await db.list('notifications', { orderBy: 'createdAt', direction: 'desc' }).catch(() => []);
+    // Convites de compartilhamento são campanhas internas e não entram no histórico comum.
+    items = items.filter(item => String(item?.type || '') !== 'profile-share-campaign');
     items = items.sort((a, b) => {
       const av = new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
       const bv = new Date(b.updatedAt || b.createdAt || 0).getTime() || 0;
@@ -3301,7 +3303,7 @@ body.admin-preview-open{overflow:hidden}
 
     const itemHtml = items.length ? items.map(item => `<article class="admin-notification-item" data-notification-row="${esc(item.id)}"><div class="admin-notification-item-copy"><h3>${esc(item.title || 'Atualização sem título')}</h3><p>${esc(item.description || 'Sem descrição.')}</p><div class="admin-notification-meta"><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculta' : 'Publicada'}</span><span>${formatDateTime(item.updatedAt || item.createdAt)}</span></div></div><div class="admin-notification-actions"><button type="button" class="a-btn" data-notification-edit="${esc(item.id)}">Editar</button><button type="button" class="a-btn danger" data-notification-delete="${esc(item.id)}">Excluir</button></div></article>`).join('') : '<div class="empty">Nenhuma notificação publicada. Crie a primeira atualização ao lado.</div>';
 
-    content.innerHTML = `<div class="admin-title-row"><div><span class="dashboard-kicker">Comunicação</span><h1>Notificações</h1><p>Publique mensagens que aparecem no sino do site e no log de atualizações. A mais recente fica sempre em primeiro.</p></div></div><section class="admin-notification-layout"><article class="a-card admin-notification-form-card"><h2 id="notificationFormTitle">Nova notificação</h2><p>O título e a descrição serão exibidos no menu de notificações e na página de atualizações.</p><form class="admin-notification-form" id="notificationAdminForm"><input type="hidden" name="id"><label class="field"><span>Título</span><input class="a-input" name="title" maxlength="120" required placeholder="Ex.: Nova seção de filmes"></label><label class="field"><span>Descrição / atualização</span><textarea class="a-textarea" name="description" maxlength="5000" required placeholder="Escreva todos os detalhes da atualização…"></textarea><small>Imagens do Discord: cole o link direto de um arquivo .png, .jpg ou .jpeg. Links de cdn.discordapp.com e media.discordapp.net são exibidos automaticamente.</small></label><label class="admin-notification-switch"><span><strong>Publicar no site</strong><small>Desative para salvar sem exibir aos usuários.</small></span><input type="checkbox" name="active" checked></label><div class="admin-notification-form-actions"><button type="button" class="a-btn" id="notificationCancelEdit" hidden>Cancelar edição</button><button type="submit" class="a-btn primary" id="notificationSaveButton">Publicar notificação</button></div></form></article><article class="a-card admin-notification-list-card"><h2>Histórico de atualizações</h2><p>${items.length} ${items.length === 1 ? 'mensagem cadastrada' : 'mensagens cadastradas'}, em ordem da mais recente para a mais antiga.</p><div class="admin-notification-items">${itemHtml}</div></article></section>`;
+    content.innerHTML = `<div class="admin-title-row"><div><span class="dashboard-kicker">Comunicação</span><h1>Notificações</h1><p>Publique mensagens que aparecem no sino do site e no log de atualizações. A mais recente fica sempre em primeiro.</p></div><div class="admin-title-actions"><button type="button" class="a-btn primary" id="profileShareCampaignTrigger">Compartilhar perfil · Enviar</button></div></div><section class="admin-notification-layout"><article class="a-card admin-notification-form-card"><h2 id="notificationFormTitle">Nova notificação</h2><p>O título e a descrição serão exibidos no menu de notificações e na página de atualizações.</p><form class="admin-notification-form" id="notificationAdminForm"><input type="hidden" name="id"><label class="field"><span>Título</span><input class="a-input" name="title" maxlength="120" required placeholder="Ex.: Nova seção de filmes"></label><label class="field"><span>Descrição / atualização</span><textarea class="a-textarea" name="description" maxlength="5000" required placeholder="Escreva todos os detalhes da atualização…"></textarea><small>Imagens do Discord: cole o link direto de um arquivo .png, .jpg ou .jpeg. Links de cdn.discordapp.com e media.discordapp.net são exibidos automaticamente.</small></label><label class="admin-notification-switch"><span><strong>Publicar no site</strong><small>Desative para salvar sem exibir aos usuários.</small></span><input type="checkbox" name="active" checked></label><div class="admin-notification-form-actions"><button type="button" class="a-btn" id="notificationCancelEdit" hidden>Cancelar edição</button><button type="submit" class="a-btn primary" id="notificationSaveButton">Publicar notificação</button></div></form></article><article class="a-card admin-notification-list-card"><h2>Histórico de atualizações</h2><p>${items.length} ${items.length === 1 ? 'mensagem cadastrada' : 'mensagens cadastradas'}, em ordem da mais recente para a mais antiga.</p><div class="admin-notification-items">${itemHtml}</div></article></section>`;
 
     const form = $('#notificationAdminForm');
     const formTitle = $('#notificationFormTitle');
@@ -3318,6 +3320,33 @@ body.admin-preview-open{overflow:hidden}
     };
 
     cancelButton.onclick = resetForm;
+
+    const campaignButton = $('#profileShareCampaignTrigger');
+    if (campaignButton) campaignButton.onclick = async () => {
+      if (campaignButton.disabled) return;
+      campaignButton.disabled = true;
+      campaignButton.textContent = 'Enviando…';
+      try {
+        const createdAt = now();
+        const campaign = {
+          title: 'Compartilhe seu perfil e ganhe uma tag',
+          description: 'Compartilhe seu perfil aos seus amigos para receber curtidas, verem suas redes sociais e os vídeos/álbuns que você mais gosta!',
+          type: 'profile-share-campaign',
+          active: true,
+          createdAt,
+          updatedAt: createdAt,
+          updatedBy: user?.email || user?.uid || ''
+        };
+        const saved = await db.add('notifications', campaign);
+        await logAction('profile_share_campaign_created', 'notifications', saved?.id || '', 'Campanha de compartilhamento de perfil enviada aos usuários.');
+        toast('Convite de perfil enviado aos usuários.');
+        await notificationsPage();
+      } catch (error) {
+        campaignButton.disabled = false;
+        campaignButton.textContent = 'Compartilhar perfil · Enviar';
+        toast(error.message || 'Não foi possível enviar o convite de perfil.', 'err');
+      }
+    };
 
     content.querySelectorAll('[data-notification-edit]').forEach(button => button.onclick = () => {
       const item = items.find(entry => String(entry.id) === String(button.dataset.notificationEdit));

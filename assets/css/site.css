@@ -17837,3 +17837,30 @@ body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsS
     margin:0!important;
   }
 }
+
+
+/* 12/08/2026 — convite de compartilhamento de perfil, visual inspirado no iPhone. */
+body.profile-share-campaign-open{overflow:hidden!important}
+.profile-share-campaign-backdrop{position:fixed;inset:0;z-index:12000;display:grid;place-items:center;padding:max(18px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:rgba(0,0,0,.58);-webkit-backdrop-filter:blur(22px) saturate(1.15);backdrop-filter:blur(22px) saturate(1.15)}
+.profile-share-campaign-card{width:min(438px,100%);max-height:min(780px,calc(100dvh - 30px));overflow:auto;overscroll-behavior:contain;padding:10px 18px 18px;border:1px solid rgba(255,255,255,.13);border-radius:36px;background:linear-gradient(180deg,rgba(35,35,38,.98),rgba(19,19,21,.99));box-shadow:0 30px 100px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.08);color:#fff;-webkit-font-smoothing:antialiased}
+.profile-share-campaign-handle{width:42px;height:5px;margin:2px auto 16px;border-radius:999px;background:rgba(255,255,255,.22)}
+.profile-share-campaign-person{display:flex;flex-direction:column;align-items:center;text-align:center}
+.profile-share-campaign-avatar{width:82px;height:82px;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(255,255,255,.16);border-radius:50%;background:#2b2b2e;box-shadow:0 10px 28px rgba(0,0,0,.28);font-size:28px;font-weight:850}
+.profile-share-campaign-avatar img{width:100%;height:100%;object-fit:cover}
+.profile-share-campaign-name{max-width:100%;margin-top:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px;letter-spacing:-.025em}
+.profile-share-campaign-favorites{display:flex;justify-content:center;gap:8px;margin:17px auto 3px}
+.profile-share-campaign-favorite{width:66px;aspect-ratio:16/10;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:#111214;box-shadow:0 7px 18px rgba(0,0,0,.22)}
+.profile-share-campaign-favorite img{width:100%;height:100%;display:block;object-fit:cover}
+.profile-share-campaign-favorite>span{display:block;width:100%;height:100%;background:linear-gradient(135deg,#25262a,#111214)}
+.profile-share-campaign-copy{margin-top:22px;text-align:left}
+.profile-share-campaign-title-row{display:flex;align-items:flex-start;gap:9px;flex-wrap:wrap}
+.profile-share-campaign-title-row h2{flex:1 1 230px;margin:0;font-size:25px;line-height:1.08;letter-spacing:-.045em}
+.profile-share-campaign-tag{display:inline-flex;align-items:center;justify-content:center;min-height:26px;padding:0 10px;border-radius:8px;background:#17365f;color:#e5f0ff;font-size:11px;font-weight:850;white-space:nowrap;box-shadow:inset 0 0 0 1px #234f86}
+.profile-share-campaign-copy p{margin:12px 0 0;color:rgba(255,255,255,.64);font-size:14px;line-height:1.5}
+.profile-share-campaign-actions{display:flex;gap:10px;margin-top:22px}
+.profile-share-campaign-button{min-width:0;min-height:50px;flex:1;border:0;border-radius:15px;padding:0 14px;font:inherit;font-size:14px;font-weight:800;letter-spacing:-.015em;cursor:pointer;transition:transform .14s ease,filter .14s ease}
+.profile-share-campaign-button:active{transform:scale(.985)}
+.profile-share-campaign-button.primary{background:#0a84ff;color:#fff;box-shadow:0 10px 24px rgba(10,132,255,.22)}
+.profile-share-campaign-button.secondary{background:#f2f2f7;color:#111114;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)}
+@media(max-width:520px){.profile-share-campaign-backdrop{align-items:end;padding:0}.profile-share-campaign-card{width:100%;max-height:calc(100dvh - 8px);padding:9px 16px max(16px,env(safe-area-inset-bottom));border-left:0;border-right:0;border-bottom:0;border-radius:34px 34px 0 0}.profile-share-campaign-avatar{width:76px;height:76px}.profile-share-campaign-title-row h2{font-size:24px}.profile-share-campaign-favorite{width:min(67px,20vw)}.profile-share-campaign-actions{gap:8px}.profile-share-campaign-button{min-height:50px;padding:0 11px;font-size:13px}}
+@media(max-width:380px){.profile-share-campaign-actions{flex-direction:column-reverse}.profile-share-campaign-button{width:100%}.profile-share-campaign-favorite{width:60px}}

@@ -394,7 +394,7 @@
         if(!window.beBackend)throw new Error('Backend indisponível.');
         await window.beBackend.ready;
         var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
-        notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&String(item.title||'').trim();}).sort(compareNewest);
+        notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&String(item.type||'')!=='profile-share-campaign'&&String(item.title||'').trim();}).sort(compareNewest);
         loaded=true;
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);
