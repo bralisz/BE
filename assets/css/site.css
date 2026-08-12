@@ -16130,6 +16130,7 @@ body.profile-page-active .profile-page-likes-received{
 .profile-award-tag.is-avocado{color:#75c4ff;background:#10283d;border-color:rgba(93,174,255,.18)}
 .profile-award-tag.is-eyelash{color:#f3cf63;background:#332b12;border-color:rgba(243,207,99,.17)}
 .profile-award-tag.is-blohsh{color:#74d995;background:#153121;border-color:rgba(116,217,149,.16)}
+.profile-award-tag.is-billie-fan{color:#dceaff;background:#17365f;border-color:#234f86}
 @media(max-width:760px){
   .profile-page-award-tags{margin-top:3px;gap:6px}
   .profile-award-tag{min-height:22px;padding:0 9px;font-size:11px}

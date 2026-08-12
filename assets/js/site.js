@@ -683,6 +683,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       bannedAt: row.banned_at || '',
       banReason: row.ban_reason || '',
       role: row.role || 'member',
+      communityTag: String(row.community_tag || '').trim().toLowerCase(),
       profileComplete: row.profile_complete !== false,
       createdAt: row.created_at || '',
       updatedAt: row.updated_at || '',
@@ -9397,6 +9398,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profilePageName=document.getElementById('profilePageName');
     var profilePageHandle=document.getElementById('profilePageHandle');
     var profilePageBadge=document.getElementById('profilePageBadge');
+    var profilePageAwardTags=document.getElementById('profilePageAwardTags');
     var profilePageSocials=document.getElementById('profilePageSocials');
     var profilePageMetaLabel=document.getElementById('profilePageMetaLabel');
     var profilePageMemberSince=document.getElementById('profilePageMemberSince');
@@ -11251,6 +11253,30 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     }
 
+    function normalizeProfileCommunityTag(value){
+      var normalized=String(value||'').trim().toLowerCase();
+      return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'?normalized:'';
+    }
+    function profileCommunityTagMeta(value){
+      var tag=normalizeProfileCommunityTag(value);
+      if(tag==='avocado')return {label:'Avocado',className:'is-avocado'};
+      if(tag==='eyelash')return {label:'Eyelash',className:'is-eyelash'};
+      if(tag==='blohsh')return {label:'Blohsh',className:'is-blohsh'};
+      if(tag==='billie_fan')return {label:'Fã da Billie',className:'is-billie-fan'};
+      return null;
+    }
+    function renderProfileAwardTags(profile){
+      if(!profilePageAwardTags)return;
+      var raw=profile&&(profile.communityTag||profile.community_tag)||'';
+      if(isOwnProfileView()&&auth.currentUser&&auth.currentUser.uid){
+        try{raw=localStorage.getItem('beCommunityTag:'+String(auth.currentUser.uid))||raw;}catch(_){ }
+      }
+      var meta=profileCommunityTagMeta(raw);
+      if(!meta){profilePageAwardTags.innerHTML='';profilePageAwardTags.hidden=true;profilePageAwardTags.setAttribute('hidden','');return;}
+      profilePageAwardTags.innerHTML='<span class="profile-award-tag '+meta.className+' notranslate" translate="no">'+escapePublic(meta.label)+'</span>';
+      profilePageAwardTags.hidden=false;profilePageAwardTags.removeAttribute('hidden');
+    }
+
     function renderProfilePage(){
       if(isConfigRoute()||document.body.classList.contains('settings-page-active')){
         if(profilePage){profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');}
@@ -11271,6 +11297,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var banner=ownProfile&&auth.currentUser?resolvedProfileBanner(auth.currentUser).bannerUrl:String(profile.bannerUrl||'');
       setLiteralText(profilePageName,(profileInlineEditing&&ownProfile&&profileInlineDraftName)?profileInlineDraftName:displayName);
       setLiteralText(profilePageHandle,'@'+(profile.username||handle||'perfil'));
+      renderProfileAwardTags(profile);
       profilePageBadge.textContent='Perfil';
       profilePageMetaLabel.textContent='Perfil público';
       profilePageMemberSince.textContent='Membro desde '+publicProfileYear(profile);
@@ -15634,13 +15661,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     writeSeen(userId,campaignId);
     if(window.beScheduleUserDataSync)window.beScheduleUserDataSync('profile-share-campaign');
   }
-  async function claimTag(){
+  async function claimTag(userId){
     try{
       var client=window.beBackend&&window.beBackend.client;
-      if(!client||typeof client.rpc!=='function')return;
+      if(!client||typeof client.rpc!=='function')return false;
       var result=await client.rpc('claim_billie_fan_tag');
       if(result&&result.error)throw result.error;
-    }catch(error){console.warn('Não foi possível aplicar a tag Fã da Billie:',error&&error.message?error.message:error);}
+      try{localStorage.setItem('beCommunityTag:'+String(userId||''),'billie_fan');}catch(_){ }
+      try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(userId||''),tag:'billie_fan'}}));}catch(_){ }
+      return true;
+    }catch(error){console.warn('Não foi possível aplicar a tag Fã da Billie:',error&&error.message?error.message:error);return false;}
   }
   function profileUrl(username){
     var path='/@'+String(username||'').replace(/^@/,'');
@@ -15655,13 +15685,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   async function shareProfile(profile,user){
     var username=String(profile&&profile.username||'').trim();
-    if(!username)return;
+    if(!username)return false;
     var url=profileUrl(username);
     var title=String(profile&&profile.displayName||user&&user.displayName||username||'Perfil').trim()||'Perfil';
     try{
-      if(navigator.share){await navigator.share({title:title,url:url});return;}
-      await copyText(url);
-    }catch(error){if(error&&error.name==='AbortError')return;try{await copyText(url);}catch(_){ }}
+      if(navigator.share){await navigator.share({title:title,url:url});return true;}
+      await copyText(url);return true;
+    }catch(error){
+      if(error&&error.name==='AbortError')return false;
+      try{await copyText(url);return true;}catch(_){return false;}
+    }
   }
   function openFavorites(){
     var profileAction=document.querySelector('[data-public-action="profile"]');
@@ -15719,7 +15752,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var add=wrap.querySelector('[data-profile-campaign-add]');
     var share=wrap.querySelector('[data-profile-campaign-share]');
     if(add)add.addEventListener('click',function(){rememberChoice(uid,campaignId);removePrompt();openFavorites();});
-    if(share)share.addEventListener('click',function(){rememberChoice(uid,campaignId);removePrompt();claimTag();shareProfile(profile,user);});
+    if(share)share.addEventListener('click',async function(){
+      if(share.disabled)return;
+      share.disabled=true;
+      var shared=await shareProfile(profile,user);
+      if(!shared){share.disabled=false;return;}
+      var tagged=await claimTag(uid);
+      share.disabled=false;
+      if(!tagged)return;
+      rememberChoice(uid,campaignId);
+      removePrompt();
+    });
   }
   async function loadProfileSnapshot(user){
     var profile=null,prefs=null;
