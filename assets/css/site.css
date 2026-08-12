@@ -17636,3 +17636,136 @@ body.profile-page-active.profile-color-customized .profile-page-hero::after{
       linear-gradient(180deg,rgba(0,0,0,.08) 0%,rgba(0,0,0,.12) 34%,rgba(0,0,0,.40) 58%,rgba(0,0,0,.68) 76%,rgba(0,0,0,.84) 100%)!important;
   }
 }
+
+/* 12/08/2026 — ajuste visual: + realmente sobre o avatar, divisor visível e banner mobile mais completo. */
+
+/* O botão de editar avatar cruza o aro no canto inferior direito, em vez de ficar ao lado. */
+body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
+  left:auto!important;
+  right:4px!important;
+  bottom:4px!important;
+  width:34px!important;
+  height:34px!important;
+  min-width:34px!important;
+  min-height:34px!important;
+  transform:none!important;
+  z-index:12!important;
+}
+
+/* Linha neutra entre o bloco de avatar/nome/ações e o primeiro conteúdo do perfil. */
+body.profile-page-active #profileFavoritesSection:not([hidden]),
+body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection:not([hidden]),
+body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection[hidden] + #profileSavedSection:not([hidden]){
+  border-top:1px solid rgba(255,255,255,.12)!important;
+}
+
+@media(max-width:760px){
+  body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
+    right:2px!important;
+    bottom:2px!important;
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+    min-height:32px!important;
+  }
+
+  /* O banner ocupa toda a parte visual superior no celular; não termina antes do avatar. */
+  body.profile-page-active .profile-page-hero{
+    min-height:470px!important;
+    height:470px!important;
+  }
+  body.profile-page-active .profile-page-banner,
+  body.profile-page-active .profile-page-banner-fallback{
+    height:360px!important;
+    min-height:360px!important;
+  }
+  body.profile-page-active .profile-page-banner img{
+    width:100%!important;
+    height:100%!important;
+    object-fit:cover!important;
+    object-position:center center!important;
+  }
+
+  /* Mantém a sombra sobre a foto, mas deixa o banner continuar atrás do avatar. */
+  body.profile-page-active .profile-page-hero::after,
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    inset:0 0 auto!important;
+    height:390px!important;
+    min-height:390px!important;
+    background:linear-gradient(180deg,
+      rgba(0,0,0,.06) 0%,
+      rgba(0,0,0,.11) 35%,
+      rgba(0,0,0,.38) 62%,
+      rgba(0,0,0,.68) 82%,
+      rgba(0,0,0,.86) 100%)!important;
+  }
+
+  body.profile-page-active .profile-page-info{
+    inset:285px 0 auto!important;
+  }
+
+  /* No mobile também existe somente essa linha simples, sem cartão/borda ao redor da seção. */
+  body.profile-page-active #profileFavoritesSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection[hidden] + #profileSavedSection:not([hidden]){
+    border-top:1px solid rgba(255,255,255,.12)!important;
+    border-left:0!important;
+    border-right:0!important;
+    border-bottom:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+}
+
+/* 12/08/2026 — perfil ao abrir: proporções do cabeçalho como no layout de referência. */
+@media(min-width:761px){
+  body.profile-page-active .profile-page-hero{
+    height:clamp(520px,62vh,590px)!important;
+    min-height:520px!important;
+  }
+
+  body.profile-page-active .profile-page-info{
+    inset:auto clamp(64px,4.6vw,88px) 28px!important;
+    gap:20px!important;
+    align-items:flex-end!important;
+    padding:0!important;
+  }
+
+  body.profile-page-active .profile-page-avatar-edit-wrap{
+    width:126px!important;
+    height:126px!important;
+    flex:0 0 126px!important;
+  }
+  body.profile-page-active .profile-page-avatar{
+    width:126px!important;
+    height:126px!important;
+    min-width:126px!important;
+    min-height:126px!important;
+  }
+
+  body.profile-page-active .profile-page-copy{
+    gap:7px!important;
+    padding-bottom:3px!important;
+  }
+  body.profile-page-active .profile-page-name{
+    font-size:clamp(38px,3.1vw,48px)!important;
+    line-height:1!important;
+  }
+  body.profile-page-active .profile-page-handle{
+    font-size:22px!important;
+  }
+
+  body.profile-page-active #profilePageHome,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageLike,
+  body.profile-page-active #profilePageShare,
+  body.profile-page-active:not(.profile-viewer-guest) #profilePageMore{
+    bottom:28px!important;
+  }
+  body.profile-page-active .profile-page-likes-received{
+    bottom:88px!important;
+  }
+
+  body.profile-page-active .profile-favorites-section{
+    padding-top:42px!important;
+  }
+}
