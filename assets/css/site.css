@@ -17769,3 +17769,35 @@ body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsS
     padding-top:42px!important;
   }
 }
+
+/* 12/08/2026 — correção pontual: banner completo no perfil mobile. */
+@media(max-width:760px){
+  body.profile-page-active .profile-page-banner,
+  body.profile-page-active .profile-page-banner-fallback{
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+  }
+  body.profile-page-active .profile-page-banner img,
+  body.profile-page-active .profile-page-banner-fallback{
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    object-fit:cover!important;
+    object-position:center center!important;
+  }
+  body.profile-page-active .profile-page-hero::after,
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    inset:0!important;
+    width:100%!important;
+    height:100%!important;
+    min-height:100%!important;
+    background:linear-gradient(180deg,
+      rgba(0,0,0,.05) 0%,
+      rgba(0,0,0,.10) 34%,
+      rgba(0,0,0,.34) 58%,
+      rgba(0,0,0,.66) 78%,
+      rgba(0,0,0,.88) 100%)!important;
+  }
+}
