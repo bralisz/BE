@@ -1,2 +1,0 @@
--- Historical no-op migration retained to keep local and remote migration history aligned.
--- 20260806054800: remove_noop_ignore_marker
