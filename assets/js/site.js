@@ -684,6 +684,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       banReason: row.ban_reason || '',
       role: row.role || 'member',
       communityTag: String(row.community_tag || '').trim().toLowerCase(),
+      communityTags: Array.isArray(row.community_tags) ? row.community_tags.map(value => String(value || '').trim().toLowerCase()).filter(Boolean) : [],
       profileComplete: row.profile_complete !== false,
       createdAt: row.created_at || '',
       updatedAt: row.updated_at || '',
@@ -9419,9 +9420,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profileInlineNameButton=null;
     var profileInlineDock=null;
     var profileInlinePaletteButton=null;
+    var profileInlineTagButton=null;
     var profileInlineCancelButton=null;
     var profileInlineSaveButton=null;
     var profileInlineColorPanel=null;
+    var profileInlineTagPanel=null;
+    var profileInlineTagSaving=false;
     var profileInlineOriginalProfileColor='';
     var profileInlineOriginalAvatarBorderColor='';
     var profileInlineOriginalAvatarUrl='';
@@ -9459,13 +9463,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(profileInlineAvatarButton){profileInlineAvatarButton.setAttribute('aria-label',localizedProfileText('Editar avatar'));profileInlineAvatarButton.title=localizedProfileText('Editar avatar');}
       if(profileInlineNameButton){profileInlineNameButton.setAttribute('aria-label',localizedProfileText('Editar nome'));profileInlineNameButton.title=localizedProfileText('Editar nome');}
       if(profileInlinePaletteButton){profileInlinePaletteButton.setAttribute('aria-label',localizedProfileText('Personalizar cores'));profileInlinePaletteButton.title=localizedProfileText('Personalizar cores');}
+      if(profileInlineTagButton){profileInlineTagButton.setAttribute('aria-label',localizedProfileText('Trocar tag'));profileInlineTagButton.title=localizedProfileText('Trocar tag');}
       if(profileInlineCancelButton&&!profileInlineCancelButton.disabled)profileInlineCancelButton.textContent=localizedProfileText('Cancelar');
       if(profileInlineSaveButton&&!profileInlineSaveButton.disabled)profileInlineSaveButton.textContent=localizedProfileText('Salvar');
       if(profileInlineColorPanel&&!profileInlineColorPanel.hidden)rebuildInlineColorPanel();
+      if(profileInlineTagPanel&&!profileInlineTagPanel.hidden)rebuildInlineTagPanel();
       if(profileLikeState&&typeof renderProfileLikeUi==='function')renderProfileLikeUi();
     }
     syncProfileLanguage();
     window.addEventListener('be:i18n-ready',syncProfileLanguage);
+    window.addEventListener('be:profile-refreshed',function(event){
+      var next=event&&event.detail&&event.detail.profile;
+      if(!next||!auth.currentUser||String(next.uid||next.id||'')!==String(auth.currentUser.uid||''))return;
+      currentProfile={...(currentProfile||{}),...next};
+      if(isOwnProfileView())viewedProfile={...(viewedProfile||{}),...next};
+      renderProfileAwardTags(viewedProfile||currentProfile);
+      syncInlineTagButtonVisibility();
+      if(profileInlineTagPanel&&!profileInlineTagPanel.hidden)rebuildInlineTagPanel();
+    });
     var profileFavoritesPicker=document.getElementById('profileFavoritesPicker');
     var profileFavoritesPickerBody=document.getElementById('profileFavoritesPickerBody');
     var profileFavoritesPickerClose=document.getElementById('profileFavoritesPickerClose');
@@ -9694,6 +9709,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     function profileInlineIcon(kind){
       if(kind==='palette')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.2a1.8 1.8 0 0 0 0-3.6h-.8a1.45 1.45 0 0 1 0-2.9H15A6 6 0 0 0 21 8.5C21 5.46 17.4 3 12 3Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7.7" cy="9" r="1" fill="currentColor"/><circle cx="10.5" cy="6.8" r="1" fill="currentColor"/><circle cx="14.2" cy="6.8" r="1" fill="currentColor"/><circle cx="16.7" cy="9.4" r="1" fill="currentColor"/></svg>';
+      if(kind==='tag')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 5.5v5.1c0 .8.3 1.6.9 2.2l6.9 6.9a2.5 2.5 0 0 0 3.5 0l3.9-3.9a2.5 2.5 0 0 0 0-3.5l-6.9-6.9a3.1 3.1 0 0 0-2.2-.9H5.5a1 1 0 0 0-1 1Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.3" cy="8.3" r="1.25" fill="currentColor"/></svg>';
       if(kind==='pencil')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="m13.8 6.2 4 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
       if(kind==='plus')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
       if(kind==='close')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
@@ -9744,12 +9760,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!profileInlineDock){
         profileInlineDock=document.createElement('div');
         profileInlineDock.className='profile-inline-edit-dock';
-        profileInlineDock.innerHTML='<button class="profile-inline-palette" type="button" aria-label="'+escapePublic(localizedProfileText('Personalizar cores'))+'" title="'+escapePublic(localizedProfileText('Personalizar cores'))+'">'+profileInlineIcon('palette')+'</button><button class="profile-inline-cancel" type="button">'+escapePublic(localizedProfileText('Cancelar'))+'</button><button class="profile-inline-save" type="button">'+escapePublic(localizedProfileText('Salvar'))+'</button>';
+        profileInlineDock.innerHTML='<button class="profile-inline-palette" type="button" aria-label="'+escapePublic(localizedProfileText('Personalizar cores'))+'" title="'+escapePublic(localizedProfileText('Personalizar cores'))+'">'+profileInlineIcon('palette')+'</button><button class="profile-inline-cancel" type="button">'+escapePublic(localizedProfileText('Cancelar'))+'</button><button class="profile-inline-save" type="button">'+escapePublic(localizedProfileText('Salvar'))+'</button><button class="profile-inline-tag-button" type="button" aria-label="'+escapePublic(localizedProfileText('Trocar tag'))+'" title="'+escapePublic(localizedProfileText('Trocar tag'))+'">'+profileInlineIcon('tag')+'</button>';
         document.body.appendChild(profileInlineDock);
         profileInlinePaletteButton=profileInlineDock.querySelector('.profile-inline-palette');
+        profileInlineTagButton=profileInlineDock.querySelector('.profile-inline-tag-button');
         profileInlineCancelButton=profileInlineDock.querySelector('.profile-inline-cancel');
         profileInlineSaveButton=profileInlineDock.querySelector('.profile-inline-save');
         profileInlinePaletteButton.onclick=function(event){event.preventDefault();event.stopPropagation();toggleInlineColorPanel();};
+        profileInlineTagButton.onclick=function(event){event.preventDefault();event.stopPropagation();toggleInlineTagPanel();};
         profileInlineCancelButton.onclick=function(event){event.preventDefault();event.stopPropagation();cancelInlineProfileEdit();};
         profileInlineSaveButton.onclick=function(event){event.preventDefault();event.stopPropagation();saveInlineProfileEdit();};
       }
@@ -9761,6 +9779,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileInlineColorPanel.hidden=true;
         document.body.appendChild(profileInlineColorPanel);
       }
+      if(!profileInlineTagPanel){
+        profileInlineTagPanel=document.createElement('section');
+        profileInlineTagPanel.className='profile-inline-tag-popover';
+        profileInlineTagPanel.setAttribute('role','dialog');
+        profileInlineTagPanel.setAttribute('aria-label',localizedProfileText('Suas tags'));
+        profileInlineTagPanel.hidden=true;
+        document.body.appendChild(profileInlineTagPanel);
+      }
+      syncInlineTagButtonVisibility();
     }
     function beginInlineNameEdit(){
       if(!profileInlineEditing||!profilePageName)return;
@@ -9792,6 +9819,88 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profilePageName.classList.remove('is-inline-editing');
       if(profileInlineNameButton)profileInlineNameButton.classList.remove('is-active');
     }
+    function ownedProfileCommunityTags(profile){
+      var values=[];
+      var list=profile&&(profile.communityTags||profile.community_tags);
+      if(Array.isArray(list))values=values.concat(list);
+      var active=profile&&(profile.communityTag||profile.community_tag);
+      if(active)values.push(active);
+      var seen={};
+      return values.map(normalizeProfileCommunityTag).filter(function(tag){
+        if(!tag||seen[tag])return false;
+        seen[tag]=true;
+        return true;
+      });
+    }
+    function syncInlineTagButtonVisibility(){
+      if(!profileInlineTagButton)return;
+      var owned=ownedProfileCommunityTags(currentProfile||viewedProfile);
+      profileInlineTagButton.hidden=!owned.length;
+      profileInlineTagButton.setAttribute('aria-hidden',owned.length?'false':'true');
+      if(!owned.length)closeInlineTagPanel();
+    }
+    function rebuildInlineTagPanel(){
+      if(!profileInlineTagPanel||!auth.currentUser)return;
+      var owned=ownedProfileCommunityTags(currentProfile||viewedProfile);
+      var active=normalizeProfileCommunityTag((currentProfile&&currentProfile.communityTag)||(viewedProfile&&viewedProfile.communityTag)||'');
+      profileInlineTagPanel.setAttribute('aria-label',localizedProfileText('Suas tags'));
+      if(!owned.length){
+        profileInlineTagPanel.innerHTML='<header class="profile-inline-tag-head"><div><strong>'+escapePublic(localizedProfileText('Suas tags'))+'</strong><span>'+escapePublic(localizedProfileText('Você ainda não possui tags.'))+'</span></div><button class="profile-inline-tag-close" type="button" aria-label="'+escapePublic(localizedProfileText('Fechar'))+'">'+profileInlineIcon('close')+'</button></header>';
+      }else{
+        profileInlineTagPanel.innerHTML='<header class="profile-inline-tag-head"><div><strong>'+escapePublic(localizedProfileText('Suas tags'))+'</strong><span>'+escapePublic(localizedProfileText('Escolha a tag que deseja exibir no seu perfil.'))+'</span></div><button class="profile-inline-tag-close" type="button" aria-label="'+escapePublic(localizedProfileText('Fechar'))+'">'+profileInlineIcon('close')+'</button></header><div class="profile-inline-tag-list">'+owned.map(function(tag){var meta=profileCommunityTagMeta(tag);if(!meta)return '';var selected=tag===active;return '<button class="profile-inline-tag-option'+(selected?' is-selected':'')+'" type="button" data-profile-community-tag="'+escapePublic(tag)+'" aria-pressed="'+(selected?'true':'false')+'"><span class="profile-inline-tag-option-main"><span class="profile-award-tag '+meta.className+' notranslate" translate="no">'+escapePublic(meta.label)+'</span></span><span class="profile-inline-tag-option-state">'+(selected?escapePublic(localizedProfileText('Em uso')):'')+'</span><span class="profile-inline-tag-check" aria-hidden="true">'+(selected?'✓':'')+'</span></button>';}).join('')+'</div>';
+      }
+      var close=profileInlineTagPanel.querySelector('.profile-inline-tag-close');
+      if(close)close.onclick=function(){closeInlineTagPanel();};
+      profileInlineTagPanel.querySelectorAll('[data-profile-community-tag]').forEach(function(button){
+        button.onclick=function(event){event.preventDefault();event.stopPropagation();selectInlineCommunityTag(button.getAttribute('data-profile-community-tag'));};
+      });
+    }
+    async function selectInlineCommunityTag(tag){
+      if(profileInlineTagSaving||!auth.currentUser)return;
+      var normalized=normalizeProfileCommunityTag(tag);
+      if(!normalized||ownedProfileCommunityTags(currentProfile||viewedProfile).indexOf(normalized)<0)return;
+      profileInlineTagSaving=true;
+      if(profileInlineTagPanel)profileInlineTagPanel.querySelectorAll('button').forEach(function(button){button.disabled=true;});
+      try{
+        var client=window.beBackend&&window.beBackend.client;
+        if(!client||typeof client.rpc!=='function')throw new Error('backend_unavailable');
+        var result=await client.rpc('set_my_community_tag',{p_tag:normalized});
+        if(result&&result.error)throw result.error;
+        var owned=ownedProfileCommunityTags(currentProfile||viewedProfile);
+        if(owned.indexOf(normalized)<0)owned.push(normalized);
+        currentProfile={...(currentProfile||{}),communityTag:normalized,communityTags:owned};
+        if(viewedProfile&&isOwnProfileView())viewedProfile={...viewedProfile,communityTag:normalized,communityTags:owned};
+        try{localStorage.setItem('beCommunityTag:'+String(auth.currentUser.uid||''),normalized);}catch(_){ }
+        renderProfileAwardTags(viewedProfile||currentProfile);
+        try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(auth.currentUser.uid||''),tag:normalized}}));}catch(_){ }
+        rebuildInlineTagPanel();
+        window.setTimeout(closeInlineTagPanel,180);
+      }catch(error){
+        console.warn('Não foi possível trocar a tag do perfil:',error&&error.message?error.message:error);
+        rebuildInlineTagPanel();
+      }finally{
+        profileInlineTagSaving=false;
+      }
+    }
+    function openInlineTagPanel(){
+      if(!profileInlineEditing||!profileInlineTagPanel||!profileInlineTagButton||profileInlineTagButton.hidden)return;
+      closeInlineColorPanel();
+      rebuildInlineTagPanel();
+      profileInlineTagPanel.hidden=false;
+      profileInlineTagPanel.removeAttribute('hidden');
+      profileInlineTagButton.classList.add('is-active');
+    }
+    function closeInlineTagPanel(){
+      if(!profileInlineTagPanel)return;
+      profileInlineTagPanel.hidden=true;
+      profileInlineTagPanel.setAttribute('hidden','');
+      if(profileInlineTagButton)profileInlineTagButton.classList.remove('is-active');
+    }
+    function toggleInlineTagPanel(){
+      if(!profileInlineTagPanel)return;
+      if(profileInlineTagPanel.hidden)openInlineTagPanel();else closeInlineTagPanel();
+    }
+
     function rebuildInlineColorPanel(){
       if(!profileInlineColorPanel||!auth.currentUser)return;
       var uid=auth.currentUser.uid;
@@ -9806,6 +9915,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     function openInlineColorPanel(){
       if(!profileInlineEditing||!profileInlineColorPanel)return;
+      closeInlineTagPanel();
       rebuildInlineColorPanel();
       profileInlineColorPanel.hidden=false;
       profileInlineColorPanel.removeAttribute('hidden');
@@ -9868,7 +9978,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       document.body.classList.add('profile-inline-editing');
       if(profileInlineCancelButton){profileInlineCancelButton.disabled=false;profileInlineCancelButton.textContent=localizedProfileText('Cancelar');}
       if(profileInlineSaveButton){profileInlineSaveButton.disabled=false;profileInlineSaveButton.textContent=localizedProfileText('Salvar');}
+      syncInlineTagButtonVisibility();
       closeInlineColorPanel();
+      closeInlineTagPanel();
     }
     function stopInlineProfileEdit(keepName){
       if(profileInlineNameWasEditing)finishInlineNameEdit(keepName!==true);
@@ -9877,6 +9989,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileInlineNameWasEditing=false;
       document.body.classList.remove('profile-inline-editing');
       closeInlineColorPanel();
+      closeInlineTagPanel();
       profileInlineOriginalName='';
       profileInlineDraftName='';
       profileInlineOriginalProfileColor='';
@@ -11298,6 +11411,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setLiteralText(profilePageName,(profileInlineEditing&&ownProfile&&profileInlineDraftName)?profileInlineDraftName:displayName);
       setLiteralText(profilePageHandle,'@'+(profile.username||handle||'perfil'));
       renderProfileAwardTags(profile);
+      syncInlineTagButtonVisibility();
       profilePageBadge.textContent='Perfil';
       profilePageMetaLabel.textContent='Perfil público';
       profilePageMemberSince.textContent='Membro desde '+publicProfileYear(profile);
@@ -11735,9 +11849,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profilePageName.addEventListener('blur',function(){if(profileInlineEditing&&profileInlineNameWasEditing)finishInlineNameEdit(false);});
     }
     document.addEventListener('pointerdown',function(event){
-      if(!profileInlineEditing||!profileInlineColorPanel||profileInlineColorPanel.hidden)return;
-      if(profileInlineColorPanel.contains(event.target)||(profileInlinePaletteButton&&profileInlinePaletteButton.contains(event.target)))return;
-      closeInlineColorPanel();
+      if(!profileInlineEditing)return;
+      var inColor=profileInlineColorPanel&&!profileInlineColorPanel.hidden;
+      var inTag=profileInlineTagPanel&&!profileInlineTagPanel.hidden;
+      if(!inColor&&!inTag)return;
+      if(inColor&&(profileInlineColorPanel.contains(event.target)||(profileInlinePaletteButton&&profileInlinePaletteButton.contains(event.target))))return;
+      if(inTag&&(profileInlineTagPanel.contains(event.target)||(profileInlineTagButton&&profileInlineTagButton.contains(event.target))))return;
+      if(inColor)closeInlineColorPanel();
+      if(inTag)closeInlineTagPanel();
     });
     avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});if(profilePageMore)profilePageMore.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileActionsMenu();});if(profilePageEdit)profilePageEdit.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openProfileEditor();});if(profilePageSettings)profilePageSettings.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openSettingsPage(true);});document.addEventListener('click',function(event){if(!profilePageActionsMenu||profilePageActionsMenu.hidden)return;if(event.target===profilePageMore||profilePageMore.contains(event.target)||profilePageActionsMenu.contains(event.target))return;closeProfileActionsMenu(false);});document.addEventListener('keydown',function(event){if(event.key==='Escape'&&profilePageActionsMenu&&!profilePageActionsMenu.hidden){event.preventDefault();closeProfileActionsMenu(true);}});window.addEventListener('resize',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)positionProfileActionsMenu();});window.addEventListener('scroll',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)closeProfileActionsMenu(false);},true);if(profilePageLike)profilePageLike.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileLike();});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
       if(event){event.preventDefault();event.stopPropagation();}
@@ -15668,6 +15787,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var result=await client.rpc('claim_billie_fan_tag');
       if(result&&result.error)throw result.error;
       try{localStorage.setItem('beCommunityTag:'+String(userId||''),'billie_fan');}catch(_){ }
+      try{
+        if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.get==='function'){
+          var refreshed=await window.beBackend.profiles.get(userId,{force:true});
+          if(refreshed&&typeof refreshed==='object')window.dispatchEvent(new CustomEvent('be:profile-refreshed',{detail:{profile:refreshed}}));
+        }
+      }catch(_){ }
       try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(userId||''),tag:'billie_fan'}}));}catch(_){ }
       return true;
     }catch(error){console.warn('Não foi possível aplicar a tag Fã da Billie:',error&&error.message?error.message:error);return false;}
