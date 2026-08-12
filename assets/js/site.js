@@ -3978,6 +3978,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"></path></svg>';
   }
 
+  function detailCommentCommunityTagMeta(value) {
+    const tag = String(value || '').trim().toLowerCase();
+    if (tag === 'avocado') return { label: 'Avocado', className: 'is-avocado' };
+    if (tag === 'eyelash') return { label: 'Eyelash', className: 'is-eyelash' };
+    if (tag === 'blohsh') return { label: 'Blohsh', className: 'is-blohsh' };
+    if (tag === 'billie_fan') return { label: 'Fã da Billie', className: 'is-billie-fan' };
+    return null;
+  }
+
+  function detailCommentCommunityTagMarkup(value) {
+    const meta = detailCommentCommunityTagMeta(value);
+    if (!meta) return '';
+    return `<span class="detail-comment-award-tag ${meta.className} notranslate" translate="no">${escapeHtml(meta.label)}</span>`;
+  }
+
   function detailCommentMarkup(row, index = 0) {
     const username = String(row?.username || '').trim().replace(/^@+/, '');
     const message = String(row?.message || '').trim();
@@ -3988,6 +4003,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const isOwner = Boolean(commentId && authorUserId && currentUserId && authorUserId === currentUserId);
     const profileHref = username ? `/@${encodeURIComponent(username)}` : '#';
     const avatar = String(row?.avatar_url || row?.avatarUrl || '').trim();
+    const communityTag = String(row?.community_tag || row?.communityTag || '').trim();
     const likesCount = Math.max(0, Number(row?.likes_count ?? row?.likesCount ?? 0) || 0);
     const likedByMe = row?.liked_by_me === true || row?.likedByMe === true;
     const likeLabel = localizedUiText(likedByMe ? 'Remover curtida do comentário' : 'Curtir comentário');
@@ -4000,7 +4016,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         ${detailCommentAvatarMarkup(avatar, '', index < 8)}
       </a>
       <div class="detail-comment-body">
-        <a class="detail-comment-user notranslate" translate="no" href="${escapeHtml(profileHref)}">@${escapeHtml(username || 'usuario')}</a>
+        <div class="detail-comment-user-row">
+          <a class="detail-comment-user notranslate" translate="no" href="${escapeHtml(profileHref)}">@${escapeHtml(username || 'usuario')}</a>
+          ${detailCommentCommunityTagMarkup(communityTag)}
+        </div>
         <p class="detail-comment-message notranslate" translate="no">${escapeHtml(message)}</p>
       </div>
       <div class="detail-comment-actions">${likeAction}${moderationAction}</div>
@@ -9858,21 +9877,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async function selectInlineCommunityTag(tag){
       if(profileInlineTagSaving||!auth.currentUser)return;
       var normalized=normalizeProfileCommunityTag(tag);
-      if(!normalized||ownedProfileCommunityTags(currentProfile||viewedProfile).indexOf(normalized)<0)return;
+      var owned=ownedProfileCommunityTags(currentProfile||viewedProfile);
+      if(!normalized||owned.indexOf(normalized)<0)return;
+      var active=normalizeProfileCommunityTag((currentProfile&&currentProfile.communityTag)||(viewedProfile&&viewedProfile.communityTag)||'');
+      /* Tocar novamente na tag que já está em uso apenas oculta a tag do perfil.
+         A tag continua em communityTags para o usuário poder reativá-la depois. */
+      var nextTag=normalized===active?'':normalized;
       profileInlineTagSaving=true;
       if(profileInlineTagPanel)profileInlineTagPanel.querySelectorAll('button').forEach(function(button){button.disabled=true;});
       try{
         var client=window.beBackend&&window.beBackend.client;
         if(!client||typeof client.rpc!=='function')throw new Error('backend_unavailable');
-        var result=await client.rpc('set_my_community_tag',{p_tag:normalized});
+        var result=await client.rpc('set_my_community_tag',{p_tag:nextTag});
         if(result&&result.error)throw result.error;
-        var owned=ownedProfileCommunityTags(currentProfile||viewedProfile);
-        if(owned.indexOf(normalized)<0)owned.push(normalized);
-        currentProfile={...(currentProfile||{}),communityTag:normalized,communityTags:owned};
-        if(viewedProfile&&isOwnProfileView())viewedProfile={...viewedProfile,communityTag:normalized,communityTags:owned};
-        try{localStorage.setItem('beCommunityTag:'+String(auth.currentUser.uid||''),normalized);}catch(_){ }
+        currentProfile={...(currentProfile||{}),communityTag:nextTag,communityTags:owned};
+        if(viewedProfile&&isOwnProfileView())viewedProfile={...viewedProfile,communityTag:nextTag,communityTags:owned};
+        try{
+          var storageKey='beCommunityTag:'+String(auth.currentUser.uid||'');
+          if(nextTag)localStorage.setItem(storageKey,nextTag);else localStorage.removeItem(storageKey);
+        }catch(_){ }
         renderProfileAwardTags(viewedProfile||currentProfile);
-        try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(auth.currentUser.uid||''),tag:normalized}}));}catch(_){ }
+        try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(auth.currentUser.uid||''),tag:nextTag}}));}catch(_){ }
         rebuildInlineTagPanel();
         window.setTimeout(closeInlineTagPanel,180);
       }catch(error){
