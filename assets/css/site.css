@@ -17490,3 +17490,149 @@ body.profile-page-active #profileLovedAlbumsSection:not([hidden]) ~ .profile-sav
     border-bottom:0!important;
   }
 }
+
+/* 12/08/2026 — correções finais do perfil: botão + sobreposto, mobile liso e desktop sem cortes. */
+
+/* O botão + fica realmente sobreposto ao canto inferior direito do avatar. */
+body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
+  left:auto!important;
+  right:-6px!important;
+  bottom:6px!important;
+  width:34px!important;
+  height:34px!important;
+  min-width:34px!important;
+  min-height:34px!important;
+  transform:none!important;
+  z-index:9!important;
+}
+body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit svg{
+  width:18px!important;
+  height:18px!important;
+}
+@media(max-width:760px){
+  body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
+    right:-4px!important;
+    bottom:4px!important;
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+    min-height:32px!important;
+  }
+  body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit svg{
+    width:17px!important;
+    height:17px!important;
+  }
+}
+
+/* Desktop e mobile: a cor do perfil segue todo o conteúdo, sem cortes pretos entre as seções. */
+body.profile-page-active .profile-favorites-section,
+body.profile-page-active .profile-saved-section{
+  margin:0!important;
+}
+
+body.profile-page-active.profile-color-customized,
+body.profile-page-active.profile-color-customized .profile-page-shell,
+body.profile-page-active.profile-color-customized .profile-page-body,
+body.profile-page-active.profile-color-customized .profile-favorites-section,
+body.profile-page-active.profile-color-customized .profile-saved-section,
+body.profile-page-active.profile-color-customized > footer,
+body.profile-page-active.profile-color-customized > footer > .footer-card{
+  background:color-mix(in srgb,var(--profile-theme-color) 18%,#090a0c)!important;
+  background-image:none!important;
+}
+
+/* A sombra atrás do usuário continua fixa e escura; só o restante recebe a cor. */
+body.profile-page-active.profile-color-customized .profile-page-hero{
+  background:transparent!important;
+}
+body.profile-page-active .profile-page-hero::after,
+body.profile-page-active.profile-color-customized .profile-page-hero::after{
+  background:
+    linear-gradient(180deg,rgba(0,0,0,.10) 0%,rgba(0,0,0,.16) 34%,rgba(0,0,0,.50) 68%,rgba(0,0,0,.82) 100%),
+    linear-gradient(90deg,rgba(0,0,0,.34) 0%,rgba(0,0,0,.12) 40%,rgba(0,0,0,.54) 100%)!important;
+}
+
+/* No PC existe só a linha/divisor logo abaixo do cabeçalho; as infos de baixo ficam lisas. */
+@media(min-width:761px){
+  body.profile-page-active #profileFavoritesSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection[hidden] + #profileSavedSection:not([hidden]){
+    margin-top:0!important;
+    border-top:1px solid rgba(255,255,255,.09)!important;
+    border-left:0!important;
+    border-right:0!important;
+    border-bottom:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+
+  body.profile-page-active #profileFavoritesSection:not([hidden]) ~ .profile-favorites-section,
+  body.profile-page-active #profileFavoritesSection:not([hidden]) ~ .profile-saved-section,
+  body.profile-page-active #profileLovedAlbumsSection:not([hidden]) ~ .profile-saved-section,
+  body.profile-page-active .profile-favorites-section,
+  body.profile-page-active .profile-saved-section{
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+
+  body.profile-page-active.profile-color-customized .profile-favorites-section,
+  body.profile-page-active.profile-color-customized .profile-saved-section{
+    background:color-mix(in srgb,var(--profile-theme-color) 18%,#090a0c)!important;
+  }
+}
+
+/* No mobile o visual fica totalmente liso, sem cartões, sem bordas nas infos. */
+@media(max-width:760px){
+  body.profile-page-active,
+  body.profile-page-active .profile-page-shell,
+  body.profile-page-active .profile-page-body,
+  body.profile-page-active .profile-favorites-section,
+  body.profile-page-active .profile-saved-section,
+  body.profile-page-active > footer,
+  body.profile-page-active > footer > .footer-card{
+    background:#090a0c!important;
+    background-image:none!important;
+  }
+
+  body.profile-page-active.profile-color-customized,
+  body.profile-page-active.profile-color-customized .profile-page-shell,
+  body.profile-page-active.profile-color-customized .profile-page-body,
+  body.profile-page-active.profile-color-customized .profile-favorites-section,
+  body.profile-page-active.profile-color-customized .profile-saved-section,
+  body.profile-page-active.profile-color-customized > footer,
+  body.profile-page-active.profile-color-customized > footer > .footer-card{
+    background:color-mix(in srgb,var(--profile-theme-color) 20%,#090a0c)!important;
+    background-image:none!important;
+  }
+
+  body.profile-page-active #profileFavoritesSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection[hidden] + #profileSavedSection:not([hidden]),
+  body.profile-page-active .profile-favorites-section,
+  body.profile-page-active .profile-saved-section,
+  body.profile-page-active.profile-avatar-border-customized .profile-favorites-section,
+  body.profile-page-active.profile-avatar-border-customized .profile-saved-section{
+    width:100%!important;
+    margin:0!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+  }
+
+  /* Nada de contorno arredondado nas infos; a única separação é a área do cabeçalho. */
+  body.profile-page-active #profileFavoritesSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection[hidden] + #profileSavedSection:not([hidden]){
+    border-top:0!important;
+  }
+
+  body.profile-page-active .profile-page-hero::after,
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    inset:0!important;
+    height:auto!important;
+    min-height:0!important;
+    background:
+      linear-gradient(180deg,rgba(0,0,0,.08) 0%,rgba(0,0,0,.12) 34%,rgba(0,0,0,.40) 58%,rgba(0,0,0,.68) 76%,rgba(0,0,0,.84) 100%)!important;
+  }
+}
