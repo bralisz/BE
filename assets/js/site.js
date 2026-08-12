@@ -10508,6 +10508,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     function updateProfileActionVisibility(){
       var guest=!auth.currentUser;
+      var own=!guest&&isOwnProfileView();
       var browsingAsGuest=guest&&Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
       document.body.classList.toggle('profile-viewer-guest',guest);
       document.body.classList.toggle('profile-view-own',!guest&&isOwnProfileView());
