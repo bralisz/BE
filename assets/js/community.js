@@ -411,7 +411,7 @@
         setHomeTab('community');
         return;
       }
-      var headerUtility=event.target&&event.target.closest?event.target.closest('#userChip,#notificationButton,#mobileProfileButton,#mobileNotificationButton'):null;
+      var headerUtility=event.target&&event.target.closest?event.target.closest('#userChip,#notificationButton,#mobileProfileButton,#mobileNotificationButton,#homeSearchToggle,#homeSearchInput,#mobileSearchButton,#mobileSearchInput'):null;
       if(headerUtility)preserveCommunitySurfaceForHeaderUtility();
       if(document.body.classList.contains('mobile-account-menu-open')){var trigger=event.target&&event.target.closest?event.target.closest('#mobileProfileButton'):null;if(!trigger&&mobileMenu&&!mobileMenu.contains(event.target))closeMobileAccountMenu();}
       var profileRoute=event.target&&event.target.closest?event.target.closest('[data-public-action="profile"],[data-public-action="settings"]'):null;
@@ -420,6 +420,18 @@
       if(notificationHome)setHomeTab('home');
       var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;
       if(nav&&!nav.matches('[data-community-tab]')){var target='home';if(nav.dataset&&nav.dataset.homeView)target=nav.dataset.homeView;else if(nav.matches('[data-public-action="support"]'))target='support';closeCommunity(false,target);}
+    },true);
+    // A pesquisa é uma utilidade da barra, não uma navegação. Mantém a página
+    // Comunidade ativa ao abrir a lupa e enquanto o usuário digita, tanto no
+    // desktop quanto no mobile. Perfis/resultados continuam podendo abrir suas
+    // rotas normalmente quando o usuário seleciona um item.
+    document.addEventListener('input',function(event){
+      var searchField=event.target&&event.target.closest?event.target.closest('#homeSearchInput,#mobileSearchInput'):null;
+      if(searchField)preserveCommunitySurfaceForHeaderUtility();
+    },true);
+    document.addEventListener('focusin',function(event){
+      var searchField=event.target&&event.target.closest?event.target.closest('#homeSearchInput,#mobileSearchInput'):null;
+      if(searchField)preserveCommunitySurfaceForHeaderUtility();
     },true);
     window.addEventListener('be:toggle-mobile-account-menu',toggleMobileAccountMenu);
     window.addEventListener('be:close-notification-menus',closeMobileAccountMenu);

@@ -9660,6 +9660,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!hex)return null;
       return {r:parseInt(hex.slice(1,3),16),g:parseInt(hex.slice(3,5),16),b:parseInt(hex.slice(5,7),16)};
     }
+    function applyOwnAvatarBorder(profile,userId){
+      var uid=String(arguments.length>1?userId:((auth.currentUser&&auth.currentUser.uid)||'')).trim();
+      var border=normalizeProfileColorValue(profile&&(profile.avatarBorderColor||profile.profileAvatarBorderColor));
+      if(!border&&uid)border=readProfileColorValue(uid,'avatar-border');
+      document.documentElement.classList.toggle('profile-avatar-global-customized',Boolean(border));
+      if(border)document.documentElement.style.setProperty('--betv-user-avatar-border',border);
+      else document.documentElement.style.removeProperty('--betv-user-avatar-border');
+    }
     function applyProfileTheme(profile){
       var theme=normalizeProfileColorValue(profile&&profile.profileColor);
       var border=normalizeProfileColorValue(profile&&(profile.avatarBorderColor||profile.profileAvatarBorderColor));
@@ -9732,6 +9740,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
       }
       applyProfileTheme(viewedProfile||currentProfile);
+      if(kind==='avatar-border')applyOwnAvatarBorder(currentProfile,user.uid);
       scheduleCrossDeviceSync('profile-colors');
       showSettingsSaved();
       window.setTimeout(function(){
@@ -9916,6 +9925,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileLovedAlbumsItems=data.profileLovedAlbums.slice(0,3);
       if(auth.currentUser&&auth.currentUser.uid===userId){
         currentProfile={...(currentProfile||{}),socialLinks:data.profileSocialLinks,profileColor:data.profileColor,avatarBorderColor:data.profileAvatarBorderColor};
+        applyOwnAvatarBorder(currentProfile,userId);
         if(viewedProfile&&isOwnProfileView())viewedProfile={...viewedProfile,socialLinks:data.profileSocialLinks,profileColor:data.profileColor,avatarBorderColor:data.profileAvatarBorderColor};
       }
       try{window.dispatchEvent(new CustomEvent('be:user-data-synced',{detail:{userId:userId,source:source||'remote',data:data}}));}catch(_){ }
@@ -11332,15 +11342,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
         if(currentProfile&&currentProfile.banned){window.dispatchEvent(new CustomEvent('be:user-banned',{detail:{email:currentUser.email||'',reason:currentProfile.banReason||'',bannedAt:currentProfile.bannedAt||''}}));try{await auth.signOut();}catch(_){ }return;}
         var restoredBanner=resolvedProfileBanner(currentUser);if(restoredBanner.bannerUrl){currentProfile.bannerUrl=restoredBanner.bannerUrl;currentProfile.bannerId=restoredBanner.bannerId;}
-        setLiteralText(username,currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário'));selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);syncAuthActionLabel();updateProfileActionVisibility();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();startCrossDeviceSync(currentUser).catch(function(error){console.warn('Falha ao iniciar sincronização:',error);});if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
-      }else{stopCrossDeviceSync();setInterfaceText(username,'Visitante');currentProfile={};selectedAvatar='';setMainAvatar('');syncAuthActionLabel();updateProfileActionVisibility();if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);else{viewedProfile=null;viewedProfileStatus='idle';}if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
+        setLiteralText(username,currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário'));selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);applyOwnAvatarBorder(currentProfile,currentUser.uid);syncAuthActionLabel();updateProfileActionVisibility();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();startCrossDeviceSync(currentUser).catch(function(error){console.warn('Falha ao iniciar sincronização:',error);});if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
+      }else{stopCrossDeviceSync();setInterfaceText(username,'Visitante');currentProfile={};applyOwnAvatarBorder(null,'');selectedAvatar='';setMainAvatar('');syncAuthActionLabel();updateProfileActionVisibility();if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);else{viewedProfile=null;viewedProfileStatus='idle';}if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
       var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()){window.BETVGuestAccess.setActive(false);localStorage.removeItem('beAuthExpected');localStorage.removeItem('beSessionUid');}syncAuthActionLabel();window.BETVPublicRoutes.go('/login');document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='donate'){toggleDropdown(false);if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/ong');return;}if(action==='support'){toggleDropdown(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/suporte');else window.dispatchEvent(new CustomEvent('be:open-support'));return;}if(action==='settings'){openSettingsPage(true);return;}
     });});
     window.addEventListener('be:guest-access',syncAuthActionLabel);
-    window.addEventListener('storage',function(event){if(event&&event.key==='beGuestAccess')syncAuthActionLabel();});
+    window.addEventListener('storage',function(event){
+      if(event&&event.key==='beGuestAccess')syncAuthActionLabel();
+      if(auth.currentUser&&event&&event.key===profileColorStorageKey(auth.currentUser.uid,'avatar-border'))applyOwnAvatarBorder(currentProfile,auth.currentUser.uid);
+    });
     window.addEventListener('be:profile-avatar-changed',function(event){
       var detail=event&&event.detail||{};
       if(!auth.currentUser||detail.userId!==auth.currentUser.uid)return;

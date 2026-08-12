@@ -16419,3 +16419,57 @@ body.profile-page-active.profile-avatar-border-customized .profile-page-avatar{
       #090909!important;
   }
 }
+
+/* 12/08/2026 — Perfil: cor personalizada sem tingir o fundo + aro persistente no site. */
+body.profile-page-active.profile-color-customized,
+body.profile-page-active.profile-color-customized .profile-page-shell{
+  background:#090a0c!important;
+  background-image:none!important;
+}
+body.profile-page-active.profile-color-customized .profile-page-hero{
+  background:#0a0b0d!important;
+  border-bottom-color:transparent!important;
+}
+body.profile-page-active.profile-color-customized .profile-page-banner-fallback{
+  background:linear-gradient(180deg,#1a2330,#080c12 52%,#06080c 100%)!important;
+}
+body.profile-page-active.profile-color-customized .profile-favorites-section,
+body.profile-page-active.profile-color-customized .profile-saved-section{
+  background:#090a0c!important;
+  background-image:none!important;
+  border-top:0!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+}
+@media(min-width:761px){
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    background:
+      linear-gradient(180deg,rgba(0,0,0,.08) 0%,rgba(0,0,0,.16) 42%,rgba(5,6,7,.76) 78%,#090a0c 100%),
+      linear-gradient(90deg,rgba(0,0,0,.14) 0%,transparent 52%,rgba(0,0,0,.18) 100%)!important;
+  }
+}
+@media(max-width:760px){
+  body.profile-page-active.profile-color-customized,
+  body.profile-page-active.profile-color-customized .profile-page-shell,
+  body.profile-page-active.profile-color-customized .profile-page-hero,
+  body.profile-page-active.profile-color-customized .profile-favorites-section,
+  body.profile-page-active.profile-color-customized .profile-saved-section{
+    background:#090909!important;
+    background-image:none!important;
+  }
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    background:linear-gradient(180deg,rgba(0,0,0,.16) 0%,rgba(0,0,0,.16) 48%,rgba(9,9,9,.7) 78%,#090909 100%)!important;
+  }
+}
+
+/* O aro escolhido pelo dono da conta acompanha o avatar nas demais áreas do site. */
+html.profile-avatar-global-customized .home-user-menu .user-chip>.avatar,
+html.profile-avatar-global-customized body.billie-page-active .billie-page-avatar>.betv-header-avatar-inner,
+html.profile-avatar-global-customized body.donate-page-active .donate-page-avatar>.betv-header-avatar-inner,
+html.profile-avatar-global-customized body.notification-page-active .notification-page-avatar>img,
+html.profile-avatar-global-customized body.legal-page-active .legal-avatar-button:not(.is-login)>img,
+html.profile-avatar-global-customized .mobile-profile-button>span,
+html.profile-avatar-global-customized .mobile-drawer-avatar,
+html.profile-avatar-global-customized .fans-page-avatar-frame{
+  border-color:var(--betv-user-avatar-border)!important;
+}
