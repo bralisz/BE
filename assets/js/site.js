@@ -9415,8 +9415,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profileInlineNameButton=null;
     var profileInlineDock=null;
     var profileInlinePaletteButton=null;
+    var profileInlineCancelButton=null;
     var profileInlineSaveButton=null;
     var profileInlineColorPanel=null;
+    var profileInlineOriginalProfileColor='';
+    var profileInlineOriginalAvatarBorderColor='';
+    var profileInlineOriginalAvatarUrl='';
+    var profileInlineOriginalAvatarId='';
+    var profileInlineOriginalBannerUrl='';
+    var profileInlineOriginalBannerId='';
     var profileFavoritesSection=document.getElementById('profileFavoritesSection');
     var profileFavoritesContent=document.getElementById('profileFavoritesContent');
     var profileFavoritesEdit=document.getElementById('profileFavoritesEdit');
@@ -9520,6 +9527,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profileDeviceSyncStop=null;
     var preferenceDeviceSyncStop=null;
     var preferenceSyncTimer=0;
+    var pendingProfileColorSync=null;
     var preferenceSyncUserId='';
     var preferenceSyncStarting=false;
     var applyingRemotePreferences=false;
@@ -9723,11 +9731,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!profileInlineDock){
         profileInlineDock=document.createElement('div');
         profileInlineDock.className='profile-inline-edit-dock';
-        profileInlineDock.innerHTML='<button class="profile-inline-palette" type="button" aria-label="Personalizar cores" title="Personalizar cores">'+profileInlineIcon('palette')+'</button><button class="profile-inline-save" type="button">Salvar</button>';
+        profileInlineDock.innerHTML='<button class="profile-inline-palette" type="button" aria-label="Personalizar cores" title="Personalizar cores">'+profileInlineIcon('palette')+'</button><button class="profile-inline-cancel" type="button">Cancelar</button><button class="profile-inline-save" type="button">Salvar</button>';
         document.body.appendChild(profileInlineDock);
         profileInlinePaletteButton=profileInlineDock.querySelector('.profile-inline-palette');
+        profileInlineCancelButton=profileInlineDock.querySelector('.profile-inline-cancel');
         profileInlineSaveButton=profileInlineDock.querySelector('.profile-inline-save');
         profileInlinePaletteButton.onclick=function(event){event.preventDefault();event.stopPropagation();toggleInlineColorPanel();};
+        profileInlineCancelButton.onclick=function(event){event.preventDefault();event.stopPropagation();cancelInlineProfileEdit();};
         profileInlineSaveButton.onclick=function(event){event.preventDefault();event.stopPropagation();saveInlineProfileEdit();};
       }
       if(!profileInlineColorPanel){
@@ -9774,9 +9784,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var uid=auth.currentUser.uid;
       var profileColor=normalizeProfileColorValue((currentProfile&&currentProfile.profileColor)||readProfileColorValue(uid,'profile'));
       var avatarBorderColor=normalizeProfileColorValue((currentProfile&&currentProfile.avatarBorderColor)||readProfileColorValue(uid,'avatar-border'));
-      profileInlineColorPanel.innerHTML='<header class="profile-inline-color-head"><div><strong>Cores do perfil</strong><span>Personalize como no iPhone</span></div><button class="profile-inline-color-close" type="button" aria-label="Fechar">'+profileInlineIcon('close')+'</button></header><div class="profile-inline-color-scroll">'+profileColorSettingsMarkup(profileColor,avatarBorderColor)+'</div>';
+      profileInlineColorPanel.innerHTML='<header class="profile-inline-color-head"><div><strong>Cores do perfil</strong><span>Personalize como no iPhone</span></div><button class="profile-inline-color-close" type="button" aria-label="Fechar">'+profileInlineIcon('close')+'</button></header><div class="profile-inline-color-scroll">'+profileColorSettingsMarkup(profileColor,avatarBorderColor)+'</div><footer class="profile-inline-color-footer"><button class="profile-inline-reset" type="button">Voltar ao padrão</button></footer>';
       var close=profileInlineColorPanel.querySelector('.profile-inline-color-close');
+      var reset=profileInlineColorPanel.querySelector('.profile-inline-reset');
       if(close)close.onclick=function(){closeInlineColorPanel();};
+      if(reset)reset.onclick=function(){resetInlineProfileColors();};
       bindProfileColorSettings(auth.currentUser,profileInlineColorPanel);
     }
     function openInlineColorPanel(){
@@ -9796,13 +9808,50 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!profileInlineColorPanel)return;
       if(profileInlineColorPanel.hidden)openInlineColorPanel();else closeInlineColorPanel();
     }
+    function resetInlineProfileColors(){
+      if(!auth.currentUser)return;
+      var uid=auth.currentUser.uid;
+      persistProfileThemeColor('profile',uid,'');
+      persistProfileThemeColor('avatar-border',uid,'');
+      rebuildInlineColorPanel();
+    }
+    function restoreInlineProfileColors(){
+      if(!auth.currentUser)return;
+      var uid=auth.currentUser.uid;
+      writeProfileColorValue(uid,'profile',profileInlineOriginalProfileColor);
+      writeProfileColorValue(uid,'avatar-border',profileInlineOriginalAvatarBorderColor);
+      currentProfile={...(currentProfile||{}),profileColor:profileInlineOriginalProfileColor,avatarBorderColor:profileInlineOriginalAvatarBorderColor};
+      if(viewedProfile&&isOwnProfileView())viewedProfile={...viewedProfile,profileColor:profileInlineOriginalProfileColor,avatarBorderColor:profileInlineOriginalAvatarBorderColor};
+      pendingProfileColorSync={userId:String(uid||''),profileColor:profileInlineOriginalProfileColor,profileAvatarBorderColor:profileInlineOriginalAvatarBorderColor};
+      applyProfileTheme(viewedProfile||currentProfile);
+      applyOwnAvatarBorder(currentProfile,uid);
+      scheduleCrossDeviceSync('profile-colors');
+    }
+    function commitInlineColorDrafts(){
+      if(!profileInlineColorPanel||!auth.currentUser)return;
+      profileInlineColorPanel.querySelectorAll('[data-profile-color-kind]').forEach(function(control){
+        if(control.dataset.profileCustomDirty!=='true')return;
+        var kind=control.getAttribute('data-profile-color-kind')==='avatar-border'?'avatar-border':'profile';
+        var hexInput=control.querySelector('[data-profile-color-hex]');
+        if(!hexInput)return;
+        var color=normalizeProfileColorValue(hexInput.value);
+        if(color){control.dataset.profileCustomDirty='false';persistProfileThemeColor(kind,auth.currentUser.uid,color);}
+      });
+    }
     function startInlineProfileEdit(){
       if(!auth.currentUser||!isOwnProfileView())return;
       ensureInlineProfileEditor();
       profileInlineEditing=true;
       profileInlineOriginalName=String((viewedProfile&&viewedProfile.displayName)||(currentProfile&&currentProfile.displayName)||auth.currentUser.displayName||profilePageName.textContent||'Usuário').trim();
       profileInlineDraftName=profileInlineOriginalName;
+      profileInlineOriginalProfileColor=normalizeProfileColorValue((currentProfile&&currentProfile.profileColor)||readProfileColorValue(auth.currentUser.uid,'profile'));
+      profileInlineOriginalAvatarBorderColor=normalizeProfileColorValue((currentProfile&&currentProfile.avatarBorderColor)||readProfileColorValue(auth.currentUser.uid,'avatar-border'));
+      profileInlineOriginalAvatarUrl=String((currentProfile&&currentProfile.avatarUrl)||auth.currentUser.photoURL||'').trim();
+      profileInlineOriginalAvatarId=String((currentProfile&&currentProfile.avatarId)||'').trim();
+      profileInlineOriginalBannerUrl=String((currentProfile&&currentProfile.bannerUrl)||'').trim();
+      profileInlineOriginalBannerId=String((currentProfile&&currentProfile.bannerId)||'').trim();
       document.body.classList.add('profile-inline-editing');
+      if(profileInlineCancelButton){profileInlineCancelButton.disabled=false;profileInlineCancelButton.textContent='Cancelar';}
       if(profileInlineSaveButton){profileInlineSaveButton.disabled=false;profileInlineSaveButton.textContent='Salvar';}
       closeInlineColorPanel();
     }
@@ -9815,10 +9864,48 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeInlineColorPanel();
       profileInlineOriginalName='';
       profileInlineDraftName='';
+      profileInlineOriginalProfileColor='';
+      profileInlineOriginalAvatarBorderColor='';
+      profileInlineOriginalAvatarUrl='';
+      profileInlineOriginalAvatarId='';
+      profileInlineOriginalBannerUrl='';
+      profileInlineOriginalBannerId='';
+    }
+    async function cancelInlineProfileEdit(){
+      if(!profileInlineEditing)return;
+      var uid=auth.currentUser&&auth.currentUser.uid;
+      if(profileInlineNameWasEditing)finishInlineNameEdit(true);
+      else if(profilePageName&&profileInlineOriginalName)setLiteralText(profilePageName,profileInlineOriginalName);
+      restoreInlineProfileColors();
+      if(profileInlineCancelButton){profileInlineCancelButton.disabled=true;profileInlineCancelButton.textContent='Cancelando…';}
+      try{
+        if(uid){
+          var currentAvatar=String((currentProfile&&currentProfile.avatarUrl)||'').trim();
+          var currentBanner=String((currentProfile&&currentProfile.bannerUrl)||'').trim();
+          if(currentAvatar!==profileInlineOriginalAvatarUrl){
+            var restoredAvatar=await beBackend.profiles.setAvatar(uid,profileInlineOriginalAvatarUrl,profileInlineOriginalAvatarId);
+            if(restoredAvatar)currentProfile=restoredAvatar;
+            selectedAvatar=profileInlineOriginalAvatarUrl;
+            setMainAvatar(profileInlineOriginalAvatarUrl);
+            try{localStorage.setItem(avatarCacheKey(auth.currentUser),profileInlineOriginalAvatarUrl);}catch(_){ }
+          }
+          if(currentBanner!==profileInlineOriginalBannerUrl){
+            var restoredBanner=await beBackend.profiles.setBanner(uid,profileInlineOriginalBannerUrl,profileInlineOriginalBannerId);
+            if(restoredBanner)currentProfile=restoredBanner;
+          }
+        }
+      }catch(error){
+        console.warn('Não foi possível desfazer totalmente as alterações do perfil:',error);
+      }
+      viewedProfile={...(viewedProfile||{}),...(currentProfile||{}),displayName:profileInlineOriginalName,profileColor:profileInlineOriginalProfileColor,avatarBorderColor:profileInlineOriginalAvatarBorderColor,avatarUrl:profileInlineOriginalAvatarUrl,bannerUrl:profileInlineOriginalBannerUrl,bannerId:profileInlineOriginalBannerId};
+      renderProfilePage();
+      stopInlineProfileEdit(false);
+      if(profileInlineCancelButton){profileInlineCancelButton.disabled=false;profileInlineCancelButton.textContent='Cancelar';}
     }
     async function saveInlineProfileEdit(){
       if(!auth.currentUser||!profileInlineEditing)return;
       if(profileInlineNameWasEditing)finishInlineNameEdit(false);
+      commitInlineColorDrafts();
       var displayName=String(profileInlineDraftName||profilePageName.textContent||'').replace(/\s+/g,' ').trim().slice(0,50);
       if(!displayName){beginInlineNameEdit();return;}
       var button=profileInlineSaveButton;
@@ -9979,6 +10066,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           else viewedProfile.avatarBorderColor=normalized;
         }
       }
+      pendingProfileColorSync={
+        userId:String(userId||''),
+        profileColor:readProfileColorValue(userId,'profile'),
+        profileAvatarBorderColor:readProfileColorValue(userId,'avatar-border')
+      };
       applyProfileTheme(viewedProfile||currentProfile);
       if(kind==='avatar-border')applyOwnAvatarBorder(currentProfile,userId);
       scheduleCrossDeviceSync('profile-colors');
@@ -10019,6 +10111,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           if(!normalized)return false;
           state=profileHexToHsv(normalized);refresh();return true;
         }
+        function markSelectedColor(value,forceCustom){
+          var normalized=normalizeProfileColorValue(value);
+          control.querySelectorAll('[data-profile-color-preset]').forEach(function(button){
+            var buttonColor=normalizeProfileColorValue(button.getAttribute('data-profile-color-preset'));
+            button.classList.toggle('is-selected',Boolean(normalized&&!forceCustom&&buttonColor===normalized));
+          });
+          if(customOpen){
+            var customSelected=Boolean(normalized&&(forceCustom||!profileColorIsPreset(normalized)));
+            customOpen.classList.toggle('is-selected',customSelected);
+          }
+        }
+        function markCustomDirty(){
+          control.dataset.profileCustomDirty='true';
+          markSelectedColor(stateHex(),true);
+        }
         function setSV(event){
           if(!sv)return;
           var rect=sv.getBoundingClientRect();
@@ -10027,11 +10134,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           state.s=rect.width?x/rect.width:0;
           state.v=rect.height?1-y/rect.height:1;
           refresh();
+          markCustomDirty();
         }
         control.querySelectorAll('[data-profile-color-preset]').forEach(function(button){
           button.onclick=function(){
             var color=normalizeProfileColorValue(button.getAttribute('data-profile-color-preset'));
-            if(color)persistProfileThemeColor(kind,user.uid,color);
+            if(color){control.dataset.profileCustomDirty='false';setFromHex(color);markSelectedColor(color,false);persistProfileThemeColor(kind,user.uid,color);}
           };
         });
         if(customOpen)customOpen.onclick=function(){
@@ -10046,9 +10154,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             setFromHex(current||(kind==='profile'?'#8B5CF6':'#FFFFFF'));refresh();
           }
         };
-        if(hue)hue.oninput=function(){state.h=Number(hue.value)||0;refresh();};
+        if(hue)hue.oninput=function(){state.h=Number(hue.value)||0;refresh();markCustomDirty();};
         if(hexInput){
-          hexInput.oninput=function(){var value=String(hexInput.value||'').trim();if(/^#[0-9a-fA-F]{6}$/.test(value))setFromHex(value);};
+          hexInput.oninput=function(){var value=String(hexInput.value||'').trim();if(/^#[0-9a-fA-F]{6}$/.test(value)){setFromHex(value);markCustomDirty();}};
           hexInput.onblur=function(){if(!setFromHex(hexInput.value))refresh();};
         }
         if(sv){
@@ -10068,8 +10176,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             if(handled){event.preventDefault();refresh();}
           });
         }
-        if(save)save.onclick=function(){persistProfileThemeColor(kind,user.uid,stateHex());};
-        if(restore)restore.onclick=function(){persistProfileThemeColor(kind,user.uid,'');};
+        if(save)save.onclick=function(){
+          var color=stateHex();
+          control.dataset.profileCustomDirty='false';
+          markSelectedColor(color,true);
+          persistProfileThemeColor(kind,user.uid,color);
+        };
+        if(restore)restore.onclick=function(){control.dataset.profileCustomDirty='false';markSelectedColor('',false);persistProfileThemeColor(kind,user.uid,'');};
         refresh();
       });
     }
@@ -10147,6 +10260,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function applyCrossDeviceData(value,userId,source){
       if(!userId)return;
       var data=normalizeCrossDeviceData(value);
+      if(pendingProfileColorSync&&pendingProfileColorSync.userId===String(userId)){
+        var remoteMatchesPending=data.profileColor===pendingProfileColorSync.profileColor&&data.profileAvatarBorderColor===pendingProfileColorSync.profileAvatarBorderColor;
+        if(remoteMatchesPending){
+          pendingProfileColorSync=null;
+        }else{
+          data.profileColor=pendingProfileColorSync.profileColor;
+          data.profileAvatarBorderColor=pendingProfileColorSync.profileAvatarBorderColor;
+        }
+      }
       applyingRemotePreferences=true;
       try{
         localStorage.setItem('beDetailFavorites',JSON.stringify(data.detailFavorites));

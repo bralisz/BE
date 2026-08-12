@@ -16858,3 +16858,419 @@ body.profile-page-active.profile-inline-editing .profile-inline-edit-dock{
 @media(prefers-reduced-motion:reduce){
   .profile-inline-color-popover{animation:none!important}
 }
+
+
+/* 12/08/2026 — ajuste fino do botão + do avatar e da borda do perfil. */
+body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
+  left:auto!important;
+  right:-8px!important;
+  bottom:10px!important;
+  width:42px!important;
+  height:42px!important;
+  transform:none!important;
+}
+body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit svg{
+  width:21px!important;
+  height:21px!important;
+}
+@media(max-width:760px){
+  body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
+    right:-6px!important;
+    bottom:8px!important;
+    width:40px!important;
+    height:40px!important;
+  }
+}
+
+body.profile-page-active.profile-avatar-border-customized .profile-page-hero{
+  border-bottom:1px solid color-mix(in srgb,var(--profile-avatar-border) 32%,rgba(255,255,255,.08))!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-section,
+body.profile-page-active.profile-avatar-border-customized .profile-saved-section{
+  position:relative;
+  width:min(calc(100% - 28px),1880px);
+  margin:0 auto 24px;
+  border:1px solid color-mix(in srgb,var(--profile-avatar-border) 30%,rgba(255,255,255,.08));
+  border-radius:32px;
+  background:#090a0c!important;
+  box-shadow:0 20px 46px rgba(0,0,0,.18),inset 0 1px 0 color-mix(in srgb,var(--profile-avatar-border) 14%,rgba(255,255,255,.04));
+  overflow:hidden;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-section{
+  margin-top:10px;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-section::before,
+body.profile-page-active.profile-avatar-border-customized .profile-saved-section::before{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  height:1px;
+  background:color-mix(in srgb,var(--profile-avatar-border) 52%,rgba(255,255,255,.08));
+  pointer-events:none;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-edit{
+  border-color:color-mix(in srgb,var(--profile-avatar-border) 52%,rgba(255,255,255,.18))!important;
+  background:color-mix(in srgb,var(--profile-avatar-border) 14%,transparent)!important;
+  color:var(--profile-avatar-border)!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-edit:hover{
+  border-color:color-mix(in srgb,var(--profile-avatar-border) 78%,rgba(255,255,255,.22))!important;
+  background:color-mix(in srgb,var(--profile-avatar-border) 20%,transparent)!important;
+}
+@media(max-width:760px){
+  body.profile-page-active.profile-avatar-border-customized .profile-favorites-section,
+  body.profile-page-active.profile-avatar-border-customized .profile-saved-section{
+    width:min(calc(100% - 16px),1880px);
+    margin-bottom:18px;
+    border-radius:24px;
+  }
+}
+
+/* 12/08/2026 — avatar personalizado na Home: um único aro sólido, sem anel duplo. */
+html.profile-avatar-global-customized .home-user-menu .user-chip{
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:0 10px 28px rgba(0,0,0,.28)!important;
+  overflow:visible!important;
+}
+html.profile-avatar-global-customized .home-user-menu .user-chip>.avatar{
+  width:100%!important;
+  height:100%!important;
+  padding:0!important;
+  border:5px solid var(--betv-user-avatar-border)!important;
+  background:#0b0d12!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+html.profile-avatar-global-customized .home-user-menu .user-chip>.avatar>img{
+  width:100%!important;
+  height:100%!important;
+  border:0!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+}
+
+/* No seletor, "Personalizado" permanece marcado depois de salvar a cor manual. */
+.profile-color-control .profile-color-custom-trigger.is-selected{
+  border-color:rgba(255,255,255,.72)!important;
+  box-shadow:0 0 0 2px rgba(255,255,255,.10)!important;
+}
+
+
+/* 12/08/2026 — perfil: rodapé acompanha a cor escolhida; sombra do banner continua preta/fixa. */
+body.profile-page-active.profile-color-customized > footer{
+  background:color-mix(in srgb,var(--profile-theme-color) 14%,#090a0c)!important;
+  background-image:none!important;
+}
+body.profile-page-active.profile-color-customized > footer > .footer-card{
+  background:transparent!important;
+}
+
+/* A sombra atrás dos dados do perfil não recebe a cor personalizada. */
+body.profile-page-active.profile-color-customized .profile-page-hero::after{
+  background:
+    linear-gradient(180deg,
+      rgba(0,0,0,.06) 0%,
+      rgba(0,0,0,.12) 40%,
+      rgba(0,0,0,.54) 70%,
+      rgba(5,6,7,.88) 86%,
+      #090a0c 100%),
+    linear-gradient(90deg,
+      rgba(0,0,0,.18) 0%,
+      rgba(0,0,0,.03) 52%,
+      rgba(0,0,0,.20) 100%)!important;
+  background-color:transparent!important;
+}
+@media(max-width:760px){
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    background:linear-gradient(180deg,
+      rgba(0,0,0,.08) 0%,
+      rgba(0,0,0,.12) 42%,
+      rgba(0,0,0,.58) 70%,
+      rgba(5,6,7,.90) 86%,
+      #090a0c 100%)!important;
+  }
+}
+
+/* 12/08/2026 — editor inline: cancelar, restaurar padrão e acabamento mobile. */
+.profile-inline-cancel{
+  min-width:104px;
+  height:48px;
+  padding:0 18px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:17px;
+  background:rgba(255,255,255,.075);
+  color:#f5f5f7;
+  font:750 15px/1 var(--font-body);
+  cursor:pointer;
+  transition:background .18s ease,transform .18s ease,opacity .18s ease,border-color .18s ease;
+}
+.profile-inline-cancel:hover{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22)}
+.profile-inline-cancel:active{transform:scale(.98)}
+.profile-inline-cancel:disabled{opacity:.62;cursor:default}
+
+.profile-inline-color-popover{
+  display:flex;
+  flex-direction:column;
+}
+.profile-inline-color-popover[hidden]{display:none!important}
+.profile-inline-color-scroll{
+  min-height:0;
+  max-height:calc(min(72vh,720px) - 132px);
+}
+.profile-inline-color-footer{
+  flex:0 0 auto;
+  padding:12px 18px 14px;
+  border-top:1px solid rgba(255,255,255,.10);
+  background:rgba(29,29,31,.93);
+  -webkit-backdrop-filter:blur(24px) saturate(145%);
+  backdrop-filter:blur(24px) saturate(145%);
+}
+.profile-inline-reset{
+  width:100%;
+  min-height:44px;
+  padding:0 16px;
+  border:1px solid rgba(255,69,58,.28);
+  border-radius:14px;
+  background:rgba(255,69,58,.08);
+  color:#ff6961;
+  font:750 14px/1 var(--font-body);
+  cursor:pointer;
+  transition:background .18s ease,border-color .18s ease,transform .18s ease;
+}
+.profile-inline-reset:hover{background:rgba(255,69,58,.14);border-color:rgba(255,69,58,.44)}
+.profile-inline-reset:active{transform:scale(.985)}
+
+@media(max-width:760px){
+  /* Cabeçalho do perfil mais compacto e sem elementos se atropelando. */
+  body.profile-page-active{
+    --profile-mobile-action-size:42px!important;
+    --profile-mobile-action-gap:8px!important;
+    --profile-mobile-action-edge:12px!important;
+    --profile-mobile-action-top:calc(12px + env(safe-area-inset-top))!important;
+  }
+  body.profile-page-active .profile-page-shell{
+    min-height:100dvh!important;
+    overflow:visible!important;
+  }
+  body.profile-page-active .profile-page-hero{
+    min-height:430px!important;
+    height:430px!important;
+    overflow:visible!important;
+  }
+  body.profile-page-active .profile-page-banner,
+  body.profile-page-active .profile-page-banner-fallback{
+    height:282px!important;
+    min-height:282px!important;
+  }
+  body.profile-page-active .profile-page-banner img,
+  body.profile-page-active .profile-page-banner-fallback{
+    object-position:center 28%!important;
+  }
+  body.profile-page-active .profile-page-hero::after,
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    height:315px!important;
+    min-height:315px!important;
+    inset:0 0 auto!important;
+    background:linear-gradient(180deg,
+      rgba(0,0,0,.08) 0%,
+      rgba(0,0,0,.13) 38%,
+      rgba(0,0,0,.58) 68%,
+      rgba(5,6,7,.92) 86%,
+      #090a0c 100%)!important;
+  }
+  body.profile-page-active .profile-page-info{
+    inset:211px 0 auto!important;
+    padding:0 16px 22px!important;
+    gap:9px!important;
+    align-items:center!important;
+    text-align:center!important;
+  }
+  body.profile-page-active .profile-page-avatar-edit-wrap{
+    width:118px!important;
+    height:118px!important;
+    flex:0 0 118px!important;
+  }
+  body.profile-page-active .profile-page-avatar{
+    width:118px!important;
+    height:118px!important;
+    min-width:118px!important;
+    min-height:118px!important;
+    border-width:5px!important;
+  }
+  body.profile-page-active .profile-page-copy{
+    width:min(100%,430px)!important;
+    gap:4px!important;
+    padding:0!important;
+  }
+  body.profile-page-active .profile-page-name-row{
+    width:100%!important;
+    min-width:0!important;
+    justify-content:center!important;
+    flex-wrap:nowrap!important;
+    gap:7px!important;
+  }
+  body.profile-page-active .profile-page-name{
+    min-width:0!important;
+    max-width:calc(100vw - 70px)!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    font-size:clamp(27px,8.6vw,34px)!important;
+    line-height:1.02!important;
+  }
+  body.profile-page-active.profile-inline-editing #profilePageName.is-inline-editing{
+    min-width:0!important;
+    max-width:calc(100vw - 88px)!important;
+    flex:1 1 auto!important;
+  }
+  body.profile-page-active.profile-inline-editing .profile-inline-name-edit{
+    width:34px!important;
+    height:34px!important;
+    flex:0 0 34px!important;
+  }
+  body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
+    right:-4px!important;
+    bottom:7px!important;
+    width:38px!important;
+    height:38px!important;
+  }
+  body.profile-page-active.profile-inline-editing .profile-inline-banner-edit{
+    top:74px!important;
+    min-height:38px!important;
+    padding:0 15px!important;
+    font-size:12px!important;
+  }
+
+  /* Ações do topo: Home à esquerda e ações do perfil alinhadas à direita. */
+  body.profile-page-active .profile-page-home,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-like,
+  body.profile-page-active .profile-page-share,
+  body.profile-page-active:not(.profile-viewer-guest) .profile-page-more{
+    width:var(--profile-mobile-action-size)!important;
+    height:var(--profile-mobile-action-size)!important;
+    min-width:var(--profile-mobile-action-size)!important;
+    min-height:var(--profile-mobile-action-size)!important;
+    top:var(--profile-mobile-action-top)!important;
+  }
+  body.profile-page-active .profile-page-home{
+    left:var(--profile-mobile-action-edge)!important;
+    right:auto!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-like{display:none!important}
+  body.profile-page-active.profile-view-own .profile-page-share{
+    right:calc(var(--profile-mobile-action-edge) + var(--profile-mobile-action-size) + var(--profile-mobile-action-gap))!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-more{
+    right:var(--profile-mobile-action-edge)!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-like{
+    right:calc(var(--profile-mobile-action-edge) + (var(--profile-mobile-action-size) + var(--profile-mobile-action-gap)) * 2)!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-share{
+    right:calc(var(--profile-mobile-action-edge) + var(--profile-mobile-action-size) + var(--profile-mobile-action-gap))!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-more{
+    right:var(--profile-mobile-action-edge)!important;
+  }
+  body.profile-viewer-guest.profile-page-active .profile-page-share{right:var(--profile-mobile-action-edge)!important}
+  body.profile-page-active .profile-page-likes-received,
+  body.profile-page-active.profile-view-own .profile-page-likes-received{
+    top:calc(var(--profile-mobile-action-top) + var(--profile-mobile-action-size) + 8px)!important;
+    right:var(--profile-mobile-action-edge)!important;
+    width:calc((var(--profile-mobile-action-size) * 2) + var(--profile-mobile-action-gap))!important;
+    max-width:calc(100% - 24px)!important;
+    font-size:11px!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-likes-received{
+    width:calc((var(--profile-mobile-action-size) * 3) + (var(--profile-mobile-action-gap) * 2))!important;
+  }
+
+  /* Seções com respiro uniforme no celular. */
+  body.profile-page-active .profile-favorites-section{
+    width:calc(100% - 16px)!important;
+    margin:0 8px 14px!important;
+    padding:28px 14px 36px!important;
+    border-radius:22px!important;
+  }
+  body.profile-page-active .profile-favorites-heading{
+    align-items:center!important;
+    gap:10px!important;
+    margin-bottom:20px!important;
+  }
+  body.profile-page-active .profile-favorites-heading h2{
+    font-size:clamp(28px,9vw,36px)!important;
+  }
+  body.profile-page-active .profile-favorites-edit{
+    min-height:38px!important;
+    padding:0 13px!important;
+    font-size:11px!important;
+  }
+  body.profile-page-active .profile-saved-section{
+    width:calc(100% - 16px)!important;
+    margin:0 8px 14px!important;
+    padding:24px 12px max(52px,env(safe-area-inset-bottom))!important;
+    border-radius:22px!important;
+  }
+
+  /* Dock de edição cabe inteiro até em telas estreitas. */
+  body.profile-page-active.profile-inline-editing .profile-page-shell{
+    padding-bottom:88px!important;
+  }
+  body.profile-page-active.profile-inline-editing .profile-inline-edit-dock{
+    width:max-content!important;
+    max-width:calc(100vw - 20px)!important;
+    bottom:max(12px,env(safe-area-inset-bottom))!important;
+    gap:6px!important;
+    padding:6px!important;
+    border-radius:20px!important;
+  }
+  .profile-inline-palette{
+    width:44px!important;
+    height:44px!important;
+    flex:0 0 44px!important;
+    border-radius:15px!important;
+  }
+  .profile-inline-cancel,
+  .profile-inline-save{
+    height:44px!important;
+    min-width:88px!important;
+    padding:0 14px!important;
+    border-radius:15px!important;
+    font-size:13px!important;
+  }
+  .profile-inline-color-popover{
+    left:8px!important;
+    right:8px!important;
+    bottom:78px!important;
+    width:auto!important;
+    max-height:min(78dvh,680px)!important;
+    border-radius:24px!important;
+  }
+  .profile-inline-color-head{
+    min-height:64px!important;
+    padding:12px 12px 11px 16px!important;
+  }
+  .profile-inline-color-head strong{font-size:16px!important}
+  .profile-inline-color-scroll{
+    flex:1 1 auto!important;
+    max-height:none!important;
+    padding:0 14px 14px!important;
+  }
+  .profile-inline-color-popover .profile-color-control{padding:17px 0 18px!important}
+  .profile-inline-color-popover .profile-color-options{gap:8px!important}
+  .profile-inline-color-popover .profile-color-swatch{width:34px!important;height:34px!important;flex-basis:34px!important}
+  .profile-inline-color-popover .profile-color-custom-trigger{min-height:34px!important;padding:0 11px!important;font-size:11px!important}
+  .profile-inline-color-footer{padding:10px 14px 12px!important}
+  .profile-inline-reset{min-height:42px!important;font-size:13px!important}
+}
+
+@media(max-width:360px){
+  .profile-inline-cancel,
+  .profile-inline-save{min-width:80px!important;padding:0 11px!important}
+  .profile-inline-palette{width:42px!important;height:42px!important;flex-basis:42px!important}
+  body.profile-page-active .profile-page-name{font-size:26px!important}
+}
