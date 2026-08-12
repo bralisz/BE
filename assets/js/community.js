@@ -39,7 +39,7 @@
     if(tag==='avocado')return {key:'avocado',label:'Avocado',className:'is-avocado'};
     if(tag==='eyelash')return {key:'eyelash',label:'Eyelash',className:'is-eyelash'};
     if(tag==='blohsh')return {key:'blohsh',label:'Blohsh',className:'is-blohsh'};
-    if(tag==='billie_fan')return {key:'billie_fan',label:'Fã da Billie',className:'is-billie-fan'};
+    if(tag==='billie_fan')return {key:'billie_fan',label:t('Fã da Billie'),className:'is-billie-fan'};
     return null;
   }
   function communityTagMarkup(value){

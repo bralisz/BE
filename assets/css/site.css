@@ -18046,3 +18046,20 @@ body.profile-page-active .profile-page-name{
   .detail-comment-user-row{gap:5px}
   .detail-comment-award-tag{min-height:17px;padding:0 5px;font-size:8.5px}
 }
+
+
+/* 12/08/2026 — FR mobile: alinha a contagem de curtidas com compartilhar + menu. */
+@media(max-width:760px){
+  html[lang^="fr"] body.profile-page-active.profile-view-own .profile-page-likes-received{
+    right:var(--profile-mobile-action-edge,24px)!important;
+    width:calc((var(--profile-mobile-action-size,46px) * 2) + var(--profile-mobile-action-gap,10px))!important;
+    max-width:none!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    font-size:10px!important;
+    letter-spacing:-.025em!important;
+  }
+}

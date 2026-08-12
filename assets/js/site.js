@@ -3983,7 +3983,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (tag === 'avocado') return { label: 'Avocado', className: 'is-avocado' };
     if (tag === 'eyelash') return { label: 'Eyelash', className: 'is-eyelash' };
     if (tag === 'blohsh') return { label: 'Blohsh', className: 'is-blohsh' };
-    if (tag === 'billie_fan') return { label: 'Fã da Billie', className: 'is-billie-fan' };
+    if (tag === 'billie_fan') return { label: localizedUiText('Fã da Billie'), className: 'is-billie-fan' };
     return null;
   }
 
@@ -11400,7 +11400,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(tag==='avocado')return {label:'Avocado',className:'is-avocado'};
       if(tag==='eyelash')return {label:'Eyelash',className:'is-eyelash'};
       if(tag==='blohsh')return {label:'Blohsh',className:'is-blohsh'};
-      if(tag==='billie_fan')return {label:'Fã da Billie',className:'is-billie-fan'};
+      if(tag==='billie_fan')return {label:localizedProfileText('Fã da Billie'),className:'is-billie-fan'};
       return null;
     }
     function renderProfileAwardTags(profile){
@@ -15887,7 +15887,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       '</div>'+
       (favorites.length?'<div class="profile-share-campaign-favorites">'+favoriteCards(favorites)+'</div>':'')+
       '<div class="profile-share-campaign-copy">'+
-        '<div class="profile-share-campaign-title-row"><h2>'+esc(t('Compartilhe seu perfil e ganhe uma tag'))+'</h2><span class="profile-share-campaign-tag notranslate" translate="no">Fã da Billie</span></div>'+
+        '<div class="profile-share-campaign-title-row"><h2>'+esc(t('Compartilhe seu perfil e ganhe uma tag'))+'</h2><span class="profile-share-campaign-tag notranslate" translate="no">'+esc(t('Fã da Billie'))+'</span></div>'+
         '<p>'+esc(t('Compartilhe seu perfil aos seus amigos para receber curtidas, verem suas redes sociais e os vídeos/álbuns que você mais gosta!'))+'</p>'+
       '</div>'+
       '<div class="profile-share-campaign-actions">'+
