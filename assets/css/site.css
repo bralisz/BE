@@ -17274,3 +17274,219 @@ body.profile-page-active.profile-color-customized .profile-page-hero::after{
   .profile-inline-palette{width:42px!important;height:42px!important;flex-basis:42px!important}
   body.profile-page-active .profile-page-name{font-size:26px!important}
 }
+
+/* 12/08/2026 — ajuste final: + compacto, aro só no avatar e desktop mais enxuto. */
+body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
+  left:auto!important;
+  right:-16px!important;
+  bottom:12px!important;
+  width:32px!important;
+  height:32px!important;
+  min-width:32px!important;
+  min-height:32px!important;
+  border-width:1px!important;
+  transform:none!important;
+}
+body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit svg{
+  width:17px!important;
+  height:17px!important;
+}
+
+/* A opção "Cor da borda de avatar" altera somente o aro do avatar. */
+body.profile-page-active.profile-avatar-border-customized .profile-page-hero{
+  border-bottom:1px solid rgba(255,255,255,.08)!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-section,
+body.profile-page-active.profile-avatar-border-customized .profile-saved-section{
+  width:100%!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  border-left:0!important;
+  border-right:0!important;
+  border-bottom:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-section{
+  border-top:1px solid rgba(255,255,255,.06)!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-saved-section{
+  border-top:0!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-section::before,
+body.profile-page-active.profile-avatar-border-customized .profile-saved-section::before{
+  content:none!important;
+  display:none!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-edit{
+  border-color:rgba(10,132,255,.5)!important;
+  background:rgba(10,132,255,.12)!important;
+  color:#64a9ff!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-favorites-edit:hover{
+  border-color:rgba(10,132,255,.75)!important;
+  background:rgba(10,132,255,.2)!important;
+}
+body.profile-page-active.profile-color-customized.profile-avatar-border-customized .profile-favorites-edit{
+  color:var(--profile-theme-color)!important;
+  border-color:rgba(var(--profile-theme-rgb),.52)!important;
+  background:rgba(var(--profile-theme-rgb),.12)!important;
+}
+body.profile-page-active.profile-color-customized.profile-avatar-border-customized .profile-favorites-edit:hover{
+  border-color:rgba(var(--profile-theme-rgb),.82)!important;
+  background:rgba(var(--profile-theme-rgb),.2)!important;
+}
+
+@media(min-width:761px){
+  /* Menos espaço vazio no perfil em telas de PC. */
+  body.profile-page-active .profile-page-hero{
+    height:clamp(350px,27vw,430px)!important;
+    min-height:350px!important;
+  }
+  body.profile-page-active .profile-page-info{
+    bottom:16px!important;
+  }
+  body.profile-page-active .profile-favorites-section{
+    padding-top:28px!important;
+    padding-bottom:44px!important;
+  }
+  body.profile-page-active .profile-favorites-heading{
+    margin-bottom:20px!important;
+  }
+  body.profile-page-active .profile-saved-section{
+    padding-top:26px!important;
+    padding-bottom:52px!important;
+  }
+}
+
+@media(max-width:760px){
+  body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
+    right:-14px!important;
+    bottom:10px!important;
+    width:30px!important;
+    height:30px!important;
+    min-width:30px!important;
+    min-height:30px!important;
+  }
+  body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit svg{
+    width:16px!important;
+    height:16px!important;
+  }
+  body.profile-page-active.profile-avatar-border-customized .profile-favorites-section,
+  body.profile-page-active.profile-avatar-border-customized .profile-saved-section{
+    width:calc(100% - 16px)!important;
+    margin-left:8px!important;
+    margin-right:8px!important;
+    border-radius:22px!important;
+  }
+}
+
+/* 12/08/2026 — mobile: a cor do perfil ocupa todo o fundo; linha divisória fica entre o cabeçalho e o conteúdo. */
+body.profile-page-active .profile-page-hero{
+  border-bottom:1px solid rgba(255,255,255,.10)!important;
+}
+body.profile-page-active .profile-favorites-section,
+body.profile-page-active .profile-saved-section{
+  border-top:0!important;
+  border-bottom:0!important;
+  box-shadow:none!important;
+}
+
+@media(max-width:760px){
+  /* A cor escolhida vira o plano de fundo contínuo do perfil no celular. */
+  body.profile-page-active.profile-color-customized,
+  body.profile-page-active.profile-color-customized .profile-page-shell,
+  body.profile-page-active.profile-color-customized .profile-page-hero,
+  body.profile-page-active.profile-color-customized .profile-page-body,
+  body.profile-page-active.profile-color-customized .profile-favorites-section,
+  body.profile-page-active.profile-color-customized .profile-saved-section,
+  body.profile-page-active.profile-color-customized > footer,
+  body.profile-page-active.profile-color-customized > footer > .footer-card{
+    background:color-mix(in srgb,var(--profile-theme-color) 20%,#090a0c)!important;
+    background-image:none!important;
+  }
+
+  /* O escurecimento continua somente sobre a foto do banner; abaixo dela aparece a cor do perfil. */
+  body.profile-page-active .profile-page-hero::after,
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    height:282px!important;
+    min-height:282px!important;
+    inset:0 0 auto!important;
+    background:linear-gradient(180deg,
+      rgba(0,0,0,.08) 0%,
+      rgba(0,0,0,.14) 38%,
+      rgba(0,0,0,.48) 68%,
+      rgba(0,0,0,.72) 86%,
+      rgba(0,0,0,.80) 100%)!important;
+  }
+
+  /* Não há cartões escuros/contornos criando faixas no fundo personalizado. */
+  body.profile-page-active.profile-color-customized .profile-favorites-section,
+  body.profile-page-active.profile-color-customized .profile-saved-section{
+    border:0!important;
+  }
+
+  /* A única divisão fica logo abaixo da área do perfil/avatar. */
+  body.profile-page-active .profile-page-hero{
+    border-bottom:1px solid rgba(255,255,255,.11)!important;
+  }
+}
+
+@media(max-width:760px){
+  body.profile-page-active .profile-favorites-section,
+  body.profile-page-active .profile-saved-section,
+  body.profile-page-active.profile-avatar-border-customized .profile-favorites-section,
+  body.profile-page-active.profile-avatar-border-customized .profile-saved-section{
+    width:100%!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    border-radius:0!important;
+  }
+}
+
+/* 12/08/2026 — divisor do perfil com o mesmo acabamento arredondado usado no catálogo da Home. */
+body.profile-page-active .profile-page-hero,
+body.profile-page-active.profile-avatar-border-customized .profile-page-hero{
+  border-bottom:0!important;
+}
+
+/* Primeiro bloco visível abaixo do cabeçalho: mesma borda superior da Home. */
+body.profile-page-active #profileFavoritesSection:not([hidden]),
+body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection:not([hidden]),
+body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection[hidden] + #profileSavedSection:not([hidden]){
+  position:relative!important;
+  z-index:8!important;
+  margin-top:-1px!important;
+  border:1px solid rgba(255,255,255,.09)!important;
+  border-bottom:0!important;
+  border-radius:34px 34px 0 0!important;
+  box-shadow:0 -14px 38px rgba(0,0,0,.34)!important;
+}
+
+/* Os blocos seguintes continuam lisos para parecerem parte do mesmo painel. */
+body.profile-page-active #profileFavoritesSection:not([hidden]) ~ .profile-favorites-section,
+body.profile-page-active #profileFavoritesSection:not([hidden]) ~ .profile-saved-section,
+body.profile-page-active #profileLovedAlbumsSection:not([hidden]) ~ .profile-saved-section{
+  border-top:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+@media(max-width:760px){
+  body.profile-page-active #profileFavoritesSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection:not([hidden]),
+  body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsSection[hidden] + #profileSavedSection:not([hidden]){
+    width:100%!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    border-radius:30px 30px 0 0!important;
+  }
+
+  /* Mesmo com cor personalizada, o contorno continua neutro como na Home. */
+  body.profile-page-active.profile-color-customized #profileFavoritesSection:not([hidden]),
+  body.profile-page-active.profile-color-customized #profileFavoritesSection[hidden] + #profileLovedAlbumsSection:not([hidden]),
+  body.profile-page-active.profile-color-customized #profileFavoritesSection[hidden] + #profileLovedAlbumsSection[hidden] + #profileSavedSection:not([hidden]){
+    border:1px solid rgba(255,255,255,.09)!important;
+    border-bottom:0!important;
+  }
+}
