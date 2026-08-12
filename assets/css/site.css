@@ -17801,3 +17801,10 @@ body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsS
       rgba(0,0,0,.88) 100%)!important;
   }
 }
+
+/* 12/08/2026 — ajuste fino mobile: sobe levemente avatar, nome e @ sem alterar o banner. */
+@media(max-width:760px){
+  body.profile-page-active .profile-page-info{
+    inset:258px 0 auto!important;
+  }
+}

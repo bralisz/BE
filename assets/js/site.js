@@ -1278,7 +1278,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           profileColor: normalizePublicProfileColor(preferenceData.profileColor),
           avatarBorderColor: normalizePublicProfileColor(preferenceData.profileAvatarBorderColor),
           favorites: Array.isArray(preferenceData.profileTopFavorites) ? clone(preferenceData.profileTopFavorites).slice(0, 4) : [],
-          lovedAlbums: Array.isArray(preferenceData.profileLovedAlbums) ? clone(preferenceData.profileLovedAlbums).slice(0, 3) : [],
+          lovedAlbums: Array.isArray(preferenceData.profileLovedAlbums) ? clone(preferenceData.profileLovedAlbums).slice(0, 4) : [],
           savedContents: Array.isArray(preferenceData.savedContents) ? clone(preferenceData.savedContents).slice(0, 20) : [],
           likesReceived: 0
         };
@@ -9449,6 +9449,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function syncProfileLanguage(){
       if(profileFavoritesEdit)profileFavoritesEdit.textContent=localizedProfileText('Editar favoritos');
       if(profileLovedAlbumsEdit)profileLovedAlbumsEdit.textContent=localizedProfileText('Editar álbuns');
+      if(profilePageEdit){var editLabel=profilePageEdit.querySelector('span');if(editLabel)editLabel.textContent=localizedProfileText('Editar perfil');}
+      if(profilePageSettings){var settingsLabel=profilePageSettings.querySelector('span');if(settingsLabel)settingsLabel.textContent=localizedProfileText('Configurações');}
+      if(profileInlineBannerButton)profileInlineBannerButton.textContent=localizedProfileText('Editar banner');
+      if(profileInlineAvatarButton){profileInlineAvatarButton.setAttribute('aria-label',localizedProfileText('Editar avatar'));profileInlineAvatarButton.title=localizedProfileText('Editar avatar');}
+      if(profileInlineNameButton){profileInlineNameButton.setAttribute('aria-label',localizedProfileText('Editar nome'));profileInlineNameButton.title=localizedProfileText('Editar nome');}
+      if(profileInlinePaletteButton){profileInlinePaletteButton.setAttribute('aria-label',localizedProfileText('Personalizar cores'));profileInlinePaletteButton.title=localizedProfileText('Personalizar cores');}
+      if(profileInlineCancelButton&&!profileInlineCancelButton.disabled)profileInlineCancelButton.textContent=localizedProfileText('Cancelar');
+      if(profileInlineSaveButton&&!profileInlineSaveButton.disabled)profileInlineSaveButton.textContent=localizedProfileText('Salvar');
+      if(profileInlineColorPanel&&!profileInlineColorPanel.hidden)rebuildInlineColorPanel();
       if(profileLikeState&&typeof renderProfileLikeUi==='function')renderProfileLikeUi();
     }
     syncProfileLanguage();
@@ -9704,8 +9713,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileInlineAvatarButton=document.createElement('button');
         profileInlineAvatarButton.type='button';
         profileInlineAvatarButton.className='profile-inline-avatar-edit';
-        profileInlineAvatarButton.setAttribute('aria-label','Editar avatar');
-        profileInlineAvatarButton.title='Editar avatar';
+        profileInlineAvatarButton.setAttribute('aria-label',localizedProfileText('Editar avatar'));
+        profileInlineAvatarButton.title=localizedProfileText('Editar avatar');
         profileInlineAvatarButton.innerHTML=profileInlineIcon('plus');
         profileInlineAvatarButton.onclick=function(event){event.preventDefault();event.stopPropagation();openAvatarPicker();};
         wrap.appendChild(profileInlineAvatarButton);
@@ -9714,7 +9723,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileInlineBannerButton=document.createElement('button');
         profileInlineBannerButton.type='button';
         profileInlineBannerButton.className='profile-inline-banner-edit';
-        profileInlineBannerButton.textContent='Editar banner';
+        profileInlineBannerButton.textContent=localizedProfileText('Editar banner');
         profileInlineBannerButton.onclick=function(event){event.preventDefault();event.stopPropagation();openBannerPicker();};
         hero.appendChild(profileInlineBannerButton);
       }
@@ -9722,8 +9731,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileInlineNameButton=document.createElement('button');
         profileInlineNameButton.type='button';
         profileInlineNameButton.className='profile-inline-name-edit';
-        profileInlineNameButton.setAttribute('aria-label','Editar nome');
-        profileInlineNameButton.title='Editar nome';
+        profileInlineNameButton.setAttribute('aria-label',localizedProfileText('Editar nome'));
+        profileInlineNameButton.title=localizedProfileText('Editar nome');
         profileInlineNameButton.innerHTML=profileInlineIcon('pencil');
         profileInlineNameButton.onclick=function(event){event.preventDefault();event.stopPropagation();beginInlineNameEdit();};
         profilePageName.insertAdjacentElement('afterend',profileInlineNameButton);
@@ -9731,7 +9740,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!profileInlineDock){
         profileInlineDock=document.createElement('div');
         profileInlineDock.className='profile-inline-edit-dock';
-        profileInlineDock.innerHTML='<button class="profile-inline-palette" type="button" aria-label="Personalizar cores" title="Personalizar cores">'+profileInlineIcon('palette')+'</button><button class="profile-inline-cancel" type="button">Cancelar</button><button class="profile-inline-save" type="button">Salvar</button>';
+        profileInlineDock.innerHTML='<button class="profile-inline-palette" type="button" aria-label="'+escapePublic(localizedProfileText('Personalizar cores'))+'" title="'+escapePublic(localizedProfileText('Personalizar cores'))+'">'+profileInlineIcon('palette')+'</button><button class="profile-inline-cancel" type="button">'+escapePublic(localizedProfileText('Cancelar'))+'</button><button class="profile-inline-save" type="button">'+escapePublic(localizedProfileText('Salvar'))+'</button>';
         document.body.appendChild(profileInlineDock);
         profileInlinePaletteButton=profileInlineDock.querySelector('.profile-inline-palette');
         profileInlineCancelButton=profileInlineDock.querySelector('.profile-inline-cancel');
@@ -9784,7 +9793,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var uid=auth.currentUser.uid;
       var profileColor=normalizeProfileColorValue((currentProfile&&currentProfile.profileColor)||readProfileColorValue(uid,'profile'));
       var avatarBorderColor=normalizeProfileColorValue((currentProfile&&currentProfile.avatarBorderColor)||readProfileColorValue(uid,'avatar-border'));
-      profileInlineColorPanel.innerHTML='<header class="profile-inline-color-head"><div><strong>Cores do perfil</strong><span>Personalize como no iPhone</span></div><button class="profile-inline-color-close" type="button" aria-label="Fechar">'+profileInlineIcon('close')+'</button></header><div class="profile-inline-color-scroll">'+profileColorSettingsMarkup(profileColor,avatarBorderColor)+'</div><footer class="profile-inline-color-footer"><button class="profile-inline-reset" type="button">Voltar ao padrão</button></footer>';
+      profileInlineColorPanel.innerHTML='<header class="profile-inline-color-head"><div><strong>'+escapePublic(localizedProfileText('Cores do perfil'))+'</strong><span>'+escapePublic(localizedProfileText('personalize conforme seu gosto'))+'</span></div><button class="profile-inline-color-close" type="button" aria-label="'+escapePublic(localizedProfileText('Fechar'))+'">'+profileInlineIcon('close')+'</button></header><div class="profile-inline-color-scroll">'+profileColorSettingsMarkup(profileColor,avatarBorderColor)+'</div><footer class="profile-inline-color-footer"><button class="profile-inline-reset" type="button">'+escapePublic(localizedProfileText('Voltar ao padrão'))+'</button></footer>';
       var close=profileInlineColorPanel.querySelector('.profile-inline-color-close');
       var reset=profileInlineColorPanel.querySelector('.profile-inline-reset');
       if(close)close.onclick=function(){closeInlineColorPanel();};
@@ -9830,7 +9839,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function commitInlineColorDrafts(){
       if(!profileInlineColorPanel||!auth.currentUser)return;
       profileInlineColorPanel.querySelectorAll('[data-profile-color-kind]').forEach(function(control){
-        if(control.dataset.profileCustomDirty!=='true')return;
+        var customTrigger=control.querySelector('[data-profile-color-custom-open]');
+        var shouldCommit=control.dataset.profileCustomDirty==='true'||Boolean(customTrigger&&customTrigger.classList.contains('is-selected'));
+        if(!shouldCommit)return;
         var kind=control.getAttribute('data-profile-color-kind')==='avatar-border'?'avatar-border':'profile';
         var hexInput=control.querySelector('[data-profile-color-hex]');
         if(!hexInput)return;
@@ -9851,8 +9862,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileInlineOriginalBannerUrl=String((currentProfile&&currentProfile.bannerUrl)||'').trim();
       profileInlineOriginalBannerId=String((currentProfile&&currentProfile.bannerId)||'').trim();
       document.body.classList.add('profile-inline-editing');
-      if(profileInlineCancelButton){profileInlineCancelButton.disabled=false;profileInlineCancelButton.textContent='Cancelar';}
-      if(profileInlineSaveButton){profileInlineSaveButton.disabled=false;profileInlineSaveButton.textContent='Salvar';}
+      if(profileInlineCancelButton){profileInlineCancelButton.disabled=false;profileInlineCancelButton.textContent=localizedProfileText('Cancelar');}
+      if(profileInlineSaveButton){profileInlineSaveButton.disabled=false;profileInlineSaveButton.textContent=localizedProfileText('Salvar');}
       closeInlineColorPanel();
     }
     function stopInlineProfileEdit(keepName){
@@ -9877,7 +9888,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(profileInlineNameWasEditing)finishInlineNameEdit(true);
       else if(profilePageName&&profileInlineOriginalName)setLiteralText(profilePageName,profileInlineOriginalName);
       restoreInlineProfileColors();
-      if(profileInlineCancelButton){profileInlineCancelButton.disabled=true;profileInlineCancelButton.textContent='Cancelando…';}
+      if(profileInlineCancelButton){profileInlineCancelButton.disabled=true;profileInlineCancelButton.textContent=localizedProfileText('Cancelando…');}
       try{
         if(uid){
           var currentAvatar=String((currentProfile&&currentProfile.avatarUrl)||'').trim();
@@ -9900,7 +9911,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       viewedProfile={...(viewedProfile||{}),...(currentProfile||{}),displayName:profileInlineOriginalName,profileColor:profileInlineOriginalProfileColor,avatarBorderColor:profileInlineOriginalAvatarBorderColor,avatarUrl:profileInlineOriginalAvatarUrl,bannerUrl:profileInlineOriginalBannerUrl,bannerId:profileInlineOriginalBannerId};
       renderProfilePage();
       stopInlineProfileEdit(false);
-      if(profileInlineCancelButton){profileInlineCancelButton.disabled=false;profileInlineCancelButton.textContent='Cancelar';}
+      if(profileInlineCancelButton){profileInlineCancelButton.disabled=false;profileInlineCancelButton.textContent=localizedProfileText('Cancelar');}
     }
     async function saveInlineProfileEdit(){
       if(!auth.currentUser||!profileInlineEditing)return;
@@ -9909,7 +9920,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var displayName=String(profileInlineDraftName||profilePageName.textContent||'').replace(/\s+/g,' ').trim().slice(0,50);
       if(!displayName){beginInlineNameEdit();return;}
       var button=profileInlineSaveButton;
-      if(button){button.disabled=true;button.textContent='Salvando…';}
+      if(button){button.disabled=true;button.textContent=localizedProfileText('Salvando…');}
       try{
         currentProfile=await beBackend.profiles.update(auth.currentUser.uid,{displayName:displayName,updatedAt:beBackend.now()});
         await auth.updateCurrentUser({displayName:displayName});
@@ -9922,7 +9933,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         stopInlineProfileEdit(true);
       }catch(error){
         console.error('Não foi possível salvar o perfil:',error);
-        if(button){button.disabled=false;button.textContent='Tentar novamente';}
+        if(button){button.disabled=false;button.textContent=localizedProfileText('Tentar novamente');}
       }
     }
     function openProfileEditor(){
@@ -10018,22 +10029,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var swatches=PROFILE_COLOR_PRESETS.map(function(color){
         return '<button class="profile-color-swatch'+(normalized===color?' is-selected':'')+'" type="button" data-profile-color-preset="'+color+'" aria-label="'+escapePublic(color)+'" title="'+escapePublic(color)+'" style="--profile-swatch:'+color+'"></button>';
       }).join('');
-      var customButton='<button class="profile-color-custom-trigger'+(customSelected?' is-selected':'')+'" type="button" data-profile-color-custom-open aria-expanded="false"><span class="profile-color-rainbow" aria-hidden="true"></span><span>Personalizado</span></button>';
+      var customButton='<button class="profile-color-custom-trigger'+(customSelected?' is-selected':'')+'" type="button" data-profile-color-custom-open aria-expanded="false"><span class="profile-color-rainbow" aria-hidden="true"></span><span>'+escapePublic(localizedProfileText('Personalizado'))+'</span></button>';
       return '<section class="profile-color-control" data-profile-color-kind="'+kind+'">'
         +'<div class="profile-color-heading"><h2>'+escapePublic(title)+'</h2><p>'+escapePublic(description)+'</p></div>'
         +'<div class="profile-color-options" role="group" aria-label="'+escapePublic(title)+'">'+swatches+customButton+'</div>'
         +'<div class="profile-custom-color-panel" data-profile-custom-panel hidden>'
-          +'<div class="profile-color-sv" data-profile-color-sv tabindex="0" aria-label="Selecionar tom e intensidade"><span class="profile-color-picker-dot" data-profile-color-picker-dot></span></div>'
-          +'<input class="profile-color-hue" data-profile-color-hue type="range" min="0" max="360" value="0" step="1" aria-label="Matiz">'
+          +'<div class="profile-color-sv" data-profile-color-sv tabindex="0" aria-label="'+escapePublic(localizedProfileText('Selecionar tom e intensidade'))+'"><span class="profile-color-picker-dot" data-profile-color-picker-dot></span></div>'
+          +'<input class="profile-color-hue" data-profile-color-hue type="range" min="0" max="360" value="0" step="1" aria-label="'+escapePublic(localizedProfileText('Matiz'))+'">'
           +'<div class="profile-color-hex-row"><input class="profile-color-hex" data-profile-color-hex type="text" inputmode="text" maxlength="7" spellcheck="false" autocomplete="off" value="'+escapePublic(normalized||'')+'" placeholder="#C61414"><span class="profile-color-live-preview" data-profile-color-live-preview aria-hidden="true"></span></div>'
-          +'<div class="profile-color-panel-actions"><span class="profile-color-preview-label">PRÉVIA</span><button class="settings-button primary profile-color-save" data-profile-color-save type="button">Salvar</button><button class="profile-color-restore" data-profile-color-restore type="button">Restaurar padrão</button></div>'
+          +'<div class="profile-color-panel-actions"><span class="profile-color-preview-label">'+escapePublic(localizedProfileText('PRÉVIA'))+'</span><button class="settings-button primary profile-color-save" data-profile-color-save type="button">'+escapePublic(localizedProfileText('Salvar'))+'</button><button class="profile-color-restore" data-profile-color-restore type="button">'+escapePublic(localizedProfileText('Restaurar padrão'))+'</button></div>'
         +'</div>'
       +'</section>';
     }
     function profileColorSettingsMarkup(profileColor,avatarBorderColor){
       return '<div class="settings-profile-colors">'
-        +profileColorControlMarkup('profile','Cor do perfil','Escolha uma cor para personalizar o visual do seu perfil.',profileColor)
-        +profileColorControlMarkup('avatar-border','Cor da borda de avatar','Escolha a cor do aro exibido ao redor do seu avatar.',avatarBorderColor)
+        +profileColorControlMarkup('profile',localizedProfileText('Cor do perfil'),localizedProfileText('Escolha uma cor para personalizar o visual do seu perfil.'),profileColor)
+        +profileColorControlMarkup('avatar-border',localizedProfileText('Cor da borda de avatar'),localizedProfileText('Escolha a cor do aro exibido ao redor do seu avatar.'),avatarBorderColor)
       +'</div>';
     }
     function profileHexToHsv(hex){
@@ -10197,7 +10208,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         featuredFavorites:uniqueSyncStrings(source.featuredFavorites),
         savedContents:uniqueSyncRecords(source.savedContents,20),
         profileTopFavorites:uniqueSyncRecords(source.profileTopFavorites,4),
-        profileLovedAlbums:uniqueSyncRecords(source.profileLovedAlbums,3),
+        profileLovedAlbums:uniqueSyncRecords(source.profileLovedAlbums,4),
         profileSocialLinks:normalizeProfileSocialLinks(source.profileSocialLinks),
         profileColor:normalizeProfileColorValue(source.profileColor),
         profileAvatarBorderColor:normalizeProfileColorValue(source.profileAvatarBorderColor),
@@ -10285,7 +10296,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }catch(error){console.warn('Não foi possível atualizar o cache sincronizado:',error);}
       applyingRemotePreferences=false;
       profileFavoritesItems=data.profileTopFavorites.slice(0,4);
-      profileLovedAlbumsItems=data.profileLovedAlbums.slice(0,3);
+      profileLovedAlbumsItems=data.profileLovedAlbums.slice(0,4);
       if(auth.currentUser&&auth.currentUser.uid===userId){
         currentProfile={...(currentProfile||{}),socialLinks:data.profileSocialLinks,profileColor:data.profileColor,avatarBorderColor:data.profileAvatarBorderColor};
         applyOwnAvatarBorder(currentProfile,userId);
@@ -10796,9 +10807,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileFavoritesSection.hidden=!publicReady;
       if(!publicReady){profileFavoritesItems=[];profileFavoritesContent.innerHTML='';if(profileFavoritesEdit)profileFavoritesEdit.hidden=true;return;}
       profileFavoritesItems=(ownProfile?readProfileFavorites():(Array.isArray(viewedProfile.favorites)?viewedProfile.favorites.map(normalizeProfileFavorite).slice(0,4):[])).map(function(item){return normalizeProfileFavorite(trustedProfileContent(item));});
-      if(profileFavoritesEdit)profileFavoritesEdit.hidden=!ownProfile||profileFavoritesItems.length!==4;
-      if(ownProfile&&profileFavoritesItems.length!==4){
-        profileFavoritesContent.innerHTML='<button class="profile-favorites-empty" id="profileFavoritesAdd" type="button"><span class="profile-favorites-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><strong>Adicionar favoritos</strong><span>Escolha quatro conteúdos que representam o seu gosto.</span></button>';
+      if(profileFavoritesEdit)profileFavoritesEdit.hidden=!ownProfile||profileFavoritesItems.length===0;
+      if(ownProfile&&profileFavoritesItems.length===0){
+        profileFavoritesContent.innerHTML='<button class="profile-favorites-empty" id="profileFavoritesAdd" type="button"><span class="profile-favorites-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><strong>Adicionar favoritos</strong><span>Escolha de 1 a 4 conteúdos que representam o seu gosto.</span></button>';
         var addButton=document.getElementById('profileFavoritesAdd');if(addButton)addButton.addEventListener('click',openProfileFavoritesPicker);return;
       }
       if(!profileFavoritesItems.length){
@@ -10835,11 +10846,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           var identity=profileFavoriteIdentity(item);
           if(identity&&!result.some(function(current){return profileFavoriteIdentity(current)===identity;}))result.push(item);
         });
-        return result.slice(0,3);
+        return result.slice(0,4);
       }catch(_){return [];}
     }
     function writeProfileLovedAlbums(items){
-      var normalized=(Array.isArray(items)?items:[]).map(normalizeProfileFavorite).map(function(item){item.collection='albums';return item;}).slice(0,3);
+      var normalized=(Array.isArray(items)?items:[]).map(normalizeProfileFavorite).map(function(item){item.collection='albums';return item;}).slice(0,4);
       localStorage.setItem(profileLovedAlbumsStorageKey(),JSON.stringify(normalized));
       try{localStorage.setItem('beSyncedUserData:'+(auth.currentUser&&auth.currentUser.uid?auth.currentUser.uid:'guest'),JSON.stringify({data:captureCrossDeviceData(auth.currentUser&&auth.currentUser.uid)}));}catch(_){ }
       if(typeof window.beScheduleUserDataSync==='function')window.beScheduleUserDataSync('profile-albums');
@@ -10884,11 +10895,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var publicReady=viewedProfileStatus==='ready'&&viewedProfile;
       profileLovedAlbumsSection.hidden=!publicReady;
       if(!publicReady){profileLovedAlbumsItems=[];profileLovedAlbumsContent.innerHTML='';if(profileLovedAlbumsEdit)profileLovedAlbumsEdit.hidden=true;return;}
-      profileLovedAlbumsItems=ownProfile?readProfileLovedAlbums():(Array.isArray(viewedProfile.lovedAlbums)?viewedProfile.lovedAlbums.map(normalizeProfileFavorite).slice(0,3):[]);
+      profileLovedAlbumsItems=ownProfile?readProfileLovedAlbums():(Array.isArray(viewedProfile.lovedAlbums)?viewedProfile.lovedAlbums.map(normalizeProfileFavorite).slice(0,4):[]);
       profileLovedAlbumsItems.forEach(function(item){item.collection='albums';});
-      if(profileLovedAlbumsEdit)profileLovedAlbumsEdit.hidden=!ownProfile||profileLovedAlbumsItems.length!==3;
-      if(ownProfile&&profileLovedAlbumsItems.length!==3){
-        profileLovedAlbumsContent.innerHTML='<button class="profile-favorites-empty" id="profileLovedAlbumsAdd" type="button"><span class="profile-favorites-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><strong>Adicionar álbuns</strong><span>Escolha três álbuns que você ama.</span></button>';
+      if(profileLovedAlbumsEdit)profileLovedAlbumsEdit.hidden=!ownProfile||profileLovedAlbumsItems.length===0;
+      if(ownProfile&&profileLovedAlbumsItems.length===0){
+        profileLovedAlbumsContent.innerHTML='<button class="profile-favorites-empty" id="profileLovedAlbumsAdd" type="button"><span class="profile-favorites-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><strong>Adicionar álbuns</strong><span>Escolha de 1 a 4 álbuns que você ama.</span></button>';
         var addButton=document.getElementById('profileLovedAlbumsAdd');if(addButton)addButton.addEventListener('click',openProfileLovedAlbumsPicker);return;
       }
       if(!profileLovedAlbumsItems.length){
@@ -10932,8 +10943,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             +'</button>';
         }).join('')+'</div><p class="profile-favorites-search-hint"><strong>Não achou o álbum?</strong><span>Pesquise pelo nome na barra acima.</span></p>';
       }
-      if(profileLovedAlbumsSelectionCount)profileLovedAlbumsSelectionCount.textContent=profileLovedAlbumsDraft.length+' de 3';
-      var ready=profileLovedAlbumsDraft.length===3;
+      if(profileLovedAlbumsSelectionCount)profileLovedAlbumsSelectionCount.textContent=profileLovedAlbumsDraft.length+' de 4';
+      var ready=profileLovedAlbumsDraft.length>=1&&profileLovedAlbumsDraft.length<=4;
       if(profileLovedAlbumsSave)profileLovedAlbumsSave.disabled=!ready;
       if(profileLovedAlbumsHeaderSave)profileLovedAlbumsHeaderSave.disabled=!ready;
     }
@@ -10941,7 +10952,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!profileLovedAlbumsPicker)return;
       if(event&&event.currentTarget)profileLovedAlbumsLastFocus=event.currentTarget;else profileLovedAlbumsLastFocus=document.activeElement;
       profileLovedAlbumsItems=readProfileLovedAlbums();
-      profileLovedAlbumsDraft=profileLovedAlbumsItems.slice(0,3);
+      profileLovedAlbumsDraft=profileLovedAlbumsItems.slice(0,4);
       if(profileLovedAlbumsSearch)profileLovedAlbumsSearch.value='';
       profileLovedAlbumsReturnPath=location.pathname+(location.search||'');
       profileLovedAlbumsPicker.hidden=false;
@@ -10977,15 +10988,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var identity=profileFavoriteIdentity(item);
       var selectedIndex=profileLovedAlbumsDraft.findIndex(function(current){return profileFavoriteIdentity(current)===identity;});
       if(selectedIndex>=0)profileLovedAlbumsDraft.splice(selectedIndex,1);
-      else if(profileLovedAlbumsDraft.length<3)profileLovedAlbumsDraft.push(item);
+      else if(profileLovedAlbumsDraft.length<4)profileLovedAlbumsDraft.push(item);
       else{
-        if(profileLovedAlbumsSelectionCount){profileLovedAlbumsSelectionCount.textContent='Limite de 3 álbuns';profileLovedAlbumsSelectionCount.classList.add('limit');setTimeout(function(){profileLovedAlbumsSelectionCount.classList.remove('limit');profileLovedAlbumsSelectionCount.textContent=profileLovedAlbumsDraft.length+' de 3';},900);}
+        if(profileLovedAlbumsSelectionCount){profileLovedAlbumsSelectionCount.textContent='Limite de 4 álbuns';profileLovedAlbumsSelectionCount.classList.add('limit');setTimeout(function(){profileLovedAlbumsSelectionCount.classList.remove('limit');profileLovedAlbumsSelectionCount.textContent=profileLovedAlbumsDraft.length+' de 4';},900);}
         if(navigator.vibrate)navigator.vibrate(20);return;
       }
       renderProfileLovedAlbumsPicker();restoreProfileLovedAlbumsContext();requestAnimationFrame(restoreProfileLovedAlbumsContext);setTimeout(restoreProfileLovedAlbumsContext,80);
     }
     function saveProfileLovedAlbums(){
-      if(profileLovedAlbumsDraft.length!==3)return;
+      if(profileLovedAlbumsDraft.length<1||profileLovedAlbumsDraft.length>4)return;
       writeProfileLovedAlbums(profileLovedAlbumsDraft);closeProfileLovedAlbumsPicker();renderProfileLovedAlbums();
     }
     function bindProfileLovedAlbums(){
@@ -11052,7 +11063,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }).join('')+'</div><p class="profile-favorites-search-hint"><strong>Não achou o vídeo que queria?</strong><span>Pesquise pelo nome na barra acima.</span></p>';
       }
       if(profileFavoritesSelectionCount)profileFavoritesSelectionCount.textContent=profileFavoritesDraft.length+' de 4';
-      var favoritesReadyToSave=profileFavoritesDraft.length===4;
+      var favoritesReadyToSave=profileFavoritesDraft.length>=1&&profileFavoritesDraft.length<=4;
       if(profileFavoritesSave)profileFavoritesSave.disabled=!favoritesReadyToSave;
       if(profileFavoritesHeaderSave)profileFavoritesHeaderSave.disabled=!favoritesReadyToSave;
     }
@@ -11116,7 +11127,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setTimeout(restoreProfileFavoritesContext,80);
     }
     function saveProfileFavorites(){
-      if(profileFavoritesDraft.length!==4)return;
+      if(profileFavoritesDraft.length<1||profileFavoritesDraft.length>4)return;
       writeProfileFavorites(profileFavoritesDraft);
       closeProfileFavoritesPicker();
       renderProfileFavorites();
