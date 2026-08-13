@@ -3158,7 +3158,9 @@ body.admin-preview-open{overflow:hidden}
 
     $('#editorForm', root).onsubmit = async event => {
       event.preventDefault();
-      if (modernEditor && event.currentTarget.dataset.editorStepFinal !== 'true') {
+      const form = event.currentTarget;
+      if (!form) return;
+      if (modernEditor && form.dataset.editorStepFinal !== 'true') {
         $('#editorStepNext', root)?.click();
         return;
       }
@@ -3167,7 +3169,7 @@ body.admin-preview-open{overflow:hidden}
       button.disabled = true;
       button.textContent = 'Salvando…';
       try {
-        const formData = new FormData(event.currentTarget);
+        const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
         for (const key of ['imageUrl','bannerUrl','logoUrl']) {
           if (data[key] && !validImageSource(data[key].trim())) throw new Error(`O campo ${key} deve usar https://... ou /assets/...`);
@@ -3255,9 +3257,9 @@ body.admin-preview-open{overflow:hidden}
           const selectedStreaming = [];
           const streamingLinks = {};
           for (const [serviceId, label, inputName, linkName] of MOVIE_STREAMING_OPTIONS) {
-            const control = event.currentTarget.elements.namedItem(inputName);
+            const control = form.elements.namedItem(inputName);
             if (!control || control.checked !== true) continue;
-            const linkControl = event.currentTarget.elements.namedItem(linkName);
+            const linkControl = form.elements.namedItem(linkName);
             const directUrl = String(linkControl?.value || '').trim();
             if (!/^https:\/\//i.test(directUrl)) {
               linkControl?.focus?.();
