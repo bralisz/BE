@@ -5321,6 +5321,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       subtitlesEnabled = false;
       subtitleButton.hidden = true;
       subtitleButton.disabled = false;
+      subtitleButton.style.removeProperty('display');
+      subtitleOverlay.style.removeProperty('display');
       subtitleButton.classList.remove('is-active', 'is-loading', 'is-error');
       subtitleButton.setAttribute('aria-pressed', 'false');
       subtitleButton.setAttribute('aria-label', 'Ativar legendas');
@@ -5549,6 +5551,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.classList.add('is-error');
         subtitleButton.title = 'Não foi possível carregar a legenda';
         renderSubtitleCue(subtitleOverlay, [], 0, false);
+        subtitleOverlay.style.removeProperty('display');
       } finally {
         if (token === subtitleLoadToken) {
           subtitleButton.disabled = false;
@@ -5722,7 +5725,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let subtitleCues = [];
     let subtitlesEnabled = false;
     let subtitleLoadToken = 0;
-    let retryStreamForSubtitles = false;
+    let frameSubtitleTimer = 0;
+    let frameSubtitleStartedAt = 0;
 
     const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
     const ownsFullscreen = () => {
@@ -5761,23 +5765,41 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       fullscreenButton.title = active ? 'Sair da tela cheia' : 'Tela cheia';
     };
 
+    const clearFrameSubtitleSync = () => {
+      window.clearInterval(frameSubtitleTimer);
+      frameSubtitleTimer = 0;
+      frameSubtitleStartedAt = 0;
+    };
+
+    const readFrameSubtitleTime = () => {
+      if (!frameSubtitleStartedAt) return 0;
+      return Math.max(0, (performance.now() - frameSubtitleStartedAt) / 1000);
+    };
+
     const syncDriveSubtitle = () => {
-      if (frameMode || !subtitlesEnabled || !activeSubtitleUrl || overlay.hidden) {
+      if (!subtitlesEnabled || !activeSubtitleUrl || overlay.hidden) {
         renderSubtitleCue(subtitleOverlay, [], 0, false);
+        subtitleOverlay.style.removeProperty('display');
         return;
       }
+      if (frameMode) {
+        renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime(), true);
+        if (!subtitleOverlay.hidden) subtitleOverlay.style.setProperty('display', 'block', 'important');
+        else subtitleOverlay.style.removeProperty('display');
+        return;
+      }
+      subtitleOverlay.style.removeProperty('display');
       renderSubtitleCue(subtitleOverlay, subtitleCues, video.currentTime, true);
     };
 
     const resetDriveSubtitles = () => {
       subtitleLoadToken += 1;
+      clearFrameSubtitleSync();
       activeSubtitleUrl = '';
       subtitleCues = [];
       subtitlesEnabled = false;
-      retryStreamForSubtitles = false;
       subtitleButton.hidden = true;
       subtitleButton.disabled = false;
-      subtitleButton.style.removeProperty('display');
       subtitleButton.classList.remove('is-active', 'is-loading', 'is-error');
       subtitleButton.setAttribute('aria-pressed', 'false');
       subtitleButton.setAttribute('aria-label', 'Ativar legendas');
@@ -5794,9 +5816,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const syncFrameSubtitleButton = () => {
       if (frameMode && activeSubtitleUrl) {
-        // O CSS do fallback nativo esconde os controles que dependem do <video>.
-        // O CC continua útil aqui como atalho para tentar reabrir o player do
-        // site com a legenda, então forçamos apenas esse botão a permanecer na barra.
         subtitleButton.hidden = false;
         subtitleButton.style.setProperty('display', 'grid', 'important');
         return;
@@ -5872,14 +5891,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setInteractive(true);
       syncFrameSubtitleButton();
       syncState();
-      if (retryStreamForSubtitles && activeSubtitleUrl) {
-        retryStreamForSubtitles = false;
-        subtitleButton.disabled = false;
-        subtitleButton.classList.remove('is-loading');
-        window.setTimeout(() => {
-          if (!overlay.hidden && !frameMode && activeSubtitleUrl && !subtitlesEnabled) subtitleButton.click();
-        }, 0);
-      }
       showControls(false);
     };
 
@@ -5896,6 +5907,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = 'frame';
       window.clearTimeout(fallbackTimer);
       fallbackTimer = 0;
+      clearFrameSubtitleSync();
+      frameSubtitleStartedAt = performance.now();
       video.pause();
       video.removeAttribute('src');
       video.load();
@@ -5904,14 +5917,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frameShell.hidden = false;
       overlay.classList.remove('is-error', 'is-source-syncing');
       overlay.classList.add('is-frame-mode');
-      if (retryStreamForSubtitles) {
-        retryStreamForSubtitles = false;
-        subtitleButton.disabled = false;
-        subtitleButton.classList.remove('is-loading');
-        subtitleButton.title = 'Legendas';
-      }
       syncFrameSubtitleButton();
-      renderSubtitleCue(subtitleOverlay, [], 0, false);
+      renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime(), subtitlesEnabled && !!activeSubtitleUrl);
+      if (!subtitleOverlay.hidden) subtitleOverlay.style.setProperty('display', 'block', 'important');
+      else subtitleOverlay.style.removeProperty('display');
+      if (subtitlesEnabled && activeSubtitleUrl) {
+        frameSubtitleTimer = window.setInterval(syncDriveSubtitle, 180);
+      }
       syncMobileDriveFrameViewport();
       window.requestAnimationFrame(syncMobileDriveFrameViewport);
       setLoading('', false);
@@ -6112,33 +6124,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     subtitleButton.addEventListener('click', async () => {
       if (!activeSubtitleUrl) return;
       showControls(true);
-      if (frameMode) {
-        // O iframe nativo do Drive é cross-origin, então o site não consegue ler
-        // play/pause/tempo atual para sincronizar um SRT/VTT diretamente nele.
-        // Mantemos o CC visível e, ao tocar, tentamos novamente o player do site;
-        // se ele abrir, a legenda é ativada automaticamente. Se falhar de novo,
-        // voltamos ao Drive e o CC continua disponível na barra.
-        retryStreamForSubtitles = true;
-        subtitleButton.disabled = true;
-        subtitleButton.classList.add('is-loading');
-        subtitleButton.classList.remove('is-error');
-        subtitleButton.title = 'Ativando legendas...';
-        frameMode = false;
-        frameShell.hidden = true;
-        frame.src = 'about:blank';
-        overlay.classList.remove('is-frame-mode');
-        subtitleButton.style.removeProperty('display');
-        setLoading('Carregando player com legendas...');
-        loadProxyStream(true);
-        return;
-      }
       if (subtitlesEnabled) {
         subtitlesEnabled = false;
+        clearFrameSubtitleSync();
         subtitleButton.classList.remove('is-active');
         subtitleButton.setAttribute('aria-pressed', 'false');
         subtitleButton.setAttribute('aria-label', 'Ativar legendas');
         subtitleButton.title = 'Legendas';
         renderSubtitleCue(subtitleOverlay, [], 0, false);
+        subtitleOverlay.style.removeProperty('display');
         showControls(false);
         return;
       }
@@ -6147,23 +6141,30 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       subtitleButton.disabled = true;
       subtitleButton.classList.add('is-loading');
       subtitleButton.classList.remove('is-error');
-      subtitleButton.title = 'Carregando legendas...';
+      subtitleButton.title = frameMode ? 'Carregando legendas (modo Drive)...' : 'Carregando legendas...';
       try {
         subtitleCues = await loadSubtitleCues(activeSubtitleUrl);
-        if (token !== subtitleLoadToken || frameMode || overlay.hidden) return;
+        if (token !== subtitleLoadToken || overlay.hidden) return;
         subtitlesEnabled = true;
+        clearFrameSubtitleSync();
+        if (frameMode) {
+          frameSubtitleStartedAt = performance.now();
+          frameSubtitleTimer = window.setInterval(syncDriveSubtitle, 180);
+        }
         subtitleButton.classList.add('is-active');
         subtitleButton.setAttribute('aria-pressed', 'true');
         subtitleButton.setAttribute('aria-label', 'Desativar legendas');
-        subtitleButton.title = 'Legendas ativadas';
+        subtitleButton.title = frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas';
         syncDriveSubtitle();
       } catch (_) {
         if (token !== subtitleLoadToken) return;
+        clearFrameSubtitleSync();
         subtitleCues = [];
         subtitlesEnabled = false;
         subtitleButton.classList.add('is-error');
         subtitleButton.title = 'Não foi possível carregar a legenda';
         renderSubtitleCue(subtitleOverlay, [], 0, false);
+        subtitleOverlay.style.removeProperty('display');
       } finally {
         if (token === subtitleLoadToken) {
           subtitleButton.disabled = false;
