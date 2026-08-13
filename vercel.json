@@ -25,11 +25,99 @@
       "destination": "/api/meta?handler=billie-wikipedia"
     },
     {
-      "source": "/albuns",
+      "source": "/api/runtime",
+      "destination": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"
+    },
+    {
+      "source": "/api/account-status",
+      "destination": "/api/delete-account?action=status"
+    },
+    {
+      "source": "/pt-br/@:username",
       "destination": "/api/site-page"
     },
     {
-      "source": "/albuns/",
+      "source": "/pt-br/:videoId(\\d{6,12})",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/albuns/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/álbuns/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/pt-br/albums/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/@:username",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/:videoId(\\d{6,12})",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/albuns/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/álbuns/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/en-us/albums/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/@:username",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/:videoId(\\d{6,12})",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/albuns/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/álbuns/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/es/albums/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/fr/@:username",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/fr/:videoId(\\d{6,12})",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/fr/albuns/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/fr/álbuns/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/fr/albums/:albumId",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/@:username",
+      "destination": "/api/site-page"
+    },
+    {
+      "source": "/:videoId(\\d{6,12})",
       "destination": "/api/site-page"
     },
     {
@@ -37,231 +125,11 @@
       "destination": "/api/site-page"
     },
     {
-      "source": "/api/runtime",
-      "destination": "/api/media?mode=supabase-runtime"
-    },
-    {
-      "source": "/api/account-status",
-      "destination": "/api/delete-account?action=status"
-    },
-    {
-      "source": "/pt-br/terms",
+      "source": "/álbuns/:albumId",
       "destination": "/api/site-page"
     },
     {
-      "source": "/pt-br/terms/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br/privacy",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br/privacy/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br/cookies",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br/cookies/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br/dmca",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br/dmca/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/terms",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/terms/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/privacy",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/privacy/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/cookies",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/cookies/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/dmca",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/dmca/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/terms",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/terms/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/privacy",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/privacy/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/cookies",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/cookies/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/dmca",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/dmca/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br/reset-password",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br/reset-password/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/reset-password",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/reset-password/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/reset-password",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/reset-password/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/reset-password",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/reset-password/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/pt-br/:path*",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/en-us/:path*",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/es/:path*",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/fr",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/fr/:path*",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/login",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/login/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/auth/callback",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/auth/callback/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/terms",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/terms/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/privacy",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/privacy/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/cookies",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/cookies/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/dmca",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/dmca/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/atualizacoes/:notificationId",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/notificacoes/:notificationId",
+      "source": "/albums/:albumId",
       "destination": "/api/site-page"
     },
     {
@@ -273,52 +141,12 @@
       "destination": "/oauth/consent/index.html"
     },
     {
-      "source": "/config",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/suporte",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/suporte/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/atualizacoes",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/atualizacoes/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/notificacoes",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/notificacoes/",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/@:username",
-      "destination": "/api/site-page"
-    },
-    {
       "source": "/404",
       "destination": "/404.html"
     },
     {
       "source": "/404/",
       "destination": "/404.html"
-    },
-    {
-      "source": "/billie-eilish",
-      "destination": "/api/site-page"
-    },
-    {
-      "source": "/billie-eilish/",
-      "destination": "/api/site-page"
     },
     {
       "source": "/apoie",
@@ -329,16 +157,256 @@
       "destination": "/404.html"
     },
     {
+      "source": "/pt-br",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pt-br/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/en-us",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/en-us/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/es",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/es/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/fr",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/fr/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/login/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/callback",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/callback/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/terms/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/privacy/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cookies",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cookies/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dmca",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dmca/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/reset-password/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/config",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/config/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/perfil",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/perfil/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/suporte",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/suporte/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/atualizacoes",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/atualizacoes/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notificacoes",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notificacoes/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/billie-eilish",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/billie-eilish/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/billie",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/billie/",
+      "destination": "/index.html"
+    },
+    {
       "source": "/ong",
-      "destination": "/api/site-page"
+      "destination": "/index.html"
     },
     {
       "source": "/ong/",
-      "destination": "/api/site-page"
+      "destination": "/index.html"
     },
     {
-      "source": "/:videoId",
-      "destination": "/api/site-page"
+      "source": "/albuns",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/albuns/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/álbuns",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/álbuns/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/albums",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/albums/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/comunidade",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/comunidade/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/community",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/community/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/comunidad",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/comunidad/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/communaute",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/communaute/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/fãs",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/fãs/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/fas",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/fas/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/fans",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/fans/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/atualizacoes/:notificationId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notificacoes/:notificationId",
+      "destination": "/index.html"
     }
   ],
   "headers": [
@@ -571,7 +639,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' blob: https://vk.com https://*.vk.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self' https://discord.com https://*.discord.com https://accounts.google.com https://drive.google.com https://www.youtube.com https://www.youtube-nocookie.com https://vkvideo.ru https://*.vkvideo.ru https://vk.com https://*.vk.com; upgrade-insecure-requests"
+          "value": "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' blob: https://cdn.jsdelivr.net https://vk.com https://*.vk.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self' https://discord.com https://*.discord.com https://accounts.google.com https://drive.google.com https://www.youtube.com https://www.youtube-nocookie.com https://vkvideo.ru https://*.vkvideo.ru https://vk.com https://*.vk.com; upgrade-insecure-requests"
         },
         {
           "key": "Cross-Origin-Resource-Policy",
@@ -609,6 +677,10 @@
         {
           "key": "Pragma",
           "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
         }
       ]
     },
@@ -618,62 +690,6 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
-      ]
-    },
-    {
-      "source": "/api/site-page",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, s-maxage=60, stale-while-revalidate=600"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
-      ]
-    },
-    {
-      "source": "/api/public-data",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, s-maxage=60, stale-while-revalidate=600"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
-      ]
-    },
-    {
-      "source": "/api/public-profile",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, s-maxage=30, stale-while-revalidate=120"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
-      ]
-    },
-    {
-      "source": "/api/profile-share-image",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=300, s-maxage=900, stale-while-revalidate=86400"
-        },
-        {
-          "key": "Content-Type",
-          "value": "image/png"
         },
         {
           "key": "X-Content-Type-Options",
@@ -699,6 +715,96 @@
         {
           "key": "X-Robots-Tag",
           "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/api/media",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, s-maxage=31536000, immutable"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-origin"
+        }
+      ]
+    },
+    {
+      "source": "/api/deployment-version",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=30, s-maxage=60, stale-while-revalidate=300"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/api/site-page",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=60, s-maxage=120, stale-while-revalidate=600"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/api/public-data",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=30, s-maxage=120, stale-while-revalidate=600"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/api/public-profile",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=60, s-maxage=120, stale-while-revalidate=600"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/api/profile-share-image",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=600, s-maxage=3600, stale-while-revalidate=86400"
+        },
+        {
+          "key": "Content-Type",
+          "value": "image/png"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
         }
       ]
     },
@@ -753,23 +859,6 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/api/media",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, s-maxage=31536000, immutable"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Cross-Origin-Resource-Policy",
-          "value": "same-origin"
         }
       ]
     }

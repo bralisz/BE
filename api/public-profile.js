@@ -138,11 +138,11 @@ async function publicProfile(req, res) {
     const profile = await fetchPublicProfile(username);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     if (!profile) {
-      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=20, stale-while-revalidate=60');
+      res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
       return res.status(404).end();
     }
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=120');
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=600');
     if (req.method === 'HEAD') return res.status(200).end();
     return res.status(200).send(JSON.stringify(profile));
   } catch (_) {

@@ -9,8 +9,8 @@ const PUBLIC_PROFILE_API = require('./public-profile');
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
 const OFFICIAL_SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
-const SETTINGS_CACHE_TTL_MS = 60000;
-const SEO_CATALOG_CACHE_TTL_MS = 60000;
+const SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000;
+const SEO_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 const SEO_CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents', 'news']);
 const I18N_REV = '20260810-original-titles-v3';
 const LOCALIZED_ROUTE_SLUGS = Object.freeze({
@@ -681,12 +681,11 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   if (publicProfile && publicProfile.username) {
     const displayName = String(publicProfile.displayName || publicProfile.username).trim().slice(0, 80);
     const username = PUBLIC_PROFILE_API.normalizeUsername(publicProfile.username);
-    const version = profileShareVersion(publicProfile);
     socialTitle = `${displayName} (@${username})`;
     documentTitle = `${displayName} (@${username}) | ${siteTitle}`;
     socialDescription = profileDescription(displayName);
     imageAlt = profileImageAlt(displayName);
-    image = `${origin}/api/profile-share-image?username=${encodeURIComponent(username)}&v=${encodeURIComponent(version)}`;
+    image = `${origin}/api/profile-share-image?username=${encodeURIComponent(username)}`;
     ogType = 'profile';
   }
 
@@ -781,8 +780,10 @@ module.exports = async function sitePage(req, res) {
         : legalRequest
           ? 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400'
           : profileUsername
-            ? 'public, max-age=0, s-maxage=30, stale-while-revalidate=300'
-            : 'public, max-age=0, s-maxage=60, stale-while-revalidate=600'
+            ? 'public, max-age=60, s-maxage=120, stale-while-revalidate=600'
+            : seoRecord
+              ? 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600'
+              : 'public, max-age=60, s-maxage=300, stale-while-revalidate=1800'
     );
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const requestPath = routeInfo.logicalPath;

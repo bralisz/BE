@@ -191,13 +191,20 @@
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
     } catch (_) { return ''; }
   }
+  window.BETVMediaProxyUrl = function BETVMediaProxyUrl(value) {
+    const raw = String(value || '').trim();
+    if (!/^https:\/\//i.test(raw)) return '';
+    const token = encodeBase64Url(raw);
+    return token ? `/api/media?u=${token}` : '';
+  };
   window.beMediaUrl = function beMediaUrl(value) {
     const raw = String(value || '').trim();
     if (!raw || raw === '#') return raw || '#';
     if (/^(?:\/|data:|blob:)/i.test(raw)) return raw;
     if (!/^https:\/\//i.test(raw)) return '#';
-    const token = encodeBase64Url(raw);
-    return token ? `/api/media?u=${token}` : '#';
+    // Imagens externas carregam direto da origem. /api/media fica apenas como
+    // fallback para hosts que bloqueiam hotlink, reduzindo Functions e transfer.
+    return raw;
   };
 
   const DEFAULT_AVATAR = '/assets/images/profile/default-avatar.png';
@@ -295,7 +302,30 @@
   };
   document.addEventListener('error', function (event) {
     const image = event.target;
-    if (!(image instanceof HTMLImageElement) || !image.hasAttribute('data-avatar-fallback')) return;
+    if (!(image instanceof HTMLImageElement)) return;
+
+    const currentSource = String(image.getAttribute('src') || '').trim();
+    const notificationOwnFallback = image.hasAttribute('data-notification-fallback-src');
+    let isExternalHttps = false;
+    try {
+      const parsed = new URL(currentSource, location.href);
+      isExternalHttps = parsed.protocol === 'https:' && parsed.origin !== location.origin;
+    } catch (_) {}
+
+    // Direct-first: só usa a Function /api/media quando a origem externa falha.
+    // Interrompe os handlers deste primeiro erro para que eles aguardem a
+    // tentativa do proxy antes de remover a imagem ou trocar pelo placeholder.
+    if (isExternalHttps && !notificationOwnFallback && !image.hasAttribute('data-betv-proxy-attempted')) {
+      const proxy = window.BETVMediaProxyUrl ? window.BETVMediaProxyUrl(currentSource) : '';
+      if (proxy && proxy !== currentSource) {
+        image.setAttribute('data-betv-proxy-attempted', '1');
+        image.setAttribute('src', proxy);
+        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        return;
+      }
+    }
+
+    if (!image.hasAttribute('data-avatar-fallback')) return;
     const fallback = image.getAttribute('data-avatar-fallback') || DEFAULT_AVATAR;
     if (String(image.getAttribute('src') || '').endsWith(fallback)) return;
     image.setAttribute('src', fallback);
@@ -986,12 +1016,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     // edge cache, so reloads and simultaneous visitors do not fan out into many
     // identical Supabase reads.
     const ttl = normalizedName === 'settings' && normalizedId === 'site'
-      ? 30000
+      ? 60000
       : normalizedName === 'notifications'
-        ? 15000
+        ? 60000
         : normalizedName === 'movies'
-          ? 120000
-          : 300000;
+          ? 300000
+          : 600000;
     const promise = fetch(`/api/public-data?${params.toString()}`, {
       method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
@@ -1291,7 +1321,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try {
         const response = await fetch(`/api/public-profile?username=${encodeURIComponent(normalized)}`, {
           headers: { Accept: 'application/json' },
-          cache: 'no-store'
+          cache: 'default'
         });
         if (response.status === 404) return null;
         if (!response.ok) throw new Error(`public_profile_${response.status}`);
@@ -5082,6 +5112,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeSubtitleUrl = '';
     let subtitleCues = [];
     let subtitlesEnabled = false;
+    let subtitlesVisible = false;
     let subtitleSyncTimer = 0;
     let subtitleLoadToken = 0;
 
@@ -5304,7 +5335,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         renderSubtitleCue(subtitleOverlay, [], 0, false);
         return;
       }
-      renderSubtitleCue(subtitleOverlay, subtitleCues, readVkCurrentTime(), true);
+      renderSubtitleCue(subtitleOverlay, subtitleCues, readVkCurrentTime(), subtitlesVisible);
     };
 
     const startVkSubtitleSync = () => {
@@ -5319,6 +5350,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeSubtitleUrl = '';
       subtitleCues = [];
       subtitlesEnabled = false;
+      subtitlesVisible = false;
       subtitleButton.hidden = true;
       subtitleButton.disabled = false;
       subtitleButton.style.removeProperty('display');
@@ -5520,12 +5552,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (activeProvider !== 'vk' || !activeSubtitleUrl) return;
       showControls(true);
       if (subtitlesEnabled) {
-        subtitlesEnabled = false;
-        stopVkSubtitleSync();
-        subtitleButton.classList.remove('is-active');
-        subtitleButton.setAttribute('aria-pressed', 'false');
-        subtitleButton.setAttribute('aria-label', 'Ativar legendas');
-        renderSubtitleCue(subtitleOverlay, [], 0, false);
+        subtitlesVisible = !subtitlesVisible;
+        subtitleButton.classList.toggle('is-active', subtitlesVisible);
+        subtitleButton.setAttribute('aria-pressed', String(subtitlesVisible));
+        subtitleButton.setAttribute('aria-label', subtitlesVisible ? 'Ocultar legendas' : 'Mostrar legendas');
+        subtitleButton.title = subtitlesVisible ? 'Legendas ativadas' : 'Legendas ocultas';
+        syncVkSubtitle();
         showControls(false);
         return;
       }
@@ -5539,15 +5571,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleCues = await loadSubtitleCues(activeSubtitleUrl);
         if (token !== subtitleLoadToken || activeProvider !== 'vk' || overlay.hidden) return;
         subtitlesEnabled = true;
+        subtitlesVisible = true;
         subtitleButton.classList.add('is-active');
         subtitleButton.setAttribute('aria-pressed', 'true');
-        subtitleButton.setAttribute('aria-label', 'Desativar legendas');
+        subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = 'Legendas ativadas';
         startVkSubtitleSync();
       } catch (_) {
         if (token !== subtitleLoadToken) return;
         subtitleCues = [];
         subtitlesEnabled = false;
+        subtitlesVisible = false;
         subtitleButton.classList.add('is-error');
         subtitleButton.title = 'Não foi possível carregar a legenda';
         renderSubtitleCue(subtitleOverlay, [], 0, false);
@@ -5724,6 +5758,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeSubtitleUrl = '';
     let subtitleCues = [];
     let subtitlesEnabled = false;
+    let subtitlesVisible = false;
     let subtitleLoadToken = 0;
     let frameSubtitleTimer = 0;
     let frameSubtitleStartedAt = 0;
@@ -5783,13 +5818,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return;
       }
       if (frameMode) {
-        renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime(), true);
+        renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime(), subtitlesVisible);
         if (!subtitleOverlay.hidden) subtitleOverlay.style.setProperty('display', 'block', 'important');
         else subtitleOverlay.style.removeProperty('display');
         return;
       }
       subtitleOverlay.style.removeProperty('display');
-      renderSubtitleCue(subtitleOverlay, subtitleCues, video.currentTime, true);
+      renderSubtitleCue(subtitleOverlay, subtitleCues, video.currentTime, subtitlesVisible);
     };
 
     const resetDriveSubtitles = () => {
@@ -5798,6 +5833,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeSubtitleUrl = '';
       subtitleCues = [];
       subtitlesEnabled = false;
+      subtitlesVisible = false;
       subtitleButton.hidden = true;
       subtitleButton.disabled = false;
       subtitleButton.classList.remove('is-active', 'is-loading', 'is-error');
@@ -5894,12 +5930,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(false);
     };
 
-    const proxyStreamUrl = (fileId, resourceKey = '', retry = false) => {
-      const url = new URL(googleDriveStreamUrl(fileId, resourceKey), location.origin);
-      if (retry) url.searchParams.set('retry', String(Date.now()));
-      return `${url.pathname}${url.search}`;
-    };
-
     const useFrameFallback = () => {
       if (!activeFileId || overlay.hidden || frameMode) return;
       frameMode = true;
@@ -5918,7 +5948,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.remove('is-error', 'is-source-syncing');
       overlay.classList.add('is-frame-mode');
       syncFrameSubtitleButton();
-      renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime(), subtitlesEnabled && !!activeSubtitleUrl);
+      renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime(), subtitlesEnabled && subtitlesVisible && !!activeSubtitleUrl);
       if (!subtitleOverlay.hidden) subtitleOverlay.style.setProperty('display', 'block', 'important');
       else subtitleOverlay.style.removeProperty('display');
       if (subtitlesEnabled && activeSubtitleUrl) {
@@ -5948,39 +5978,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }, 18000);
     };
 
-    const loadProxyStream = retry => {
-      if (!activeFileId || overlay.hidden || frameMode || mediaReady) return;
-      streamAttempt = retry ? 'proxy-retry' : 'proxy';
-      mediaReady = false;
-      window.clearTimeout(fallbackTimer);
-      setInteractive(false);
-      overlay.classList.remove('is-error');
-      overlay.classList.add('is-source-syncing');
-      setLoading(retry ? 'Tentando carregar o vídeo novamente...' : 'Carregando vídeo do Google Drive...');
-      video.pause();
-      video.src = proxyStreamUrl(activeFileId, activeResourceKey, retry);
-      video.load();
-      requestPlayback();
-      fallbackTimer = window.setTimeout(() => {
-        if (mediaReady || overlay.hidden || frameMode) return;
-        if (!retry) loadProxyStream(true);
-        else tryDirectStream();
-      }, retry ? 22000 : 16000);
-    };
-
     const handleStreamFailure = () => {
       if (overlay.hidden || frameMode || mediaReady) return;
       window.clearTimeout(fallbackTimer);
       fallbackTimer = 0;
-      if (streamAttempt === 'proxy') {
-        loadProxyStream(true);
-      } else if (streamAttempt === 'proxy-retry') {
-        tryDirectStream();
-      } else if (streamAttempt === 'direct') {
-        useFrameFallback();
-      } else {
-        loadProxyStream(false);
-      }
+      // Vídeos do Drive não passam mais pelo proxy da Vercel. Se o link
+      // direto falhar, usamos o player nativo do Google Drive como fallback.
+      if (streamAttempt === 'direct') useFrameFallback();
+      else tryDirectStream();
     };
 
     const closePlayer = (restoreFocus = true) => {
@@ -6060,7 +6065,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         });
       }
 
-      loadProxyStream(false);
+      // Tenta primeiro a entrega direta pelo Google Drive. Isso evita que o
+      // arquivo de vídeo seja retransmitido por /api/drive-media na Vercel.
+      tryDirectStream();
       window.setTimeout(() => {
         if (token === openingToken && !overlay.hidden) showControls(false);
       }, 50);
@@ -6125,14 +6132,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!activeSubtitleUrl) return;
       showControls(true);
       if (subtitlesEnabled) {
-        subtitlesEnabled = false;
-        clearFrameSubtitleSync();
-        subtitleButton.classList.remove('is-active');
-        subtitleButton.setAttribute('aria-pressed', 'false');
-        subtitleButton.setAttribute('aria-label', 'Ativar legendas');
-        subtitleButton.title = 'Legendas';
-        renderSubtitleCue(subtitleOverlay, [], 0, false);
-        subtitleOverlay.style.removeProperty('display');
+        subtitlesVisible = !subtitlesVisible;
+        subtitleButton.classList.toggle('is-active', subtitlesVisible);
+        subtitleButton.setAttribute('aria-pressed', String(subtitlesVisible));
+        subtitleButton.setAttribute('aria-label', subtitlesVisible ? 'Ocultar legendas' : 'Mostrar legendas');
+        subtitleButton.title = subtitlesVisible ? (frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas') : 'Legendas ocultas';
+        syncDriveSubtitle();
         showControls(false);
         return;
       }
@@ -6146,6 +6151,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleCues = await loadSubtitleCues(activeSubtitleUrl);
         if (token !== subtitleLoadToken || overlay.hidden) return;
         subtitlesEnabled = true;
+        subtitlesVisible = true;
         clearFrameSubtitleSync();
         if (frameMode) {
           frameSubtitleStartedAt = performance.now();
@@ -6153,7 +6159,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
         subtitleButton.classList.add('is-active');
         subtitleButton.setAttribute('aria-pressed', 'true');
-        subtitleButton.setAttribute('aria-label', 'Desativar legendas');
+        subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas';
         syncDriveSubtitle();
       } catch (_) {
@@ -6161,6 +6167,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         clearFrameSubtitleSync();
         subtitleCues = [];
         subtitlesEnabled = false;
+        subtitlesVisible = false;
         subtitleButton.classList.add('is-error');
         subtitleButton.title = 'Não foi possível carregar a legenda';
         renderSubtitleCue(subtitleOverlay, [], 0, false);
@@ -6967,8 +6974,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         else showStreamError('Não foi possível carregar o MP3. Verifique a permissão pública do arquivo no Google Drive.');
         return;
       }
-      if (streamAttempt === 'proxy') tryDirectDriveStream();
-      else if (streamAttempt === 'proxy-retry') tryDirectDriveStream();
+      if (streamAttempt === 'proxy') loadProxyStream(true);
+      else if (streamAttempt === 'proxy-retry') showStreamError('Não foi possível carregar o MP3. Verifique a permissão pública do arquivo no Google Drive.');
       else useFrameFallback();
     };
 
@@ -7072,9 +7079,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         metadataProbeFinished = true;
         if (overlay.hidden || activeFileId !== fileId || token !== openingToken) return;
         applyMediaKind(kind);
+        // Se o tipo só foi identificado como áudio depois da abertura, troca
+        // para o fluxo de áudio. Vídeos continuam sempre fora do proxy.
+        if (kind === 'audio' && !mediaReady && !frameMode && streamAttempt === 'direct') {
+          loadProxyStream(false);
+        }
       });
 
-      loadProxyStream(false);
+      if (activeMediaKind === 'audio') {
+        // Mantemos o proxy apenas para MP3, que depende do player HTML atual.
+        loadProxyStream(false);
+      } else {
+        // Para vídeo, tenta o Google Drive diretamente e usa o iframe nativo
+        // como fallback. O filme não atravessa /api/drive-media.
+        tryDirectDriveStream();
+      }
       closeButton.focus({ preventScroll: true });
     };
 
@@ -12824,9 +12843,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     window.addEventListener('hashchange',handlePublicRoute);
     window.addEventListener('popstate',handlePublicRoute);
+    // A checagem de bloqueio não precisa rodar a cada minuto. O perfil local e
+    // os eventos de autenticação continuam cobrindo alterações imediatas; este
+    // ciclo mais espaçado evita consultas repetidas em abas deixadas abertas.
     window.setInterval(function(){
       if(auth.currentUser&&document.visibilityState==='visible'&&navigator.onLine!==false)enforceAccountAccess(auth.currentUser);
-    },60000);
+    },300000);
   }
 
   async function startAuthentication(){
@@ -13441,8 +13463,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function notificationImageProxyUrl(value){
-    if(!window.beMediaUrl)return '';
-    var proxy=window.beMediaUrl(value);
+    if(!window.BETVMediaProxyUrl)return '';
+    var proxy=window.BETVMediaProxyUrl(value);
     return proxy&&proxy!=='#'&&proxy!==value?proxy:'';
   }
 
@@ -13947,8 +13969,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   'use strict';
 
   var ENDPOINT = '/api/deployment-version';
-  var RELEASE_ENDPOINT = '/api/public-data?name=settings&id=site';
-  var CHECK_INTERVAL = 15000;
+  // Uma chamada a cada 5 minutos, com no máximo uma chamada extra por minuto
+  // em foco/navegação. O endpoint usa cache de borda e já devolve a liberação
+  // pública junto da versão, evitando duas Functions a cada verificação.
+  var CHECK_INTERVAL = 5 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 60 * 1000;
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
   var PUBLIC_APPLIED_UPDATE_KEY = 'betvPublicAppliedUpdateVersion';
@@ -13958,6 +13983,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var checking = false;
   var updateStarted = false;
   var intervalId = 0;
+  var lastCheckAt = 0;
   var popupObserver = null;
   var releaseStateLoaded = false;
   var publicReleaseEnabled = false;
@@ -14146,79 +14172,68 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  function fetchLatestVersion() {
+  function fetchLatestVersion(force) {
+    var nowMs = Date.now();
     if (checking || updateStarted || document.visibilityState === 'prerender') return Promise.resolve();
+    if (!force && document.visibilityState === 'hidden') return Promise.resolve();
+    if (!force && lastCheckAt && nowMs - lastCheckAt < MIN_CHECK_GAP_MS) return Promise.resolve();
+    lastCheckAt = nowMs;
     checking = true;
 
-    var separator = ENDPOINT.indexOf('?') === -1 ? '?' : '&';
-    var versionRequest = fetch(ENDPOINT + separator + 't=' + Date.now(), {
+    return fetch(ENDPOINT, {
       method: 'GET',
-      cache: 'no-store',
+      cache: 'default',
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {
       if (!response.ok) throw new Error('version-check-failed');
       return response.json();
-    });
+    }).then(function (data) {
+      data = data || {};
+      var version = String(data.version || '').trim();
+      if (!version || version.indexOf('local:') === 0) return;
 
-    var releaseSeparator = RELEASE_ENDPOINT.indexOf('?') === -1 ? '?' : '&';
-    var releaseRequest = fetch(RELEASE_ENDPOINT + releaseSeparator + 't=' + Date.now(), {
-      method: 'GET',
-      cache: 'no-store',
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json' }
-    }).then(function (response) {
-      if (!response.ok) return null;
-      return response.json().catch(function () { return null; });
-    }).catch(function () { return null; });
-
-    return Promise.all([versionRequest, releaseRequest])
-      .then(function (results) {
-        var data = results[0] || {};
-        var release = results[1] || {};
-        var version = String(data && data.version || '').trim();
-        if (!version || version.indexOf('local:') === 0) return;
-
+      if (data.releaseStateAvailable !== false) {
         releaseStateLoaded = true;
-        publicReleaseEnabled = release && (release.updateReleaseEnabled === true || String(release.updateReleaseEnabled || '').toLowerCase() === 'true');
-        publicReleasedVersion = String(release && release.releasedDeploymentVersion || '').trim();
+        publicReleaseEnabled = data.updateReleaseEnabled === true || String(data.updateReleaseEnabled || '').toLowerCase() === 'true';
+        publicReleasedVersion = String(data.releasedDeploymentVersion || '').trim();
+      }
 
-        // O administrador usa a notificação antiga do canto direito sempre que
-        // existe uma versão que ele ainda não aplicou pelo botão Atualizar. A
-        // liberação pública não interfere no aviso do admin.
-        if (isAdminContext()) {
-          var adminAppliedVersion = readAdminAppliedUpdate();
-          if (version !== adminAppliedVersion) showPopup(version, true);
-          else {
-            clearPendingUpdate();
-            hidePopup();
-          }
-          if (!currentVersion) currentVersion = version;
-          return;
-        }
-
-        // Para usuários comuns, a liberação é controlada por versão. O fato de
-        // o navegador já ter carregado os arquivos do deploy não significa que o usuário
-        // aplicou a atualização. A versão só é considerada aplicada depois do clique em
-        // "Atualizar", que grava PUBLIC_APPLIED_UPDATE_KEY durante o reload.
-        if (!canExposeVersionToCurrentViewer(version)) {
+      // O administrador usa a notificação antiga do canto direito sempre que
+      // existe uma versão que ele ainda não aplicou pelo botão Atualizar. A
+      // liberação pública não interfere no aviso do admin.
+      if (isAdminContext()) {
+        var adminAppliedVersion = readAdminAppliedUpdate();
+        if (version !== adminAppliedVersion) showPopup(version, true);
+        else {
           clearPendingUpdate();
           hidePopup();
-          if (!currentVersion) currentVersion = version;
-          return;
         }
+        if (!currentVersion) currentVersion = version;
+        return;
+      }
 
-        var publicAppliedVersion = readPublicAppliedUpdate();
-        if (publicAppliedVersion !== version) {
-          showPopup(version, true);
-          return;
-        }
-
+      // Para usuários comuns, a liberação é controlada por versão. O fato de
+      // o navegador já ter carregado os arquivos do deploy não significa que o usuário
+      // aplicou a atualização. A versão só é considerada aplicada depois do clique em
+      // "Atualizar", que grava PUBLIC_APPLIED_UPDATE_KEY durante o reload.
+      if (!canExposeVersionToCurrentViewer(version)) {
         clearPendingUpdate();
         hidePopup();
         if (!currentVersion) currentVersion = version;
-      })
-      .catch(function () {})
+        return;
+      }
+
+      var publicAppliedVersion = readPublicAppliedUpdate();
+      if (publicAppliedVersion !== version) {
+        showPopup(version, true);
+        return;
+      }
+
+      clearPendingUpdate();
+      hidePopup();
+      if (!currentVersion) currentVersion = version;
+    }).catch(function () {})
       .finally(function () { checking = false; });
   }
 
@@ -14452,13 +14467,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         backend.auth.onChange(function (account) {
           if (!account || !isAuthenticatedAdmin()) return;
           restorePendingUpdate();
-          fetchLatestVersion();
+          fetchLatestVersion(true);
         });
       } else if (backend && backend.ready && typeof backend.ready.then === 'function') {
         backend.ready.then(function () {
           if (!isAuthenticatedAdmin()) return;
           restorePendingUpdate();
-          fetchLatestVersion();
+          fetchLatestVersion(true);
         }).catch(function () {});
       }
     } catch (_) {}
@@ -14476,7 +14491,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       releaseStateLoaded = true;
       publicReleaseEnabled = detail.updateReleaseEnabled === true || String(detail.updateReleaseEnabled || '').toLowerCase() === 'true';
       publicReleasedVersion = String(detail.releasedDeploymentVersion || '').trim();
-      fetchLatestVersion();
+      fetchLatestVersion(true);
     });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
@@ -16393,7 +16408,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     Promise.resolve(window.beBackend.ready).then(function(){
       if(window.beBackend.auth&&typeof window.beBackend.auth.onChange==='function')window.beBackend.auth.onChange(function(){schedule(900);});
       schedule(1200);
-      window.clearInterval(pollTimer);pollTimer=window.setInterval(function(){if(!document.hidden)check();},30000);
+      // A campanha continua reagindo aos eventos de notificações/auth acima.
+      // O polling vira apenas uma rede de segurança para abas abertas por muito
+      // tempo, em vez de consultar a coleção a cada 30 segundos.
+      window.clearInterval(pollTimer);pollTimer=window.setInterval(function(){if(!document.hidden)check();},300000);
     }).catch(function(){schedule(1500);});
   }
   window.addEventListener('be:notifications-ready',function(){schedule(250);});

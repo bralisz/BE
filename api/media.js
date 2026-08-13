@@ -204,7 +204,17 @@ async function fetchImage(initialUrl) {
   throw new Error('redirect_failed');
 }
 
+function rejectExplicitCrossSite(req, res) {
+  const fetchSite = String(req && req.headers && req.headers['sec-fetch-site'] || '').trim().toLowerCase();
+  if (fetchSite !== 'cross-site') return false;
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  res.status(403).end();
+  return true;
+}
+
 module.exports = async function mediaProxy(req, res) {
+  if (rejectExplicitCrossSite(req, res)) return;
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).end();

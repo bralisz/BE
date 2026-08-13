@@ -303,7 +303,17 @@ function sendMetadata(res, metadata) {
   }));
 }
 
+function rejectExplicitCrossSite(req, res) {
+  const fetchSite = String(req && req.headers && req.headers['sec-fetch-site'] || '').trim().toLowerCase();
+  if (fetchSite !== 'cross-site') return false;
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  res.status(403).end();
+  return true;
+}
+
 module.exports = async function driveMediaProxy(req, res) {
+  if (rejectExplicitCrossSite(req, res)) return;
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).end();
@@ -351,6 +361,21 @@ module.exports = async function driveMediaProxy(req, res) {
 
     if (!upstream) return res.status(502).end();
 
+    const kind = mediaKind(contentType, upstream.headers.get('content-disposition'), filename);
+
+    // Nunca retransmite arquivos de vídeo pela Function da Vercel. Mesmo se
+    // algum código antigo chamar /api/drive-media sem ?metadata=1, devolvemos
+    // um redirect para a origem final do Google Drive e encerramos o body aqui.
+    // Isso protege Fast Origin Transfer, Fast Data Transfer e CPU/Functions.
+    if (kind === 'video' && upstream.url) {
+      try { await upstream.body?.cancel(); } catch (_) { /* sem ação */ }
+      res.statusCode = 307;
+      res.setHeader('Location', upstream.url);
+      res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+      res.setHeader('X-BETV-Media-Kind', 'video');
+      return res.end();
+    }
+
     res.statusCode = upstream.status;
     res.setHeader('Content-Type', contentType || 'application/octet-stream');
     res.setHeader('Content-Disposition', 'inline');
@@ -358,7 +383,6 @@ module.exports = async function driveMediaProxy(req, res) {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Accept-Ranges', upstream.headers.get('accept-ranges') || 'bytes');
 
-    const kind = mediaKind(contentType, upstream.headers.get('content-disposition'), filename);
     if (kind) res.setHeader('X-BETV-Media-Kind', kind);
 
     copyHeader(upstream, res, 'content-length');

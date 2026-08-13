@@ -36,10 +36,10 @@ function normalizeLocale(value) {
 }
 
 function upstreamTtl(name, id) {
-  if (name === 'settings' && id === 'site') return 30 * 1000;
-  if (name === 'notifications') return 15 * 1000;
-  if (name === 'movies') return 2 * 60 * 1000;
-  return 5 * 60 * 1000;
+  if (name === 'settings' && id === 'site') return 60 * 1000;
+  if (name === 'notifications') return 60 * 1000;
+  if (name === 'movies') return 5 * 60 * 1000;
+  return 10 * 60 * 1000;
 }
 
 async function cachedUpstream(key, ttl, loader) {
@@ -90,22 +90,14 @@ function isLocalAsset(value) {
   return /^\/(?!\/)/.test(String(value || '').trim());
 }
 
-function encodeBase64Url(value) {
-  return Buffer.from(String(value || ''), 'utf8')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
-}
-
 function mediaReference(collection, id, field, value) {
   const raw = String(value || '').trim();
   if (!raw || isLocalAsset(raw)) return raw;
   if (!/^https:\/\//i.test(raw)) return '';
-  // The public response already knows the validated source URL. Carry it to the
-  // media proxy instead of making /api/media query Supabase again for every card image.
-  const params = new URLSearchParams({ u: encodeBase64Url(raw) });
-  return `/api/media?${params.toString()}`;
+  // Entrega a URL original ao navegador. O frontend tenta a origem diretamente
+  // e recorre a /api/media apenas se a imagem falhar, evitando uma Function por
+  // imagem em cada visita ao catálogo/perfil.
+  return raw.slice(0, 6000);
 }
 
 function safeText(value, maxLength = 20000) {
@@ -351,12 +343,12 @@ module.exports = async function publicData(req, res) {
     const isSiteReleaseSetting = name === 'settings' && id === 'site';
     res.setHeader('Cache-Control', rows.length
       ? (isSiteReleaseSetting
-          ? 'public, max-age=0, s-maxage=30, stale-while-revalidate=60'
+          ? 'public, max-age=30, s-maxage=60, stale-while-revalidate=300'
           : name === 'notifications'
-            ? 'public, max-age=0, s-maxage=15, stale-while-revalidate=30'
+            ? 'public, max-age=30, s-maxage=60, stale-while-revalidate=300'
             : name === 'movies'
-              ? 'public, max-age=0, s-maxage=120, stale-while-revalidate=300'
-              : 'public, max-age=0, s-maxage=300, stale-while-revalidate=600')
+              ? 'public, max-age=120, s-maxage=300, stale-while-revalidate=1800'
+              : 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600')
       : 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');

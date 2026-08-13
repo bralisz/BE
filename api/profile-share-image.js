@@ -321,6 +321,15 @@ async function profileShareImage(req, res) {
   );
   if (!publicProfileApi.validUsername(username)) return res.status(400).end();
 
+  // Evita que parâmetros aleatórios criem milhares de chaves de cache para a
+  // mesma imagem e forcem o Sharp a renderizar novamente.
+  const extraQueryKeys = Object.keys(req.query || {}).filter(key => key !== 'username');
+  if (extraQueryKeys.length) {
+    res.setHeader('Location', `/api/profile-share-image?username=${encodeURIComponent(username)}`);
+    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600');
+    return res.status(308).end();
+  }
+
   try {
     const profile = await publicProfileApi.fetchPublicProfile(username);
     if (!profile) return res.status(404).end();
@@ -328,7 +337,7 @@ async function profileShareImage(req, res) {
     res.setHeader('Content-Type', 'image/png');
     res.setHeader('Content-Length', String(image.length));
     res.setHeader('Content-Disposition', `inline; filename="${username}-favoritos.png"`);
-    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=900, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'public, max-age=600, s-maxage=3600, stale-while-revalidate=86400');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     if (req.method === 'HEAD') return res.status(200).end();
     return res.status(200).send(image);
