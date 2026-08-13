@@ -2240,6 +2240,75 @@ body.admin-preview-open{overflow:hidden}
   }
 
 
+  const MOVIE_SUBTITLE_BUCKET = 'movie-subtitles';
+  const MOVIE_SUBTITLE_LANGUAGES = Object.freeze([
+    ['pt', 'Português', 'Pt'],
+    ['es', 'Español', 'Es'],
+    ['fr', 'Français', 'Fr']
+  ]);
+
+  function normalizeAdminSubtitleTracks(item = {}) {
+    const source = item?.subtitleTracks && typeof item.subtitleTracks === 'object' && !Array.isArray(item.subtitleTracks)
+      ? item.subtitleTracks
+      : {};
+    const legacy = String(item?.subtitleUrl || '').trim();
+    return {
+      pt: String(source.pt || source['pt-br'] || legacy || '').trim(),
+      es: String(source.es || '').trim(),
+      fr: String(source.fr || '').trim()
+    };
+  }
+
+  function subtitleFileNameFromUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const url = new URL(raw, location.origin);
+      const name = decodeURIComponent(url.pathname.split('/').filter(Boolean).pop() || 'legenda');
+      return name || 'legenda';
+    } catch (_) {
+      return 'legenda';
+    }
+  }
+
+  function movieSubtitleUploadFields(item = {}) {
+    const tracks = normalizeAdminSubtitleTracks(item);
+    return `<div class="field full"><label>Legendas</label><small>Envie os arquivos diretamente pelo site. Formatos aceitos: .SRT e .VTT, até 5 MB por idioma. O ícone CC só aparece quando existir uma legenda disponível.</small></div>${MOVIE_SUBTITLE_LANGUAGES.map(([locale, label, suffix]) => {
+      const current = tracks[locale] || '';
+      return `<div class="field full movie-subtitle-upload-field" data-subtitle-locale="${locale}"><label>Legenda — ${label}</label><input type="hidden" name="subtitleExisting${suffix}" value="${esc(current)}"><input class="a-input movie-subtitle-file" type="file" name="subtitleFile${suffix}" accept=".srt,.vtt,text/vtt,application/x-subrip,text/plain"><small>${current ? `Arquivo atual: <strong>${esc(subtitleFileNameFromUrl(current))}</strong>. Selecione outro arquivo para substituir.` : 'Nenhum arquivo enviado para este idioma.'}</small>${current ? `<label class="movie-subtitle-remove"><input type="checkbox" name="subtitleRemove${suffix}" value="true"> Remover esta legenda ao salvar</label>` : ''}</div>`;
+    }).join('')}`;
+  }
+
+  async function uploadMovieSubtitleFile(file, locale, folderKey) {
+    if (!(file instanceof File) || !file.size) return '';
+    if (file.size > 5 * 1024 * 1024) throw new Error('Cada arquivo de legenda pode ter no máximo 5 MB.');
+    const name = String(file.name || '').trim();
+    const match = name.match(/\.([a-z0-9]+)$/i);
+    const extension = String(match?.[1] || '').toLowerCase();
+    if (!['srt', 'vtt'].includes(extension)) throw new Error('Use somente arquivos de legenda .SRT ou .VTT.');
+    const client = beBackend && beBackend.client;
+    if (!client?.storage?.from) throw new Error('O upload de legendas não está disponível no momento.');
+    const cleanFolder = String(folderKey || generatePublicId()).replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 90) || generatePublicId();
+    const random = new Uint32Array(1);
+    if (window.crypto?.getRandomValues) window.crypto.getRandomValues(random);
+    const nonce = random[0] || Math.floor(Math.random() * 1e9);
+    const path = `movies/${cleanFolder}/${locale}-${Date.now()}-${nonce}.${extension}`;
+    const contentType = extension === 'vtt' ? 'text/vtt' : 'application/x-subrip';
+    const bucket = client.storage.from(MOVIE_SUBTITLE_BUCKET);
+    const { data: uploadData, error } = await bucket.upload(path, file, {
+      cacheControl: '3600',
+      contentType,
+      upsert: false
+    });
+    if (error) throw new Error(error.message || 'Não foi possível enviar a legenda.');
+    const storedPath = String(uploadData?.path || path);
+    const publicResult = bucket.getPublicUrl(storedPath);
+    const publicUrl = String(publicResult?.data?.publicUrl || publicResult?.publicURL || '').trim();
+    if (!/^https:\/\//i.test(publicUrl)) throw new Error('A legenda foi enviada, mas não foi possível obter o link público.');
+    return publicUrl;
+  }
+
+
   const MOVIE_STREAMING_OPTIONS = Object.freeze([
     ['apple-tv', 'Apple TV', 'streamingAppleTv', 'streamingAppleTvUrl'],
     ['prime-video', 'Prime Video', 'streamingPrimeVideo', 'streamingPrimeVideoUrl'],
@@ -2665,7 +2734,7 @@ body.admin-preview-open{overflow:hidden}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
           ${name === 'videos' ? imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. A logo aparece somente ao abrir os detalhes do conteúdo e não é exibida nos cards.' }) : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
-          ${name === 'movies' ? `<div class="field full"><label>Arquivo de legenda (Google Drive)</label><input class="a-input" name="subtitleUrl" value="${esc(item.subtitleUrl || '')}" placeholder="https://drive.google.com/file/d/.../view"><small>Opcional. Envie a legenda em .VTT ou .SRT para o Google Drive, deixe o arquivo acessível por link e cole aqui o link de compartilhamento. O ícone de legendas só aparecerá no player quando este campo estiver preenchido.</small></div>` : ''}
+          ${name === 'movies' ? movieSubtitleUploadFields(item) : ''}
         </div>
       </section>
 
@@ -3166,10 +3235,22 @@ body.admin-preview-open{overflow:hidden}
           delete data.link;
         }
         if (name === 'movies') {
-          data.subtitleUrl = String(data.subtitleUrl || '').trim();
-          if (data.subtitleUrl && !/^https:\/\//i.test(data.subtitleUrl)) {
-            throw new Error('Use um link HTTPS válido para o arquivo de legenda.');
+          const subtitleTracks = {};
+          const subtitleFolderKey = item?.id || `draft-${generatePublicId(`${String(data.title || '').trim()}-${Date.now()}`)}`;
+          for (const [locale, , suffix] of MOVIE_SUBTITLE_LANGUAGES) {
+            const existingUrl = String(data[`subtitleExisting${suffix}`] || '').trim();
+            const removeExisting = String(data[`subtitleRemove${suffix}`] || '').toLowerCase() === 'true';
+            const file = formData.get(`subtitleFile${suffix}`);
+            let url = removeExisting ? '' : existingUrl;
+            if (file instanceof File && file.size) url = await uploadMovieSubtitleFile(file, locale, subtitleFolderKey);
+            if (url) subtitleTracks[locale] = url;
+            delete data[`subtitleExisting${suffix}`];
+            delete data[`subtitleFile${suffix}`];
+            delete data[`subtitleRemove${suffix}`];
           }
+          data.subtitleTracks = subtitleTracks;
+          // Mantém um fallback em português para versões antigas do catálogo/player.
+          data.subtitleUrl = String(subtitleTracks.pt || subtitleTracks.es || subtitleTracks.fr || '').trim();
           // Persiste os streamings marcados e o link direto do filme em cada serviço.
           const selectedStreaming = [];
           const streamingLinks = {};

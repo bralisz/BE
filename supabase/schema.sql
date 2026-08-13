@@ -179,6 +179,31 @@ revoke all on function public.is_admin() from public, anon;
 grant execute on function public.is_admin() to authenticated;
 
 
+-- Legendas de filmes enviadas pelo painel administrativo.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'movie-subtitles',
+  'movie-subtitles',
+  true,
+  5242880,
+  array['text/vtt','application/x-subrip','text/plain']::text[]
+)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "movie subtitles admin upload" on storage.objects;
+create policy "movie subtitles admin upload"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'movie-subtitles'
+  and public.is_admin()
+  and lower(storage.extension(name)) in ('srt','vtt')
+);
+
+
 -- Permite ao primeiro passo da tela de acesso decidir entre entrar e criar
 -- conta. O retorno contém somente verdadeiro/falso e nunca expõe dados do
 -- usuário. Para reduzir abuso em produção, aplique rate limiting na borda.
@@ -920,7 +945,10 @@ as $$
       'sectionName', c.data -> 'sectionName',
       'slug', c.data -> 'slug',
       'sourceCollection', c.data -> 'sourceCollection',
-      'subtitleUrl', c.data -> 'subtitleUrl',
+      'subtitleUrl', coalesce(
+        nullif(c.data #>> '{subtitleTracks,pt}', ''),
+        nullif(c.data ->> 'subtitleUrl', '')
+      ),
       'thumbnailUrl', c.data -> 'thumbnailUrl',
       'title', c.data -> 'title',
       'translations', c.data -> 'translations',
