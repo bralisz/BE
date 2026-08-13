@@ -107,6 +107,7 @@
           imageUrl: thumbnail,
           bannerUrl: background,
           contentUrl: source.videoUrl || source.contentUrl || source.link || item.contentUrl,
+          subtitleUrl: source.subtitleUrl || item.subtitleUrl || '',
           duration: source.duration || source.videoDuration || source.runtime || item.duration,
           year: source.year || item.year,
           logoUrl: source.logoUrl || item.logoUrl || '',
@@ -148,6 +149,7 @@
               data-year="${escapeHtml(item.year || '')}"
               data-duration="${escapeHtml(item.duration || '')}"
               data-content-url="${safeUrl(url)}"
+              data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
               data-image-url="${safeUrl(item.imageUrl || '')}"
               data-banner-url="${safeUrl(item.bannerUrl || item.imageUrl || '')}"
               data-logo-url="${safeUrl(item.logoUrl || '')}"
@@ -288,6 +290,7 @@
             data-year="${escapeHtml(year)}"
             data-duration="${escapeHtml(duration)}"
             data-content-url="${safeUrl(contentUrl)}"
+            data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
             data-image-url="${safeUrl(thumbnail)}"
             data-banner-url="${safeUrl(background)}"
             data-logo-url="${safeUrl(item.logoUrl || '')}"
@@ -536,6 +539,7 @@
       data-year="${escapeHtml(year)}"
       data-duration="${escapeHtml(duration)}"
       data-content-url="${safeUrl(contentHref)}"
+      data-subtitle-url="${safeUrl(video.subtitleUrl || '')}"
       data-image-url="${safeUrl(image)}"
       data-banner-url="${safeUrl(banner)}"
       data-logo-url="${safeUrl(logo)}"
@@ -604,6 +608,7 @@
           year: item.year || '',
           duration: item.duration || item.videoDuration || item.runtime || '',
           contentUrl: item.videoUrl || item.contentUrl || item.link || '#',
+          subtitleUrl: item.subtitleUrl || '',
           imageUrl: item.thumbnailUrl || item.imageUrl || item.bannerUrl || '',
           bannerUrl: ['movies', 'series'].includes(collection)
             ? (item.thumbnailUrl || item.imageUrl || item.bannerUrl || '')
@@ -668,6 +673,7 @@
       data-year="${escapeHtml(data.year || '')}"
       data-duration="${escapeHtml(data.duration || '')}"
       data-content-url="${safeUrl(contentHref)}"
+      data-subtitle-url="${safeUrl(data.subtitleUrl || '')}"
       data-image-url="${safeUrl(image)}"
       data-banner-url="${safeUrl(['movies', 'series'].includes(String(data.collection || '').toLowerCase()) ? image : (data.bannerUrl || image))}"
       data-logo-url="${safeUrl(data.logoUrl || '')}"
@@ -850,6 +856,7 @@
     const year = data.year || '';
     const duration = data.duration || '';
     const contentUrl = data.contentUrl || '#';
+    const subtitleUrl = data.subtitleUrl || '';
     const collection = String(data.collection || '').toLowerCase();
     const thumbnailUrl = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
     const bannerUrl = ['movies', 'series'].includes(collection)

@@ -19,7 +19,9 @@ const MIME_BY_EXTENSION = Object.freeze({
   m4v: 'video/mp4',
   webm: 'video/webm',
   mov: 'video/quicktime',
-  mkv: 'video/x-matroska'
+  mkv: 'video/x-matroska',
+  vtt: 'text/vtt',
+  srt: 'application/x-subrip'
 });
 
 function firstQueryValue(value) {
@@ -125,7 +127,7 @@ function filenameFromPreviewHtml(html) {
     /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i,
     /<meta[^>]+itemprop=["']name["'][^>]+content=["']([^"']+)["']/i,
     /<title>([^<]+)<\/title>/i,
-    /["']([^"']+\.(?:mp3|m4a|aac|wav|ogg|oga|opus|flac|mp4|m4v|webm|mov|mkv))["']/i
+    /["']([^"']+\.(?:mp3|m4a|aac|wav|ogg|oga|opus|flac|mp4|m4v|webm|mov|mkv|vtt|srt))["']/i
   ];
   for (const pattern of patterns) {
     const match = source.match(pattern);

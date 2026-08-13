@@ -2694,6 +2694,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         logoUrl: source.logoUrl || item.logoUrl || '',
         streamingAvailability: source.streamingAvailability || [],
         streamingLinks: source.streamingLinks || {},
+        subtitleUrl: source.subtitleUrl || item.subtitleUrl || '',
         sectionId: source.sectionId || '',
         sectionName: source.sectionName || '',
         collection,
@@ -2732,6 +2733,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-year="${escapeHtml(item.year || '')}"
               data-duration="${escapeHtml(item.duration || '')}"
               data-content-url="${safeUrl(url)}"
+              data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
               data-image-url="${safeAssetUrl(item.imageUrl || '')}"
               data-banner-url="${safeAssetUrl(item.bannerUrl || item.imageUrl || '')}"
               data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
@@ -2896,6 +2898,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             data-year="${escapeHtml(year)}"
             data-duration="${escapeHtml(duration)}"
             data-content-url="${safeUrl(contentUrl)}"
+            data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
             data-image-url="${safeAssetUrl(thumbnail)}"
             data-banner-url="${safeAssetUrl(background)}"
             data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
@@ -3390,6 +3393,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-year="${escapeHtml(year)}"
       data-duration="${escapeHtml(duration)}"
       data-content-url="${safeUrl(contentHref)}"
+      data-subtitle-url="${safeUrl(video.subtitleUrl || '')}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(banner)}"
       data-logo-url="${safeAssetUrl(logo)}"
@@ -3498,6 +3502,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           year: item.year || '',
           duration: item.duration || item.videoDuration || item.runtime || '',
           contentUrl: item.videoUrl || item.contentUrl || item.link || '#',
+          subtitleUrl: item.subtitleUrl || '',
           imageUrl: item.thumbnailUrl || item.imageUrl || item.bannerUrl || '',
           bannerUrl: ['movies', 'series'].includes(collection)
             ? (item.thumbnailUrl || item.imageUrl || item.bannerUrl || '')
@@ -3878,6 +3883,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-year="${escapeHtml(data.year || '')}"
       data-duration="${escapeHtml(data.duration || '')}"
       data-content-url="${safeUrl(contentHref)}"
+      data-subtitle-url="${safeUrl(data.subtitleUrl || '')}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(['movies', 'series'].includes(String(data.collection || '').toLowerCase()) ? image : (data.bannerUrl || image))}"
       data-logo-url="${safeAssetUrl(data.logoUrl || '')}"
@@ -4889,12 +4895,130 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   setupMobileSiteOrientationLock();
 
 
+  const subtitleCueCache = new Map();
+
+  function subtitleFetchUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const fileId = googleDriveFileId(raw);
+    if (fileId) return googleDriveStreamUrl(fileId, googleDriveResourceKey(raw));
+    try {
+      const url = new URL(raw, location.origin);
+      return url.protocol === 'https:' ? url.href : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function subtitleTimeSeconds(value) {
+    const raw = String(value || '').trim().replace(',', '.');
+    if (!raw) return NaN;
+    const parts = raw.split(':');
+    if (parts.length < 2 || parts.length > 3) return NaN;
+    const seconds = Number(parts.pop());
+    const minutes = Number(parts.pop());
+    const hours = parts.length ? Number(parts.pop()) : 0;
+    if (![hours, minutes, seconds].every(Number.isFinite)) return NaN;
+    return (hours * 3600) + (minutes * 60) + seconds;
+  }
+
+  function decodeSubtitleEntities(value) {
+    return String(value || '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;|&apos;/gi, "'")
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&amp;/gi, '&')
+      .replace(/&#(\d+);/g, (_, code) => {
+        const point = Number(code);
+        return Number.isInteger(point) && point >= 0 && point <= 0x10ffff ? String.fromCodePoint(point) : '';
+      });
+  }
+
+  function parseSubtitleCues(value) {
+    const source = String(value || '')
+      .replace(/^\uFEFF/, '')
+      .replace(/\r\n?/g, '\n')
+      .trim();
+    if (!source) return [];
+
+    const cues = [];
+    source.split(/\n{2,}/).forEach(block => {
+      const lines = block.split('\n').map(line => line.trimEnd());
+      const timeIndex = lines.findIndex(line => line.includes('-->'));
+      if (timeIndex < 0) return;
+      const match = lines[timeIndex].match(/^\s*([^\s]+)\s+-->\s+([^\s]+)(?:\s+.*)?$/);
+      if (!match) return;
+      const start = subtitleTimeSeconds(match[1]);
+      const end = subtitleTimeSeconds(match[2]);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+      const text = decodeSubtitleEntities(
+        lines.slice(timeIndex + 1).join('\n')
+          .replace(/<br\s*\/?\s*>/gi, '\n')
+          .replace(/<[^>]+>/g, '')
+      ).trim();
+      if (text) cues.push({ start, end, text });
+    });
+
+    return cues.sort((a, b) => a.start - b.start || a.end - b.end);
+  }
+
+  function subtitleTextAtTime(cues, currentTime) {
+    const time = Number(currentTime);
+    if (!Array.isArray(cues) || !cues.length || !Number.isFinite(time) || time < 0) return '';
+    let low = 0;
+    let high = cues.length - 1;
+    let candidate = null;
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      const cue = cues[mid];
+      if (cue.start <= time) {
+        candidate = cue;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return candidate && time <= candidate.end ? candidate.text : '';
+  }
+
+  function renderSubtitleCue(element, cues, currentTime, enabled = true) {
+    if (!element) return;
+    const text = enabled ? subtitleTextAtTime(cues, currentTime) : '';
+    if (element.textContent !== text) element.textContent = text;
+    element.hidden = !text;
+  }
+
+  async function loadSubtitleCues(value) {
+    const fetchUrl = subtitleFetchUrl(value);
+    if (!fetchUrl) throw new Error('Link de legenda inválido');
+    if (!subtitleCueCache.has(fetchUrl)) {
+      const request = fetch(fetchUrl, {
+        method: 'GET',
+        credentials: fetchUrl.startsWith('/') ? 'same-origin' : 'omit'
+      }).then(async response => {
+        if (!response.ok) throw new Error(`Falha ao carregar legenda (${response.status})`);
+        const cues = parseSubtitleCues(await response.text());
+        if (!cues.length) throw new Error('Arquivo de legenda sem falas válidas');
+        return cues;
+      }).catch(error => {
+        subtitleCueCache.delete(fetchUrl);
+        throw error;
+      });
+      subtitleCueCache.set(fetchUrl, request);
+    }
+    return subtitleCueCache.get(fetchUrl);
+  }
+
+
   function externalVideoPlayersMarkup() {
     return `<div class="external-native-player-overlay" id="externalNativePlayerOverlay" hidden aria-hidden="true" data-provider="">
       <section class="external-native-player-shell" id="externalNativePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo externo">
         <div class="external-native-player-frame-shell">
           <iframe class="external-native-player-frame" id="externalNativePlayerFrame" title="Reprodutor de vídeo" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
+        <div class="external-native-player-subtitle-overlay" id="externalNativePlayerSubtitleOverlay" hidden aria-live="off"></div>
         <div class="external-native-player-bottom-shade" id="externalNativePlayerBottomShade" aria-hidden="true"></div>
         <div class="external-native-player-wake-zone" id="externalNativePlayerWakeZone" aria-hidden="true"></div>
         <div class="external-native-player-menu external-native-player-quality-menu" id="externalNativePlayerQualityMenu" hidden role="menu" aria-label="Qualidade do vídeo">
@@ -4912,6 +5036,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           </button>
           <button class="external-native-player-action external-native-player-audio" id="externalNativePlayerAudio" type="button" aria-label="Alterar faixa de áudio" title="Faixa de áudio" aria-expanded="false" aria-controls="externalNativePlayerAudioMenu">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
+          </button>
+          <button class="external-native-player-action external-native-player-subtitle" id="externalNativePlayerSubtitle" type="button" aria-label="Ativar legendas" title="Legendas" aria-pressed="false" hidden>
+            <span class="player-cc-icon" aria-hidden="true">CC</span>
           </button>
           <button class="external-native-player-action external-native-player-close" id="externalNativePlayerClose" type="button" aria-label="Fechar vídeo" title="Fechar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
@@ -4934,9 +5061,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const closeButton = document.getElementById('externalNativePlayerClose');
     const qualityButton = document.getElementById('externalNativePlayerQuality');
     const audioButton = document.getElementById('externalNativePlayerAudio');
+    const subtitleButton = document.getElementById('externalNativePlayerSubtitle');
+    const subtitleOverlay = document.getElementById('externalNativePlayerSubtitleOverlay');
     const qualityMenu = document.getElementById('externalNativePlayerQualityMenu');
     const audioMenu = document.getElementById('externalNativePlayerAudioMenu');
-    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !qualityMenu || !audioMenu) return;
+    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !subtitleButton || !subtitleOverlay || !qualityMenu || !audioMenu) return;
 
     let previousFocus = null;
     let activeProvider = '';
@@ -4950,6 +5079,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let vkSelectedAudioTrack = 'default';
     let controlsInteracting = false;
     let inactivityTimer = 0;
+    let activeSubtitleUrl = '';
+    let subtitleCues = [];
+    let subtitlesEnabled = false;
+    let subtitleSyncTimer = 0;
+    let subtitleLoadToken = 0;
 
     const syncBodyLock = () => {
       document.body.classList.toggle('external-video-player-open', !overlay.hidden);
@@ -5160,6 +5294,46 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     };
 
+    const stopVkSubtitleSync = () => {
+      window.clearInterval(subtitleSyncTimer);
+      subtitleSyncTimer = 0;
+    };
+
+    const syncVkSubtitle = () => {
+      if (activeProvider !== 'vk' || !subtitlesEnabled || !activeSubtitleUrl || overlay.hidden) {
+        renderSubtitleCue(subtitleOverlay, [], 0, false);
+        return;
+      }
+      renderSubtitleCue(subtitleOverlay, subtitleCues, readVkCurrentTime(), true);
+    };
+
+    const startVkSubtitleSync = () => {
+      stopVkSubtitleSync();
+      syncVkSubtitle();
+      subtitleSyncTimer = window.setInterval(syncVkSubtitle, 180);
+    };
+
+    const resetExternalSubtitles = () => {
+      subtitleLoadToken += 1;
+      stopVkSubtitleSync();
+      activeSubtitleUrl = '';
+      subtitleCues = [];
+      subtitlesEnabled = false;
+      subtitleButton.hidden = true;
+      subtitleButton.disabled = false;
+      subtitleButton.classList.remove('is-active', 'is-loading', 'is-error');
+      subtitleButton.setAttribute('aria-pressed', 'false');
+      subtitleButton.setAttribute('aria-label', 'Ativar legendas');
+      subtitleButton.title = 'Legendas';
+      renderSubtitleCue(subtitleOverlay, [], 0, false);
+    };
+
+    const configureExternalSubtitles = value => {
+      resetExternalSubtitles();
+      activeSubtitleUrl = activeProvider === 'vk' ? String(value || '').trim() : '';
+      subtitleButton.hidden = !activeSubtitleUrl;
+    };
+
     const readVkPaused = () => {
       if (!vkPlayer || !vkApiReady || typeof vkPlayer.getState !== 'function') return false;
       try {
@@ -5228,6 +5402,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (overlay.hidden) return;
       closeMenus();
       resetVkPlayer();
+      resetExternalSubtitles();
       frame.src = 'about:blank';
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
@@ -5256,6 +5431,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = document.activeElement;
       activeProvider = normalizedProvider;
       activeVkInfo = normalizedProvider === 'vk' ? info : null;
+      configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '');
       vkSelectedQuality = 4;
       renderVkAudioTracks([]);
       syncQualityMenu(4);
@@ -5295,8 +5471,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       event.preventDefault();
       event.stopImmediatePropagation();
 
+      const subtitleUrl = linkedContent.subtitleUrl || link.dataset.subtitleUrl || '';
       if (youtubeInfo) openExternalPlayer('youtube', youtubeInfo, { title });
-      else openExternalPlayer('vk', vkInfo, { title });
+      else openExternalPlayer('vk', vkInfo, { title, subtitleUrl });
     }, true);
 
     qualityButton.addEventListener('click', () => {
@@ -5335,6 +5512,50 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       audioMenu.hidden = true;
       audioButton.setAttribute('aria-expanded', 'false');
       showControls(false);
+    });
+
+    subtitleButton.addEventListener('click', async () => {
+      if (activeProvider !== 'vk' || !activeSubtitleUrl) return;
+      showControls(true);
+      if (subtitlesEnabled) {
+        subtitlesEnabled = false;
+        stopVkSubtitleSync();
+        subtitleButton.classList.remove('is-active');
+        subtitleButton.setAttribute('aria-pressed', 'false');
+        subtitleButton.setAttribute('aria-label', 'Ativar legendas');
+        renderSubtitleCue(subtitleOverlay, [], 0, false);
+        showControls(false);
+        return;
+      }
+
+      const token = ++subtitleLoadToken;
+      subtitleButton.disabled = true;
+      subtitleButton.classList.add('is-loading');
+      subtitleButton.classList.remove('is-error');
+      subtitleButton.title = 'Carregando legendas...';
+      try {
+        subtitleCues = await loadSubtitleCues(activeSubtitleUrl);
+        if (token !== subtitleLoadToken || activeProvider !== 'vk' || overlay.hidden) return;
+        subtitlesEnabled = true;
+        subtitleButton.classList.add('is-active');
+        subtitleButton.setAttribute('aria-pressed', 'true');
+        subtitleButton.setAttribute('aria-label', 'Desativar legendas');
+        subtitleButton.title = 'Legendas ativadas';
+        startVkSubtitleSync();
+      } catch (_) {
+        if (token !== subtitleLoadToken) return;
+        subtitleCues = [];
+        subtitlesEnabled = false;
+        subtitleButton.classList.add('is-error');
+        subtitleButton.title = 'Não foi possível carregar a legenda';
+        renderSubtitleCue(subtitleOverlay, [], 0, false);
+      } finally {
+        if (token === subtitleLoadToken) {
+          subtitleButton.disabled = false;
+          subtitleButton.classList.remove('is-loading');
+          showControls(false);
+        }
+      }
     });
 
     closeButton.addEventListener('click', () => closeExternalPlayer(true));
@@ -5410,6 +5631,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-video-player-frame-shell" id="driveVideoPlayerFrameShell" hidden>
           <iframe class="drive-video-player-frame" id="driveVideoPlayerFrame" title="Reprodutor de vídeo do Google Drive" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
+        <div class="drive-video-player-subtitle-overlay" id="driveVideoPlayerSubtitleOverlay" hidden aria-live="off"></div>
         <div class="drive-video-player-loading" id="driveVideoPlayerLoading" role="status" aria-label="Carregando vídeo">
           <span class="drive-video-player-loader" aria-hidden="true"></span>
           <span class="drive-video-player-loading-message" id="driveVideoPlayerLoadingMessage" hidden></span>
@@ -5440,6 +5662,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             <button class="drive-video-player-action drive-video-player-volume" id="driveVideoPlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
               <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+            <button class="drive-video-player-action drive-video-player-subtitle" id="driveVideoPlayerSubtitle" type="button" aria-label="Ativar legendas" title="Legendas" aria-pressed="false" hidden>
+              <span class="player-cc-icon" aria-hidden="true">CC</span>
             </button>
             <button class="drive-video-player-action drive-video-player-external" id="driveVideoPlayerExternal" type="button" aria-label="Abrir no Google Drive" title="Abrir no Google Drive">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -5473,11 +5698,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const durationLabel = document.getElementById('driveVideoPlayerDuration');
     const fullscreenButton = document.getElementById('driveVideoPlayerFullscreen');
     const volumeButton = document.getElementById('driveVideoPlayerVolume');
+    const subtitleButton = document.getElementById('driveVideoPlayerSubtitle');
+    const subtitleOverlay = document.getElementById('driveVideoPlayerSubtitleOverlay');
     const externalButton = document.getElementById('driveVideoPlayerExternal');
     const closeButton = document.getElementById('driveVideoPlayerClose');
     const actionbar = document.getElementById('driveVideoPlayerActionbar');
     const actionWakeZone = document.getElementById('driveVideoPlayerActionWakeZone');
-    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !loadingMessage || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel || !fullscreenButton || !volumeButton || !externalButton || !closeButton || !actionbar || !actionWakeZone) return;
+    if (!overlay || !shell || !video || !frameShell || !frame || !loading || !loadingMessage || !toggleButton || !backButton || !forwardButton || !progress || !currentLabel || !durationLabel || !fullscreenButton || !volumeButton || !subtitleButton || !subtitleOverlay || !externalButton || !closeButton || !actionbar || !actionWakeZone) return;
 
     let activeFileId = '';
     let activeResourceKey = '';
@@ -5491,6 +5718,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let controlsInteracting = false;
     let openingToken = 0;
     let activeSourceLink = null;
+    let activeSubtitleUrl = '';
+    let subtitleCues = [];
+    let subtitlesEnabled = false;
+    let subtitleLoadToken = 0;
 
     const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
     const ownsFullscreen = () => {
@@ -5529,6 +5760,34 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       fullscreenButton.title = active ? 'Sair da tela cheia' : 'Tela cheia';
     };
 
+    const syncDriveSubtitle = () => {
+      if (frameMode || !subtitlesEnabled || !activeSubtitleUrl || overlay.hidden) {
+        renderSubtitleCue(subtitleOverlay, [], 0, false);
+        return;
+      }
+      renderSubtitleCue(subtitleOverlay, subtitleCues, video.currentTime, true);
+    };
+
+    const resetDriveSubtitles = () => {
+      subtitleLoadToken += 1;
+      activeSubtitleUrl = '';
+      subtitleCues = [];
+      subtitlesEnabled = false;
+      subtitleButton.hidden = true;
+      subtitleButton.disabled = false;
+      subtitleButton.classList.remove('is-active', 'is-loading', 'is-error');
+      subtitleButton.setAttribute('aria-pressed', 'false');
+      subtitleButton.setAttribute('aria-label', 'Ativar legendas');
+      subtitleButton.title = 'Legendas';
+      renderSubtitleCue(subtitleOverlay, [], 0, false);
+    };
+
+    const configureDriveSubtitles = value => {
+      resetDriveSubtitles();
+      activeSubtitleUrl = String(value || '').trim();
+      subtitleButton.hidden = !activeSubtitleUrl;
+    };
+
     const syncState = () => {
       if (frameMode) return;
       const duration = Number.isFinite(video.duration) ? video.duration : 0;
@@ -5544,6 +5803,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       toggleButton.title = video.paused ? 'Reproduzir' : 'Pausar';
       volumeButton.setAttribute('aria-label', video.muted || video.volume === 0 ? 'Ativar som' : 'Silenciar');
       volumeButton.title = video.muted || video.volume === 0 ? 'Ativar som' : 'Silenciar';
+      syncDriveSubtitle();
     };
 
     const hideControlsForInactivity = () => {
@@ -5618,6 +5878,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frameShell.hidden = false;
       overlay.classList.remove('is-error', 'is-source-syncing');
       overlay.classList.add('is-frame-mode');
+      subtitleButton.hidden = true;
+      renderSubtitleCue(subtitleOverlay, [], 0, false);
       syncMobileDriveFrameViewport();
       window.requestAnimationFrame(syncMobileDriveFrameViewport);
       setLoading('', false);
@@ -5700,6 +5962,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeResourceKey = '';
       activeExternalUrl = '';
       activeSourceLink = null;
+      resetDriveSubtitles();
       streamAttempt = '';
       mediaReady = false;
       frameMode = false;
@@ -5721,6 +5984,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeFileId = fileId;
       activeResourceKey = resourceKey;
       activeSourceLink = context?.sourceLink instanceof Element ? context.sourceLink : null;
+      configureDriveSubtitles(context?.subtitleUrl);
       const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
       activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
       previousFocus = document.activeElement;
@@ -5781,7 +6045,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       event.stopImmediatePropagation();
       window.dispatchEvent(new Event('be:close-external-video-players'));
       window.dispatchEvent(new Event('be:close-drive-player'));
-      openPlayer(fileId, googleDriveResourceKey(mediaUrl), { title, sourceLink: link });
+      openPlayer(fileId, googleDriveResourceKey(mediaUrl), {
+        title,
+        sourceLink: link,
+        subtitleUrl: linkedContent.subtitleUrl || link.dataset.subtitleUrl || ''
+      });
     }, true);
 
     backButton.addEventListener('click', () => {
@@ -5809,6 +6077,50 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       syncState();
       showControls(false);
     });
+    subtitleButton.addEventListener('click', async () => {
+      if (frameMode || !activeSubtitleUrl) return;
+      showControls(true);
+      if (subtitlesEnabled) {
+        subtitlesEnabled = false;
+        subtitleButton.classList.remove('is-active');
+        subtitleButton.setAttribute('aria-pressed', 'false');
+        subtitleButton.setAttribute('aria-label', 'Ativar legendas');
+        subtitleButton.title = 'Legendas';
+        renderSubtitleCue(subtitleOverlay, [], 0, false);
+        showControls(false);
+        return;
+      }
+
+      const token = ++subtitleLoadToken;
+      subtitleButton.disabled = true;
+      subtitleButton.classList.add('is-loading');
+      subtitleButton.classList.remove('is-error');
+      subtitleButton.title = 'Carregando legendas...';
+      try {
+        subtitleCues = await loadSubtitleCues(activeSubtitleUrl);
+        if (token !== subtitleLoadToken || frameMode || overlay.hidden) return;
+        subtitlesEnabled = true;
+        subtitleButton.classList.add('is-active');
+        subtitleButton.setAttribute('aria-pressed', 'true');
+        subtitleButton.setAttribute('aria-label', 'Desativar legendas');
+        subtitleButton.title = 'Legendas ativadas';
+        syncDriveSubtitle();
+      } catch (_) {
+        if (token !== subtitleLoadToken) return;
+        subtitleCues = [];
+        subtitlesEnabled = false;
+        subtitleButton.classList.add('is-error');
+        subtitleButton.title = 'Não foi possível carregar a legenda';
+        renderSubtitleCue(subtitleOverlay, [], 0, false);
+      } finally {
+        if (token === subtitleLoadToken) {
+          subtitleButton.disabled = false;
+          subtitleButton.classList.remove('is-loading');
+          showControls(false);
+        }
+      }
+    });
+
     externalButton.addEventListener('click', () => {
       if (activeExternalUrl) window.open(activeExternalUrl, '_blank', 'noopener,noreferrer');
       showControls(false);
@@ -5905,6 +6217,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     video.addEventListener('canplay', markReady);
     video.addEventListener('playing', markReady);
     video.addEventListener('timeupdate', syncState);
+    video.addEventListener('seeked', syncDriveSubtitle);
     video.addEventListener('durationchange', syncState);
     video.addEventListener('volumechange', syncState);
     video.addEventListener('play', () => { syncState(); showControls(false); });
@@ -7328,6 +7641,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const year = data.year || '';
     const duration = data.duration || '';
     const contentUrl = data.contentUrl || '#';
+    const subtitleUrl = data.subtitleUrl || '';
     const collection = String(data.collection || '').toLowerCase();
     const thumbnailUrl = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
     const bannerUrl = ['movies', 'series'].includes(collection)
@@ -7392,6 +7706,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     play.dataset.year = year;
     play.dataset.duration = duration;
     play.dataset.contentUrl = contentUrl;
+    play.dataset.subtitleUrl = subtitleUrl;
     play.dataset.imageUrl = thumbnailUrl;
     play.dataset.bannerUrl = bannerUrl;
     play.dataset.logoUrl = logoUrl;
@@ -7423,6 +7738,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     list.dataset.year = year;
     list.dataset.duration = duration;
     list.dataset.contentUrl = contentUrl;
+    list.dataset.subtitleUrl = subtitleUrl;
     list.dataset.imageUrl = thumbnailUrl;
     list.dataset.bannerUrl = bannerUrl;
     list.dataset.logoUrl = logoUrl;
@@ -7872,6 +8188,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       year:String(data?.year || ''),
       duration:String(data?.duration || ''),
       contentUrl:String(data?.contentUrl || '#'),
+      subtitleUrl:String(data?.subtitleUrl || ''),
       imageUrl:String(data?.imageUrl || data?.thumbnailUrl || data?.bannerUrl || ''),
       bannerUrl:String(data?.bannerUrl || data?.imageUrl || data?.thumbnailUrl || ''),
       logoUrl:String(data?.logoUrl || ''),
@@ -7902,6 +8219,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       year:dataset.year || element.dataset?.year || '',
       duration:dataset.duration || element.dataset?.duration || '',
       contentUrl:dataset.contentUrl || element.dataset?.contentUrl || '#',
+      subtitleUrl:dataset.subtitleUrl || element.dataset?.subtitleUrl || '',
       imageUrl:dataset.imageUrl || element.dataset?.imageUrl || '',
       bannerUrl:dataset.bannerUrl || element.dataset?.bannerUrl || '',
       logoUrl:dataset.logoUrl || element.dataset?.logoUrl || '',
@@ -15742,6 +16060,61 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },1800);
   }
 
+  function normalizedHandle(value){
+    return String(value||'').trim().replace(/^@/,'').toLowerCase();
+  }
+
+  function routeProfileHandle(){
+    try{
+      var path=decodeURIComponent(String(location.pathname||''));
+      var parts=path.split('/').filter(Boolean);
+      if(parts.length&&/^(pt-br|en-us|es|fr)$/i.test(parts[0]))parts.shift();
+      return parts.length&&String(parts[0]||'').charAt(0)==='@'?normalizedHandle(parts[0]):'';
+    }catch(_){return '';}
+  }
+
+  function ownsBillieFanTag(profile){
+    if(!profile||typeof profile!=='object')return false;
+    var active=String(profile.communityTag||profile.community_tag||'').trim().toLowerCase();
+    if(active==='billie_fan')return true;
+    var owned=profile.communityTags||profile.community_tags;
+    return Array.isArray(owned)&&owned.some(function(tag){return String(tag||'').trim().toLowerCase()==='billie_fan';});
+  }
+
+  async function claimBillieFanForOwnProfile(){
+    try{
+      var backend=window.beBackend;
+      var user=backend&&backend.auth&&backend.auth.currentUser;
+      var client=backend&&backend.client;
+      if(!user||!user.uid||!client||typeof client.rpc!=='function')return false;
+
+      var profile=null;
+      try{profile=await backend.profiles.get(user.uid,{force:true});}catch(_){ }
+      if(!profile)return false;
+
+      /* Compartilhar outro perfil não concede a tag a quem está visualizando. */
+      var routeHandle=routeProfileHandle();
+      var ownHandle=normalizedHandle(profile.username);
+      if(!routeHandle||!ownHandle||routeHandle!==ownHandle)return false;
+      if(ownsBillieFanTag(profile))return true;
+
+      var result=await client.rpc('claim_billie_fan_tag');
+      if(result&&result.error)throw result.error;
+      try{localStorage.setItem('beCommunityTag:'+String(user.uid||''),'billie_fan');}catch(_){ }
+      try{
+        var refreshed=await backend.profiles.get(user.uid,{force:true});
+        if(refreshed&&typeof refreshed==='object'){
+          window.dispatchEvent(new CustomEvent('be:profile-refreshed',{detail:{profile:refreshed}}));
+        }
+      }catch(_){ }
+      try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(user.uid||''),tag:'billie_fan'}}));}catch(_){ }
+      return true;
+    }catch(error){
+      console.warn('Não foi possível conceder a tag Fã da Billie pelo compartilhamento do perfil:',error&&error.message?error.message:error);
+      return false;
+    }
+  }
+
   button.addEventListener('click',async function(event){
     event.preventDefault();
     event.stopPropagation();
@@ -15751,13 +16124,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try{
       if(navigator.share){
         await navigator.share({title:title,url:url});
+        await claimBillieFanForOwnProfile();
         return;
       }
       await copyText(url);
       showCopiedFeedback();
+      await claimBillieFanForOwnProfile();
     }catch(error){
       if(error&&error.name==='AbortError')return;
-      try{await copyText(url);showCopiedFeedback();}catch(_){ }
+      try{await copyText(url);showCopiedFeedback();await claimBillieFanForOwnProfile();}catch(_){ }
     }
   });
 })();
@@ -15785,6 +16160,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function writeSeen(userId,campaignId){try{localStorage.setItem(storageKey(userId),String(campaignId||''));}catch(_){ }}
   function readFavorites(userId){
     try{var value=JSON.parse(localStorage.getItem('beProfileTopFavorites:'+String(userId||'guest'))||'[]');return Array.isArray(value)?value.slice(0,4):[];}catch(_){return [];}
+  }
+  function ownsBillieFanTag(profile){
+    if(!profile||typeof profile!=='object')return false;
+    var active=String(profile.communityTag||profile.community_tag||'').trim().toLowerCase();
+    if(active==='billie_fan')return true;
+    var owned=profile.communityTags||profile.community_tags;
+    return Array.isArray(owned)&&owned.some(function(tag){return String(tag||'').trim().toLowerCase()==='billie_fan';});
   }
   function cleanFavoriteImage(item){
     var raw=String((item&&(item.imageUrl||item.thumbnailUrl||item.bannerUrl||item.logoUrl))||'').trim();
@@ -15941,6 +16323,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!campaignId||readSeen(user.uid)===campaignId)return;
       var snapshot=await loadProfileSnapshot(user);
       if(!snapshot){schedule(2500);return;}
+      /* Quem já conquistou Fã da Billie não recebe novamente este convite,
+         mesmo quando o Admin dispara uma campanha nova. */
+      if(ownsBillieFanTag(snapshot.profile)){
+        rememberChoice(user.uid,campaignId);
+        removePrompt();
+        return;
+      }
       buildPrompt(campaign,user,snapshot.profile,snapshot.favorites);
     }catch(error){console.warn('Não foi possível verificar o convite de perfil:',error&&error.message?error.message:error);}
     finally{checking=false;}

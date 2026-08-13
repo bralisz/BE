@@ -2665,6 +2665,7 @@ body.admin-preview-open{overflow:hidden}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
           ${name === 'videos' ? imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. A logo aparece somente ao abrir os detalhes do conteúdo e não é exibida nos cards.' }) : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
+          ${name === 'movies' ? `<div class="field full"><label>Arquivo de legenda (Google Drive)</label><input class="a-input" name="subtitleUrl" value="${esc(item.subtitleUrl || '')}" placeholder="https://drive.google.com/file/d/.../view"><small>Opcional. Envie a legenda em .VTT ou .SRT para o Google Drive, deixe o arquivo acessível por link e cole aqui o link de compartilhamento. O ícone de legendas só aparecerá no player quando este campo estiver preenchido.</small></div>` : ''}
         </div>
       </section>
 
@@ -3165,6 +3166,10 @@ body.admin-preview-open{overflow:hidden}
           delete data.link;
         }
         if (name === 'movies') {
+          data.subtitleUrl = String(data.subtitleUrl || '').trim();
+          if (data.subtitleUrl && !/^https:\/\//i.test(data.subtitleUrl)) {
+            throw new Error('Use um link HTTPS válido para o arquivo de legenda.');
+          }
           // Persiste os streamings marcados e o link direto do filme em cada serviço.
           const selectedStreaming = [];
           const streamingLinks = {};

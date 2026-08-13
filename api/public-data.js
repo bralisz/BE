@@ -9,7 +9,7 @@ const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
   'mediaType', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
-  'sourceCollection', 'streamingAvailability', 'streamingLinks', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
+  'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
 ]);
 const MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl']);
@@ -159,7 +159,7 @@ function sanitizeItem(collection, row) {
       source[field] = mediaReference(collection, row.id, field, source[field]);
     }
   }
-  for (const field of ['contentUrl', 'videoUrl', 'link']) {
+  for (const field of ['contentUrl', 'videoUrl', 'link', 'subtitleUrl']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeLink(source[field], true);
   }
   for (const field of ['title', 'type', 'category', 'description', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug']) {

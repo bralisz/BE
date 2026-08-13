@@ -920,6 +920,7 @@ as $$
       'sectionName', c.data -> 'sectionName',
       'slug', c.data -> 'slug',
       'sourceCollection', c.data -> 'sourceCollection',
+      'subtitleUrl', c.data -> 'subtitleUrl',
       'thumbnailUrl', c.data -> 'thumbnailUrl',
       'title', c.data -> 'title',
       'translations', c.data -> 'translations',

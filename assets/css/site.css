@@ -18063,3 +18063,99 @@ body.profile-page-active .profile-page-name{
     letter-spacing:-.025em!important;
   }
 }
+
+
+/* =========================================================
+   Legendas externas (.VTT/.SRT) — Google Drive + VK
+   O botão CC só é exibido quando o filme possui subtitleUrl.
+   ========================================================= */
+.player-cc-icon{
+  display:grid;
+  place-items:center;
+  min-width:24px;
+  height:18px;
+  padding:0 3px;
+  border:1.5px solid currentColor;
+  border-radius:4px;
+  font-size:9px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:-.02em;
+  pointer-events:none;
+}
+.external-native-player-subtitle[hidden],
+.drive-video-player-subtitle[hidden]{display:none!important}
+.external-native-player-subtitle.is-active,
+.drive-video-player-subtitle.is-active{
+  background:rgba(255,255,255,.16)!important;
+  color:#fff!important;
+}
+.external-native-player-subtitle.is-loading,
+.drive-video-player-subtitle.is-loading{opacity:.62}
+.external-native-player-subtitle.is-error,
+.drive-video-player-subtitle.is-error{opacity:.72}
+.external-native-player-overlay:not([data-provider="vk"]) .external-native-player-subtitle{display:none!important}
+
+.external-native-player-subtitle-overlay,
+.drive-video-player-subtitle-overlay{
+  position:absolute;
+  z-index:20;
+  left:50%;
+  width:max-content;
+  max-width:min(88vw,1120px);
+  transform:translateX(-50%);
+  padding:7px 12px;
+  border-radius:8px;
+  background:rgba(0,0,0,.66);
+  color:#fff;
+  font-size:clamp(17px,2vw,30px);
+  line-height:1.28;
+  font-weight:700;
+  text-align:center;
+  white-space:pre-line;
+  overflow-wrap:anywhere;
+  text-shadow:0 1px 3px rgba(0,0,0,.9);
+  pointer-events:none;
+  user-select:none;
+}
+.external-native-player-subtitle-overlay[hidden],
+.drive-video-player-subtitle-overlay[hidden]{display:none!important}
+.external-native-player-subtitle-overlay{
+  bottom:max(146px,calc(env(safe-area-inset-bottom) + 136px));
+}
+.drive-video-player-subtitle-overlay{
+  bottom:calc(150px + max(8px,env(safe-area-inset-bottom)));
+  z-index:12;
+}
+.drive-video-player-overlay.is-frame-mode .drive-video-player-subtitle,
+.drive-video-player-overlay.is-frame-mode .drive-video-player-subtitle-overlay{display:none!important}
+
+@media(max-width:700px){
+  .external-native-player-subtitle-overlay{
+    bottom:max(132px,calc(env(safe-area-inset-bottom) + 122px));
+    max-width:90vw;
+    padding:6px 10px;
+    font-size:clamp(15px,4.1vw,22px);
+  }
+  .drive-video-player-subtitle-overlay{
+    bottom:calc(138px + max(8px,env(safe-area-inset-bottom)));
+    max-width:90vw;
+    padding:6px 10px;
+    font-size:clamp(15px,4.1vw,22px);
+  }
+}
+
+@media (max-width:920px) and (orientation:landscape), (pointer:coarse) and (max-height:620px){
+  .external-native-player-subtitle-overlay{
+    bottom:max(88px,calc(env(safe-area-inset-bottom) + 78px));
+    max-width:84vw;
+    padding:5px 9px;
+    font-size:clamp(14px,2.8vw,20px);
+  }
+  .drive-video-player-subtitle-overlay{
+    bottom:calc(94px + max(6px,env(safe-area-inset-bottom)));
+    max-width:84vw;
+    padding:5px 9px;
+    font-size:clamp(14px,2.8vw,20px);
+  }
+}
