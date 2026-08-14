@@ -1062,6 +1062,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       saveLocalDatabase(database);
     },
     async count(name) {
+      if (name === 'users' && MODE === 'supabase') {
+        const { count, error } = await supabaseClient.from('profiles').select('id', { count: 'exact', head: true });
+        if (error) throw mapAuthError(error);
+        return Number(count || 0);
+      }
       return (await this.list(name)).length;
     }
   };
@@ -1078,6 +1083,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV3:';
   const HOME_BOOTSTRAP_BROWSER_TTL_MS = 30 * 60 * 1000;
   const HOME_BOOTSTRAP_MEMORY_TTL_MS = 10 * 60 * 1000;
+  // Destaques mudam com mais frequência no Admin. Eles podem vir junto do
+  // bootstrap da Home, mas só são confiados por uma janela curta; o restante
+  // do catálogo continua aproveitando o cache longo.
+  const FEATURED_FRESH_TTL_MS = 2 * 60 * 1000;
 
   function homeBootstrapStorageKey(locale) {
     return HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX + String(locale || 'pt-br');
@@ -1116,11 +1125,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try { localStorage.removeItem(homeBootstrapStorageKey(locale || activeLocaleSlug())); } catch (_) {}
   }
 
-  function hydrateHomeBootstrapBundle(bundle, locale, ttl = HOME_BOOTSTRAP_MEMORY_TTL_MS) {
-    const expiresAt = Date.now() + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
+  function hydrateHomeBootstrapBundle(bundle, locale, ttl = HOME_BOOTSTRAP_MEMORY_TTL_MS, bundleAgeMs = 0) {
+    const nowMs = Date.now();
+    const expiresAt = nowMs + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
+    const featuredFresh = Math.max(0, Number(bundleAgeMs) || 0) < FEATURED_FRESH_TTL_MS;
     for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
+      if (name === 'featured' && !featuredFresh) continue;
       const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
-      publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt });
+      const itemExpiresAt = name === 'featured'
+        ? nowMs + Math.max(30000, FEATURED_FRESH_TTL_MS - Math.max(0, Number(bundleAgeMs) || 0))
+        : expiresAt;
+      publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt: itemExpiresAt });
     }
     const siteSettings = bundle && bundle.settings && bundle.settings.site;
     if (siteSettings && typeof siteSettings === 'object') {
@@ -1136,9 +1151,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const browserCached = readHomeBootstrapBrowserCache(locale);
     if (browserCached) {
-      const age = Math.max(0, nowMs - Number(browserCached.savedAt || nowMs));
-      const remaining = Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - age);
-      hydrateHomeBootstrapBundle(browserCached.bundle, locale, Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining));
+      const savedAge = Math.max(0, nowMs - Number(browserCached.savedAt || nowMs));
+      const generatedAt = Number(browserCached.bundle && browserCached.bundle.__generatedAt || 0);
+      const generatedAge = generatedAt > 0 ? Math.max(0, nowMs - generatedAt) : 0;
+      const age = Math.max(savedAge, generatedAge);
+      const remaining = Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - savedAge);
+      hydrateHomeBootstrapBundle(browserCached.bundle, locale, Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining), age);
       const browserPromise = Promise.resolve(browserCached.bundle);
       homeBootstrapMemoryCache.set(locale, {
         promise: browserPromise,
@@ -1154,7 +1172,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
       return response.json();
     }).then(bundle => {
-      hydrateHomeBootstrapBundle(bundle, locale);
+      const generatedAt = Number(bundle && bundle.__generatedAt || 0);
+      const bundleAge = generatedAt > 0 ? Math.max(0, Date.now() - generatedAt) : 0;
+      hydrateHomeBootstrapBundle(bundle, locale, HOME_BOOTSTRAP_MEMORY_TTL_MS, bundleAge);
       writeHomeBootstrapBrowserCache(locale, bundle);
       return bundle;
     }).catch(error => {
@@ -1185,7 +1205,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         ? 60000
         : normalizedName === 'movies'
           ? 300000
-          : 600000;
+          : normalizedName === 'featured'
+            ? FEATURED_FRESH_TTL_MS
+            : 600000;
     const promise = fetch(`/api/public-data?${params.toString()}`, {
       method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
@@ -1214,27 +1236,45 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  async function listAllProfileRows() {
+  async function listAllProfileRows(options = {}) {
     const rows = [];
-    const pageSize = 500;
-    let from = 0;
+    const requestedLimit = Number.isFinite(Number(options.limit)) ? Math.max(0, Number(options.limit)) : Infinity;
+    const pageSize = Math.max(1, Math.min(500, requestedLimit === Infinity ? 500 : Math.max(1, requestedLimit)));
+    let from = Math.max(0, Number(options.offset) || 0);
+    const searchRaw = String(options.search || '').trim().replace(/^@+/, '');
+    const search = searchRaw.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+    const userStatus = String(options.userStatus || '').trim().toLowerCase();
+    const selectFields = 'id,email,display_name,username,bio,avatar_url,avatar_id,banner_url,banner_id,banned,banned_at,ban_reason,role,community_tag,community_tags,profile_complete,created_at,updated_at,last_login_at';
 
-    while (true) {
-      const { data, error } = await supabaseClient
+    while (rows.length < requestedLimit) {
+      const remaining = requestedLimit === Infinity ? pageSize : Math.min(pageSize, requestedLimit - rows.length);
+      let query = supabaseClient
         .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(from, from + pageSize - 1);
+        .select(selectFields)
+        .order('created_at', { ascending: false });
+
+      if (userStatus === 'banned') query = query.eq('banned', true);
+      else if (userStatus === 'active') query = query.eq('banned', false);
+
+      if (search) {
+        const pattern = `%${search}%`;
+        const filters = [`display_name.ilike.${pattern}`, `username.ilike.${pattern}`, `email.ilike.${pattern}`];
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(search)) filters.unshift(`id.eq.${search}`);
+        query = query.or(filters.join(','));
+      }
+
+      const { data, error } = await query.range(from, from + remaining - 1);
       if (error) throw error;
 
       const page = Array.isArray(data) ? data : [];
       rows.push(...page);
-      if (page.length < pageSize) break;
+      if (page.length < remaining || requestedLimit !== Infinity) break;
       from += pageSize;
     }
 
     return rows;
   }
+
 
   const supabaseData = {
     async preloadHome() {
@@ -1250,7 +1290,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return sortAndFilter(translatedItems, options);
         }
         if (name === 'users') {
-          const data = await listAllProfileRows();
+          const data = await listAllProfileRows(options);
           items = data.map(profileFromRow);
         } else if (name === 'settings') {
           const { data, error } = await supabaseClient.from('site_settings').select('*');
@@ -1394,6 +1434,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     },
     async count(name) {
+      if (name === 'users' && MODE === 'supabase') {
+        const { count, error } = await supabaseClient.from('profiles').select('id', { count: 'exact', head: true });
+        if (error) throw mapAuthError(error);
+        return Number(count || 0);
+      }
       return (await this.list(name)).length;
     }
   };

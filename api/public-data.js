@@ -39,6 +39,7 @@ function normalizeLocale(value) {
 function upstreamTtl(name, id) {
   if (name === 'settings' && id === 'site') return 10 * 60 * 1000;
   if (name === 'notifications') return 2 * 60 * 1000;
+  if (name === 'featured') return 60 * 1000;
   if (name === 'movies') return 30 * 60 * 1000;
   return 30 * 60 * 1000;
 }
@@ -331,7 +332,10 @@ async function fetchHomeBootstrap(locale) {
   const settingsRows = await fetchRows('settings', 'site', locale);
   return {
     ...Object.fromEntries(entries),
-    settings: { site: settingsRows[0] || null }
+    settings: { site: settingsRows[0] || null },
+    // Permite ao navegador detectar quando recebeu um bootstrap antigo do CDN
+    // e refazer somente a leitura de Destaques, sem invalidar o catálogo todo.
+    __generatedAt: Date.now()
   };
 }
 
@@ -348,8 +352,8 @@ function setPublicCacheHeaders(res, name, id, hasData) {
 
   if (name === 'home-bootstrap') {
     browserSeconds = 900;
-    edgeSeconds = 1800;
-    staleSeconds = 21600;
+    edgeSeconds = 120;
+    staleSeconds = 300;
   } else if (name === 'settings' && id === 'site') {
     browserSeconds = 300;
     edgeSeconds = 600;
@@ -358,6 +362,10 @@ function setPublicCacheHeaders(res, name, id, hasData) {
     browserSeconds = 120;
     edgeSeconds = 300;
     staleSeconds = 1800;
+  } else if (name === 'featured') {
+    browserSeconds = 60;
+    edgeSeconds = 60;
+    staleSeconds = 60;
   } else if (name === 'movies') {
     browserSeconds = 300;
     edgeSeconds = 1800;
@@ -386,7 +394,7 @@ module.exports = async function publicData(req, res) {
     let hasData = false;
     if (name === 'home-bootstrap') {
       if (id) return res.status(400).end();
-      payload = await cachedUpstream(`home-bootstrap:${locale}`, 30 * 60 * 1000, () => fetchHomeBootstrap(locale));
+      payload = await cachedUpstream(`home-bootstrap:${locale}`, 2 * 60 * 1000, () => fetchHomeBootstrap(locale));
       hasData = HOME_BOOTSTRAP_COLLECTIONS.some(collection => Array.isArray(payload?.[collection]) && payload[collection].length > 0);
     } else {
       const rows = await fetchRows(name, id, locale);

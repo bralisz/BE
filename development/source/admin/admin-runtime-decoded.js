@@ -1818,7 +1818,7 @@ body.admin-preview-open{overflow:hidden}
     try {
       const [reportRows, rawUsers] = await Promise.all([
         loadReports(),
-        db.list('users', { orderBy: 'createdAt', direction: 'desc' })
+        db.list('users', { orderBy: 'createdAt', direction: 'desc', userStatus: 'banned' })
       ]);
       reports = reportRows;
       allUsers = rawUsers.filter(item => !String(item.email || '').toLowerCase().endsWith('@deleted.invalid')).map(item => ({
@@ -1982,8 +1982,9 @@ body.admin-preview-open{overflow:hidden}
     const content = $('#adminContent');
     content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando usuários…</div>';
     const adminClient = beBackend && beBackend.client;
-    const [rawUsers, featuredFanResult, reportCountResult] = await Promise.all([
-      db.list('users', { orderBy: 'createdAt', direction: 'desc' }),
+    const USER_PAGE_SIZE = 30;
+    const [rawUsers, featuredFanResult, reportCountResult, totalUsersResult, bannedUsersCountResult] = await Promise.all([
+      db.list('users', { orderBy: 'createdAt', direction: 'desc', limit: USER_PAGE_SIZE + 1, offset: 0 }),
       adminClient && typeof adminClient.rpc === 'function'
         ? (async () => {
             try { return await adminClient.rpc('get_admin_featured_fans'); }
@@ -1995,33 +1996,79 @@ body.admin-preview-open{overflow:hidden}
             try { return await adminClient.rpc('get_admin_comment_reports', { p_limit: 250 }); }
             catch (error) { return { data: [], error }; }
           })()
-        : Promise.resolve({ data: [], error: null })
+        : Promise.resolve({ data: [], error: null }),
+      db.count('users').catch(() => 0),
+      adminClient
+        ? (async () => {
+            try { return await adminClient.from('profiles').select('id', { count: 'exact', head: true }).eq('banned', true); }
+            catch (error) { return { count: 0, error }; }
+          })()
+        : Promise.resolve({ count: 0, error: null })
     ]);
     if (featuredFanResult?.error) console.warn('Não foi possível carregar os fãs destacados:', featuredFanResult.error.message || featuredFanResult.error);
     const featuredFanIds = new Set((Array.isArray(featuredFanResult?.data) ? featuredFanResult.data : []).map(row => String(row.user_id || row.userId || '')));
-    let items = rawUsers.filter(item => !String(item.email || '').toLowerCase().endsWith('@deleted.invalid')).map(item => ({
-      ...item,
-      banned:userProfileIsBanned(item),
-      isFeaturedFan:featuredFanIds.has(String(item.id))
-    }));
+    const normalizeUserRows = rows => (Array.isArray(rows) ? rows : [])
+      .filter(item => !String(item.email || '').toLowerCase().endsWith('@deleted.invalid'))
+      .map(item => ({
+        ...item,
+        banned:userProfileIsBanned(item),
+        isFeaturedFan:featuredFanIds.has(String(item.id))
+      }));
+    let hasMoreUsers = rawUsers.length > USER_PAGE_SIZE;
+    let nextUsersOffset = Math.min(USER_PAGE_SIZE, rawUsers.length);
+    let items = normalizeUserRows(rawUsers.slice(0, USER_PAGE_SIZE));
+    let totalUsers = Math.max(items.length, Number(totalUsersResult || 0));
+    let totalBannedUsers = Math.max(0, Number(bannedUsersCountResult?.count || 0));
     const reportCount = Array.isArray(reportCountResult?.data) ? reportCountResult.data.length : 0;
-    const bannedCount = () => items.filter(item => userProfileIsBanned(item)).length;
-    const usersMobileOverview = `<section class="users-mobile-overview" aria-label="Resumo de usuários"><div class="users-mobile-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1></div><div class="users-mobile-members" aria-label="Total de membros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><strong data-users-member-count>${items.length}</strong><span>membros</span></div></div><div class="users-mobile-moderation-actions"><button type="button" data-users-moderation="reports" aria-label="Abrir denúncias"><span class="users-mobile-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path><path d="M12 7v4"></path><path d="M12 15h.01"></path></svg></span><span><strong>Denúncias</strong><small>Reports</small></span><b>${reportCount}</b></button><button type="button" data-users-moderation="bans" aria-label="Abrir banimentos"><span class="users-mobile-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m8.5 15.5 7-7"></path></svg></span><span><strong>Banimentos</strong><small>Acessos</small></span><b data-users-ban-count>${bannedCount()}</b></button></div></section>`;
+    const bannedCount = () => totalBannedUsers;
+    const usersMobileOverview = `<section class="users-mobile-overview" aria-label="Resumo de usuários"><div class="users-mobile-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1></div><div class="users-mobile-members" aria-label="Total de membros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><strong data-users-member-count>${totalUsers}</strong><span>membros</span></div></div><div class="users-mobile-moderation-actions"><button type="button" data-users-moderation="reports" aria-label="Abrir denúncias"><span class="users-mobile-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path><path d="M12 7v4"></path><path d="M12 15h.01"></path></svg></span><span><strong>Denúncias</strong><small>Reports</small></span><b>${reportCount}</b></button><button type="button" data-users-moderation="bans" aria-label="Abrir banimentos"><span class="users-mobile-action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m8.5 15.5 7-7"></path></svg></span><span><strong>Banimentos</strong><small>Acessos</small></span><b data-users-ban-count>${bannedCount()}</b></button></div></section>`;
 
-    content.innerHTML = `${usersMobileOverview}<div class="users-moderation-entry"><button type="button" id="openUsersModeration" class="users-moderation-entry-button"><span><strong>Denúncias e banimentos</strong><small>Revisar comentários denunciados e acessos bloqueados</small></span><i aria-hidden="true">›</i></button></div><div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte os dados e controle o acesso das contas cadastradas.</p></div><div class="users-total"><strong>${items.length}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
+    content.innerHTML = `${usersMobileOverview}<div class="users-moderation-entry"><button type="button" id="openUsersModeration" class="users-moderation-entry-button"><span><strong>Denúncias e banimentos</strong><small>Revisar comentários denunciados e acessos bloqueados</small></span><i aria-hidden="true">›</i></button></div><div class="admin-title-row users-title-row"><div><span class="dashboard-kicker">Administração</span><h1>Usuários</h1><p>Consulte os dados e controle o acesso das contas cadastradas.</p></div><div class="users-total"><strong>${totalUsers}</strong><span>contas</span></div></div><section class="users-admin-card"><div class="toolbar users-toolbar"><input class="a-input" id="userSearch" placeholder="Buscar por nome, @, e-mail ou ID…"><select class="a-select" id="userStatus"><option value="">Todos os acessos</option><option value="active">Ativos</option><option value="banned">Banidos</option></select></div><div id="usersList"></div></section>`;
     $('#openUsersModeration').onclick = () => openUsersModerationPanel();
     document.querySelectorAll('[data-users-moderation]').forEach(button => button.onclick = () => openUsersModerationPanel(button.dataset.usersModeration));
     const refreshUsersOverview = () => {
       const memberCount = content.querySelector('[data-users-member-count]');
       const banCount = content.querySelector('[data-users-ban-count]');
-      if (memberCount) memberCount.textContent = String(items.length);
+      if (memberCount) memberCount.textContent = String(totalUsers);
       if (banCount) banCount.textContent = String(bannedCount());
       const desktopCount = content.querySelector('.users-total strong');
-      if (desktopCount) desktopCount.textContent = String(items.length);
+      if (desktopCount) desktopCount.textContent = String(totalUsers);
+    };
+
+    let usersLoadToken = 0;
+    let usersSearchTimer = 0;
+    const loadUsersBatch = async (reset = false) => {
+      const token = ++usersLoadToken;
+      const search = String($('#userSearch')?.value || '').trim();
+      const status = String($('#userStatus')?.value || '').trim();
+      const offset = reset ? 0 : nextUsersOffset;
+      const loadMoreButton = document.querySelector('[data-users-load-more]');
+      if (loadMoreButton) { loadMoreButton.disabled = true; loadMoreButton.textContent = 'Carregando…'; }
+      try {
+        const rows = await db.list('users', {
+          orderBy: 'createdAt', direction: 'desc',
+          limit: USER_PAGE_SIZE + 1, offset,
+          search, userStatus: status
+        });
+        if (token !== usersLoadToken) return;
+        hasMoreUsers = rows.length > USER_PAGE_SIZE;
+        const nextItems = normalizeUserRows(rows.slice(0, USER_PAGE_SIZE));
+        nextUsersOffset = offset + Math.min(USER_PAGE_SIZE, rows.length);
+        if (reset) items = nextItems;
+        else {
+          const known = new Set(items.map(item => String(item.id)));
+          items.push(...nextItems.filter(item => !known.has(String(item.id))));
+        }
+        draw();
+      } catch (error) {
+        if (token !== usersLoadToken) return;
+        toast(error.message || 'Não foi possível carregar os usuários.', 'err');
+        draw();
+      }
     };
 
     const draw = () => {
-      const search = String($('#userSearch').value || '').trim().toLowerCase();
+      const search = String($('#userSearch').value || '').trim().toLowerCase().replace(/^@+/, '');
       const status = $('#userStatus').value;
       const rows = items.filter(item => {
         const haystack = [item.displayName, item.username, item.email, item.id].join(' ').toLowerCase();
@@ -2036,8 +2083,11 @@ body.admin-preview-open{overflow:hidden}
         const isBanned = userProfileIsBanned(item);
         const chosenAvatar = selectedProfileAvatar(item);
         const avatar = chosenAvatar ? `<img loading="lazy" decoding="async" src="${esc(media(chosenAvatar))}" alt="Avatar escolhido pelo usuário">` : `<span aria-label="Usuário sem avatar escolhido">${esc(String(item.displayName || item.username || item.email || 'U').charAt(0).toUpperCase())}</span>`;
-        return `<tr class="${isBanned ? 'user-row-banned' : ''}"><td><div class="user-cell"><div class="user-cell-avatar">${avatar}</div><div><strong>${esc(item.displayName || item.username || 'Usuário')}</strong><small>${item.username ? '@' + esc(item.username) + ' · ' : ''}${esc(item.email || '')}</small><em>${esc(item.id)}</em></div></div></td><td><span class="status ${isBanned ? 'off' : 'on'}">${isBanned ? 'Banido' : 'Ativo'}</span>${isBanned && item.banReason ? `<button type="button" class="ban-reason-mail" data-ban-reason="${esc(item.id)}" aria-label="Ver motivo do banimento" title="Ver motivo do banimento">📫</button>` : ''}</td><td>${formatDate(item.createdAt)}</td><td>${formatDateTime(item.lastLoginAt)}</td><td><div class="row-actions user-actions"><button class="a-btn" data-user-export="${esc(item.id)}">Exportar dados</button><button class="a-btn fan ${item.isFeaturedFan ? 'is-active' : ''}" data-user-fan="${esc(item.id)}" data-user-featured="${item.isFeaturedFan ? 'true' : 'false'}" ${isBanned && !item.isFeaturedFan ? 'disabled title="Desbana o usuário antes de adicioná-lo"' : ''}>${item.isFeaturedFan ? 'Remover fã' : 'Fã'}</button>${protectedAccount ? '<span class="protected-account">Conta protegida</span>' : `<button class="a-btn ${isBanned ? '' : 'warning'}" data-user-ban="${esc(item.id)}" data-user-action="${isBanned ? 'unban' : 'ban'}">${isBanned ? 'Desbanir' : 'Banir'}</button><button class="a-btn danger" data-user-delete="${esc(item.id)}">Apagar conta</button>`}</div></td></tr>`;
+        return `<tr class="${isBanned ? 'user-row-banned' : ''}" data-community-tag="${esc(item.communityTag || '')}"><td><div class="user-cell"><div class="user-cell-avatar">${avatar}</div><div><strong>${esc(item.displayName || item.username || 'Usuário')}</strong><small>${item.username ? '@' + esc(item.username) + ' · ' : ''}${esc(item.email || '')}</small><em>${esc(item.id)}</em></div></div></td><td><span class="status ${isBanned ? 'off' : 'on'}">${isBanned ? 'Banido' : 'Ativo'}</span>${isBanned && item.banReason ? `<button type="button" class="ban-reason-mail" data-ban-reason="${esc(item.id)}" aria-label="Ver motivo do banimento" title="Ver motivo do banimento">📫</button>` : ''}</td><td>${formatDate(item.createdAt)}</td><td>${formatDateTime(item.lastLoginAt)}</td><td><div class="row-actions user-actions"><button class="a-btn" data-user-export="${esc(item.id)}">Exportar dados</button><button class="a-btn fan ${item.isFeaturedFan ? 'is-active' : ''}" data-user-fan="${esc(item.id)}" data-user-featured="${item.isFeaturedFan ? 'true' : 'false'}" ${isBanned && !item.isFeaturedFan ? 'disabled title="Desbana o usuário antes de adicioná-lo"' : ''}>${item.isFeaturedFan ? 'Remover fã' : 'Fã'}</button>${protectedAccount ? '<span class="protected-account">Conta protegida</span>' : `<button class="a-btn ${isBanned ? '' : 'warning'}" data-user-ban="${esc(item.id)}" data-user-action="${isBanned ? 'unban' : 'ban'}">${isBanned ? 'Desbanir' : 'Banir'}</button><button class="a-btn danger" data-user-delete="${esc(item.id)}">Apagar conta</button>`}</div></td></tr>`;
       }).join('')}</tbody></table></div>` : '<div class="empty">Nenhum usuário encontrado.</div>';
+      if (hasMoreUsers) $('#usersList').insertAdjacentHTML('beforeend', '<div class="users-load-more"><button type="button" class="a-btn" data-users-load-more>Carregar mais usuários</button></div>');
+      const usersLoadMoreButton = document.querySelector('[data-users-load-more]');
+      if (usersLoadMoreButton) usersLoadMoreButton.onclick = () => loadUsersBatch(false);
 
       document.querySelectorAll('[data-ban-reason]').forEach(button => button.onclick = () => {
         const profile = items.find(item => String(item.id) === String(button.dataset.banReason));
@@ -2086,6 +2136,7 @@ body.admin-preview-open{overflow:hidden}
           if (reason === null) return;
         } else if (!confirm(`Desbanir ${profile.displayName || profile.email || 'este usuário'}?`)) return;
         button.disabled = true;
+        const wasBanned = userProfileIsBanned(profile);
         try {
           const payload = await adminUserRequest(action, profile.id, { reason });
           profile.banned = action === 'ban';
@@ -2093,6 +2144,8 @@ body.admin-preview-open{overflow:hidden}
           profile.banReason = profile.banned ? (payload.reason || reason) : '';
           const persistedProfile = await db.get('users', profile.id).catch(() => null);
           if (persistedProfile) Object.assign(profile, persistedProfile, { banned:userProfileIsBanned(persistedProfile) });
+          const isBannedNow = userProfileIsBanned(profile);
+          if (wasBanned !== isBannedNow) totalBannedUsers = Math.max(0, totalBannedUsers + (isBannedNow ? 1 : -1));
           draw();
           refreshUsersOverview();
           toast(profile.banned ? 'Usuário banido.' : 'Acesso restaurado.');
@@ -2111,6 +2164,8 @@ body.admin-preview-open{overflow:hidden}
         try {
           await adminUserRequest('delete', profile.id);
           items = items.filter(item => String(item.id) !== String(profile.id));
+          totalUsers = Math.max(0, totalUsers - 1);
+          if (userProfileIsBanned(profile)) totalBannedUsers = Math.max(0, totalBannedUsers - 1);
           draw();
           refreshUsersOverview();
           toast('Conta apagada permanentemente.');
@@ -2122,8 +2177,11 @@ body.admin-preview-open{overflow:hidden}
       });
     };
 
-    $('#userSearch').oninput = draw;
-    $('#userStatus').onchange = draw;
+    $('#userSearch').oninput = () => {
+      window.clearTimeout(usersSearchTimer);
+      usersSearchTimer = window.setTimeout(() => loadUsersBatch(true), 280);
+    };
+    $('#userStatus').onchange = () => loadUsersBatch(true);
     draw();
     refreshUsersOverview();
   }
