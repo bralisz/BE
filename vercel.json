@@ -1,6 +1,38 @@
 {
   "rewrites": [
     {
+      "source": "/api/admin-deployment-release",
+      "destination": "/api/admin?handler=deployment-release"
+    },
+    {
+      "source": "/api/admin-public-cache",
+      "destination": "/api/admin?handler=public-cache"
+    },
+    {
+      "source": "/api/admin-runtime",
+      "destination": "/api/admin?handler=runtime"
+    },
+    {
+      "source": "/api/admin-user",
+      "destination": "/api/admin?handler=user"
+    },
+    {
+      "source": "/api/account-status",
+      "destination": "/api/account?handler=delete-account&action=status"
+    },
+    {
+      "source": "/api/delete-account",
+      "destination": "/api/account?handler=delete-account"
+    },
+    {
+      "source": "/api/export-account",
+      "destination": "/api/account?handler=export-account"
+    },
+    {
+      "source": "/api/drive-media",
+      "destination": "/api/media?handler=drive-media"
+    },
+    {
       "source": "/robots.txt",
       "destination": "/api/meta?handler=robots"
     },
@@ -27,10 +59,6 @@
     {
       "source": "/api/runtime",
       "destination": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"
-    },
-    {
-      "source": "/api/account-status",
-      "destination": "/api/delete-account?action=status"
     },
     {
       "source": "/pt-br/@:username",
