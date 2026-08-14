@@ -2,8 +2,12 @@
   'use strict';
 
   var ENDPOINT = '/api/deployment-version';
-  var RELEASE_ENDPOINT = '/api/public-data?name=settings&id=site';
-  var CHECK_INTERVAL = 15000;
+  // A versão é compartilhada em localStorage entre abas e reloads. Cada navegador
+  // consulta a Vercel no máximo uma vez a cada 15 minutos em uso normal.
+  var CHECK_INTERVAL = 15 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 5 * 60 * 1000;
+  var SHARED_CHECK_TTL_MS = 15 * 60 * 1000;
+  var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV2';
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
   var PUBLIC_APPLIED_UPDATE_KEY = 'betvPublicAppliedUpdateVersion';
@@ -13,6 +17,7 @@
   var checking = false;
   var updateStarted = false;
   var intervalId = 0;
+  var lastCheckAt = 0;
   var popupObserver = null;
   var releaseStateLoaded = false;
   var publicReleaseEnabled = false;
@@ -20,13 +25,14 @@
   var UPDATE_COPY = {
     'pt-br': { available:'Atualização disponível', ready:'Uma nova versão do site está pronta.', action:'Atualizar', updating:'Atualizando a nova versão' },
     'en-us': { available:'Update available', ready:'A new version of the site is ready.', action:'Update', updating:'Updating to the new version' },
-    'es': { available:'Actualización disponible', ready:'Hay una nueva versión del sitio lista.', action:'Actualizar', updating:'Actualizando a la nueva versión' }
+    'es': { available:'Actualización disponible', ready:'Hay una nueva versión del sitio lista.', action:'Actualizar', updating:'Actualizando a la nueva versión' },
+    'fr': { available:'Mise à jour disponible', ready:'Une nouvelle version du site est prête.', action:'Mettre à jour', updating:'Mise à jour vers la nouvelle version' }
   };
 
   function updateLocaleSlug() {
     var configured = String(window.BETVLocale && window.BETVLocale.slug || '').toLowerCase();
     if (UPDATE_COPY[configured]) return configured;
-    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es)(?:\/|$)/);
+    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es|fr)(?:\/|$)/);
     return match && UPDATE_COPY[match[1]] ? match[1] : 'pt-br';
   }
 
@@ -200,79 +206,90 @@
     }
   }
 
-  function fetchLatestVersion() {
-    if (checking || updateStarted || document.visibilityState === 'prerender') return Promise.resolve();
-    checking = true;
+  function readSharedVersionCheck() {
+    try {
+      var parsed = JSON.parse(window.localStorage.getItem(SHARED_CHECK_KEY) || 'null');
+      if (!parsed || !parsed.checkedAt || !parsed.data) return null;
+      if (Date.now() - Number(parsed.checkedAt) >= SHARED_CHECK_TTL_MS) return null;
+      return parsed;
+    } catch (_) { return null; }
+  }
 
-    var separator = ENDPOINT.indexOf('?') === -1 ? '?' : '&';
-    var versionRequest = fetch(ENDPOINT + separator + 't=' + Date.now(), {
+  function writeSharedVersionCheck(data) {
+    try {
+      window.localStorage.setItem(SHARED_CHECK_KEY, JSON.stringify({ checkedAt: Date.now(), data: data || {} }));
+    } catch (_) {}
+  }
+
+  function applyVersionPayload(data) {
+    data = data || {};
+    var version = String(data.version || '').trim();
+    if (!version || version.indexOf('local:') === 0) return;
+
+    if (data.releaseStateAvailable !== false) {
+      releaseStateLoaded = true;
+      publicReleaseEnabled = data.updateReleaseEnabled === true || String(data.updateReleaseEnabled || '').toLowerCase() === 'true';
+      publicReleasedVersion = String(data.releasedDeploymentVersion || '').trim();
+    }
+
+    if (isAdminContext()) {
+      var adminAppliedVersion = readAdminAppliedUpdate();
+      if (version !== adminAppliedVersion) showPopup(version, true);
+      else {
+        clearPendingUpdate();
+        hidePopup();
+      }
+      if (!currentVersion) currentVersion = version;
+      return;
+    }
+
+    if (!canExposeVersionToCurrentViewer(version)) {
+      clearPendingUpdate();
+      hidePopup();
+      if (!currentVersion) currentVersion = version;
+      return;
+    }
+
+    var publicAppliedVersion = readPublicAppliedUpdate();
+    if (publicAppliedVersion !== version) {
+      showPopup(version, true);
+      return;
+    }
+
+    clearPendingUpdate();
+    hidePopup();
+    if (!currentVersion) currentVersion = version;
+  }
+
+  function fetchLatestVersion(force) {
+    var nowMs = Date.now();
+    if (checking || updateStarted || document.visibilityState === 'prerender') return Promise.resolve();
+    if (!force && document.visibilityState === 'hidden') return Promise.resolve();
+
+    if (!force) {
+      var shared = readSharedVersionCheck();
+      if (shared) {
+        lastCheckAt = Math.max(lastCheckAt, Number(shared.checkedAt) || nowMs);
+        applyVersionPayload(shared.data);
+        return Promise.resolve();
+      }
+      if (lastCheckAt && nowMs - lastCheckAt < MIN_CHECK_GAP_MS) return Promise.resolve();
+    }
+
+    lastCheckAt = nowMs;
+    checking = true;
+    return fetch(ENDPOINT, {
       method: 'GET',
-      cache: 'no-store',
+      cache: 'default',
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {
       if (!response.ok) throw new Error('version-check-failed');
       return response.json();
-    });
-
-    var releaseSeparator = RELEASE_ENDPOINT.indexOf('?') === -1 ? '?' : '&';
-    var releaseRequest = fetch(RELEASE_ENDPOINT + releaseSeparator + 't=' + Date.now(), {
-      method: 'GET',
-      cache: 'no-store',
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json' }
-    }).then(function (response) {
-      if (!response.ok) return null;
-      return response.json().catch(function () { return null; });
-    }).catch(function () { return null; });
-
-    return Promise.all([versionRequest, releaseRequest])
-      .then(function (results) {
-        var data = results[0] || {};
-        var release = results[1] || {};
-        var version = String(data && data.version || '').trim();
-        if (!version || version.indexOf('local:') === 0) return;
-
-        releaseStateLoaded = true;
-        publicReleaseEnabled = release && (release.updateReleaseEnabled === true || String(release.updateReleaseEnabled || '').toLowerCase() === 'true');
-        publicReleasedVersion = String(release && release.releasedDeploymentVersion || '').trim();
-
-        // O administrador usa a notificação antiga do canto direito sempre que
-        // existe uma versão que ele ainda não aplicou pelo botão Atualizar. A
-        // liberação pública não interfere no aviso do admin.
-        if (isAdminContext()) {
-          var adminAppliedVersion = readAdminAppliedUpdate();
-          if (version !== adminAppliedVersion) showPopup(version, true);
-          else {
-            clearPendingUpdate();
-            hidePopup();
-          }
-          if (!currentVersion) currentVersion = version;
-          return;
-        }
-
-        // Para usuários comuns, a liberação é controlada por versão. O fato de
-        // o navegador já ter carregado os arquivos do deploy não significa que o usuário
-        // aplicou a atualização. A versão só é considerada aplicada depois do clique em
-        // "Atualizar", que grava PUBLIC_APPLIED_UPDATE_KEY durante o reload.
-        if (!canExposeVersionToCurrentViewer(version)) {
-          clearPendingUpdate();
-          hidePopup();
-          if (!currentVersion) currentVersion = version;
-          return;
-        }
-
-        var publicAppliedVersion = readPublicAppliedUpdate();
-        if (publicAppliedVersion !== version) {
-          showPopup(version, true);
-          return;
-        }
-
-        clearPendingUpdate();
-        hidePopup();
-        if (!currentVersion) currentVersion = version;
-      })
-      .catch(function () {})
+    }).then(function (data) {
+      writeSharedVersionCheck(data);
+      applyVersionPayload(data);
+    }).catch(function () {})
       .finally(function () { checking = false; });
   }
 
@@ -455,6 +472,15 @@
     if (updateStarted) return;
     updateStarted = true;
 
+    // Guarda rota, aba do catálogo, pesquisa e posição antes do reload de
+    // atualização. O módulo de restauração usa estes dados depois que os
+    // novos arquivos terminam de carregar.
+    try {
+      if (window.BETVPreserveReloadPosition && typeof window.BETVPreserveReloadPosition.markUpdate === 'function') {
+        window.BETVPreserveReloadPosition.markUpdate();
+      }
+    } catch (_) {}
+
     var copy = updateCopy();
     var element = createPopup();
     var button = element.querySelector('.betv-update-action');
@@ -497,13 +523,13 @@
         backend.auth.onChange(function (account) {
           if (!account || !isAuthenticatedAdmin()) return;
           restorePendingUpdate();
-          fetchLatestVersion();
+          fetchLatestVersion(true);
         });
       } else if (backend && backend.ready && typeof backend.ready.then === 'function') {
         backend.ready.then(function () {
           if (!isAuthenticatedAdmin()) return;
           restorePendingUpdate();
-          fetchLatestVersion();
+          fetchLatestVersion(true);
         }).catch(function () {});
       }
     } catch (_) {}
@@ -521,7 +547,12 @@
       releaseStateLoaded = true;
       publicReleaseEnabled = detail.updateReleaseEnabled === true || String(detail.updateReleaseEnabled || '').toLowerCase() === 'true';
       publicReleasedVersion = String(detail.releasedDeploymentVersion || '').trim();
-      fetchLatestVersion();
+      fetchLatestVersion(true);
+    });
+    window.addEventListener('storage', function (event) {
+      if (!event || event.key !== SHARED_CHECK_KEY || !event.newValue) return;
+      var shared = readSharedVersionCheck();
+      if (shared) applyVersionPayload(shared.data);
     });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {

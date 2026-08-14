@@ -5,6 +5,7 @@ const DEFAULT_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const ALLOWED_COLLECTIONS = new Set([
   'contents', 'featured', 'gallery', 'movies', 'news', 'notifications', 'ongs', 'sections', 'series', 'videos'
 ]);
+const HOME_BOOTSTRAP_COLLECTIONS = Object.freeze(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
 const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
@@ -36,9 +37,9 @@ function normalizeLocale(value) {
 }
 
 function upstreamTtl(name, id) {
-  if (name === 'settings' && id === 'site') return 60 * 1000;
-  if (name === 'notifications') return 60 * 1000;
-  if (name === 'movies') return 5 * 60 * 1000;
+  if (name === 'settings' && id === 'site') return 5 * 60 * 1000;
+  if (name === 'notifications') return 2 * 60 * 1000;
+  if (name === 'movies') return 10 * 60 * 1000;
   return 10 * 60 * 1000;
 }
 
@@ -325,6 +326,51 @@ async function fetchRows(name, id, locale) {
   return cachedUpstream(key, upstreamTtl(name, id), () => fetchRowsUncached(name, id, locale));
 }
 
+async function fetchHomeBootstrap(locale) {
+  const entries = await Promise.all(HOME_BOOTSTRAP_COLLECTIONS.map(async name => [name, await fetchRows(name, '', locale)]));
+  const settingsRows = await fetchRows('settings', 'site', locale);
+  return {
+    ...Object.fromEntries(entries),
+    settings: { site: settingsRows[0] || null }
+  };
+}
+
+function setPublicCacheHeaders(res, name, id, hasData) {
+  if (!hasData) {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
+    return;
+  }
+
+  let browserSeconds = 300;
+  let edgeSeconds = 900;
+  let staleSeconds = 7200;
+
+  if (name === 'home-bootstrap') {
+    browserSeconds = 600;
+    edgeSeconds = 600;
+    staleSeconds = 3600;
+  } else if (name === 'settings' && id === 'site') {
+    browserSeconds = 300;
+    edgeSeconds = 600;
+    staleSeconds = 3600;
+  } else if (name === 'notifications') {
+    browserSeconds = 120;
+    edgeSeconds = 300;
+    staleSeconds = 1800;
+  } else if (name === 'movies') {
+    browserSeconds = 300;
+    edgeSeconds = 1800;
+    staleSeconds = 10800;
+  }
+
+  // O navegador evita repetir a mesma leitura durante navegação/reloads curtos.
+  // A Vercel mantém uma cópia compartilhada por mais tempo para que milhares de
+  // visitantes não transformem o mesmo conteúdo público em milhares de Functions.
+  res.setHeader('Cache-Control', `public, max-age=${browserSeconds}, stale-while-revalidate=${Math.min(staleSeconds, 3600)}`);
+  res.setHeader('Vercel-CDN-Cache-Control', `public, s-maxage=${edgeSeconds}, stale-while-revalidate=${staleSeconds}`);
+}
+
 module.exports = async function publicData(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
@@ -335,21 +381,23 @@ module.exports = async function publicData(req, res) {
     const id = String(Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id || '').trim();
     const locale = normalizeLocale(Array.isArray(req.query?.locale) ? req.query.locale[0] : req.query?.locale);
     if (!name || name.length > 40 || id.length > 100) return res.status(400).end();
-    const rows = await fetchRows(name, id, locale);
-    const payload = id ? (rows[0] || null) : rows;
+
+    let payload;
+    let hasData = false;
+    if (name === 'home-bootstrap') {
+      if (id) return res.status(400).end();
+      payload = await cachedUpstream(`home-bootstrap:${locale}`, 10 * 60 * 1000, () => fetchHomeBootstrap(locale));
+      hasData = HOME_BOOTSTRAP_COLLECTIONS.some(collection => Array.isArray(payload?.[collection]) && payload[collection].length > 0);
+    } else {
+      const rows = await fetchRows(name, id, locale);
+      payload = id ? (rows[0] || null) : rows;
+      hasData = rows.length > 0;
+    }
+
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     // Nunca mantém uma resposta vazia em cache: um vazio transitório fazia a Home
     // interpretar que não existiam seções e ocultar todo o catálogo.
-    const isSiteReleaseSetting = name === 'settings' && id === 'site';
-    res.setHeader('Cache-Control', rows.length
-      ? (isSiteReleaseSetting
-          ? 'public, max-age=30, s-maxage=60, stale-while-revalidate=300'
-          : name === 'notifications'
-            ? 'public, max-age=30, s-maxage=60, stale-while-revalidate=300'
-            : name === 'movies'
-              ? 'public, max-age=120, s-maxage=300, stale-while-revalidate=1800'
-              : 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600')
-      : 'no-store');
+    setPublicCacheHeaders(res, name, id, hasData);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     if (req.method === 'HEAD') return res.status(200).end();

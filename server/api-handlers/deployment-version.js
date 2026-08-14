@@ -4,7 +4,7 @@ const crypto = require('crypto');
 
 const DEFAULT_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const RELEASE_CACHE_TTL_MS = 60 * 1000;
+const RELEASE_CACHE_TTL_MS = 5 * 60 * 1000;
 let releaseCache = { value: null, expiresAt: 0, promise: null };
 
 function deploymentVersion() {
@@ -87,7 +87,8 @@ module.exports = async function deploymentVersionHandler(req, res) {
 
   const release = await loadReleaseState();
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+  res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=900');
+  res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=1800');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
 

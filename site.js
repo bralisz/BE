@@ -928,6 +928,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   const localData = {
+    async preloadHome() { return null; },
     async list(name, options = {}) {
       const database = loadLocalDatabase();
       const values = Object.values(localCollection(database, name)).map(clone);
@@ -971,6 +972,40 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   const publicDataMemoryCache = new Map();
+  const HOME_BOOTSTRAP_COLLECTIONS = new Set(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
+  const homeBootstrapMemoryCache = new Map();
+
+  async function preloadPublicHomeData() {
+    const locale = activeLocaleSlug();
+    const nowMs = Date.now();
+    const cached = homeBootstrapMemoryCache.get(locale);
+    if (cached && cached.expiresAt > nowMs) return cached.promise;
+
+    const params = new URLSearchParams({ name: 'home-bootstrap', locale });
+    const promise = fetch(`/api/public-data?${params.toString()}`, {
+      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+    }).then(response => {
+      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+      return response.json();
+    }).then(bundle => {
+      const ttl = 5 * 60 * 1000;
+      for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
+        const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
+        publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt: Date.now() + ttl });
+      }
+      const siteSettings = bundle && bundle.settings && bundle.settings.site;
+      if (siteSettings && typeof siteSettings === 'object') {
+        publicDataMemoryCache.set(`settings:site:${locale}`, { promise: Promise.resolve(siteSettings), expiresAt: Date.now() + ttl });
+      }
+      return bundle;
+    }).catch(error => {
+      homeBootstrapMemoryCache.delete(locale);
+      throw error;
+    });
+
+    homeBootstrapMemoryCache.set(locale, { promise, expiresAt: nowMs + 5 * 60 * 1000 });
+    return promise;
+  }
   async function readPublicData(name, id = '') {
     const normalizedName = String(name || '');
     const normalizedId = String(id || '');
@@ -986,12 +1021,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     // edge cache, so reloads and simultaneous visitors do not fan out into many
     // identical Supabase reads.
     const ttl = normalizedName === 'settings' && normalizedId === 'site'
-      ? 30000
+      ? 5 * 60 * 1000
       : normalizedName === 'notifications'
-        ? 15000
+        ? 2 * 60 * 1000
         : normalizedName === 'movies'
-          ? 120000
-          : 300000;
+          ? 5 * 60 * 1000
+          : 5 * 60 * 1000;
     const promise = fetch(`/api/public-data?${params.toString()}`, {
       method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
@@ -1038,6 +1073,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   const supabaseData = {
+    async preloadHome() {
+      if (usesProtectedAdminData()) return null;
+      return preloadPublicHomeData();
+    },
     async list(name, options = {}) {
       try {
         let items = [];
@@ -2585,6 +2624,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try {
       if (!window.beBackend) return;
       await window.beBackend.ready;
+      if (window.beBackend.data && typeof window.beBackend.data.preloadHome === 'function') {
+        await window.beBackend.data.preloadHome().catch(error => {
+          console.warn('Pré-carregamento do catálogo indisponível; usando leituras individuais:', error?.message || error);
+        });
+      }
       const contentTasks = await Promise.allSettled([
         applySiteSettings(),
         renderFeatured(),
@@ -13946,8 +13990,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   'use strict';
 
   var ENDPOINT = '/api/deployment-version';
-  var RELEASE_ENDPOINT = '/api/public-data?name=settings&id=site';
-  var CHECK_INTERVAL = 15000;
+  // A versão é compartilhada em localStorage entre abas e reloads. Cada navegador
+  // consulta a Vercel no máximo uma vez a cada 15 minutos em uso normal.
+  var CHECK_INTERVAL = 15 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 5 * 60 * 1000;
+  var SHARED_CHECK_TTL_MS = 15 * 60 * 1000;
+  var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV2';
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
   var PUBLIC_APPLIED_UPDATE_KEY = 'betvPublicAppliedUpdateVersion';
@@ -13957,6 +14005,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var checking = false;
   var updateStarted = false;
   var intervalId = 0;
+  var lastCheckAt = 0;
   var popupObserver = null;
   var releaseStateLoaded = false;
   var publicReleaseEnabled = false;
@@ -14145,79 +14194,90 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  function fetchLatestVersion() {
-    if (checking || updateStarted || document.visibilityState === 'prerender') return Promise.resolve();
-    checking = true;
+  function readSharedVersionCheck() {
+    try {
+      var parsed = JSON.parse(window.localStorage.getItem(SHARED_CHECK_KEY) || 'null');
+      if (!parsed || !parsed.checkedAt || !parsed.data) return null;
+      if (Date.now() - Number(parsed.checkedAt) >= SHARED_CHECK_TTL_MS) return null;
+      return parsed;
+    } catch (_) { return null; }
+  }
 
-    var separator = ENDPOINT.indexOf('?') === -1 ? '?' : '&';
-    var versionRequest = fetch(ENDPOINT + separator + 't=' + Date.now(), {
+  function writeSharedVersionCheck(data) {
+    try {
+      window.localStorage.setItem(SHARED_CHECK_KEY, JSON.stringify({ checkedAt: Date.now(), data: data || {} }));
+    } catch (_) {}
+  }
+
+  function applyVersionPayload(data) {
+    data = data || {};
+    var version = String(data.version || '').trim();
+    if (!version || version.indexOf('local:') === 0) return;
+
+    if (data.releaseStateAvailable !== false) {
+      releaseStateLoaded = true;
+      publicReleaseEnabled = data.updateReleaseEnabled === true || String(data.updateReleaseEnabled || '').toLowerCase() === 'true';
+      publicReleasedVersion = String(data.releasedDeploymentVersion || '').trim();
+    }
+
+    if (isAdminContext()) {
+      var adminAppliedVersion = readAdminAppliedUpdate();
+      if (version !== adminAppliedVersion) showPopup(version, true);
+      else {
+        clearPendingUpdate();
+        hidePopup();
+      }
+      if (!currentVersion) currentVersion = version;
+      return;
+    }
+
+    if (!canExposeVersionToCurrentViewer(version)) {
+      clearPendingUpdate();
+      hidePopup();
+      if (!currentVersion) currentVersion = version;
+      return;
+    }
+
+    var publicAppliedVersion = readPublicAppliedUpdate();
+    if (publicAppliedVersion !== version) {
+      showPopup(version, true);
+      return;
+    }
+
+    clearPendingUpdate();
+    hidePopup();
+    if (!currentVersion) currentVersion = version;
+  }
+
+  function fetchLatestVersion(force) {
+    var nowMs = Date.now();
+    if (checking || updateStarted || document.visibilityState === 'prerender') return Promise.resolve();
+    if (!force && document.visibilityState === 'hidden') return Promise.resolve();
+
+    if (!force) {
+      var shared = readSharedVersionCheck();
+      if (shared) {
+        lastCheckAt = Math.max(lastCheckAt, Number(shared.checkedAt) || nowMs);
+        applyVersionPayload(shared.data);
+        return Promise.resolve();
+      }
+      if (lastCheckAt && nowMs - lastCheckAt < MIN_CHECK_GAP_MS) return Promise.resolve();
+    }
+
+    lastCheckAt = nowMs;
+    checking = true;
+    return fetch(ENDPOINT, {
       method: 'GET',
-      cache: 'no-store',
+      cache: 'default',
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {
       if (!response.ok) throw new Error('version-check-failed');
       return response.json();
-    });
-
-    var releaseSeparator = RELEASE_ENDPOINT.indexOf('?') === -1 ? '?' : '&';
-    var releaseRequest = fetch(RELEASE_ENDPOINT + releaseSeparator + 't=' + Date.now(), {
-      method: 'GET',
-      cache: 'no-store',
-      credentials: 'same-origin',
-      headers: { 'Accept': 'application/json' }
-    }).then(function (response) {
-      if (!response.ok) return null;
-      return response.json().catch(function () { return null; });
-    }).catch(function () { return null; });
-
-    return Promise.all([versionRequest, releaseRequest])
-      .then(function (results) {
-        var data = results[0] || {};
-        var release = results[1] || {};
-        var version = String(data && data.version || '').trim();
-        if (!version || version.indexOf('local:') === 0) return;
-
-        releaseStateLoaded = true;
-        publicReleaseEnabled = release && (release.updateReleaseEnabled === true || String(release.updateReleaseEnabled || '').toLowerCase() === 'true');
-        publicReleasedVersion = String(release && release.releasedDeploymentVersion || '').trim();
-
-        // O administrador usa a notificação antiga do canto direito sempre que
-        // existe uma versão que ele ainda não aplicou pelo botão Atualizar. A
-        // liberação pública não interfere no aviso do admin.
-        if (isAdminContext()) {
-          var adminAppliedVersion = readAdminAppliedUpdate();
-          if (version !== adminAppliedVersion) showPopup(version, true);
-          else {
-            clearPendingUpdate();
-            hidePopup();
-          }
-          if (!currentVersion) currentVersion = version;
-          return;
-        }
-
-        // Para usuários comuns, a liberação é controlada por versão. O fato de
-        // o navegador já ter carregado os arquivos do deploy não significa que o usuário
-        // aplicou a atualização. A versão só é considerada aplicada depois do clique em
-        // "Atualizar", que grava PUBLIC_APPLIED_UPDATE_KEY durante o reload.
-        if (!canExposeVersionToCurrentViewer(version)) {
-          clearPendingUpdate();
-          hidePopup();
-          if (!currentVersion) currentVersion = version;
-          return;
-        }
-
-        var publicAppliedVersion = readPublicAppliedUpdate();
-        if (publicAppliedVersion !== version) {
-          showPopup(version, true);
-          return;
-        }
-
-        clearPendingUpdate();
-        hidePopup();
-        if (!currentVersion) currentVersion = version;
-      })
-      .catch(function () {})
+    }).then(function (data) {
+      writeSharedVersionCheck(data);
+      applyVersionPayload(data);
+    }).catch(function () {})
       .finally(function () { checking = false; });
   }
 
@@ -14451,13 +14511,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         backend.auth.onChange(function (account) {
           if (!account || !isAuthenticatedAdmin()) return;
           restorePendingUpdate();
-          fetchLatestVersion();
+          fetchLatestVersion(true);
         });
       } else if (backend && backend.ready && typeof backend.ready.then === 'function') {
         backend.ready.then(function () {
           if (!isAuthenticatedAdmin()) return;
           restorePendingUpdate();
-          fetchLatestVersion();
+          fetchLatestVersion(true);
         }).catch(function () {});
       }
     } catch (_) {}
@@ -14475,7 +14535,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       releaseStateLoaded = true;
       publicReleaseEnabled = detail.updateReleaseEnabled === true || String(detail.updateReleaseEnabled || '').toLowerCase() === 'true';
       publicReleasedVersion = String(detail.releasedDeploymentVersion || '').trim();
-      fetchLatestVersion();
+      fetchLatestVersion(true);
+    });
+    window.addEventListener('storage', function (event) {
+      if (!event || event.key !== SHARED_CHECK_KEY || !event.newValue) return;
+      var shared = readSharedVersionCheck();
+      if (shared) applyVersionPayload(shared.data);
     });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
