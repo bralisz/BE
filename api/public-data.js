@@ -27,6 +27,7 @@ const BILLIE_SETTING_FIELDS = new Set([
 ]);
 
 const upstreamResponseCache = new Map();
+const FEATURED_CACHE_TAG = 'betv-featured';
 
 function normalizeLocale(value) {
   const locale = String(value || 'pt-br').trim().toLowerCase();
@@ -39,7 +40,7 @@ function normalizeLocale(value) {
 function upstreamTtl(name, id) {
   if (name === 'settings' && id === 'site') return 10 * 60 * 1000;
   if (name === 'notifications') return 2 * 60 * 1000;
-  if (name === 'featured') return 60 * 1000;
+  if (name === 'featured') return 0;
   if (name === 'movies') return 30 * 60 * 1000;
   return 30 * 60 * 1000;
 }
@@ -372,6 +373,12 @@ function setPublicCacheHeaders(res, name, id, hasData) {
     staleSeconds = 10800;
   }
 
+  // O cache de Destaques recebe uma tag própria. O Admin invalida somente essa
+  // tag ao salvar/excluir um destaque, sem derrubar o cache do catálogo inteiro.
+  if (name === 'featured' || name === 'home-bootstrap') {
+    res.setHeader('Vercel-Cache-Tag', FEATURED_CACHE_TAG);
+  }
+
   // O navegador evita repetir a mesma leitura durante navegação/reloads curtos.
   // A Vercel mantém uma cópia compartilhada por mais tempo para que milhares de
   // visitantes não transformem o mesmo conteúdo público em milhares de Functions.
@@ -394,7 +401,7 @@ module.exports = async function publicData(req, res) {
     let hasData = false;
     if (name === 'home-bootstrap') {
       if (id) return res.status(400).end();
-      payload = await cachedUpstream(`home-bootstrap:${locale}`, 2 * 60 * 1000, () => fetchHomeBootstrap(locale));
+      payload = await fetchHomeBootstrap(locale);
       hasData = HOME_BOOTSTRAP_COLLECTIONS.some(collection => Array.isArray(payload?.[collection]) && payload[collection].length > 0);
     } else {
       const rows = await fetchRows(name, id, locale);

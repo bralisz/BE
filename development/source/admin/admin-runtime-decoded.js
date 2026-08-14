@@ -1674,6 +1674,30 @@ body.admin-preview-open{overflow:hidden}
     if (!isFeatured) await maybeResumePendingContentEditor();
   }
 
+  async function invalidateFeaturedPublicCache() {
+    if (beBackend.mode !== 'supabase') return { ok: true, skipped: true };
+    const client = beBackend && beBackend.client;
+    if (!client?.auth?.getSession) return { ok: false, skipped: true };
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    const token = sessionData?.session?.access_token;
+    if (!token) throw new Error('Sua sessão expirou. Entre novamente no painel.');
+    const response = await fetch('/api/admin-public-cache', {
+      method: 'POST',
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ scope: 'featured' })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload?.message || 'Não foi possível atualizar o cache público dos destaques.');
+    return payload;
+  }
+
   async function adminUserRequest(action, userId, extra = {}) {
     if (beBackend.mode === 'local') {
       const profile = await db.get('users', userId);
@@ -3403,6 +3427,11 @@ body.admin-preview-open{overflow:hidden}
           if (active.length >= 6 && !item) throw new Error('Não é possível ativar mais de 6 destaques.');
         }
         const saved = item ? await db.set(name, item.id, data, { merge: true }) : await db.add(name, data);
+        if (name === 'featured') {
+          await invalidateFeaturedPublicCache().catch(error => {
+            console.warn('Destaque salvo, mas a invalidação imediata do cache falhou:', error?.message || error);
+          });
+        }
         await logAction(item ? 'content_updated' : 'content_created', name, saved.id, `${LABELS[name] || name}: ${name === 'gallery' ? (data.itemType === 'banner' ? 'Banner' : data.category || 'Avatar') : data.title}`);
         toast('Salvo com sucesso.');
         closeEditor();
@@ -3423,6 +3452,11 @@ body.admin-preview-open{overflow:hidden}
     $('#yes').onclick = async () => {
       try {
         await db.remove(name, id);
+        if (name === 'featured') {
+          await invalidateFeaturedPublicCache().catch(error => {
+            console.warn('Destaque excluído, mas a invalidação imediata do cache falhou:', error?.message || error);
+          });
+        }
         await logAction('content_deleted', name, id, `Item excluído de ${name}`);
         toast('Item excluído.');
         wrap.remove();

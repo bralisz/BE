@@ -1086,7 +1086,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   // Destaques mudam com mais frequência no Admin. Eles podem vir junto do
   // bootstrap da Home, mas só são confiados por uma janela curta; o restante
   // do catálogo continua aproveitando o cache longo.
-  const FEATURED_FRESH_TTL_MS = 2 * 60 * 1000;
+  const FEATURED_FRESH_TTL_MS = 30 * 1000;
 
   function homeBootstrapStorageKey(locale) {
     return HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX + String(locale || 'pt-br');
@@ -1108,7 +1108,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function writeHomeBootstrapBrowserCache(locale, bundle) {
     if (!bundle || typeof bundle !== 'object') return;
     const key = homeBootstrapStorageKey(locale);
-    const value = JSON.stringify({ savedAt: Date.now(), bundle });
+    const now = Date.now();
+    const value = JSON.stringify({ savedAt: now, featuredSavedAt: now, bundle });
     try {
       // Mantém somente o idioma atual para não acumular vários MB de catálogo.
       for (let index = localStorage.length - 1; index >= 0; index -= 1) {
@@ -1125,6 +1126,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try { localStorage.removeItem(homeBootstrapStorageKey(locale || activeLocaleSlug())); } catch (_) {}
   }
 
+  function updateHomeBootstrapFeaturedBrowserCache(locale, rows) {
+    try {
+      const key = homeBootstrapStorageKey(locale);
+      const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!parsed || !parsed.bundle || typeof parsed.bundle !== 'object') return;
+      parsed.bundle.featured = Array.isArray(rows) ? rows : [];
+      parsed.featuredSavedAt = Date.now();
+      localStorage.setItem(key, JSON.stringify(parsed));
+    } catch (_) {}
+  }
+
   function hydrateHomeBootstrapBundle(bundle, locale, ttl = HOME_BOOTSTRAP_MEMORY_TTL_MS, bundleAgeMs = 0) {
     const nowMs = Date.now();
     const expiresAt = nowMs + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
@@ -1133,7 +1145,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (name === 'featured' && !featuredFresh) continue;
       const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
       const itemExpiresAt = name === 'featured'
-        ? nowMs + Math.max(30000, FEATURED_FRESH_TTL_MS - Math.max(0, Number(bundleAgeMs) || 0))
+        ? nowMs + Math.max(1000, FEATURED_FRESH_TTL_MS - Math.max(0, Number(bundleAgeMs) || 0))
         : expiresAt;
       publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt: itemExpiresAt });
     }
@@ -1154,9 +1166,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const savedAge = Math.max(0, nowMs - Number(browserCached.savedAt || nowMs));
       const generatedAt = Number(browserCached.bundle && browserCached.bundle.__generatedAt || 0);
       const generatedAge = generatedAt > 0 ? Math.max(0, nowMs - generatedAt) : 0;
-      const age = Math.max(savedAge, generatedAge);
+      const featuredSavedAt = Number(browserCached.featuredSavedAt || 0);
+      const featuredAge = featuredSavedAt > 0
+        ? Math.max(0, nowMs - featuredSavedAt)
+        : Math.max(savedAge, generatedAge);
       const remaining = Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - savedAge);
-      hydrateHomeBootstrapBundle(browserCached.bundle, locale, Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining), age);
+      hydrateHomeBootstrapBundle(browserCached.bundle, locale, Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining), featuredAge);
       const browserPromise = Promise.resolve(browserCached.bundle);
       homeBootstrapMemoryCache.set(locale, {
         promise: browserPromise,
@@ -1213,6 +1228,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }).then(response => {
       if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
       return response.json();
+    }).then(payload => {
+      if (normalizedName === 'featured' && !normalizedId && Array.isArray(payload)) {
+        updateHomeBootstrapFeaturedBrowserCache(locale, payload);
+      }
+      return payload;
     }).catch(error => {
       publicDataMemoryCache.delete(cacheKey);
       throw error;
