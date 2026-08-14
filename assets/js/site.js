@@ -185,6 +185,57 @@
 
 (() => {
   'use strict';
+  const MEDIA_PROXY_PREFS_KEY = 'betvMediaProxyPrefsV1';
+  const MEDIA_PROXY_PREF_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  const MEDIA_PROXY_PREF_LIMIT = 120;
+
+  function readMediaProxyPrefs() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(MEDIA_PROXY_PREFS_KEY) || '{}');
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+      const nowMs = Date.now();
+      let changed = false;
+      for (const [url, savedAt] of Object.entries(parsed)) {
+        if (!Number(savedAt) || nowMs - Number(savedAt) > MEDIA_PROXY_PREF_TTL_MS) {
+          delete parsed[url];
+          changed = true;
+        }
+      }
+      if (changed) localStorage.setItem(MEDIA_PROXY_PREFS_KEY, JSON.stringify(parsed));
+      return parsed;
+    } catch (_) { return {}; }
+  }
+
+  function prefersMediaProxy(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return false;
+    return Boolean(readMediaProxyPrefs()[raw]);
+  }
+
+  function rememberMediaProxy(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return;
+    try {
+      const prefs = readMediaProxyPrefs();
+      prefs[raw] = Date.now();
+      const entries = Object.entries(prefs)
+        .sort((a, b) => Number(b[1]) - Number(a[1]))
+        .slice(0, MEDIA_PROXY_PREF_LIMIT);
+      localStorage.setItem(MEDIA_PROXY_PREFS_KEY, JSON.stringify(Object.fromEntries(entries)));
+    } catch (_) {}
+  }
+
+  function forgetMediaProxy(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return;
+    try {
+      const prefs = readMediaProxyPrefs();
+      if (!prefs[raw]) return;
+      delete prefs[raw];
+      localStorage.setItem(MEDIA_PROXY_PREFS_KEY, JSON.stringify(prefs));
+    } catch (_) {}
+  }
+
   function encodeBase64Url(value) {
     try {
       return btoa(unescape(encodeURIComponent(String(value || ''))))
@@ -202,8 +253,13 @@
     if (!raw || raw === '#') return raw || '#';
     if (/^(?:\/|data:|blob:)/i.test(raw)) return raw;
     if (!/^https:\/\//i.test(raw)) return '#';
-    // Imagens externas carregam direto da origem. /api/media fica apenas como
-    // fallback para hosts que bloqueiam hotlink, reduzindo Functions e transfer.
+    // Primeira tentativa continua indo direto para a origem. Se este navegador
+    // já confirmou que a URL precisa do proxy, usa a cópia /api/media que fica
+    // com cache immutable no próprio navegador nos próximos carregamentos.
+    if (prefersMediaProxy(raw)) {
+      const cachedProxy = window.BETVMediaProxyUrl ? window.BETVMediaProxyUrl(raw) : '';
+      if (cachedProxy) return cachedProxy;
+    }
     return raw;
   };
 
@@ -319,10 +375,16 @@
       const proxy = window.BETVMediaProxyUrl ? window.BETVMediaProxyUrl(currentSource) : '';
       if (proxy && proxy !== currentSource) {
         image.setAttribute('data-betv-proxy-attempted', '1');
+        image.setAttribute('data-betv-proxy-original', currentSource);
         image.setAttribute('src', proxy);
         if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
         return;
       }
+    }
+
+    if (image.hasAttribute('data-betv-proxy-attempted')) {
+      const original = String(image.getAttribute('data-betv-proxy-original') || '').trim();
+      if (original && /^\/api\/media(?:\?|$)/.test(currentSource)) forgetMediaProxy(original);
     }
 
     if (!image.hasAttribute('data-avatar-fallback')) return;
@@ -330,6 +392,15 @@
     if (String(image.getAttribute('src') || '').endsWith(fallback)) return;
     image.setAttribute('src', fallback);
     image.hidden = false;
+  }, true);
+
+  document.addEventListener('load', function (event) {
+    const image = event.target;
+    if (!(image instanceof HTMLImageElement)) return;
+    if (!image.hasAttribute('data-betv-proxy-attempted')) return;
+    const original = String(image.getAttribute('data-betv-proxy-original') || '').trim();
+    const currentSource = String(image.getAttribute('src') || '').trim();
+    if (original && /^\/api\/media(?:\?|$)/.test(currentSource)) rememberMediaProxy(original);
   }, true);
 })();
 
@@ -1004,12 +1075,77 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const publicDataMemoryCache = new Map();
   const HOME_BOOTSTRAP_COLLECTIONS = new Set(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
   const homeBootstrapMemoryCache = new Map();
+  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV3:';
+  const HOME_BOOTSTRAP_BROWSER_TTL_MS = 30 * 60 * 1000;
+  const HOME_BOOTSTRAP_MEMORY_TTL_MS = 10 * 60 * 1000;
+
+  function homeBootstrapStorageKey(locale) {
+    return HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX + String(locale || 'pt-br');
+  }
+
+  function readHomeBootstrapBrowserCache(locale) {
+    try {
+      const key = homeBootstrapStorageKey(locale);
+      const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!parsed || !parsed.savedAt || !parsed.bundle || typeof parsed.bundle !== 'object') return null;
+      if (Date.now() - Number(parsed.savedAt) >= HOME_BOOTSTRAP_BROWSER_TTL_MS) {
+        localStorage.removeItem(key);
+        return null;
+      }
+      return parsed;
+    } catch (_) { return null; }
+  }
+
+  function writeHomeBootstrapBrowserCache(locale, bundle) {
+    if (!bundle || typeof bundle !== 'object') return;
+    const key = homeBootstrapStorageKey(locale);
+    const value = JSON.stringify({ savedAt: Date.now(), bundle });
+    try {
+      // Mantém somente o idioma atual para não acumular vários MB de catálogo.
+      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const storedKey = String(localStorage.key(index) || '');
+        if (storedKey.startsWith(HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX) && storedKey !== key) localStorage.removeItem(storedKey);
+      }
+      localStorage.setItem(key, value);
+    } catch (_) {
+      try { localStorage.removeItem(key); } catch (_) {}
+    }
+  }
+
+  function clearHomeBootstrapBrowserCache(locale) {
+    try { localStorage.removeItem(homeBootstrapStorageKey(locale || activeLocaleSlug())); } catch (_) {}
+  }
+
+  function hydrateHomeBootstrapBundle(bundle, locale, ttl = HOME_BOOTSTRAP_MEMORY_TTL_MS) {
+    const expiresAt = Date.now() + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
+    for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
+      const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
+      publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt });
+    }
+    const siteSettings = bundle && bundle.settings && bundle.settings.site;
+    if (siteSettings && typeof siteSettings === 'object') {
+      publicDataMemoryCache.set(`settings:site:${locale}`, { promise: Promise.resolve(siteSettings), expiresAt });
+    }
+  }
 
   async function preloadPublicHomeData() {
     const locale = activeLocaleSlug();
     const nowMs = Date.now();
     const cached = homeBootstrapMemoryCache.get(locale);
     if (cached && cached.expiresAt > nowMs) return cached.promise;
+
+    const browserCached = readHomeBootstrapBrowserCache(locale);
+    if (browserCached) {
+      const age = Math.max(0, nowMs - Number(browserCached.savedAt || nowMs));
+      const remaining = Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - age);
+      hydrateHomeBootstrapBundle(browserCached.bundle, locale, Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining));
+      const browserPromise = Promise.resolve(browserCached.bundle);
+      homeBootstrapMemoryCache.set(locale, {
+        promise: browserPromise,
+        expiresAt: nowMs + Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining)
+      });
+      return browserPromise;
+    }
 
     const params = new URLSearchParams({ name: 'home-bootstrap', locale });
     const promise = fetch(`/api/public-data?${params.toString()}`, {
@@ -1018,22 +1154,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
       return response.json();
     }).then(bundle => {
-      const ttl = 5 * 60 * 1000;
-      for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
-        const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
-        publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt: Date.now() + ttl });
-      }
-      const siteSettings = bundle && bundle.settings && bundle.settings.site;
-      if (siteSettings && typeof siteSettings === 'object') {
-        publicDataMemoryCache.set(`settings:site:${locale}`, { promise: Promise.resolve(siteSettings), expiresAt: Date.now() + ttl });
-      }
+      hydrateHomeBootstrapBundle(bundle, locale);
+      writeHomeBootstrapBrowserCache(locale, bundle);
       return bundle;
     }).catch(error => {
       homeBootstrapMemoryCache.delete(locale);
       throw error;
     });
 
-    homeBootstrapMemoryCache.set(locale, { promise, expiresAt: nowMs + 5 * 60 * 1000 });
+    homeBootstrapMemoryCache.set(locale, { promise, expiresAt: nowMs + HOME_BOOTSTRAP_MEMORY_TTL_MS });
     return promise;
   }
   async function readPublicData(name, id = '') {
@@ -1077,6 +1206,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!key.startsWith(`${normalizedName}:`)) continue;
       if (normalizedId && !key.startsWith(`${normalizedName}:${normalizedId}:`)) continue;
       publicDataMemoryCache.delete(key);
+    }
+    if (HOME_BOOTSTRAP_COLLECTIONS.has(normalizedName) || (normalizedName === 'settings' && (!normalizedId || normalizedId === 'site'))) {
+      const locale = activeLocaleSlug();
+      homeBootstrapMemoryCache.delete(locale);
+      clearHomeBootstrapBrowserCache(locale);
     }
   }
 
@@ -14014,10 +14148,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   var ENDPOINT = '/api/deployment-version';
   // A versão é compartilhada em localStorage entre abas e reloads. Cada navegador
-  // consulta a Vercel no máximo uma vez a cada 15 minutos em uso normal.
-  var CHECK_INTERVAL = 15 * 60 * 1000;
-  var MIN_CHECK_GAP_MS = 5 * 60 * 1000;
-  var SHARED_CHECK_TTL_MS = 15 * 60 * 1000;
+  // consulta a Vercel no máximo uma vez por hora em uso normal.
+  var CHECK_INTERVAL = 60 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 30 * 60 * 1000;
+  var SHARED_CHECK_TTL_MS = 60 * 60 * 1000;
   var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV2';
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
@@ -14289,9 +14423,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     lastCheckAt = nowMs;
     checking = true;
-    return fetch(ENDPOINT, {
+    var requestUrl = force ? ENDPOINT + '?fresh=' + String(Date.now()) : ENDPOINT;
+    return fetch(requestUrl, {
       method: 'GET',
-      cache: 'default',
+      cache: force ? 'no-store' : 'default',
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {

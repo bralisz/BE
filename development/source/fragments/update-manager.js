@@ -3,10 +3,10 @@
 
   var ENDPOINT = '/api/deployment-version';
   // A versão é compartilhada em localStorage entre abas e reloads. Cada navegador
-  // consulta a Vercel no máximo uma vez a cada 15 minutos em uso normal.
-  var CHECK_INTERVAL = 15 * 60 * 1000;
-  var MIN_CHECK_GAP_MS = 5 * 60 * 1000;
-  var SHARED_CHECK_TTL_MS = 15 * 60 * 1000;
+  // consulta a Vercel no máximo uma vez por hora em uso normal.
+  var CHECK_INTERVAL = 60 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 30 * 60 * 1000;
+  var SHARED_CHECK_TTL_MS = 60 * 60 * 1000;
   var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV2';
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
@@ -278,9 +278,10 @@
 
     lastCheckAt = nowMs;
     checking = true;
-    return fetch(ENDPOINT, {
+    var requestUrl = force ? ENDPOINT + '?fresh=' + String(Date.now()) : ENDPOINT;
+    return fetch(requestUrl, {
       method: 'GET',
-      cache: 'default',
+      cache: force ? 'no-store' : 'default',
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {

@@ -4,7 +4,7 @@ const crypto = require('crypto');
 
 const DEFAULT_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const RELEASE_CACHE_TTL_MS = 5 * 60 * 1000;
+const RELEASE_CACHE_TTL_MS = 15 * 60 * 1000;
 let releaseCache = { value: null, expiresAt: 0, promise: null };
 
 function deploymentVersion() {
@@ -28,8 +28,9 @@ function supabaseConfig() {
   };
 }
 
-async function loadReleaseState() {
+async function loadReleaseState(forceRefresh = false) {
   const now = Date.now();
+  if (forceRefresh) releaseCache = { value: null, expiresAt: 0, promise: null };
   if (releaseCache.value && releaseCache.expiresAt > now) return releaseCache.value;
   if (releaseCache.promise) return releaseCache.promise;
 
@@ -85,10 +86,17 @@ module.exports = async function deploymentVersionHandler(req, res) {
     return res.status(405).end();
   }
 
-  const release = await loadReleaseState();
+  const fresh = String(req.query?.fresh || '').trim();
+  const forceRefresh = Boolean(fresh);
+  const release = await loadReleaseState(forceRefresh);
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=900');
-  res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=1800');
+  if (forceRefresh) {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
+  } else {
+    res.setHeader('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, max-age=900, stale-while-revalidate=7200');
+  }
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
 

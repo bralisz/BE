@@ -37,10 +37,10 @@ function normalizeLocale(value) {
 }
 
 function upstreamTtl(name, id) {
-  if (name === 'settings' && id === 'site') return 5 * 60 * 1000;
+  if (name === 'settings' && id === 'site') return 10 * 60 * 1000;
   if (name === 'notifications') return 2 * 60 * 1000;
-  if (name === 'movies') return 10 * 60 * 1000;
-  return 10 * 60 * 1000;
+  if (name === 'movies') return 30 * 60 * 1000;
+  return 30 * 60 * 1000;
 }
 
 async function cachedUpstream(key, ttl, loader) {
@@ -347,9 +347,9 @@ function setPublicCacheHeaders(res, name, id, hasData) {
   let staleSeconds = 7200;
 
   if (name === 'home-bootstrap') {
-    browserSeconds = 600;
-    edgeSeconds = 600;
-    staleSeconds = 3600;
+    browserSeconds = 900;
+    edgeSeconds = 1800;
+    staleSeconds = 21600;
   } else if (name === 'settings' && id === 'site') {
     browserSeconds = 300;
     edgeSeconds = 600;
@@ -368,7 +368,7 @@ function setPublicCacheHeaders(res, name, id, hasData) {
   // A Vercel mantém uma cópia compartilhada por mais tempo para que milhares de
   // visitantes não transformem o mesmo conteúdo público em milhares de Functions.
   res.setHeader('Cache-Control', `public, max-age=${browserSeconds}, stale-while-revalidate=${Math.min(staleSeconds, 3600)}`);
-  res.setHeader('Vercel-CDN-Cache-Control', `public, s-maxage=${edgeSeconds}, stale-while-revalidate=${staleSeconds}`);
+  res.setHeader('Vercel-CDN-Cache-Control', `public, max-age=${edgeSeconds}, stale-while-revalidate=${staleSeconds}`);
 }
 
 module.exports = async function publicData(req, res) {
@@ -386,7 +386,7 @@ module.exports = async function publicData(req, res) {
     let hasData = false;
     if (name === 'home-bootstrap') {
       if (id) return res.status(400).end();
-      payload = await cachedUpstream(`home-bootstrap:${locale}`, 10 * 60 * 1000, () => fetchHomeBootstrap(locale));
+      payload = await cachedUpstream(`home-bootstrap:${locale}`, 30 * 60 * 1000, () => fetchHomeBootstrap(locale));
       hasData = HOME_BOOTSTRAP_COLLECTIONS.some(collection => Array.isArray(payload?.[collection]) && payload[collection].length > 0);
     } else {
       const rows = await fetchRows(name, id, locale);
