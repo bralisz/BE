@@ -28,6 +28,7 @@ const BILLIE_SETTING_FIELDS = new Set([
 
 const upstreamResponseCache = new Map();
 const FEATURED_CACHE_TAG = 'betv-featured';
+const NOTIFICATIONS_CACHE_TAG = 'betv-notifications';
 
 function normalizeLocale(value) {
   const locale = String(value || 'pt-br').trim().toLowerCase();
@@ -39,7 +40,10 @@ function normalizeLocale(value) {
 
 function upstreamTtl(name, id) {
   if (name === 'settings' && id === 'site') return 10 * 60 * 1000;
-  if (name === 'notifications') return 2 * 60 * 1000;
+  // A borda da Vercel já segura o tráfego de notificações. Não mantenha uma
+  // segunda cópia em memória na Function, pois ela pode sobreviver a uma
+  // invalidação por tag e reconstruir o CDN com uma lista antiga.
+  if (name === 'notifications') return 0;
   if (name === 'featured') return 0;
   if (name === 'movies') return 30 * 60 * 1000;
   return 30 * 60 * 1000;
@@ -360,7 +364,10 @@ function setPublicCacheHeaders(res, name, id, hasData) {
     edgeSeconds = 600;
     staleSeconds = 3600;
   } else if (name === 'notifications') {
-    browserSeconds = 120;
+    // O navegador sempre revalida o sino; a resposta continua barata porque a
+    // Vercel mantém a cópia compartilhada na borda. Assim um PT-BR que já havia
+    // aberto o site não fica preso por minutos numa lista antiga do browser.
+    browserSeconds = 0;
     edgeSeconds = 300;
     staleSeconds = 1800;
   } else if (name === 'featured') {
@@ -377,12 +384,18 @@ function setPublicCacheHeaders(res, name, id, hasData) {
   // tag ao salvar/excluir um destaque, sem derrubar o cache do catálogo inteiro.
   if (name === 'featured' || name === 'home-bootstrap') {
     res.setHeader('Vercel-Cache-Tag', FEATURED_CACHE_TAG);
+  } else if (name === 'notifications') {
+    res.setHeader('Vercel-Cache-Tag', NOTIFICATIONS_CACHE_TAG);
   }
 
   // O navegador evita repetir a mesma leitura durante navegação/reloads curtos.
   // A Vercel mantém uma cópia compartilhada por mais tempo para que milhares de
   // visitantes não transformem o mesmo conteúdo público em milhares de Functions.
-  res.setHeader('Cache-Control', `public, max-age=${browserSeconds}, stale-while-revalidate=${Math.min(staleSeconds, 3600)}`);
+  if (name === 'notifications') {
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  } else {
+    res.setHeader('Cache-Control', `public, max-age=${browserSeconds}, stale-while-revalidate=${Math.min(staleSeconds, 3600)}`);
+  }
   res.setHeader('Vercel-CDN-Cache-Control', `public, max-age=${edgeSeconds}, stale-while-revalidate=${staleSeconds}`);
 }
 

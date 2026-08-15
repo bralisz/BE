@@ -2,7 +2,10 @@
 'use strict';
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
-const FEATURED_CACHE_TAG = 'betv-featured';
+const PUBLIC_CACHE_TAGS = Object.freeze({
+  featured: 'betv-featured',
+  notifications: 'betv-notifications'
+});
 
 function config() {
   return {
@@ -77,7 +80,7 @@ async function assertAdmin(settings, accessToken) {
   }
 }
 
-async function deleteFeaturedCache(settings) {
+async function deletePublicCache(settings, scope) {
   if (!settings.vercelToken || !settings.projectIdOrName) {
     const error = new Error('Integração de cache da Vercel não configurada.');
     error.status = 503;
@@ -87,6 +90,13 @@ async function deleteFeaturedCache(settings) {
   url.searchParams.set('projectIdOrName', settings.projectIdOrName);
   if (settings.teamId) url.searchParams.set('teamId', settings.teamId);
 
+  const tag = PUBLIC_CACHE_TAGS[String(scope || '').trim().toLowerCase()];
+  if (!tag) {
+    const error = new Error('Escopo de cache inválido.');
+    error.status = 400;
+    throw error;
+  }
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -94,7 +104,7 @@ async function deleteFeaturedCache(settings) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      tags: [FEATURED_CACHE_TAG],
+      tags: [tag],
       target: settings.target,
       revalidationDeadlineSeconds: 10
     }),
@@ -124,15 +134,16 @@ module.exports = async function adminPublicCache(req, res) {
   if (!accessToken) return res.status(401).json({ ok: false });
 
   const body = req.body && typeof req.body === 'object' ? req.body : {};
-  if (String(body.scope || '').trim().toLowerCase() !== 'featured') {
+  const scope = String(body.scope || '').trim().toLowerCase();
+  if (!PUBLIC_CACHE_TAGS[scope]) {
     return res.status(400).json({ ok: false, message: 'Escopo de cache inválido.' });
   }
 
   try {
     const settings = config();
     await assertAdmin(settings, accessToken);
-    await deleteFeaturedCache(settings);
-    return res.status(200).json({ ok: true, scope: 'featured' });
+    await deletePublicCache(settings, scope);
+    return res.status(200).json({ ok: true, scope });
   } catch (error) {
     return res.status(Number(error?.status || 500)).json({
       ok: false,

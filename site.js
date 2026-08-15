@@ -1176,13 +1176,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const params = new URLSearchParams({ name: normalizedName, locale });
     if (normalizedId) params.set('id', normalizedId);
+    // Versão própria do inbox para não reutilizar respostas antigas do CDN/browser
+    // geradas antes da invalidação por tag das notificações.
+    if (normalizedName === 'notifications') params.set('v', 'notifications-v2');
     // Keep one response per collection/locale in memory. Public-data also has an
     // edge cache, so reloads and simultaneous visitors do not fan out into many
     // identical Supabase reads.
     const ttl = normalizedName === 'settings' && normalizedId === 'site'
       ? 5 * 60 * 1000
       : normalizedName === 'notifications'
-        ? 2 * 60 * 1000
+        ? 30 * 1000
         : normalizedName === 'movies'
           ? 5 * 60 * 1000
           : 5 * 60 * 1000;
@@ -13522,6 +13525,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var loaded=false;
   var loadingPromise=null;
   var selectedId='';
+  var lastLoadedAt=0;
+  var NOTIFICATION_REFRESH_MS=60*1000;
   var STORAGE_KEY='beNotificationsLastSeen';
   var READ_STATE_KEY='beNotificationsReadStateV2';
 
@@ -13970,6 +13975,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage('');
       }finally{
+        lastLoadedAt=Date.now();
         window.__beNotificationsReady=true;
         window.dispatchEvent(new CustomEvent('be:notifications-ready',{detail:{count:notifications.length}}));
         loadingPromise=null;
@@ -14036,6 +14042,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(userChip)userChip.setAttribute('aria-expanded','false');
   }
 
+  function refreshNotificationsIfStale(){
+    if(!lastLoadedAt||Date.now()-lastLoadedAt>=NOTIFICATION_REFRESH_MS)loadNotifications(true);
+  }
+
   function toggleDesktop(event){
     if(event)event.stopPropagation();
     if(!desktopDropdown||!desktopButton)return;
@@ -14049,7 +14059,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     closeAccountMenu();
     desktopDropdown.classList.toggle('open',open);
     desktopButton.setAttribute('aria-expanded',String(open));
-    if(open){loadNotifications(false);}
+    if(open){refreshNotificationsIfStale();}
   }
 
   function toggleMobile(event){
@@ -14069,7 +14079,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     mobilePopover.hidden=!open;
     var button=getMobileButton();
     if(button)button.setAttribute('aria-expanded',String(open));
-    if(open){loadNotifications(false);}
+    if(open){refreshNotificationsIfStale();}
   }
 
   if(desktopDropdown)desktopDropdown.addEventListener('click',function(event){event.stopPropagation();});
@@ -14131,6 +14141,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var info=routeInfo();
     if(info.active)openPage(info.id,false);
     else if(document.body.classList.contains('notification-page-active'))closePage(false);
+  });
+  window.addEventListener('focus',refreshNotificationsIfStale);
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden)refreshNotificationsIfStale();
   });
   window.addEventListener('storage',function(event){
     if(event.key===READ_STATE_KEY||event.key===STORAGE_KEY)renderPreviews();

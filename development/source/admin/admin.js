@@ -1674,7 +1674,7 @@ body.admin-preview-open{overflow:hidden}
     if (!isFeatured) await maybeResumePendingContentEditor();
   }
 
-  async function invalidateFeaturedPublicCache() {
+  async function invalidatePublicCache(scope) {
     if (beBackend.mode !== 'supabase') return { ok: true, skipped: true };
     const client = beBackend && beBackend.client;
     if (!client?.auth?.getSession) return { ok: false, skipped: true };
@@ -1691,11 +1691,19 @@ body.admin-preview-open{overflow:hidden}
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({ scope: 'featured' })
+      body: JSON.stringify({ scope: String(scope || '') })
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload?.message || 'Não foi possível atualizar o cache público dos destaques.');
+    if (!response.ok) throw new Error(payload?.message || 'Não foi possível atualizar o cache público.');
     return payload;
+  }
+
+  function invalidateFeaturedPublicCache() {
+    return invalidatePublicCache('featured');
+  }
+
+  function invalidateNotificationsPublicCache() {
+    return invalidatePublicCache('notifications');
   }
 
   async function adminUserRequest(action, userId, extra = {}) {
@@ -3518,6 +3526,9 @@ body.admin-preview-open{overflow:hidden}
           updatedBy: user?.email || user?.uid || ''
         };
         const saved = await db.add('notifications', campaign);
+        await invalidateNotificationsPublicCache().catch(error => {
+          console.warn('Campanha salva, mas a invalidação imediata do cache de notificações falhou:', error?.message || error);
+        });
         await logAction('profile_share_campaign_created', 'notifications', saved?.id || '', 'Campanha de compartilhamento de perfil enviada aos usuários.');
         toast('Convite de perfil enviado aos usuários.');
         await notificationsPage();
@@ -3548,6 +3559,9 @@ body.admin-preview-open{overflow:hidden}
       button.disabled = true;
       try {
         await db.remove('notifications', item.id);
+        await invalidateNotificationsPublicCache().catch(error => {
+          console.warn('Notificação excluída, mas a invalidação imediata do cache falhou:', error?.message || error);
+        });
         await logAction('notification_deleted', 'notifications', item.id, `Notificação excluída: ${item.title || item.id}`);
         toast('Notificação excluída.');
         await notificationsPage();
@@ -3576,6 +3590,9 @@ body.admin-preview-open{overflow:hidden}
           updatedBy: user?.email || user?.uid || ''
         };
         const saved = id ? await db.set('notifications', id, data, { merge: true }) : await db.add('notifications', data);
+        await invalidateNotificationsPublicCache().catch(error => {
+          console.warn('Notificação salva, mas a invalidação imediata do cache falhou:', error?.message || error);
+        });
         await logAction(id ? 'notification_updated' : 'notification_created', 'notifications', saved?.id || id, `${id ? 'Notificação atualizada' : 'Notificação publicada'}: ${title}`);
         toast(id ? 'Notificação atualizada.' : 'Notificação publicada.');
         await notificationsPage();
