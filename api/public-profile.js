@@ -3,6 +3,21 @@
 const DEFAULT_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const ALLOWED_COLLECTIONS = new Set(['videos', 'movies', 'series', 'albums']);
+const SAFE_MEDIA_HOSTS = new Set([
+  'cdn.discordapp.com', 'media.discordapp.net', 'images-ext-1.discordapp.net', 'images-ext-2.discordapp.net',
+  'cdn.theplaylist.net', 'disney.images.edge.bamgrid.com', 'dwgyu36up6iuz.cloudfront.net',
+  'dx35vtwkllhj9.cloudfront.net', 'encrypted-tbn0.gstatic.com', 'fycextras.com', 'i.imgur.com',
+  'i.scdn.co', 'i.pinimg.com', 'i.ytimg.com', 'i0.wp.com', 'image.tmdb.org', 'images.ctfassets.net',
+  'img10.hotstar.com', 'lh3.googleusercontent.com', 'm.media-amazon.com', 'media.themoviedb.org',
+  'occ-0-3934-3933.1.nflxso.net', 'pbs.twimg.com', 'upload.wikimedia.org', 'variety.com',
+  'www.billboard.com', 'www.hollywoodreporter.com'
+]);
+const SAFE_MEDIA_SUFFIXES = [
+  '.bamgrid.com', '.billboard.com', '.cloudfront.net', '.ctfassets.net', '.discordapp.com', '.discordapp.net',
+  '.googleusercontent.com', '.gstatic.com', '.hollywoodreporter.com', '.hotstar.com', '.imgur.com',
+  '.media-amazon.com', '.nflxso.net', '.pinimg.com', '.scdn.co', '.spotifycdn.com', '.themoviedb.org',
+  '.theplaylist.net', '.tmdb.org', '.twimg.com', '.wikimedia.org', '.wp.com', '.ytimg.com'
+];
 
 function config() {
   return {
@@ -38,8 +53,14 @@ function safeAsset(value) {
   try {
     const url = new URL(raw, 'https://billieilishtv.site');
     if (url.protocol !== 'https:' || url.username || url.password) return '';
-    if (url.hostname !== 'billieilishtv.site' && url.hostname !== 'www.billieilishtv.site') return '';
-    return `${url.pathname}${url.search}`.slice(0, 1200);
+    url.hash = '';
+    const host = String(url.hostname || '').toLowerCase().replace(/\.$/, '');
+    if (host === 'billieilishtv.site' || host === 'www.billieilishtv.site') {
+      return `${url.pathname}${url.search}`.slice(0, 2000);
+    }
+    const trustedExternal = SAFE_MEDIA_HOSTS.has(host) || SAFE_MEDIA_SUFFIXES.some(suffix => host.endsWith(suffix));
+    if (!trustedExternal) return '';
+    return url.href.slice(0, 2000);
   } catch (_) {}
   return '';
 }

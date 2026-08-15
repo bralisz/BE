@@ -432,9 +432,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   let accountStatusCache = { banned: false, reason: '', bannedAt: '' };
   let supabaseClient = null;
   const PROFILE_CACHE_TTL_MS = 300000;
+  const PUBLIC_PROFILE_CACHE_TTL_MS = 120000;
+  const PUBLIC_PROFILE_SESSION_TTL_MS = 120000;
   const PREFERENCE_CACHE_TTL_MS = 300000;
   const profileCache = new Map();
   const profileEnsurePromises = new Map();
+  const publicProfileCache = new Map();
+  const publicProfilePromises = new Map();
   const preferenceCache = new Map();
   const userSyncChannels = new Map();
   let realtimeAuthPromise = null;
@@ -809,6 +813,34 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     profileCache.delete(String(userId || ''));
   }
 
+  function publicProfileSessionKey(username) {
+    return `bePublicProfileCache:v2:${normalizeUsername(username)}`;
+  }
+
+  function cachePublicProfile(username, profile) {
+    const normalized = normalizeUsername(username);
+    if (!normalized || !profile || typeof profile !== 'object') return profile;
+    const record = { value: clone(profile), cachedAt: Date.now() };
+    publicProfileCache.set(normalized, record);
+    try { sessionStorage.setItem(publicProfileSessionKey(normalized), JSON.stringify(record)); } catch (_) {}
+    return profile;
+  }
+
+  function readCachedPublicProfile(username, maxAge = PUBLIC_PROFILE_CACHE_TTL_MS) {
+    const normalized = normalizeUsername(username);
+    if (!normalized) return null;
+    const memory = publicProfileCache.get(normalized);
+    if (memory && Date.now() - Number(memory.cachedAt || 0) <= maxAge) return clone(memory.value);
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem(publicProfileSessionKey(normalized)) || 'null');
+      if (parsed && parsed.value && Date.now() - Number(parsed.cachedAt || 0) <= Math.max(maxAge, PUBLIC_PROFILE_SESSION_TTL_MS)) {
+        publicProfileCache.set(normalized, { value: clone(parsed.value), cachedAt: Number(parsed.cachedAt || Date.now()) });
+        return clone(parsed.value);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   function profileToRow(id, data) {
     const row = { id };
     const mappings = {
@@ -1080,7 +1112,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const publicDataMemoryCache = new Map();
   const HOME_BOOTSTRAP_COLLECTIONS = new Set(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
   const homeBootstrapMemoryCache = new Map();
-  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV3:';
+  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV4:';
   const HOME_BOOTSTRAP_BROWSER_TTL_MS = 30 * 60 * 1000;
   const HOME_BOOTSTRAP_MEMORY_TTL_MS = 10 * 60 * 1000;
   // Destaques mudam com mais frequência no Admin. Eles podem vir junto do
@@ -1142,12 +1174,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const expiresAt = nowMs + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
     const featuredFresh = Math.max(0, Number(bundleAgeMs) || 0) < FEATURED_FRESH_TTL_MS;
     for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
-      if (name === 'featured' && !featuredFresh) continue;
+      // Destaques não são hidratados pelo cache persistente da Home. Isso evita
+      // que abas móveis mantidas em segundo plano continuem exibindo uma lista
+      // antiga depois de uma alteração no Admin. A coleção `featured` continua
+      // protegida pelo cache da CDN na API pública.
+      if (name === 'featured') continue;
       const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
-      const itemExpiresAt = name === 'featured'
-        ? nowMs + Math.max(1000, FEATURED_FRESH_TTL_MS - Math.max(0, Number(bundleAgeMs) || 0))
-        : expiresAt;
-      publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt: itemExpiresAt });
+      publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt });
     }
     const siteSettings = bundle && bundle.settings && bundle.settings.site;
     if (siteSettings && typeof siteSettings === 'object') {
@@ -1556,7 +1589,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         };
       }
 
-      try {
+      const cachedPublicProfile = readCachedPublicProfile(normalized);
+      if (cachedPublicProfile) return cachedPublicProfile;
+      if (publicProfilePromises.has(normalized)) return clone(await publicProfilePromises.get(normalized));
+
+      const publicProfilePromise = (async () => {
         const response = await fetch(`/api/public-profile?username=${encodeURIComponent(normalized)}`, {
           headers: { Accept: 'application/json' },
           cache: 'default'
@@ -1564,9 +1601,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (response.status === 404) return null;
         if (!response.ok) throw new Error(`public_profile_${response.status}`);
         const payload = await response.json();
-        return payload && typeof payload === 'object' && !Array.isArray(payload) ? clone(payload) : null;
+        const profile = payload && typeof payload === 'object' && !Array.isArray(payload) ? clone(payload) : null;
+        if (profile) cachePublicProfile(normalized, profile);
+        return profile;
+      })();
+      publicProfilePromises.set(normalized, publicProfilePromise);
+      try {
+        return clone(await publicProfilePromise);
       } catch (error) {
+        const stale = readCachedPublicProfile(normalized, 1800000);
+        if (stale) return stale;
         throw backendError('profile/public-unavailable', 'Não foi possível carregar este perfil público.', error);
+      } finally {
+        publicProfilePromises.delete(normalized);
       }
     },
     async ensure(user) {
@@ -2879,6 +2926,53 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startDynamicContent, { once: true });
   else startDynamicContent();
 
+  // Navegadores móveis frequentemente preservam a página em memória ao trocar
+  // de aplicativo/aba. Ao retornar depois de algum tempo, atualiza apenas a
+  // coleção de Destaques e reaproveita o restante do catálogo já em cache.
+  let featuredPageHiddenAt = 0;
+  let featuredResumeRefreshRunning = false;
+  const FEATURED_RESUME_REFRESH_MS = 30 * 1000;
+
+  async function refreshFeaturedAfterResume(force = false) {
+    if (featuredResumeRefreshRunning || document.visibilityState === 'hidden') return;
+    const now = Date.now();
+    if (!force && featuredPageHiddenAt && now - featuredPageHiddenAt < FEATURED_RESUME_REFRESH_MS) return;
+    featuredResumeRefreshRunning = true;
+    try {
+      const locale = activeLocaleSlug();
+      publicDataMemoryCache.delete(`featured::${locale}`);
+      updateHomeBootstrapFeaturedBrowserCache(locale, []);
+      const key = homeBootstrapStorageKey(locale);
+      try {
+        const parsed = JSON.parse(localStorage.getItem(key) || 'null');
+        if (parsed && typeof parsed === 'object') {
+          parsed.featuredSavedAt = 0;
+          if (parsed.bundle && typeof parsed.bundle === 'object') parsed.bundle.featured = [];
+          localStorage.setItem(key, JSON.stringify(parsed));
+        }
+      } catch (_) {}
+      if (window.__beContentReady) await renderVideoCatalog();
+    } catch (error) {
+      console.warn('Não foi possível atualizar os Destaques ao retomar a página:', error?.message || error);
+    } finally {
+      featuredResumeRefreshRunning = false;
+      featuredPageHiddenAt = 0;
+    }
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      featuredPageHiddenAt = Date.now();
+      return;
+    }
+    if (featuredPageHiddenAt && Date.now() - featuredPageHiddenAt >= FEATURED_RESUME_REFRESH_MS) {
+      refreshFeaturedAfterResume(true);
+    }
+  });
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) refreshFeaturedAfterResume(true);
+  });
+
   function normalizedFooterLink(value, network = 'website') {
     let raw = String(value || '').trim();
     if (!raw) return '';
@@ -2942,10 +3036,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return [collection, new Map(rows.map(source => [String(source.id), source]))];
     }));
     const featuredSourceMaps = Object.fromEntries(featuredSourceEntries);
+
+    // O catálogo completo pode estar em cache por mais tempo que a lista de destaques.
+    // Se um destaque recém-selecionado não existir nessa cópia antiga, busca somente
+    // o conteúdo faltante pelo ID em vez de simplesmente esconder o card.
+    await Promise.all(featured.map(async item => {
+      const requested = item.contentCollection || item.sourceCollection;
+      const collection = ['videos', 'movies', 'series'].includes(requested) ? requested : 'videos';
+      const sourceId = String(item.contentId || item.videoId || item.sourceId || '');
+      if (!sourceId) return;
+      if (!featuredSourceMaps[collection]) featuredSourceMaps[collection] = new Map();
+      if (featuredSourceMaps[collection].has(sourceId)) return;
+      const source = await beBackend.data.get(collection, sourceId).catch(() => null);
+      if (source) featuredSourceMaps[collection].set(sourceId, source);
+    }));
+
     featured = featured.map(item => {
       const requested = item.contentCollection || item.sourceCollection;
       const collection = ['videos', 'movies', 'series'].includes(requested) ? requested : 'videos';
-      const sourceId = String(item.contentId || item.videoId || '');
+      const sourceId = String(item.contentId || item.videoId || item.sourceId || '');
       const source = featuredSourceMaps[collection]?.get(sourceId);
       if (!source || source.active === false) return null;
       const thumbnail = source.thumbnailUrl || source.imageUrl || source.bannerUrl || item.imageUrl || item.bannerUrl || '';
@@ -3225,14 +3334,28 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       movies: new Map(allMovies.map(item => [String(item.id), item])),
       series: new Map(allSeries.map(item => [String(item.id), item]))
     };
+
+    // Destaques são atualizados quase imediatamente, enquanto o catálogo geral pode
+    // continuar em cache. Resolve apenas IDs ausentes para que um destaque novo não
+    // desapareça da faixa "Recomendação de um fã" por causa de um catálogo antigo.
+    await Promise.all(featuredRows.map(async item => {
+      if (item.active === false) return;
+      const requested = item.contentCollection || item.sourceCollection;
+      const collection = ['videos', 'movies', 'series'].includes(requested) ? requested : 'videos';
+      const sourceId = String(item.contentId || item.videoId || item.sourceId || '');
+      if (!sourceId || sourceMaps[collection]?.has(sourceId)) return;
+      const source = await beBackend.data.get(collection, sourceId).catch(() => null);
+      if (source && source.active !== false) sourceMaps[collection].set(sourceId, source);
+    }));
+
     const featuredSeen = new Set();
     const featuredContents = featuredRows
-      .filter(item => item.active !== false && (item.contentId || item.videoId))
+      .filter(item => item.active !== false && (item.contentId || item.videoId || item.sourceId))
       .map(item => {
         const collection = ['videos', 'movies', 'series'].includes(item.contentCollection || item.sourceCollection)
           ? (item.contentCollection || item.sourceCollection)
           : 'videos';
-        const sourceId = String(item.contentId || item.videoId || '');
+        const sourceId = String(item.contentId || item.videoId || item.sourceId || '');
         const source = sourceMaps[collection]?.get(sourceId);
         const uniqueKey = `${collection}:${sourceId}`;
         if (!source || featuredSeen.has(uniqueKey)) return null;
@@ -11485,7 +11608,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function setProfilePageAvatar(url){
       var avatar=String(url||'').trim()||window.BETV_DEFAULT_AVATAR;
       profilePageAvatar.hidden=false;profilePageAvatar.removeAttribute('hidden');profilePageAvatar.setAttribute('aria-hidden','false');
-      profilePageAvatar.innerHTML='<img loading="eager" decoding="async" src="'+escapePublic(window.BETVResolveAvatar?window.BETVResolveAvatar(avatar):avatar)+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'"+DEFAULT+"')+'" alt="Avatar do perfil">';
+      profilePageAvatar.innerHTML='<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.BETVResolveAvatar?window.BETVResolveAvatar(avatar):avatar)+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'"+DEFAULT+"')+'" alt="Avatar do perfil">';
       var info=profilePage&&profilePage.querySelector('.profile-page-info');if(info)info.classList.remove('without-avatar');
     }
     function renderProfileState(title,handle,message){
@@ -11598,6 +11721,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       profileFavoritesContent.innerHTML='<div class="profile-favorites-ranking">'+profileFavoritesItems.map(function(item,index){
         var image=profileFavoriteImage(item);
+        var imageAttrs=index===0?' loading="eager" fetchpriority="high" decoding="async"':(index===1?' loading="eager" decoding="async"':' loading="lazy" decoding="async"');
         var rank=String(index+1);
         var gradientId='profileFavoriteRankGradient'+rank;
         var clipId='profileFavoriteRankClip'+rank;
@@ -11606,7 +11730,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           +'<rect x="0" y="0" width="100%" height="100%" fill="url(#'+gradientId+')" clip-path="url(#'+clipId+')"></rect></svg>';
         return '<button class="profile-favorite-ranked-item" type="button" data-profile-favorite-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'favorito')+'">'
           +'<span class="profile-favorite-rank" aria-hidden="true">'+rankSvg+'</span>'
-          +'<span class="profile-favorite-poster">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
+          +'<span class="profile-favorite-poster">'+(image?'<img'+imageAttrs+' src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
           +'<span class="profile-favorite-type">'+profileFavoriteCollectionLabel(item)+'</span>'
           +'<span class="profile-favorite-title notranslate" translate="no">'+escapePublic(item.title||'Conteúdo')+'</span></span>'
           +'</button>';
@@ -11688,6 +11812,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       profileLovedAlbumsContent.innerHTML='<div class="profile-favorites-ranking">'+profileLovedAlbumsItems.map(function(item,index){
         var image=profileFavoriteImage(item);
+        var imageAttrs=index===0?' loading="eager" fetchpriority="high" decoding="async"':(index===1?' loading="eager" decoding="async"':' loading="lazy" decoding="async"');
         var rank=String(index+1);
         var gradientId='profileLovedAlbumRankGradient'+rank;
         var clipId='profileLovedAlbumRankClip'+rank;
@@ -11696,7 +11821,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           +'<rect x="0" y="0" width="100%" height="100%" fill="url(#'+gradientId+')" clip-path="url(#'+clipId+')"></rect></svg>';
         return '<button class="profile-favorite-ranked-item" type="button" data-profile-loved-album-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'álbum')+'">'
           +'<span class="profile-favorite-rank" aria-hidden="true">'+rankSvg+'</span>'
-          +'<span class="profile-favorite-poster">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
+          +'<span class="profile-favorite-poster">'+(image?'<img'+imageAttrs+' src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
           +'<span class="profile-favorite-type">ÁLBUM</span>'
           +'<span class="profile-favorite-title notranslate" translate="no">'+escapePublic(item.title||'Álbum')+'</span></span>'
           +'</button>';
