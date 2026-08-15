@@ -18159,3 +18159,44 @@ body.profile-page-active .profile-page-name{
     font-size:clamp(14px,2.8vw,20px);
   }
 }
+
+/* 15/08/2026 — restaura a edição completa do próprio perfil no mobile.
+   Mantém os mesmos recursos do desktop: menu Editar perfil, avatar, banner,
+   nome, cores/borda, tags e dock Salvar/Cancelar. */
+@media (max-width:760px){
+  body.profile-page-active.profile-view-own #profilePageMore:not([hidden]){
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    z-index:10160!important;
+  }
+  body.profile-page-active.profile-view-own #profilePageActionsMenu:not([hidden]){
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    z-index:10220!important;
+  }
+  body.profile-page-active.profile-view-own.profile-inline-editing .profile-inline-banner-edit,
+  body.profile-page-active.profile-view-own.profile-inline-editing .profile-inline-avatar-edit,
+  body.profile-page-active.profile-view-own.profile-inline-editing .profile-inline-name-edit,
+  body.profile-page-active.profile-view-own.profile-inline-editing .profile-inline-edit-dock{
+    display:flex!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+  }
+  body.profile-page-active.profile-view-own.profile-inline-editing .profile-inline-edit-dock{
+    z-index:10240!important;
+  }
+  body.profile-page-active.profile-view-own.profile-inline-editing .profile-inline-color-popover:not([hidden]),
+  body.profile-page-active.profile-view-own.profile-inline-editing .profile-inline-tag-popover:not([hidden]){
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    pointer-events:auto!important;
+    z-index:10260!important;
+  }
+}
+
