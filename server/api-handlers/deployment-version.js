@@ -94,8 +94,8 @@ module.exports = async function deploymentVersionHandler(req, res) {
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
   } else {
-    res.setHeader('Cache-Control', 'public, max-age=900, stale-while-revalidate=3600');
-    res.setHeader('Vercel-CDN-Cache-Control', 'public, max-age=900, stale-while-revalidate=7200');
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=21600');
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, max-age=21600, stale-while-revalidate=43200');
   }
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');

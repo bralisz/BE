@@ -356,9 +356,12 @@ function setPublicCacheHeaders(res, name, id, hasData) {
   let staleSeconds = 7200;
 
   if (name === 'home-bootstrap') {
-    browserSeconds = 900;
-    edgeSeconds = 120;
-    staleSeconds = 300;
+    // O navegador já mantém o bundle da Home por 30 minutos. Mantemos a borda
+    // pelo mesmo período para que visitantes novos compartilhem a mesma resposta
+    // sem aumentar o prazo máximo aceitável para um vídeo novo aparecer.
+    browserSeconds = 1800;
+    edgeSeconds = 1800;
+    staleSeconds = 1800;
   } else if (name === 'settings' && id === 'site') {
     browserSeconds = 300;
     edgeSeconds = 600;

@@ -14170,9 +14170,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var ENDPOINT = '/api/deployment-version';
   // A versão é compartilhada em localStorage entre abas e reloads. Cada navegador
   // consulta a Vercel no máximo uma vez por hora em uso normal.
-  var CHECK_INTERVAL = 60 * 60 * 1000;
-  var MIN_CHECK_GAP_MS = 30 * 60 * 1000;
-  var SHARED_CHECK_TTL_MS = 60 * 60 * 1000;
+  var CHECK_INTERVAL = 6 * 60 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 60 * 60 * 1000;
+  var SHARED_CHECK_TTL_MS = 6 * 60 * 60 * 1000;
   var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV2';
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
