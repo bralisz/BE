@@ -151,11 +151,11 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260818-vk-audio-4k-v2">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260818-vk-audio-4k-bag-v4">
 <link rel="stylesheet" href="/assets/css/community.css?rev=20260812-billie-fan-share-claim-v2">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"></script>
 <script defer src="/assets/js/i18n.js?rev=20260812-billie-fan-i18n-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260818-vk-audio-4k-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260818-vk-audio-4k-bag-v4"></script>
 <script defer src="/assets/js/community.js?rev=20260812-billie-fan-share-claim-v2"></script>
 </head>
 <body class="site-loading-active">
@@ -553,26 +553,26 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>
             Assistir
           </a>
-          <button class="detail-list" id="contentDetailList" type="button" aria-pressed="false" aria-label="Adicionar aos favoritos" title="Adicionar aos favoritos">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
-          </button>
+          <div class="detail-streaming-store" id="detailStreamingStore" hidden>
+            <div class="detail-streaming-panel" id="detailStreamingPanel" hidden role="dialog" aria-label="Disponível em">
+              <span class="detail-streaming-panel-title">Disponível em</span>
+              <div class="detail-streaming-list" id="detailStreamingList"></div>
+            </div>
+            <button class="detail-streaming-button" id="detailStreamingButton" type="button" aria-label="Onde assistir" title="Onde assistir" aria-expanded="false" aria-controls="detailStreamingPanel">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 8.5h11l1 11h-13l1-11Z"></path><path d="M9 9V6.8a3 3 0 0 1 6 0V9"></path></svg>
+            </button>
+          </div>
           <button class="detail-streaming-mobile-button" id="detailStreamingButtonMobile" type="button" aria-label="Onde assistir" title="Onde assistir" aria-expanded="false" aria-controls="detailStreamingMobileSheet" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 8.5h11l1 11h-13l1-11Z"></path><path d="M9 9V6.8a3 3 0 0 1 6 0V9"></path></svg>
+          </button>
+          <button class="detail-list" id="contentDetailList" type="button" aria-pressed="false" aria-label="Adicionar aos favoritos" title="Adicionar aos favoritos">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
           </button>
           <button class="detail-share" id="contentDetailShare" type="button" aria-label="Compartilhar" title="Compartilhar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 12v7h14v-7"/></svg>
           </button>
         </div>
         <p class="detail-desc" id="contentDetailDesc"></p>
-      </div>
-      <div class="detail-streaming-store" id="detailStreamingStore" hidden>
-        <div class="detail-streaming-panel" id="detailStreamingPanel" hidden role="dialog" aria-label="Disponível em">
-          <span class="detail-streaming-panel-title">Disponível em</span>
-          <div class="detail-streaming-list" id="detailStreamingList"></div>
-        </div>
-        <button class="detail-streaming-button" id="detailStreamingButton" type="button" aria-label="Onde assistir" title="Onde assistir" aria-expanded="false" aria-controls="detailStreamingPanel">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 8.5h11l1 11h-13l1-11Z"></path><path d="M9 9V6.8a3 3 0 0 1 6 0V9"></path></svg>
-        </button>
       </div>
       <div class="detail-streaming-mobile-sheet" id="detailStreamingMobileSheet" hidden>
         <button class="detail-streaming-mobile-backdrop" id="detailStreamingMobileBackdrop" type="button" aria-label="Fechar"></button>

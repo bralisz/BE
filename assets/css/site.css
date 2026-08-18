@@ -13626,15 +13626,21 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
 .external-native-player-quality-badge{
   display:grid;
   place-items:center;
-  min-width:25px;
+  box-sizing:border-box;
+  width:30px;
+  min-width:30px;
+  max-width:30px;
   height:18px;
-  padding:0 4px;
+  padding:0 2px;
   border:1.5px solid currentColor;
   border-radius:5px;
   font-size:9px;
   line-height:1;
   font-weight:900;
   letter-spacing:.02em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-transform:uppercase;
   pointer-events:none;
 }
 .external-native-player-audio{position:relative}
@@ -14477,7 +14483,9 @@ body.profile-page-active .profile-page-hero{
   }
   .external-native-player-action svg{width:20px!important;height:20px!important}
   .external-native-player-quality-badge{
-    min-width:24px!important;
+    width:28px!important;
+    min-width:28px!important;
+    max-width:28px!important;
     height:17px!important;
     font-size:8px!important;
   }
@@ -15754,25 +15762,25 @@ body.detail-streaming-mobile-open{overflow:hidden}
   .detail-streaming-mobile-sheet{display:none!important}
 
   body.detail-page-active .detail-streaming-store:not([hidden]){
-    position:absolute;
-    right:clamp(30px,4vw,68px);
-    bottom:clamp(40px,6vh,66px);
-    z-index:6;
-    display:block;
+    position:relative;
+    z-index:7;
+    display:inline-flex;
+    align-items:center;
+    flex:0 0 auto;
   }
   .detail-streaming-button{
-    width:50px;
-    height:50px;
+    width:46px;
+    min-width:46px;
+    height:46px;
     display:grid;
     place-items:center;
     padding:0;
     border:1px solid rgba(255,255,255,.18);
     border-radius:50%;
-    background:rgba(16,17,18,.68);
+    background:rgba(255,255,255,.10);
     color:#fff;
-    -webkit-backdrop-filter:blur(16px);
-    backdrop-filter:blur(16px);
-    box-shadow:0 10px 30px rgba(0,0,0,.2);
+    -webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
     cursor:pointer;
     transition:transform .18s ease,background .18s ease,border-color .18s ease;
   }

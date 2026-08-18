@@ -5483,7 +5483,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         </div>
         <header class="external-native-player-toolbar" id="externalNativePlayerToolbar" aria-label="Ações do vídeo">
           <button class="external-native-player-action external-native-player-quality" id="externalNativePlayerQuality" type="button" aria-label="Alterar qualidade do vídeo" title="Qualidade" aria-expanded="false" aria-controls="externalNativePlayerQualityMenu">
-            <span class="external-native-player-quality-badge" aria-hidden="true">HD</span>
+            <span class="external-native-player-quality-badge notranslate" aria-hidden="true" data-i18n-ignore="true" translate="no">FHD</span>
           </button>
           <button class="external-native-player-action external-native-player-audio" id="externalNativePlayerAudio" type="button" aria-label="Alterar faixa de áudio" title="Faixa de áudio" aria-expanded="false" aria-controls="externalNativePlayerAudioMenu">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
@@ -5655,7 +5655,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const qualityLabel = ({ 6: '2160p / 4K', 5: '1440p', 4: '1080p', 3: '720p', 2: '480p', 1: '360p' })[normalized] || 'Automática';
       qualityButton.title = `Qualidade — ${qualityLabel}`;
       const badge = qualityButton.querySelector('.external-native-player-quality-badge');
-      if (badge) badge.textContent = normalized === 6 ? '4K' : 'HD';
+      if (badge) badge.textContent = ({ 6: '4K', 5: '2K', 4: 'FHD', 3: 'HD', 2: 'SD', 1: 'SD' })[normalized] || 'AUTO';
     };
 
     const extractVkVolumeState = (value, depth = 0) => {
