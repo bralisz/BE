@@ -3706,6 +3706,54 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     catch (_) { return ''; }
   }
 
+  function usesMobileMovieStreamingSheet() {
+    try {
+      return window.matchMedia('(max-width: 760px), (pointer: coarse) and (max-width: 920px)').matches;
+    } catch (_) {
+      return window.innerWidth <= 760;
+    }
+  }
+
+  function positionDesktopMovieStreamingPanel() {
+    const panel = document.getElementById('detailStreamingPanel');
+    const button = document.getElementById('detailStreamingButton');
+    if (!panel || !button || panel.hidden || usesMobileMovieStreamingSheet()) return;
+
+    const viewportWidth = Math.max(1, document.documentElement.clientWidth || window.innerWidth || 1);
+    const viewportHeight = Math.max(1, document.documentElement.clientHeight || window.innerHeight || 1);
+    const margin = 16;
+    const gap = 12;
+    const buttonRect = button.getBoundingClientRect();
+    const actionsRect = button.closest('.detail-actions')?.getBoundingClientRect() || buttonRect;
+    const panelRect = panel.getBoundingClientRect();
+    const panelWidth = Math.min(panelRect.width, Math.max(1, viewportWidth - margin * 2));
+    const panelHeight = Math.min(panelRect.height, Math.max(1, viewportHeight - margin * 2));
+    const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+
+    let placement = 'top';
+    let left = clamp(
+      buttonRect.left + (buttonRect.width - panelWidth) / 2,
+      margin,
+      viewportWidth - margin - panelWidth
+    );
+    let top = buttonRect.top - panelHeight - gap;
+
+    const rightSpace = viewportWidth - actionsRect.right - margin;
+    if (viewportWidth >= 980 && rightSpace >= panelWidth + gap) {
+      placement = 'right';
+      left = clamp(actionsRect.right + gap, margin, viewportWidth - margin - panelWidth);
+      top = clamp(buttonRect.bottom - panelHeight, margin, viewportHeight - margin - panelHeight);
+    } else if (top < margin) {
+      placement = 'bottom';
+      top = buttonRect.bottom + gap;
+    }
+
+    top = clamp(top, margin, viewportHeight - margin - panelHeight);
+    panel.style.left = `${Math.round(left)}px`;
+    panel.style.top = `${Math.round(top)}px`;
+    panel.dataset.placement = placement;
+  }
+
   function closeMobileMovieStreamingSheet(options = {}) {
     const sheet = document.getElementById('detailStreamingMobileSheet');
     const button = document.getElementById('detailStreamingButtonMobile');
@@ -8346,19 +8394,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const streamingMobileSheet = document.getElementById('detailStreamingMobileSheet');
     const streamingMobileBackdrop = document.getElementById('detailStreamingMobileBackdrop');
     const streamingMobileClose = document.getElementById('detailStreamingMobileClose');
+    if (streamingPanel && streamingPanel.parentElement !== document.body) document.body.appendChild(streamingPanel);
+    if (streamingMobileSheet && streamingMobileSheet.parentElement !== document.body) document.body.appendChild(streamingMobileSheet);
     if (streamingButton && streamingButton.dataset.bound !== 'true') {
       streamingButton.dataset.bound = 'true';
       streamingButton.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
-        if (!streamingPanel || streamingStore?.hidden) return;
+        if (!streamingPanel || streamingStore?.hidden || usesMobileMovieStreamingSheet()) return;
         closeMobileMovieStreamingSheet();
         const open = streamingPanel.hidden;
-        streamingPanel.hidden = !open;
-        streamingButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (!open) {
+          closeDesktopMovieStreamingPanel({ focusButton: true });
+          return;
+        }
+        streamingPanel.hidden = false;
+        streamingButton.setAttribute('aria-expanded', 'true');
+        positionDesktopMovieStreamingPanel();
+        window.requestAnimationFrame(positionDesktopMovieStreamingPanel);
       });
       document.addEventListener('click', event => {
-        if (!streamingPanel || streamingPanel.hidden || streamingStore?.contains(event.target)) return;
+        if (!streamingPanel || streamingPanel.hidden || streamingStore?.contains(event.target) || streamingPanel.contains(event.target)) return;
         closeDesktopMovieStreamingPanel();
       });
       document.addEventListener('keydown', event => {
@@ -8370,13 +8426,30 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (!streamingPanel || streamingPanel.hidden) return;
         closeDesktopMovieStreamingPanel({ focusButton: true });
       });
+      const syncStreamingPosition = () => {
+        if (usesMobileMovieStreamingSheet()) {
+          if (streamingPanel && !streamingPanel.hidden) closeDesktopMovieStreamingPanel();
+          return;
+        }
+        if (streamingMobileSheet && !streamingMobileSheet.hidden) closeMobileMovieStreamingSheet();
+        positionDesktopMovieStreamingPanel();
+      };
+      window.addEventListener('resize', syncStreamingPosition, { passive: true });
+      window.addEventListener('scroll', syncStreamingPosition, { passive: true, capture: true });
+      window.visualViewport?.addEventListener('resize', syncStreamingPosition, { passive: true });
+    }
+    if (streamingPanel && streamingPanel.dataset.bound !== 'true') {
+      streamingPanel.dataset.bound = 'true';
+      streamingPanel.addEventListener('click', event => {
+        if (event.target.closest?.('.detail-streaming-link')) closeDesktopMovieStreamingPanel();
+      });
     }
     if (streamingMobileButton && streamingMobileButton.dataset.bound !== 'true') {
       streamingMobileButton.dataset.bound = 'true';
       streamingMobileButton.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
-        if (streamingMobileButton.hidden || !streamingMobileSheet) return;
+        if (streamingMobileButton.hidden || !streamingMobileSheet || !usesMobileMovieStreamingSheet()) return;
         closeDesktopMovieStreamingPanel();
         const open = streamingMobileSheet.hidden;
         if (!open) {
