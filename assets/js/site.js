@@ -3724,34 +3724,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const margin = 16;
     const gap = 12;
     const buttonRect = button.getBoundingClientRect();
-    const actionsRect = button.closest('.detail-actions')?.getBoundingClientRect() || buttonRect;
     const panelRect = panel.getBoundingClientRect();
     const panelWidth = Math.min(panelRect.width, Math.max(1, viewportWidth - margin * 2));
     const panelHeight = Math.min(panelRect.height, Math.max(1, viewportHeight - margin * 2));
     const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
 
-    let placement = 'top';
-    let left = clamp(
+    const left = clamp(
       buttonRect.left + (buttonRect.width - panelWidth) / 2,
       margin,
       viewportWidth - margin - panelWidth
     );
-    let top = buttonRect.top - panelHeight - gap;
-
-    const rightSpace = viewportWidth - actionsRect.right - margin;
-    if (viewportWidth >= 980 && rightSpace >= panelWidth + gap) {
-      placement = 'right';
-      left = clamp(actionsRect.right + gap, margin, viewportWidth - margin - panelWidth);
-      top = clamp(buttonRect.bottom - panelHeight, margin, viewportHeight - margin - panelHeight);
-    } else if (top < margin) {
-      placement = 'bottom';
-      top = buttonRect.bottom + gap;
-    }
-
-    top = clamp(top, margin, viewportHeight - margin - panelHeight);
+    const top = clamp(
+      buttonRect.top - panelHeight - gap,
+      margin,
+      viewportHeight - margin - panelHeight
+    );
     panel.style.left = `${Math.round(left)}px`;
     panel.style.top = `${Math.round(top)}px`;
-    panel.dataset.placement = placement;
+    panel.dataset.placement = 'top';
   }
 
   function closeMobileMovieStreamingSheet(options = {}) {

@@ -18368,6 +18368,14 @@ body.profile-page-active .profile-page-name{
   margin:auto!important;
   transform:none!important;
 }
+.external-native-player-volume .volume-on,
+.external-native-player-volume .volume-off{
+  grid-area:1/1;
+}
+.external-native-player-volume .volume-on{display:block!important}
+.external-native-player-volume .volume-off{display:none!important}
+.external-native-player-overlay.is-muted .external-native-player-volume .volume-on{display:none!important}
+.external-native-player-overlay.is-muted .external-native-player-volume .volume-off{display:block!important}
 .external-native-player-quality-badge,
 .external-native-player-subtitle .player-cc-icon,
 .drive-video-player-subtitle .player-cc-icon{
