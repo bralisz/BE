@@ -5037,7 +5037,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function vkVideoEmbedUrl(info, options = {}) {
     if (!info) return '';
     const requestedHd = Number(options?.hd);
-    const hd = Number.isFinite(requestedHd) ? Math.min(4, Math.max(0, Math.round(requestedHd))) : 4;
+    const hd = Number.isFinite(requestedHd) ? Math.min(6, Math.max(0, Math.round(requestedHd))) : 4;
     const params = new URLSearchParams({
       oid: info.ownerId,
       id: info.videoId,
@@ -5407,6 +5407,60 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return subtitleCueCache.get(fetchUrl);
   }
 
+  const SUBTITLE_SYNC_NOTICE_TEXT = Object.freeze({
+    'pt-br': 'As legendas acompanham o filme em tempo real e podem apresentar atraso. Se você avançar o vídeo, elas podem não acompanhar o novo trecho.',
+    'en-us': 'Subtitles follow the movie in real time and may be delayed. If you skip ahead, they may not follow the new position.',
+    es: 'Los subtítulos siguen la película en tiempo real y pueden presentar retraso. Si adelantas el video, es posible que no acompañen el nuevo punto.',
+    fr: 'Les sous-titres suivent le film en temps réel et peuvent présenter un décalage. Si vous avancez la vidéo, ils peuvent ne pas suivre le nouveau passage.'
+  });
+
+  function subtitleSyncNoticeText() {
+    const slug = String(window.BETVLocale?.slug || 'pt-br').trim().toLowerCase();
+    return SUBTITLE_SYNC_NOTICE_TEXT[slug] || SUBTITLE_SYNC_NOTICE_TEXT['pt-br'];
+  }
+
+  function clearSubtitleSyncNoticeTimers(notice) {
+    if (!notice) return;
+    window.cancelAnimationFrame(notice.__beShowFrame || 0);
+    window.clearTimeout(notice.__beHideTimer || 0);
+    window.clearTimeout(notice.__beHiddenTimer || 0);
+    notice.__beShowFrame = 0;
+    notice.__beHideTimer = 0;
+    notice.__beHiddenTimer = 0;
+  }
+
+  function hideSubtitleSyncNotice(playerShell, immediate = true) {
+    const notice = playerShell?.querySelector?.('.player-subtitle-sync-notice');
+    if (!notice) return;
+    clearSubtitleSyncNoticeTimers(notice);
+    notice.classList.remove('is-visible');
+    if (immediate) notice.hidden = true;
+    else notice.__beHiddenTimer = window.setTimeout(() => { notice.hidden = true; }, 220);
+  }
+
+  function showSubtitleSyncNotice(playerShell) {
+    if (!(playerShell instanceof Element)) return;
+    let notice = playerShell.querySelector('.player-subtitle-sync-notice');
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.className = 'player-subtitle-sync-notice';
+      notice.hidden = true;
+      notice.setAttribute('role', 'status');
+      notice.setAttribute('aria-live', 'polite');
+      notice.setAttribute('data-i18n-ignore', 'true');
+      notice.innerHTML = '<span class="player-subtitle-sync-notice-icon" aria-hidden="true">!</span><p></p>';
+      playerShell.appendChild(notice);
+    }
+    clearSubtitleSyncNoticeTimers(notice);
+    const copy = notice.querySelector('p');
+    if (copy) copy.textContent = subtitleSyncNoticeText();
+    notice.hidden = false;
+    notice.classList.remove('is-visible');
+    void notice.offsetWidth;
+    notice.__beShowFrame = window.requestAnimationFrame(() => notice.classList.add('is-visible'));
+    notice.__beHideTimer = window.setTimeout(() => hideSubtitleSyncNotice(playerShell, false), 5000);
+  }
+
 
   function externalVideoPlayersMarkup() {
     return `<div class="external-native-player-overlay" id="externalNativePlayerOverlay" hidden aria-hidden="true" data-provider="">
@@ -5418,6 +5472,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="external-native-player-bottom-shade" id="externalNativePlayerBottomShade" aria-hidden="true"></div>
         <div class="external-native-player-wake-zone" id="externalNativePlayerWakeZone" aria-hidden="true"></div>
         <div class="external-native-player-menu external-native-player-quality-menu" id="externalNativePlayerQualityMenu" hidden role="menu" aria-label="Qualidade do vídeo">
+          <button type="button" class="external-native-player-menu-item" data-vk-quality="6" role="menuitemradio" aria-checked="false"><span>2160p</span><small>4K Ultra HD</small></button>
           <button type="button" class="external-native-player-menu-item" data-vk-quality="4" role="menuitemradio" aria-checked="true"><span>1080p</span><small>Full HD</small></button>
           <button type="button" class="external-native-player-menu-item" data-vk-quality="3" role="menuitemradio" aria-checked="false"><span>720p</span><small>HD</small></button>
           <button type="button" class="external-native-player-menu-item" data-vk-quality="2" role="menuitemradio" aria-checked="false"><span>480p</span></button>
@@ -5432,6 +5487,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           </button>
           <button class="external-native-player-action external-native-player-audio" id="externalNativePlayerAudio" type="button" aria-label="Alterar faixa de áudio" title="Faixa de áudio" aria-expanded="false" aria-controls="externalNativePlayerAudioMenu">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
+          </button>
+          <button class="external-native-player-action external-native-player-volume" id="externalNativePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar" aria-pressed="false">
+            <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
           <button class="external-native-player-action external-native-player-subtitle" id="externalNativePlayerSubtitle" type="button" aria-label="Ativar legendas" title="Legendas" aria-pressed="false" hidden>
             <span class="player-cc-icon" aria-hidden="true">CC</span>
@@ -5457,11 +5516,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const closeButton = document.getElementById('externalNativePlayerClose');
     const qualityButton = document.getElementById('externalNativePlayerQuality');
     const audioButton = document.getElementById('externalNativePlayerAudio');
+    const volumeButton = document.getElementById('externalNativePlayerVolume');
     const subtitleButton = document.getElementById('externalNativePlayerSubtitle');
     const subtitleOverlay = document.getElementById('externalNativePlayerSubtitleOverlay');
     const qualityMenu = document.getElementById('externalNativePlayerQualityMenu');
     const audioMenu = document.getElementById('externalNativePlayerAudioMenu');
-    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !subtitleButton || !subtitleOverlay || !qualityMenu || !audioMenu) return;
+    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !volumeButton || !subtitleButton || !subtitleOverlay || !qualityMenu || !audioMenu) return;
 
     let previousFocus = null;
     let activeProvider = '';
@@ -5473,6 +5533,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let vkSelectedQuality = 4;
     let vkAudioTracks = [];
     let vkSelectedAudioTrack = 'default';
+    let vkMuted = false;
+    let vkVolume = 1;
+    let vkLastAudibleVolume = 1;
     let controlsInteracting = false;
     let inactivityTimer = 0;
     let activeSubtitleUrl = '';
@@ -5569,7 +5632,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const text = String(value ?? '').trim().toLowerCase();
       const numeric = Number(text.replace(/[^0-9.]/g, ''));
       if (Number.isFinite(numeric)) {
-        if (numeric <= 4 && numeric >= 1 && !/p/.test(text)) return Math.round(numeric);
+        if (numeric <= 6 && numeric >= 1 && !/p/.test(text)) return Math.round(numeric);
+        if (numeric >= 2160) return 6;
+        if (numeric >= 1440) return 5;
         if (numeric >= 1080) return 4;
         if (numeric >= 720) return 3;
         if (numeric >= 480) return 2;
@@ -5587,7 +5652,140 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         button.setAttribute('aria-checked', String(active));
       });
       qualityButton.dataset.quality = String(normalized);
-      qualityButton.title = `Qualidade — ${normalized === 4 ? '1080p' : normalized === 3 ? '720p' : normalized === 2 ? '480p' : '360p'}`;
+      const qualityLabel = ({ 6: '2160p / 4K', 5: '1440p', 4: '1080p', 3: '720p', 2: '480p', 1: '360p' })[normalized] || 'Automática';
+      qualityButton.title = `Qualidade — ${qualityLabel}`;
+      const badge = qualityButton.querySelector('.external-native-player-quality-badge');
+      if (badge) badge.textContent = normalized === 6 ? '4K' : 'HD';
+    };
+
+    const extractVkVolumeState = (value, depth = 0) => {
+      if (!value || typeof value !== 'object' || depth > 4) return {};
+      const result = {};
+      const volumeValue = value.volume ?? value.volumeLevel ?? value.volume_level;
+      const numericVolume = Number(volumeValue);
+      if (Number.isFinite(numericVolume) && numericVolume >= 0) {
+        result.volume = numericVolume > 1 ? Math.min(1, numericVolume / 100) : Math.min(1, numericVolume);
+      }
+      const mutedValue = value.muted ?? value.mute ?? value.isMuted ?? value.is_muted;
+      if (typeof mutedValue === 'boolean') result.muted = mutedValue;
+      else if (mutedValue === 0 || mutedValue === 1 || mutedValue === '0' || mutedValue === '1') result.muted = String(mutedValue) === '1';
+      for (const key of ['data', 'payload', 'state', 'params', 'player', 'detail']) {
+        const nested = extractVkVolumeState(value[key], depth + 1);
+        if (result.volume === undefined && nested.volume !== undefined) result.volume = nested.volume;
+        if (result.muted === undefined && nested.muted !== undefined) result.muted = nested.muted;
+      }
+      return result;
+    };
+
+    const syncVkVolumeUi = (state = {}) => {
+      const normalized = extractVkVolumeState(state);
+      if (Number.isFinite(normalized.volume)) {
+        vkVolume = normalized.volume;
+        if (vkVolume > 0) vkLastAudibleVolume = vkVolume;
+      }
+      if (typeof normalized.muted === 'boolean') vkMuted = normalized.muted;
+      const silent = vkMuted || vkVolume === 0;
+      overlay.classList.toggle('is-muted', silent);
+      volumeButton.setAttribute('aria-pressed', String(silent));
+      volumeButton.setAttribute('aria-label', silent ? 'Ativar som' : 'Silenciar');
+      volumeButton.title = silent ? 'Ativar som' : 'Silenciar';
+    };
+
+    const postVkPlayerMessage = payload => {
+      if (activeProvider !== 'vk' || !frame.contentWindow) return false;
+      try {
+        frame.contentWindow.postMessage(payload, '*');
+        return true;
+      } catch (_) {
+        return false;
+      }
+    };
+
+    const readVkVolumeState = async () => {
+      if (!vkPlayer || !vkApiReady) return;
+      const state = {};
+      if (typeof vkPlayer.getVolume === 'function') {
+        try { state.volume = await Promise.resolve(vkPlayer.getVolume()); } catch (_) {}
+      }
+      if (typeof vkPlayer.isMuted === 'function') {
+        try { state.muted = await Promise.resolve(vkPlayer.isMuted()); } catch (_) {}
+      }
+      syncVkVolumeUi(state);
+    };
+
+    const setVkMuted = async muted => {
+      if (activeProvider !== 'vk') return false;
+      const shouldMute = Boolean(muted);
+      if (shouldMute) {
+        if (vkVolume > 0) vkLastAudibleVolume = vkVolume;
+        vkMuted = true;
+      } else {
+        vkMuted = false;
+        if (vkVolume === 0) vkVolume = Math.max(.05, vkLastAudibleVolume || 1);
+      }
+      syncVkVolumeUi({ muted: vkMuted, volume: vkVolume });
+
+      let applied = false;
+      if (vkPlayer && vkApiReady) {
+        const methodNames = shouldMute ? ['mute'] : ['unmute', 'unMute'];
+        for (const name of methodNames) {
+          if (typeof vkPlayer[name] !== 'function') continue;
+          try {
+            await Promise.resolve(vkPlayer[name]());
+            applied = true;
+            break;
+          } catch (_) {}
+        }
+        if (!applied && typeof vkPlayer.setVolume === 'function') {
+          try {
+            await Promise.resolve(vkPlayer.setVolume(shouldMute ? 0 : Math.max(.05, vkLastAudibleVolume || 1)));
+            applied = true;
+          } catch (_) {}
+        }
+      }
+
+      applied = postVkPlayerMessage({ method: shouldMute ? 'mute' : 'unmute' }) || applied;
+      if (!shouldMute) {
+        applied = postVkPlayerMessage({ method: 'set_volume', volume: Math.max(.05, vkLastAudibleVolume || 1) }) || applied;
+      }
+      window.setTimeout(readVkVolumeState, 180);
+      return applied;
+    };
+
+    const disableVkNativeSubtitles = async () => {
+      if (activeProvider !== 'vk' || !activeSubtitleUrl) return false;
+      let applied = false;
+      if (vkPlayer && vkApiReady) {
+        for (const name of ['disableSubtitles', 'hideSubtitles', 'disableCaptions', 'hideCaptions']) {
+          if (typeof vkPlayer[name] !== 'function') continue;
+          try { await Promise.resolve(vkPlayer[name]()); applied = true; } catch (_) {}
+        }
+        for (const name of ['setSubtitles', 'setCaptions', 'setSubtitleVisibility', 'setCaptionsVisibility']) {
+          if (typeof vkPlayer[name] !== 'function') continue;
+          try { await Promise.resolve(vkPlayer[name](false)); applied = true; } catch (_) {}
+        }
+        for (const name of ['setSubtitleTrack', 'setCaptionsTrack']) {
+          if (typeof vkPlayer[name] !== 'function') continue;
+          try { await Promise.resolve(vkPlayer[name](null)); applied = true; } catch (_) {}
+        }
+      }
+      [
+        { method: 'set_subtitles', enabled: false, visible: false, track: null },
+        { method: 'set_captions', enabled: false, visible: false, track: null },
+        { method: 'disable_subtitles' },
+        { event: 'command', func: 'setSubtitles', args: [false] },
+        { event: 'command', func: 'setCaptions', args: [false] }
+      ].forEach(payload => { applied = postVkPlayerMessage(payload) || applied; });
+      return applied;
+    };
+
+    const scheduleVkNativeSubtitleSuppression = () => {
+      if (activeProvider !== 'vk' || !activeSubtitleUrl) return;
+      [260, 900, 1800].forEach(delay => {
+        window.setTimeout(() => {
+          if (!overlay.hidden && activeProvider === 'vk' && activeSubtitleUrl) disableVkNativeSubtitles();
+        }, delay);
+      });
     };
 
     const normalizeVkAudioTracks = raw => {
@@ -5693,6 +5891,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const bindVkApi = () => {
       if (activeProvider !== 'vk' || !activeVkInfo || overlay.hidden) return;
       const token = ++vkBindToken;
+      const restoreMuted = vkMuted || vkVolume === 0;
       ensureVkVideoApiForExternalPlayer().then(() => {
         if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden) return;
         try {
@@ -5707,9 +5906,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             if (quality !== undefined && quality !== null && String(quality).trim()) syncQualityMenu(quality);
             discoverVkAudioTracks();
           };
+          const syncVolumeFromApi = state => {
+            if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden) return;
+            const normalized = extractVkVolumeState(state);
+            if (normalized.volume !== undefined || normalized.muted !== undefined) syncVkVolumeUi(normalized);
+            else readVkVolumeState();
+          };
+          const keepSiteSubtitlesOnly = () => {
+            if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden || !activeSubtitleUrl) return;
+            disableVkNativeSubtitles();
+          };
           if (vkPlayer && typeof vkPlayer.on === 'function') {
             ['inited', 'started', 'qualitychange'].forEach(eventName => {
               try { vkPlayer.on(eventName, syncQualityFromApi); } catch (_) {}
+            });
+            ['inited', 'volumechange'].forEach(eventName => {
+              try { vkPlayer.on(eventName, syncVolumeFromApi); } catch (_) {}
+            });
+            ['inited', 'started', 'resumed'].forEach(eventName => {
+              try { vkPlayer.on(eventName, keepSiteSubtitlesOnly); } catch (_) {}
             });
             const syncSubtitleFromApi = state => {
               if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden) return;
@@ -5720,7 +5935,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               try { vkPlayer.on(eventName, syncSubtitleFromApi); } catch (_) {}
             });
           }
+          if (restoreMuted) setVkMuted(true);
+          else readVkVolumeState();
+          keepSiteSubtitlesOnly();
           window.setTimeout(() => syncQualityFromApi({}), 180);
+          window.setTimeout(readVkVolumeState, 320);
+          window.setTimeout(keepSiteSubtitlesOnly, 420);
           window.setTimeout(discoverVkAudioTracks, 600);
         } catch (_) {
           vkApiReady = false;
@@ -5810,7 +6030,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const switchVkQuality = quality => {
-      const hd = Math.min(4, Math.max(1, Number(quality) || 4));
+      const hd = Math.min(6, Math.max(1, Math.round(Number(quality) || 4)));
       if (activeProvider !== 'vk' || !activeVkInfo) return;
       const currentTime = readVkCurrentTime();
       const paused = readVkPaused();
@@ -5820,6 +6040,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frame.src = vkVideoEmbedUrl(activeVkInfo, { hd, startSeconds: currentTime, autoplay: !paused });
       frame.addEventListener('load', bindVkApi, { once: true });
       window.setTimeout(bindVkApi, 900);
+      scheduleVkNativeSubtitleSuppression();
     };
 
     const setVkAudioTrack = async trackId => {
@@ -5876,6 +6097,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeVkInfo = null;
       vkAudioTracks = [];
       renderVkAudioTracks([]);
+      vkMuted = false;
+      vkVolume = 1;
+      vkLastAudibleVolume = 1;
+      syncVkVolumeUi({ muted: false, volume: 1 });
       syncBodyLock();
       if (restoreFocus && previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
       previousFocus = null;
@@ -5898,6 +6123,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '');
       vkSelectedQuality = 4;
       renderVkAudioTracks([]);
+      vkMuted = false;
+      vkVolume = 1;
+      vkLastAudibleVolume = 1;
+      syncVkVolumeUi({ muted: false, volume: 1 });
       syncQualityMenu(4);
       const providerLabel = normalizedProvider === 'vk' ? 'VK Video' : 'YouTube';
       const mediaTitle = String(context?.title || '').trim();
@@ -5915,6 +6144,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (normalizedProvider === 'vk') {
         frame.addEventListener('load', bindVkApi, { once: true });
         window.setTimeout(bindVkApi, 900);
+        scheduleVkNativeSubtitleSuppression();
         window.setTimeout(() => {
           if (!overlay.hidden && activeProvider === 'vk') showControls(false);
         }, 80);
@@ -5959,6 +6189,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(willOpen);
     });
 
+    volumeButton.addEventListener('click', () => {
+      if (activeProvider !== 'vk') return;
+      setVkMuted(!(vkMuted || vkVolume === 0));
+      showControls(true);
+    });
+
     qualityMenu.addEventListener('click', event => {
       const option = event.target.closest('[data-vk-quality]');
       if (!option) return;
@@ -5988,6 +6224,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', subtitlesVisible ? 'Ocultar legendas' : 'Mostrar legendas');
         subtitleButton.title = subtitlesVisible ? 'Legendas ativadas' : 'Legendas ocultas';
         syncVkSubtitle();
+        disableVkNativeSubtitles();
         showControls(false);
         return;
       }
@@ -6007,6 +6244,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = 'Legendas ativadas';
         startVkSubtitleSync();
+        disableVkNativeSubtitles();
       } catch (_) {
         if (token !== subtitleLoadToken) return;
         subtitleCues = [];
@@ -6071,6 +6309,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (tracks.length) renderVkAudioTracks(tracks);
       const quality = payload && typeof payload === 'object' ? (payload.quality ?? payload?.data?.quality ?? payload?.state?.quality) : null;
       if (quality !== null && quality !== undefined) syncQualityMenu(quality);
+      const volumeState = extractVkVolumeState(payload);
+      if (volumeState.volume !== undefined || volumeState.muted !== undefined) syncVkVolumeUi(volumeState);
       if (payload && typeof payload === 'object' && updateVkSubtitleTime(payload)) syncVkSubtitle();
     });
 
@@ -6531,6 +6771,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeResourceKey = '';
       activeExternalUrl = '';
       activeSourceLink = null;
+      hideSubtitleSyncNotice(shell, true);
       resetDriveSubtitles();
       streamAttempt = '';
       mediaReady = false;
@@ -6658,6 +6899,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', subtitlesVisible ? 'Ocultar legendas' : 'Mostrar legendas');
         subtitleButton.title = subtitlesVisible ? (frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas') : 'Legendas ocultas';
         syncDriveSubtitle();
+        if (subtitlesVisible) showSubtitleSyncNotice(shell);
+        else hideSubtitleSyncNotice(shell, true);
         showControls(false);
         return;
       }
@@ -6681,6 +6924,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas';
         syncDriveSubtitle();
+        showSubtitleSyncNotice(shell);
       } catch (_) {
         if (token !== subtitleLoadToken) return;
         clearFrameSubtitleSync();

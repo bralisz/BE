@@ -13648,8 +13648,12 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   background:#fff;
   box-shadow:0 0 0 2px rgba(17,19,19,.9);
 }
+.external-native-player-volume .volume-off{display:none}
+.external-native-player-overlay.is-muted .external-native-player-volume .volume-on{display:none}
+.external-native-player-overlay.is-muted .external-native-player-volume .volume-off{display:block}
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-quality,
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-audio,
+.external-native-player-overlay:not([data-provider="vk"]) .external-native-player-volume,
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-menu{display:none!important}
 .external-native-player-menu{
   position:absolute;
@@ -14467,7 +14471,7 @@ body.profile-page-active .profile-page-hero{
     opacity:0!important;
   }
 
-  /* VK: mesma tab HD/áudio/X do desktop, mas adaptada ao toque. */
+  /* VK: mesma tab de qualidade/áudio/som/legenda/X do desktop, adaptada ao toque. */
   .external-native-player-overlay[data-provider="vk"] .external-native-player-toolbar{
     bottom:max(70px,calc(env(safe-area-inset-bottom) + 60px))!important;
   }
@@ -18096,6 +18100,59 @@ body.profile-page-active .profile-page-name{
 .drive-video-player-subtitle.is-error{opacity:.72}
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-subtitle{display:none!important}
 
+.player-subtitle-sync-notice{
+  position:absolute;
+  z-index:60;
+  top:max(20px,calc(env(safe-area-inset-top) + 12px));
+  left:50%;
+  width:min(570px,calc(100% - 32px));
+  box-sizing:border-box;
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  padding:12px 14px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:15px;
+  background:rgba(13,16,20,.88);
+  color:#fff;
+  box-shadow:0 14px 40px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.06);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  backdrop-filter:blur(18px) saturate(140%);
+  opacity:0;
+  transform:translate(-50%,-9px) scale(.985);
+  transition:opacity .2s ease,transform .2s ease;
+  pointer-events:none;
+  user-select:none;
+}
+.player-subtitle-sync-notice[hidden]{display:none!important}
+.player-subtitle-sync-notice.is-visible{
+  opacity:1;
+  transform:translate(-50%,0) scale(1);
+}
+.player-subtitle-sync-notice-icon{
+  display:grid;
+  place-items:center;
+  flex:0 0 24px;
+  width:24px;
+  height:24px;
+  margin-top:1px;
+  border-radius:50%;
+  background:#f4c24f;
+  color:#17120a;
+  font-size:14px;
+  line-height:1;
+  font-weight:950;
+  box-shadow:0 0 0 4px rgba(244,194,79,.13);
+}
+.player-subtitle-sync-notice p{
+  margin:0;
+  color:rgba(255,255,255,.94);
+  font-size:13px;
+  line-height:1.42;
+  font-weight:650;
+  text-align:left;
+}
+
 .external-native-player-subtitle-overlay,
 .drive-video-player-subtitle-overlay{
   position:absolute;
@@ -18131,6 +18188,15 @@ body.profile-page-active .profile-page-name{
 .drive-video-player-overlay.is-frame-mode .drive-video-player-subtitle-overlay{display:none!important}
 
 @media(max-width:700px){
+  .player-subtitle-sync-notice{
+    top:max(12px,calc(env(safe-area-inset-top) + 7px));
+    width:calc(100% - 20px);
+    gap:10px;
+    padding:11px 12px;
+    border-radius:13px;
+  }
+  .player-subtitle-sync-notice-icon{flex-basis:22px;width:22px;height:22px;font-size:13px}
+  .player-subtitle-sync-notice p{font-size:12px;line-height:1.38}
   .external-native-player-subtitle-overlay{
     bottom:max(132px,calc(env(safe-area-inset-bottom) + 122px));
     max-width:90vw;
@@ -18146,6 +18212,13 @@ body.profile-page-active .profile-page-name{
 }
 
 @media (max-width:920px) and (orientation:landscape), (pointer:coarse) and (max-height:620px){
+  .player-subtitle-sync-notice{
+    top:max(8px,calc(env(safe-area-inset-top) + 5px));
+    width:min(620px,76vw);
+    padding:8px 11px;
+  }
+  .player-subtitle-sync-notice-icon{flex-basis:20px;width:20px;height:20px;font-size:12px}
+  .player-subtitle-sync-notice p{font-size:11px;line-height:1.32}
   .external-native-player-subtitle-overlay{
     bottom:max(88px,calc(env(safe-area-inset-bottom) + 78px));
     max-width:84vw;
@@ -18158,6 +18231,10 @@ body.profile-page-active .profile-page-name{
     padding:5px 9px;
     font-size:clamp(14px,2.8vw,20px);
   }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .player-subtitle-sync-notice{transition:none!important}
 }
 
 /* 15/08/2026 — restaura a edição completa do próprio perfil no mobile.
@@ -18199,4 +18276,3 @@ body.profile-page-active .profile-page-name{
     z-index:10260!important;
   }
 }
-
