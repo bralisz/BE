@@ -5481,6 +5481,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let subtitlesVisible = false;
     let subtitleSyncTimer = 0;
     let subtitleLoadToken = 0;
+    let vkSubtitleTime = 0;
+    let vkSubtitleReadPending = false;
+    let vkSubtitleReadToken = 0;
 
     const syncBodyLock = () => {
       document.body.classList.toggle('external-video-player-open', !overlay.hidden);
@@ -5524,6 +5527,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const resetVkPlayer = () => {
       vkBindToken += 1;
+      vkSubtitleReadToken += 1;
+      vkSubtitleReadPending = false;
       if (vkPlayer && typeof vkPlayer.destroy === 'function') {
         try { vkPlayer.destroy(); } catch (_) {}
       }
@@ -5650,6 +5655,41 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     };
 
+    const extractVkPlaybackTime = (value, depth = 0) => {
+      if (depth > 4 || value === null || value === undefined) return NaN;
+      if (typeof value === 'number') return Number.isFinite(value) && value >= 0 && value <= 86400 ? value : NaN;
+      if (typeof value === 'string') {
+        const normalized = value.trim();
+        if (!normalized || !/^\d+(?:\.\d+)?$/.test(normalized)) return NaN;
+        const numeric = Number(normalized);
+        return Number.isFinite(numeric) && numeric >= 0 && numeric <= 86400 ? numeric : NaN;
+      }
+      if (typeof value !== 'object') return NaN;
+
+      const timeKeys = [
+        'time', 'currentTime', 'current_time', 'position', 'playbackTime',
+        'playback_time', 'progressTime', 'progress_time', 'seconds'
+      ];
+      for (const key of timeKeys) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        const time = extractVkPlaybackTime(value[key], depth + 1);
+        if (Number.isFinite(time)) return time;
+      }
+      for (const key of ['data', 'payload', 'state', 'params', 'player', 'detail']) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        const time = extractVkPlaybackTime(value[key], depth + 1);
+        if (Number.isFinite(time)) return time;
+      }
+      return NaN;
+    };
+
+    const updateVkSubtitleTime = value => {
+      const time = extractVkPlaybackTime(value);
+      if (!Number.isFinite(time)) return false;
+      vkSubtitleTime = time;
+      return true;
+    };
+
     const bindVkApi = () => {
       if (activeProvider !== 'vk' || !activeVkInfo || overlay.hidden) return;
       const token = ++vkBindToken;
@@ -5671,6 +5711,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             ['inited', 'started', 'qualitychange'].forEach(eventName => {
               try { vkPlayer.on(eventName, syncQualityFromApi); } catch (_) {}
             });
+            const syncSubtitleFromApi = state => {
+              if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden) return;
+              if (!updateVkSubtitleTime(state)) readVkCurrentTime();
+              syncVkSubtitle();
+            };
+            ['inited', 'started', 'resumed', 'timeupdate', 'seeking', 'seeked', 'paused', 'ended'].forEach(eventName => {
+              try { vkPlayer.on(eventName, syncSubtitleFromApi); } catch (_) {}
+            });
           }
           window.setTimeout(() => syncQualityFromApi({}), 180);
           window.setTimeout(discoverVkAudioTracks, 600);
@@ -5682,12 +5730,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
 
     const readVkCurrentTime = () => {
-      if (!vkPlayer || !vkApiReady || typeof vkPlayer.getCurrentTime !== 'function') return 0;
+      if (!vkPlayer || !vkApiReady || typeof vkPlayer.getCurrentTime !== 'function') return vkSubtitleTime;
+      if (vkSubtitleReadPending) return vkSubtitleTime;
       try {
-        const value = Number(vkPlayer.getCurrentTime());
-        return Number.isFinite(value) && value > 0 ? value : 0;
+        const value = vkPlayer.getCurrentTime();
+        if (value && typeof value.then === 'function') {
+          const token = vkSubtitleReadToken;
+          vkSubtitleReadPending = true;
+          Promise.resolve(value).then(result => {
+            if (token !== vkSubtitleReadToken || activeProvider !== 'vk' || overlay.hidden) return;
+            if (updateVkSubtitleTime(result)) syncVkSubtitle();
+          }).catch(() => {}).finally(() => {
+            if (token === vkSubtitleReadToken) vkSubtitleReadPending = false;
+          });
+          return vkSubtitleTime;
+        }
+        updateVkSubtitleTime(value);
+        return vkSubtitleTime;
       } catch (_) {
-        return 0;
+        return vkSubtitleTime;
       }
     };
 
@@ -5713,6 +5774,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const resetExternalSubtitles = () => {
       subtitleLoadToken += 1;
       stopVkSubtitleSync();
+      vkSubtitleReadToken += 1;
+      vkSubtitleReadPending = false;
+      vkSubtitleTime = 0;
       activeSubtitleUrl = '';
       subtitleCues = [];
       subtitlesEnabled = false;
@@ -6007,6 +6071,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (tracks.length) renderVkAudioTracks(tracks);
       const quality = payload && typeof payload === 'object' ? (payload.quality ?? payload?.data?.quality ?? payload?.state?.quality) : null;
       if (quality !== null && quality !== undefined) syncQualityMenu(quality);
+      if (payload && typeof payload === 'object' && updateVkSubtitleTime(payload)) syncVkSubtitle();
     });
 
     window.addEventListener('keydown', event => {
@@ -6127,7 +6192,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let subtitlesVisible = false;
     let subtitleLoadToken = 0;
     let frameSubtitleTimer = 0;
-    let frameSubtitleStartedAt = 0;
+    let frameSubtitleBaseTime = 0;
+    let frameSubtitleTickedAt = 0;
+    let frameSubtitlePlaying = false;
 
     const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
     const ownsFullscreen = () => {
@@ -6166,15 +6233,80 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       fullscreenButton.title = active ? 'Sair da tela cheia' : 'Tela cheia';
     };
 
-    const clearFrameSubtitleSync = () => {
+    const clearFrameSubtitleSync = (resetClock = false) => {
       window.clearInterval(frameSubtitleTimer);
       frameSubtitleTimer = 0;
-      frameSubtitleStartedAt = 0;
+      if (resetClock) {
+        frameSubtitleBaseTime = 0;
+        frameSubtitleTickedAt = 0;
+        frameSubtitlePlaying = false;
+      }
     };
 
     const readFrameSubtitleTime = () => {
-      if (!frameSubtitleStartedAt) return 0;
-      return Math.max(0, (performance.now() - frameSubtitleStartedAt) / 1000);
+      const elapsed = frameSubtitlePlaying && frameSubtitleTickedAt
+        ? Math.max(0, (performance.now() - frameSubtitleTickedAt) / 1000)
+        : 0;
+      return Math.max(0, frameSubtitleBaseTime + elapsed);
+    };
+
+    const setFrameSubtitleClock = (time, playing = frameSubtitlePlaying) => {
+      const nextTime = Number(time);
+      if (Number.isFinite(nextTime) && nextTime >= 0 && nextTime <= 86400) {
+        frameSubtitleBaseTime = nextTime;
+      } else {
+        frameSubtitleBaseTime = readFrameSubtitleTime();
+      }
+      frameSubtitlePlaying = Boolean(playing);
+      frameSubtitleTickedAt = performance.now();
+    };
+
+    const extractDriveFrameTime = (value, depth = 0, timeField = false) => {
+      if (depth > 4 || value === null || value === undefined) return NaN;
+      if (typeof value === 'number') return timeField && Number.isFinite(value) && value >= 0 && value <= 86400 ? value : NaN;
+      if (typeof value === 'string') {
+        const normalized = value.trim();
+        if (!timeField || !/^\d+(?:\.\d+)?$/.test(normalized)) return NaN;
+        const numeric = Number(normalized);
+        return Number.isFinite(numeric) && numeric >= 0 && numeric <= 86400 ? numeric : NaN;
+      }
+      if (typeof value !== 'object') return NaN;
+      for (const key of ['currentTime', 'current_time', 'playbackTime', 'playback_time', 'position', 'time', 'seconds']) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        const time = extractDriveFrameTime(value[key], depth + 1, true);
+        if (Number.isFinite(time)) return time;
+      }
+      for (const key of ['data', 'payload', 'state', 'params', 'player', 'detail']) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        const time = extractDriveFrameTime(value[key], depth + 1, false);
+        if (Number.isFinite(time)) return time;
+      }
+      return NaN;
+    };
+
+    const extractDriveFramePlaying = (value, depth = 0) => {
+      if (depth > 4 || value === null || value === undefined) return null;
+      if (typeof value === 'string') {
+        const state = value.trim().toLowerCase();
+        if (!state) return null;
+        if (/(?:pause|paused|ended|stopped)/.test(state)) return false;
+        if (/(?:play|playing|started|resumed)/.test(state)) return true;
+        return null;
+      }
+      if (typeof value !== 'object') return null;
+      if (typeof value.paused === 'boolean') return !value.paused;
+      if (typeof value.playing === 'boolean') return value.playing;
+      for (const key of ['event', 'eventName', 'event_name', 'type', 'status', 'playerState', 'player_state', 'state']) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        const playing = extractDriveFramePlaying(value[key], depth + 1);
+        if (playing !== null) return playing;
+      }
+      for (const key of ['data', 'payload', 'params', 'player', 'detail']) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        const playing = extractDriveFramePlaying(value[key], depth + 1);
+        if (playing !== null) return playing;
+      }
+      return null;
     };
 
     const syncDriveSubtitle = () => {
@@ -6195,7 +6327,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const resetDriveSubtitles = () => {
       subtitleLoadToken += 1;
-      clearFrameSubtitleSync();
+      clearFrameSubtitleSync(true);
       activeSubtitleUrl = '';
       subtitleCues = [];
       subtitlesEnabled = false;
@@ -6303,8 +6435,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       streamAttempt = 'frame';
       window.clearTimeout(fallbackTimer);
       fallbackTimer = 0;
-      clearFrameSubtitleSync();
-      frameSubtitleStartedAt = performance.now();
+      clearFrameSubtitleSync(true);
+      setFrameSubtitleClock(0, false);
       video.pause();
       video.removeAttribute('src');
       video.load();
@@ -6327,6 +6459,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(true);
     };
 
+    const tryRedirectStream = () => {
+      if (!activeFileId || overlay.hidden || frameMode || mediaReady || streamAttempt === 'redirect') return;
+      streamAttempt = 'redirect';
+      mediaReady = false;
+      window.clearTimeout(fallbackTimer);
+      setInteractive(false);
+      overlay.classList.add('is-source-syncing');
+      setLoading('Tentando uma rota alternativa do Google Drive...');
+      video.pause();
+      // O endpoint apenas encontra a URL final do Google e responde com
+      // redirecionamento; o arquivo de vídeo não é retransmitido pela Vercel.
+      video.src = googleDriveStreamUrl(activeFileId, activeResourceKey);
+      video.load();
+      requestPlayback();
+      fallbackTimer = window.setTimeout(() => {
+        if (!mediaReady && !overlay.hidden && !frameMode) useFrameFallback();
+      }, 12000);
+    };
+
     const tryDirectStream = () => {
       if (!activeFileId || overlay.hidden || frameMode || mediaReady || streamAttempt === 'direct') return;
       streamAttempt = 'direct';
@@ -6340,7 +6491,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       video.load();
       requestPlayback();
       fallbackTimer = window.setTimeout(() => {
-        if (!mediaReady && !overlay.hidden && !frameMode) useFrameFallback();
+        if (mediaReady || overlay.hidden || frameMode) return;
+        if (activeSubtitleUrl) tryRedirectStream();
+        else useFrameFallback();
       }, 18000);
     };
 
@@ -6348,9 +6501,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (overlay.hidden || frameMode || mediaReady) return;
       window.clearTimeout(fallbackTimer);
       fallbackTimer = 0;
-      // Vídeos do Drive não passam mais pelo proxy da Vercel. Se o link
-      // direto falhar, usamos o player nativo do Google Drive como fallback.
-      if (streamAttempt === 'direct') useFrameFallback();
+      // Em filmes legendados tentamos primeiro uma segunda URL controlável,
+      // para que currentTime e seek continuem disponíveis para a legenda.
+      if (streamAttempt === 'direct' && activeSubtitleUrl) tryRedirectStream();
+      else if (streamAttempt === 'direct' || streamAttempt === 'redirect') useFrameFallback();
       else tryDirectStream();
     };
 
@@ -6520,7 +6674,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitlesVisible = true;
         clearFrameSubtitleSync();
         if (frameMode) {
-          frameSubtitleStartedAt = performance.now();
           frameSubtitleTimer = window.setInterval(syncDriveSubtitle, 180);
         }
         subtitleButton.classList.add('is-active');
@@ -6615,8 +6768,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     frame.addEventListener('load', () => {
       if (overlay.hidden || !frameMode || frame.src === 'about:blank') return;
+      setFrameSubtitleClock(readFrameSubtitleTime(), true);
+      syncDriveSubtitle();
       syncMobileDriveFrameViewport();
       setLoading('', false);
+    });
+
+    // O preview do Drive não possui uma API pública de player. Quando uma
+    // versão do iframe enviar estado por postMessage, aproveitamos o tempo e
+    // o estado recebidos; nas demais versões permanece o relógio de fallback.
+    window.addEventListener('message', event => {
+      if (overlay.hidden || !frameMode || event.source !== frame.contentWindow) return;
+      if (event.origin && event.origin !== 'null') {
+        let hostname = '';
+        try { hostname = new URL(event.origin).hostname; } catch (_) { return; }
+        if (!/(^|\.)google(?:usercontent)?\.com$/i.test(hostname)) return;
+      }
+      let payload = event.data;
+      if (typeof payload === 'string') {
+        try { payload = JSON.parse(payload); } catch (_) { /* alguns eventos são texto simples */ }
+      }
+      const time = extractDriveFrameTime(payload);
+      const playing = extractDriveFramePlaying(payload);
+      if (!Number.isFinite(time) && playing === null) return;
+      setFrameSubtitleClock(Number.isFinite(time) ? time : readFrameSubtitleTime(), playing === null ? frameSubtitlePlaying : playing);
+      syncDriveSubtitle();
     });
 
     video.addEventListener('loadstart', () => {
