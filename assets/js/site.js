@@ -5489,8 +5489,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
           </button>
           <button class="external-native-player-action external-native-player-volume" id="externalNativePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar" aria-pressed="false">
-            <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m17 9 4 4m0-4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10v4h3.2l4.3 3.5v-11L7.7 10H4.5Z"/><path d="M15.2 9.1a4.2 4.2 0 0 1 0 5.8M17.6 6.8a7.3 7.3 0 0 1 0 10.4"/></svg>
+            <svg class="volume-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10v4h3.2l4.3 3.5v-11L7.7 10H4.5Z"/><path d="m5 5 14 14"/></svg>
           </button>
           <button class="external-native-player-action external-native-player-subtitle" id="externalNativePlayerSubtitle" type="button" aria-label="Ativar legendas" title="Legendas" aria-pressed="false" hidden>
             <span class="player-cc-icon" aria-hidden="true">CC</span>
@@ -5752,42 +5752,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return applied;
     };
 
-    const disableVkNativeSubtitles = async () => {
-      if (activeProvider !== 'vk' || !activeSubtitleUrl) return false;
-      let applied = false;
-      if (vkPlayer && vkApiReady) {
-        for (const name of ['disableSubtitles', 'hideSubtitles', 'disableCaptions', 'hideCaptions']) {
-          if (typeof vkPlayer[name] !== 'function') continue;
-          try { await Promise.resolve(vkPlayer[name]()); applied = true; } catch (_) {}
-        }
-        for (const name of ['setSubtitles', 'setCaptions', 'setSubtitleVisibility', 'setCaptionsVisibility']) {
-          if (typeof vkPlayer[name] !== 'function') continue;
-          try { await Promise.resolve(vkPlayer[name](false)); applied = true; } catch (_) {}
-        }
-        for (const name of ['setSubtitleTrack', 'setCaptionsTrack']) {
-          if (typeof vkPlayer[name] !== 'function') continue;
-          try { await Promise.resolve(vkPlayer[name](null)); applied = true; } catch (_) {}
-        }
-      }
-      [
-        { method: 'set_subtitles', enabled: false, visible: false, track: null },
-        { method: 'set_captions', enabled: false, visible: false, track: null },
-        { method: 'disable_subtitles' },
-        { event: 'command', func: 'setSubtitles', args: [false] },
-        { event: 'command', func: 'setCaptions', args: [false] }
-      ].forEach(payload => { applied = postVkPlayerMessage(payload) || applied; });
-      return applied;
-    };
-
-    const scheduleVkNativeSubtitleSuppression = () => {
-      if (activeProvider !== 'vk' || !activeSubtitleUrl) return;
-      [260, 900, 1800].forEach(delay => {
-        window.setTimeout(() => {
-          if (!overlay.hidden && activeProvider === 'vk' && activeSubtitleUrl) disableVkNativeSubtitles();
-        }, delay);
-      });
-    };
-
     const normalizeVkAudioTracks = raw => {
       const list = Array.isArray(raw) ? raw : [];
       const result = [];
@@ -5912,19 +5876,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             if (normalized.volume !== undefined || normalized.muted !== undefined) syncVkVolumeUi(normalized);
             else readVkVolumeState();
           };
-          const keepSiteSubtitlesOnly = () => {
-            if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden || !activeSubtitleUrl) return;
-            disableVkNativeSubtitles();
-          };
           if (vkPlayer && typeof vkPlayer.on === 'function') {
             ['inited', 'started', 'qualitychange'].forEach(eventName => {
               try { vkPlayer.on(eventName, syncQualityFromApi); } catch (_) {}
             });
             ['inited', 'volumechange'].forEach(eventName => {
               try { vkPlayer.on(eventName, syncVolumeFromApi); } catch (_) {}
-            });
-            ['inited', 'started', 'resumed'].forEach(eventName => {
-              try { vkPlayer.on(eventName, keepSiteSubtitlesOnly); } catch (_) {}
             });
             const syncSubtitleFromApi = state => {
               if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden) return;
@@ -5937,10 +5894,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           }
           if (restoreMuted) setVkMuted(true);
           else readVkVolumeState();
-          keepSiteSubtitlesOnly();
           window.setTimeout(() => syncQualityFromApi({}), 180);
           window.setTimeout(readVkVolumeState, 320);
-          window.setTimeout(keepSiteSubtitlesOnly, 420);
           window.setTimeout(discoverVkAudioTracks, 600);
         } catch (_) {
           vkApiReady = false;
@@ -6014,6 +5969,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const configureExternalSubtitles = value => {
       resetExternalSubtitles();
+      // O iframe do VK não expõe controle público para a faixa de legenda nativa.
+      // A legenda enviada pelo site é renderizada separadamente sobre o player.
       activeSubtitleUrl = activeProvider === 'vk' ? String(value || '').trim() : '';
       subtitleButton.hidden = !activeSubtitleUrl;
     };
@@ -6040,7 +5997,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frame.src = vkVideoEmbedUrl(activeVkInfo, { hd, startSeconds: currentTime, autoplay: !paused });
       frame.addEventListener('load', bindVkApi, { once: true });
       window.setTimeout(bindVkApi, 900);
-      scheduleVkNativeSubtitleSuppression();
     };
 
     const setVkAudioTrack = async trackId => {
@@ -6144,7 +6100,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (normalizedProvider === 'vk') {
         frame.addEventListener('load', bindVkApi, { once: true });
         window.setTimeout(bindVkApi, 900);
-        scheduleVkNativeSubtitleSuppression();
         window.setTimeout(() => {
           if (!overlay.hidden && activeProvider === 'vk') showControls(false);
         }, 80);
@@ -6224,7 +6179,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', subtitlesVisible ? 'Ocultar legendas' : 'Mostrar legendas');
         subtitleButton.title = subtitlesVisible ? 'Legendas ativadas' : 'Legendas ocultas';
         syncVkSubtitle();
-        disableVkNativeSubtitles();
         showControls(false);
         return;
       }
@@ -6244,7 +6198,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = 'Legendas ativadas';
         startVkSubtitleSync();
-        disableVkNativeSubtitles();
       } catch (_) {
         if (token !== subtitleLoadToken) return;
         subtitleCues = [];
