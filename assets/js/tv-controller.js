@@ -27,10 +27,12 @@
 
   let client = null;
   let user = null;
+  let userProfile = null;
   let activeSessionId = '';
   let activeCode = '';
   let pendingMedia = null;
   let busy = false;
+  let castToastTimer = 0;
 
   function safeCode(value) {
     return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
@@ -40,20 +42,73 @@
     return `${location.pathname}${location.search}`;
   }
 
+  function profileMetadata() {
+    return user?.user_metadata || {};
+  }
+
+  function accountProfile() {
+    const metadata = profileMetadata();
+    return {
+      displayName: String(userProfile?.display_name || metadata.display_name || metadata.full_name || user?.email || 'Sua conta').trim(),
+      username: String(userProfile?.username || metadata.username || metadata.user_name || '').trim().replace(/^@+/, ''),
+      avatarUrl: String(userProfile?.avatar_url || metadata.profile_avatar_url || '').trim(),
+      bannerUrl: String(userProfile?.banner_url || metadata.profile_banner_url || metadata.banner_url || '').trim()
+    };
+  }
+
+  async function loadAccountProfile() {
+    if (!client || !user?.id) return null;
+    const { data, error } = await client
+      .from('profiles')
+      .select('display_name,username,avatar_url,banner_url')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (error) throw error;
+    userProfile = data || null;
+    return userProfile;
+  }
+
   function accountMarkup(target) {
     if (!target || !user) return;
-    const name = String(user.user_metadata?.display_name || user.user_metadata?.full_name || user.email || 'Sua conta');
+    const profile = accountProfile();
+    const name = profile.displayName || 'Sua conta';
     const initial = (name.trim()[0] || 'B').toUpperCase();
     target.textContent = '';
+    target.classList.toggle('has-banner', Boolean(profile.bannerUrl));
+
+    if (profile.bannerUrl) {
+      const banner = document.createElement('img');
+      banner.className = 'tv-account-banner';
+      banner.src = profile.bannerUrl;
+      banner.alt = '';
+      banner.loading = 'eager';
+      banner.decoding = 'async';
+      banner.addEventListener('error', () => {
+        banner.remove();
+        target.classList.remove('has-banner');
+      }, { once: true });
+      target.appendChild(banner);
+    }
+
     const avatar = document.createElement('span');
     avatar.className = 'tv-account-avatar';
     avatar.textContent = initial;
+    if (profile.avatarUrl) {
+      const image = document.createElement('img');
+      image.src = profile.avatarUrl;
+      image.alt = '';
+      image.loading = 'eager';
+      image.decoding = 'async';
+      image.addEventListener('error', () => { image.remove(); avatar.textContent = initial; }, { once: true });
+      avatar.appendChild(image);
+    }
+
     const copy = document.createElement('span');
     copy.className = 'tv-account-copy';
     const strong = document.createElement('strong');
     strong.textContent = name;
     const small = document.createElement('span');
-    small.textContent = user.email || 'Conta Billie Eilish TV';
+    small.textContent = profile.username ? `@${profile.username}` : 'Perfil Billie Eilish TV';
     copy.append(strong, small);
     target.append(avatar, copy);
   }
@@ -62,6 +117,22 @@
     if (!target) return;
     target.className = `tv-message${type ? ` ${type}` : ''}`;
     target.textContent = text || '';
+  }
+
+  function showCastToast(text) {
+    let toast = document.getElementById('tvCastToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'tvCastToast';
+      toast.className = 'tv-cast-toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      document.body.appendChild(toast);
+    }
+    toast.textContent = text || '';
+    window.clearTimeout(castToastTimer);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    castToastTimer = window.setTimeout(() => toast.classList.remove('show'), 3200);
   }
 
   function readPendingMedia() {
@@ -96,6 +167,9 @@
     }
     pendingPreview.hidden = false;
     sendButton.hidden = false;
+    sendButton.textContent = 'Transmitir agora';
+    sendButton.classList.remove('is-transmitted');
+    sendButton.disabled = false;
   }
 
   function showForm() {
@@ -157,12 +231,15 @@
       });
       if (error) throw error;
       localStorage.removeItem(PENDING_MEDIA_KEY);
-      setMessage(connectedMessage, 'Enviado para a TV. A reprodução começa por lá.', 'ok');
-      sendButton.textContent = 'Transmitido ✓';
+      setMessage(connectedMessage, '');
+      showCastToast('Enviado para a TV. A reprodução começa por lá.');
+      sendButton.textContent = 'Transmitido';
+      sendButton.classList.add('is-transmitted');
       sendButton.disabled = true;
       return true;
     } catch (error) {
       console.error('Falha ao transmitir:', error);
+      sendButton.classList.remove('is-transmitted');
       setMessage(connectedMessage, 'Não foi possível enviar o conteúdo. Reconecte a TV e tente novamente.', 'error');
       sendButton.disabled = false;
       return false;
@@ -200,6 +277,11 @@
     }
 
     pendingMedia = readPendingMedia();
+    try {
+      await loadAccountProfile();
+    } catch (error) {
+      console.warn('Não foi possível carregar o perfil na transmissão:', error);
+    }
     accountMarkup(accountHost);
     accountMarkup(connectedAccountHost);
 

@@ -79,19 +79,29 @@ button,a{-webkit-tap-highlight-color:transparent}
 .tv-controller-icon{width:76px;height:76px;margin:0 auto 20px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.20);border-radius:23px;background:linear-gradient(180deg,rgba(44,47,54,.82),rgba(27,30,36,.78));-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 10px 30px rgba(0,0,0,.22)}
 .tv-controller-icon svg{width:39px;height:39px;fill:none;stroke:#fff;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round}
 .tv-controller-icon .airplay-icon path:last-child{fill:#fff;stroke:#fff;stroke-width:1.35}
-.tv-controller-header h1{font-size:clamp(30px,6vw,44px)}
+.tv-controller-header h1{font-size:clamp(26px,5.2vw,44px);white-space:nowrap;letter-spacing:-.05em}
+.tv-controller-url{margin-top:10px;font-size:14px;font-weight:700;color:rgba(238,244,255,.82)}
+.tv-controller-url a{color:var(--tv-blue);text-decoration:none;font-weight:800}
+.tv-controller-url a:hover,.tv-controller-url a:focus-visible{text-decoration:underline}
 .tv-controller-body{padding:24px 34px 36px}
-.tv-account-chip{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid rgba(255,255,255,.11);border-radius:18px;background:rgba(255,255,255,.045);margin-bottom:18px}
-.tv-account-avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.1);font-weight:900}
-.tv-account-copy{min-width:0}
+.tv-account-chip{position:relative;isolation:isolate;display:flex;align-items:center;gap:13px;min-height:76px;padding:13px 15px;border:1px solid rgba(255,255,255,.13);border-radius:20px;background:rgba(255,255,255,.045);margin-bottom:18px;overflow:hidden}
+.tv-account-chip.has-banner{border-color:rgba(255,255,255,.2);background:#101318}
+.tv-account-chip.has-banner::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(5,7,10,.9) 0%,rgba(5,7,10,.72) 48%,rgba(5,7,10,.42) 100%);pointer-events:none}
+.tv-account-banner{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover;object-position:center 43%;display:block}
+.tv-account-avatar{position:relative;z-index:2;width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border:2px solid rgba(255,255,255,.88);border-radius:50%;overflow:hidden;background:#2a2d34;color:#fff;font-weight:900;box-shadow:0 5px 18px rgba(0,0,0,.32)}
+.tv-account-avatar img{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
+.tv-account-copy{position:relative;z-index:2;min-width:0;filter:drop-shadow(0 1px 5px rgba(0,0,0,.48))}
 .tv-account-copy strong,.tv-account-copy span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tv-account-copy span{margin-top:2px;color:var(--tv-muted);font-size:12px}
+.tv-account-copy strong{font-size:16px;line-height:1.2}
+.tv-account-copy span{margin-top:4px;color:rgba(255,255,255,.76);font-size:12.5px;font-weight:600}
 .tv-form{display:grid;gap:12px}
 .tv-input-label{font-size:12px;color:rgba(255,255,255,.64);font-weight:700}
 .tv-code-input{width:100%;height:62px;border:1px solid rgba(255,255,255,.15);border-radius:18px;background:rgba(255,255,255,.07);color:#fff;text-align:center;text-transform:uppercase;font-size:24px;font-weight:900;letter-spacing:.16em;outline:none}
 .tv-code-input:focus{border-color:rgba(100,185,255,.78);box-shadow:0 0 0 4px rgba(65,168,255,.13)}
 .tv-primary,.tv-secondary,.tv-danger-button{width:100%;min-height:56px;border-radius:18px;font-weight:850;cursor:pointer;transition:transform .16s ease,opacity .16s ease,background .16s ease}
 .tv-primary{border:0;background:#fff;color:#0a0c10;box-shadow:0 12px 34px rgba(0,0,0,.25)}
+.tv-primary.is-transmitted{background:var(--tv-green);color:#07130b;box-shadow:0 12px 34px rgba(38,180,93,.18)}
+.tv-primary.is-transmitted:disabled{opacity:1;cursor:default}
 .tv-secondary{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#fff}
 .tv-danger-button{border:1px solid rgba(255,109,123,.2);background:rgba(255,109,123,.08);color:#ff9ca6}
 .tv-primary:active,.tv-secondary:active,.tv-danger-button:active{transform:scale(.985)}
@@ -113,6 +123,46 @@ button,a{-webkit-tap-highlight-color:transparent}
 .tv-actions-stack{display:grid;gap:10px}
 .tv-message{min-height:20px;margin-top:13px;text-align:center;color:var(--tv-muted);font-size:13px}
 .tv-message.ok{color:#a6f3bd}.tv-message.error{color:#ff9ca6}
+.tv-cast-toast{position:fixed;z-index:50;top:max(20px,env(safe-area-inset-top));left:50%;width:min(520px,calc(100% - 36px));padding:14px 18px;border:1px solid rgba(114,229,158,.2);border-radius:18px;background:rgba(4,8,12,.94);box-shadow:0 18px 52px rgba(0,0,0,.42);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);color:#9cf2b7;font-size:14px;font-weight:650;line-height:1.45;text-align:center;opacity:0;transform:translate(-50%,-12px);pointer-events:none;transition:opacity .22s ease,transform .22s ease}
+.tv-cast-toast.show{opacity:1;transform:translate(-50%,0)}
+
+
+/* Desktop controller: compact layout so the whole casting panel fits in one screen. */
+@media (min-width:721px){
+  .tv-controller .tv-content{padding-top:14px;padding-bottom:14px}
+  .tv-controller .tv-brand img{width:78px}
+  .tv-controller .tv-back{height:40px;min-width:40px;padding:0 14px;font-size:14px}
+  .tv-controller .tv-main{padding:10px 0 12px;align-items:center}
+  .tv-controller .tv-controller-card{width:min(590px,100%);border-radius:30px}
+  .tv-controller .tv-controller-header{padding:18px 28px 4px}
+  .tv-controller .tv-controller-icon{width:56px;height:56px;margin-bottom:12px;border-radius:18px}
+  .tv-controller .tv-controller-icon svg{width:30px;height:30px}
+  .tv-controller .tv-controller-header h1{font-size:36px;line-height:1}
+  .tv-controller .tv-controller-header p{margin-top:8px;font-size:14px;line-height:1.4}
+  .tv-controller .tv-controller-url{margin-top:6px!important;font-size:12.5px!important}
+  .tv-controller .tv-controller-body{padding:14px 28px 22px}
+  .tv-controller .tv-loading{min-height:220px}
+  .tv-controller .tv-account-chip{min-height:60px;padding:9px 12px;margin-bottom:12px;border-radius:17px}
+  .tv-controller .tv-account-avatar{width:42px;height:42px;flex-basis:42px}
+  .tv-controller .tv-account-copy strong{font-size:15px}
+  .tv-controller .tv-account-copy span{margin-top:2px;font-size:11.5px}
+  .tv-controller .tv-device-card{gap:10px;padding:13px 14px;border-radius:20px}
+  .tv-controller .tv-device-row{gap:11px}
+  .tv-controller .tv-device-symbol{width:42px;height:42px;border-radius:14px}
+  .tv-controller .tv-device-symbol svg{width:23px;height:23px}
+  .tv-controller .tv-device-copy strong{font-size:15.5px}
+  .tv-controller .tv-device-copy span{margin-top:2px;font-size:11.5px}
+  .tv-controller .tv-content-preview{gap:10px;padding:9px 10px;border-radius:15px}
+  .tv-controller .tv-content-thumb{width:64px;border-radius:10px}
+  .tv-controller .tv-content-copy strong{font-size:14px}
+  .tv-controller .tv-content-copy span{margin-top:2px;font-size:11px}
+  .tv-controller .tv-actions-stack{gap:7px}
+  .tv-controller .tv-primary,.tv-controller .tv-secondary,.tv-controller .tv-danger-button{min-height:46px;border-radius:15px;font-size:14px}
+  .tv-controller .tv-message{min-height:16px;margin-top:7px;font-size:12px}
+  .tv-controller .tv-form{gap:9px}
+  .tv-controller .tv-code-input{height:54px;border-radius:16px;font-size:21px}
+  .tv-controller .tv-help{margin-top:9px;font-size:12px;line-height:1.35}
+}
 
 @media (max-width:720px){
   .tv-content{padding-left:18px;padding-right:18px}
@@ -123,6 +173,8 @@ button,a{-webkit-tap-highlight-color:transparent}
   .tv-card{border-radius:30px}
   .tv-card-inner,.tv-controller-body{padding:24px 20px}
   .tv-controller-header{padding:28px 20px 4px}
+  .tv-controller-header h1{font-size:clamp(24px,8.4vw,32px)}
+  .tv-controller-url{font-size:13px}
   .tv-controller-icon{width:66px;height:66px;border-radius:22px;margin-bottom:16px}
   .tv-pair-grid{grid-template-columns:1fr;gap:20px}
   .tv-qr{width:min(260px,82vw);margin:0 auto;border-radius:26px}
@@ -132,6 +184,9 @@ button,a{-webkit-tap-highlight-color:transparent}
   .tv-now-playing{align-items:flex-start;flex-direction:column}
   .tv-player-wrap{border-radius:20px}
   .tv-code-input{font-size:20px;letter-spacing:.12em}
+  .tv-account-chip{min-height:72px;padding:12px 13px;border-radius:18px}
+  .tv-account-avatar{width:44px;height:44px;flex-basis:44px}
+  .tv-account-copy strong{font-size:15px}
 }
 
 @media (min-width:1100px){
