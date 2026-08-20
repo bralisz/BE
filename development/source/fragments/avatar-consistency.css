@@ -9,3 +9,105 @@
 /* Os avatares dos cabeçalhos replicam a Home: borda externa no botão,
    padding de 3 px e borda interna diretamente na foto. Pseudo-elementos
    de contorno ficam desativados para impedir faixas e cortes inferiores. */
+
+/* 20/08/2026 — aro escolhido pelo usuário com o mesmo desenho em todas as áreas. */
+html.profile-avatar-global-customized{
+  --betv-avatar-ring-width:2px;
+  --betv-avatar-ring-gap:2px;
+  --betv-avatar-ring-bg:#08090b;
+}
+html.profile-avatar-global-customized .home-user-menu .user-chip>.avatar,
+html.profile-avatar-global-customized body.notification-page-active .notification-page-avatar,
+html.profile-avatar-global-customized body.legal-page-active .legal-avatar-button:not(.is-login),
+html.profile-avatar-global-customized .mobile-profile-button>span,
+html.profile-avatar-global-customized .mobile-drawer-avatar,
+html.profile-avatar-global-customized .fans-page-avatar-frame,
+html.profile-avatar-global-customized .settings-avatar-preview,
+html.profile-avatar-global-customized .profile-avatar-preview,
+html.profile-avatar-global-customized .profile-share-campaign-avatar,
+html.profile-avatar-global-customized .detail-comment-composer-avatar,
+html.profile-avatar-global-customized .detail-comment-item.is-current-user .detail-comment-avatar{
+  box-sizing:border-box!important;
+  padding:var(--betv-avatar-ring-gap)!important;
+  border:var(--betv-avatar-ring-width) solid var(--betv-user-avatar-border)!important;
+  border-radius:50%!important;
+  background:var(--betv-avatar-ring-bg)!important;
+  overflow:hidden!important;
+  box-shadow:none!important;
+}
+html.profile-avatar-global-customized .home-user-menu .user-chip>.avatar>img,
+html.profile-avatar-global-customized body.notification-page-active .notification-page-avatar>img,
+html.profile-avatar-global-customized body.legal-page-active .legal-avatar-button:not(.is-login)>img,
+html.profile-avatar-global-customized .mobile-profile-button>span>img,
+html.profile-avatar-global-customized .mobile-drawer-avatar>img,
+html.profile-avatar-global-customized .fans-page-avatar-frame>img,
+html.profile-avatar-global-customized .settings-avatar-preview>img,
+html.profile-avatar-global-customized .profile-avatar-preview>img,
+html.profile-avatar-global-customized .profile-share-campaign-avatar>img,
+html.profile-avatar-global-customized .detail-comment-composer-avatar>img,
+html.profile-avatar-global-customized .detail-comment-item.is-current-user .detail-comment-avatar>img{
+  width:100%!important;
+  height:100%!important;
+  border:0!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+  display:block!important;
+}
+html.profile-avatar-global-customized body.billie-page-active .billie-page-avatar,
+html.profile-avatar-global-customized body.donate-page-active .donate-page-avatar{
+  box-sizing:border-box!important;
+  padding:var(--betv-avatar-ring-gap)!important;
+  border:var(--betv-avatar-ring-width) solid var(--betv-user-avatar-border)!important;
+  background:var(--betv-avatar-ring-bg)!important;
+  box-shadow:none!important;
+}
+html.profile-avatar-global-customized body.billie-page-active .billie-page-avatar>.betv-header-avatar-inner,
+html.profile-avatar-global-customized body.donate-page-active .donate-page-avatar>.betv-header-avatar-inner{
+  border:0!important;
+  background:var(--betv-avatar-ring-bg)!important;
+}
+html.profile-avatar-global-customized .home-user-menu .user-chip,
+html.profile-avatar-global-customized .mobile-profile-button{
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+}
+html.profile-avatar-global-customized .community-ranking-row.is-current-user .community-rank-avatar,
+html.profile-avatar-global-customized .community-ranking-own-row .community-rank-avatar{
+  box-sizing:border-box!important;
+  padding:1px!important;
+  border:2px solid var(--betv-user-avatar-border)!important;
+  background:var(--betv-avatar-ring-bg)!important;
+}
+html.profile-avatar-global-customized .community-favorite-face.is-current-user{
+  box-sizing:border-box!important;
+  padding:1px!important;
+  border:1.5px solid var(--betv-user-avatar-border)!important;
+  background:var(--betv-avatar-ring-bg)!important;
+}
+html.profile-avatar-global-customized .community-ranking-row.is-current-user .community-rank-avatar img,
+html.profile-avatar-global-customized .community-ranking-own-row .community-rank-avatar img,
+html.profile-avatar-global-customized .community-favorite-face.is-current-user img{
+  border-radius:50%!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-page-avatar{
+  box-sizing:border-box!important;
+  padding:3px!important;
+  border:2px solid var(--profile-avatar-border)!important;
+  border-radius:50%!important;
+  background:#08090b!important;
+  box-shadow:0 14px 34px rgba(0,0,0,.48)!important;
+}
+body.profile-page-active.profile-avatar-border-customized .profile-page-avatar>img{
+  width:100%!important;
+  height:100%!important;
+  border:0!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+}
+@media(max-width:760px){
+  html.profile-avatar-global-customized{
+    --betv-avatar-ring-width:2px;
+    --betv-avatar-ring-gap:2px;
+  }
+}

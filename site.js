@@ -4228,7 +4228,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const moderationAction = isOwner
       ? `<button type="button" class="detail-comment-action danger" data-comment-delete="${escapeHtml(commentId)}" aria-label="${escapeHtml(localizedUiText('Apagar comentário'))}" title="${escapeHtml(localizedUiText('Apagar comentário'))}">${detailCommentActionIcon('delete')}</button>`
       : `<button type="button" class="detail-comment-action" data-comment-report="${escapeHtml(commentId)}" data-comment-user="${escapeHtml(username)}" aria-label="${escapeHtml(localizedUiText('Denunciar comentário'))}" title="${escapeHtml(localizedUiText('Denunciar comentário'))}">${detailCommentActionIcon('report')}</button>`;
-    return `<article class="detail-comment-item" data-comment-id="${escapeHtml(commentId)}" data-comment-author-id="${escapeHtml(authorUserId)}">
+    return `<article class="detail-comment-item${isOwner ? ' is-current-user' : ''}" data-comment-id="${escapeHtml(commentId)}" data-comment-author-id="${escapeHtml(authorUserId)}">
       <a class="detail-comment-avatar" href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
         ${detailCommentAvatarMarkup(avatar, '', index < 8)}
       </a>
@@ -9202,6 +9202,85 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   const MOBILE_QUERY = '(max-width:760px)';
   const isMobile = () => window.matchMedia(MOBILE_QUERY).matches;
+  let deferredInstallPrompt = null;
+
+  const isStandaloneApp = () => Boolean(
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+  const isIosDevice = () => /iphone|ipad|ipod/i.test(String(navigator.userAgent || ''));
+
+  function updateInstallButton() {
+    const button = document.getElementById('mobileInstallButton');
+    if (!button) return;
+    const shouldShow = isMobile() && !isStandaloneApp();
+    button.hidden = !shouldShow;
+    button.classList.toggle('is-ready', Boolean(deferredInstallPrompt));
+  }
+
+  function closeInstallSheet() {
+    document.getElementById('mobileInstallSheet')?.remove();
+    document.body.classList.remove('mobile-install-sheet-open');
+  }
+
+  function openInstallSheet() {
+    closeInstallSheet();
+    const ios = isIosDevice();
+    const sheet = document.createElement('div');
+    sheet.className = 'mobile-install-sheet-backdrop';
+    sheet.id = 'mobileInstallSheet';
+    sheet.innerHTML = `
+      <section class="mobile-install-sheet" role="dialog" aria-modal="true" aria-labelledby="mobileInstallTitle">
+        <button class="mobile-install-sheet-close" type="button" aria-label="Fechar">${icon('close')}</button>
+        <span class="mobile-install-sheet-icon" aria-hidden="true">${icon('install')}</span>
+        <h2 id="mobileInstallTitle">Instalar Billie Eilish TV</h2>
+        <p>${ios
+          ? 'No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início.'
+          : 'Abra o menu do navegador e escolha Instalar app ou Adicionar à tela inicial.'}</p>
+        <button class="mobile-install-sheet-done" type="button">Entendi</button>
+      </section>`;
+    document.body.appendChild(sheet);
+    document.body.classList.add('mobile-install-sheet-open');
+    sheet.addEventListener('click', event => {
+      if (event.target === sheet || event.target.closest('.mobile-install-sheet-close,.mobile-install-sheet-done')) closeInstallSheet();
+    });
+  }
+
+  async function requestAppInstall() {
+    openDrawer(false);
+    openMobileSearch(false);
+    if (isStandaloneApp()) {
+      updateInstallButton();
+      return;
+    }
+    if (!deferredInstallPrompt) {
+      openInstallSheet();
+      return;
+    }
+    const promptEvent = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    try {
+      promptEvent.prompt();
+      await promptEvent.userChoice;
+    } catch (_) {
+      openInstallSheet();
+    } finally {
+      updateInstallButton();
+    }
+  }
+
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    updateInstallButton();
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    closeInstallSheet();
+    updateInstallButton();
+  });
+  window.BETVRequestAppInstall = requestAppInstall;
+  window.BETVIsAppInstalled = isStandaloneApp;
 
   const icon = name => ({
     menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
@@ -9214,6 +9293,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     support:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 13a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-2v-7h4M4 12h4v7H6a2 2 0 0 1-2-2Z"/><path d="M16 19c0 2-2 3-4 3"/></svg>',
     fans:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M14 15.5a4.5 4.5 0 0 1 6.5 4"/></svg>',
     user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>',
+    install:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 3v11"/><path d="m8 10 4 4 4-4"/><path d="M5 18v2h14v-2"/></svg>',
     logout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/><path d="m15 8 4 4-4 4M19 12H9"/></svg>'
   }[name] || '');
 
@@ -9388,6 +9468,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <button class="mobile-drawer-link" type="button" data-mobile-destination="fans">${icon('fans')}<span>Fãs que ajudaram o site</span></button>
       </nav>
       <div class="mobile-drawer-footer">
+        <button class="mobile-install-button" id="mobileInstallButton" type="button" hidden>${icon('install')}<span>Instalar app</span></button>
         <button class="mobile-logout-button" id="mobileLogoutButton" type="button">${icon('logout')}<span>Sair do site</span></button>
       </div>`;
 
@@ -9454,6 +9535,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.dispatchEvent(new CustomEvent('be:toggle-mobile-account-menu'));
     });
     bindActivation(document.getElementById('mobileDrawerProfile'), openProfile);
+    bindActivation(document.getElementById('mobileInstallButton'), requestAppInstall);
     bindActivation(document.getElementById('mobileLogoutButton'), logout);
     document.querySelectorAll('[data-mobile-destination]').forEach(button => {
       bindActivation(button, () => selectView(button.dataset.mobileDestination));
@@ -9535,12 +9617,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function start() {
     createMobileUI();
+    updateInstallButton();
     syncActiveFromPublicView();
     window.addEventListener('be:catalog-ready', syncActiveFromPublicView);
     window.addEventListener('resize', () => {
+      updateInstallButton();
       if (!isMobile()) {
         openDrawer(false);
         openMobileSearch(false);
+        closeInstallSheet();
       }
     });
     window.addEventListener('popstate', () => { openDrawer(false); openMobileSearch(false, false); });

@@ -25,7 +25,7 @@
   ]);
   var ORIGINAL_TITLE_COLLECTIONS=new Set(['contents','featured','movies','series','videos','ongs','news']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v6-original-titles';
-  var STATIC_REV='20260810-original-titles-v3';
+  var STATIC_REV='20260820-avatar-ring-pwa-v1';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
