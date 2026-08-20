@@ -19,6 +19,16 @@ function parseCookies(req) {
   return out;
 }
 
+function mediaStateKey(media) {
+  const source = media && typeof media === 'object' && !Array.isArray(media) ? media : {};
+  const playable = String(source.tvDriveUrl || source.mobileAppDriveUrl || source.appDriveUrl || source.contentUrl || '').trim();
+  if (playable) {
+    return ['media', playable, source.itemId || '', source.recordId || '', source.title || ''].map(value => String(value || '')).join('|').slice(0, 3000);
+  }
+  const profile = source.tvProfile && typeof source.tvProfile === 'object' && !Array.isArray(source.tvProfile) ? source.tvProfile : {};
+  return ['profile', profile.displayName || '', profile.username || '', profile.avatarUrl || '', profile.bannerUrl || ''].map(value => String(value || '')).join('|').slice(0, 3000);
+}
+
 async function supabaseRpc(name, payload) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${encodeURIComponent(name)}`, {
     method: 'POST',
@@ -57,10 +67,12 @@ module.exports = async function handler(req, res) {
       p_session_id: sessionId,
       p_device_token: deviceToken
     });
+    const media = row && row.current_media && typeof row.current_media === 'object' ? row.current_media : {};
     return res.status(200).json({
       status: row && row.status ? row.status : 'missing',
       media_version: row && Number.isFinite(Number(row.media_version)) ? Number(row.media_version) : -1,
-      subtitle_enabled: Boolean(row && row.current_media && row.current_media.subtitleEnabled)
+      media_key: mediaStateKey(media),
+      subtitle_enabled: Boolean(media.subtitleEnabled)
     });
   } catch (error) {
     console.error('TV page state failed:', error);

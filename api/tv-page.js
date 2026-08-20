@@ -173,6 +173,50 @@ function preferredMediaUrl(media) {
   return String(media.contentUrl || '').trim();
 }
 
+function normalizeSubtitleLocale(value) {
+  const raw = String(value || 'pt-br').trim().toLowerCase();
+  if (raw === 'en' || raw === 'en-us' || raw.indexOf('en-') === 0) return 'en-us';
+  if (raw === 'es' || raw.indexOf('es-') === 0) return 'es';
+  if (raw === 'fr' || raw.indexOf('fr-') === 0) return 'fr';
+  return 'pt-br';
+}
+
+function localizedSubtitleUrl(media) {
+  const source = media && typeof media === 'object' && !Array.isArray(media) ? media : {};
+  const locale = normalizeSubtitleLocale(source.subtitleLocale);
+  const aliases = locale === 'en-us' ? ['en-us', 'en'] : [locale];
+  for (const map of [source.subtitleUrls, source.subtitles]) {
+    if (!map || typeof map !== 'object' || Array.isArray(map)) continue;
+    for (const key of aliases) {
+      const value = map[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+      if (value && typeof value === 'object') {
+        const nested = String(value.url || value.subtitleUrl || '').trim();
+        if (nested) return nested;
+      }
+    }
+  }
+  const translations = source.translations;
+  if (translations && typeof translations === 'object' && !Array.isArray(translations)) {
+    for (const key of aliases) {
+      const translated = translations[key];
+      const nested = translated && typeof translated === 'object' ? String(translated.subtitleUrl || '').trim() : '';
+      if (nested) return nested;
+    }
+  }
+  return String(source.subtitleUrl || '').trim();
+}
+
+function mediaStateKey(media) {
+  const source = media && typeof media === 'object' && !Array.isArray(media) ? media : {};
+  const playable = String(source.tvDriveUrl || source.mobileAppDriveUrl || source.appDriveUrl || source.contentUrl || '').trim();
+  if (playable) {
+    return ['media', playable, source.itemId || '', source.recordId || '', source.title || ''].map(value => String(value || '')).join('|').slice(0, 3000);
+  }
+  const profile = source.tvProfile && typeof source.tvProfile === 'object' && !Array.isArray(source.tvProfile) ? source.tvProfile : {};
+  return ['profile', profile.displayName || '', profile.username || '', profile.avatarUrl || '', profile.bannerUrl || ''].map(value => String(value || '')).join('|').slice(0, 3000);
+}
+
 function subtitleClientUrl(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -181,6 +225,12 @@ function subtitleClientUrl(value) {
   try {
     const url = new URL(raw, 'https://billieilishtv.site');
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    // As legendas enviadas pelo Dashboard ficam no bucket movie-subtitles.
+    // A TV lê pelo mesmo domínio do site para evitar bloqueios CORS em
+    // navegadores antigos de Smart TV.
+    if (url.hostname.toLowerCase() === 'cxkevnnxibhezvospkce.supabase.co' && url.pathname.indexOf('/storage/v1/object/public/movie-subtitles/') === 0) {
+      return `/api/tv-subtitle?${qs({ url: url.href })}`;
+    }
     return url.href;
   } catch (_) {
     return '';
@@ -193,7 +243,7 @@ function renderMedia(media) {
   const drive = driveInfo(selected);
   const yt = youtubeInfo(selected);
   const vk = vkInfo(selected);
-  const subtitleUrl = subtitleClientUrl(media.subtitleUrl || '');
+  const subtitleUrl = subtitleClientUrl(localizedSubtitleUrl(media));
   let player = '';
   let provider = '';
 
@@ -348,14 +398,16 @@ function codeMarkup(code) {
   return String(code || '').split('').map(char => `<span>${escapeHtml(char)}</span>`).join('');
 }
 
-function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion = 0 }) {
+function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion = 0, mediaKey = '', subtitleEnabled = false }) {
   const initialStatus = JSON.stringify(String(stateStatus || 'waiting'));
+  const initialMediaKey = JSON.stringify(String(mediaKey || ''));
   const poll = `
 <script type="text/javascript">
 (function(){
   var initialStatus=${initialStatus};
   var version=${Number(mediaVersion) || 0};
-  var subtitleEnabled=null;
+  var mediaKey=${initialMediaKey};
+  var subtitleEnabled=${subtitleEnabled ? 'true' : 'false'};
   var stopped=false;
   function schedule(ms){if(!stopped)setTimeout(poll,ms);}
   function poll(){
@@ -372,8 +424,9 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
             var d=JSON.parse(x.responseText||'{}');
             var status=d&&d.status?String(d.status):'';
             var nextVersion=d&&d.media_version!=null?Number(d.media_version):-1;
+            var nextMediaKey=d&&d.media_key!=null?String(d.media_key):'';
             var statusChanged=status&&status!=='error'&&status!=='missing'&&status!==initialStatus;
-            var mediaChanged=initialStatus==='paired'&&status==='paired'&&nextVersion>=0&&nextVersion!==version;
+            var mediaChanged=initialStatus==='paired'&&status==='paired'&&nextVersion>=0&&nextVersion!==version&&nextMediaKey!==mediaKey;
             var nextSubtitle=!!(d&&d.subtitle_enabled);
             if(subtitleEnabled===null)subtitleEnabled=nextSubtitle;
             else if(nextSubtitle!==subtitleEnabled){subtitleEnabled=nextSubtitle;if(typeof window.BETVTVSetSubtitles==='function')window.BETVTVSetSubtitles(nextSubtitle);}
@@ -383,6 +436,8 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
               location.reload();
               return;
             }
+            if(nextVersion>=0)version=nextVersion;
+            if(nextMediaKey)mediaKey=nextMediaKey;
           }catch(e){}
         }
         finish(4000);
@@ -407,7 +462,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   <meta name="theme-color" content="#020409">
   <title>Conectar Smart TV — Billie Eilish TV</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-media-v3">
+  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-cc-title-v5">
 </head>
 <body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
   <main class="tv-shell">
@@ -446,13 +501,27 @@ function pairingBody(code, connectUrl) {
       </div>
     </div>`;
 }
-function connectedBody(owner) {
+function connectedBody(owner, media) {
+  const embedded = media && typeof media === 'object' && !Array.isArray(media) && media.tvProfile && typeof media.tvProfile === 'object' ? media.tvProfile : null;
+  const profile = embedded || (owner && typeof owner === 'object' ? owner : { displayName: owner });
+  const displayName = escapeHtml(profile.displayName || profile.username || 'Conta conectada');
+  const username = String(profile.username || '').trim().replace(/^@+/, '');
+  const avatarUrl = String(profile.avatarUrl || '').trim();
+  const bannerUrl = String(profile.bannerUrl || '').trim();
+  const initial = escapeHtml((String(profile.displayName || username || 'B').trim().charAt(0) || 'B').toUpperCase());
   return `
     <div class="tv-card-inner" id="receiverConnected">
-      <span class="tv-eyebrow"><span class="tv-dot"></span>TV conectada</span>
       <h1>Conectado à sua conta</h1>
       <p>Agora escolha um vídeo ou filme no celular e toque no ícone de transmissão.</p>
-      <div class="tv-status connected"><span class="pulse"></span><span>${escapeHtml(owner || 'Conta conectada')}</span></div>
+      <div class="tv-receiver-profile${bannerUrl ? ' has-banner' : ''}">
+        ${bannerUrl ? `<img class="tv-receiver-profile-banner" src="${escapeHtml(bannerUrl)}" alt="">` : ''}
+        <div class="tv-receiver-profile-shade"></div>
+        <div class="tv-receiver-profile-avatar">${avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" alt="">` : initial}</div>
+        <div class="tv-receiver-profile-copy">
+          <strong>${displayName}</strong>
+          ${username ? `<span>@${escapeHtml(username)}</span>` : ''}
+        </div>
+      </div>
     </div>`;
 }
 
@@ -513,7 +582,7 @@ module.exports = async function handler(req, res) {
         ]);
       }
       const connectUrl = `https://billieilishtv.site/connect-tv/?code=${encodeURIComponent(pairingCode)}`;
-      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl), stateStatus: 'waiting', mediaVersion: state.media_version });
+      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl), stateStatus: 'waiting', mediaVersion: state.media_version, mediaKey: mediaStateKey(state.current_media) });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
     }
 
@@ -527,12 +596,14 @@ module.exports = async function handler(req, res) {
             body: rendered,
             stateStatus: 'paired',
             playing: true,
-            mediaVersion: state.media_version
+            mediaVersion: state.media_version,
+            mediaKey: mediaStateKey(media),
+            subtitleEnabled: Boolean(media.subtitleEnabled)
           });
           return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
         }
       }
-      const html = baseHtml({ body: connectedBody(state.owner_display_name), stateStatus: 'paired', mediaVersion: state.media_version });
+      const html = baseHtml({ body: connectedBody(state.owner_display_name, media), stateStatus: 'paired', mediaVersion: state.media_version, mediaKey: mediaStateKey(media) });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
     }
 

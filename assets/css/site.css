@@ -18795,3 +18795,13 @@ html.betv-installed-app .user-dropdown .install-app-action{display:none!importan
     color:#fff!important;
   }
 }
+
+
+/* 20/08/2026 — variante do modal quando o PWA já está instalado. */
+.mobile-install-sheet.is-installed .mobile-install-sheet-icon{
+  background:#30d158!important;
+  color:#07140b!important;
+  box-shadow:0 10px 28px rgba(48,209,88,.24);
+}
+.mobile-install-sheet.is-installed .mobile-install-sheet-icon svg{width:31px;height:31px}
+.mobile-install-sheet.is-installed .mobile-install-sheet-done{cursor:pointer}

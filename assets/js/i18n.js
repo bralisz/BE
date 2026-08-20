@@ -31,7 +31,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v8-es-native-music-only';
-  var STATIC_REV='20260820-avatar-ring-pwa-v1';
+  var STATIC_REV='20260820-pwa-installed-state-v1';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}

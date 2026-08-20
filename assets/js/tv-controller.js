@@ -59,6 +59,114 @@
     };
   }
 
+  function currentLocaleSlug() {
+    const raw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase();
+    if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
+    if (raw === 'es' || raw.startsWith('es-')) return 'es';
+    if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
+    return 'pt-br';
+  }
+
+  function mediaLocale(media) {
+    const raw = String(media?.subtitleLocale || currentLocaleSlug()).trim().toLowerCase();
+    if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
+    if (raw === 'es' || raw.startsWith('es-')) return 'es';
+    if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
+    return 'pt-br';
+  }
+
+  function subtitleUploadedLocale(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const url = new URL(raw, location.origin);
+      const path = decodeURIComponent(url.pathname || '').toLowerCase();
+      const match = path.match(/(?:^|\/)(pt-br|pt|es|fr|en-us|en)[-_][^/]+\.(?:srt|vtt)$/i);
+      if (!match) return '';
+      const code = String(match[1] || '').toLowerCase();
+      if (code === 'pt' || code === 'pt-br') return 'pt-br';
+      if (code === 'en' || code === 'en-us') return 'en-us';
+      if (code === 'es') return 'es';
+      if (code === 'fr') return 'fr';
+    } catch (_) {}
+    return '';
+  }
+
+  function subtitleMatchesLocale(value, locale) {
+    const uploadedLocale = subtitleUploadedLocale(value);
+    return !uploadedLocale || uploadedLocale === locale;
+  }
+
+  function localizedSubtitleUrl(media) {
+    if (!media || typeof media !== 'object') return '';
+    const locale = mediaLocale(media);
+    const aliases = locale === 'pt-br' ? ['pt-br', 'pt'] : locale === 'en-us' ? ['en-us', 'en'] : [locale];
+    const maps = [media.subtitleTracks, media.subtitleUrls, media.subtitles];
+    for (const map of maps) {
+      if (!map || typeof map !== 'object' || Array.isArray(map)) continue;
+      for (const key of aliases) {
+        const value = map[key];
+        if (typeof value === 'string' && value.trim() && subtitleMatchesLocale(value, locale)) return value.trim();
+        if (value && typeof value === 'object' && String(value.url || value.subtitleUrl || '').trim()) {
+          const nested = String(value.url || value.subtitleUrl).trim();
+          if (subtitleMatchesLocale(nested, locale)) return nested;
+        }
+      }
+    }
+    const translations = media.translations;
+    if (translations && typeof translations === 'object' && !Array.isArray(translations)) {
+      for (const key of aliases) {
+        const translated = translations[key];
+        if (translated && typeof translated === 'object' && String(translated.subtitleUrl || '').trim()) {
+          const nested = String(translated.subtitleUrl).trim();
+          if (subtitleMatchesLocale(nested, locale)) return nested;
+        }
+      }
+    }
+    const fallback = String(media.subtitleUrl || '').trim();
+    return fallback && subtitleMatchesLocale(fallback, locale) ? fallback : '';
+  }
+
+  function hasPlayableMedia(media) {
+    if (!media || typeof media !== 'object') return false;
+    return Boolean(String(media.tvDriveUrl || media.mobileAppDriveUrl || media.appDriveUrl || media.contentUrl || '').trim());
+  }
+
+  function mediaWithTvState(media, subtitleEnabled = false) {
+    const source = media && typeof media === 'object' ? media : {};
+    const subtitleLocale = mediaLocale(source);
+    const subtitleUrl = localizedSubtitleUrl(source);
+    const profile = accountProfile();
+    return {
+      itemId: String(source.itemId || ''),
+      recordId: String(source.recordId || ''),
+      title: String(source.title || 'Billie Eilish TV'),
+      year: String(source.year || ''),
+      duration: String(source.duration || ''),
+      contentUrl: String(source.contentUrl || ''),
+      mobileAppDriveUrl: String(source.mobileAppDriveUrl || source.appDriveUrl || ''),
+      tvDriveUrl: String(source.tvDriveUrl || source.mobileAppDriveUrl || source.appDriveUrl || ''),
+      collection: String(source.collection || 'videos'),
+      subtitleUrl,
+      subtitleLocale,
+      subtitleEnabled: Boolean(subtitleUrl && subtitleEnabled),
+      tvProfile: profile
+    };
+  }
+
+  async function syncProfileToTv() {
+    if (!client || !activeSessionId || !user) return false;
+    const source = currentTvMedia && typeof currentTvMedia === 'object' ? currentTvMedia : {};
+    const nextMedia = mediaWithTvState(source, Boolean(source.subtitleEnabled));
+    const previous = source.tvProfile && typeof source.tvProfile === 'object' ? source.tvProfile : {};
+    const nextProfile = nextMedia.tvProfile || {};
+    if (previous.displayName === nextProfile.displayName && previous.username === nextProfile.username && previous.avatarUrl === nextProfile.avatarUrl && previous.bannerUrl === nextProfile.bannerUrl) return true;
+    const { error } = await client.rpc('tv_send_media', { p_session_id: activeSessionId, p_media: nextMedia });
+    if (error) throw error;
+    currentTvMedia = nextMedia;
+    return true;
+  }
+
   async function loadAccountProfile() {
     if (!client || !user?.id) return null;
     const { data, error } = await client
@@ -141,7 +249,7 @@
 
   function syncSubtitleRemote() {
     if (!subtitleRemoteButton) return;
-    const hasSubtitle = Boolean(currentTvMedia && String(currentTvMedia.subtitleUrl || '').trim());
+    const hasSubtitle = Boolean(currentTvMedia && localizedSubtitleUrl(currentTvMedia));
     subtitleRemoteButton.hidden = !hasSubtitle;
     subtitleRemoteButton.disabled = false;
     subtitleRemoteButton.classList.toggle('is-active', hasSubtitle && tvSubtitlesEnabled);
@@ -229,6 +337,7 @@
     localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
     localStorage.setItem(ACTIVE_CODE_KEY, activeCode);
     showConnected();
+    try { await syncProfileToTv(); } catch (error) { console.warn('Não foi possível sincronizar o perfil com a TV:', error); }
     try { history.replaceState(null, '', '/connect-tv/'); } catch (_) {}
     return true;
   }
@@ -241,12 +350,13 @@
     sendButton.disabled = true;
     setMessage(connectedMessage, automatic ? 'Enviando para sua TV…' : 'Transmitindo…');
     try {
+      const mediaToSend = mediaWithTvState(pendingMedia, false);
       const { error } = await client.rpc('tv_send_media', {
         p_session_id: activeSessionId,
-        p_media: pendingMedia
+        p_media: mediaToSend
       });
       if (error) throw error;
-      currentTvMedia = { ...pendingMedia, subtitleEnabled: false };
+      currentTvMedia = mediaToSend;
       tvSubtitlesEnabled = false;
       localStorage.removeItem(PENDING_MEDIA_KEY);
       setMessage(connectedMessage, '');
@@ -323,12 +433,13 @@
       const existing = await loadMySession();
       if (existing) {
         activeSessionId = String(existing.session_id || '');
-        currentTvMedia = existing.current_media && typeof existing.current_media === 'object' ? existing.current_media : null;
+        currentTvMedia = existing.current_media && typeof existing.current_media === 'object' ? existing.current_media : {};
         tvSubtitlesEnabled = Boolean(currentTvMedia && currentTvMedia.subtitleEnabled);
         activeCode = String(existing.pairing_code || localStorage.getItem(ACTIVE_CODE_KEY) || '');
         localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
         if (activeCode) localStorage.setItem(ACTIVE_CODE_KEY, activeCode);
         showConnected();
+        try { await syncProfileToTv(); } catch (error) { console.warn('Não foi possível sincronizar o perfil com a TV:', error); }
         if (pendingMedia) await sendPending({ automatic: true });
       } else {
         showForm();
@@ -367,15 +478,33 @@
   sendButton?.addEventListener('click', () => sendPending());
 
   subtitleRemoteButton?.addEventListener('click', async () => {
-    if (!activeSessionId || !currentTvMedia || !currentTvMedia.subtitleUrl || busy) return;
+    if (!activeSessionId || !currentTvMedia || !localizedSubtitleUrl(currentTvMedia) || busy) return;
     busy = true;
     subtitleRemoteButton.disabled = true;
     const next = !tvSubtitlesEnabled;
     try {
-      const { error } = await client.rpc('tv_set_subtitles', { p_session_id: activeSessionId, p_enabled: next });
-      if (error) throw error;
+      const updatedMedia = mediaWithTvState(currentTvMedia, next);
+      let changed = false;
+
+      // Preferimos a RPC leve quando ela já estiver instalada no Supabase: ela
+      // altera somente o estado da legenda e não reinicia o vídeo na televisão.
+      try {
+        const result = await client.rpc('tv_set_subtitles', { p_session_id: activeSessionId, p_enabled: next });
+        if (!result?.error && result?.data === true) changed = true;
+      } catch (_) {}
+
+      // Compatibilidade com instalações que ainda não aplicaram a migration da
+      // RPC acima. O payload é propositalmente pequeno para não estourar o limite
+      // do tv_send_media e a TV ignora a mudança de versão quando o vídeo é o mesmo.
+      if (!changed) {
+        const fallback = await client.rpc('tv_send_media', { p_session_id: activeSessionId, p_media: updatedMedia });
+        if (fallback?.error) throw fallback.error;
+        changed = true;
+      }
+
+      currentTvMedia = updatedMedia;
       tvSubtitlesEnabled = next;
-      currentTvMedia.subtitleEnabled = next;
+      setMessage(connectedMessage, '');
       syncSubtitleRemote();
       showCastToast(next ? 'Legendas ativadas na TV.' : 'Legendas desativadas na TV.');
     } catch (error) {

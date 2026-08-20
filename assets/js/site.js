@@ -6481,7 +6481,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-video-player-action-wake-zone" id="driveVideoPlayerActionWakeZone" aria-hidden="true"></div>
         <div class="drive-video-player-actionbar" id="driveVideoPlayerActionbar" aria-label="Controles do vídeo">
           <button class="drive-video-player-action drive-video-player-fullscreen" id="driveVideoPlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
-            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v5M5 5l6 6M14 19h5v-5M19 19l-6-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4a1 1 0 0 0 1-1V4M20 9h-4a1 1 0 0 1-1-1V4M4 15h4a1 1 0 0 1 1 1v4M20 15h-4a1 1 0 0 0-1 1v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div class="drive-video-player-actions-right">
@@ -8515,6 +8515,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       mobileAppDriveUrl: String(data.mobileAppDriveUrl || ''),
       tvDriveUrl: String(data.mobileAppDriveUrl || ''),
       subtitleUrl: String(data.subtitleUrl || ''),
+      subtitleLocale: String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase(),
       imageUrl: String(data.imageUrl || ''),
       bannerUrl: String(data.bannerUrl || ''),
       logoUrl: String(data.logoUrl || ''),
@@ -10032,20 +10033,45 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return installed;
   };
   const isIosDevice = () => /iphone|ipad|ipod/i.test(String(navigator.userAgent || ''));
+  const INSTALL_MARKER = 'betv-pwa-installed';
+
+  function rememberInstalledApp() {
+    try { localStorage.setItem(INSTALL_MARKER, '1'); } catch (_) {}
+  }
+
+  function isAppKnownInstalled() {
+    if (isStandaloneApp()) {
+      rememberInstalledApp();
+      return true;
+    }
+    try { return localStorage.getItem(INSTALL_MARKER) === '1'; }
+    catch (_) { return false; }
+  }
+
+  function setInstallButtonState(button, installed) {
+    if (!button) return;
+    button.classList.toggle('is-installed', installed);
+    const label = button.querySelector('span');
+    if (label) label.textContent = installed ? 'Abrir app' : 'Instalar app';
+    else if (button.id === 'desktopInstallButton') button.textContent = installed ? 'Abrir app' : 'Instalar app';
+  }
 
   function updateInstallButton() {
-    const installed = isStandaloneApp();
-    document.documentElement.classList.toggle('betv-installed-app', installed);
+    const runningAsApp = isStandaloneApp();
+    const installed = isAppKnownInstalled();
+    document.documentElement.classList.toggle('betv-installed-app', runningAsApp);
     const ready = Boolean(deferredInstallPrompt);
     const mobileButton = document.getElementById('mobileInstallButton');
     const desktopButton = document.getElementById('desktopInstallButton');
     if (mobileButton) {
-      mobileButton.hidden = !isMobile() || installed;
-      mobileButton.classList.toggle('is-ready', ready);
+      mobileButton.hidden = !isMobile() || runningAsApp;
+      mobileButton.classList.toggle('is-ready', ready && !installed);
+      setInstallButtonState(mobileButton, installed);
     }
     if (desktopButton) {
-      desktopButton.hidden = installed;
-      desktopButton.classList.toggle('is-ready', ready);
+      desktopButton.hidden = runningAsApp;
+      desktopButton.classList.toggle('is-ready', ready && !installed);
+      setInstallButtonState(desktopButton, installed);
     }
   }
 
@@ -10054,30 +10080,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.classList.remove('mobile-install-sheet-open');
   }
 
-  function openInstallSheet() {
+  function launchInstalledApp() {
     closeInstallSheet();
+    location.assign('/');
+  }
+
+  function openInstallSheet(options = {}) {
+    closeInstallSheet();
+    const installed = Boolean(options.installed);
     const ios = isIosDevice();
     const desktop = !isMobile();
     const sheet = document.createElement('div');
     sheet.className = 'mobile-install-sheet-backdrop';
     sheet.id = 'mobileInstallSheet';
-    const instructions = ios
-      ? 'No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início.'
-      : desktop
-        ? 'No Chrome ou Edge, clique no ícone de instalar na barra de endereço ou abra o menu do navegador e escolha Instalar Billie Eilish TV.'
-        : 'Abra o menu do navegador e escolha Instalar app ou Adicionar à tela inicial.';
+    const instructions = installed
+      ? 'Billie Eilish TV já está instalado neste dispositivo. Está tudo certo para continuar pelo app.'
+      : ios
+        ? 'No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início.'
+        : desktop
+          ? 'No Chrome ou Edge, clique no ícone de instalar na barra de endereço ou abra o menu do navegador e escolha Instalar Billie Eilish TV.'
+          : 'Abra o menu do navegador e escolha Instalar app ou Adicionar à tela inicial.';
     sheet.innerHTML = `
-      <section class="mobile-install-sheet${desktop ? ' is-desktop' : ''}" role="dialog" aria-modal="true" aria-labelledby="mobileInstallTitle">
+      <section class="mobile-install-sheet${desktop ? ' is-desktop' : ''}${installed ? ' is-installed' : ''}" role="dialog" aria-modal="true" aria-labelledby="mobileInstallTitle">
         <button class="mobile-install-sheet-close" type="button" aria-label="Fechar">${icon('close')}</button>
-        <span class="mobile-install-sheet-icon" aria-hidden="true">${icon('install')}</span>
-        <h2 id="mobileInstallTitle">Instalar Billie Eilish TV</h2>
+        <span class="mobile-install-sheet-icon" aria-hidden="true">${installed ? icon('check') : icon('install')}</span>
+        <h2 id="mobileInstallTitle">${installed ? 'Tudo certo!' : 'Instalar Billie Eilish TV'}</h2>
         <p>${instructions}</p>
-        <button class="mobile-install-sheet-done" type="button">Entendi</button>
+        <button class="mobile-install-sheet-done" type="button" data-install-sheet-action="${installed ? 'open' : 'close'}">${installed ? 'Abrir o app' : 'Entendi'}</button>
       </section>`;
     document.body.appendChild(sheet);
     document.body.classList.add('mobile-install-sheet-open');
     sheet.addEventListener('click', event => {
-      if (event.target === sheet || event.target.closest('.mobile-install-sheet-close,.mobile-install-sheet-done')) closeInstallSheet();
+      if (event.target === sheet || event.target.closest('.mobile-install-sheet-close')) {
+        closeInstallSheet();
+        return;
+      }
+      const action = event.target.closest('[data-install-sheet-action]')?.dataset.installSheetAction;
+      if (action === 'open') launchInstalledApp();
+      else if (action === 'close') closeInstallSheet();
     });
   }
 
@@ -10089,11 +10129,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.getElementById('userDropdown')?.classList.remove('open');
     document.getElementById('userChip')?.setAttribute('aria-expanded', 'false');
     if (isStandaloneApp()) {
+      rememberInstalledApp();
+      updateInstallButton();
+      return;
+    }
+    if (isAppKnownInstalled()) {
+      openInstallSheet({ installed:true });
       updateInstallButton();
       return;
     }
     if (!deferredInstallPrompt) {
-      openInstallSheet();
+      openInstallSheet({ installed:false });
       return;
     }
     const promptEvent = deferredInstallPrompt;
@@ -10102,7 +10148,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       promptEvent.prompt();
       await promptEvent.userChoice;
     } catch (_) {
-      openInstallSheet();
+      openInstallSheet({ installed:false });
     } finally {
       updateInstallButton();
     }
@@ -10115,8 +10161,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   });
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
-    closeInstallSheet();
+    rememberInstalledApp();
     updateInstallButton();
+    openInstallSheet({ installed:true });
   });
   window.addEventListener('pageshow', updateInstallButton);
   window.addEventListener('resize', updateInstallButton, { passive:true });
@@ -10143,6 +10190,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     fans:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M14 15.5a4.5 4.5 0 0 1 6.5 4"/></svg>',
     user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>',
     install:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 3v11"/><path d="m8 10 4 4 4-4"/><path d="M5 18v2h14v-2"/></svg>',
+    check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7"/></svg>',
     logout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/><path d="m15 8 4 4-4 4M19 12H9"/></svg>'
   }[name] || '');
 
