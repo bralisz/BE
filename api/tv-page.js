@@ -198,12 +198,13 @@ function renderMedia(media) {
   let provider = '';
 
   if (drive) {
-    // O endpoint do próprio site resolve confirmação/cookies do Google Drive e
-    // redireciona o <video> para a URL final, algo bem mais confiável em TVs.
-    const stream = `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey })}`;
+    // Smart TVs antigas lidam mal com o redirect 307 de /api/drive-media.
+    // Use a origem direta do Google como player principal e mantenha o
+    // preview oficial como fallback quando o codec/download não abrir.
+    const direct = `https://drive.usercontent.google.com/download?${qs({ id: drive.id, export: 'download', confirm: 't', authuser: '0', resourcekey: drive.resourceKey })}`;
     const preview = `https://drive.google.com/file/d/${encodeURIComponent(drive.id)}/preview?${qs({ autoplay: '1', resourcekey: drive.resourceKey })}`;
     provider = 'native';
-    player = `<video id="legacyTvVideo" controls autoplay playsinline preload="metadata" src="${escapeHtml(stream)}" style="width:100%;height:100%;background:#000" onerror="this.style.display='none';var f=document.getElementById('legacyDriveFallback');if(f){f.style.display='block';}var a=document.getElementById('tvPlayerAccessibility');if(a){a.style.display='none';}var s=document.getElementById('tvSubtitleOverlay');if(s){s.style.display='none';}"></video>` +
+    player = `<video id="legacyTvVideo" controls autoplay playsinline preload="metadata" src="${escapeHtml(direct)}" style="width:100%;height:100%;background:#000" onerror="this.style.display='none';var f=document.getElementById('legacyDriveFallback');if(f){f.style.display='block';}var a=document.getElementById('tvPlayerAccessibility');if(a){a.style.display='none';}var s=document.getElementById('tvSubtitleOverlay');if(s){s.style.display='none';}"></video>` +
       `<iframe id="legacyDriveFallback" src="${escapeHtml(preview)}" allow="autoplay; fullscreen" allowfullscreen frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
   } else if (yt) {
     const path = yt.id ? `embed/${encodeURIComponent(yt.id)}` : 'embed/videoseries';
