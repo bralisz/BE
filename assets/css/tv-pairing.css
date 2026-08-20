@@ -59,6 +59,20 @@ button,a{-webkit-tap-highlight-color:transparent}
 .tv-now-playing-meta{display:block;margin-top:5px;color:var(--tv-muted);font-size:13px}
 .tv-receiver-badge{flex:none;display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid rgba(114,229,158,.2);border-radius:999px;background:rgba(114,229,158,.08);color:#a6f3bd;font-size:12px;font-weight:800}
 
+/* TV playback: use the entire television viewport while media is playing.
+   This is CSS fullscreen (not the browser Fullscreen API), so it also works
+   on older Smart TV browsers without requiring a remote-control gesture. */
+.tv-receiver.is-playing{overflow:hidden;background:#000}
+.tv-receiver.is-playing .tv-shell{width:100vw;height:100vh;min-height:100vh;background:#000;overflow:hidden}
+.tv-receiver.is-playing .tv-shell::before,.tv-receiver.is-playing .tv-shell::after,.tv-receiver.is-playing .tv-topbar,.tv-receiver.is-playing .tv-now-playing{display:none!important}
+.tv-receiver.is-playing .tv-content,.tv-receiver.is-playing .tv-main,.tv-receiver.is-playing .tv-receiver-card,.tv-receiver.is-playing .tv-card-inner,.tv-receiver.is-playing .tv-player-wrap{width:100vw!important;height:100vh!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#000!important}
+.tv-receiver.is-playing .tv-content{display:block!important}
+.tv-receiver.is-playing .tv-main{display:block!important}
+.tv-receiver.is-playing .tv-receiver-card{position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:0!important;overflow:hidden!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.tv-receiver.is-playing .tv-player-wrap{position:absolute!important;top:0!important;right:0!important;bottom:0!important;left:0!important;aspect-ratio:auto!important}
+.tv-receiver.is-playing .tv-player-wrap iframe,.tv-receiver.is-playing .tv-player-wrap video{position:absolute!important;top:0!important;right:0!important;bottom:0!important;left:0!important;width:100%!important;height:100%!important;margin:0!important;border:0!important;background:#000!important}
+.tv-receiver.is-playing .tv-player-wrap video{object-fit:contain}
+
 /* Controller */
 .tv-controller-card{width:min(620px,100%)}
 .tv-controller-header{text-align:center;padding:36px 34px 8px}
@@ -157,6 +171,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 .legacy-tv .tv-loading{display:block;text-align:center;padding-top:110px}
 .legacy-tv .tv-spinner{display:block;margin:0 auto 18px}
 .legacy-tv .tv-player-wrap{height:0;padding-top:56.25%;border-radius:20px}
+.legacy-tv.tv-receiver.is-playing .tv-player-wrap{height:100vh!important;padding-top:0!important;border-radius:0!important}
 .legacy-tv .tv-player-wrap iframe,.legacy-tv .tv-player-wrap video{top:0;right:0;bottom:0;left:0}
 .legacy-tv .tv-now-playing{display:block}
 .legacy-tv .tv-receiver-badge{display:inline-block;margin-top:12px}

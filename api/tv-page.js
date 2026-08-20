@@ -263,9 +263,9 @@ function baseHtml({ body, refreshSeconds = 0, playing = false, mediaVersion = 0 
   ${refresh}
   <title>Conectar Smart TV — Billie Eilish TV</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-legacy-v3">
+  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-fullscreen-v1">
 </head>
-<body class="tv-receiver legacy-tv">
+<body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
   <main class="tv-shell">
     <div class="tv-content">
       <header class="tv-topbar">
