@@ -224,33 +224,50 @@ function codeMarkup(code) {
   return String(code || '').split('').map(char => `<span>${escapeHtml(char)}</span>`).join('');
 }
 
-function baseHtml({ body, refreshSeconds = 0, playing = false, mediaVersion = 0 }) {
-  const refresh = refreshSeconds > 0
-    ? `<meta http-equiv="refresh" content="${refreshSeconds};url=/tv">`
-    : '';
-
-  const poll = playing ? `
+function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion = 0 }) {
+  const initialStatus = JSON.stringify(String(stateStatus || 'waiting'));
+  const poll = `
 <script type="text/javascript">
 (function(){
+  var initialStatus=${initialStatus};
   var version=${Number(mediaVersion) || 0};
+  var stopped=false;
+  function schedule(ms){if(!stopped)setTimeout(poll,ms);}
   function poll(){
     var x;
-    try{x=new XMLHttpRequest();}catch(e){setTimeout(poll,5000);return;}
+    var finished=false;
+    function finish(ms){if(finished)return;finished=true;schedule(ms);}
+    try{x=new XMLHttpRequest();}catch(e){schedule(6000);return;}
     try{
       x.open('GET','/api/tv-page-state?v='+new Date().getTime(),true);
       x.onreadystatechange=function(){
         if(x.readyState!==4)return;
         if(x.status>=200&&x.status<300){
-          try{var d=JSON.parse(x.responseText||'{}');if(d&&Number(d.media_version)!==version){location.reload();return;}}catch(e){}
+          try{
+            var d=JSON.parse(x.responseText||'{}');
+            var status=d&&d.status?String(d.status):'';
+            var nextVersion=d&&d.media_version!=null?Number(d.media_version):-1;
+            var statusChanged=status&&status!=='error'&&status!=='missing'&&status!==initialStatus;
+            var mediaChanged=initialStatus==='paired'&&status==='paired'&&nextVersion>=0&&nextVersion!==version;
+            if(statusChanged||mediaChanged||status==='disconnected'){
+              stopped=true;
+              finished=true;
+              location.reload();
+              return;
+            }
+          }catch(e){}
         }
-        setTimeout(poll,4000);
+        finish(4000);
       };
+      x.onerror=function(){finish(6000);};
+      x.ontimeout=function(){finish(6000);};
+      x.timeout=12000;
       x.send(null);
-    }catch(e){setTimeout(poll,5000);}
+    }catch(e){finish(6000);}
   }
-  setTimeout(poll,4000);
+  schedule(4000);
 })();
-</script>` : '';
+</script>`;
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -260,10 +277,9 @@ function baseHtml({ body, refreshSeconds = 0, playing = false, mediaVersion = 0 
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="theme-color" content="#020409">
-  ${refresh}
   <title>Conectar Smart TV — Billie Eilish TV</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-fullscreen-v1">
+  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-stable-v2">
 </head>
 <body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
   <main class="tv-shell">
@@ -282,11 +298,9 @@ function baseHtml({ body, refreshSeconds = 0, playing = false, mediaVersion = 0 
 </body>
 </html>`;
 }
-
 function pairingBody(code, connectUrl) {
   return `
     <div class="tv-card-inner" id="receiverPairing">
-      <span class="tv-eyebrow"><span class="tv-dot"></span>Smart TV</span>
       <h1>Conecte seu celular</h1>
       <p>Escaneie o QR Code com a câmera do celular. Você entra na sua conta e a TV fica pronta para receber os vídeos do site.</p>
       <div class="tv-pair-grid">
@@ -294,14 +308,16 @@ function pairingBody(code, connectUrl) {
         <div class="tv-code-panel">
           <span class="tv-code-label">Seu código</span>
           <div class="tv-code" aria-label="Código da TV">${codeMarkup(code)}</div>
-          <div class="tv-note"><span>1.</span><span>Escaneie o QR Code.<br><strong>2.</strong> Entre na sua conta.<br><strong>3.</strong> Abra um vídeo ou filme e toque no ícone de transmissão.</span></div>
+          <div class="tv-note" aria-label="Como conectar">
+            <div class="tv-note-step"><strong>1.</strong><span>Escaneie o QR Code.</span></div>
+            <div class="tv-note-step"><strong>2.</strong><span>Entre na sua conta.</span></div>
+            <div class="tv-note-step"><strong>3.</strong><span>Abra um vídeo ou filme e toque no ícone de transmissão.</span></div>
+          </div>
           <span class="tv-help">O código expira em 5 minutos se não for usado.</span>
         </div>
       </div>
-      <div class="tv-status"><span class="pulse"></span><span>Aguardando conexão do celular…</span></div>
     </div>`;
 }
-
 function connectedBody(owner) {
   return `
     <div class="tv-card-inner" id="receiverConnected">
@@ -315,7 +331,6 @@ function connectedBody(owner) {
 function errorBody() {
   return `
     <div class="tv-card-inner">
-      <span class="tv-eyebrow"><span class="tv-dot"></span>Smart TV</span>
       <h1>Não foi possível conectar</h1>
       <p>Atualize a página para tentar novamente.</p>
       <div class="tv-status error"><span class="pulse"></span><span>Falha ao preparar a conexão.</span></div>
@@ -370,7 +385,7 @@ module.exports = async function handler(req, res) {
         ]);
       }
       const connectUrl = `https://billieilishtv.site/connect-tv/?code=${encodeURIComponent(pairingCode)}`;
-      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl), refreshSeconds: 3 });
+      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl), stateStatus: 'waiting', mediaVersion: state.media_version });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
     }
 
@@ -382,21 +397,22 @@ module.exports = async function handler(req, res) {
         if (rendered) {
           const html = baseHtml({
             body: rendered,
+            stateStatus: 'paired',
             playing: true,
             mediaVersion: state.media_version
           });
           return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
         }
       }
-      const html = baseHtml({ body: connectedBody(state.owner_display_name), refreshSeconds: 3 });
+      const html = baseHtml({ body: connectedBody(state.owner_display_name), stateStatus: 'paired', mediaVersion: state.media_version });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
     }
 
-    const html = baseHtml({ body: errorBody(), refreshSeconds: 5 });
+    const html = baseHtml({ body: errorBody(), stateStatus: 'error' });
     return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
   } catch (error) {
     console.error('TV legacy page failed:', error);
-    const html = baseHtml({ body: errorBody(), refreshSeconds: 5 });
+    const html = baseHtml({ body: errorBody(), stateStatus: 'error' });
     return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
   }
 };
