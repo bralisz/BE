@@ -23,7 +23,7 @@ function mediaStateKey(media) {
   const source = media && typeof media === 'object' && !Array.isArray(media) ? media : {};
   const playable = String(source.tvDriveUrl || source.mobileAppDriveUrl || source.appDriveUrl || source.contentUrl || '').trim();
   if (playable) {
-    return ['media', playable, source.itemId || '', source.recordId || '', source.title || ''].map(value => String(value || '')).join('|').slice(0, 3000);
+    return ['media', playable, source.itemId || '', source.recordId || '', source.title || '', source.subtitleUrl || '', source.subtitleLocale || ''].map(value => String(value || '')).join('|').slice(0, 3000);
   }
   const profile = source.tvProfile && typeof source.tvProfile === 'object' && !Array.isArray(source.tvProfile) ? source.tvProfile : {};
   return ['profile', profile.displayName || '', profile.username || '', profile.avatarUrl || '', profile.bannerUrl || ''].map(value => String(value || '')).join('|').slice(0, 3000);

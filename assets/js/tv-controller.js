@@ -60,7 +60,9 @@
   }
 
   function currentLocaleSlug() {
-    const raw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase();
+    let stored = '';
+    try { stored = String(localStorage.getItem('betvPreferredLocale') || '').trim(); } catch (_) {}
+    const raw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || stored || document.documentElement.lang || 'pt-br').trim().toLowerCase();
     if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
     if (raw === 'es' || raw.startsWith('es-')) return 'es';
     if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
@@ -94,7 +96,8 @@
 
   function subtitleMatchesLocale(value, locale) {
     const uploadedLocale = subtitleUploadedLocale(value);
-    return !uploadedLocale || uploadedLocale === locale;
+    // URLs antigas sem idioma identificado são tratadas somente como PT-BR.
+    return uploadedLocale ? uploadedLocale === locale : locale === 'pt-br';
   }
 
   function localizedSubtitleUrl(media) {
