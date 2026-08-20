@@ -3,7 +3,14 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const LEGAL_TRANSLATIONS = require('../config/legal-translations');
+// A configuração de tradução melhora as páginas legais, mas nunca deve impedir
+// que uma página de conteúdo seja aberta caso o arquivo não tenha sido enviado.
+let LEGAL_TRANSLATIONS = Object.freeze({});
+try {
+  LEGAL_TRANSLATIONS = require('../config/legal-translations');
+} catch (error) {
+  console.warn('Legal translations unavailable:', error && error.message ? error.message : error);
+}
 const PUBLIC_PROFILE_API = require('./public-profile');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
