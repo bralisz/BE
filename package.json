@@ -6,6 +6,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "sharp": "^0.34.1"
+    "sharp": "^0.34.1",
+    "qrcode": "^1.5.4"
   }
 }

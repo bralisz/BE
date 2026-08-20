@@ -1,0 +1,126 @@
+:root{
+  color-scheme:dark;
+  --tv-bg:#020409;
+  --tv-text:#f7f9ff;
+  --tv-muted:rgba(238,244,255,.64);
+  --tv-line:rgba(255,255,255,.15);
+  --tv-glass:rgba(14,18,26,.66);
+  --tv-glass-strong:rgba(12,16,24,.82);
+  --tv-blue:#41a8ff;
+  --tv-green:#72e59e;
+  --tv-danger:#ff6d7b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--tv-bg);color:var(--tv-text);font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}
+button,input,a{font:inherit}
+button,a{-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+.tv-shell{position:relative;min-height:100svh;overflow:hidden;background:#03050a}
+.tv-shell::before{content:"";position:fixed;inset:0;background:url('/assets/images/tv/connect-bg.webp') center/cover no-repeat;transform:scale(1.02);filter:saturate(.88) brightness(.62);z-index:0}
+.tv-shell::after{content:"";position:fixed;inset:0;background:linear-gradient(180deg,rgba(1,4,10,.28),rgba(1,4,10,.72) 60%,rgba(1,4,10,.92)),radial-gradient(circle at 50% 28%,rgba(35,126,215,.16),transparent 42%);z-index:0}
+.tv-content{position:relative;z-index:1;min-height:100svh;display:flex;flex-direction:column;padding:max(22px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left))}
+.tv-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;width:min(1180px,100%);margin:0 auto}
+.tv-brand{display:inline-flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-weight:800;letter-spacing:-.02em}
+.tv-brand img{display:block;width:96px;height:auto;filter:drop-shadow(0 4px 18px rgba(0,0,0,.35))}
+.tv-back{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:44px;padding:0 16px;border:1px solid var(--tv-line);border-radius:999px;background:rgba(10,14,21,.48);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);color:#fff;text-decoration:none;font-weight:700}
+.tv-main{flex:1;width:min(1180px,100%);margin:0 auto;display:grid;place-items:center;padding:34px 0}
+.tv-card{width:min(760px,100%);border:1px solid rgba(255,255,255,.17);border-radius:38px;background:linear-gradient(180deg,rgba(19,24,33,.78),rgba(8,11,17,.74));box-shadow:0 36px 100px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.08);backdrop-filter:blur(34px) saturate(1.15);-webkit-backdrop-filter:blur(34px) saturate(1.15);overflow:hidden}
+.tv-card-inner{padding:34px}
+.tv-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:12px;color:rgba(255,255,255,.72);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.12em}
+.tv-dot{width:8px;height:8px;border-radius:50%;background:var(--tv-blue);box-shadow:0 0 0 6px rgba(65,168,255,.12)}
+.tv-card h1{margin:0;font-size:clamp(30px,4vw,52px);line-height:1.03;letter-spacing:-.045em}
+.tv-card p{margin:12px 0 0;color:var(--tv-muted);font-size:16px;line-height:1.55}
+.tv-pair-grid{display:grid;grid-template-columns:minmax(210px,280px) minmax(0,1fr);gap:28px;align-items:center;margin-top:30px}
+.tv-qr{display:grid;place-items:center;aspect-ratio:1;border-radius:30px;background:#fff;padding:18px;box-shadow:0 18px 54px rgba(0,0,0,.34)}
+.tv-qr img{display:block;width:100%;height:100%;object-fit:contain}
+.tv-code-panel{display:grid;gap:14px}
+.tv-code-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.5);font-weight:800}
+.tv-code{display:flex;gap:7px;flex-wrap:wrap}
+.tv-code span{display:grid;place-items:center;min-width:43px;height:54px;padding:0 10px;border:1px solid rgba(98,181,255,.22);border-radius:14px;background:rgba(30,125,211,.08);color:#65b9ff;font-size:25px;font-weight:900;letter-spacing:.02em}
+.tv-note{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.7);font-size:13px;line-height:1.45}
+.tv-note strong{color:#fff}
+.tv-status{display:flex;align-items:center;gap:10px;margin-top:22px;color:rgba(255,255,255,.72);font-size:14px;min-height:24px}
+.tv-status .pulse{width:8px;height:8px;border-radius:50%;background:var(--tv-blue);animation:tvPulse 1.6s ease-in-out infinite}
+.tv-status.connected .pulse{background:var(--tv-green)}
+.tv-status.error .pulse{background:var(--tv-danger);animation:none}
+@keyframes tvPulse{50%{opacity:.35;transform:scale(.78)}}
+.tv-loading{display:grid;place-items:center;gap:16px;text-align:center;min-height:300px;color:var(--tv-muted)}
+.tv-spinner{width:38px;height:38px;border:3px solid rgba(255,255,255,.15);border-top-color:#fff;border-radius:50%;animation:spin .85s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Receiver/player */
+.tv-receiver-card{width:min(880px,100%)}
+.tv-receiver-card.is-playing{width:min(1180px,100%);background:rgba(0,0,0,.78)}
+.tv-player-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:28px;overflow:hidden}
+.tv-player-wrap iframe,.tv-player-wrap video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+.tv-now-playing{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:18px}
+.tv-now-playing-copy{min-width:0}
+.tv-now-playing-title{display:block;font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-now-playing-meta{display:block;margin-top:5px;color:var(--tv-muted);font-size:13px}
+.tv-receiver-badge{flex:none;display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid rgba(114,229,158,.2);border-radius:999px;background:rgba(114,229,158,.08);color:#a6f3bd;font-size:12px;font-weight:800}
+
+/* Controller */
+.tv-controller-card{width:min(620px,100%)}
+.tv-controller-header{text-align:center;padding:36px 34px 8px}
+.tv-controller-icon{width:76px;height:76px;margin:0 auto 20px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);border-radius:24px;background:rgba(255,255,255,.07);box-shadow:inset 0 1px rgba(255,255,255,.1)}
+.tv-controller-icon svg{width:38px;height:38px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tv-controller-header h1{font-size:clamp(30px,6vw,44px)}
+.tv-controller-body{padding:24px 34px 36px}
+.tv-account-chip{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid rgba(255,255,255,.11);border-radius:18px;background:rgba(255,255,255,.045);margin-bottom:18px}
+.tv-account-avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.1);font-weight:900}
+.tv-account-copy{min-width:0}
+.tv-account-copy strong,.tv-account-copy span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-account-copy span{margin-top:2px;color:var(--tv-muted);font-size:12px}
+.tv-form{display:grid;gap:12px}
+.tv-input-label{font-size:12px;color:rgba(255,255,255,.64);font-weight:700}
+.tv-code-input{width:100%;height:62px;border:1px solid rgba(255,255,255,.15);border-radius:18px;background:rgba(255,255,255,.07);color:#fff;text-align:center;text-transform:uppercase;font-size:24px;font-weight:900;letter-spacing:.16em;outline:none}
+.tv-code-input:focus{border-color:rgba(100,185,255,.78);box-shadow:0 0 0 4px rgba(65,168,255,.13)}
+.tv-primary,.tv-secondary,.tv-danger-button{width:100%;min-height:56px;border-radius:18px;font-weight:850;cursor:pointer;transition:transform .16s ease,opacity .16s ease,background .16s ease}
+.tv-primary{border:0;background:#fff;color:#0a0c10;box-shadow:0 12px 34px rgba(0,0,0,.25)}
+.tv-secondary{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#fff}
+.tv-danger-button{border:1px solid rgba(255,109,123,.2);background:rgba(255,109,123,.08);color:#ff9ca6}
+.tv-primary:active,.tv-secondary:active,.tv-danger-button:active{transform:scale(.985)}
+.tv-primary:disabled,.tv-secondary:disabled,.tv-danger-button:disabled{opacity:.48;cursor:wait;transform:none}
+.tv-help{margin:14px 0 0;text-align:center;color:var(--tv-muted);font-size:13px;line-height:1.5}
+.tv-device-card{display:grid;gap:16px;padding:18px;border:1px solid rgba(255,255,255,.12);border-radius:24px;background:rgba(255,255,255,.055)}
+.tv-device-row{display:flex;align-items:center;gap:14px}
+.tv-device-symbol{width:48px;height:48px;display:grid;place-items:center;border-radius:16px;background:rgba(65,168,255,.1);color:#79c2ff}
+.tv-device-symbol svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.tv-device-copy{min-width:0;flex:1}
+.tv-device-copy strong{display:block;font-size:17px}
+.tv-device-copy span{display:block;margin-top:3px;color:#a6f3bd;font-size:12px}
+.tv-content-preview{display:flex;align-items:center;gap:12px;padding:12px;border-radius:18px;background:rgba(0,0,0,.2)}
+.tv-content-thumb{width:74px;aspect-ratio:16/10;flex:none;border-radius:12px;overflow:hidden;background:rgba(255,255,255,.08)}
+.tv-content-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.tv-content-copy{min-width:0}
+.tv-content-copy strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-content-copy span{display:block;margin-top:4px;color:var(--tv-muted);font-size:12px}
+.tv-actions-stack{display:grid;gap:10px}
+.tv-message{min-height:20px;margin-top:13px;text-align:center;color:var(--tv-muted);font-size:13px}
+.tv-message.ok{color:#a6f3bd}.tv-message.error{color:#ff9ca6}
+
+@media (max-width:720px){
+  .tv-content{padding-left:18px;padding-right:18px}
+  .tv-topbar{align-items:flex-start}
+  .tv-brand img{width:82px}
+  .tv-back{height:40px;min-width:40px;padding:0 13px;font-size:13px}
+  .tv-main{padding:20px 0 28px;align-items:start}
+  .tv-card{border-radius:30px}
+  .tv-card-inner,.tv-controller-body{padding:24px 20px}
+  .tv-controller-header{padding:28px 20px 4px}
+  .tv-controller-icon{width:66px;height:66px;border-radius:22px;margin-bottom:16px}
+  .tv-pair-grid{grid-template-columns:1fr;gap:20px}
+  .tv-qr{width:min(260px,82vw);margin:0 auto;border-radius:26px}
+  .tv-code{justify-content:center}
+  .tv-code span{min-width:36px;height:48px;font-size:22px}
+  .tv-code-panel{text-align:center}
+  .tv-now-playing{align-items:flex-start;flex-direction:column}
+  .tv-player-wrap{border-radius:20px}
+  .tv-code-input{font-size:20px;letter-spacing:.12em}
+}
+
+@media (min-width:1100px){
+  .tv-receiver .tv-main{padding-top:42px;padding-bottom:42px}
+  .tv-receiver .tv-card-inner{padding:42px}
+  .tv-receiver .tv-card h1{font-size:48px}
+}

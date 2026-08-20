@@ -2648,6 +2648,7 @@
   .detail-play,
   .detail-list,
   .detail-streaming-mobile-button,
+  .detail-cast,
   .detail-share{
     display:inline-flex;
     align-items:center;
@@ -2669,6 +2670,7 @@
   .detail-play svg{fill:#101112;width:16px;height:16px}
   .detail-list,
   .detail-streaming-mobile-button,
+  .detail-cast,
   .detail-share{
     width:46px;
     min-width:46px;
@@ -2679,10 +2681,10 @@
     -webkit-backdrop-filter:blur(14px);
     backdrop-filter:blur(14px);
   }
-  .detail-list svg,.detail-streaming-mobile-button svg,.detail-share svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .detail-list svg,.detail-streaming-mobile-button svg,.detail-cast svg,.detail-share svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .detail-list.active svg{fill:currentColor}
   .detail-streaming-mobile-button{display:none}
-  .detail-play:hover,.detail-list:hover,.detail-streaming-mobile-button:hover,.detail-share:hover{transform:translateY(-1px);}
+  .detail-play:hover,.detail-list:hover,.detail-streaming-mobile-button:hover,.detail-cast:hover,.detail-share:hover{transform:translateY(-1px);}
   .detail-list.active,.detail-streaming-mobile-button[aria-expanded="true"],.detail-share.is-copied{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.3)}
   .detail-desc{
     max-width:540px;
@@ -2909,7 +2911,7 @@
     .detail-desc{font-size:13.5px;max-width:95%}
     .detail-actions{gap:10px}
     .detail-play{height:43px;padding:0 18px;font-size:14px}
-    .detail-list,.detail-streaming-mobile-button,.detail-share{width:43px;min-width:43px;height:43px;padding:0}
+    .detail-list,.detail-streaming-mobile-button,.detail-cast,.detail-share{width:43px;min-width:43px;height:43px;padding:0}
     .detail-recommendations{padding:28px 18px 54px}
     .detail-reco-rail{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
     .detail-reco-rail::-webkit-scrollbar{display:none}
@@ -18638,7 +18640,7 @@ html.profile-avatar-global-customized .community-favorite-face.is-current-user i
 body.profile-page-active.profile-avatar-border-customized .profile-page-avatar{
   box-sizing:border-box!important;
   padding:3px!important;
-  border:2px solid var(--profile-avatar-border)!important;
+  border:5px solid var(--profile-avatar-border)!important;
   border-radius:50%!important;
   background:#08090b!important;
   box-shadow:0 14px 34px rgba(0,0,0,.48)!important;
@@ -18770,5 +18772,24 @@ body.mobile-install-sheet-open{overflow:hidden}
   .mobile-install-sheet-backdrop{
     align-items:flex-end;
     padding:18px max(14px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+  }
+}
+
+/* 20/08/2026 — no app instalado o atalho de instalação some; no desktop web ele usa azul. */
+html.betv-installed-app .user-dropdown .install-app-action{display:none!important}
+@media (display-mode:standalone){
+  .user-dropdown .install-app-action{display:none!important}
+}
+@media(min-width:761px){
+  .user-dropdown .install-app-action{
+    border-color:#0a84ff!important;
+    background:#0a84ff!important;
+    color:#fff!important;
+  }
+  .user-dropdown .install-app-action:hover,
+  .user-dropdown .install-app-action:focus-visible{
+    border-color:#2997ff!important;
+    background:#2997ff!important;
+    color:#fff!important;
   }
 }

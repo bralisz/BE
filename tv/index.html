@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#020409">
+  <title>Conectar Smart TV — Billie Eilish TV</title>
+  <link rel="icon" href="/assets/icons/favicon-home-pc.ico" sizes="any">
+  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-cast-v1">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"></script>
+  <script defer src="/assets/js/tv-receiver.js?rev=20260820-tv-cast-v1"></script>
+</head>
+<body class="tv-receiver">
+  <main class="tv-shell">
+    <div class="tv-content">
+      <header class="tv-topbar">
+        <a class="tv-brand" href="/" aria-label="Billie Eilish TV"><img src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="Billie Eilish TV"></a>
+        <a class="tv-back" href="/">Sair</a>
+      </header>
+      <section class="tv-main">
+        <article class="tv-card tv-receiver-card" id="receiverCard">
+          <div class="tv-card-inner" id="receiverLoading">
+            <div class="tv-loading"><span class="tv-spinner" aria-hidden="true"></span><span>Preparando a conexão com sua TV…</span></div>
+          </div>
+          <div class="tv-card-inner" id="receiverPairing" hidden>
+            <span class="tv-eyebrow"><span class="tv-dot"></span>Smart TV</span>
+            <h1>Conecte seu celular</h1>
+            <p>Escaneie o QR Code com a câmera do celular. Você entra na sua conta e a TV fica pronta para receber os vídeos do site.</p>
+            <div class="tv-pair-grid">
+              <div class="tv-qr"><img id="receiverQr" alt="QR Code para conectar esta TV"></div>
+              <div class="tv-code-panel">
+                <span class="tv-code-label">Seu código</span>
+                <div class="tv-code" id="receiverCode" aria-label="Código da TV"></div>
+                <div class="tv-note"><span>1.</span><span>Escaneie o QR Code.<br><strong>2.</strong> Entre na sua conta.<br><strong>3.</strong> Abra um vídeo ou filme e toque no ícone de transmissão.</span></div>
+                <span class="tv-help">O código expira em 5 minutos se não for usado.</span>
+              </div>
+            </div>
+            <div class="tv-status" id="receiverStatus"><span class="pulse"></span><span>Aguardando conexão do celular…</span></div>
+          </div>
+          <div class="tv-card-inner" id="receiverConnected" hidden>
+            <span class="tv-eyebrow"><span class="tv-dot"></span>TV conectada</span>
+            <h1 id="receiverConnectedTitle">Conectado</h1>
+            <p id="receiverConnectedCopy">Agora escolha um vídeo ou filme no celular e toque no ícone de transmissão.</p>
+            <div class="tv-status connected"><span class="pulse"></span><span id="receiverOwner">Conta conectada</span></div>
+          </div>
+          <div class="tv-card-inner" id="receiverPlayer" hidden>
+            <div class="tv-player-wrap" id="receiverPlayerHost"></div>
+            <div class="tv-now-playing">
+              <div class="tv-now-playing-copy">
+                <strong class="tv-now-playing-title" id="receiverMediaTitle">Reproduzindo</strong>
+                <span class="tv-now-playing-meta" id="receiverMediaMeta"></span>
+              </div>
+              <span class="tv-receiver-badge"><span class="pulse"></span>Conectado ao celular</span>
+            </div>
+          </div>
+        </article>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

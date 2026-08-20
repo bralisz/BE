@@ -1,6 +1,22 @@
 {
   "rewrites": [
     {
+      "source": "/tv",
+      "destination": "/tv/index.html"
+    },
+    {
+      "source": "/tv/",
+      "destination": "/tv/index.html"
+    },
+    {
+      "source": "/connect-tv",
+      "destination": "/connect-tv/index.html"
+    },
+    {
+      "source": "/connect-tv/",
+      "destination": "/connect-tv/index.html"
+    },
+    {
       "source": "/api/admin-deployment-release",
       "destination": "/api/admin?handler=deployment-release"
     },
@@ -438,6 +454,58 @@
     }
   ],
   "headers": [
+    {
+      "source": "/tv",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/tv/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/connect-tv",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/connect-tv/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
     {
       "source": "/fr/reset-password/",
       "headers": [

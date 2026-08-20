@@ -2824,6 +2824,7 @@ body.admin-preview-open{overflow:hidden}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
           ${name === 'videos' ? imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. A logo aparece somente ao abrir os detalhes do conteúdo e não é exibida nos cards.' }) : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
+          ${name === 'movies' ? `<div class="field full"><label>Google Drive para o app mobile <span style="font-weight:500;opacity:.7">(opcional)</span></label><input class="a-input" name="mobileAppDriveUrl" value="${esc(item.mobileAppDriveUrl || '')}" placeholder="https://drive.google.com/file/d/..."><small>No app instalado no celular, este link substitui o “Link do conteúdo”. Se ficar vazio, o app usa o link padrão acima.</small></div>` : ''}
           ${name === 'movies' ? movieSubtitleUploadFields(item) : ''}
         </div>
       </section>
@@ -3327,6 +3328,10 @@ body.admin-preview-open{overflow:hidden}
           delete data.link;
         }
         if (name === 'movies') {
+          data.mobileAppDriveUrl = String(data.mobileAppDriveUrl || '').trim();
+          if (data.mobileAppDriveUrl && !/^https:\/\/(?:drive\.google\.com|drive\.usercontent\.google\.com)\//i.test(data.mobileAppDriveUrl)) {
+            throw new Error('O link opcional do app mobile deve ser um link HTTPS do Google Drive.');
+          }
           const subtitleTracks = {};
           const subtitleFolderKey = item?.id || `draft-${generatePublicId(`${String(data.title || '').trim()}-${Date.now()}`)}`;
           for (const [locale, , suffix] of MOVIE_SUBTITLE_LANGUAGES) {

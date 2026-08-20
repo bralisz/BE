@@ -3071,6 +3071,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         imageUrl: thumbnail,
         bannerUrl: background,
         contentUrl: source.videoUrl || source.contentUrl || source.link || item.contentUrl,
+        mobileAppDriveUrl: source.mobileAppDriveUrl || item.mobileAppDriveUrl || '',
         duration: source.duration || source.videoDuration || source.runtime || item.duration,
         year: source.year || item.year,
         logoUrl: source.logoUrl || item.logoUrl || '',
@@ -3115,6 +3116,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-year="${escapeHtml(item.year || '')}"
               data-duration="${escapeHtml(item.duration || '')}"
               data-content-url="${safeUrl(url)}"
+              data-mobile-app-drive-url="${safeUrl(item.mobileAppDriveUrl || '')}"
               data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
               data-image-url="${safeAssetUrl(item.imageUrl || '')}"
               data-banner-url="${safeAssetUrl(item.bannerUrl || item.imageUrl || '')}"
@@ -3315,6 +3317,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-year="${escapeHtml(year)}"
               data-duration="${escapeHtml(duration)}"
               data-content-url="${safeUrl(contentUrl)}"
+              data-mobile-app-drive-url="${safeUrl(item.mobileAppDriveUrl || '')}"
               data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
               data-image-url="${safeAssetUrl(thumbnail)}"
               data-banner-url="${safeAssetUrl(background)}"
@@ -3922,6 +3925,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-year="${escapeHtml(year)}"
       data-duration="${escapeHtml(duration)}"
       data-content-url="${safeUrl(contentHref)}"
+      data-mobile-app-drive-url="${safeUrl(video.mobileAppDriveUrl || '')}"
       data-subtitle-url="${safeUrl(video.subtitleUrl || '')}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(banner)}"
@@ -4031,6 +4035,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           year: item.year || '',
           duration: item.duration || item.videoDuration || item.runtime || '',
           contentUrl: item.videoUrl || item.contentUrl || item.link || '#',
+          mobileAppDriveUrl: item.mobileAppDriveUrl || '',
           subtitleUrl: item.subtitleUrl || '',
           imageUrl: item.thumbnailUrl || item.imageUrl || item.bannerUrl || '',
           bannerUrl: ['movies', 'series'].includes(collection)
@@ -4412,6 +4417,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-year="${escapeHtml(data.year || '')}"
       data-duration="${escapeHtml(data.duration || '')}"
       data-content-url="${safeUrl(contentHref)}"
+      data-mobile-app-drive-url="${safeUrl(data.mobileAppDriveUrl || '')}"
       data-subtitle-url="${safeUrl(data.subtitleUrl || '')}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(['movies', 'series'].includes(String(data.collection || '').toLowerCase()) ? image : (data.bannerUrl || image))}"
@@ -5174,6 +5180,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         window.matchMedia?.('(display-mode: fullscreen)').matches ||
         window.navigator.standalone === true
       );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function isInstalledMobileApp() {
+    try {
+      const installed = window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      return Boolean(installed && isMobileOrientationDevice());
     } catch (_) {
       return false;
     }
@@ -8482,6 +8497,39 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  function queueDetailTvCast() {
+    const play = document.getElementById('contentDetailPlay');
+    if (!play || play.getAttribute('aria-disabled') === 'true') return;
+    const data = contentDataFromElement(play);
+    const contentUrl = String(data.contentUrl || '').trim();
+    if (!contentUrl || contentUrl === '#') return;
+
+    const payload = {
+      itemId: String(data.itemId || ''),
+      recordId: String(data.recordId || ''),
+      title: String(data.title || 'Billie Eilish TV'),
+      description: String(data.description || ''),
+      year: String(data.year || ''),
+      duration: String(data.duration || ''),
+      contentUrl,
+      subtitleUrl: String(data.subtitleUrl || ''),
+      imageUrl: String(data.imageUrl || ''),
+      bannerUrl: String(data.bannerUrl || ''),
+      logoUrl: String(data.logoUrl || ''),
+      collection: String(data.collection || 'videos')
+    };
+
+    try { localStorage.setItem('beTvPendingMedia', JSON.stringify(payload)); } catch (_) {}
+    const target = '/connect-tv/?from=cast';
+    const account = window.beBackend?.auth?.currentUser || null;
+    if (!account) {
+      try { sessionStorage.setItem('bePostAuthReturn', target); } catch (_) {}
+      location.assign(`/login?return_to=${encodeURIComponent(target)}`);
+      return;
+    }
+    location.assign(target);
+  }
+
   function setupDetailControls() {
     setupExternalVideoPlayers();
     setupDriveVideoPlayer();
@@ -8489,6 +8537,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const section = document.getElementById('contentDetailSection');
     const back = document.getElementById('detailBackButton');
     const share = document.getElementById('contentDetailShare');
+    const cast = document.getElementById('contentDetailCast');
     const streamingStore = document.getElementById('detailStreamingStore');
     const streamingButton = document.getElementById('detailStreamingButton');
     const streamingPanel = document.getElementById('detailStreamingPanel');
@@ -8600,6 +8649,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         shareDetailContent(share);
       });
     }
+    if (cast && cast.dataset.bound !== 'true') {
+      cast.dataset.bound = 'true';
+      cast.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        queueDetailTvCast();
+      });
+    }
     if (section && section.dataset.bound !== 'true') {
       section.dataset.bound = 'true';
       window.addEventListener('be:detail-close', event => closeContentDetail(false, !(event instanceof CustomEvent && event.detail && event.detail.preserveRoute === true)));
@@ -8623,16 +8680,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const play = document.getElementById('contentDetailPlay');
     const list = document.getElementById('contentDetailList');
     const share = document.getElementById('contentDetailShare');
-    if (!section || !bg || !logo || !meta || !desc || !play || !list || !share) return;
+    const cast = document.getElementById('contentDetailCast');
+    if (!section || !bg || !logo || !meta || !desc || !play || !list || !share || !cast) return;
 
     const title = data.title || 'Conteúdo';
     const preserveTitle = data.preserveTitle === true || String(data.preserveTitle || '').toLowerCase() === 'true' || preservesOriginalMusicTitle(data);
     const description = data.description || 'Descrição indisponível no momento.';
     const year = data.year || '';
     const duration = data.duration || '';
-    const contentUrl = data.contentUrl || '#';
-    const subtitleUrl = data.subtitleUrl || '';
     const collection = String(data.collection || '').toLowerCase();
+    const defaultContentUrl = data.contentUrl || '#';
+    const requestedMobileDriveUrl = String(data.mobileAppDriveUrl || data.appDriveUrl || '').trim();
+    const mobileDriveUrl = requestedMobileDriveUrl && googleDriveFileId(requestedMobileDriveUrl) ? requestedMobileDriveUrl : '';
+    const contentUrl = collection === 'movies' && isInstalledMobileApp() && mobileDriveUrl
+      ? mobileDriveUrl
+      : defaultContentUrl;
+    const subtitleUrl = data.subtitleUrl || '';
     const thumbnailUrl = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
     const bannerUrl = ['movies', 'series'].includes(collection)
       ? thumbnailUrl
@@ -8669,6 +8732,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const playableUrl = safeUrlValue(contentUrl);
     const hasContentLink = playableUrl !== '#';
+    const castableCollection = ['videos', 'movies'].includes(collection || 'videos');
+    cast.hidden = !(hasContentLink && castableCollection);
+    if (!cast.hidden) cast.removeAttribute('hidden'); else cast.setAttribute('hidden', '');
     play.innerHTML = hasContentLink
       ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir'
       : 'Disponível em Breve';
@@ -8696,6 +8762,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     play.dataset.year = year;
     play.dataset.duration = duration;
     play.dataset.contentUrl = contentUrl;
+    play.dataset.mobileAppDriveUrl = requestedMobileDriveUrl;
     play.dataset.subtitleUrl = subtitleUrl;
     play.dataset.imageUrl = thumbnailUrl;
     play.dataset.bannerUrl = bannerUrl;
@@ -9178,6 +9245,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       year:String(data?.year || ''),
       duration:String(data?.duration || ''),
       contentUrl:String(data?.contentUrl || '#'),
+      mobileAppDriveUrl:String(data?.mobileAppDriveUrl || data?.appDriveUrl || ''),
       subtitleUrl:String(data?.subtitleUrl || ''),
       imageUrl:String(data?.imageUrl || data?.thumbnailUrl || data?.bannerUrl || ''),
       bannerUrl:String(data?.bannerUrl || data?.imageUrl || data?.thumbnailUrl || ''),
@@ -9209,6 +9277,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       year:dataset.year || element.dataset?.year || '',
       duration:dataset.duration || element.dataset?.duration || '',
       contentUrl:dataset.contentUrl || element.dataset?.contentUrl || '#',
+      mobileAppDriveUrl:dataset.mobileAppDriveUrl || element.dataset?.mobileAppDriveUrl || '',
       subtitleUrl:dataset.subtitleUrl || element.dataset?.subtitleUrl || '',
       imageUrl:dataset.imageUrl || element.dataset?.imageUrl || '',
       bannerUrl:dataset.bannerUrl || element.dataset?.bannerUrl || '',
@@ -9939,6 +10008,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function updateInstallButton() {
     const installed = isStandaloneApp();
+    document.documentElement.classList.toggle('betv-installed-app', installed);
     const ready = Boolean(deferredInstallPrompt);
     const mobileButton = document.getElementById('mobileInstallButton');
     const desktopButton = document.getElementById('desktopInstallButton');
@@ -13551,6 +13621,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function authCallbackError(){var p=callbackParams();return p.query.get('error_description')||p.hash.get('error_description')||p.query.get('error')||p.hash.get('error')||'';}
   function cleanPathname(){try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}}
   function replaceRoute(route){var url=new URL(location.href);['code','error','error_code','error_description','auth_callback','oauth'].forEach(function(name){url.searchParams.delete(name)});if(String(route||'').startsWith('/')){url.pathname=route;url.hash='';}else{url.pathname='/';url.hash=route||'';}history.replaceState(null,'',url.pathname+(url.search||'')+url.hash);}
+  function postAuthReturnTarget(){var raw='';try{raw=String(new URLSearchParams(location.search||'').get('return_to')||sessionStorage.getItem('bePostAuthReturn')||'').trim();}catch(_){raw='';}if(!raw)return '';try{var url=new URL(raw,location.origin);if(url.origin!==location.origin)return '';if(!/^\/connect-tv\/?$/i.test(url.pathname))return '';return url.pathname+(url.search||'');}catch(_){return '';}}
   function isConfigRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/config'||hash==='#config'||hash==='#/config';}
   function isLoginRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/login'||hash==='#login'||hash==='#/login';}
   function isPasswordRecoveryRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/reset-password'||hash==='#reset-password'||hash==='#/reset-password'||sessionStorage.getItem('bePasswordRecoveryActive')==='1';}
@@ -13685,6 +13756,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!(await enforceAccountAccess(user)))return null;
     setStatus('');
     if(isPasswordRecoveryRoute()){showPasswordRecovery();return user;}
+    var postAuthTarget=postAuthReturnTarget();
+    if(postAuthTarget){try{sessionStorage.removeItem('bePostAuthReturn');}catch(_){}location.replace(postAuthTarget);return user;}
     if(isNotificationsRoute())showNotificationsRoute();
     else if(isDonateRoute())showDonateRoute();
     else if(isSupportRoute())showSupportRoute();
@@ -13708,6 +13781,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{await auth.signInWithDiscord();}catch(err){setStatus(friendly(err),'error');authFlowBusy=false;button.disabled=false;}
     };
     var guestAccessButton=q('guestAccessButton');
+    var tvPostAuthTarget=postAuthReturnTarget();
+    if(tvPostAuthTarget){try{sessionStorage.setItem('bePostAuthReturn',tvPostAuthTarget);}catch(_){}if(guestAccessButton)guestAccessButton.hidden=true;}
     if(guestAccessButton)guestAccessButton.onclick=function(){
       if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(true);
       localStorage.removeItem('beAuthExpected');
@@ -13799,7 +13874,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{
         var result=await auth.signUp({email:email,password:password,name:name,username:'',remember:true});
         if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}
-        currentProfile=await beBackend.profiles.ensure(result.user);if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');enterHome();
+        currentProfile=await beBackend.profiles.ensure(result.user);if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');await finishPublicLogin(result.user);
       }catch(err){
         showLogin();
         if(err&&err.code==='auth/email-already-in-use')setMode('password',email);else setMode('signup',email);
