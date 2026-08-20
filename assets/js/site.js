@@ -10000,10 +10000,35 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const isMobile = () => window.matchMedia(MOBILE_QUERY).matches;
   let deferredInstallPrompt = null;
 
-  const isStandaloneApp = () => Boolean(
-    window.matchMedia?.('(display-mode: standalone)').matches ||
-    window.navigator.standalone === true
-  );
+  const isStandaloneApp = () => {
+    let sessionFlag = false;
+    let launchedFromPwa = false;
+    let androidAppReferrer = false;
+    try {
+      sessionFlag = sessionStorage.getItem('betv-pwa-session') === '1';
+      launchedFromPwa = new URLSearchParams(location.search || '').get('source') === 'pwa';
+      androidAppReferrer = /^android-app:\/\//i.test(String(document.referrer || ''));
+    } catch (_) {}
+    const standaloneDisplay = Boolean(
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      window.matchMedia?.('(display-mode: fullscreen)').matches ||
+      window.matchMedia?.('(display-mode: minimal-ui)').matches ||
+      window.matchMedia?.('(display-mode: window-controls-overlay)').matches
+    );
+    const installed = Boolean(
+      window.__BETVInstalledAppLaunch === true ||
+      sessionFlag ||
+      launchedFromPwa ||
+      androidAppReferrer ||
+      standaloneDisplay ||
+      window.navigator.standalone === true
+    );
+    if (installed) {
+      try { sessionStorage.setItem('betv-pwa-session', '1'); } catch (_) {}
+      window.__BETVInstalledAppLaunch = true;
+    }
+    return installed;
+  };
   const isIosDevice = () => /iphone|ipad|ipod/i.test(String(navigator.userAgent || ''));
 
   function updateInstallButton() {
