@@ -16,7 +16,7 @@ button,input,a{font:inherit}
 button,a{-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 .tv-shell{position:relative;min-height:100svh;overflow:hidden;background:#03050a}
-.tv-shell::before{content:"";position:fixed;inset:0;background:url('/assets/images/tv/connect-bg.webp') center/cover no-repeat;transform:scale(1.02);filter:saturate(.88) brightness(.62);z-index:0}
+.tv-shell::before{content:"";position:fixed;inset:0;background:url('/assets/images/tv/connect-bg-tv.jpg') center/cover no-repeat;transform:scale(1.02);filter:saturate(.88) brightness(.62);z-index:0}
 .tv-shell::after{content:"";position:fixed;inset:0;background:linear-gradient(180deg,rgba(1,4,10,.28),rgba(1,4,10,.72) 60%,rgba(1,4,10,.92)),radial-gradient(circle at 50% 28%,rgba(35,126,215,.16),transparent 42%);z-index:0}
 .tv-content{position:relative;z-index:1;min-height:100svh;display:flex;flex-direction:column;padding:max(22px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left))}
 .tv-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;width:min(1180px,100%);margin:0 auto}
@@ -125,3 +125,53 @@ button,a{-webkit-tap-highlight-color:transparent}
   .tv-receiver .tv-card-inner{padding:42px}
   .tv-receiver .tv-card h1{font-size:48px}
 }
+
+/* Smart TV legacy compatibility (old Tizen/WebOS/NetCast browsers). */
+.legacy-tv,.legacy-tv body{background:#020409;color:#f7f9ff}
+.legacy-tv .tv-shell{min-height:100vh}
+.legacy-tv .tv-shell::before{top:0;right:0;bottom:0;left:0;background-image:url('/assets/images/tv/connect-bg-tv.jpg');background-position:center center;background-repeat:no-repeat;background-size:cover}
+.legacy-tv .tv-shell::after{top:0;right:0;bottom:0;left:0}
+.legacy-tv .tv-content{min-height:100vh;padding:22px}
+.legacy-tv .tv-topbar{width:100%;max-width:1180px}
+.legacy-tv .tv-main{width:100%;max-width:1180px;display:block;padding-top:54px;padding-bottom:36px}
+.legacy-tv .tv-card{width:760px;max-width:100%;margin:0 auto;background:rgba(8,11,17,.94)}
+.legacy-tv .tv-receiver-card{width:880px;max-width:100%}
+.legacy-tv .tv-receiver-card.is-playing{width:1180px;max-width:100%}
+.legacy-tv .tv-card h1{font-size:46px}
+.legacy-tv .tv-card p{color:rgba(238,244,255,.72)}
+.legacy-tv .tv-back{border-color:rgba(255,255,255,.15)}
+.legacy-tv .tv-dot,.legacy-tv .tv-status .pulse{background:#41a8ff}
+.legacy-tv .tv-status.connected .pulse{background:#72e59e}
+.legacy-tv .tv-status.error .pulse{background:#ff6d7b}
+.legacy-tv .tv-pair-grid{display:block;overflow:hidden}
+.legacy-tv .tv-qr{display:block;float:left;width:280px;height:280px;margin:0 28px 0 0}
+.legacy-tv .tv-qr img{width:100%;height:100%}
+.legacy-tv .tv-code-panel{display:block;overflow:hidden;padding-top:4px}
+.legacy-tv .tv-code-panel>*{margin-bottom:14px}
+.legacy-tv .tv-code{display:block;white-space:nowrap}
+.legacy-tv .tv-code span{display:inline-block;vertical-align:middle;min-width:43px;height:54px;line-height:54px;text-align:center;margin:0 5px 5px 0}
+.legacy-tv .tv-note{display:block}
+.legacy-tv .tv-status{display:block}
+.legacy-tv .tv-status .pulse{display:inline-block;vertical-align:middle;margin-right:10px}
+.legacy-tv .tv-status span{vertical-align:middle}
+.legacy-tv .tv-loading{display:block;text-align:center;padding-top:110px}
+.legacy-tv .tv-spinner{display:block;margin:0 auto 18px}
+.legacy-tv .tv-player-wrap{height:0;padding-top:56.25%;border-radius:20px}
+.legacy-tv .tv-player-wrap iframe,.legacy-tv .tv-player-wrap video{top:0;right:0;bottom:0;left:0}
+.legacy-tv .tv-now-playing{display:block}
+.legacy-tv .tv-receiver-badge{display:inline-block;margin-top:12px}
+
+@media (max-width:900px){
+  .legacy-tv .tv-main{padding-top:28px}
+  .legacy-tv .tv-card-inner{padding:26px}
+  .legacy-tv .tv-card h1{font-size:36px}
+  .legacy-tv .tv-qr{float:none;width:240px;height:240px;margin:0 auto 22px}
+  .legacy-tv .tv-code-panel{text-align:center}
+}
+.legacy-tv .tv-card p,
+.legacy-tv .tv-now-playing-meta,
+.legacy-tv .tv-help,
+.legacy-tv .tv-loading,
+.legacy-tv .tv-account-copy span,
+.legacy-tv .tv-content-copy span,
+.legacy-tv .tv-message{color:rgba(238,244,255,.72)}

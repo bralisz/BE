@@ -8512,6 +8512,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       year: String(data.year || ''),
       duration: String(data.duration || ''),
       contentUrl,
+      mobileAppDriveUrl: String(data.mobileAppDriveUrl || ''),
+      tvDriveUrl: String(data.mobileAppDriveUrl || ''),
       subtitleUrl: String(data.subtitleUrl || ''),
       imageUrl: String(data.imageUrl || ''),
       bannerUrl: String(data.bannerUrl || ''),

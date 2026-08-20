@@ -27,17 +27,19 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const svg = await QRCode.toString(target.href, {
-      type: 'svg',
+    // PNG is intentionally used here because older Smart TV browsers can
+    // render it reliably, while SVG support in <img> is inconsistent.
+    const png = await QRCode.toBuffer(target.href, {
+      type: 'png',
       errorCorrectionLevel: 'M',
       margin: 1,
       color: { dark: '#000000', light: '#ffffff' },
-      width: 640
+      width: 520
     });
-    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Content-Type', 'image/png');
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.status(200).send(svg);
+    res.status(200).send(png);
   } catch (error) {
     console.error('TV QR generation failed:', error);
     res.status(500).json({ error: 'qr_generation_failed' });
