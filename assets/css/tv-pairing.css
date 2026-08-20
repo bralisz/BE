@@ -233,6 +233,20 @@ button,a{-webkit-tap-highlight-color:transparent}
   .tv-receiver .tv-card h1{font-size:48px}
 }
 
+
+/* Smart TV player accessibility */
+.tv-player-accessibility{position:absolute;right:22px;bottom:22px;z-index:8;display:flex;align-items:center;gap:10px;pointer-events:none}
+.tv-subtitle-toggle{pointer-events:auto;display:none;align-items:center;gap:9px;min-height:44px;padding:9px 14px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(8,11,17,.76);color:#fff;font-weight:800;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,.34)}
+.tv-subtitle-toggle:focus,.tv-subtitle-toggle:hover{outline:none;border-color:rgba(255,255,255,.7);background:rgba(28,33,43,.92)}
+.tv-subtitle-toggle.is-active{background:#fff;color:#080b10;border-color:#fff}
+.tv-subtitle-icon{display:grid;place-items:center;min-width:28px;height:22px;padding:0 4px;border:2px solid currentColor;border-radius:5px;font-size:11px;line-height:1;font-weight:950;letter-spacing:.02em}
+.tv-subtitle-label{font-size:13px}
+.tv-subtitle-overlay{position:absolute;left:8%;right:8%;bottom:9%;z-index:7;text-align:center;white-space:pre-line;color:#fff;font-size:clamp(20px,2.25vw,34px);line-height:1.22;font-weight:750;text-shadow:0 2px 4px #000,0 0 10px #000;pointer-events:none}
+.tv-subtitle-overlay:not([hidden]){display:block}
+.tv-subtitle-overlay::first-line{background:rgba(0,0,0,.68)}
+.legacy-tv.tv-receiver.is-playing .tv-player-accessibility{position:fixed;right:28px;bottom:28px}
+.legacy-tv.tv-receiver.is-playing .tv-subtitle-overlay{position:fixed;left:8%;right:8%;bottom:8%}
+
 /* Smart TV legacy compatibility (old Tizen/WebOS/NetCast browsers). */
 .legacy-tv,.legacy-tv body{background:#020409;color:#f7f9ff}
 .legacy-tv .tv-shell{min-height:100vh}

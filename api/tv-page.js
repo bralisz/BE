@@ -173,43 +173,69 @@ function preferredMediaUrl(media) {
   return String(media.contentUrl || '').trim();
 }
 
+function subtitleClientUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const drive = driveInfo(raw);
+  if (drive) return `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey })}`;
+  try {
+    const url = new URL(raw, 'https://billieilishtv.site');
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    return url.href;
+  } catch (_) {
+    return '';
+  }
+}
+
 function renderMedia(media) {
   if (!media || typeof media !== 'object') return '';
   const selected = preferredMediaUrl(media);
   const drive = driveInfo(selected);
   const yt = youtubeInfo(selected);
   const vk = vkInfo(selected);
+  const subtitleUrl = subtitleClientUrl(media.subtitleUrl || '');
   let player = '';
+  let provider = '';
 
   if (drive) {
-    const direct = `https://drive.usercontent.google.com/download?${qs({
-      id: drive.id,
-      export: 'download',
-      confirm: 't',
-      authuser: '0',
-      resourcekey: drive.resourceKey
-    })}`;
+    // O endpoint do próprio site resolve confirmação/cookies do Google Drive e
+    // redireciona o <video> para a URL final, algo bem mais confiável em TVs.
+    const stream = `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey })}`;
     const preview = `https://drive.google.com/file/d/${encodeURIComponent(drive.id)}/preview?${qs({ autoplay: '1', resourcekey: drive.resourceKey })}`;
-    player = `<video id="legacyTvVideo" controls autoplay preload="auto" src="${escapeHtml(direct)}" style="width:100%;height:100%;background:#000" onerror="this.style.display='none';document.getElementById('legacyDriveFallback').style.display='block';"></video>` +
+    provider = 'native';
+    player = `<video id="legacyTvVideo" controls autoplay playsinline preload="metadata" src="${escapeHtml(stream)}" style="width:100%;height:100%;background:#000" onerror="this.style.display='none';var f=document.getElementById('legacyDriveFallback');if(f){f.style.display='block';}var a=document.getElementById('tvPlayerAccessibility');if(a){a.style.display='none';}var s=document.getElementById('tvSubtitleOverlay');if(s){s.style.display='none';}"></video>` +
       `<iframe id="legacyDriveFallback" src="${escapeHtml(preview)}" allow="autoplay; fullscreen" allowfullscreen frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
   } else if (yt) {
     const path = yt.id ? `embed/${encodeURIComponent(yt.id)}` : 'embed/videoseries';
     const src = `https://www.youtube-nocookie.com/${path}?${qs({ autoplay: '1', controls: '1', rel: '0', list: yt.list })}`;
-    player = `<iframe src="${escapeHtml(src)}" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>`;
+    provider = 'youtube';
+    player = `<iframe id="legacyTvFrame" src="${escapeHtml(src)}" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>`;
   } else if (vk) {
-    const src = `https://vk.com/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', hash: vk.hash })}`;
-    player = `<iframe src="${escapeHtml(src)}" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>`;
+    // vkvideo.ru é o player de embed atual do VK Video. js_api permite obter
+    // o tempo atual para sincronizar as legendas externas do BETV.
+    const src = `https://vkvideo.ru/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '4', js_api: '1', hash: vk.hash })}`;
+    provider = 'vk';
+    const fallbackSrc = `https://vk.com/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '4', js_api: '1', hash: vk.hash })}`;
+    player = `<iframe id="legacyTvFrame" src="${escapeHtml(src)}" data-fallback-src="${escapeHtml(fallbackSrc)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0"></iframe>`;
   } else if (/^https?:\/\//i.test(selected) && /\.(?:mp4|m4v|webm)(?:$|[?#])/i.test(selected)) {
-    player = `<video controls autoplay preload="auto" src="${escapeHtml(selected)}"></video>`;
+    provider = 'native';
+    player = `<video id="legacyTvVideo" controls autoplay playsinline preload="metadata" src="${escapeHtml(selected)}"></video>`;
   }
 
   if (!player) return '';
 
   const title = escapeHtml(media.title || 'Billie Eilish TV');
   const meta = [media.year, media.duration].filter(Boolean).map(escapeHtml).join(' • ');
+  const subtitleControls = subtitleUrl && (provider === 'native' || provider === 'vk')
+    ? `<div class="tv-player-accessibility" id="tvPlayerAccessibility"><button type="button" class="tv-subtitle-toggle" id="tvSubtitleToggle" aria-pressed="false" aria-label="Ativar legendas" title="Legendas"><span class="tv-subtitle-icon" aria-hidden="true">CC</span><span class="tv-subtitle-label">Legendas</span></button></div><div class="tv-subtitle-overlay" id="tvSubtitleOverlay" hidden></div>`
+    : '';
+  const subtitleScript = subtitleUrl && (provider === 'native' || provider === 'vk')
+    ? subtitleRuntimeScript(subtitleUrl, provider)
+    : '';
+
   return `
     <div class="tv-card-inner" id="receiverPlayer">
-      <div class="tv-player-wrap" id="receiverPlayerHost">${player}</div>
+      <div class="tv-player-wrap" id="receiverPlayerHost" data-provider="${escapeHtml(provider)}">${player}${subtitleControls}</div>
       <div class="tv-now-playing">
         <div class="tv-now-playing-copy">
           <strong class="tv-now-playing-title">${title}</strong>
@@ -217,7 +243,103 @@ function renderMedia(media) {
         </div>
         <span class="tv-receiver-badge"><span class="pulse"></span>Conectado ao celular</span>
       </div>
-    </div>`;
+    </div>${subtitleScript}`;
+}
+
+function subtitleRuntimeScript(subtitleUrl, provider) {
+  const safeUrl = JSON.stringify(String(subtitleUrl || '')).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+  const safeProvider = JSON.stringify(String(provider || '')).replace(/</g, '\\u003c');
+  return `<script type="text/javascript">
+(function(){
+  var subtitleUrl=${safeUrl};
+  var provider=${safeProvider};
+  var button=document.getElementById('tvSubtitleToggle');
+  var overlay=document.getElementById('tvSubtitleOverlay');
+  var video=document.getElementById('legacyTvVideo');
+  var frame=document.getElementById('legacyTvFrame');
+  var cues=[];
+  var enabled=false;
+  var vkPlayer=null;
+  var vkReady=false;
+  var timer=0;
+
+  function entities(text){
+    return String(text||'').replace(/&nbsp;/gi,' ').replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&amp;/gi,'&');
+  }
+  function seconds(value){
+    var raw=String(value||'').replace(',','.').replace(/^\\s+|\\s+$/g,'');
+    var parts=raw.split(':');
+    if(parts.length<2||parts.length>3)return NaN;
+    var sec=parseFloat(parts.pop()),min=parseFloat(parts.pop()),hour=parts.length?parseFloat(parts.pop()):0;
+    if(isNaN(sec)||isNaN(min)||isNaN(hour))return NaN;
+    return hour*3600+min*60+sec;
+  }
+  function parse(text){
+    var source=String(text||'').replace(/^\\uFEFF/,'').replace(/\\r\\n?/g,'\\n').replace(/^\\s+|\\s+$/g,'');
+    var blocks=source.split(/\\n{2,}/),out=[];
+    for(var i=0;i<blocks.length;i++){
+      var lines=blocks[i].split('\\n'),timeIndex=-1;
+      for(var j=0;j<lines.length;j++){if(lines[j].indexOf('-->')>=0){timeIndex=j;break;}}
+      if(timeIndex<0)continue;
+      var match=lines[timeIndex].match(/^\\s*([^\\s]+)\\s+-->\\s+([^\\s]+)(?:\\s+.*)?$/);
+      if(!match)continue;
+      var start=seconds(match[1]),end=seconds(match[2]);
+      if(isNaN(start)||isNaN(end)||end<=start)continue;
+      var body=lines.slice(timeIndex+1).join('\\n').replace(/<br\\s*\\/?\\s*>/gi,'\\n').replace(/<[^>]+>/g,'');
+      body=entities(body).replace(/^\\s+|\\s+$/g,'');
+      if(body)out.push({start:start,end:end,text:body});
+    }
+    return out;
+  }
+  function cueAt(time){
+    var t=Number(time); if(isNaN(t))return '';
+    for(var i=cues.length-1;i>=0;i--){if(cues[i].start<=t)return t<=cues[i].end?cues[i].text:'';}
+    return '';
+  }
+  function show(text){
+    if(!overlay)return;
+    var value=enabled?String(text||''):'';
+    if(overlay.textContent!==value)overlay.textContent=value;
+    overlay.hidden=!value;
+  }
+  function currentTime(){
+    if(provider==='native'&&video)return Number(video.currentTime)||0;
+    if(provider==='vk'&&vkReady&&vkPlayer&&typeof vkPlayer.getCurrentTime==='function'){
+      try{return Number(vkPlayer.getCurrentTime())||0;}catch(e){}
+    }
+    return 0;
+  }
+  function tick(){show(cueAt(currentTime()));timer=setTimeout(tick,250);}
+  function setEnabled(value){
+    enabled=!!value;
+    if(button){button.className='tv-subtitle-toggle'+(enabled?' is-active':'');button.setAttribute('aria-pressed',enabled?'true':'false');button.setAttribute('aria-label',enabled?'Desativar legendas':'Ativar legendas');}
+    if(!enabled)show('');
+  }
+  function load(){
+    if(!subtitleUrl||!window.XMLHttpRequest)return;
+    var x=new XMLHttpRequest();
+    try{x.open('GET',subtitleUrl,true);}catch(e){return;}
+    x.onreadystatechange=function(){
+      if(x.readyState!==4)return;
+      if(x.status>=200&&x.status<300){cues=parse(x.responseText||'');if(cues.length&&button){button.style.display='inline-flex';}}
+    };
+    try{x.send(null);}catch(e){}
+  }
+  function bindVk(attempt){
+    if(provider!=='vk'||!frame)return;
+    if(window.VK&&typeof window.VK.VideoPlayer==='function'){
+      try{vkPlayer=window.VK.VideoPlayer(frame);vkReady=true;return;}catch(e){}
+    }
+    if(attempt>12)return;
+    setTimeout(function(){bindVk(attempt+1);},400);
+  }
+  if(button){button.style.display='none';button.onclick=function(){setEnabled(!enabled);};}
+  if(provider==='vk'){
+    var script=document.createElement('script');script.src='https://vk.com/js/api/videoplayer.js';script.async=true;script.onload=function(){bindVk(0);};document.getElementsByTagName('head')[0].appendChild(script);
+  }
+  load();tick();
+})();
+</script>`;
 }
 
 function codeMarkup(code) {
@@ -279,7 +401,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   <meta name="theme-color" content="#020409">
   <title>Conectar Smart TV — Billie Eilish TV</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-stable-v2">
+  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-media-v3">
 </head>
 <body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
   <main class="tv-shell">
