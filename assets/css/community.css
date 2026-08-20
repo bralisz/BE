@@ -282,3 +282,13 @@ body.community-page-active .site-footer{
     padding-top:0!important;
   }
 }
+
+/* 20/08/2026 — mantém "Instalar app" branco no menu do avatar no mobile. */
+@media (max-width:760px){
+  .mobile-account-popover button[data-mobile-account="install"],
+  .mobile-account-popover button[data-mobile-account="install"]:active,
+  .mobile-account-popover button[data-mobile-account="install"]:focus-visible{
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+  }
+}
