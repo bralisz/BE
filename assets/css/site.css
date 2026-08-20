@@ -2682,6 +2682,8 @@
     backdrop-filter:blur(14px);
   }
   .detail-list svg,.detail-streaming-mobile-button svg,.detail-cast svg,.detail-share svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .detail-cast .airplay-icon{width:21px;height:21px;stroke-width:1.85}
+  .detail-cast .airplay-icon path:last-child{fill:currentColor;stroke:currentColor;stroke-width:1.35}
   .detail-list.active svg{fill:currentColor}
   .detail-streaming-mobile-button{display:none}
   .detail-play:hover,.detail-list:hover,.detail-streaming-mobile-button:hover,.detail-cast:hover,.detail-share:hover{transform:translateY(-1px);}
