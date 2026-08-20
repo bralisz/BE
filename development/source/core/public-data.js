@@ -3,7 +3,7 @@
   if (location.hash.startsWith('#/admin')) return;
 
   const randomFeaturedPools = { videos: [], films: [], movies: [], series: [] };
-  const lastRandomFeaturedId = { videos: '', films: '', movies: '', series: '' };
+  const lastRandomFeaturedIds = { videos: [], films: [], movies: [], series: [] };
 
 
   function localizedUiText(source, variables = {}) {
@@ -210,7 +210,7 @@
     section.className = 'featured-wrap tab-random-featured';
     section.id = 'randomFeaturedSection';
     section.hidden = true;
-    section.innerHTML = '<div class="featured" id="randomFeatured" aria-roledescription="destaque" aria-label="Destaque aleatório da categoria"></div>';
+    section.innerHTML = '<div class="featured" id="randomFeatured" aria-roledescription="destaque" aria-label="Destaques aleatórios da categoria"></div>';
     homeFeatured.insertAdjacentElement('afterend', section);
     return section;
   }
@@ -225,23 +225,42 @@
     return Math.floor(Math.random() * max);
   }
 
-  function chooseRandomFeatured(view, force = false) {
+  function randomFeaturedIdentity(item) {
+    return String(item?.id || item?.publicId || item?.title || '');
+  }
+
+  function chooseRandomFeaturedItems(view, force = false, limit = 3) {
     const pool = randomFeaturedPools[view] || [];
-    if (!pool.length) return null;
-    const currentId = lastRandomFeaturedId[view];
-    if (!force && currentId) {
-      const current = pool.find(item => String(item.id || item.publicId || item.title) === currentId);
-      if (current) return current;
+    if (!pool.length) return [];
+
+    const count = Math.min(Math.max(1, Number(limit) || 3), pool.length);
+    const currentIds = Array.isArray(lastRandomFeaturedIds[view]) ? lastRandomFeaturedIds[view] : [];
+    if (!force && currentIds.length) {
+      const currentItems = currentIds
+        .map(id => pool.find(item => randomFeaturedIdentity(item) === id))
+        .filter(Boolean)
+        .slice(0, count);
+      if (currentItems.length === count) return currentItems;
     }
-    let selected = pool[randomIndex(pool.length)];
-    if (pool.length > 1 && currentId) {
-      let attempts = 0;
-      while (String(selected.id || selected.publicId || selected.title) === currentId && attempts < 8) {
-        selected = pool[randomIndex(pool.length)];
-        attempts += 1;
+
+    const previousSignature = currentIds.join('|');
+    let selected = [];
+    let attempts = 0;
+    do {
+      const candidates = pool.slice();
+      selected = [];
+      while (selected.length < count && candidates.length) {
+        selected.push(candidates.splice(randomIndex(candidates.length), 1)[0]);
       }
-    }
-    lastRandomFeaturedId[view] = String(selected.id || selected.publicId || selected.title || '');
+      attempts += 1;
+    } while (
+      force &&
+      pool.length > count &&
+      selected.map(randomFeaturedIdentity).join('|') === previousSignature &&
+      attempts < 6
+    );
+
+    lastRandomFeaturedIds[view] = selected.map(randomFeaturedIdentity);
     return selected;
   }
 
@@ -253,63 +272,124 @@
       return;
     }
 
-    const item = chooseRandomFeatured(view, force);
-    if (!item) {
+    const items = chooseRandomFeaturedItems(view, force, 3);
+    if (!items.length) {
       host.innerHTML = '';
       section.hidden = true;
       return;
     }
 
-    const collection = item.collection || (['films','movies'].includes(view) ? 'movies' : view === 'series' ? 'series' : 'videos');
-    const title = item.title || item.name || 'Conteúdo';
-    const thumbnail = item.thumbnailUrl || item.imageUrl || item.bannerUrl || '';
-    const background = ['movies', 'series'].includes(collection)
-      ? thumbnail
-      : (item.bannerUrl || item.imageUrl || item.thumbnailUrl || '');
-    const duration = item.duration || item.videoDuration || item.runtime || '';
-    const year = item.year || '';
-    const contentUrl = item.videoUrl || item.contentUrl || item.link || '#';
-    const publicId = numericPublicId(item.publicId || item.id || title);
-    const meta = [
-      duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
-      duration && year ? '<span class="f-dot-sep"></span>' : '',
-      year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
-    ].join('');
+    if (host._beRandomFeaturedTimer) {
+      clearInterval(host._beRandomFeaturedTimer);
+      host._beRandomFeaturedTimer = null;
+    }
 
-    host.innerHTML = `<div class="f-slide active" data-index="0">
-      <div class="f-info">
-        <div class="f-logo">${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
-        <div class="f-meta">${meta}</div>
-        <p class="f-desc">${escapeHtml(item.description || '')}</p>
-        <div class="f-actions">
-          <button class="f-play" type="button" data-open-detail="true"
-            data-item-id="${escapeHtml(String(publicId))}"
-            data-record-id="${escapeHtml(String(item.id || ''))}"
-            data-title="${escapeHtml(title)}"
-            data-description="${escapeHtml(item.description || '')}"
-            data-year="${escapeHtml(year)}"
-            data-duration="${escapeHtml(duration)}"
-            data-content-url="${safeUrl(contentUrl)}"
-            data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
-            data-image-url="${safeUrl(thumbnail)}"
-            data-banner-url="${safeUrl(background)}"
-            data-logo-url="${safeUrl(item.logoUrl || '')}"
-            data-collection="${escapeHtml(collection)}">
-            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
-          </button>
-          <button class="f-fav" type="button" data-favorite-id="${escapeHtml(`${collection}:${item.id || publicId}`)}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-9.7-9A5.4 5.4 0 0 1 12 6a5.4 5.4 0 0 1 9.7 6c-2.2 4.4-9.7 9-9.7 9Z"/></svg>
-          </button>
+    host.innerHTML = items.map((item, index) => {
+      const collection = item.collection || (['films','movies'].includes(view) ? 'movies' : view === 'series' ? 'series' : 'videos');
+      const title = item.title || item.name || 'Conteúdo';
+      const thumbnail = item.thumbnailUrl || item.imageUrl || item.bannerUrl || '';
+      const background = ['movies', 'series'].includes(collection)
+        ? thumbnail
+        : (item.bannerUrl || item.imageUrl || item.thumbnailUrl || '');
+      const duration = item.duration || item.videoDuration || item.runtime || '';
+      const year = item.year || '';
+      const contentUrl = item.videoUrl || item.contentUrl || item.link || '#';
+      const publicId = numericPublicId(item.publicId || item.id || title);
+      const meta = [
+        duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
+        duration && year ? '<span class="f-dot-sep"></span>' : '',
+        year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
+      ].join('');
+      const logoMarkup = item.logoUrl
+        ? (index === 0
+          ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">`
+          : `<img decoding="async" data-featured-src="${safeUrl(item.logoUrl)}" alt="${escapeHtml(title)}">`)
+        : escapeHtml(title);
+      const mediaMarkup = background
+        ? (index === 0
+          ? `<img src="${safeUrl(background)}" data-fallback-src="${safeUrl(thumbnail)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">`
+          : `<img data-featured-src="${safeUrl(background)}" data-fallback-src="${safeUrl(thumbnail)}" alt="${escapeHtml(title)}" decoding="async">`)
+        : '<div class="ph ph-wide" style="height:100%"></div>';
+
+      return `<div class="f-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
+        <div class="f-info">
+          <div class="f-logo">${logoMarkup}</div>
+          <div class="f-meta">${meta}</div>
+          <p class="f-desc">${escapeHtml(item.description || '')}</p>
+          <div class="f-actions">
+            <button class="f-play" type="button" data-open-detail="true"
+              data-item-id="${escapeHtml(String(publicId))}"
+              data-record-id="${escapeHtml(String(item.id || ''))}"
+              data-title="${escapeHtml(title)}"
+              data-description="${escapeHtml(item.description || '')}"
+              data-year="${escapeHtml(year)}"
+              data-duration="${escapeHtml(duration)}"
+              data-content-url="${safeUrl(contentUrl)}"
+              data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
+              data-image-url="${safeUrl(thumbnail)}"
+              data-banner-url="${safeUrl(background)}"
+              data-logo-url="${safeUrl(item.logoUrl || '')}"
+              data-collection="${escapeHtml(collection)}">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
+            </button>
+            <button class="f-fav" type="button" data-favorite-id="${escapeHtml(`${collection}:${item.id || publicId}`)}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-9.7-9A5.4 5.4 0 0 1 12 6a5.4 5.4 0 0 1 9.7 6c-2.2 4.4-9.7 9-9.7 9Z"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="f-media">${background ? `<img decoding="async" src="${safeUrl(background)}" data-fallback-src="${safeUrl(thumbnail)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
-    </div>`;
+        <div class="f-media">${mediaMarkup}</div>
+      </div>`;
+    }).join('') + `<div class="f-dots" id="randomFeaturedDots">${items.map((_, index) => `<button class="f-dot ${index === 0 ? 'active' : ''}" data-goto="${index}" aria-label="Ir para o destaque ${index + 1}"></button>`).join('')}</div>`;
 
-    section.dataset.featuredView = view;
-    section.hidden = false;
+    const slides = Array.from(host.querySelectorAll('.f-slide'));
+    const dots = Array.from(host.querySelectorAll('.f-dot'));
+    let activeIndex = 0;
+    const hydrateSlide = slide => {
+      if (!slide) return;
+      slide.querySelectorAll('img[data-featured-src]').forEach(image => {
+        const source = image.dataset.featuredSrc;
+        if (!source) return;
+        image.src = source;
+        image.removeAttribute('data-featured-src');
+      });
+    };
+    const scheduleNextSlide = () => {
+      if (slides.length < 2) return;
+      const nextSlide = slides[(activeIndex + 1) % slides.length];
+      const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 700));
+      idle(() => hydrateSlide(nextSlide), { timeout: 1800 });
+    };
+    const go = next => {
+      activeIndex = (next + slides.length) % slides.length;
+      hydrateSlide(slides[activeIndex]);
+      slides.forEach((slide, index) => slide.classList.toggle('active', index === activeIndex));
+      dots.forEach((dot, index) => dot.classList.toggle('active', index === activeIndex));
+      scheduleNextSlide();
+    };
+    const stop = () => {
+      if (!host._beRandomFeaturedTimer) return;
+      clearInterval(host._beRandomFeaturedTimer);
+      host._beRandomFeaturedTimer = null;
+    };
+    const start = () => {
+      stop();
+      if (slides.length > 1) host._beRandomFeaturedTimer = setInterval(() => go(activeIndex + 1), 10000);
+    };
+
+    dots.forEach(dot => dot.addEventListener('click', () => {
+      go(Number(dot.dataset.goto || 0));
+      start();
+    }));
+    host.onmouseenter = stop;
+    host.onmouseleave = start;
     bindBannerImageFallbacks(host);
     setupFavoriteButtons(host);
     setupContentDetailInteractions(host);
+    start();
+    scheduleNextSlide();
+
+    section.dataset.featuredView = view;
+    section.hidden = false;
   }
 
   async function renderVideoCatalog() {

@@ -2748,7 +2748,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if (location.hash.startsWith('#/admin')) return;
 
   const randomFeaturedPools = { videos: [], films: [], movies: [], series: [] };
-  const lastRandomFeaturedId = { videos: '', films: '', movies: '', series: '' };
+  const lastRandomFeaturedIds = { videos: [], films: [], movies: [], series: [] };
 
 
   function localizedUiText(source, variables = {}) {
@@ -3199,7 +3199,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     section.className = 'featured-wrap tab-random-featured';
     section.id = 'randomFeaturedSection';
     section.hidden = true;
-    section.innerHTML = '<div class="featured" id="randomFeatured" aria-roledescription="destaque" aria-label="Destaque aleatório da categoria"></div>';
+    section.innerHTML = '<div class="featured" id="randomFeatured" aria-roledescription="destaque" aria-label="Destaques aleatórios da categoria"></div>';
     homeFeatured.insertAdjacentElement('afterend', section);
     return section;
   }
@@ -3214,23 +3214,42 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return Math.floor(Math.random() * max);
   }
 
-  function chooseRandomFeatured(view, force = false) {
+  function randomFeaturedIdentity(item) {
+    return String(item?.id || item?.publicId || item?.title || '');
+  }
+
+  function chooseRandomFeaturedItems(view, force = false, limit = 3) {
     const pool = randomFeaturedPools[view] || [];
-    if (!pool.length) return null;
-    const currentId = lastRandomFeaturedId[view];
-    if (!force && currentId) {
-      const current = pool.find(item => String(item.id || item.publicId || item.title) === currentId);
-      if (current) return current;
+    if (!pool.length) return [];
+
+    const count = Math.min(Math.max(1, Number(limit) || 3), pool.length);
+    const currentIds = Array.isArray(lastRandomFeaturedIds[view]) ? lastRandomFeaturedIds[view] : [];
+    if (!force && currentIds.length) {
+      const currentItems = currentIds
+        .map(id => pool.find(item => randomFeaturedIdentity(item) === id))
+        .filter(Boolean)
+        .slice(0, count);
+      if (currentItems.length === count) return currentItems;
     }
-    let selected = pool[randomIndex(pool.length)];
-    if (pool.length > 1 && currentId) {
-      let attempts = 0;
-      while (String(selected.id || selected.publicId || selected.title) === currentId && attempts < 8) {
-        selected = pool[randomIndex(pool.length)];
-        attempts += 1;
+
+    const previousSignature = currentIds.join('|');
+    let selected = [];
+    let attempts = 0;
+    do {
+      const candidates = pool.slice();
+      selected = [];
+      while (selected.length < count && candidates.length) {
+        selected.push(candidates.splice(randomIndex(candidates.length), 1)[0]);
       }
-    }
-    lastRandomFeaturedId[view] = String(selected.id || selected.publicId || selected.title || '');
+      attempts += 1;
+    } while (
+      force &&
+      pool.length > count &&
+      selected.map(randomFeaturedIdentity).join('|') === previousSignature &&
+      attempts < 6
+    );
+
+    lastRandomFeaturedIds[view] = selected.map(randomFeaturedIdentity);
     return selected;
   }
 
@@ -3242,69 +3261,130 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
 
-    const item = chooseRandomFeatured(view, force);
-    if (!item) {
+    const items = chooseRandomFeaturedItems(view, force, 3);
+    if (!items.length) {
       host.innerHTML = '';
       section.hidden = true;
       return;
     }
 
-    const collection = item.collection || (['films','movies'].includes(view) ? 'movies' : view === 'series' ? 'series' : 'videos');
-    const title = item.title || item.name || 'Conteúdo';
-    const preserveTitle = preservesOriginalMusicTitle(item);
-    const thumbnail = item.thumbnailUrl || item.imageUrl || item.bannerUrl || '';
-    const background = ['movies', 'series'].includes(collection)
-      ? thumbnail
-      : (item.bannerUrl || item.imageUrl || item.thumbnailUrl || '');
-    const duration = item.duration || item.videoDuration || item.runtime || '';
-    const year = item.year || '';
-    const contentUrl = item.videoUrl || item.contentUrl || item.link || '#';
-    const publicId = numericPublicId(item.publicId || item.id || title);
-    const meta = [
-      duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
-      duration && year ? '<span class="f-dot-sep"></span>' : '',
-      year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
-    ].join('');
+    if (host._beRandomFeaturedTimer) {
+      clearInterval(host._beRandomFeaturedTimer);
+      host._beRandomFeaturedTimer = null;
+    }
 
-    host.innerHTML = `<div class="f-slide active" data-index="0">
-      <div class="f-info">
-        <div class="f-logo${preserveTitle ? ' notranslate' : ''}"${preserveTitle ? ' translate="no"' : ''}>${item.logoUrl ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : escapeHtml(title)}</div>
-        <div class="f-meta">${meta}</div>
-        <div class="f-desc be-markdown">${markdownToHtml(item.description || '')}</div>
-        <div class="f-actions">
-          <button class="f-play" type="button" data-open-detail="true"
-            data-item-id="${escapeHtml(String(publicId))}"
-            data-record-id="${escapeHtml(String(item.id || ''))}"
-            data-title="${escapeHtml(title)}"
-            data-description="${escapeHtml(item.description || '')}"
-            data-year="${escapeHtml(year)}"
-            data-duration="${escapeHtml(duration)}"
-            data-content-url="${safeUrl(contentUrl)}"
-            data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
-            data-image-url="${safeAssetUrl(thumbnail)}"
-            data-banner-url="${safeAssetUrl(background)}"
-            data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
-            data-collection="${escapeHtml(collection)}"
-            data-section-id="${escapeHtml(String(item.sectionId || ''))}"
-            data-section-name="${escapeHtml(String(item.sectionName || ''))}"
-            data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(item.streamingAvailability).join(','))}"
+    host.innerHTML = items.map((item, index) => {
+      const collection = item.collection || (['films','movies'].includes(view) ? 'movies' : view === 'series' ? 'series' : 'videos');
+      const title = item.title || item.name || 'Conteúdo';
+      const preserveTitle = preservesOriginalMusicTitle(item);
+      const thumbnail = item.thumbnailUrl || item.imageUrl || item.bannerUrl || '';
+      const background = ['movies', 'series'].includes(collection)
+        ? thumbnail
+        : (item.bannerUrl || item.imageUrl || item.thumbnailUrl || '');
+      const duration = item.duration || item.videoDuration || item.runtime || '';
+      const year = item.year || '';
+      const contentUrl = item.videoUrl || item.contentUrl || item.link || '#';
+      const publicId = numericPublicId(item.publicId || item.id || title);
+      const meta = [
+        duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
+        duration && year ? '<span class="f-dot-sep"></span>' : '',
+        year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
+      ].join('');
+      const logoMarkup = item.logoUrl
+        ? (index === 0
+          ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">`
+          : `<img decoding="async" data-featured-src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">`)
+        : (['movies', 'series'].includes(collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title));
+      const mediaMarkup = background
+        ? (index === 0
+          ? `<img src="${safeAssetUrl(background)}" data-fallback-src="${safeAssetUrl(thumbnail)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">`
+          : `<img data-featured-src="${safeAssetUrl(background)}" data-fallback-src="${safeAssetUrl(thumbnail)}" alt="${escapeHtml(title)}" decoding="async">`)
+        : '<div class="ph ph-wide" style="height:100%"></div>';
+
+      return `<div class="f-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
+        <div class="f-info">
+          <div class="f-logo${preserveTitle ? ' notranslate' : ''}"${preserveTitle ? ' translate="no"' : ''}>${logoMarkup}</div>
+          <div class="f-meta">${meta}</div>
+          <div class="f-desc be-markdown">${markdownToHtml(item.description || '')}</div>
+          <div class="f-actions">
+            <button class="f-play" type="button" data-open-detail="true"
+              data-item-id="${escapeHtml(String(publicId))}"
+              data-record-id="${escapeHtml(String(item.id || ''))}"
+              data-title="${escapeHtml(title)}"
+              data-description="${escapeHtml(item.description || '')}"
+              data-year="${escapeHtml(year)}"
+              data-duration="${escapeHtml(duration)}"
+              data-content-url="${safeUrl(contentUrl)}"
+              data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
+              data-image-url="${safeAssetUrl(thumbnail)}"
+              data-banner-url="${safeAssetUrl(background)}"
+              data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
+              data-collection="${escapeHtml(collection)}"
+              data-section-id="${escapeHtml(String(item.sectionId || ''))}"
+              data-section-name="${escapeHtml(String(item.sectionName || ''))}"
+              data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(item.streamingAvailability).join(','))}"
               data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(item.streamingLinks))}"
-            data-preserve-title="${preserveTitle ? 'true' : 'false'}">
-            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
-          </button>
-          <button class="f-fav" type="button" data-favorite-id="${escapeHtml(`${collection}:${item.id || publicId}`)}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-9.7-9A5.4 5.4 0 0 1 12 6a5.4 5.4 0 0 1 9.7 6c-2.2 4.4-9.7 9-9.7 9Z"/></svg>
-          </button>
+              data-preserve-title="${preserveTitle ? 'true' : 'false'}">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir
+            </button>
+            <button class="f-fav" type="button" data-favorite-id="${escapeHtml(`${collection}:${item.id || publicId}`)}" aria-label="Adicionar ${escapeHtml(title)} aos favoritos" aria-pressed="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-9.7-9A5.4 5.4 0 0 1 12 6a5.4 5.4 0 0 1 9.7 6c-2.2 4.4-9.7 9-9.7 9Z"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="f-media">${background ? `<img decoding="async" src="${safeAssetUrl(background)}" data-fallback-src="${safeAssetUrl(thumbnail)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">` : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
-    </div>`;
+        <div class="f-media">${mediaMarkup}</div>
+      </div>`;
+    }).join('') + `<div class="f-dots" id="randomFeaturedDots">${items.map((_, index) => `<button class="f-dot ${index === 0 ? 'active' : ''}" data-goto="${index}" aria-label="Ir para o destaque ${index + 1}"></button>`).join('')}</div>`;
 
-    section.dataset.featuredView = view;
-    section.hidden = false;
+    const slides = Array.from(host.querySelectorAll('.f-slide'));
+    const dots = Array.from(host.querySelectorAll('.f-dot'));
+    let activeIndex = 0;
+    const hydrateSlide = slide => {
+      if (!slide) return;
+      slide.querySelectorAll('img[data-featured-src]').forEach(image => {
+        const source = image.dataset.featuredSrc;
+        if (!source) return;
+        image.src = source;
+        image.removeAttribute('data-featured-src');
+      });
+    };
+    const scheduleNextSlide = () => {
+      if (slides.length < 2) return;
+      const nextSlide = slides[(activeIndex + 1) % slides.length];
+      const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 700));
+      idle(() => hydrateSlide(nextSlide), { timeout: 1800 });
+    };
+    const go = next => {
+      activeIndex = (next + slides.length) % slides.length;
+      hydrateSlide(slides[activeIndex]);
+      slides.forEach((slide, index) => slide.classList.toggle('active', index === activeIndex));
+      dots.forEach((dot, index) => dot.classList.toggle('active', index === activeIndex));
+      scheduleNextSlide();
+    };
+    const stop = () => {
+      if (!host._beRandomFeaturedTimer) return;
+      clearInterval(host._beRandomFeaturedTimer);
+      host._beRandomFeaturedTimer = null;
+    };
+    const start = () => {
+      stop();
+      if (slides.length > 1) host._beRandomFeaturedTimer = setInterval(() => go(activeIndex + 1), 10000);
+    };
+
+    dots.forEach(dot => dot.addEventListener('click', () => {
+      go(Number(dot.dataset.goto || 0));
+      start();
+    }));
+    host.onmouseenter = stop;
+    host.onmouseleave = start;
     bindBannerImageFallbacks(host);
     setupFavoriteButtons(host);
     setupContentDetailInteractions(host);
+    start();
+    scheduleNextSlide();
+
+    section.dataset.featuredView = view;
+    section.hidden = false;
   }
 
   async function renderVideoCatalog() {
@@ -5087,6 +5167,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `${String(hours).padStart(2, '0')}h${String(minutes).padStart(2, '0')}m${String(rest).padStart(2, '0')}s`;
   }
 
+  function isStandalonePlayerApp() {
+    try {
+      return Boolean(
+        window.matchMedia?.('(display-mode: standalone)').matches ||
+        window.matchMedia?.('(display-mode: fullscreen)').matches ||
+        window.navigator.standalone === true
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
   function vkVideoEmbedUrl(info, options = {}) {
     if (!info) return '';
     const requestedHd = Number(options?.hd);
@@ -5101,7 +5193,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const startSeconds = Number(options?.startSeconds);
     if (Number.isFinite(startSeconds) && startSeconds > 0) params.set('t', vkVideoTimeParam(startSeconds));
     if (info.hash) params.set('hash', info.hash);
-    return `https://vkvideo.ru/video_ext.php?${params.toString()}`;
+    // No app/PWA mobile usamos o endpoint de embed do vk.com. O domínio
+    // vkvideo.ru pode redirecionar o iframe instalado para a tela "Abrir VK".
+    const embedHost = isStandalonePlayerApp() && isMobileOrientationDevice()
+      ? 'vk.com'
+      : 'vkvideo.ru';
+    return `https://${embedHost}/video_ext.php?${params.toString()}`;
   }
 
   function vkVideoWatchUrl(info) {
@@ -6369,7 +6466,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-video-player-action-wake-zone" id="driveVideoPlayerActionWakeZone" aria-hidden="true"></div>
         <div class="drive-video-player-actionbar" id="driveVideoPlayerActionbar" aria-label="Controles do vídeo">
           <button class="drive-video-player-action drive-video-player-fullscreen" id="driveVideoPlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
-            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v5M5 5l6 6M14 19h5v-5M19 19l-6-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4a1 1 0 0 0 1-1V4M20 9h-4a1 1 0 0 1-1-1V4M4 15h4a1 1 0 0 1 1 1v4M20 15h-4a1 1 0 0 0-1 1v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div class="drive-video-player-actions-right">
@@ -9841,11 +9938,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const isIosDevice = () => /iphone|ipad|ipod/i.test(String(navigator.userAgent || ''));
 
   function updateInstallButton() {
-    const button = document.getElementById('mobileInstallButton');
-    if (!button) return;
-    const shouldShow = isMobile() && !isStandaloneApp();
-    button.hidden = !shouldShow;
-    button.classList.toggle('is-ready', Boolean(deferredInstallPrompt));
+    const installed = isStandaloneApp();
+    const ready = Boolean(deferredInstallPrompt);
+    const mobileButton = document.getElementById('mobileInstallButton');
+    const desktopButton = document.getElementById('desktopInstallButton');
+    if (mobileButton) {
+      mobileButton.hidden = !isMobile() || installed;
+      mobileButton.classList.toggle('is-ready', ready);
+    }
+    if (desktopButton) {
+      desktopButton.hidden = installed;
+      desktopButton.classList.toggle('is-ready', ready);
+    }
   }
 
   function closeInstallSheet() {
@@ -9856,17 +9960,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function openInstallSheet() {
     closeInstallSheet();
     const ios = isIosDevice();
+    const desktop = !isMobile();
     const sheet = document.createElement('div');
     sheet.className = 'mobile-install-sheet-backdrop';
     sheet.id = 'mobileInstallSheet';
+    const instructions = ios
+      ? 'No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início.'
+      : desktop
+        ? 'No Chrome ou Edge, clique no ícone de instalar na barra de endereço ou abra o menu do navegador e escolha Instalar Billie Eilish TV.'
+        : 'Abra o menu do navegador e escolha Instalar app ou Adicionar à tela inicial.';
     sheet.innerHTML = `
-      <section class="mobile-install-sheet" role="dialog" aria-modal="true" aria-labelledby="mobileInstallTitle">
+      <section class="mobile-install-sheet${desktop ? ' is-desktop' : ''}" role="dialog" aria-modal="true" aria-labelledby="mobileInstallTitle">
         <button class="mobile-install-sheet-close" type="button" aria-label="Fechar">${icon('close')}</button>
         <span class="mobile-install-sheet-icon" aria-hidden="true">${icon('install')}</span>
         <h2 id="mobileInstallTitle">Instalar Billie Eilish TV</h2>
-        <p>${ios
-          ? 'No Safari, toque em Compartilhar e depois em Adicionar à Tela de Início.'
-          : 'Abra o menu do navegador e escolha Instalar app ou Adicionar à tela inicial.'}</p>
+        <p>${instructions}</p>
         <button class="mobile-install-sheet-done" type="button">Entendi</button>
       </section>`;
     document.body.appendChild(sheet);
@@ -9877,8 +9985,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function requestAppInstall() {
-    openDrawer(false);
-    openMobileSearch(false);
+    if (isMobile()) {
+      openDrawer(false);
+      openMobileSearch(false);
+    }
+    document.getElementById('userDropdown')?.classList.remove('open');
+    document.getElementById('userChip')?.setAttribute('aria-expanded', 'false');
     if (isStandaloneApp()) {
       updateInstallButton();
       return;
@@ -9909,8 +10021,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     closeInstallSheet();
     updateInstallButton();
   });
+  window.addEventListener('pageshow', updateInstallButton);
+  window.addEventListener('resize', updateInstallButton, { passive:true });
   window.BETVRequestAppInstall = requestAppInstall;
   window.BETVIsAppInstalled = isStandaloneApp;
+
+  document.addEventListener('click', event => {
+    const button = event.target?.closest?.('[data-public-action="install"],#desktopInstallButton');
+    if (!button) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    requestAppInstall();
+  }, true);
 
   const icon = name => ({
     menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
@@ -10105,6 +10227,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.append(bar, backdrop, drawer);
     bindMobileActions();
     syncProfile();
+    updateInstallButton();
   }
 
   function bindActivation(element, handler) {
