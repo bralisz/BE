@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/tv",
-      "destination": "/tv/index.html"
+      "destination": "/api/tv-page"
     },
     {
       "source": "/tv/",
-      "destination": "/tv/index.html"
+      "destination": "/api/tv-page"
     },
     {
       "source": "/connect-tv",
