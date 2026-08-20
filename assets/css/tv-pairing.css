@@ -168,11 +168,11 @@ button,a{-webkit-tap-highlight-color:transparent}
 
 @media (max-width:720px){
   .tv-controller .tv-shell{overflow-x:hidden;overflow-y:auto}
-  .tv-controller .tv-content{min-height:100svh;padding:max(10px,env(safe-area-inset-top)) 12px max(14px,env(safe-area-inset-bottom))}
+  .tv-controller .tv-content{min-height:100svh;padding:max(10px,env(safe-area-inset-top)) 12px max(14px,env(safe-area-inset-bottom));justify-content:center}
   .tv-controller .tv-topbar{align-items:center;min-height:42px}
   .tv-controller .tv-brand img{width:68px}
   .tv-controller .tv-back{height:36px;min-width:36px;padding:0 11px;font-size:12px}
-  .tv-controller .tv-main{padding:8px 0 14px;align-items:start}
+  .tv-controller .tv-main{padding:8px 0 14px;align-items:center}
   .tv-controller .tv-controller-card{width:100%;border-radius:24px}
   .tv-controller .tv-controller-header{padding:18px 14px 4px}
   .tv-controller .tv-controller-icon{width:54px;height:54px;border-radius:18px;margin-bottom:12px}
@@ -300,3 +300,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 .legacy-tv .tv-account-copy span,
 .legacy-tv .tv-content-copy span,
 .legacy-tv .tv-message{color:rgba(238,244,255,.72)}
+
+.tv-subtitle-remote{display:flex;align-items:center;justify-content:center;gap:9px}
+.tv-subtitle-remote-icon{display:grid;place-items:center;min-width:28px;height:22px;padding:0 5px;border:1.5px solid currentColor;border-radius:5px;font-size:11px;font-weight:900;line-height:1}
+.tv-subtitle-remote.is-active{border-color:rgba(114,229,158,.34);background:rgba(114,229,158,.12);color:#a6f3bd}

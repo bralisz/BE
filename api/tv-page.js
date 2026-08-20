@@ -228,10 +228,10 @@ function renderMedia(media) {
   const title = escapeHtml(media.title || 'Billie Eilish TV');
   const meta = [media.year, media.duration].filter(Boolean).map(escapeHtml).join(' • ');
   const subtitleControls = subtitleUrl && (provider === 'native' || provider === 'vk')
-    ? `<div class="tv-player-accessibility" id="tvPlayerAccessibility"><button type="button" class="tv-subtitle-toggle" id="tvSubtitleToggle" aria-pressed="false" aria-label="Ativar legendas" title="Legendas"><span class="tv-subtitle-icon" aria-hidden="true">CC</span><span class="tv-subtitle-label">Legendas</span></button></div><div class="tv-subtitle-overlay" id="tvSubtitleOverlay" hidden></div>`
+    ? `<div class="tv-subtitle-overlay" id="tvSubtitleOverlay" hidden></div>`
     : '';
   const subtitleScript = subtitleUrl && (provider === 'native' || provider === 'vk')
-    ? subtitleRuntimeScript(subtitleUrl, provider)
+    ? subtitleRuntimeScript(subtitleUrl, provider, Boolean(media.subtitleEnabled))
     : '';
 
   return `
@@ -247,19 +247,20 @@ function renderMedia(media) {
     </div>${subtitleScript}`;
 }
 
-function subtitleRuntimeScript(subtitleUrl, provider) {
+function subtitleRuntimeScript(subtitleUrl, provider, initialEnabled) {
   const safeUrl = JSON.stringify(String(subtitleUrl || '')).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
   const safeProvider = JSON.stringify(String(provider || '')).replace(/</g, '\\u003c');
+  const safeInitialEnabled = initialEnabled ? 'true' : 'false';
   return `<script type="text/javascript">
 (function(){
   var subtitleUrl=${safeUrl};
   var provider=${safeProvider};
-  var button=document.getElementById('tvSubtitleToggle');
+  var button=null;
   var overlay=document.getElementById('tvSubtitleOverlay');
   var video=document.getElementById('legacyTvVideo');
   var frame=document.getElementById('legacyTvFrame');
   var cues=[];
-  var enabled=false;
+  var enabled=${safeInitialEnabled};
   var vkPlayer=null;
   var vkReady=false;
   var timer=0;
@@ -322,7 +323,7 @@ function subtitleRuntimeScript(subtitleUrl, provider) {
     try{x.open('GET',subtitleUrl,true);}catch(e){return;}
     x.onreadystatechange=function(){
       if(x.readyState!==4)return;
-      if(x.status>=200&&x.status<300){cues=parse(x.responseText||'');if(cues.length&&button){button.style.display='inline-flex';}}
+      if(x.status>=200&&x.status<300){cues=parse(x.responseText||'');if(enabled)show(cueAt(currentTime()));}
     };
     try{x.send(null);}catch(e){}
   }
@@ -334,7 +335,7 @@ function subtitleRuntimeScript(subtitleUrl, provider) {
     if(attempt>12)return;
     setTimeout(function(){bindVk(attempt+1);},400);
   }
-  if(button){button.style.display='none';button.onclick=function(){setEnabled(!enabled);};}
+  window.BETVTVSetSubtitles=setEnabled;
   if(provider==='vk'){
     var script=document.createElement('script');script.src='https://vk.com/js/api/videoplayer.js';script.async=true;script.onload=function(){bindVk(0);};document.getElementsByTagName('head')[0].appendChild(script);
   }
@@ -354,6 +355,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
 (function(){
   var initialStatus=${initialStatus};
   var version=${Number(mediaVersion) || 0};
+  var subtitleEnabled=null;
   var stopped=false;
   function schedule(ms){if(!stopped)setTimeout(poll,ms);}
   function poll(){
@@ -372,6 +374,9 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
             var nextVersion=d&&d.media_version!=null?Number(d.media_version):-1;
             var statusChanged=status&&status!=='error'&&status!=='missing'&&status!==initialStatus;
             var mediaChanged=initialStatus==='paired'&&status==='paired'&&nextVersion>=0&&nextVersion!==version;
+            var nextSubtitle=!!(d&&d.subtitle_enabled);
+            if(subtitleEnabled===null)subtitleEnabled=nextSubtitle;
+            else if(nextSubtitle!==subtitleEnabled){subtitleEnabled=nextSubtitle;if(typeof window.BETVTVSetSubtitles==='function')window.BETVTVSetSubtitles(nextSubtitle);}
             if(statusChanged||mediaChanged||status==='disconnected'){
               stopped=true;
               finished=true;

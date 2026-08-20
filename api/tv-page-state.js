@@ -59,7 +59,8 @@ module.exports = async function handler(req, res) {
     });
     return res.status(200).json({
       status: row && row.status ? row.status : 'missing',
-      media_version: row && Number.isFinite(Number(row.media_version)) ? Number(row.media_version) : -1
+      media_version: row && Number.isFinite(Number(row.media_version)) ? Number(row.media_version) : -1,
+      subtitle_enabled: Boolean(row && row.current_media && row.current_media.subtitleEnabled)
     });
   } catch (error) {
     console.error('TV page state failed:', error);

@@ -24,6 +24,7 @@
   const pendingMeta = document.getElementById('pendingMeta');
   const sendButton = document.getElementById('sendToTvButton');
   const disconnectButton = document.getElementById('disconnectTvButton');
+  const subtitleRemoteButton = document.getElementById('tvSubtitleRemoteButton');
 
   let client = null;
   let user = null;
@@ -33,6 +34,8 @@
   let pendingMedia = null;
   let busy = false;
   let castToastTimer = 0;
+  let currentTvMedia = null;
+  let tvSubtitlesEnabled = false;
 
   function safeCode(value) {
     return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
@@ -135,6 +138,18 @@
     castToastTimer = window.setTimeout(() => toast.classList.remove('show'), 3200);
   }
 
+
+  function syncSubtitleRemote() {
+    if (!subtitleRemoteButton) return;
+    const hasSubtitle = Boolean(currentTvMedia && String(currentTvMedia.subtitleUrl || '').trim());
+    subtitleRemoteButton.hidden = !hasSubtitle;
+    subtitleRemoteButton.disabled = false;
+    subtitleRemoteButton.classList.toggle('is-active', hasSubtitle && tvSubtitlesEnabled);
+    subtitleRemoteButton.setAttribute('aria-pressed', tvSubtitlesEnabled ? 'true' : 'false');
+    const label = subtitleRemoteButton.querySelector('span:last-child');
+    if (label) label.textContent = tvSubtitlesEnabled ? 'Desativar legendas na TV' : 'Ativar legendas na TV';
+  }
+
   function readPendingMedia() {
     try {
       const raw = localStorage.getItem(PENDING_MEDIA_KEY);
@@ -187,6 +202,7 @@
     accountMarkup(connectedAccountHost);
     connectedCode.textContent = activeCode ? `Código ${activeCode} • pronta para receber conteúdo` : 'Pronta para receber conteúdo';
     renderPending();
+    syncSubtitleRemote();
   }
 
   async function loadMySession() {
@@ -230,12 +246,15 @@
         p_media: pendingMedia
       });
       if (error) throw error;
+      currentTvMedia = { ...pendingMedia, subtitleEnabled: false };
+      tvSubtitlesEnabled = false;
       localStorage.removeItem(PENDING_MEDIA_KEY);
       setMessage(connectedMessage, '');
       showCastToast('Enviado para a TV. A reprodução começa por lá.');
       sendButton.textContent = 'Transmitido';
       sendButton.classList.add('is-transmitted');
       sendButton.disabled = true;
+      syncSubtitleRemote();
       return true;
     } catch (error) {
       console.error('Falha ao transmitir:', error);
@@ -304,6 +323,8 @@
       const existing = await loadMySession();
       if (existing) {
         activeSessionId = String(existing.session_id || '');
+        currentTvMedia = existing.current_media && typeof existing.current_media === 'object' ? existing.current_media : null;
+        tvSubtitlesEnabled = Boolean(currentTvMedia && currentTvMedia.subtitleEnabled);
         activeCode = String(existing.pairing_code || localStorage.getItem(ACTIVE_CODE_KEY) || '');
         localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
         if (activeCode) localStorage.setItem(ACTIVE_CODE_KEY, activeCode);
@@ -344,6 +365,25 @@
   });
 
   sendButton?.addEventListener('click', () => sendPending());
+
+  subtitleRemoteButton?.addEventListener('click', async () => {
+    if (!activeSessionId || !currentTvMedia || !currentTvMedia.subtitleUrl || busy) return;
+    busy = true;
+    subtitleRemoteButton.disabled = true;
+    const next = !tvSubtitlesEnabled;
+    try {
+      const { error } = await client.rpc('tv_set_subtitles', { p_session_id: activeSessionId, p_enabled: next });
+      if (error) throw error;
+      tvSubtitlesEnabled = next;
+      currentTvMedia.subtitleEnabled = next;
+      syncSubtitleRemote();
+      showCastToast(next ? 'Legendas ativadas na TV.' : 'Legendas desativadas na TV.');
+    } catch (error) {
+      console.error('Falha ao controlar legendas da TV:', error);
+      setMessage(connectedMessage, 'Não foi possível alterar as legendas da TV.', 'error');
+      subtitleRemoteButton.disabled = false;
+    } finally { busy = false; }
+  });
 
   disconnectButton?.addEventListener('click', async () => {
     if (!activeSessionId || busy) return;
