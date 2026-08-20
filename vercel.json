@@ -1,12 +1,64 @@
 {
   "rewrites": [
     {
+      "source": "/api/account",
+      "destination": "/api?route=account"
+    },
+    {
+      "source": "/api/admin",
+      "destination": "/api?route=admin"
+    },
+    {
+      "source": "/api/media",
+      "destination": "/api?route=media"
+    },
+    {
+      "source": "/api/meta",
+      "destination": "/api?route=meta"
+    },
+    {
+      "source": "/api/profile-share-image",
+      "destination": "/api?route=profile-share-image"
+    },
+    {
+      "source": "/api/public-data",
+      "destination": "/api?route=public-data"
+    },
+    {
+      "source": "/api/public-profile",
+      "destination": "/api?route=public-profile"
+    },
+    {
+      "source": "/api/site-page",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/api/tv-page-state",
+      "destination": "/api?route=tv-page-state"
+    },
+    {
+      "source": "/api/tv-page",
+      "destination": "/api?route=tv-page"
+    },
+    {
+      "source": "/api/tv-qr",
+      "destination": "/api?route=tv-qr"
+    },
+    {
+      "source": "/api/tv-subtitle",
+      "destination": "/api?route=tv-subtitle"
+    },
+    {
+      "source": "/api/tv",
+      "destination": "/api?route=tv"
+    },
+    {
       "source": "/tv",
-      "destination": "/api/tv-page"
+      "destination": "/api?route=tv-page"
     },
     {
       "source": "/tv/",
-      "destination": "/api/tv-page"
+      "destination": "/api?route=tv-page"
     },
     {
       "source": "/connect-tv",
@@ -18,59 +70,59 @@
     },
     {
       "source": "/api/admin-deployment-release",
-      "destination": "/api/admin?handler=deployment-release"
+      "destination": "/api?route=admin&handler=deployment-release"
     },
     {
       "source": "/api/admin-public-cache",
-      "destination": "/api/admin?handler=public-cache"
+      "destination": "/api?route=admin&handler=public-cache"
     },
     {
       "source": "/api/admin-runtime",
-      "destination": "/api/admin?handler=runtime"
+      "destination": "/api?route=admin&handler=runtime"
     },
     {
       "source": "/api/admin-user",
-      "destination": "/api/admin?handler=user"
+      "destination": "/api?route=admin&handler=user"
     },
     {
       "source": "/api/account-status",
-      "destination": "/api/account?handler=delete-account&action=status"
+      "destination": "/api?route=account&handler=delete-account&action=status"
     },
     {
       "source": "/api/delete-account",
-      "destination": "/api/account?handler=delete-account"
+      "destination": "/api?route=account&handler=delete-account"
     },
     {
       "source": "/api/export-account",
-      "destination": "/api/account?handler=export-account"
+      "destination": "/api?route=account&handler=export-account"
     },
     {
       "source": "/api/drive-media",
-      "destination": "/api/media?handler=drive-media"
+      "destination": "/api?route=media&handler=drive-media"
     },
     {
       "source": "/robots.txt",
-      "destination": "/api/meta?handler=robots"
+      "destination": "/api?route=meta&handler=robots"
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/api/meta?handler=sitemap"
+      "destination": "/api?route=meta&handler=sitemap"
     },
     {
       "source": "/api/deployment-version",
-      "destination": "/api/meta?handler=deployment-version"
+      "destination": "/api?route=meta&handler=deployment-version"
     },
     {
       "source": "/api/robots",
-      "destination": "/api/meta?handler=robots"
+      "destination": "/api?route=meta&handler=robots"
     },
     {
       "source": "/api/sitemap",
-      "destination": "/api/meta?handler=sitemap"
+      "destination": "/api?route=meta&handler=sitemap"
     },
     {
       "source": "/api/billie-wikipedia",
-      "destination": "/api/meta?handler=billie-wikipedia"
+      "destination": "/api?route=meta&handler=billie-wikipedia"
     },
     {
       "source": "/api/runtime",
@@ -78,103 +130,103 @@
     },
     {
       "source": "/pt-br/@:username",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/pt-br/:videoId(\\d{6,12})",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/pt-br/albuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/pt-br/álbuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/pt-br/albums/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/en-us/@:username",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/en-us/:videoId(\\d{6,12})",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/en-us/albuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/en-us/álbuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/en-us/albums/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/es/@:username",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/es/:videoId(\\d{6,12})",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/es/albuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/es/álbuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/es/albums/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fr/@:username",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fr/:videoId(\\d{6,12})",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fr/albuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fr/álbuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fr/albums/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/@:username",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/:videoId(\\d{6,12})",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/albuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/álbuns/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/albums/:albumId",
-      "destination": "/api/site-page"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/oauth/consent",
@@ -944,10 +996,8 @@
     }
   ],
   "functions": {
-    "api/site-page.js": {
-      "includeFiles": "index.html"
-    },
-    "api/profile-share-image.js": {
+    "api/index.js": {
+      "includeFiles": "index.html",
       "maxDuration": 20
     }
   },
