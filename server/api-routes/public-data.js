@@ -9,7 +9,7 @@ const HOME_BOOTSTRAP_COLLECTIONS = Object.freeze(['sections', 'videos', 'movies'
 const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
-  'mediaType', 'mobileAppDriveUrl', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
+  'mediaType', 'mobileAppDriveUrl', 'tvDriveUrl', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
   'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
 ]);
@@ -114,7 +114,7 @@ async function mergeMovieDashboardDrive(rows, id = '') {
   }
   return rows.map(row => {
     const drive = driveById.get(String(row && row.id || ''));
-    return drive ? { ...row, mobileAppDriveUrl: drive } : row;
+    return drive ? { ...row, tvDriveUrl: drive, mobileAppDriveUrl: drive } : row;
   });
 }
 
@@ -183,7 +183,7 @@ function sanitizeItem(collection, row) {
       source[field] = mediaReference(collection, row.id, field, source[field]);
     }
   }
-  for (const field of ['contentUrl', 'videoUrl', 'link', 'subtitleUrl', 'mobileAppDriveUrl']) {
+  for (const field of ['contentUrl', 'videoUrl', 'link', 'subtitleUrl', 'mobileAppDriveUrl', 'tvDriveUrl']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeLink(source[field], true);
   }
   for (const field of ['title', 'type', 'category', 'description', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug']) {
@@ -351,9 +351,9 @@ async function fetchRowsUncached(name, id, locale) {
       sanitizedRows = rows.map(row => sanitizeItem(name, row)).filter(Boolean);
     }
   }
-  // O Dashboard já salva mobileAppDriveUrl nos filmes. Esta leitura restrita
-  // acrescenta somente esse campo público caso a RPC do Supabase ainda esteja
-  // em uma versão antiga que não o devolve.
+  // O segundo link do Dashboard é exclusivo da TV. A chave legada
+  // mobileAppDriveUrl continua sendo aceita para filmes já cadastrados, mas
+  // a resposta pública também expõe tvDriveUrl para deixar a finalidade clara.
   return name === 'movies' ? mergeMovieDashboardDrive(sanitizedRows, id) : sanitizedRows;
 }
 

@@ -2890,7 +2890,7 @@ body.admin-preview-open{overflow:hidden}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
           ${name === 'videos' ? imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. A logo aparece somente ao abrir os detalhes do conteúdo e não é exibida nos cards.' }) : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
-          ${name === 'movies' ? `<div class="field full"><label>Google Drive para o app mobile <span style="font-weight:500;opacity:.7">(opcional)</span></label><input class="a-input" name="mobileAppDriveUrl" value="${esc(item.mobileAppDriveUrl || '')}" placeholder="https://drive.google.com/file/d/..."><small>No app instalado no celular, este link substitui o “Link do conteúdo”. Se ficar vazio, o app usa o link padrão acima.</small></div>` : ''}
+          ${name === 'movies' ? `<div class="field full"><label>Google Drive para Smart TV <span style="font-weight:500;opacity:.7">(opcional)</span></label><input class="a-input" name="tvDriveUrl" value="${esc(item.tvDriveUrl || item.mobileAppDriveUrl || '')}" placeholder="https://drive.google.com/file/d/..."><small>Usado somente na TV/Smart TV. No PC, navegador mobile e app instalado, o site continua usando o “Link do conteúdo” acima. Se ficar vazio, a TV também usa o link principal.</small></div>` : ''}
           ${name === 'movies' ? movieSubtitleUploadFields(item) : ''}
         </div>
       </section>
@@ -3404,10 +3404,14 @@ body.admin-preview-open{overflow:hidden}
           delete data.link;
         }
         if (name === 'movies') {
-          data.mobileAppDriveUrl = String(data.mobileAppDriveUrl || '').trim();
-          if (data.mobileAppDriveUrl && !/^https:\/\/(?:drive\.google\.com|drive\.usercontent\.google\.com)\//i.test(data.mobileAppDriveUrl)) {
-            throw new Error('O link opcional do app mobile deve ser um link HTTPS do Google Drive.');
+          // O segundo link do editor é exclusivo da TV. Mantemos também a
+          // chave legada mobileAppDriveUrl para não quebrar filmes antigos,
+          // RPCs ou TVs que ainda estejam em uma versão anterior.
+          data.tvDriveUrl = String(data.tvDriveUrl || data.mobileAppDriveUrl || '').trim();
+          if (data.tvDriveUrl && !/^https:\/\/(?:drive\.google\.com|drive\.usercontent\.google\.com)\//i.test(data.tvDriveUrl)) {
+            throw new Error('O link opcional para TV deve ser um link HTTPS do Google Drive.');
           }
+          data.mobileAppDriveUrl = data.tvDriveUrl;
           const subtitleTracks = {};
           const subtitleFolderKey = item?.id || `draft-${generatePublicId(`${String(data.title || '').trim()}-${Date.now()}`)}`;
           for (const [locale, , suffix] of MOVIE_SUBTITLE_LANGUAGES) {

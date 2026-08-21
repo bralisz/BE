@@ -5356,12 +5356,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span><a class="drive-player-support-link" href="/suporte" data-public-action="support" data-support-target="contact" hidden>Informe o erro ao suporte</a></div>
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-fullscreen is-streaming-fullscreen-icon" id="drivePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
-            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 5h6v2H7v4H5V5Zm8 0h6v6h-2V7h-4V5ZM5 13h2v4h4v2H5v-6Zm12 0h2v6h-6v-2h4v-4Z" fill="currentColor"/>
-            </svg>
-            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 5h2v6H5V9h4V5Zm4 0h2v4h4v2h-6V5ZM5 13h6v6H9v-4H5v-2Zm8 0h6v2h-4v4h-2v-6Z" fill="currentColor"/>
-            </svg>
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10 20 4"/><path d="M15 4h5v5"/><path d="M10 14 4 20"/><path d="M4 15v5h5"/></svg>
+            <svg class="fullscreen-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 9V4h-5"/><path d="M20 4l-6 6"/><path d="M4 15v5h5"/><path d="M4 20l6-6"/></svg>
           </button>
           <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -5711,8 +5707,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             <span class="player-cc-icon" aria-hidden="true">CC</span>
           </button>
           <button class="external-native-player-action external-native-player-fullscreen is-streaming-fullscreen-icon" id="externalNativePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
-            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h6v2H7v4H5V5Zm8 0h6v6h-2V7h-4V5ZM5 13h2v4h4v2H5v-6Zm12 0h2v6h-6v-2h4v-4Z" fill="currentColor"/></svg>
-            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h2v6H5V9h4V5Zm4 0h2v4h4v2h-6V5ZM5 13h6v6H9v-4H5v-2Zm8 0h6v2h-4v4h-2v-6Z" fill="currentColor"/></svg>
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10 20 4"/><path d="M15 4h5v5"/><path d="M10 14 4 20"/><path d="M4 15v5h5"/></svg>
+            <svg class="fullscreen-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 9V4h-5"/><path d="M20 4l-6 6"/><path d="M4 15v5h5"/><path d="M4 20l6-6"/></svg>
           </button>
           <button class="external-native-player-action external-native-player-close" id="externalNativePlayerClose" type="button" aria-label="Fechar vídeo" title="Fechar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
@@ -6627,8 +6623,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-video-player-action-wake-zone" id="driveVideoPlayerActionWakeZone" aria-hidden="true"></div>
         <div class="drive-video-player-actionbar" id="driveVideoPlayerActionbar" aria-label="Controles do vídeo">
           <button class="drive-video-player-action drive-video-player-fullscreen is-streaming-fullscreen-icon" id="driveVideoPlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
-            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h6v2H7v4H5V5Zm8 0h6v6h-2V7h-4V5ZM5 13h2v4h4v2H5v-6Zm12 0h2v6h-6v-2h4v-4Z" fill="currentColor"/></svg>
-            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h2v6H5V9h4V5Zm4 0h2v4h4v2h-6V5ZM5 13h6v6H9v-4H5v-2Zm8 0h6v2h-4v4h-2v-6Z" fill="currentColor"/></svg>
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10 20 4"/><path d="M15 4h5v5"/><path d="M10 14 4 20"/><path d="M4 15v5h5"/></svg>
+            <svg class="fullscreen-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 9V4h-5"/><path d="M20 4l-6 6"/><path d="M4 15v5h5"/><path d="M4 20l6-6"/></svg>
           </button>
           <div class="drive-video-player-actions-right">
             <button class="drive-video-player-action drive-video-player-volume" id="driveVideoPlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
