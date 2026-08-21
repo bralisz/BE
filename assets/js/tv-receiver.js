@@ -333,79 +333,26 @@
     if (drive) {
       if (legacyMode) {
         var directDrive = 'https://drive.usercontent.google.com/download?' + paramsString({ id: drive.id, export: 'download', confirm: 't', authuser: '0', resourcekey: drive.resourceKey });
-        var proxyDrive = '/api/drive-media?' + paramsString({ id: drive.id, resourcekey: drive.resourceKey, tv: '1' });
-        var metaDrive = '/api/drive-media?' + paramsString({ id: drive.id, resourcekey: drive.resourceKey, metadata: '1' });
+        var proxyDrive = '/api/drive-media?' + paramsString({ id: drive.id, resourcekey: drive.resourceKey });
         element = createVideo(directDrive, String(media.subtitleUrl || ''));
-        (function (video, fallbackDrive, proxyUrl, metadataUrl) {
+        (function (video, fallbackDrive, proxyUrl) {
           var fallbackStep = 0;
-          var watchdog = 0;
-          function clearWatchdog() {
-            if (watchdog) { window.clearTimeout(watchdog); watchdog = 0; }
-          }
-          function previewFallback() {
-            clearWatchdog();
+          video.onerror = function () {
+            if (fallbackStep === 0) {
+              fallbackStep = 1;
+              try {
+                video.src = proxyUrl;
+                if (video.load) video.load();
+                return;
+              } catch (ignore) {}
+            }
+            if (fallbackStep > 1) return;
             fallbackStep = 2;
-            try { video.pause(); } catch (ignore) {}
             var preview = 'https://drive.google.com/file/d/' + encodeURIComponent(fallbackDrive.id) + '/preview?' + paramsString({ autoplay: '1', resourcekey: fallbackDrive.resourceKey });
             clearPlayer();
             playerHost.appendChild(createIframe(preview));
-          }
-          function proxyFallback() {
-            if (fallbackStep > 0) { previewFallback(); return; }
-            fallbackStep = 1;
-            clearWatchdog();
-            try {
-              video.src = proxyUrl;
-              if (video.load) video.load();
-              if (video.play) {
-                var p = video.play();
-                if (p && typeof p.catch === 'function') p.catch(function () {});
-              }
-            } catch (ignore) { previewFallback(); return; }
-            watchdog = window.setTimeout(function () {
-              if (video.readyState < 2 || video.error) previewFallback();
-            }, 12000);
-          }
-          function armWatchdog() {
-            clearWatchdog();
-            watchdog = window.setTimeout(function () {
-              if (video.readyState < 2 || video.error) proxyFallback();
-            }, 9000);
-          }
-          video.onerror = proxyFallback;
-          if (video.addEventListener) {
-            video.addEventListener('playing', clearWatchdog, false);
-            video.addEventListener('canplay', clearWatchdog, false);
-            video.addEventListener('stalled', armWatchdog, false);
-            video.addEventListener('waiting', armWatchdog, false);
-          }
-          armWatchdog();
-
-          // O cookie do Google não pode ser gravado diretamente pela Billie Eilish
-          // TV no domínio google.com. Quando necessário, o proxy acima mantém a
-          // confirmação/cookies do Drive no servidor e a TV usa apenas um cookie
-          // first-party do nosso endpoint.
-          if (window.XMLHttpRequest && metadataUrl) {
-            try {
-              var xhr = new XMLHttpRequest();
-              xhr.open('GET', metadataUrl, true);
-              xhr.timeout = 6500;
-              xhr.onreadystatechange = function () {
-                if (xhr.readyState !== 4 || xhr.status < 200 || xhr.status >= 300) return;
-                try {
-                  var data = JSON.parse(xhr.responseText || '{}');
-                  var type = String(data.contentType || '').toLowerCase().split(';')[0];
-                  var name = String(data.filename || '').toLowerCase();
-                  var safe = type === 'video/mp4' || type === 'video/x-m4v' ||
-                    ((!type || type === 'application/octet-stream' || type === 'binary/octet-stream') && (!name || /\.(?:mp4|m4v)$/i.test(name)));
-                  if (data.kind && String(data.kind).toLowerCase() !== 'video') safe = false;
-                  if (!safe) previewFallback();
-                } catch (ignore) {}
-              };
-              xhr.send(null);
-            } catch (ignore) {}
-          }
-        })(element, drive, proxyDrive, metaDrive);
+          };
+        })(element, drive, proxyDrive);
       } else {
         element = createIframe('https://drive.google.com/file/d/' + encodeURIComponent(drive.id) + '/preview?' + paramsString({ autoplay: '1', resourcekey: drive.resourceKey }));
       }

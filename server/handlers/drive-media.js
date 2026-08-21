@@ -1,10 +1,8 @@
 'use strict';
 
 const { once } = require('events');
-const crypto = require('crypto');
 
 const REQUEST_TIMEOUT_MS = 15000;
-const TV_RANGE_CHUNK_BYTES = 16 * 1024 * 1024;
 const FILE_ID_PATTERN = /^[a-z0-9_-]{10,}$/i;
 const RESOURCE_KEY_PATTERN = /^[a-z0-9_-]+$/i;
 
@@ -38,38 +36,6 @@ function safeFileId(value) {
 function safeResourceKey(value) {
   const normalized = String(firstQueryValue(value) || '').trim();
   return !normalized || RESOURCE_KEY_PATTERN.test(normalized) ? normalized : '';
-}
-
-
-function wantsTvStream(req) {
-  const value = String(firstQueryValue(req.query?.tv ?? req.query?.stream ?? req.query?.proxy) || '').trim().toLowerCase();
-  return value === '1' || value === 'true' || value === 'yes';
-}
-
-function tvSessionValue(req, fileId, resourceKey) {
-  const ua = String(req?.headers?.['user-agent'] || '');
-  return crypto.createHash('sha256')
-    .update(`${fileId}|${resourceKey || ''}|${ua}`)
-    .digest('hex')
-    .slice(0, 32);
-}
-
-function setTvSessionCookie(req, res, fileId, resourceKey) {
-  const value = tvSessionValue(req, fileId, resourceKey);
-  res.setHeader('Set-Cookie', `betv_tv_drive=${value}; Path=/api/drive-media; Max-Age=3600; HttpOnly; Secure; SameSite=Lax`);
-}
-
-function boundedTvRange(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return `bytes=0-${TV_RANGE_CHUNK_BYTES - 1}`;
-  const match = raw.match(/^bytes=(\d+)-(\d*)$/i);
-  if (!match) return raw;
-  const start = Number(match[1]);
-  const end = match[2] ? Number(match[2]) : NaN;
-  if (!Number.isFinite(start) || start < 0) return raw;
-  const maxEnd = start + TV_RANGE_CHUNK_BYTES - 1;
-  if (!Number.isFinite(end) || end > maxEnd) return `bytes=${start}-${maxEnd}`;
-  return raw;
 }
 
 function wantsMetadata(req) {
@@ -214,50 +180,6 @@ function responseCookies(response) {
   }
 }
 
-
-function mergeCookieHeader(current, incoming) {
-  const map = Object.create(null);
-  function add(value) {
-    String(value || '').split(';').forEach(part => {
-      const item = String(part || '').trim();
-      const index = item.indexOf('=');
-      if (index <= 0) return;
-      const name = item.slice(0, index).trim();
-      const val = item.slice(index + 1).trim();
-      if (name) map[name] = val;
-    });
-  }
-  add(current);
-  add(incoming);
-  return Object.keys(map).map(name => `${name}=${map[name]}`).join('; ');
-}
-
-async function fetchWithCookieRedirects(url, options = {}, initialCookie = '') {
-  let target = new URL(url);
-  let cookieHeader = String(initialCookie || '');
-  let method = String(options.method || 'GET').toUpperCase();
-  for (let step = 0; step < 7; step += 1) {
-    const headers = { ...(options.headers || {}) };
-    if (cookieHeader) headers.Cookie = cookieHeader;
-    const response = await fetchWithTimeout(target, {
-      ...options,
-      method,
-      redirect: 'manual',
-      headers
-    });
-    cookieHeader = mergeCookieHeader(cookieHeader, responseCookies(response));
-    if (![301, 302, 303, 307, 308].includes(response.status)) {
-      return { response, cookieHeader };
-    }
-    const location = response.headers.get('location');
-    if (!location) return { response, cookieHeader };
-    try { await response.body?.cancel(); } catch (_) { /* sem ação */ }
-    target = new URL(location, target);
-    if (response.status === 303) method = 'GET';
-  }
-  throw new Error('drive_redirect_loop');
-}
-
 function confirmedDownloadUrl(html, baseUrl) {
   const source = String(html || '');
   const directPatterns = [
@@ -290,11 +212,9 @@ function confirmedDownloadUrl(html, baseUrl) {
   return null;
 }
 
-async function fetchDriveSource(url, req, probeOnly = false, tvStream = false) {
+async function fetchDriveSource(url, req, probeOnly = false) {
   const clientRange = String(req.headers.range || '').trim();
-  const requestedRange = probeOnly && !clientRange
-    ? 'bytes=0-0'
-    : (tvStream ? boundedTvRange(clientRange) : clientRange);
+  const requestedRange = probeOnly && !clientRange ? 'bytes=0-0' : clientRange;
   const headers = {
     Accept: '*/*',
     'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
@@ -302,11 +222,11 @@ async function fetchDriveSource(url, req, probeOnly = false, tvStream = false) {
   };
   if (requestedRange) headers.Range = requestedRange;
 
-  const first = await fetchWithCookieRedirects(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'GET',
+    redirect: 'follow',
     headers
   });
-  const response = first.response;
 
   const contentType = String(response.headers.get('content-type') || '').toLowerCase();
   if (!contentType.startsWith('text/html')) return response;
@@ -315,11 +235,14 @@ async function fetchDriveSource(url, req, probeOnly = false, tvStream = false) {
   const confirmedUrl = confirmedDownloadUrl(html, response.url || url);
   if (!confirmedUrl) return response;
 
-  const confirmed = await fetchWithCookieRedirects(confirmedUrl, {
+  const cookie = responseCookies(response);
+  const confirmedHeaders = { ...headers };
+  if (cookie) confirmedHeaders.Cookie = cookie;
+  return fetchWithTimeout(confirmedUrl, {
     method: 'GET',
-    headers
-  }, first.cookieHeader);
-  return confirmed.response;
+    redirect: 'follow',
+    headers: confirmedHeaders
+  });
 }
 
 async function fetchPreviewMetadata(fileId, resourceKey) {
@@ -402,8 +325,6 @@ module.exports = async function driveMediaProxy(req, res) {
   if (!fileId || (rawResourceKey && !resourceKey)) return res.status(400).end();
 
   const metadataRequest = wantsMetadata(req);
-  const tvStream = wantsTvStream(req) && !metadataRequest;
-  if (tvStream) setTvSessionCookie(req, res, fileId, resourceKey);
 
   try {
     let upstream = null;
@@ -411,7 +332,7 @@ module.exports = async function driveMediaProxy(req, res) {
     let filename = '';
 
     for (const url of sourceUrls(fileId, resourceKey)) {
-      const candidate = await fetchDriveSource(url, req, metadataRequest || req.method === 'HEAD', tvStream);
+      const candidate = await fetchDriveSource(url, req, metadataRequest || req.method === 'HEAD');
       const candidateType = normalizedContentType(candidate);
       if (!looksLikeDriveError(candidate, candidateType)) {
         upstream = candidate;
@@ -446,7 +367,7 @@ module.exports = async function driveMediaProxy(req, res) {
     // algum código antigo chamar /api/drive-media sem ?metadata=1, devolvemos
     // um redirect para a origem final do Google Drive e encerramos o body aqui.
     // Isso protege Fast Origin Transfer, Fast Data Transfer e CPU/Functions.
-    if (kind === 'video' && upstream.url && !tvStream) {
+    if (kind === 'video' && upstream.url) {
       try { await upstream.body?.cancel(); } catch (_) { /* sem ação */ }
       // 302 é entendido por browsers de Smart TV bem antigos e mantém o GET.
       // O vídeo passa a ser lido diretamente do Google, sem limite de duração da
@@ -460,7 +381,6 @@ module.exports = async function driveMediaProxy(req, res) {
     }
 
     res.statusCode = upstream.status;
-    if (tvStream) res.setHeader('X-BETV-Drive-Mode', 'tv-cookie-proxy');
     res.setHeader('Content-Type', contentType || 'application/octet-stream');
     res.setHeader('Content-Disposition', 'inline');
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
