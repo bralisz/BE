@@ -73,6 +73,10 @@
     applyFooterLink('footerWebsite', data.website || data.siteUrl, 'website');
     applyFooterLink('footerX', data.xUrl || data.twitter || data.x, 'x');
     applyFooterLink('footerDiscord', data.discordUrl || data.discord || data.discordInvite, 'discord');
+    window.dispatchEvent(new CustomEvent('be:update-release-changed', { detail: {
+      updateReleaseEnabled: data.updateReleaseEnabled === true || String(data.updateReleaseEnabled || '').toLowerCase() === 'true',
+      releasedDeploymentVersion: String(data.releasedDeploymentVersion || '').trim()
+    } }));
   }
 
   async function renderFeatured() {

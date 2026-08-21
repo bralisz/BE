@@ -1,49 +1,42 @@
-# Supabase: banco, autenticação e segurança
+# Supabase
 
-Esta pasta representa a estrutura de dados usada pelo Billie Eilish TV no Supabase.
+Esta pasta reúne o schema consolidado e as Edge Functions do Billie Eilish TV.
 
-## Conteúdo
+## Estrutura
 
-- `schema.sql`: visão consolidada do schema do projeto;
-- `migrations/`: alterações versionadas do banco, executadas em ordem;
-- `MIGRATIONS.md`: orientações para manter o histórico local e remoto sincronizado.
+- `schema.sql`: visão consolidada das tabelas, funções, triggers, grants e políticas RLS;
+- `config.toml`: configuração local do Supabase;
+- `MIGRATIONS.md`: notas sobre o histórico de migrations;
+- `functions/create-donation-checkout/`: cria sessões de pagamento da Stripe;
+- `functions/stripe-donation-status/`: consulta o estado de uma doação;
+- `functions/translate-content-record/`: traduz conteúdo e textos da interface.
 
-## Funcionalidades atendidas
+As migrations versionadas ficam na pasta `migrations/` da raiz do projeto.
 
-- autenticação e criação de contas;
-- perfis, nomes de usuário, avatares e banners;
-- permissões de membros e administradores;
-- configurações públicas do site;
-- catálogo administrável;
-- políticas de Row Level Security;
-- funções auxiliares usadas pelos fluxos de login e conta;
-- Edge Function autenticada para criar doações Stripe com valor mínimo por ONG.
+## Traduções
 
-Nunca renomeie migrations que já foram aplicadas. Cada arquivo deve possuir uma versão numérica única para evitar conflitos nos ambientes de Preview e produção.
+`translate-content-record` aceita atualmente:
 
-## Checkout de doações
+- `en-us` → inglês;
+- `es` → espanhol;
+- `fr` → francês.
 
-A função `functions/create-donation-checkout` exige o segredo `STRIPE_SECRET_KEY` configurado no painel do Supabase. O valor mínimo é lido novamente do banco no servidor; o valor exibido no navegador não é considerado confiável.
+As traduções de conteúdo são salvas no objeto `translations` para evitar retradução em cada acesso. A implementação usa endpoints públicos do Google Tradutor e possui atribuição em `functions/translate-content-record/THIRD_PARTY_NOTICES.md`.
 
-### Visão administrativa de doações
+## Doações
 
-A função `get_admin_donation_overview` só pode ser executada por usuários autenticados com função de administrador. Ela mantém no histórico todos os checkouts iniciados, incluindo criados e cancelados, mas calcula os indicadores agregados somente com pagamentos confirmados pela Stripe (`status = 'paid'`).
+`create-donation-checkout` valida a sessão, busca novamente a ONG no banco e confere valor mínimo e moeda antes de criar o Checkout da Stripe.
 
-## Tradução automática
+Segredo necessário:
 
-A função autenticada `functions/translate-content-record` traduz os campos textuais salvos em português para `en-us` e `es`. Ela usa no Supabase/Deno o mesmo método do `deep-translator`: consulta a versão móvel do Google Tradutor e extrai o resultado da página, sem exigir chave da API Google Cloud.
+- `STRIPE_SECRET_KEY`.
 
-As traduções ficam persistidas no JSON `translations` do próprio conteúdo, evitando repetir a tradução em cada acesso. Não é necessário configurar `GOOGLE_TRANSLATE_API_KEY`.
+Nunca coloque essa chave em JavaScript público ou no repositório.
 
-Ao criar ou editar um conteúdo no painel, o site solicita automaticamente as duas traduções. O processamento possui divisão de textos longos, tentativas limitadas e pequenas pausas para reduzir bloqueios. Se o serviço estiver temporariamente indisponível ou limitar requisições, o conteúdo original em português continua sendo exibido como fallback.
+## Regras de manutenção
 
-Esse método depende da página pública do Google Tradutor e, por isso, pode sofrer limitação temporária ou mudanças externas. A implementação foi adaptada da estratégia `GoogleTranslator` do projeto `deep-translator` e sua atribuição está em `functions/translate-content-record/THIRD_PARTY_NOTICES.md`.
-
-## Doações regionais
-
-Cada ONG possui dois mínimos independentes no painel:
-
-- `minimumDonationCents`: mínimo em BRL;
-- `minimumDonationUsdCents`: mínimo em USD.
-
-O navegador seleciona BRL para dispositivos identificados como estando na região Brasil e USD para as demais regiões. A moeda, o mínimo e o valor são validados novamente pela Edge Function antes da criação do Checkout da Stripe.
+- não renomeie migrations já aplicadas;
+- crie uma nova migration para cada mudança de banco;
+- revise RLS e grants ao criar tabelas, views, RPCs ou funções;
+- mantenha dados administrativos fora das funções públicas;
+- use `schema.sql` como referência consolidada, não como substituto do histórico de migrations.

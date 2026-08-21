@@ -1,14 +1,16 @@
-/* Billie Eilish TV — service worker mínimo para instalação como app.
-   O site continua sempre buscando os arquivos pela rede; nenhum conteúdo
-   de vídeo, conta ou preferências é armazenado pelo service worker. */
-const SW_VERSION = '20260821-netflix-webp-v2';
+/* Service worker do PWA; os arquivos continuam vindo da rede. */
+const SW_VERSION = '20260821-vercel-opt-v1';
 
-self.addEventListener('install', event => {
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('message', event => {

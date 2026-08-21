@@ -1,6 +1,10 @@
 'use strict';
 
-const sharp = require('sharp');
+let sharpModule = null;
+function sharp(...args) {
+  if (!sharpModule) sharpModule = require('sharp');
+  return sharpModule(...args);
+}
 const publicProfileApi = require('./public-profile');
 
 const WIDTH = 1200;

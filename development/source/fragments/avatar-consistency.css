@@ -10,7 +10,7 @@
    padding de 3 px e borda interna diretamente na foto. Pseudo-elementos
    de contorno ficam desativados para impedir faixas e cortes inferiores. */
 
-/* 20/08/2026 — aro escolhido pelo usuário com o mesmo desenho em todas as áreas. */
+
 html.profile-avatar-global-customized{
   --betv-avatar-ring-width:2px;
   --betv-avatar-ring-gap:2px;

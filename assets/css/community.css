@@ -137,7 +137,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 }
 
 
-/* Comunidade 2026-08-11 — favoritos sociais, ranking e CTA de apoiadores */
+
 .community-favorite-social{position:absolute;right:10px;bottom:10px;z-index:4;display:flex;align-items:center;gap:7px;min-height:30px;padding:4px 8px 4px 5px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(8,11,16,.72);box-shadow:0 7px 22px rgba(0,0,0,.34);-webkit-backdrop-filter:blur(16px) saturate(145%);backdrop-filter:blur(16px) saturate(145%);pointer-events:none}
 .community-favorite-faces{display:flex;align-items:center;padding-left:2px}
 .community-favorite-face{width:23px;height:23px;margin-left:-6px;overflow:hidden;border:2px solid rgba(8,11,16,.96);border-radius:50%;background:#151a22}
@@ -154,7 +154,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 .community-supporters-cta:active{transform:scale(.985)}
 @media(max-width:760px){.community-favorite-social{right:9px;bottom:9px}.community-favorite-face{width:21px;height:21px}.community-ranking-own-row{grid-template-columns:28px 40px minmax(0,1fr) auto;gap:10px;min-height:60px;padding:9px 12px}.community-supporters-cta-wrap{margin:4px 20px 0}.community-supporters-cta{width:100%}}
 
-/* Comunidade 2026-08-11 — top 15 e banner de apoio à ONG */
+
 .community-ong-spotlight{
   margin:28px clamp(24px,4vw,68px) 8px;
 }
@@ -218,7 +218,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 }
 
 
-/* Comunidade 2026-08-11 — banner principal e tags mensais */
+
 .community-page{padding-top:0}
 .community-page-inner{width:min(100%,1920px);margin:0 auto}
 .community-hero-banner{margin:0 0 18px}
@@ -256,14 +256,14 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 #communityContinueSection .community-section-head h2::first-letter{text-transform:uppercase}
 
 
-/* Comunidade 2026-08-11 — rodapé integrado ao fundo da página */
+
 body.community-page-active > footer,
 body.community-page-active .site-footer{
   background:#020406!important;
 }
 
 
-/* Comunidade 2026-08-11 — continuidade visual até o rodapé no desktop */
+
 @media (min-width:761px){
   body.community-page-active,
   body.community-page-active > main,
@@ -283,7 +283,7 @@ body.community-page-active .site-footer{
   }
 }
 
-/* 20/08/2026 — "Instalar app" com fundo branco no menu do avatar no mobile. */
+
 @media (max-width:760px){
   .mobile-account-popover button[data-mobile-account="install"]{
     margin:4px 0;
@@ -301,7 +301,7 @@ body.community-page-active .site-footer{
   }
 }
 
-/* 21/08/2026 — exibe para todos o aro escolhido por cada perfil no ranking. */
+
 .community-rank-avatar.has-custom-ring{
   box-sizing:border-box!important;
   padding:1px!important;

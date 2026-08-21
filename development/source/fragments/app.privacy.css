@@ -3411,7 +3411,7 @@
   }
 
 
-/* Skeleton final: mantém o carregamento acima de toda a interface e segue o layout real. */
+/* Carregamento inicial. */
 .auth-loading{
   position:fixed!important;
   inset:0!important;
@@ -3789,7 +3789,7 @@ body.support-page-active .home-nav-link[data-public-action="support"]{display:in
   .support-contact-button{transition:none!important}
 }
 
-/* Notificações e correções de navegação — atualização 03/08/2026. */
+/* Notificações. */
 html.site-loading-active,
 body.site-loading-active{
   width:100%;
@@ -4422,7 +4422,7 @@ body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned
 }
 
 
-/* Ajustes finais: sino compacto e suporte totalmente dedicado. */
+/* Suporte. */
 .home-notification-menu{
   top:27px;
 }
@@ -4999,7 +4999,7 @@ body.section-catalog-active main>section:not(#contentDetailSection){display:none
   .section-view-active .video-rail{grid-template-columns:1fr!important}
 }
 
-/* Ajustes finais: perfil e catálogo completo das seções. */
+/* Perfis e catálogo. */
 body.profile-page-active .home-notification-menu,
 body.profile-page-active .profile-page-more{
   right:24px!important;
@@ -5256,7 +5256,7 @@ body.section-catalog-active>footer>.footer-card{
   background:var(--be-page-background)!important;
 }
 
-/* Correção definitiva de rolagem das abas Filmes e Vídeos. */
+/* Catálogo. */
 html{
   scroll-padding-top:112px;
 }
@@ -5426,7 +5426,7 @@ body.section-catalog-active #dynamicSections.section-view-mode{
 }
 
 
-/* Ajuste final: destaques aleatórios visíveis nas abas Filmes e Vídeos + visual limpo ao abrir seção. */
+/* Catálogo. */
 body[data-home-view="films"] #randomFeaturedSection,
 body[data-home-view="movies"] #randomFeaturedSection,
 body[data-home-view="series"] #randomFeaturedSection,
@@ -5472,7 +5472,7 @@ body.section-catalog-active .section-view-active .video-rail{
   }
 }
 
-/* Correção definitiva do espaço vazio ao abrir uma seção. */
+/* Catálogo. */
 body.section-catalog-active > main{
   display:none!important;
   min-height:0!important;
@@ -5511,7 +5511,7 @@ body.section-catalog-active #dynamicSections.section-view-mode > .section-view-a
 }
 
 
-/* Correções finais: notificações, busca e navegação para o perfil. */
+/* Notificações e busca. */
 .notification-dropdown-header,
 .mobile-notification-head{
   display:grid!important;
@@ -5724,7 +5724,7 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-/* Ajuste final: mais espaço nas recomendações dos detalhes. */
+/* Recomendações. */
 .detail-recommendations{
   padding-top:48px!important;
   padding-bottom:82px!important;
@@ -5773,8 +5773,7 @@ body.legal-page-active #dynamicSections{
 }
 
 
-/* Normalização final das logos nos cards.
-   Cada logo usa uma área segura e centralizada, sem corte ou deslocamento no hover. */
+/* Logos dos cards. */
 .video-card > .video-card-logo-slot{
   position:absolute!important;
   top:50%!important;
@@ -5927,8 +5926,7 @@ body.legal-page-active #dynamicSections{
 }
 
 
-/* BETV logo refresh — 2026-08-07
-   Larger login branding, vertically aligned with Discord on desktop and mobile. */
+/* Logos. */
 body.login-mode .login-topbar{
   align-items:center!important;
 }
@@ -5976,7 +5974,7 @@ body.login-mode .login-brand img{
 }
 
 
-/* Ajustes 2026-08-08: conta em /fãs e menu de usuário com acabamento estilo iOS. */
+
 .user-dropdown{
   width:220px;
   padding:8px;

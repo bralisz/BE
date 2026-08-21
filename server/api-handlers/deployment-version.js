@@ -86,10 +86,20 @@ module.exports = async function deploymentVersionHandler(req, res) {
     return res.status(405).end();
   }
 
+  const versionOnly = String(req.query?.versionOnly || '').trim() === '1';
   const fresh = String(req.query?.fresh || '').trim();
   const forceRefresh = Boolean(fresh);
-  const release = await loadReleaseState(forceRefresh);
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  if (versionOnly) {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    if (req.method === 'HEAD') return res.status(200).end();
+    return res.status(200).json({ version: deploymentVersion() });
+  }
+
+  const release = await loadReleaseState(forceRefresh);
   if (forceRefresh) {
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.setHeader('Vercel-CDN-Cache-Control', 'no-store');

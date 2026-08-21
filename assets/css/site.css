@@ -3623,7 +3623,7 @@
   }
 
 
-/* Skeleton final: mantém o carregamento acima de toda a interface e segue o layout real. */
+/* Carregamento inicial. */
 .auth-loading{
   position:fixed!important;
   inset:0!important;
@@ -4001,7 +4001,7 @@ body.support-page-active .home-nav-link[data-public-action="support"]{display:in
   .support-contact-button{transition:none!important}
 }
 
-/* Notificações e correções de navegação — atualização 03/08/2026. */
+/* Notificações. */
 html.site-loading-active,
 body.site-loading-active{
   width:100%;
@@ -4634,7 +4634,7 @@ body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned
 }
 
 
-/* Ajustes finais: sino compacto e suporte totalmente dedicado. */
+/* Suporte. */
 .home-notification-menu{
   top:27px;
 }
@@ -5232,7 +5232,7 @@ body.section-catalog-active main>section:not(#contentDetailSection){display:none
   .section-view-active .video-rail{grid-template-columns:1fr!important}
 }
 
-/* Ajustes finais: perfil e catálogo completo das seções. */
+/* Perfis e catálogo. */
 body.profile-page-active .home-notification-menu,
 body.profile-page-active .profile-page-more{
   right:24px!important;
@@ -5489,7 +5489,7 @@ body.section-catalog-active>footer>.footer-card{
   background:var(--be-page-background)!important;
 }
 
-/* Correção definitiva de rolagem das abas Filmes e Vídeos. */
+/* Catálogo. */
 html{
   scroll-padding-top:112px;
 }
@@ -5659,7 +5659,7 @@ body.section-catalog-active #dynamicSections.section-view-mode{
 }
 
 
-/* Ajuste final: destaques aleatórios visíveis nas abas Filmes e Vídeos + visual limpo ao abrir seção. */
+/* Catálogo. */
 body[data-home-view="films"] #randomFeaturedSection,
 body[data-home-view="movies"] #randomFeaturedSection,
 body[data-home-view="series"] #randomFeaturedSection,
@@ -5705,7 +5705,7 @@ body.section-catalog-active .section-view-active .video-rail{
   }
 }
 
-/* Correção definitiva do espaço vazio ao abrir uma seção. */
+/* Catálogo. */
 body.section-catalog-active > main{
   display:none!important;
   min-height:0!important;
@@ -5744,7 +5744,7 @@ body.section-catalog-active #dynamicSections.section-view-mode > .section-view-a
 }
 
 
-/* Correções finais: notificações, busca e navegação para o perfil. */
+/* Notificações e busca. */
 .notification-dropdown-header,
 .mobile-notification-head{
   display:grid!important;
@@ -5957,7 +5957,7 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-/* Ajuste final: mais espaço nas recomendações dos detalhes. */
+/* Recomendações. */
 .detail-recommendations{
   padding-top:48px!important;
   padding-bottom:82px!important;
@@ -6006,8 +6006,7 @@ body.legal-page-active #dynamicSections{
 }
 
 
-/* Normalização final das logos nos cards.
-   Cada logo usa uma área segura e centralizada, sem corte ou deslocamento no hover. */
+/* Logos dos cards. */
 .video-card > .video-card-logo-slot{
   position:absolute!important;
   top:50%!important;
@@ -6109,7 +6108,7 @@ body.legal-page-active #dynamicSections{
 }
 
 
-/* module boundary */
+
 .betv-update-popup{
   position:fixed;
   z-index:2147483000;
@@ -6297,7 +6296,7 @@ body.profile-page-active .profile-page-more svg{width:22px!important;height:22px
   .profile-page-logout svg{width:21px;height:21px}
 }
 
-/* Atualização: páginas dedicadas de Filmes/Séries e seletores mais leves. */
+/* Catálogo. */
 body.section-catalog-active #dynamicSections.section-view-mode > .video-rail-section:not(.section-view-active),
 body.section-catalog-active #dynamicSections.section-view-mode > .film-library-section:not(.section-view-active){
   display:none!important;
@@ -6414,7 +6413,7 @@ body.section-catalog-active #dynamicSections.section-view-mode > .film-library-s
   }
 }
 
-/* Atualização mobile: cabeçalho da seção sem recorte e navegação anterior real. */
+/* Catálogo no mobile. */
 @media(max-width:760px){
   body.section-catalog-active #dynamicSections.section-view-mode > .section-view-active{
     display:grid!important;
@@ -6466,7 +6465,7 @@ body.section-catalog-active #dynamicSections.section-view-mode > .film-library-s
   }
 }
 
-/* Atualização: exportação de dados, Markdown, busca e aviso de banimento. */
+/* Busca. */
 .settings-data-card .settings-export-button svg,
 .settings-session-card .settings-button svg{
   width:19px;
@@ -6656,7 +6655,7 @@ body.settings-page-active #settingsPageBody{width:min(1260px,calc(100% - 40px))!
 }
 
 
-/* Atualização: suporte direto, apelação por e-mail e ícones opticamente centralizados. */
+/* Suporte. */
 .support-contact{
   scroll-margin-top:clamp(92px,10vh,132px);
 }
@@ -6767,10 +6766,7 @@ body.support-page-active .home-topbar.search-open .home-nav-leading{
   transform:none!important;
 }
 
-/* Suporte: mantém o mesmo indicador compartilhado das outras abas.
-   Assim o pill branco desliza de Comunidade/Filmes/Vídeos até Suporte em vez
-   de desaparecer e reaparecer diretamente sobre o botão. O JS continua
-   sincronizando Suporte como a aba ativa, evitando o retorno indevido à logo. */
+/* Suporte. */
 body.support-page-active .home-nav-leading::before{
   opacity:1!important;
 }
@@ -7070,7 +7066,7 @@ body.support-page-active .home-nav-link[data-public-action="support"].active{
   body.profile-page-active .profile-page-hero{min-height:485px!important}
 }
 
-/* v1.1.0 — refinamento visual das configurações públicas. */
+
 @media (min-width: 1024px){
   /* Mantém o menu de abas à esquerda e o conteúdo amplo como no layout de referência. */
   body.settings-page-active #settingsPageBody{
@@ -7606,7 +7602,7 @@ body.profile-favorites-picker-active{overflow:hidden!important}
 }
 
 
-/* Ajustes finais: alinhamento de Favoritos, sobreposição do ranking e scroll consistente. */
+/* Favoritos. */
 @media(min-width:761px){
   .profile-favorites-section{
     padding:34px clamp(22px,4vw,60px) 58px;
@@ -7887,7 +7883,7 @@ body.profile-favorites-picker-active{overflow:hidden!important}
 }
 
 
-/* Correções de sessão e layout de Meus Dados — 04/08/2026. */
+/* Autenticação. */
 html:not(.admin-route-boot).site-loading-active body > :not(#authLoading):not(script):not(style){
   visibility:hidden!important;
 }
@@ -8219,7 +8215,7 @@ body.detail-page-active #detailRecommendations:not([hidden]){
   }
 }
 
-/* Acesso protegido e Favoritos no perfil mobile — 04/08/2026. */
+/* Perfil no mobile. */
 @media(max-width:760px){
   /* No mobile, Favoritos usa o mesmo conceito de ranking numerado do desktop. */
   body.profile-page-active .profile-favorites-section{
@@ -8371,7 +8367,7 @@ body.detail-page-active #detailRecommendations:not([hidden]){
   .profile-favorites-selection-count{min-width:54px!important}
 }
 
-/* Perfil público compartilhável — 04/08/2026. */
+/* Perfis. */
 body.profile-page-active .profile-page-avatar[hidden],
 body.profile-page-active .profile-page-like[hidden],
 body.profile-page-active .profile-page-more[hidden]{
@@ -8863,7 +8859,7 @@ body.drive-player-open{overflow:hidden!important;overscroll-behavior:none}
 }
 
 
-/* Ajustes finais: botão de mais compacto e controles do player. */
+/* Player. */
 .video-rail-more{
   flex-basis:54px!important;
   width:54px!important;
@@ -9474,11 +9470,7 @@ body.billie-page-active .billie-wikipedia-attribution a{
   color:rgba(238,242,248,.72);
 }
 
-/* ==========================================================================
-   Billie Eilish — layout mobile compacto
-   Mantém a moldura e a hierarquia do desktop sem deixar a foto ocupar
-   praticamente toda a primeira tela em celulares.
-   ========================================================================== */
+
 @media (max-width:900px){
   body.billie-page-active .billie-page-content{
     width:100%;
@@ -10597,8 +10589,7 @@ body.donate-page-active .donate-page-avatar>img:not([hidden])~svg{
 }
 
 
-/* Correção definitiva dos avatares de cabeçalho — replica a estrutura visual da Home.
-   A borda interna fica na própria foto, evitando a faixa/corte visto na página ONG. */
+/* Avatares. */
 .home-user-menu .user-chip,
 body.billie-page-active .billie-page-avatar,
 body.donate-page-active .donate-page-avatar,
@@ -10747,7 +10738,7 @@ body.donate-page-active .donate-page-avatar>img:not([hidden])~svg{
 @media(max-width:760px){.settings-language-options{grid-template-columns:1fr}.settings-language-option{min-height:76px}}
 
 
-/* Ajuste fino final dos avatares de Billie e ONG: evita artefato inferior e sincroniza o anel com a foto. */
+/* Avatares. */
 body.billie-page-active .billie-page-avatar,
 body.donate-page-active .donate-page-avatar{
   position:relative!important;
@@ -11349,8 +11340,7 @@ body.album-page-active .topbar-wrap{z-index:170}
 @media(max-width:390px){.album-page-cover-card{flex-basis:34vw}.album-detail-hero{grid-template-columns:90px minmax(0,1fr) 40px}.album-detail-cover-wrap{width:90px}.album-detail-player{width:40px;height:40px}}
 
 
-/* Ajuste final: aumentar o avatar do app bar mobile em telas pequenas.
-   Mantém a foto mais visível que antes, inclusive em celulares estreitos. */
+/* Avatares. */
 @media(max-width:760px){
   :root{
     --betv-header-avatar-size:62px;
@@ -11450,8 +11440,7 @@ html.legal-route-boot .legal-home-button{
 }
 
 
-/* BETV logo refresh — 2026-08-07
-   Larger login branding, vertically aligned with Discord on desktop and mobile. */
+/* Logos. */
 body.login-mode .login-topbar{
   align-items:center!important;
 }
@@ -11558,7 +11547,7 @@ body.section-catalog-active.featured-section-catalog-active #dynamicSections.sec
   display:none!important;
 }
 
-/* Álbuns que amo + coração para salvar álbum — 07/08/2026 */
+/* Curtidas. */
 .profile-loved-albums-section{padding-top:42px}
 .profile-loved-albums-section .profile-favorites-ranking{gap:clamp(18px,2vw,30px)}
 .profile-loved-albums-section .profile-favorite-ranked-item{
@@ -11849,7 +11838,7 @@ body.profile-page-active .profile-page-share.is-copied{
 }
 
 
-/* Ajuste final dos ícones do topo do perfil no mobile e centralização do botão de compartilhar. */
+/* Perfil no mobile. */
 body.profile-page-active .profile-page-share{
   display:grid!important;
   place-items:center!important;
@@ -12112,7 +12101,7 @@ body.site-loading-active.donate-page-active > footer{
 }
 
 
-/* Ajustes 2026-08-08: conta em /fãs e menu de usuário com acabamento estilo iOS. */
+
 .user-dropdown{
   width:220px;
   padding:8px;
@@ -12522,13 +12511,7 @@ body.site-loading-active.donate-page-active > footer{
 }
 
 
-/* =========================================================
-   Player final:
-   - sem inatividade no modo normal (PC/mobile);
-   - fullscreen sem os controles centrais;
-   - timeline/tempo continuam acessíveis no fullscreen;
-   - VK nativo fica mascarado atrás do player BETV.
-   ========================================================= */
+/* Player. */
 
 /* Fora da tela cheia os controles do site ficam sempre visíveis. */
 .drive-player-overlay.is-open:not(.is-browser-fullscreen) .drive-player-top-controls,
@@ -12775,13 +12758,7 @@ body.site-loading-active.donate-page-active > footer{
   }
 }
 
-/* Celular deitado em tela cheia:
-   - reduz a faixa preta inferior;
-   - aproveita mais a altura para o vídeo;
-   - mantém uma máscara preta suficiente para esconder os controles nativos do VK;
-   - a timeline/tempo do BETV continuam acessíveis.
-   A inatividade de 2s dos ícones superiores continua sendo controlada por
-   .fullscreen-ui-idle, inclusive nesta orientação. */
+/* Tela cheia. */
 @media(max-width:950px) and (max-height:560px) and (orientation:landscape){
   .drive-player-overlay.is-browser-fullscreen.is-vk-api-mode .drive-player-frame{
     top:-38px!important;
@@ -12832,11 +12809,7 @@ body.site-loading-active.donate-page-active > footer{
 }
 
 
-/* =========================================================
-   VK Video — usar somente o player nativo do VK.
-   Remove os controles BETV sobrepostos e libera toda a área
-   do iframe para os controles próprios do VK.
-   ========================================================= */
+/* VK. */
 .drive-player-overlay.is-vk-api-mode .drive-player-frame-shell{
   inset:0!important;
   overflow:hidden!important;
@@ -13094,13 +13067,7 @@ body.external-video-player-open{overflow:hidden!important;overscroll-behavior:no
 }
 
 
-/* =========================================================
-   Ajuste 2026-08-08
-   YouTube: fora do fullscreen, somente os ícones do site ficam
-   sobre o player; sem barra, marca ou faixa ocupando espaço.
-   Google Drive: controles entram em inatividade após 2s.
-   VK permanece inalterado.
-   ========================================================= */
+/* Tela cheia. */
 .youtube-player-shell{
   display:block!important;
 }
@@ -13136,11 +13103,7 @@ body.external-video-player-open{overflow:hidden!important;overscroll-behavior:no
 /* MP3 do Google Drive: configuração original restaurada; controles permanecem no comportamento anterior. */
 
 
-/* Ajuste YouTube 2026-08-08 v3
-   - remove a barra/timeline nativa do embed (controls=0 no JS);
-   - remove o antigo ícone de abrir externamente;
-   - mantém apenas tela cheia + fechar fora do fullscreen;
-   - no fullscreen, os ícones do site desaparecem. */
+/* YouTube. */
 .youtube-player-shell:fullscreen .youtube-player-toolbar,
 .youtube-player-shell:-webkit-full-screen .youtube-player-toolbar{
   display:none!important;
@@ -13153,12 +13116,7 @@ body.external-video-player-open{overflow:hidden!important;overscroll-behavior:no
 }
 
 
-/* =========================================================
-   YouTube 2026-08-08 v4
-   - controles nativos do YouTube (uma única timeline/duração);
-   - sem botão de fullscreen customizado do site;
-   - botão fechar centralizado embaixo em uma barra cinza minimalista.
-   ========================================================= */
+/* YouTube. */
 .youtube-player-toolbar{
   top:auto!important;
   right:auto!important;
@@ -14186,11 +14144,7 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   pointer-events:auto!important;
 }
 
-/* =========================================================
-   08/08/2026 — refinamento do MP3 + correção do perfil.
-   MP3: cartão central de áudio em vez de ocupar toda a viewport.
-   Perfil: remove qualquer espaço reservado pelo header antigo.
-   ========================================================= */
+
 
 /* MP3 do Drive — apresentação compacta, sem aparência de player de vídeo gigante. */
 .drive-player-overlay.is-audio-mode{
@@ -14413,11 +14367,7 @@ body.profile-page-active .profile-page-hero{
   }
 }
 
-/* =========================================================
-   08/08/2026 — limpeza do boot do player do Google Drive.
-   Evita que a barra/base anterior apareça por um instante enquanto
-   o MP4 ainda está sincronizando com o Drive.
-   ========================================================= */
+/* Google Drive. */
 .drive-video-player-overlay.is-source-syncing .drive-video-player-actionbar,
 .drive-video-player-overlay.is-source-syncing .drive-video-player-action-wake-zone{
   opacity:0!important;
@@ -14434,11 +14384,7 @@ body.profile-page-active .profile-page-hero{
   pointer-events:none!important;
 }
 
-/* =========================================================
-   08/08/2026 — Players em MOBILE (sem alterar o desktop)
-   YouTube + VK: layout compacto inspirado no PC.
-   Drive MP4: layout responsivo estável, mantendo o fallback nativo do Drive.
-   ========================================================= */
+
 @media (max-width:820px), (pointer:coarse) and (max-height:620px){
   /* ---------- YouTube + VK ---------- */
   .external-native-player-overlay,
@@ -14515,15 +14461,14 @@ body.profile-page-active .profile-page-hero{
     padding:0 12px!important;
   }
 
-  /* No desktop o VK some em 2s e volta por hover. No mobile manter a tab
-     acessível é mais confiável, pois o iframe captura os toques. */
+  /* VK: oculta a barra após 5s; o primeiro toque na tela a exibe novamente. */
   .external-native-player-overlay.controls-idle[data-provider="vk"] .external-native-player-toolbar{
-    opacity:1!important;
-    pointer-events:auto!important;
-    transform:translateX(-50%) translateY(0)!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    transform:translateX(-50%) translateY(10px)!important;
   }
   .external-native-player-overlay.controls-idle[data-provider="vk"] .external-native-player-bottom-shade{
-    opacity:.66!important;
+    opacity:.28!important;
   }
 
   /* ---------- Google Drive MP4 — mobile estável ---------- */
@@ -14653,10 +14598,7 @@ body.profile-page-active .profile-page-hero{
 
 }
 
-/* =========================================================
-   08/08/2026 — ajuste pontual MOBILE
-   YouTube: X afastado da barra nativa. Desktop não é alterado.
-   ========================================================= */
+
 @media (max-width:820px){
   .external-native-player-overlay[data-provider="youtube"] .external-native-player-toolbar{
     bottom:max(150px,calc(env(safe-area-inset-bottom) + 138px))!important;
@@ -14671,12 +14613,7 @@ body.profile-page-active .profile-page-hero{
   }
 }
 
-/* =========================================================
-   08/08/2026 — Drive nativo no MOBILE em retrato
-   O preview do Google Drive não lida bem com um iframe 100dvh estreito:
-   ele espalha os controles pela altura inteira. Em fallback/frame-mode,
-   damos ao iframe um viewport 16:9 real, como no desktop, sem alterar PC.
-   ========================================================= */
+/* Google Drive. */
 @media (max-width:820px) and (orientation:portrait){
   .drive-video-player-overlay.is-frame-mode .drive-video-player-frame-shell{
     position:absolute!important;
@@ -14758,12 +14695,7 @@ body.profile-page-active .profile-page-hero{
 }
 
 
-/* =========================================================
-   08/08/2026 — YouTube PC: X com auto-hide de 2s.
-   Exclusivo para mouse/desktop. Mobile permanece inalterado.
-   A zona invisível coincide apenas com a região do X para não
-   criar uma faixa ampla bloqueando os controles nativos do YouTube.
-   ========================================================= */
+
 @media (min-width:821px) and (hover:hover) and (pointer:fine){
   .external-native-player-overlay[data-provider="youtube"] .external-native-player-wake-zone{
     display:block!important;
@@ -14805,9 +14737,7 @@ body.site-loading-active.notification-page-active > #notificationPage{
   pointer-events:none!important;
 }
 
-/* 09/08/2026 — Perfil: hover/press consistente nas quatro ações.
-   As regras ficam no fim do CSS para não serem anuladas pelos ajustes
-   responsivos posteriores de Notificações e Mais opções. */
+
 body.profile-page-active .profile-page-home,
 body.profile-page-active:not(.profile-viewer-guest) .profile-page-like,
 body.profile-page-active .profile-page-share,
@@ -14878,9 +14808,7 @@ html.performance-lite .skeleton-shimmer::after{
 }
 
 
-/* 09/08/2026 — Performance Lite: preservar transparências do layout.
-   O modo leve pode remover blur/backdrop-filter, mas nunca deve criar um
-   preenchimento sólido onde a Home usa fundo transparente. */
+
 html.performance-lite body:not(.login-mode):not(.admin-mode) .topbar-wrap,
 html.performance-lite body:not(.login-mode):not(.admin-mode) .home-topbar,
 html.performance-lite body:not(.login-mode):not(.admin-mode) .mobile-app-bar{
@@ -14891,9 +14819,7 @@ html.performance-lite body:not(.login-mode):not(.admin-mode) .home-topbar.search
   background:transparent!important;
 }
 
-/* 09/08/2026 — Mobile: isolar a página de detalhes do conteúdo.
-   Evita que Destaques, catálogo/cards ou rodapé da Home reapareçam por
-   regras responsivas/estado de aba enquanto um vídeo está aberto. */
+
 @media (max-width:760px){
   body.detail-page-active #featuredSection,
   body.detail-page-active #randomFeaturedSection,
@@ -14930,9 +14856,7 @@ html.performance-lite body:not(.login-mode):not(.admin-mode) .home-topbar.search
   }
 }
 
-/* 09/08/2026 — Curtidas em perfis públicos.
-   Desktop: a contagem fica acima das ações do banner.
-   Mobile: a contagem fica logo abaixo dos ícones do topo. */
+
 body.profile-page-active .profile-page-likes-received{
   position:absolute;
   z-index:10022;
@@ -14993,7 +14917,7 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
   }
 }
 
-/* 2026-08-09 — Configurações > Perfil: prévia completa em telas desktop largas/baixas. */
+
 @media (min-width:1024px){
   body.settings-page-active .settings-profile-panel .settings-panel-card{
     min-width:0;
@@ -15382,8 +15306,7 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
   @keyframes detailCommentSheetMobileIn{from{opacity:.6;transform:translateY(100%)}to{opacity:1;transform:none}}
 }
 
-/* 09/08/2026 — Perfil desktop: ações sem sobreposição.
-   Ordem visual fixa: Home → Curtir → Compartilhar → Mais opções. */
+
 @media (min-width:761px){
   body.profile-page-active{
     --profile-desktop-action-size-final:48px;
@@ -15444,8 +15367,7 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
   }
 }
 
-/* 09/08/2026 — correção definitiva das ações do perfil no desktop.
-   Home sempre visível ao lado do coração; coração sem fundo residual. */
+
 @media (min-width:761px){
   body.profile-page-active #profilePageHome,
   body.profile-page-active:not(.profile-viewer-guest) #profilePageLike,
@@ -15512,7 +15434,7 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
   }
 }
 
-/* 09/08/2026 — Perfil desktop: coração com o mesmo botão circular das demais ações. */
+
 @media (min-width:761px){
   body.profile-page-active:not(.profile-viewer-guest) #profilePageLike,
   body.profile-page-active:not(.profile-viewer-guest) #profilePageLike:hover,
@@ -15535,7 +15457,7 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
   }
 }
 
-/* 09/08/2026 — Mobile: Comentários sempre abaixo de Recomendações nos detalhes. */
+
 @media (max-width:760px){
   body.detail-page-active .detail-comment-avatar,
   body.detail-page-active .detail-comment-composer-avatar{
@@ -15572,7 +15494,7 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
   }
 }
 
-/* 09/08/2026 — Curtida dos comentários: sem fundo/sombra atrás do coração. */
+
 .detail-comment-like,
 .detail-comment-like:hover,
 .detail-comment-like:focus,
@@ -15600,7 +15522,7 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
 }
 
 
-/* 09/08/2026 — Curtida dos comentários também garantida no desktop. */
+
 @media (min-width:761px){
   body.detail-page-active .detail-comment-actions .detail-comment-like{
     display:inline-flex!important;
@@ -15628,8 +15550,7 @@ body.profile-page-active .profile-page-like:disabled{cursor:wait;opacity:.72}
   }
 }
 
-/* 09/08/2026 — Players mobile acompanham a rotação do aparelho.
-   Aplica-se ao Drive, VK e YouTube e também ao modo PWA/standalone. */
+
 @media (pointer:coarse), (max-width:920px){
   body.external-video-player-open .external-native-player-overlay,
   body.external-video-player-open .external-native-player-shell,
@@ -16001,7 +15922,7 @@ body.detail-streaming-mobile-open{overflow:hidden}
 }
 
 
-/* 09/08/2026 — Mobile: cards maiores mantendo 2 por linha. */
+
 @media (max-width: 760px){
   body.section-catalog-active #dynamicSections.section-view-mode{
     padding-left:8px!important;
@@ -16035,7 +15956,7 @@ body.detail-streaming-mobile-open{overflow:hidden}
 }
 
 
-/* 10/08/2026 — Mobile: cards do catálogo maiores e melhor aproveitamento horizontal. */
+
 @media (max-width:760px){
   body.section-catalog-active #dynamicSections.section-view-mode{
     padding-left:3px!important;
@@ -16081,7 +16002,7 @@ body.detail-streaming-mobile-open{overflow:hidden}
 }
 
 
-/* 10/08/2026 — Centraliza a contagem de curtidas com o grupo de ações do perfil. */
+
 body.profile-page-active .profile-page-likes-received{
   left:auto!important;
   margin:0!important;
@@ -16119,8 +16040,7 @@ body.profile-page-active .profile-page-likes-received{
   }
 }
 
-/* 10/08/2026 — SEO: o texto de acesso não é um heading da página.
-   Mantém exatamente a mesma aparência do antigo h2 para não alterar o layout. */
+
 #emailStepTitle.auth-step-title{
   max-width:440px;
   margin:0;
@@ -16135,7 +16055,7 @@ body.profile-page-active .profile-page-likes-received{
 }
 
 
-/* Ajuste final do banner “Conheça Billie Eilish” */
+/* Banners. */
 .billie-home-spotlight-copy{
   max-width:min(760px,66%);
 }
@@ -16157,7 +16077,7 @@ body.profile-page-active .profile-page-likes-received{
 }
 
 
-/* 11/08/2026 — ajustes mobile: catálogo mais largo + alinhamento da contagem do perfil. */
+
 @media (max-width:760px){
   /* Seções abertas: usa praticamente toda a largura útil e mantém 2 cards grandes por linha. */
   body.section-catalog-active #dynamicSections.section-view-mode{
@@ -16219,7 +16139,7 @@ body.profile-page-active .profile-page-likes-received{
 }
 
 
-/* Perfil 2026-08-11 — tag de comunidade */
+/* Perfis. */
 .profile-page-award-tags{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:5px;margin-bottom:2px}
 .profile-page-award-tags[hidden]{display:none!important}
 .profile-award-tag{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:0 10px;border:1px solid transparent;border-radius:7px;font-size:12px;font-weight:850;line-height:1;letter-spacing:-.01em;box-shadow:none;white-space:nowrap}
@@ -16232,7 +16152,7 @@ body.profile-page-active .profile-page-likes-received{
   .profile-award-tag{min-height:22px;padding:0 9px;font-size:11px}
 }
 
-/* 12/08/2026 — Personalização de cores do perfil e aro do avatar. */
+
 .settings-profile-colors{
   margin-top:28px;
   padding-top:6px;
@@ -16517,7 +16437,7 @@ body.profile-page-active.profile-avatar-border-customized .profile-page-avatar{
   }
 }
 
-/* 12/08/2026 — Perfil: cor personalizada sem tingir o fundo + aro persistente no site. */
+
 body.profile-page-active.profile-color-customized,
 body.profile-page-active.profile-color-customized .profile-page-shell{
   background:#090a0c!important;
@@ -16572,7 +16492,7 @@ html.profile-avatar-global-customized .fans-page-avatar-frame{
 }
 
 
-/* 12/08/2026 — painel dos três pontos no próprio perfil. */
+
 body.profile-page-active .profile-page-actions-menu{
   position:fixed!important;
   left:var(--profile-actions-left,auto)!important;
@@ -16653,7 +16573,7 @@ body.profile-page-active #profilePageMore[aria-expanded="true"]{
 }
 
 
-/* 12/08/2026 — Cor do perfil aplicada ao fundo, lisa e sem faixas/linhas. */
+
 body.profile-page-active.profile-color-customized,
 body.profile-page-active.profile-color-customized .profile-page-shell,
 body.profile-page-active.profile-color-customized .profile-page-hero,
@@ -16697,7 +16617,7 @@ html.profile-avatar-global-customized body.legal-page-active .legal-avatar-butto
   border-color:var(--betv-user-avatar-border)!important;
 }
 
-/* 12/08/2026 — edição do perfil diretamente no próprio perfil. */
+
 .profile-page-avatar-edit-wrap{
   position:relative;
   width:132px;
@@ -16957,7 +16877,7 @@ body.profile-page-active.profile-inline-editing .profile-inline-edit-dock{
 }
 
 
-/* 12/08/2026 — ajuste fino do botão + do avatar e da borda do perfil. */
+
 body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
   left:auto!important;
   right:-8px!important;
@@ -17025,7 +16945,7 @@ body.profile-page-active.profile-avatar-border-customized .profile-favorites-edi
   }
 }
 
-/* 12/08/2026 — avatar personalizado na Home: um único aro sólido, sem anel duplo. */
+
 html.profile-avatar-global-customized .home-user-menu .user-chip{
   padding:0!important;
   border:0!important;
@@ -17057,7 +16977,7 @@ html.profile-avatar-global-customized .home-user-menu .user-chip>.avatar>img{
 }
 
 
-/* 12/08/2026 — perfil: rodapé acompanha a cor escolhida; sombra do banner continua preta/fixa. */
+
 body.profile-page-active.profile-color-customized > footer{
   background:color-mix(in srgb,var(--profile-theme-color) 14%,#090a0c)!important;
   background-image:none!important;
@@ -17092,7 +17012,7 @@ body.profile-page-active.profile-color-customized .profile-page-hero::after{
   }
 }
 
-/* 12/08/2026 — editor inline: cancelar, restaurar padrão e acabamento mobile. */
+
 .profile-inline-cancel{
   min-width:104px;
   height:48px;
@@ -17372,7 +17292,7 @@ body.profile-page-active.profile-color-customized .profile-page-hero::after{
   body.profile-page-active .profile-page-name{font-size:26px!important}
 }
 
-/* 12/08/2026 — ajuste final: + compacto, aro só no avatar e desktop mais enxuto. */
+
 body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
   left:auto!important;
   right:-16px!important;
@@ -17478,7 +17398,7 @@ body.profile-page-active.profile-color-customized.profile-avatar-border-customiz
   }
 }
 
-/* 12/08/2026 — mobile: a cor do perfil ocupa todo o fundo; linha divisória fica entre o cabeçalho e o conteúdo. */
+
 body.profile-page-active .profile-page-hero{
   border-bottom:1px solid rgba(255,255,255,.10)!important;
 }
@@ -17541,7 +17461,7 @@ body.profile-page-active .profile-saved-section{
   }
 }
 
-/* 12/08/2026 — divisor do perfil com o mesmo acabamento arredondado usado no catálogo da Home. */
+
 body.profile-page-active .profile-page-hero,
 body.profile-page-active.profile-avatar-border-customized .profile-page-hero{
   border-bottom:0!important;
@@ -17588,7 +17508,7 @@ body.profile-page-active #profileLovedAlbumsSection:not([hidden]) ~ .profile-sav
   }
 }
 
-/* 12/08/2026 — correções finais do perfil: botão + sobreposto, mobile liso e desktop sem cortes. */
+
 
 /* O botão + fica realmente sobreposto ao canto inferior direito do avatar. */
 body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
@@ -17734,7 +17654,7 @@ body.profile-page-active.profile-color-customized .profile-page-hero::after{
   }
 }
 
-/* 12/08/2026 — ajuste visual: + realmente sobre o avatar, divisor visível e banner mobile mais completo. */
+
 
 /* O botão de editar avatar cruza o aro no canto inferior direito, em vez de ficar ao lado. */
 body.profile-page-active.profile-inline-editing .profile-inline-avatar-edit{
@@ -17814,7 +17734,7 @@ body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsS
   }
 }
 
-/* 12/08/2026 — perfil ao abrir: proporções do cabeçalho como no layout de referência. */
+
 @media(min-width:761px){
   body.profile-page-active .profile-page-hero{
     height:clamp(520px,62vh,590px)!important;
@@ -17867,7 +17787,7 @@ body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsS
   }
 }
 
-/* 12/08/2026 — correção pontual: banner completo no perfil mobile. */
+
 @media(max-width:760px){
   body.profile-page-active .profile-page-banner,
   body.profile-page-active .profile-page-banner-fallback{
@@ -17899,15 +17819,14 @@ body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsS
   }
 }
 
-/* 12/08/2026 — ajuste fino mobile: sobe levemente avatar, nome e @ sem alterar o banner. */
+
 @media(max-width:760px){
   body.profile-page-active .profile-page-info{
     inset:258px 0 auto!important;
   }
 }
 
-/* 12/08/2026 — correção: botão de curtir visível no perfil mobile.
-   Mantém oculto para visitantes e no próprio perfil, como definido pelo JS. */
+
 @media(max-width:760px){
   body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) #profilePageLike:not([hidden]){
     display:grid!important;
@@ -17936,7 +17855,7 @@ body.profile-page-active #profileFavoritesSection[hidden] + #profileLovedAlbumsS
 }
 
 
-/* 12/08/2026 — convite de compartilhamento de perfil, visual inspirado no iPhone. */
+
 body.profile-share-campaign-open{overflow:hidden!important}
 .profile-share-campaign-backdrop{position:fixed;inset:0;z-index:12000;display:grid;place-items:center;padding:max(18px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:rgba(0,0,0,.58);-webkit-backdrop-filter:blur(22px) saturate(1.15);backdrop-filter:blur(22px) saturate(1.15)}
 .profile-share-campaign-card{width:min(438px,100%);max-height:min(780px,calc(100dvh - 30px));overflow:auto;overscroll-behavior:contain;padding:10px 18px 18px;border:1px solid rgba(255,255,255,.13);border-radius:36px;background:linear-gradient(180deg,rgba(35,35,38,.98),rgba(19,19,21,.99));box-shadow:0 30px 100px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.08);color:#fff;-webkit-font-smoothing:antialiased}
@@ -17962,7 +17881,7 @@ body.profile-share-campaign-open{overflow:hidden!important}
 @media(max-width:520px){.profile-share-campaign-backdrop{align-items:end;padding:0}.profile-share-campaign-card{width:100%;max-height:calc(100dvh - 8px);padding:9px 16px max(16px,env(safe-area-inset-bottom));border-left:0;border-right:0;border-bottom:0;border-radius:34px 34px 0 0}.profile-share-campaign-avatar{width:76px;height:76px}.profile-share-campaign-title-row h2{font-size:24px}.profile-share-campaign-favorite{width:min(67px,20vw)}.profile-share-campaign-actions{gap:8px}.profile-share-campaign-button{min-height:50px;padding:0 11px;font-size:13px}}
 @media(max-width:380px){.profile-share-campaign-actions{flex-direction:column-reverse}.profile-share-campaign-button{width:100%}.profile-share-campaign-favorite{width:60px}}
 
-/* 12/08/2026 — seletor de tags do próprio perfil no dock de edição (estilo iPhone). */
+
 .profile-inline-tag-button{
   width:48px;
   height:48px;
@@ -18079,7 +17998,7 @@ body.profile-share-campaign-open{overflow:hidden!important}
   .profile-inline-tag-popover{animation:none!important}
 }
 
-/* 12/08/2026 — redes sociais ao lado da tag no desktop. */
+
 @media (min-width:761px){
   body.profile-page-active .profile-page-copy{
     display:flex!important;
@@ -18113,14 +18032,14 @@ body.profile-share-campaign-open{overflow:hidden!important}
 }
 
 
-/* 12/08/2026 — mobile: sobe avatar, nome, tag e redes para não encostarem/cortarem na próxima seção. */
+
 @media (max-width:760px){
   body.profile-page-active .profile-page-info{
     inset:225px 0 auto!important;
   }
 }
 
-/* 12/08/2026 — ajuste fino: sobe apenas o nome do usuário no cabeçalho do perfil. */
+
 body.profile-page-active .profile-page-name{
   position:relative!important;
   transform:translateY(-6px)!important;
@@ -18131,14 +18050,14 @@ body.profile-page-active .profile-page-name{
   }
 }
 
-/* 12/08/2026 — tag ativa ao lado do nome nos comentários. */
+
 @media(max-width:760px){
   .detail-comment-user-row{gap:5px}
   .detail-comment-award-tag{min-height:17px;padding:0 5px;font-size:8.5px}
 }
 
 
-/* 12/08/2026 — FR mobile: alinha a contagem de curtidas com compartilhar + menu. */
+
 @media(max-width:760px){
   html[lang^="fr"] body.profile-page-active.profile-view-own .profile-page-likes-received{
     right:var(--profile-mobile-action-edge,24px)!important;
@@ -18323,9 +18242,7 @@ body.profile-page-active .profile-page-name{
   .player-subtitle-sync-notice{transition:none!important}
 }
 
-/* 15/08/2026 — restaura a edição completa do próprio perfil no mobile.
-   Mantém os mesmos recursos do desktop: menu Editar perfil, avatar, banner,
-   nome, cores/borda, tags e dock Salvar/Cancelar. */
+
 @media (max-width:760px){
   body.profile-page-active.profile-view-own #profilePageMore:not([hidden]){
     display:grid!important;
@@ -18363,9 +18280,7 @@ body.profile-page-active .profile-page-name{
   }
 }
 
-/* 18/08/2026 — VK + Google Drive: controles uniformes e alinhados.
-   Todos os botões usam a mesma área de toque; SVGs compartilham a mesma
-   escala visual e os selos de qualidade/CC têm dimensões idênticas. */
+/* Google Drive. */
 .external-native-player-toolbar,
 .drive-video-player-actionbar{
   --be-player-action-size:42px;
@@ -18460,7 +18375,7 @@ body.profile-page-active .profile-page-name{
   }
 }
 
-/* 20/08/2026 — instalação do site como app/atalho no celular. */
+
 @media (max-width:760px){
   .mobile-drawer-footer{display:grid;gap:10px}
   .mobile-install-button{
@@ -18549,7 +18464,7 @@ body.profile-page-active .profile-page-name{
   body.mobile-install-sheet-open{overflow:hidden}
 }
 
-/* 20/08/2026 — aro escolhido pelo usuário com o mesmo desenho em todas as áreas. */
+
 html.profile-avatar-global-customized{
   --betv-avatar-ring-width:2px;
   --betv-avatar-ring-gap:2px;
@@ -18670,7 +18585,7 @@ body.profile-page-active.profile-avatar-border-customized .profile-page-avatar>i
 .drive-video-player-overlay.is-browser-fullscreen .drive-video-player-fullscreen .fullscreen-exit{display:block}
 
 
-/* 20/08/2026 — instalação PWA também no computador + botão branco no menu. */
+
 .user-dropdown .install-app-action{
   display:flex;
   align-items:center;
@@ -18774,7 +18689,7 @@ body.mobile-install-sheet-open{overflow:hidden}
   }
 }
 
-/* 20/08/2026 — no app instalado o atalho de instalação some; no desktop web ele usa azul. */
+
 html.betv-installed-app .user-dropdown .install-app-action{display:none!important}
 @media (display-mode:standalone){
   .user-dropdown .install-app-action{display:none!important}
@@ -18794,7 +18709,7 @@ html.betv-installed-app .user-dropdown .install-app-action{display:none!importan
 }
 
 
-/* 20/08/2026 — variante do modal quando o PWA já está instalado. */
+
 .mobile-install-sheet.is-installed .mobile-install-sheet-icon{
   background:#30d158!important;
   color:#07140b!important;
@@ -18804,7 +18719,7 @@ html.betv-installed-app .user-dropdown .install-app-action{display:none!importan
 .mobile-install-sheet.is-installed .mobile-install-sheet-done{cursor:pointer}
 
 
-/* 2026-08-21 — Fullscreen mobile no estilo dos players de streaming/YouTube. */
+
 .drive-player-fullscreen .fullscreen-enter path,
 .drive-player-fullscreen .fullscreen-exit path,
 .drive-video-player-fullscreen .fullscreen-enter path,
@@ -18853,7 +18768,7 @@ html.betv-installed-app .user-dropdown .install-app-action{display:none!importan
   }
 }
 
-/* 21/08/2026 — o aro público acompanha o avatar dos autores nos comentários. */
+
 .detail-comment-avatar.has-custom-ring{
   box-sizing:border-box!important;
   padding:2px!important;
@@ -18872,7 +18787,7 @@ html.betv-installed-app .user-dropdown .install-app-action{display:none!importan
   display:block!important;
 }
 
-/* 21/08/2026 — preserva a leitura do perfil sem apagar banners naturalmente escuros. */
+
 body.profile-page-active .profile-page-banner img{
   filter:brightness(.92) saturate(.96)!important;
 }
@@ -18899,13 +18814,9 @@ body.profile-page-active .profile-page-banner img{
   }
 }
 
-/* =========================================================
-   21/08/2026 — MOBILE: auto-hide da tab de ações em 5s.
-   Quando a tab some, uma camada transparente recebe somente o primeiro toque
-   para reexibir os controles; em seguida ela libera o iframe/vídeo novamente.
-   ========================================================= */
+
 @media (max-width:820px), (pointer:coarse) and (max-height:620px){
-  /* YouTube/VK: agora a tab também some no mobile. */
+  /* Player no mobile. */
   .external-native-player-overlay.controls-idle .external-native-player-toolbar{
     opacity:0!important;
     pointer-events:none!important;
@@ -18962,7 +18873,7 @@ body.profile-page-active .profile-page-banner img{
 }
 
 
-/* 21/08/2026 — ajuste SOMENTE da caixa de pesquisa no mobile */
+
 @media (max-width:760px){
   body.mobile-search-open .mobile-app-bar{
     gap:10px;
@@ -19013,13 +18924,12 @@ body.profile-page-active .profile-page-banner img{
 }
 
 
-/* 21/08/2026 — instalação: oculta também o segundo atalho do menu mobile dentro do PWA. */
+
 [data-mobile-account="install"][hidden],
 html.betv-installed-app [data-mobile-account="install"]{display:none!important}
 
 
-/* 21/08/2026 — Mobile: a tab do player principal some após 5s e o
-   primeiro toque em qualquer área do vídeo a reabre, inclusive sobre iframes. */
+
 .drive-player-wake-zone{
   display:none;
   pointer-events:none;
@@ -19037,7 +18947,7 @@ html.betv-installed-app [data-mobile-account="install"]{display:none!important}
 }
 
 
-/* 21/08/2026 — separação mobile navegador x app instalado. */
+
 html.betv-installed-app #mobileInstallButton,
 html.betv-installed-app [data-mobile-account="install"],
 html.betv-installed-app .install-app-action{
@@ -19190,7 +19100,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 }
 
 
-/* Comunidade 2026-08-11 — favoritos sociais, ranking e CTA de apoiadores */
+
 .community-favorite-social{position:absolute;right:10px;bottom:10px;z-index:4;display:flex;align-items:center;gap:7px;min-height:30px;padding:4px 8px 4px 5px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(8,11,16,.72);box-shadow:0 7px 22px rgba(0,0,0,.34);-webkit-backdrop-filter:blur(16px) saturate(145%);backdrop-filter:blur(16px) saturate(145%);pointer-events:none}
 .community-favorite-faces{display:flex;align-items:center;padding-left:2px}
 .community-favorite-face{width:23px;height:23px;margin-left:-6px;overflow:hidden;border:2px solid rgba(8,11,16,.96);border-radius:50%;background:#151a22}
@@ -19207,7 +19117,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 .community-supporters-cta:active{transform:scale(.985)}
 @media(max-width:760px){.community-favorite-social{right:9px;bottom:9px}.community-favorite-face{width:21px;height:21px}.community-ranking-own-row{grid-template-columns:28px 40px minmax(0,1fr) auto;gap:10px;min-height:60px;padding:9px 12px}.community-supporters-cta-wrap{margin:4px 20px 0}.community-supporters-cta{width:100%}}
 
-/* Comunidade 2026-08-11 — top 15 e banner de apoio à ONG */
+
 .community-ong-spotlight{
   margin:28px clamp(24px,4vw,68px) 8px;
 }
@@ -19271,7 +19181,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 }
 
 
-/* Comunidade 2026-08-11 — banner principal e tags mensais */
+
 .community-page{padding-top:0}
 .community-page-inner{width:min(100%,1920px);margin:0 auto}
 .community-hero-banner{margin:0 0 18px}
@@ -19309,14 +19219,14 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
 #communityContinueSection .community-section-head h2::first-letter{text-transform:uppercase}
 
 
-/* Comunidade 2026-08-11 — rodapé integrado ao fundo da página */
+
 body.community-page-active > footer,
 body.community-page-active .site-footer{
   background:#020406!important;
 }
 
 
-/* Comunidade 2026-08-11 — continuidade visual até o rodapé no desktop */
+
 @media (min-width:761px){
   body.community-page-active,
   body.community-page-active > main,
@@ -19336,7 +19246,7 @@ body.community-page-active .site-footer{
   }
 }
 
-/* 20/08/2026 — "Instalar app" com fundo branco no menu do avatar no mobile. */
+
 @media (max-width:760px){
   .mobile-account-popover button[data-mobile-account="install"]{
     margin:4px 0;
@@ -19354,7 +19264,7 @@ body.community-page-active .site-footer{
   }
 }
 
-/* 21/08/2026 — exibe para todos o aro escolhido por cada perfil no ranking. */
+
 .community-rank-avatar.has-custom-ring{
   box-sizing:border-box!important;
   padding:1px!important;
@@ -19374,7 +19284,7 @@ body.community-page-active .site-footer{
 
 
 /* bundled: tv-session-widget.css */
-/* BETV Smart TV — desktop iOS-inspired status widget */
+/* Smart TVs. */
 .betv-tv-session-widget{position:fixed;top:18px;left:22px;z-index:2200;width:260px;color:#fff;font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;filter:drop-shadow(0 16px 40px rgba(0,0,0,.34));transition:opacity .2s ease,transform .2s ease}
 .betv-tv-session-widget[hidden]{display:none!important}
 .betv-tv-session-shell{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.19);border-radius:24px;background:rgba(17,19,23,.82);box-shadow:inset 0 1px 0 rgba(255,255,255,.10);backdrop-filter:blur(26px) saturate(1.25);-webkit-backdrop-filter:blur(26px) saturate(1.25)}

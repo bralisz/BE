@@ -1,7 +1,6 @@
 'use strict';
 
-// All public API endpoints are routed through this one Vercel Serverless Function.
-// Handlers live outside /api so Vercel does not count each one as a separate function.
+// Rotas públicas centralizadas em uma única Function.
 const loaders = Object.freeze({
   account: () => require('../server/api-routes/account'),
   admin: () => require('../server/api-routes/admin'),

@@ -1,7 +1,11 @@
-# Consentimento OAuth
+# OAuth
 
-Esta pasta contém a interface exibida durante fluxos de autorização de conexões externas, como a integração de uma conta com outro serviço compatível.
+Esta pasta contém a interface de consentimento usada em fluxos de autorização externos.
 
-A página `consent/index.html` apresenta ao usuário o pedido de autorização e mantém a experiência visual alinhada ao restante do Billie Eilish TV.
+## Arquivo principal
 
-As credenciais privadas dos provedores OAuth não devem ser armazenadas nesta pasta.
+- `consent/index.html`: tela exibida durante o pedido de autorização.
+
+## Ao editar
+
+Mantenha a tela simples e coerente com a identidade do site. Credenciais, client secrets e tokens nunca devem ficar no HTML ou em outros arquivos públicos desta pasta.

@@ -1,5 +1,3 @@
-const QRCode = require('qrcode');
-
 const PAIRING_CODE = /^[A-Z0-9]{4,10}$/i;
 
 module.exports = async function handler(req, res) {
@@ -38,6 +36,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    const QRCode = require('qrcode');
     // PNG RGB simples, margem branca maior e tamanho moderado: combinação mais
     // confiável em engines antigas de Tizen, WebOS e NetCast.
     const png = await QRCode.toBuffer(target.href, {

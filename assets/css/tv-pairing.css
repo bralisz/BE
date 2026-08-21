@@ -63,9 +63,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 .tv-now-playing-meta{display:block;margin-top:5px;color:var(--tv-muted);font-size:13px}
 .tv-receiver-badge{flex:none;display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid rgba(114,229,158,.2);border-radius:999px;background:rgba(114,229,158,.08);color:#a6f3bd;font-size:12px;font-weight:800}
 
-/* TV playback: use the entire television viewport while media is playing.
-   This is CSS fullscreen (not the browser Fullscreen API), so it also works
-   on older Smart TV browsers without requiring a remote-control gesture. */
+/* Smart TVs. */
 .tv-receiver.is-playing{overflow:hidden;background:#000}
 .tv-receiver.is-playing .tv-shell{width:100vw;height:100vh;min-height:100vh;background:#000;overflow:hidden}
 .tv-receiver.is-playing .tv-shell::before,.tv-receiver.is-playing .tv-shell::after,.tv-receiver.is-playing .tv-topbar,.tv-receiver.is-playing .tv-now-playing{display:none!important}
@@ -79,8 +77,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 
 
 
-/* Loading indicator shown over Smart TV playback. Uses only basic CSS so it
-   remains visible on older Tizen/WebOS/NetCast engines. */
+/* Smart TVs. */
 .tv-playback-loading{position:absolute;z-index:12;top:0;right:0;bottom:0;left:0;display:block;background:rgba(0,0,0,.18);pointer-events:none}
 .tv-playback-spinner{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border:4px solid rgba(255,255,255,.22);border-top-color:#fff;border-right-color:rgba(255,255,255,.72);border-radius:50%;-webkit-animation:tvPlaybackSpin .82s linear infinite;animation:tvPlaybackSpin .82s linear infinite;box-shadow:0 1px 12px rgba(0,0,0,.28)}
 @-webkit-keyframes tvPlaybackSpin{to{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}
@@ -152,7 +149,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 .tv-cast-toast.show{opacity:1;transform:translate(-50%,0)}
 
 
-/* Desktop controller: compact layout so the whole casting panel fits in one screen. */
+
 @media (min-width:721px){
   .tv-controller .tv-content{padding-top:14px;padding-bottom:14px}
   .tv-controller .tv-brand img{width:78px}

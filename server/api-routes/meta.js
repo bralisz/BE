@@ -1,7 +1,6 @@
 'use strict';
 
-// Consolidates small public/meta endpoints into a single Vercel Serverless Function.
-// Public URLs remain unchanged through rewrites in vercel.json.
+// Endpoints públicos de metadados.
 const handlers = Object.freeze({
   'deployment-version': require('../api-handlers/deployment-version'),
   robots: require('../api-handlers/robots'),

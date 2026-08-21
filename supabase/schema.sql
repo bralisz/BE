@@ -1114,7 +1114,7 @@ revoke all on table public.donation_checkout_requests from public, anon, authent
 
 commit;
 
--- Scale concurrent users: private Broadcast per account instead of Postgres Changes.
+-- Presença por conta via Broadcast privado.
 drop policy if exists "users receive own sync broadcasts" on realtime.messages;
 create policy "users receive own sync broadcasts"
 on realtime.messages for select to authenticated
@@ -1318,7 +1318,7 @@ grant execute on function public.get_admin_donation_overview(text, integer) to a
 notify pgrst, 'reload schema';
 
 
--- Definição final com valores administrativos separados por moeda.
+-- Valores administrativos separados por moeda.
 create or replace function public.get_admin_donation_overview(
   p_search text default null,
   p_limit integer default 250
@@ -1458,7 +1458,7 @@ notify pgrst, 'reload schema';
 -- Acesso interno da Edge Function de tradução automática.
 grant select, update on public.content_items, public.site_settings to service_role;
 
--- Automatic public-content translation queue (2026-08-06)
+-- Fila de tradução automática de conteúdo público.
 create extension if not exists pg_net with schema extensions;
 
 grant select, update on public.content_items, public.site_settings to service_role;
@@ -1523,9 +1523,7 @@ after insert or update of data on public.site_settings
 for each row execute function private.enqueue_betv_translation();
 
 
--- Snapshot final: insights de ONG contabilizam somente pagamentos confirmados.
--- Mantém o histórico completo no dashboard, mas calcula os insights apenas
--- com pagamentos confirmados pela Stripe (status = 'paid').
+-- Insights de ONG consideram somente pagamentos confirmados.
 create or replace function public.get_admin_donation_overview(
   p_search text default null,
   p_limit integer default 250
@@ -1812,7 +1810,7 @@ grant execute on function public.post_video_comment(text, text) to authenticated
 
 notify pgrst, 'reload schema';
 
--- Public profile search used by the global @ search field.
+-- Busca pública de perfis pelo campo global de @.
 create index if not exists profiles_username_search_idx
   on public.profiles (lower(username::text) text_pattern_ops)
   where username is not null and banned is false;
@@ -1862,8 +1860,7 @@ notify pgrst, 'reload schema';
 -- 20260809173734_video_comment_moderation
 begin;
 
--- Expose the stable author id with each public comment so the client can show
--- owner-only actions without relying on a mutable username.
+-- ID estável do autor para ações no próprio comentário.
 drop function if exists public.get_video_comments(text, integer);
 create function public.get_video_comments(
   p_video_key text,
@@ -2358,8 +2355,7 @@ grant execute on function public.toggle_video_comment_like(uuid) to authenticate
 
 notify pgrst, 'reload schema';
 
--- 12/08/2026 — cores públicas personalizadas do perfil.
--- Mantém privadas todas as demais preferências sincronizadas.
+-- Cores públicas do perfil; demais preferências continuam privadas.
 drop function if exists public.get_public_profile(text);
 
 create function public.get_public_profile(p_username text)
@@ -2424,7 +2420,7 @@ revoke all on function public.get_public_profile(text) from public;
 grant execute on function public.get_public_profile(text) to anon, authenticated;
 
 
--- 12/08/2026 — tag Fã da Billie concedida pelo convite de compartilhamento de perfil.
+-- Tag Fã da Billie por compartilhamento de perfil.
 
 alter table public.profiles
   drop constraint if exists profiles_community_tag_check;

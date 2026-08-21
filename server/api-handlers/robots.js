@@ -13,7 +13,6 @@ module.exports = function robots(req, res) {
     'Allow: /',
     'Disallow: /api/',
     '',
-    '# Permite que o conteúdo público seja usado nos recursos compatíveis do Gemini.',
     'User-agent: Google-Extended',
     'Allow: /',
     'Disallow: /api/',

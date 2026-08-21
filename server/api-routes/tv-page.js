@@ -823,20 +823,36 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   var subtitleEnabled=${subtitleEnabled ? 'true' : 'false'};
   var remoteNonce=${initialRemoteNonce};
   var stopped=false;
-  function schedule(ms){if(!stopped)setTimeout(poll,ms);}
+  var inFlight=false;
+  var timer=0;
+  function delayFor(status,failed){
+    if(document.visibilityState==='hidden')return status==='paired'?15000:30000;
+    if(failed)return 12000;
+    return status==='paired'?4000:12000;
+  }
+  function schedule(ms){
+    if(stopped)return;
+    if(timer)clearTimeout(timer);
+    timer=setTimeout(poll,ms);
+  }
   function poll(){
+    if(stopped||inFlight)return;
+    if(document.visibilityState==='prerender'){schedule(30000);return;}
     var x;
     var finished=false;
-    function finish(ms){if(finished)return;finished=true;schedule(ms);}
-    try{x=new XMLHttpRequest();}catch(e){schedule(6000);return;}
+    var lastStatus=initialStatus;
+    function finish(ms){if(finished)return;finished=true;inFlight=false;schedule(ms);}
+    try{x=new XMLHttpRequest();}catch(e){schedule(delayFor(initialStatus,true));return;}
+    inFlight=true;
     try{
-      x.open('GET','/api/tv-page-state?v='+new Date().getTime(),true);
+      x.open('GET','/api/tv-page-state',true);
       x.onreadystatechange=function(){
         if(x.readyState!==4)return;
         if(x.status>=200&&x.status<300){
           try{
             var d=JSON.parse(x.responseText||'{}');
             var status=d&&d.status?String(d.status):'';
+            if(status)lastStatus=status;
             var nextVersion=d&&d.media_version!=null?Number(d.media_version):-1;
             var nextMediaKey=d&&d.media_key!=null?String(d.media_key):'';
             var statusChanged=status&&status!=='error'&&status!=='missing'&&status!==initialStatus;
@@ -852,6 +868,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
             if(statusChanged||mediaChanged||status==='disconnected'){
               stopped=true;
               finished=true;
+              inFlight=false;
               location.reload();
               return;
             }
@@ -859,15 +876,19 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
             if(nextMediaKey)mediaKey=nextMediaKey;
           }catch(e){}
         }
-        finish(4000);
+        finish(delayFor(lastStatus,false));
       };
-      x.onerror=function(){finish(6000);};
-      x.ontimeout=function(){finish(6000);};
+      x.onerror=function(){finish(delayFor(lastStatus,true));};
+      x.ontimeout=function(){finish(delayFor(lastStatus,true));};
       x.timeout=12000;
       x.send(null);
-    }catch(e){finish(6000);}
+    }catch(e){finish(delayFor(lastStatus,true));}
   }
-  schedule(4000);
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible'&&!stopped){if(timer)clearTimeout(timer);schedule(250);}
+  });
+  window.addEventListener('beforeunload',function(){stopped=true;if(timer)clearTimeout(timer);},{once:true});
+  schedule(initialStatus==='paired'?4000:10000);
 })();
 </script>`;
   const localeBootstrap = `

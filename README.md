@@ -6,33 +6,59 @@
 
 **Um espaço feito por fãs, para fãs da Billie Eilish.**
 
-O Billie Eilish TV é um projeto independente que reúne, organiza e apresenta conteúdos relacionados à carreira da Billie Eilish em uma experiência visual inspirada em plataformas de streaming. A proposta é facilitar a descoberta de filmes, documentários, apresentações, entrevistas, vídeos, notícias e outros momentos importantes em um só lugar.
+O Billie Eilish TV é um projeto independente que reúne conteúdos, comunidade, perfis, filmes, séries, vídeos e recursos para Smart TV em uma interface inspirada em serviços de streaming.
 
-> Este é um projeto de fãs, sem vínculo oficial com Billie Eilish, sua equipe, gravadoras, produtoras ou plataformas citadas.
+> Projeto de fãs, sem vínculo oficial com Billie Eilish, sua equipe, gravadoras, produtoras ou plataformas citadas.
 
-## Acesse o site
+## Site
 
 **https://billieilishtv.site**
 
-## O que o projeto oferece
+## Onde mexer
 
-- catálogo organizado por categorias;
-- destaques e recomendações de conteúdo;
-- páginas individuais para vídeos e produções;
-- busca integrada;
-- perfis personalizados para membros;
-- lista de favoritos;
-- área de configurações da conta;
-- suporte a dispositivos móveis e instalação como PWA;
-- painel administrativo para gerenciamento do catálogo.
+| Área | Arquivos principais |
+| --- | --- |
+| Estrutura da página pública | `index.html` |
+| CSS principal | `assets/css/site.css` |
+| JavaScript principal | `assets/js/site.js` |
+| Comunidade | `assets/js/community.js` e `assets/css/community.css` |
+| Idiomas | `assets/i18n/`, `assets/js/i18n.js` e `assets/js/locale-routing.js` |
+| Smart TV / pareamento | `tv/`, `connect-tv/`, `assets/js/tv-controller.js` e `assets/css/tv-pairing.css` |
+| API da Vercel | `api/index.js` e `server/` |
+| Painel administrativo | `development/source/admin/` e `server/handlers/admin-runtime.js` |
+| Banco e RLS | `supabase/schema.sql` e `migrations/` |
+| Edge Functions | `supabase/functions/` |
+| PWA | `site.webmanifest` e `sw.js` |
 
-## Proposta
+## Estrutura do projeto
 
-O objetivo do Billie Eilish TV é criar um ponto de encontro digital para fãs explorarem a trajetória artística da Billie Eilish de forma organizada, bonita e acessível. O projeto valoriza a comunidade, a descoberta de conteúdos e a preservação de momentos marcantes da carreira da artista.
+- `assets/`: arquivos públicos de CSS, JavaScript, imagens, ícones e traduções;
+- `api/`: entrada única das rotas de API na Vercel;
+- `server/`: rotas, handlers e configurações executadas no servidor;
+- `development/source/`: fontes legíveis usadas para manutenção e referência;
+- `migrations/`: histórico versionado das alterações do Supabase;
+- `supabase/`: schema consolidado e Edge Functions;
+- `tv/` e `connect-tv/`: interface e conexão com Smart TVs;
+- `oauth/`: tela de consentimento de integrações;
+- `docs/`: documentação técnica e auditorias.
 
+## Atenção ao editar
 
-## Migração de segurança obrigatória
+O `package.json` não possui um processo automático de build. Alguns arquivos de `development/source/` possuem uma versão publicada ou empacotada em outro local. Por exemplo, o painel legível está em `development/source/admin/admin.js`, enquanto a versão servida está embutida em `server/handlers/admin-runtime.js`.
 
-Publique primeiro os novos arquivos na Vercel e, em seguida, execute no Supabase a migration `supabase/migrations/20260805213000_harden_public_content_and_billie_settings.sql`. Ela impede leitura pública do JSON bruto das configurações e do catálogo, expondo apenas campos aprovados pelas funções públicas. A proteção do banco só fica completa depois dessa migration.
+Antes de alterar um arquivo de desenvolvimento, confira se existe uma versão correspondente em `assets/` ou `server/` para evitar que a fonte e a versão publicada fiquem diferentes.
 
-O relatório da revisão está em `docs/SECURITY-AUDIT-20260805.md`.
+## Banco de dados
+
+As migrations já aplicadas não devem ser renomeadas, removidas ou reutilizadas. Novas alterações de banco devem receber um novo arquivo em `migrations/` com timestamp único.
+
+O schema consolidado para consulta está em `supabase/schema.sql`.
+
+## Segurança
+
+- nunca salve chaves, tokens ou credenciais no repositório;
+- mantenha validações sensíveis no servidor/Supabase, não apenas no navegador;
+- preserve políticas RLS e verificações administrativas ao alterar consultas;
+- preserve avisos de licença e atribuições de terceiros existentes no código.
+
+O relatório de segurança disponível neste pacote está em `docs/SECURITY-AUDIT-20260805.md`.

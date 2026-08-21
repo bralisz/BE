@@ -1,5 +1,13 @@
-# Documentação do projeto
+# Documentação técnica
 
-Esta pasta reúne notas técnicas e relatórios de manutenção que não fazem parte do site publicado.
+Esta pasta guarda relatórios e notas de manutenção que não fazem parte da lógica do site.
 
-Os arquivos em `docs/` são excluídos do deploy pela `.vercelignore`. Não coloque chaves privadas, senhas ou credenciais administrativas nem mesmo nesta pasta.
+## Arquivos atuais
+
+- `SECURITY-AUDIT-20260805.md`: revisão de segurança e pontos que exigem atenção.
+
+## Cuidados
+
+Não salve senhas, tokens, chaves privadas, cookies ou credenciais administrativas em documentação.
+
+Este pacote não contém uma `.vercelignore` na raiz. Se a intenção for impedir o envio de `docs/` ou outras fontes de manutenção para a Vercel, configure a exclusão explicitamente no fluxo de deploy.

@@ -1,7 +1,7 @@
 # Migrações do Supabase
 
-Este diretório está sincronizado com o histórico remoto do projeto `be-tv`.
-As versões abaixo devem permanecer no repositório para evitar o aviso **Remote migration versions not found in local migrations directory**.
+O histórico SQL fica em `../migrations/` e deve permanecer sincronizado com o projeto remoto.
+As versões abaixo não devem ser renomeadas ou removidas para evitar conflitos entre o histórico local e o remoto.
 
 ## Histórico local sincronizado
 

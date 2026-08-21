@@ -67,9 +67,7 @@ function normalizeVkMediaUrl(value) {
     const url = new URL(raw);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
     const host = url.hostname.toLowerCase();
-    // VK currently serves media from several vk/userapi CDN hostnames. Keep the
-    // resolver constrained to those domains so this endpoint cannot become an
-    // open redirect.
+    // Restringe redirecionamentos aos CDNs do VK.
     if (!/(^|\.)(?:vk\.com|vkvideo\.ru|vk-cdn\.com|vk-cdn\.net|vkcdn\.net|vkuseraudio\.(?:net|ru)|vkuserlive\.net|vkuservideo\.net|vkuser\.net|userapi\.com|mycdn\.me|vk\.me)$/i.test(host)) return '';
     return url.href;
   } catch (_) {
@@ -105,8 +103,7 @@ function extractVkMediaUrl(html, maxQuality) {
     }
   }
 
-  // Some player versions expose normal <source> elements rather than named
-  // url720/url480 fields. Infer the quality from the filename/query when possible.
+  // Lê fontes alternativas do player do VK.
   const sourceRegex = /<(?:source|video)[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/gi;
   let sourceMatch;
   while ((sourceMatch = sourceRegex.exec(source))) {
@@ -128,8 +125,6 @@ function extractVkMediaUrl(html, maxQuality) {
     if (found[quality]) return found[quality];
   }
 
-  // Final fallback: choose a plain MP4 URL if the page exposes one without a
-  // quality label. Lower resolutions are requested first on old TVs.
   const mp4 = escaped.match(/https?:\\?\/\\?\/[^"'<>\s]+\.mp4(?:\?[^"'<>\s]*)?/i);
   if (mp4 && mp4[0]) {
     const normalized = normalizeVkMediaUrl(mp4[0]);

@@ -2,12 +2,12 @@
   'use strict';
 
   var ENDPOINT = '/api/deployment-version';
-  // A versão é compartilhada em localStorage entre abas e reloads. Cada navegador
-  // consulta a Vercel no máximo uma vez por hora em uso normal.
-  var CHECK_INTERVAL = 60 * 60 * 1000;
-  var MIN_CHECK_GAP_MS = 30 * 60 * 1000;
-  var SHARED_CHECK_TTL_MS = 60 * 60 * 1000;
-  var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV2';
+  // Compartilha a checagem entre abas para evitar requests repetidos.
+  var CHECK_INTERVAL = 12 * 60 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 2 * 60 * 60 * 1000;
+  var SHARED_CHECK_TTL_MS = 12 * 60 * 60 * 1000;
+  var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV3';
+  var OBSERVED_RELEASE_KEY = 'betvObservedReleaseStateV1';
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
   var PUBLIC_APPLIED_UPDATE_KEY = 'betvPublicAppliedUpdateVersion';
@@ -548,7 +548,14 @@
       releaseStateLoaded = true;
       publicReleaseEnabled = detail.updateReleaseEnabled === true || String(detail.updateReleaseEnabled || '').toLowerCase() === 'true';
       publicReleasedVersion = String(detail.releasedDeploymentVersion || '').trim();
-      fetchLatestVersion(true);
+      var releaseStateKey = (publicReleaseEnabled ? '1:' : '0:') + publicReleasedVersion;
+      var releaseChanged = false;
+      try {
+        releaseChanged = String(window.localStorage.getItem(OBSERVED_RELEASE_KEY) || '') !== releaseStateKey;
+        window.localStorage.setItem(OBSERVED_RELEASE_KEY, releaseStateKey);
+      } catch (_) {}
+      // Uma mudança manual no Admin força só uma checagem; no uso normal vale o cache de 12 h.
+      fetchLatestVersion(releaseChanged);
     });
     window.addEventListener('storage', function (event) {
       if (!event || event.key !== SHARED_CHECK_KEY || !event.newValue) return;
