@@ -367,6 +367,7 @@ body.admin-preview-open{overflow:hidden}
     users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
     saved: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg>',
     viewed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+    commented: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"></path><path d="M8 9h8M8 13h5"></path></svg>',
     donations: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path><path d="m9.5 12 1.7 1.7 3.6-4"></path></svg>',
     update: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path></svg>'
   };
@@ -1117,18 +1118,20 @@ body.admin-preview-open{overflow:hidden}
     content.innerHTML = `
       <section class="dashboard-hero dashboard-insights-hero">
         <div class="dashboard-copy">
-          <h1>Painel de conteúdo</h1>
-          <section class="dashboard-update-notice ${currentDeploymentReleased ? 'is-released' : ''}" aria-label="Notificação de atualização">
-            <label class="dashboard-update-checkbox" for="dashboardReleaseUpdate">
-              <input id="dashboardReleaseUpdate" type="checkbox" ${currentDeploymentReleased ? 'checked' : ''} ${deploymentCanBeReleased ? '' : 'disabled'}>
-              <span class="dashboard-update-checkbox-box" aria-hidden="true"></span>
-              <span class="dashboard-update-checkbox-copy">
-                <strong>Notificar usuários sobre atualização</strong>
-                <small>${currentDeploymentReleased ? 'Ativado. Os usuários verão o aviso desta versão uma única vez.' : 'Desativado. Ative apenas quando quiser avisar sobre uma atualização importante.'}</small>
-              </span>
-            </label>
-            <div class="dashboard-update-version">Versão <code>${esc(deploymentShortLabel)}</code></div>
-          </section>
+          <div class="dashboard-heading-row">
+            <h1>Painel de conteúdo</h1>
+            <section class="dashboard-update-notice ${currentDeploymentReleased ? 'is-released' : ''}" aria-label="Notificação de atualização">
+              <label class="dashboard-update-checkbox" for="dashboardReleaseUpdate">
+                <input id="dashboardReleaseUpdate" type="checkbox" ${currentDeploymentReleased ? 'checked' : ''} ${deploymentCanBeReleased ? '' : 'disabled'}>
+                <span class="dashboard-update-checkbox-box" aria-hidden="true"></span>
+                <span class="dashboard-update-checkbox-copy">
+                  <strong>Notificar usuários</strong>
+                  <small>${currentDeploymentReleased ? 'Atualização ativada' : 'Atualização desativada'}</small>
+                </span>
+              </label>
+              <div class="dashboard-update-version"><code>${esc(deploymentShortLabel)}</code></div>
+            </section>
+          </div>
           <div class="dashboard-metrics-grid dashboard-metrics-grid-four">
             <article class="dashboard-metric-card primary-metric">
               <div class="dashboard-metric-label"><i>${ADMIN_DASHBOARD_ICONS.users}</i><span>Novos usuários hoje</span></div>
@@ -1138,6 +1141,7 @@ body.admin-preview-open{overflow:hidden}
 
             ${contentMetricCard('Mais salvo', overallMetric('topSaved'), 'salvamentos', ADMIN_DASHBOARD_ICONS.saved)}
             ${contentMetricCard('Mais visto', overallMetric('topViewed'), 'visualizações', ADMIN_DASHBOARD_ICONS.viewed)}
+            ${contentMetricCard('Mais comentado', overallMetric('topCommented'), 'comentários', ADMIN_DASHBOARD_ICONS.commented)}
 
             <article class="dashboard-metric-card donation-approved-card">
               <div class="dashboard-metric-label"><i>${ADMIN_DASHBOARD_ICONS.donations}</i><span>Doações para ONGs</span></div>
@@ -1145,8 +1149,6 @@ body.admin-preview-open{overflow:hidden}
               <strong class="dashboard-metric-big-number">${Number(dashboardMetrics?.approvedDonations || 0).toLocaleString('pt-BR')}</strong>
               <small>doações confirmadas com sucesso</small>
             </article>
-
-
           </div>
         </div>
       </section>
@@ -4449,7 +4451,7 @@ body.admin-preview-open{overflow:hidden}
   if(document.getElementById('be-admin-dashboard-metrics-style')) return;
   const style=document.createElement('style');
   style.id='be-admin-dashboard-metrics-style';
-  style.textContent=`body.admin-mode .dashboard-insights-hero .dashboard-copy>h1{margin-bottom:24px}
+  style.textContent=`body.admin-mode .dashboard-heading-row{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:24px}\nbody.admin-mode .dashboard-heading-row>h1{margin:0}
 body.admin-mode .dashboard-metrics-grid{
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
@@ -4925,12 +4927,14 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
       display:flex!important;
       align-items:center!important;
       justify-content:space-between!important;
-      gap:16px!important;
-      width:100%!important;
-      margin:14px 0 20px!important;
-      padding:14px 16px!important;
+      gap:12px!important;
+      flex:0 0 auto!important;
+      width:min(330px,38vw)!important;
+      min-height:58px!important;
+      margin:0!important;
+      padding:10px 12px!important;
       border:1px solid rgba(125,181,255,.16)!important;
-      border-radius:16px!important;
+      border-radius:15px!important;
       background:rgba(255,255,255,.035)!important;
       transition:border-color .2s ease,background .2s ease,box-shadow .2s ease!important;
     }
@@ -4961,10 +4965,10 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
 
     body.admin-mode .dashboard-update-checkbox-box{
       position:relative!important;
-      flex:0 0 24px!important;
-      width:24px!important;
-      height:24px!important;
-      margin-top:1px!important;
+      flex:0 0 22px!important;
+      width:22px!important;
+      height:22px!important;
+      margin-top:0!important;
       border:1px solid rgba(125,181,255,.30)!important;
       border-radius:7px!important;
       background:rgba(255,255,255,.035)!important;
@@ -4981,8 +4985,8 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
     body.admin-mode .dashboard-update-checkbox input:checked + .dashboard-update-checkbox-box::after{
       content:""!important;
       position:absolute!important;
-      left:7px!important;
-      top:4px!important;
+      left:6px!important;
+      top:3px!important;
       width:6px!important;
       height:11px!important;
       border:solid #fff!important;
@@ -5008,7 +5012,7 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
 
     body.admin-mode .dashboard-update-checkbox-copy strong{
       color:#f5f8ff!important;
-      font-size:13px!important;
+      font-size:12px!important;
       line-height:1.25!important;
       font-weight:800!important;
     }
@@ -5016,12 +5020,13 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
     body.admin-mode .dashboard-update-checkbox-copy small,
     body.admin-mode .dashboard-update-help{
       color:var(--a-muted)!important;
-      font-size:10px!important;
-      line-height:1.4!important;
+      font-size:9px!important;
+      line-height:1.3!important;
     }
 
     body.admin-mode .dashboard-update-version{
-      margin-top:auto!important;
+      margin-top:0!important;
+      flex:0 0 auto!important;
       color:var(--a-muted)!important;
       font-size:10px!important;
     }
@@ -5037,13 +5042,16 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
     }
 
     @media(max-width:1100px){
+      body.admin-mode .dashboard-heading-row{align-items:stretch!important;flex-direction:column!important}
+      body.admin-mode .dashboard-update-notice{width:min(100%,360px)!important}
       body.admin-mode .dashboard-metrics-grid.dashboard-metrics-grid-four{
         grid-template-columns:repeat(2,minmax(0,1fr))!important;
       }
     }
 
     @media(max-width:760px){
-      body.admin-mode .dashboard-update-notice{align-items:flex-start!important;flex-direction:column!important;gap:10px!important}
+      body.admin-mode .dashboard-heading-row{gap:14px!important;margin-bottom:18px!important}
+      body.admin-mode .dashboard-update-notice{width:100%!important}
       body.admin-mode .dashboard-update-checkbox{width:100%!important}
       body.admin-mode .dashboard-update-version{margin-top:0!important}
       body.admin-mode .dashboard-metrics-grid.dashboard-metrics-grid-four{
