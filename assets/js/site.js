@@ -8497,10 +8497,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  function queueDetailTvCast() {
+  async function refreshMovieTvSource(data) {
+    const source = data && typeof data === 'object' ? { ...data } : {};
+    if (String(source.collection || '').toLowerCase() !== 'movies') return source;
+    const recordId = String(source.recordId || '').trim();
+    if (!recordId) return source;
+    try {
+      const params = new URLSearchParams({
+        name: 'movies',
+        id: recordId,
+        locale: activeLocaleSlug(),
+        fresh: '1',
+        t: String(Date.now())
+      });
+      const response = await fetch(`/api/public-data?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) return source;
+      const latest = await response.json();
+      if (!latest || typeof latest !== 'object') return source;
+      const dashboardDrive = String(latest.mobileAppDriveUrl || latest.tvDriveUrl || '').trim();
+      return {
+        ...source,
+        mobileAppDriveUrl: dashboardDrive || String(source.mobileAppDriveUrl || '').trim(),
+        tvDriveUrl: dashboardDrive || String(source.tvDriveUrl || source.mobileAppDriveUrl || '').trim()
+      };
+    } catch (_) {
+      return source;
+    }
+  }
+
+  async function queueDetailTvCast() {
     const play = document.getElementById('contentDetailPlay');
     if (!play || play.getAttribute('aria-disabled') === 'true') return;
-    const data = contentDataFromElement(play);
+    let data = contentDataFromElement(play);
+    data = await refreshMovieTvSource(data);
     const contentUrl = String(data.contentUrl || '').trim();
     if (!contentUrl || contentUrl === '#') return;
 
@@ -8513,7 +8547,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       duration: String(data.duration || ''),
       contentUrl,
       mobileAppDriveUrl: String(data.mobileAppDriveUrl || ''),
-      tvDriveUrl: String(data.mobileAppDriveUrl || ''),
+      tvDriveUrl: String(data.tvDriveUrl || data.mobileAppDriveUrl || ''),
       subtitleUrl: String(data.subtitleUrl || ''),
       subtitleLocale: String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase(),
       imageUrl: String(data.imageUrl || ''),
@@ -8522,14 +8556,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       collection: String(data.collection || 'videos')
     };
 
-    try { localStorage.setItem('beTvPendingMedia', JSON.stringify(payload)); } catch (_) {}
     const target = '/connect-tv/?from=cast';
     const account = window.beBackend?.auth?.currentUser || null;
     if (!account) {
+      try { localStorage.setItem('beTvPendingMedia', JSON.stringify(payload)); } catch (_) {}
       try { sessionStorage.setItem('bePostAuthReturn', target); } catch (_) {}
       location.assign(`/login?return_to=${encodeURIComponent(target)}`);
       return;
     }
+
+    // Se já existe uma TV conectada, envia o novo conteúdo diretamente e
+    // mantém a pessoa na página atual. O painel volta a ser necessário apenas
+    // para conectar/reconectar uma televisão.
+    try {
+      const storedSession = String(localStorage.getItem('beTvActiveSessionId') || '').trim();
+      if (storedSession && window.BETVTVSession && typeof window.BETVTVSession.sendMedia === 'function') {
+        const sent = await window.BETVTVSession.sendMedia(payload);
+        if (sent) return;
+      }
+    } catch (error) {
+      console.warn('Não foi possível enviar direto para a TV:', error);
+    }
+
+    try { localStorage.setItem('beTvPendingMedia', JSON.stringify(payload)); } catch (_) {}
     location.assign(target);
   }
 

@@ -166,13 +166,13 @@ function isLegacyTvRequest(req) {
   if (!ua) return false;
   if (/netcast|maple|hbbtv|viera|aquos|nettv|inettvbrowser/i.test(ua)) return true;
   const tizen = ua.match(/tizen[\s\/](\d+)(?:\.|\b)/i);
-  if (tizen) return Number(tizen[1]) <= 4;
+  if (tizen) return Number(tizen[1]) <= 6;
   const webos = ua.match(/(?:web0s|webos)[\s\/](\d+)(?:\.|\b)/i);
-  if (webos) return Number(webos[1]) <= 4;
+  if (webos) return Number(webos[1]) <= 6;
   // Samsung Orsay e outros aparelhos pré-Tizen costumam expor apenas SMART-TV.
   if (/smart-tv|smarttv/i.test(ua)) return true;
   const chrome = ua.match(/(?:chrome|chromium)\/(\d+)/i);
-  if (chrome && Number(chrome[1]) < 60) return true;
+  if (chrome && Number(chrome[1]) < 80 && /tizen|webos|web0s|smart-tv|smarttv|hbbtv/i.test(ua)) return true;
   const safari = ua.match(/version\/(\d+)(?:\.\d+)?[^)]*safari/i);
   if (safari && Number(safari[1]) < 10) return true;
   return false;
@@ -334,8 +334,10 @@ function renderMedia(media, legacyPlayback) {
       // O iframe atual do VK também depende de APIs modernas. Para TVs antigas,
       // o servidor resolve uma URL MP4 temporária e o <video> nativo reproduz o
       // arquivo. Se a resolução falhar, o player oficial ainda fica como fallback.
-      const resolved = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '720' })}`;
-      player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="auto" src="${escapeHtml(resolved)}" style="width:100%;height:100%;background:#000" onerror="this.style.display='none';var f=document.getElementById('legacyTvFrame');if(f){f.style.display='block';var u=f.getAttribute('data-src')||'';if(u){f.src=u;}}"></video>` +
+      const resolved480 = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '480' })}`;
+      const resolved360 = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '360' })}`;
+      const resolved240 = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '240' })}`;
+      player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="metadata" src="${escapeHtml(resolved480)}" data-vk-src-1="${escapeHtml(resolved480)}" data-vk-src-2="${escapeHtml(resolved360)}" data-vk-src-3="${escapeHtml(resolved240)}" style="width:100%;height:100%;background:#000"></video>` +
         `<iframe id="legacyTvFrame" src="about:blank" data-src="${escapeHtml(official)}" data-fallback-src="${escapeHtml(officialAlt)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
     } else {
       // TVs novas usam diretamente o player oficial incorporado do VK.
@@ -367,7 +369,7 @@ function renderMedia(media, legacyPlayback) {
         </div>
         <span class="tv-receiver-badge"><span class="pulse"></span>Conectado ao celular</span>
       </div>
-    </div>${playbackLoadingRuntimeScript(provider)}${subtitleScript}`;
+    </div>${playbackLoadingRuntimeScript(provider)}${playbackRemoteRuntimeScript(provider)}${subtitleScript}`;
 }
 function playbackLoadingRuntimeScript(provider) {
   const safeProvider = JSON.stringify(String(provider || '')).replace(/</g, '\\u003c');
@@ -380,12 +382,15 @@ function playbackLoadingRuntimeScript(provider) {
   var driveFrame=document.getElementById('legacyDriveFallback');
   var driveAttempt=1;
   var driveWatchdog=0;
+  var vkAttempt=1;
+  var vkWatchdog=0;
   var spinnerTimer=0;
   var spinnerAngle=0;
 
   function show(){if(loader){loader.style.display='block';loader.setAttribute('aria-hidden','false');}}
   function hide(){if(loader){loader.style.display='none';loader.setAttribute('aria-hidden','true');}}
   function clearWatchdog(){if(driveWatchdog){clearTimeout(driveWatchdog);driveWatchdog=0;}}
+  function clearVkWatchdog(){if(vkWatchdog){clearTimeout(vkWatchdog);vkWatchdog=0;}}
   function armWatchdog(){
     clearWatchdog();
     if(provider!=='drive'||!video||video.style.display==='none')return;
@@ -394,6 +399,15 @@ function playbackLoadingRuntimeScript(provider) {
       if(video.readyState>=3&&!video.error)return;
       nextDriveSource();
     },18000);
+  }
+  function armVkWatchdog(){
+    clearVkWatchdog();
+    if(provider!=='vk'||!video||video.style.display==='none')return;
+    vkWatchdog=setTimeout(function(){
+      if(!video||video.style.display==='none')return;
+      if(video.readyState>=2&&!video.error)return;
+      nextVkSource();
+    },12000);
   }
   function startSpinnerFallback(){
     var ring=loader&&loader.getElementsByTagName('span')[0];
@@ -435,14 +449,42 @@ function playbackLoadingRuntimeScript(provider) {
     }catch(e){}
     armWatchdog();
   }
-  function onVideoReady(){clearWatchdog();hide();}
-  function onVideoBusy(){show();if(provider==='drive')armWatchdog();}
-  function onVideoError(){if(video&&video.style.display==='none')return;show();if(provider==='drive')nextDriveSource();}
+  function showVkFallback(){
+    clearVkWatchdog();
+    show();
+    if(video){try{video.pause();}catch(e){}video.style.display='none';try{video.removeAttribute('src');video.load();}catch(e){}}
+    if(frame){
+      frame.style.display='block';
+      var target=frame.getAttribute('data-src')||'';
+      if(target&&frame.src!==target)frame.src=target;
+    }
+  }
+  function nextVkSource(){
+    if(provider!=='vk'||!video){showVkFallback();return;}
+    if(video.style.display==='none')return;
+    clearVkWatchdog();
+    vkAttempt++;
+    var next=video.getAttribute('data-vk-src-'+vkAttempt)||'';
+    if(!next){showVkFallback();return;}
+    show();
+    try{
+      video.src=next;
+      video.load();
+      var promise=video.play();
+      if(promise&&typeof promise.catch==='function')promise.catch(function(){});
+    }catch(e){}
+    armVkWatchdog();
+  }
+  function onVideoReady(){clearWatchdog();clearVkWatchdog();hide();}
+  function onVideoBusy(){show();if(provider==='drive')armWatchdog();if(provider==='vk')armVkWatchdog();}
+  function onVideoError(){if(video&&video.style.display==='none')return;show();if(provider==='drive')nextDriveSource();else if(provider==='vk')nextVkSource();}
 
   window.BETVTVShowLoader=show;
   window.BETVTVHideLoader=hide;
   window.BETVTVNextDriveSource=nextDriveSource;
   window.BETVTVShowDriveFallback=showDriveFallback;
+  window.BETVTVNextVkSource=nextVkSource;
+  window.BETVTVShowVkFallback=showVkFallback;
   startSpinnerFallback();
   show();
 
@@ -457,6 +499,7 @@ function playbackLoadingRuntimeScript(provider) {
     video.addEventListener('seeked',onVideoReady,false);
     video.addEventListener('error',onVideoError,false);
     if(provider==='drive')armWatchdog();
+    if(provider==='vk')armVkWatchdog();
     if(video.readyState>=3)hide();
   }
   function frameLoaded(target){
@@ -468,6 +511,94 @@ function playbackLoadingRuntimeScript(provider) {
   }
   if(frame&&frame.addEventListener)frame.addEventListener('load',function(){frameLoaded(frame);},false);
   if(driveFrame&&driveFrame.addEventListener)driveFrame.addEventListener('load',function(){frameLoaded(driveFrame);},false);
+})();
+</script>`;
+}
+
+function playbackRemoteRuntimeScript(provider) {
+  const safeProvider = JSON.stringify(String(provider || '')).replace(/</g, '\\u003c');
+  return `<script type="text/javascript">
+(function(){
+  var provider=${safeProvider};
+  var video=document.getElementById('legacyTvVideo');
+  var frame=document.getElementById('legacyTvFrame');
+  var vkPlayer=null;
+  var vkReady=false;
+  var pending=[];
+
+  function visibleVideo(){return !!(video&&(!video.style||video.style.display!=='none'));}
+  function asNumber(value,fallback){var n=Number(value);return isNaN(n)?fallback:n;}
+  function nativeCommand(action,value){
+    if(!visibleVideo())return false;
+    try{
+      if(action==='pause'){video.pause();return true;}
+      if(action==='play'){var p=video.play();if(p&&typeof p.catch==='function')p.catch(function(){});return true;}
+      if(action==='seek_relative'){
+        var next=Math.max(0,(Number(video.currentTime)||0)+asNumber(value,0));
+        if(isFinite(Number(video.duration))&&Number(video.duration)>0)next=Math.min(next,Number(video.duration));
+        video.currentTime=next;return true;
+      }
+    }catch(e){}
+    return false;
+  }
+  function resolveVkTime(callback){
+    if(!vkPlayer||typeof vkPlayer.getCurrentTime!=='function'){callback(0);return;}
+    try{
+      var value=vkPlayer.getCurrentTime();
+      if(value&&typeof value.then==='function'){
+        value.then(function(next){callback(asNumber(next,0));},function(){callback(0);});
+      }else callback(asNumber(value,0));
+    }catch(e){callback(0);}
+  }
+  function vkCommand(action,value){
+    if(!vkReady||!vkPlayer)return false;
+    try{
+      if(action==='pause'&&typeof vkPlayer.pause==='function'){vkPlayer.pause();return true;}
+      if(action==='play'&&typeof vkPlayer.play==='function'){vkPlayer.play();return true;}
+      if(action==='seek_relative'&&typeof vkPlayer.seek==='function'){
+        resolveVkTime(function(time){try{vkPlayer.seek(Math.max(0,time+asNumber(value,0)));}catch(e){}});
+        return true;
+      }
+    }catch(e){}
+    return false;
+  }
+  function apply(action,value){
+    action=String(action||'');
+    if(!action)return false;
+    if(nativeCommand(action,value))return true;
+    if(provider==='vk'){
+      if(vkCommand(action,value))return true;
+      pending.push({action:action,value:value});
+      bindVk(0);
+      return true;
+    }
+    // O preview oficial do Google Drive não expõe uma API pública de
+    // play/pause/seek. Em TVs antigas o Drive usa o <video> nativo acima,
+    // onde os controles remotos funcionam normalmente.
+    return false;
+  }
+  function flush(){
+    if(!vkReady||!pending.length)return;
+    var copy=pending.slice();pending.length=0;
+    for(var i=0;i<copy.length;i++)vkCommand(copy[i].action,copy[i].value);
+  }
+  function bindVk(attempt){
+    if(provider!=='vk'||!frame||vkReady)return;
+    if(window.VK&&typeof window.VK.VideoPlayer==='function'){
+      try{vkPlayer=window.VK.VideoPlayer(frame);vkReady=true;window.BETVTVVKPlayer=vkPlayer;flush();return;}catch(e){}
+    }
+    if(attempt>15)return;
+    setTimeout(function(){bindVk(attempt+1);},350);
+  }
+  function ensureVkApi(){
+    if(provider!=='vk'||!frame)return;
+    if(window.VK&&typeof window.VK.VideoPlayer==='function'){bindVk(0);return;}
+    var existing=document.getElementById('betvVkVideoApi');
+    if(existing){bindVk(0);return;}
+    var script=document.createElement('script');script.id='betvVkVideoApi';script.src='https://vk.com/js/api/videoplayer.js';script.async=true;script.onload=function(){bindVk(0);};document.getElementsByTagName('head')[0].appendChild(script);
+  }
+  window.BETVTVRemote=function(action,value){return apply(action,value);};
+  ensureVkApi();
 })();
 </script>`;
 }
@@ -611,9 +742,10 @@ function codeMarkup(code) {
   return String(code || '').split('').map(char => `<span>${escapeHtml(char)}</span>`).join('');
 }
 
-function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion = 0, mediaKey = '', subtitleEnabled = false }) {
+function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion = 0, mediaKey = '', subtitleEnabled = false, remoteNonce = '' }) {
   const initialStatus = JSON.stringify(String(stateStatus || 'waiting'));
   const initialMediaKey = JSON.stringify(String(mediaKey || ''));
+  const initialRemoteNonce = JSON.stringify(String(remoteNonce || ''));
   const poll = `
 <script type="text/javascript">
 (function(){
@@ -621,6 +753,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   var version=${Number(mediaVersion) || 0};
   var mediaKey=${initialMediaKey};
   var subtitleEnabled=${subtitleEnabled ? 'true' : 'false'};
+  var remoteNonce=${initialRemoteNonce};
   var stopped=false;
   function schedule(ms){if(!stopped)setTimeout(poll,ms);}
   function poll(){
@@ -643,6 +776,11 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
             var nextSubtitle=!!(d&&d.subtitle_enabled);
             if(subtitleEnabled===null)subtitleEnabled=nextSubtitle;
             else if(nextSubtitle!==subtitleEnabled){subtitleEnabled=nextSubtitle;if(typeof window.BETVTVSetSubtitles==='function')window.BETVTVSetSubtitles(nextSubtitle);}
+            var nextRemoteNonce=d&&d.remote_nonce!=null?String(d.remote_nonce):'';
+            if(nextRemoteNonce&&nextRemoteNonce!==remoteNonce){
+              remoteNonce=nextRemoteNonce;
+              if(typeof window.BETVTVRemote==='function')window.BETVTVRemote(String(d.remote_command||''),Number(d.remote_value)||0);
+            }
             if(statusChanged||mediaChanged||status==='disconnected'){
               stopped=true;
               finished=true;
@@ -675,7 +813,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   <meta name="theme-color" content="#020409">
   <title>Conectar Smart TV — Billie Eilish TV</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260821-tv-legacy-media-fallback-v2">
+  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260821-tv-vk-legacy-retry-v3">
 </head>
 <body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
   <main class="tv-shell">
@@ -812,7 +950,8 @@ module.exports = async function handler(req, res) {
             playing: true,
             mediaVersion: state.media_version,
             mediaKey: mediaStateKey(media),
-            subtitleEnabled: Boolean(media.subtitleEnabled)
+            subtitleEnabled: Boolean(media.subtitleEnabled),
+            remoteNonce: media.remoteControl && typeof media.remoteControl === 'object' ? String(media.remoteControl.nonce || '') : ''
           });
           return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
         }

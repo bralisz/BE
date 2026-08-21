@@ -93,6 +93,31 @@ async function fetchPrivateSettingWithServiceRole(id) {
   return row && row.data && typeof row.data === 'object' ? row.data : null;
 }
 
+async function mergeMovieDashboardDrive(rows, id = '') {
+  if (!Array.isArray(rows) || !rows.length) return rows;
+  const { url, key: publicKey } = config();
+  const key = serviceRoleKey() || publicKey;
+  if (!key) return rows;
+  const params = new URLSearchParams({ select: 'id,data', collection: 'eq.movies' });
+  if (id) params.set('id', `eq.${id}`);
+  const response = await fetch(`${url}/rest/v1/content_items?${params.toString()}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json' },
+    cache: 'no-store'
+  }).catch(() => null);
+  if (!response || !response.ok) return rows;
+  const privateRows = await response.json().catch(() => []);
+  const driveById = new Map();
+  for (const row of Array.isArray(privateRows) ? privateRows : []) {
+    const raw = row && row.data && typeof row.data === 'object' ? row.data : {};
+    const drive = safeLink(raw.mobileAppDriveUrl || raw.tvDriveUrl || '', false);
+    if (drive) driveById.set(String(row.id || ''), drive);
+  }
+  return rows.map(row => {
+    const drive = driveById.get(String(row && row.id || ''));
+    return drive ? { ...row, mobileAppDriveUrl: drive } : row;
+  });
+}
+
 function isLocalAsset(value) {
   return /^\/(?!\/)/.test(String(value || '').trim());
 }
@@ -307,6 +332,7 @@ async function fetchRowsUncached(name, id, locale) {
     }
   }
   if (!ALLOWED_COLLECTIONS.has(name)) throw new Error('invalid_collection');
+  let sanitizedRows = [];
   try {
     const payload = await callRpc('get_public_content_items_v2', {
       p_collection: name,
@@ -314,17 +340,21 @@ async function fetchRowsUncached(name, id, locale) {
       p_locale: locale
     });
     const rows = Array.isArray(payload) ? payload : [];
-    return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
+    sanitizedRows = rows.map(row => sanitizeItem(name, row)).filter(Boolean);
   } catch (_) {
     try {
       const payload = await callRpc('get_public_content_items', { p_collection: name, p_id: id || null });
       const rows = Array.isArray(payload) ? payload : [];
-      return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
+      sanitizedRows = rows.map(row => sanitizeItem(name, row)).filter(Boolean);
     } catch (_) {
       const rows = await fetchLegacyRows(name, id);
-      return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
+      sanitizedRows = rows.map(row => sanitizeItem(name, row)).filter(Boolean);
     }
   }
+  // O Dashboard já salva mobileAppDriveUrl nos filmes. Esta leitura restrita
+  // acrescenta somente esse campo público caso a RPC do Supabase ainda esteja
+  // em uma versão antiga que não o devolve.
+  return name === 'movies' ? mergeMovieDashboardDrive(sanitizedRows, id) : sanitizedRows;
 }
 
 async function fetchRows(name, id, locale) {
@@ -411,6 +441,7 @@ module.exports = async function publicData(req, res) {
     const name = String(Array.isArray(req.query?.name) ? req.query.name[0] : req.query?.name || '').trim().toLowerCase();
     const id = String(Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id || '').trim();
     const locale = normalizeLocale(Array.isArray(req.query?.locale) ? req.query.locale[0] : req.query?.locale);
+    const freshMovie = name === 'movies' && Boolean(id) && String(Array.isArray(req.query?.fresh) ? req.query.fresh[0] : req.query?.fresh || '') === '1';
     if (!name || name.length > 40 || id.length > 100) return res.status(400).end();
 
     let payload;
@@ -420,7 +451,9 @@ module.exports = async function publicData(req, res) {
       payload = await fetchHomeBootstrap(locale);
       hasData = HOME_BOOTSTRAP_COLLECTIONS.some(collection => Array.isArray(payload?.[collection]) && payload[collection].length > 0);
     } else {
-      const rows = await fetchRows(name, id, locale);
+      const rows = freshMovie
+        ? await fetchRowsUncached(name, id, locale)
+        : await fetchRows(name, id, locale);
       payload = id ? (rows[0] || null) : rows;
       hasData = rows.length > 0;
     }
@@ -428,7 +461,12 @@ module.exports = async function publicData(req, res) {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     // Nunca mantém uma resposta vazia em cache: um vazio transitório fazia a Home
     // interpretar que não existiam seções e ocultar todo o catálogo.
-    setPublicCacheHeaders(res, name, id, hasData);
+    if (freshMovie) {
+      res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+      res.setHeader('Vercel-CDN-Cache-Control', 'private, no-store, max-age=0');
+    } else {
+      setPublicCacheHeaders(res, name, id, hasData);
+    }
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     if (req.method === 'HEAD') return res.status(200).end();

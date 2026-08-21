@@ -68,11 +68,17 @@ module.exports = async function handler(req, res) {
       p_device_token: deviceToken
     });
     const media = row && row.current_media && typeof row.current_media === 'object' ? row.current_media : {};
+    const remote = media.remoteControl && typeof media.remoteControl === 'object' && !Array.isArray(media.remoteControl)
+      ? media.remoteControl
+      : {};
     return res.status(200).json({
       status: row && row.status ? row.status : 'missing',
       media_version: row && Number.isFinite(Number(row.media_version)) ? Number(row.media_version) : -1,
       media_key: mediaStateKey(media),
-      subtitle_enabled: Boolean(media.subtitleEnabled)
+      subtitle_enabled: Boolean(media.subtitleEnabled),
+      remote_command: String(remote.action || ''),
+      remote_value: Number.isFinite(Number(remote.value)) ? Number(remote.value) : 0,
+      remote_nonce: String(remote.nonce || '')
     });
   } catch (error) {
     console.error('TV page state failed:', error);

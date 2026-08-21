@@ -1,6 +1,6 @@
 'use strict';
 
-const REQUEST_TIMEOUT_MS = 12000;
+const REQUEST_TIMEOUT_MS = 9000;
 
 function firstQueryValue(value) {
   return Array.isArray(value) ? value[0] : value;
@@ -129,9 +129,26 @@ function extractVkMediaUrl(html, maxQuality) {
   }
 
   // Final fallback: choose a plain MP4 URL if the page exposes one without a
-  // quality label. 720p-or-lower is preferred by the patterns above.
+  // quality label. Lower resolutions are requested first on old TVs.
   const mp4 = escaped.match(/https?:\\?\/\\?\/[^"'<>\s]+\.mp4(?:\?[^"'<>\s]*)?/i);
-  return mp4 && mp4[0] ? normalizeVkMediaUrl(mp4[0]) : '';
+  if (mp4 && mp4[0]) {
+    const normalized = normalizeVkMediaUrl(mp4[0]);
+    if (normalized) return normalized;
+  }
+
+  // Alguns players do VK entregam somente HLS. Muitas Smart TVs antigas têm
+  // suporte HLS nativo mesmo quando o iframe moderno do VK não funciona.
+  const hlsPatterns = [
+    /["'](?:hls|hls_url|hls_m3u8|manifest)["']\s*[:=]\s*["']([^"']+\.m3u8[^"']*)["']/i,
+    /(https?:\\?\/\\?\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?)/i
+  ];
+  for (const pattern of hlsPatterns) {
+    const match = escaped.match(pattern);
+    if (!match || !match[1]) continue;
+    const normalized = normalizeVkMediaUrl(match[1]);
+    if (normalized) return normalized;
+  }
+  return '';
 }
 
 async function fetchWithTimeout(url, options) {
@@ -157,27 +174,43 @@ module.exports = async function vkMediaResolver(req, res) {
   const quality = safeQuality(req.query?.quality);
   if (!owner || !id || (rawHash && !hash)) return res.status(400).end();
 
-  const embed = `https://vk.com/video_ext.php?${qs({ oid: owner, id, hash, hd: quality >= 720 ? '2' : '1', autoplay: '0' })}`;
+  const embeds = [
+    `https://vk.com/video_ext.php?${qs({ oid: owner, id, hash, hd: quality >= 720 ? '2' : '1', autoplay: '0', js_api: '1' })}`,
+    `https://vkvideo.ru/video_ext.php?${qs({ oid: owner, id, hash, hd: quality >= 720 ? '2' : '1', autoplay: '0', js_api: '1' })}`
+  ];
 
   try {
-    const response = await fetchWithTimeout(embed, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: {
-        Accept: 'text/html,application/xhtml+xml',
-        'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
-        Referer: 'https://vk.com/',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36'
+    let mediaUrl = '';
+    let sawNotFound = false;
+    for (const embed of embeds) {
+      let response = null;
+      try {
+        response = await fetchWithTimeout(embed, {
+          method: 'GET',
+          redirect: 'follow',
+          headers: {
+            Accept: 'text/html,application/xhtml+xml',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+            Referer: 'https://vk.com/',
+            Origin: 'https://vk.com',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36'
+          }
+        });
+      } catch (error) {
+        continue;
       }
-    });
+      if (!response || !response.ok) {
+        if (response && response.status === 404) sawNotFound = true;
+        continue;
+      }
+      const html = await response.text();
+      mediaUrl = extractVkMediaUrl(html, quality);
+      if (mediaUrl) break;
+    }
+    if (!mediaUrl) return res.status(sawNotFound ? 404 : 502).end();
 
-    if (!response.ok) return res.status(response.status === 404 ? 404 : 502).end();
-    const html = await response.text();
-    const mediaUrl = extractVkMediaUrl(html, quality);
-    if (!mediaUrl) return res.status(502).end();
-
-    // The resolver only discovers the temporary VK CDN URL. The movie itself
-    // never passes through Vercel, which keeps long videos viable.
+    // O endpoint descobre a URL temporária do CDN do VK e redireciona a TV.
+    // O arquivo longo não passa pela Function da Vercel.
     res.statusCode = 302;
     res.setHeader('Location', mediaUrl);
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');

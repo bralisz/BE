@@ -6,6 +6,7 @@
   const ACTIVE_SESSION_KEY = 'beTvActiveSessionId';
   const ACTIVE_CODE_KEY = 'beTvActivePairCode';
   const PENDING_MEDIA_KEY = 'beTvPendingMedia';
+  const CURRENT_MEDIA_KEY = 'beTvCurrentMedia';
   const POST_AUTH_KEY = 'bePostAuthReturn';
 
   const loading = document.getElementById('controllerLoading');
@@ -43,6 +44,17 @@
 
   function safeReturnTarget() {
     return `${location.pathname}${location.search}`;
+  }
+
+
+  function returnHome() {
+    try { location.replace('/'); }
+    catch (_) { location.href = '/'; }
+  }
+
+  function desktopControllerMode() {
+    try { return window.matchMedia('(min-width: 1000px)').matches; }
+    catch (_) { return Number(window.innerWidth || 0) >= 1000; }
   }
 
   function profileMetadata() {
@@ -147,6 +159,10 @@
       mobileAppDriveUrl: String(source.mobileAppDriveUrl || source.appDriveUrl || ''),
       tvDriveUrl: String(source.tvDriveUrl || source.mobileAppDriveUrl || source.appDriveUrl || ''),
       collection: String(source.collection || 'videos'),
+      description: String(source.description || ''),
+      imageUrl: String(source.imageUrl || ''),
+      bannerUrl: String(source.bannerUrl || ''),
+      logoUrl: String(source.logoUrl || ''),
       subtitleUrl,
       subtitleLocale,
       subtitleEnabled: Boolean(subtitleUrl && subtitleEnabled),
@@ -358,6 +374,7 @@
       if (error) throw error;
       currentTvMedia = mediaToSend;
       tvSubtitlesEnabled = false;
+      try { localStorage.setItem(CURRENT_MEDIA_KEY, JSON.stringify(mediaToSend)); } catch (_) {}
       localStorage.removeItem(PENDING_MEDIA_KEY);
       setMessage(connectedMessage, '');
       sendButton.textContent = 'Transmitido';
@@ -420,6 +437,8 @@
       try {
         const ok = await claim(queryCode);
         if (ok && pendingMedia) await sendPending({ automatic: true });
+        if (ok && desktopControllerMode()) returnHome();
+        if (ok) showConnected();
         return;
       } catch (error) {
         showForm();
@@ -437,9 +456,11 @@
         activeCode = String(existing.pairing_code || localStorage.getItem(ACTIVE_CODE_KEY) || '');
         localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
         if (activeCode) localStorage.setItem(ACTIVE_CODE_KEY, activeCode);
-        showConnected();
+        if (!desktopControllerMode()) showConnected();
         try { await syncProfileToTv(); } catch (error) { console.warn('Não foi possível sincronizar o perfil com a TV:', error); }
         if (pendingMedia) await sendPending({ automatic: true });
+        if (desktopControllerMode()) returnHome();
+        showConnected();
       } else {
         showForm();
       }
@@ -465,6 +486,8 @@
     try {
       const ok = await claim(codeInput.value);
       if (ok && readPendingMedia()) await sendPending({ automatic: true });
+      if (ok && desktopControllerMode()) returnHome();
+      if (ok) showConnected();
     } catch (error) {
       showForm();
       setMessage(message, friendlyPairError(error), 'error');
@@ -525,6 +548,7 @@
     }
     localStorage.removeItem(ACTIVE_SESSION_KEY);
     localStorage.removeItem(ACTIVE_CODE_KEY);
+    localStorage.removeItem(CURRENT_MEDIA_KEY);
     activeSessionId = '';
     activeCode = '';
     codeInput.value = '';
