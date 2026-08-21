@@ -1,5 +1,5 @@
 /* Service worker do PWA; os arquivos continuam vindo da rede. */
-const SW_VERSION = '20260821-vercel-opt-v1';
+const SW_VERSION = '20260821-tv-legacy-admin-compact-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

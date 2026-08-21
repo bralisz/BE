@@ -5575,6 +5575,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `https://drive.google.com/uc?${params.toString()}`;
   }
 
+  function isLegacySmartTvBrowser() {
+    const ua = String(navigator.userAgent || '').toLowerCase();
+    if (!ua) return false;
+    if (/netcast|maple|hbbtv|viera|aquos|nettv|inettvbrowser|smart-tv|smarttv/i.test(ua)) return true;
+    const tizen = ua.match(/tizen[\s\/](\d+)(?:\.|\b)/i);
+    if (tizen && Number(tizen[1]) <= 7) return true;
+    const webos = ua.match(/(?:web0s|webos)[\s\/](\d+)(?:\.|\b)/i);
+    if (webos && Number(webos[1]) <= 7) return true;
+    const chrome = ua.match(/(?:chrome|chromium)\/(\d+)/i);
+    if (chrome && Number(chrome[1]) < 90 && /tizen|webos|web0s|hbbtv/i.test(ua)) return true;
+    return false;
+  }
+
+  function googleDriveLegacyStreamUrl(fileId, resourceKey = '', proxy = false) {
+    const params = new URLSearchParams({ id: fileId, tv: '1' });
+    if (resourceKey) params.set('resourcekey', resourceKey);
+    if (proxy) params.set('proxy', '1');
+    return `/api/drive-media?${params.toString()}`;
+  }
+
   function normalizeDriveMediaKind(value) {
     const normalized = String(value || '').trim().toLowerCase();
     if (normalized === 'audio' || normalized === 'music' || normalized === 'song') return 'audio';
@@ -5905,12 +5925,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return subtitleCueCache.get(fetchUrl);
   }
 
+  const SUBTITLE_START_NOTICE_TEXT = Object.freeze({
+    'pt-br': 'Ative as legendas apenas quando o filme começar.',
+    'en-us': 'Turn subtitles on only when the movie starts.',
+    es: 'Activa los subtítulos solo cuando empiece la película.',
+    fr: 'Activez les sous-titres seulement quand le film commence.'
+  });
+
   const SUBTITLE_SYNC_NOTICE_TEXT = Object.freeze({
     'pt-br': 'As legendas acompanham o filme em tempo real e podem apresentar atraso. Se você avançar o vídeo, elas podem não acompanhar o novo trecho.',
     'en-us': 'Subtitles follow the movie in real time and may be delayed. If you skip ahead, they may not follow the new position.',
     es: 'Los subtítulos siguen la película en tiempo real y pueden presentar retraso. Si adelantas el video, es posible que no acompañen el nuevo punto.',
     fr: 'Les sous-titres suivent le film en temps réel et peuvent présenter un décalage. Si vous avancez la vidéo, ils peuvent ne pas suivre le nouveau passage.'
   });
+
+  function subtitleStartNoticeText() {
+    const slug = String(window.BETVLocale?.slug || 'pt-br').trim().toLowerCase();
+    return SUBTITLE_START_NOTICE_TEXT[slug] || SUBTITLE_START_NOTICE_TEXT['pt-br'];
+  }
 
   function subtitleSyncNoticeText() {
     const slug = String(window.BETVLocale?.slug || 'pt-br').trim().toLowerCase();
@@ -5922,9 +5954,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.cancelAnimationFrame(notice.__beShowFrame || 0);
     window.clearTimeout(notice.__beHideTimer || 0);
     window.clearTimeout(notice.__beHiddenTimer || 0);
+    window.clearTimeout(notice.__beSecondaryTimer || 0);
     notice.__beShowFrame = 0;
     notice.__beHideTimer = 0;
     notice.__beHiddenTimer = 0;
+    notice.__beSecondaryTimer = 0;
+    const secondary = notice.querySelector('.player-subtitle-sync-notice-secondary');
+    if (secondary) secondary.classList.remove('is-visible');
   }
 
   function hideSubtitleSyncNotice(playerShell, immediate = true) {
@@ -5936,7 +5972,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else notice.__beHiddenTimer = window.setTimeout(() => { notice.hidden = true; }, 220);
   }
 
-  function showSubtitleSyncNotice(playerShell) {
+  function showSubtitleSyncNotice(playerShell, options = {}) {
     if (!(playerShell instanceof Element)) return;
     let notice = playerShell.querySelector('.player-subtitle-sync-notice');
     if (!notice) {
@@ -5946,16 +5982,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       notice.setAttribute('role', 'status');
       notice.setAttribute('aria-live', 'polite');
       notice.setAttribute('data-i18n-ignore', 'true');
-      notice.innerHTML = '<span class="player-subtitle-sync-notice-icon" aria-hidden="true">!</span><p></p>';
+      notice.innerHTML = '<span class="player-subtitle-sync-notice-icon" aria-hidden="true">!</span><p class="player-subtitle-sync-notice-copy"><span class="player-subtitle-sync-notice-primary"></span><span class="player-subtitle-sync-notice-secondary"></span></p>';
       playerShell.appendChild(notice);
     }
+    const sequence = Boolean(options && options.sequence);
     clearSubtitleSyncNoticeTimers(notice);
-    const copy = notice.querySelector('p');
-    if (copy) copy.textContent = subtitleSyncNoticeText();
+    const primary = notice.querySelector('.player-subtitle-sync-notice-primary');
+    const secondary = notice.querySelector('.player-subtitle-sync-notice-secondary');
+    if (primary) primary.textContent = sequence ? subtitleStartNoticeText() : subtitleSyncNoticeText();
+    if (secondary) {
+      secondary.textContent = sequence ? subtitleSyncNoticeText() : '';
+      secondary.classList.remove('is-visible');
+    }
     notice.hidden = false;
     notice.classList.remove('is-visible');
     void notice.offsetWidth;
     notice.__beShowFrame = window.requestAnimationFrame(() => notice.classList.add('is-visible'));
+    if (sequence) {
+      notice.__beSecondaryTimer = window.setTimeout(() => {
+        if (!notice.hidden && secondary) secondary.classList.add('is-visible');
+      }, 1500);
+      notice.__beHideTimer = window.setTimeout(() => hideSubtitleSyncNotice(playerShell, false), 7800);
+      return;
+    }
     notice.__beHideTimer = window.setTimeout(() => hideSubtitleSyncNotice(playerShell, false), 5000);
   }
 
@@ -6824,6 +6873,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let activeExternalUrl = '';
     let previousFocus = null;
     let streamAttempt = '';
+    let legacySmartTvMode = false;
     let mediaReady = false;
     let frameMode = false;
     let fallbackTimer = 0;
@@ -7075,8 +7125,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(false);
     };
 
+    const showLegacyPlaybackError = message => {
+      if (overlay.hidden) return;
+      mediaReady = false;
+      window.clearTimeout(fallbackTimer);
+      fallbackTimer = 0;
+      overlay.classList.remove('is-source-syncing');
+      overlay.classList.add('is-error');
+      setInteractive(false);
+      setLoading(String(message || 'Esta Smart TV não conseguiu reproduzir o vídeo.'), true);
+      loadingMessage.hidden = false;
+      showControls(true);
+    };
+
     const useFrameFallback = () => {
       if (!activeFileId || overlay.hidden || frameMode) return;
+      if (legacySmartTvMode) {
+        if (streamAttempt !== 'legacy-proxy') tryLegacyProxyStream();
+        else showLegacyPlaybackError('Esta Smart TV não conseguiu reproduzir o arquivo do Google Drive.');
+        return;
+      }
       frameMode = true;
       mediaReady = false;
       streamAttempt = 'frame';
@@ -7104,6 +7172,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setLoading('', false);
       setInteractive(false);
       showControls(true);
+    };
+
+    const tryLegacyProxyStream = () => {
+      if (!activeFileId || overlay.hidden || frameMode || mediaReady || streamAttempt === 'legacy-proxy') return;
+      streamAttempt = 'legacy-proxy';
+      mediaReady = false;
+      window.clearTimeout(fallbackTimer);
+      setInteractive(false);
+      overlay.classList.remove('is-error');
+      overlay.classList.add('is-source-syncing');
+      setLoading('Tentando modo compatível para Smart TV...');
+      video.pause();
+      video.src = googleDriveLegacyStreamUrl(activeFileId, activeResourceKey, true);
+      video.load();
+      requestPlayback();
+      fallbackTimer = window.setTimeout(() => {
+        if (!mediaReady && !overlay.hidden && !frameMode) {
+          showLegacyPlaybackError('Esta Smart TV não conseguiu decodificar o vídeo. O arquivo pode precisar estar em MP4 H.264/AAC.');
+        }
+      }, 26000);
+    };
+
+    const tryLegacyResolverStream = () => {
+      if (!activeFileId || overlay.hidden || frameMode || mediaReady || streamAttempt === 'legacy-resolver') return;
+      streamAttempt = 'legacy-resolver';
+      mediaReady = false;
+      window.clearTimeout(fallbackTimer);
+      setInteractive(false);
+      overlay.classList.remove('is-error');
+      overlay.classList.add('is-source-syncing');
+      setLoading('Preparando vídeo para Smart TV...');
+      video.pause();
+      video.src = googleDriveLegacyStreamUrl(activeFileId, activeResourceKey, false);
+      video.load();
+      requestPlayback();
+      fallbackTimer = window.setTimeout(() => {
+        if (!mediaReady && !overlay.hidden && !frameMode) tryLegacyProxyStream();
+      }, 15000);
     };
 
     const tryRedirectStream = () => {
@@ -7150,8 +7256,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       fallbackTimer = 0;
       // Em filmes legendados tentamos primeiro uma segunda URL controlável,
       // para que currentTime e seek continuem disponíveis para a legenda.
-      if (streamAttempt === 'direct' && activeSubtitleUrl) tryRedirectStream();
+      if (streamAttempt === 'legacy-resolver') tryLegacyProxyStream();
+      else if (streamAttempt === 'legacy-proxy') showLegacyPlaybackError('Esta Smart TV não conseguiu reproduzir o arquivo do Google Drive.');
+      else if (streamAttempt === 'direct' && activeSubtitleUrl) tryRedirectStream();
       else if (streamAttempt === 'direct' || streamAttempt === 'redirect') useFrameFallback();
+      else if (legacySmartTvMode) tryLegacyResolverStream();
       else tryDirectStream();
     };
 
@@ -7181,6 +7290,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       hideSubtitleSyncNotice(shell, true);
       resetDriveSubtitles();
       streamAttempt = '';
+      legacySmartTvMode = false;
       mediaReady = false;
       frameMode = false;
       progress.value = '0';
@@ -7206,6 +7316,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
       previousFocus = document.activeElement;
       streamAttempt = '';
+      legacySmartTvMode = isLegacySmartTvBrowser();
       mediaReady = false;
       frameMode = false;
       frameShell.hidden = true;
@@ -7233,9 +7344,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         });
       }
 
-      // Tenta primeiro a entrega direta pelo Google Drive. Isso evita que o
-      // arquivo de vídeo seja retransmitido pelo servidor do site.
-      tryDirectStream();
+      if (legacySmartTvMode) {
+        // Em TVs antigas evitamos o iframe do Drive, que frequentemente fica
+        // preto. Primeiro resolvemos a URL no mesmo domínio e, se necessário,
+        // usamos o proxy same-origin com suporte a Range.
+        tryLegacyResolverStream();
+      } else {
+        // Navegadores atuais continuam tentando primeiro a entrega direta pelo
+        // Google Drive, sem retransmitir o vídeo pelo servidor do site.
+        tryDirectStream();
+      }
       window.setTimeout(() => {
         if (token === openingToken && !overlay.hidden) showControls(false);
       }, 50);
@@ -7331,7 +7449,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas';
         syncDriveSubtitle();
-        showSubtitleSyncNotice(shell);
+        showSubtitleSyncNotice(shell, { sequence: true });
       } catch (_) {
         if (token !== subtitleLoadToken) return;
         clearFrameSubtitleSync();
@@ -7609,6 +7727,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let audioMode = false;
     let streamAttempt = '';
     let metadataProbeFinished = false;
+    let legacySmartTvMode = false;
     let mediaReady = false;
     let openingToken = 0;
     let youtubeMuted = false;
@@ -8111,13 +8230,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls();
     };
 
-    const showStreamError = () => {
+    const showStreamError = message => {
       if (overlay.hidden) return;
       mediaReady = false;
       window.clearTimeout(fallbackTimer);
       overlay.classList.add('is-error');
       setPlayerInteractive(false);
-      setLoadingMessage('Não foi possível carregar esta mídia.', true, true);
+      setLoadingMessage(String(message || 'Não foi possível carregar esta mídia.'), true, true);
       showControls(true);
     };
 
@@ -8138,6 +8257,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!activeFileId || frameMode || overlay.hidden) return;
       if (activeMediaKind === 'audio' || audioMode) {
         showStreamError('O MP3 não pôde ser reproduzido. Confirme se o arquivo está público para qualquer pessoa com o link.');
+        return;
+      }
+      if (legacySmartTvMode) {
+        if (streamAttempt !== 'legacy-proxy') tryLegacyProxyStream();
+        else showStreamError('Esta Smart TV não conseguiu reproduzir o arquivo do Google Drive.');
         return;
       }
       frameMode = true;
@@ -8188,6 +8312,42 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }, retry ? 26000 : 18000);
     };
 
+    const tryLegacyProxyStream = () => {
+      if (!activeFileId || frameMode || overlay.hidden || streamAttempt === 'legacy-proxy') return;
+      mediaReady = false;
+      streamAttempt = 'legacy-proxy';
+      window.clearTimeout(fallbackTimer);
+      overlay.classList.remove('is-error');
+      setPlayerInteractive(false);
+      setLoadingMessage('Tentando o modo compatível para Smart TV...');
+      video.pause();
+      video.src = googleDriveLegacyStreamUrl(activeFileId, activeResourceKey, true);
+      video.load();
+      requestPlayback();
+      armFallbackTimer(() => {
+        if (mediaReady || overlay.hidden || frameMode) return;
+        showStreamError('Esta Smart TV não conseguiu decodificar o arquivo. Tente outro dispositivo ou uma versão MP4 H.264/AAC.');
+      }, 26000);
+    };
+
+    const tryLegacyDriveResolver = () => {
+      if (!activeFileId || frameMode || overlay.hidden || streamAttempt === 'legacy-resolver') return;
+      mediaReady = false;
+      streamAttempt = 'legacy-resolver';
+      window.clearTimeout(fallbackTimer);
+      overlay.classList.remove('is-error');
+      setPlayerInteractive(false);
+      setLoadingMessage('Preparando modo compatível para Smart TV...');
+      video.pause();
+      video.src = googleDriveLegacyStreamUrl(activeFileId, activeResourceKey, false);
+      video.load();
+      requestPlayback();
+      armFallbackTimer(() => {
+        if (mediaReady || overlay.hidden || frameMode) return;
+        tryLegacyProxyStream();
+      }, 16000);
+    };
+
     const tryDirectDriveStream = () => {
       if (!activeFileId || frameMode || overlay.hidden || streamAttempt === 'direct') return;
       if (activeMediaKind === 'audio' || audioMode) {
@@ -8214,7 +8374,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         else showStreamError('Não foi possível carregar o MP3. Verifique a permissão pública do arquivo no Google Drive.');
         return;
       }
-      if (streamAttempt === 'proxy') loadProxyStream(true);
+      if (streamAttempt === 'legacy-resolver') tryLegacyProxyStream();
+      else if (streamAttempt === 'legacy-proxy') showStreamError('Esta Smart TV não conseguiu reproduzir o arquivo do Google Drive.');
+      else if (streamAttempt === 'proxy') loadProxyStream(true);
       else if (streamAttempt === 'proxy-retry') showStreamError('Não foi possível carregar o MP3. Verifique a permissão pública do arquivo no Google Drive.');
       else useFrameFallback();
     };
@@ -8252,6 +8414,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeExternalUrl = '';
       streamAttempt = '';
       metadataProbeFinished = false;
+      legacySmartTvMode = false;
       applyBackdrop();
       overlay.classList.remove('is-open', 'is-frame-mode', 'is-drive-frame-mode', 'is-audio-frame-mode', 'is-youtube-mode', 'is-vk-api-mode', 'is-loading', 'is-error', 'controls-visible', 'controls-idle', 'fullscreen-ui-idle', 'center-skip-idle', 'is-paused', 'is-muted', 'is-browser-fullscreen');
       youtubeMuted = false;
@@ -8300,6 +8463,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frameMode = false;
       streamAttempt = '';
       metadataProbeFinished = false;
+      legacySmartTvMode = isLegacySmartTvBrowser();
       mediaReady = false;
       setAudioMode(activeMediaKind === 'audio');
       applyBackdrop();
@@ -8329,9 +8493,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (activeMediaKind === 'audio') {
         // Mantemos o proxy apenas para MP3, que depende do player HTML atual.
         loadProxyStream(false);
+      } else if (legacySmartTvMode) {
+        // TVs antigas recebem primeiro um endereço resolvido pelo mesmo domínio.
+        // Se o navegador não acompanhar bem o redirecionamento do Drive, o
+        // fallback retransmite apenas para esse modo legado, preservando Range.
+        tryLegacyDriveResolver();
       } else {
-        // Para vídeo, tenta o Google Drive diretamente e usa o iframe nativo
-        // como fallback. O filme não atravessa /api/drive-media.
+        // Navegadores atuais continuam usando o Drive diretamente e o iframe
+        // oficial como fallback, sem consumir transferência da Function.
         tryDirectDriveStream();
       }
       closeButton.focus({ preventScroll: true });
@@ -9134,8 +9303,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     logo.classList.toggle('notranslate', preserveTitle);
     if (preserveTitle) logo.setAttribute('translate', 'no'); else logo.removeAttribute('translate');
     if (logoUrl && logoUrl !== '#') {
+      const videoLogoClass = /\bsziget\b/i.test(String(title || '')) ? ' is-logo-sziget' : '';
       logo.innerHTML = collection === 'videos'
-        ? `<span class="detail-logo-media--video"><img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`
+        ? `<span class="detail-logo-media--video${videoLogoClass}"><img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(logoUrl)}" alt="${escapeHtml(title)}"></span>`
         : `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(logoUrl)}" alt="${escapeHtml(title)}">`;
     } else if (['movies', 'series'].includes(String(data.collection || '').toLowerCase())) {
       logo.innerHTML = `<span class="sr-only">${escapeHtml(title)}</span>`;

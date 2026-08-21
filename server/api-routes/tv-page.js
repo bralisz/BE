@@ -230,9 +230,9 @@ function isLegacyTvRequest(req) {
   if (!ua) return false;
   if (/netcast|maple|hbbtv|viera|aquos|nettv|inettvbrowser/i.test(ua)) return true;
   const tizen = ua.match(/tizen[\s\/](\d+)(?:\.|\b)/i);
-  if (tizen) return Number(tizen[1]) <= 6;
+  if (tizen) return Number(tizen[1]) <= 7;
   const webos = ua.match(/(?:web0s|webos)[\s\/](\d+)(?:\.|\b)/i);
-  if (webos) return Number(webos[1]) <= 6;
+  if (webos) return Number(webos[1]) <= 7;
   // Samsung Orsay e outros aparelhos pré-Tizen costumam expor apenas SMART-TV.
   if (/smart-tv|smarttv/i.test(ua)) return true;
   const chrome = ua.match(/(?:chrome|chromium)\/(\d+)/i);
@@ -379,7 +379,8 @@ function renderMedia(media, legacyPlayback, copy) {
       const resolved = `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey, tv: '1' })}`;
       const direct = `https://drive.usercontent.google.com/download?${qs({ id: drive.id, export: 'download', confirm: 't', authuser: '0', resourcekey: drive.resourceKey })}`;
       const alternate = `https://drive.google.com/uc?${qs({ id: drive.id, export: 'download', confirm: 't', resourcekey: drive.resourceKey })}`;
-      player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="auto" src="${escapeHtml(resolved)}" data-drive-src-1="${escapeHtml(resolved)}" data-drive-src-2="${escapeHtml(direct)}" data-drive-src-3="${escapeHtml(alternate)}" style="width:100%;height:100%;background:#000"></video>` +
+      const sameOriginProxy = `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey, tv: '1', proxy: '1' })}`;
+      player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="auto" src="${escapeHtml(resolved)}" data-drive-src-1="${escapeHtml(resolved)}" data-drive-src-2="${escapeHtml(direct)}" data-drive-src-3="${escapeHtml(alternate)}" data-drive-src-4="${escapeHtml(sameOriginProxy)}" style="width:100%;height:100%;background:#000"></video>` +
         `<iframe id="legacyDriveFallback" src="about:blank" data-src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media" frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
     } else {
       // TVs novas continuam usando o player oficial do Google Drive.

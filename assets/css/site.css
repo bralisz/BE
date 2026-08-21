@@ -12255,12 +12255,12 @@ body.site-loading-active.donate-page-active > footer{
 }
 @media(max-width:760px){
   .detail-logo-media--video{
-    width:min(94vw,430px);
-    height:158px;
-    max-width:calc(100vw - 24px);
+    width:min(88vw,390px);
+    height:128px;
+    max-width:calc(100vw - 36px);
   }
   .detail-logo-media--video > img{
-    transform:scale(1.30);
+    transform:scale(1.08);
     transform-origin:left bottom;
   }
 }
@@ -18161,6 +18161,20 @@ body.profile-page-active .profile-page-name{
   font-weight:650;
   text-align:left;
 }
+.player-subtitle-sync-notice-copy{display:grid;gap:5px;min-width:0}
+.player-subtitle-sync-notice-primary{display:block}
+.player-subtitle-sync-notice-secondary{
+  display:block;
+  color:rgba(255,255,255,.70);
+  font-size:11px;
+  line-height:1.36;
+  font-weight:560;
+  opacity:0;
+  transform:translateY(4px);
+  transition:opacity .36s ease,transform .36s ease;
+  will-change:opacity,transform;
+}
+.player-subtitle-sync-notice-secondary.is-visible{opacity:1;transform:translateY(0)}
 
 .external-native-player-subtitle-overlay,
 .drive-video-player-subtitle-overlay{
