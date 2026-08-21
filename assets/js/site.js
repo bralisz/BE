@@ -1112,8 +1112,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const publicDataMemoryCache = new Map();
   const HOME_BOOTSTRAP_COLLECTIONS = new Set(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
   const homeBootstrapMemoryCache = new Map();
-  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV5:';
-  const PUBLIC_DATA_REVISION = '20260820-subtitle-locale-v1';
+  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV4:';
   const HOME_BOOTSTRAP_BROWSER_TTL_MS = 30 * 60 * 1000;
   const HOME_BOOTSTRAP_MEMORY_TTL_MS = 10 * 60 * 1000;
   // Destaques mudam com mais frequência no Admin. Eles podem vir junto do
@@ -1214,7 +1213,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return browserPromise;
     }
 
-    const params = new URLSearchParams({ name: 'home-bootstrap', locale, rev: PUBLIC_DATA_REVISION });
+    const params = new URLSearchParams({ name: 'home-bootstrap', locale });
     const promise = fetch(`/api/public-data?${params.toString()}`, {
       method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
@@ -1243,7 +1242,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const cached = publicDataMemoryCache.get(cacheKey);
     if (cached && cached.expiresAt > nowMs) return cached.promise;
 
-    const params = new URLSearchParams({ name: normalizedName, locale, rev: PUBLIC_DATA_REVISION });
+    const params = new URLSearchParams({ name: normalizedName, locale });
     if (normalizedId) params.set('id', normalizedId);
     // Keep one response per collection/locale in memory. Public-data also has an
     // edge cache, so reloads and simultaneous visitors do not fan out into many
@@ -5459,44 +5458,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   const subtitleCueCache = new Map();
 
-  function normalizeSubtitleLocaleSlug(value) {
-    const raw = String(value || 'pt-br').trim().toLowerCase();
-    if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
-    if (raw === 'es' || raw.startsWith('es-')) return 'es';
-    if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
-    return 'pt-br';
-  }
-
-  function activeSubtitleLocaleSlug() {
-    return normalizeSubtitleLocaleSlug(activeLocaleSlug());
-  }
-
-  function subtitleUploadedLocale(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return '';
-    try {
-      const url = new URL(raw, location.origin);
-      const path = decodeURIComponent(url.pathname || '').toLowerCase();
-      const match = path.match(/(?:^|\/)(pt-br|pt|en-us|en|es|fr)[-_][^/]+\.(?:srt|vtt)$/i);
-      if (!match) return '';
-      const code = String(match[1] || '').toLowerCase();
-      if (code === 'pt' || code === 'pt-br') return 'pt-br';
-      if (code === 'en' || code === 'en-us') return 'en-us';
-      if (code === 'es') return 'es';
-      if (code === 'fr') return 'fr';
-    } catch (_) {}
-    return '';
-  }
-
-  function subtitleUrlForActiveLocale(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return '';
-    const locale = activeSubtitleLocaleSlug();
-    const uploadedLocale = subtitleUploadedLocale(raw);
-    // Arquivos antigos sem identificador de idioma são o fallback histórico PT.
-    return uploadedLocale ? (uploadedLocale === locale ? raw : '') : (locale === 'pt-br' ? raw : '');
-  }
-
   function subtitleFetchUrl(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -8554,7 +8515,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       mobileAppDriveUrl: String(data.mobileAppDriveUrl || ''),
       tvDriveUrl: String(data.mobileAppDriveUrl || ''),
       subtitleUrl: String(data.subtitleUrl || ''),
-      subtitleLocale: activeSubtitleLocaleSlug(),
+      subtitleLocale: String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase(),
       imageUrl: String(data.imageUrl || ''),
       bannerUrl: String(data.bannerUrl || ''),
       logoUrl: String(data.logoUrl || ''),
@@ -8737,7 +8698,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const contentUrl = collection === 'movies' && isInstalledMobileApp() && mobileDriveUrl
       ? mobileDriveUrl
       : defaultContentUrl;
-    const subtitleUrl = subtitleUrlForActiveLocale(data.subtitleUrl);
+    const subtitleUrl = data.subtitleUrl || '';
     const thumbnailUrl = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
     const bannerUrl = ['movies', 'series'].includes(collection)
       ? thumbnailUrl
@@ -8774,7 +8735,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const playableUrl = safeUrlValue(contentUrl);
     const hasContentLink = playableUrl !== '#';
-    const castableCollection = ['videos', 'movies', 'series'].includes(collection || 'videos');
+    const castableCollection = ['videos', 'movies'].includes(collection || 'videos');
     cast.hidden = !(hasContentLink && castableCollection);
     if (!cast.hidden) cast.removeAttribute('hidden'); else cast.setAttribute('hidden', '');
     play.innerHTML = hasContentLink
@@ -9288,7 +9249,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       duration:String(data?.duration || ''),
       contentUrl:String(data?.contentUrl || '#'),
       mobileAppDriveUrl:String(data?.mobileAppDriveUrl || data?.appDriveUrl || ''),
-      subtitleUrl:subtitleUrlForActiveLocale(data?.subtitleUrl),
+      subtitleUrl:String(data?.subtitleUrl || ''),
       imageUrl:String(data?.imageUrl || data?.thumbnailUrl || data?.bannerUrl || ''),
       bannerUrl:String(data?.bannerUrl || data?.imageUrl || data?.thumbnailUrl || ''),
       logoUrl:String(data?.logoUrl || ''),
