@@ -2304,7 +2304,7 @@ body.admin-preview-open{overflow:hidden}
     }).join('')}`;
   }
 
-  async function uploadMovieSubtitleFile(file, locale, folderKey, collection = 'movies') {
+  async function uploadMovieSubtitleFile(file, locale, folderKey) {
     if (!(file instanceof File) || !file.size) return '';
     if (file.size > 5 * 1024 * 1024) throw new Error('Cada arquivo de legenda pode ter no máximo 5 MB.');
     const name = String(file.name || '').trim();
@@ -2317,8 +2317,7 @@ body.admin-preview-open{overflow:hidden}
     const random = new Uint32Array(1);
     if (window.crypto?.getRandomValues) window.crypto.getRandomValues(random);
     const nonce = random[0] || Math.floor(Math.random() * 1e9);
-    const subtitleCollection = String(collection || '').toLowerCase() === 'series' ? 'series' : 'movies';
-    const path = `${subtitleCollection}/${cleanFolder}/${locale}-${Date.now()}-${nonce}.${extension}`;
+    const path = `movies/${cleanFolder}/${locale}-${Date.now()}-${nonce}.${extension}`;
     const contentType = extension === 'vtt' ? 'text/vtt' : 'application/x-subrip';
     const bucket = client.storage.from(MOVIE_SUBTITLE_BUCKET);
     const { data: uploadData, error } = await bucket.upload(path, file, {
@@ -2596,35 +2595,6 @@ body.admin-preview-open{overflow:hidden}
     ) || null;
   }
 
-
-  function setupVideoCardLogoToggle(root) {
-    const form = $('#editorForm', root);
-    const checkbox = form?.elements?.showCardLogo;
-    const toggle = $('[data-video-card-logo-toggle]', root);
-    if (!checkbox || !toggle) return;
-
-    const syncToggle = () => {
-      const checked = checkbox.checked === true;
-      toggle.classList.toggle('is-checked', checked);
-      toggle.setAttribute('aria-pressed', String(checked));
-    };
-
-    toggle.addEventListener('click', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      const scroller = $('.content-editor-fields', root);
-      const previousScrollTop = scroller ? scroller.scrollTop : 0;
-      checkbox.checked = !checkbox.checked;
-      syncToggle();
-      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-      requestAnimationFrame(() => {
-        if (scroller) scroller.scrollTop = previousScrollTop;
-      });
-    });
-
-    syncToggle();
-  }
-
   function setupImagePreviews(root, options = {}) {
     const galleryMode = String(options.collection || '') === 'gallery';
     const currentGalleryId = String(options.currentId || '');
@@ -2845,10 +2815,10 @@ body.admin-preview-open{overflow:hidden}
         <div class="form-grid modern-form-grid">
           ${imageField(isVisualTitle ? 'Imagem / thumbnail *' : 'Imagem / thumbnail *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
-          ${name === 'videos' ? `${imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. Você pode usar a logo somente nos detalhes ou também exibi-la no card.' })}<div class="video-card-logo-check field full" data-festivals-shows-card-logo-option${festivalsShowsVideo ? '' : ' hidden'}><input type="checkbox" name="showCardLogo" value="true" ${(item.showCardLogo === true || String(item.showCardLogo || '').toLowerCase() === 'true') ? 'checked' : ''} hidden><button type="button" class="video-card-logo-toggle" data-video-card-logo-toggle aria-pressed="${(item.showCardLogo === true || String(item.showCardLogo || '').toLowerCase() === 'true') ? 'true' : 'false'}"><span class="video-card-logo-checkmark" aria-hidden="true">✓</span><span class="video-card-logo-check-copy"><strong>Exibir logo no card</strong><small>Mostra a logo sobre a thumbnail do vídeo, como nos cards de filmes.</small></span></button></div>` : ''}
+          ${name === 'videos' ? imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. A logo aparece somente ao abrir os detalhes do conteúdo e não é exibida nos cards.' }) : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
           ${name === 'movies' ? `<div class="field full"><label>Google Drive para Smart TV <span style="font-weight:500;opacity:.7">(opcional)</span></label><input class="a-input" name="tvDriveUrl" value="${esc(item.tvDriveUrl || item.mobileAppDriveUrl || '')}" placeholder="https://drive.google.com/file/d/..."><small>Usado somente na TV/Smart TV. No PC, navegador mobile e app instalado, o site continua usando o “Link do conteúdo” acima. Se ficar vazio, a TV também usa o link principal.</small></div>` : ''}
-          ${['movies','series'].includes(name) ? movieSubtitleUploadFields(item) : ''}
+          ${name === 'movies' ? movieSubtitleUploadFields(item) : ''}
         </div>
       </section>
 
@@ -2904,7 +2874,7 @@ body.admin-preview-open{overflow:hidden}
         </div>
         <div class="editor-preview-rail">
           <small>Card da seção</small>
-          <div class="editor-preview-card" data-preview-card><span>Imagem do conteúdo</span><span class="editor-preview-card-logo" data-preview-card-logo hidden></span></div>
+          <div class="editor-preview-card" data-preview-card><span>Imagem do conteúdo</span></div>
         </div>
       </div>
       <div class="preview-help"><span>✓</span><p>A prévia é atualizada enquanto você edita. O rascunho é salvo no navegador ao trocar de aba ou recarregar a página.</p></div>
@@ -2924,7 +2894,6 @@ body.admin-preview-open{overflow:hidden}
     const previewYear = $('[data-preview-year]', root);
     const previewDuration = $('[data-preview-duration]', root);
     const previewCard = $('[data-preview-card]', root);
-    const previewCardLogo = $('[data-preview-card-logo]', root);
     const previewPane = $('.content-live-preview', root);
     const previewToggle = $('[data-preview-toggle]', root);
     const previewClose = $('[data-preview-close]', root);
@@ -2979,22 +2948,12 @@ body.admin-preview-open{overflow:hidden}
       } else {
         previewLogo.textContent = title;
       }
-      if (previewCardLogo) {
-        const logoOnCard = name !== 'videos' || form.elements.showCardLogo?.checked === true;
-        const showPreviewCardLogo = Boolean(logo && logoOnCard && (name !== 'videos' || festivalDetailLogo));
-        previewCardLogo.hidden = !showPreviewCardLogo;
-        previewCardLogo.innerHTML = showPreviewCardLogo ? `<img loading="lazy" decoding="async" src="${esc(media(logo))}" alt="">` : '';
-      }
       if (previewDescription) previewDescription.innerHTML = adminMarkdownToHtml(descriptionText);
       previewYear.textContent = year;
       previewDuration.textContent = duration;
       if (descriptionCount && description) descriptionCount.textContent = String(description.value.length);
     };
-    const snapshot = () => {
-      const data = Object.fromEntries(new FormData(form).entries());
-      if (name === 'videos' && form.elements.showCardLogo) data.showCardLogo = form.elements.showCardLogo.checked ? 'true' : 'false';
-      return data;
-    };
+    const snapshot = () => Object.fromEntries(new FormData(form).entries());
     const saveDraft = immediate => {
       if (timer) clearTimeout(timer);
       const execute = () => {
@@ -3256,7 +3215,6 @@ body.admin-preview-open{overflow:hidden}
     if (modernEditor && $('#footerCancelButton', root)) $('#footerCancelButton', root).onclick = closeEditor;
     if (!modernEditor) wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
     setupImagePreviews(root, { collection: name, currentId: item?.id || '' });
-    if (name === 'videos') setupVideoCardLogoToggle(root);
     if (name === 'featured') setupFeaturedContentPicker(root, context, draft);
     if (modernEditor) draftController = setupModernContentEditor(root, name, item, draftKey, storedDraft);
     if (name === 'news') setupAlbumTrackEditor(root);
@@ -3271,11 +3229,8 @@ body.admin-preview-open{overflow:hidden}
         hidden.value = match ? match.id : '';
         search.setCustomValidity(match ? '' : 'Selecione uma seção criada em Seções do site.');
         if (name === 'videos') {
-          const festivalsShows = isFestivalsShowsSection(match || search.value);
           const logoField = $('[data-festivals-shows-logo-field]', root);
-          const cardLogoOption = $('[data-festivals-shows-card-logo-option]', root);
-          if (logoField) logoField.hidden = !festivalsShows;
-          if (cardLogoOption) cardLogoOption.hidden = !festivalsShows;
+          if (logoField) logoField.hidden = !isFestivalsShowsSection(match || search.value);
         }
       };
       search.addEventListener('input', syncSection);
@@ -3375,24 +3330,6 @@ body.admin-preview-open{overflow:hidden}
           delete data.contentUrl;
           delete data.link;
         }
-        if (['movies','series'].includes(name)) {
-          const subtitleTracks = {};
-          const subtitleFolderKey = item?.id || `draft-${generatePublicId(`${String(data.title || '').trim()}-${Date.now()}`)}`;
-          for (const [locale, , suffix] of MOVIE_SUBTITLE_LANGUAGES) {
-            const existingUrl = String(data[`subtitleExisting${suffix}`] || '').trim();
-            const removeExisting = String(data[`subtitleRemove${suffix}`] || '').toLowerCase() === 'true';
-            const file = formData.get(`subtitleFile${suffix}`);
-            let url = removeExisting ? '' : existingUrl;
-            if (file instanceof File && file.size) url = await uploadMovieSubtitleFile(file, locale, subtitleFolderKey, name);
-            if (url) subtitleTracks[locale] = url;
-            delete data[`subtitleExisting${suffix}`];
-            delete data[`subtitleFile${suffix}`];
-            delete data[`subtitleRemove${suffix}`];
-          }
-          data.subtitleTracks = subtitleTracks;
-          // Mantém um fallback em português para versões antigas do catálogo/player.
-          data.subtitleUrl = String(subtitleTracks.pt || subtitleTracks.es || subtitleTracks.fr || '').trim();
-        }
         if (name === 'movies') {
           // O segundo link do editor é exclusivo da TV. Mantemos também a
           // chave legada mobileAppDriveUrl para não quebrar filmes antigos,
@@ -3402,6 +3339,22 @@ body.admin-preview-open{overflow:hidden}
             throw new Error('O link opcional para TV deve ser um link HTTPS do Google Drive.');
           }
           data.mobileAppDriveUrl = data.tvDriveUrl;
+          const subtitleTracks = {};
+          const subtitleFolderKey = item?.id || `draft-${generatePublicId(`${String(data.title || '').trim()}-${Date.now()}`)}`;
+          for (const [locale, , suffix] of MOVIE_SUBTITLE_LANGUAGES) {
+            const existingUrl = String(data[`subtitleExisting${suffix}`] || '').trim();
+            const removeExisting = String(data[`subtitleRemove${suffix}`] || '').toLowerCase() === 'true';
+            const file = formData.get(`subtitleFile${suffix}`);
+            let url = removeExisting ? '' : existingUrl;
+            if (file instanceof File && file.size) url = await uploadMovieSubtitleFile(file, locale, subtitleFolderKey);
+            if (url) subtitleTracks[locale] = url;
+            delete data[`subtitleExisting${suffix}`];
+            delete data[`subtitleFile${suffix}`];
+            delete data[`subtitleRemove${suffix}`];
+          }
+          data.subtitleTracks = subtitleTracks;
+          // Mantém um fallback em português para versões antigas do catálogo/player.
+          data.subtitleUrl = String(subtitleTracks.pt || subtitleTracks.es || subtitleTracks.fr || '').trim();
           // Persiste os streamings marcados e o link direto do filme em cada serviço.
           const selectedStreaming = [];
           const streamingLinks = {};
@@ -3442,12 +3395,7 @@ body.admin-preview-open{overflow:hidden}
           data.sectionName = String(selected.title || selected.category || selected.id).trim();
           data.category = String(selected.category || selected.slug || selected.id).trim().toLowerCase();
           data.type = data.sectionName;
-          if (name === 'videos') {
-            const festivalsShows = isFestivalsShowsSection(selected);
-            data.showCardLogo = festivalsShows && form.elements.showCardLogo?.checked === true;
-            if (!festivalsShows) data.logoUrl = '';
-            if (!String(data.logoUrl || '').trim()) data.showCardLogo = false;
-          }
+          if (name === 'videos' && !isFestivalsShowsSection(selected)) data.logoUrl = '';
           delete data.sectionSearch;
         }
         if (name === 'videos') {
@@ -5323,32 +5271,6 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
 })();
 
 
-/* Opção minimalista para exibir a logo também no card de Vídeos. */
-(() => {
-  if (document.getElementById('be-admin-video-card-logo-option-style')) return;
-  const style = document.createElement('style');
-  style.id = 'be-admin-video-card-logo-option-style';
-  style.textContent = `
-    body.admin-mode .video-card-logo-check{grid-column:1/-1;display:block!important;width:max-content;max-width:100%;margin-top:-5px;padding:0;color:#dbe6f3;user-select:none}
-    body.admin-mode .video-card-logo-check[hidden]{display:none!important}
-    body.admin-mode .video-card-logo-check>input[hidden]{display:none!important}
-    body.admin-mode .video-card-logo-toggle{display:flex;align-items:center;gap:9px;width:max-content;max-width:100%;margin:0;padding:2px 1px;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}
-    body.admin-mode .video-card-logo-checkmark{width:18px;height:18px;flex:0 0 18px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:5px;background:rgba(255,255,255,.025);color:transparent;font-size:11px;font-weight:900;line-height:1;transition:.15s ease}
-    body.admin-mode .video-card-logo-toggle:hover .video-card-logo-checkmark{border-color:rgba(255,255,255,.42)}
-    body.admin-mode .video-card-logo-toggle.is-checked .video-card-logo-checkmark{border-color:#43d19e;background:#43d19e;color:#062119}
-    body.admin-mode .video-card-logo-toggle:focus-visible{outline:none}
-    body.admin-mode .video-card-logo-toggle:focus-visible .video-card-logo-checkmark{outline:2px solid #5ac8fa;outline-offset:3px}
-    body.admin-mode .video-card-logo-check-copy{display:grid;gap:1px;min-width:0}
-    body.admin-mode .video-card-logo-check-copy strong{font-size:12px;font-weight:750;color:#eef5fc}
-    body.admin-mode .video-card-logo-check-copy small{font-size:10.5px;line-height:1.35;color:rgba(235,235,245,.48)}
-    body.admin-mode .editor-preview-card{position:relative;overflow:hidden}
-    body.admin-mode .editor-preview-card-logo{position:absolute;left:12px;right:12px;bottom:11px;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
-    body.admin-mode .editor-preview-card-logo[hidden]{display:none!important}
-    body.admin-mode .editor-preview-card-logo img{display:block;max-width:min(72%,190px);max-height:54px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(0,0,0,.52))}
-  `;
-  document.head.appendChild(style);
-})();
-
 /* Painel administrativo. */
 (() => {
   if (document.getElementById('be-admin-ios-2026-style')) return;
@@ -6351,4 +6273,200 @@ body.admin-mode .editor-preview-logo{max-width:100%!important;overflow-wrap:anyw
   style.id='be-admin-mobile-final-polish-20260811';
   style.textContent="/* Editor de conteúdo. */\n@media(max-width:800px){\n  /* Galeria: igual ao desktop, só botões de texto e sem cards/ícones de criação. */\n  body.admin-mode .gallery-title-row{\n    display:grid!important;\n    grid-template-columns:1fr!important;\n    gap:12px!important;\n    align-items:start!important;\n  }\n  body.admin-mode .gallery-title-row>div:first-child p,\n  body.admin-mode .gallery-title-row>div:first-child .dashboard-kicker{display:none!important}\n  body.admin-mode .gallery-desktop-actions{\n    display:grid!important;\n    grid-template-columns:repeat(2,minmax(0,1fr))!important;\n    width:100%!important;\n    margin:0!important;\n    gap:8px!important;\n  }\n  body.admin-mode .gallery-desktop-actions .gallery-header-action{\n    width:100%!important;\n    min-width:0!important;\n    min-height:44px!important;\n    margin:0!important;\n    padding:0 10px!important;\n    border-radius:13px!important;\n    font-size:12px!important;\n    white-space:nowrap!important;\n  }\n  body.admin-mode .gallery-create-panel{display:none!important}\n\n  /* Editor de vídeos/conteúdo: tabs sempre legíveis e grupos ocultos respeitam a etapa ativa. */\n  body.admin-mode .ios-editor-stepbar-wrap{\n    width:100%!important;\n    min-width:0!important;\n    padding:7px 8px 9px!important;\n    overflow:hidden!important;\n  }\n  body.admin-mode .ios-editor-stepbar{\n    display:grid!important;\n    grid-auto-flow:column!important;\n    grid-auto-columns:minmax(108px,1fr)!important;\n    width:100%!important;\n    min-width:0!important;\n    gap:6px!important;\n    padding:0!important;\n    overflow-x:auto!important;\n    overflow-y:hidden!important;\n    scroll-snap-type:x proximity!important;\n    scrollbar-width:none!important;\n    -webkit-overflow-scrolling:touch!important;\n  }\n  body.admin-mode .ios-editor-stepbar::-webkit-scrollbar{display:none!important}\n  body.admin-mode .ios-editor-stepbar button{\n    display:flex!important;\n    align-items:center!important;\n    justify-content:center!important;\n    width:100%!important;\n    min-width:0!important;\n    min-height:44px!important;\n    padding:6px 9px!important;\n    gap:0!important;\n    border:1px solid rgba(255,255,255,.07)!important;\n    border-radius:12px!important;\n    background:rgba(255,255,255,.035)!important;\n    color:rgba(235,235,245,.68)!important;\n    scroll-snap-align:start!important;\n    overflow:hidden!important;\n  }\n  body.admin-mode .ios-editor-stepbar button>span{display:none!important}\n  body.admin-mode .ios-editor-stepbar button strong{\n    display:block!important;\n    width:100%!important;\n    max-width:none!important;\n    margin:0!important;\n    color:inherit!important;\n    opacity:1!important;\n    font-size:11px!important;\n    font-weight:700!important;\n    line-height:1.15!important;\n    text-align:center!important;\n    white-space:normal!important;\n    overflow:visible!important;\n    text-overflow:clip!important;\n  }\n  body.admin-mode .ios-editor-stepbar button.active{\n    border-color:rgba(10,132,255,.32)!important;\n    background:rgba(10,132,255,.16)!important;\n    color:#fff!important;\n  }\n  body.admin-mode .content-editor-fields>.editor-field-group[hidden]{display:none!important}\n  body.admin-mode .content-editor-fields>.editor-field-group.is-step-active{\n    display:grid!important;\n    visibility:visible!important;\n    opacity:1!important;\n  }\n  body.admin-mode .admin-content.admin-editor-active .content-editor-fields{\n    width:100%!important;\n    min-width:0!important;\n    padding:10px!important;\n    overflow:visible!important;\n  }\n  body.admin-mode .content-editor-fields>.editor-field-group{\n    width:100%!important;\n    min-width:0!important;\n    margin:0!important;\n    padding:15px 13px!important;\n  }\n  body.admin-mode .content-editor-action-buttons{\n    display:grid!important;\n    grid-template-columns:1fr 1fr 1.2fr!important;\n    width:100%!important;\n    gap:7px!important;\n  }\n  body.admin-mode .content-editor-action-buttons .a-btn,\n  body.admin-mode .content-editor-action-buttons .editor-cancel-button,\n  body.admin-mode #footerCancelButton{\n    display:flex!important;\n    align-items:center!important;\n    justify-content:center!important;\n    width:100%!important;\n    min-width:0!important;\n    min-height:44px!important;\n    padding:0 8px!important;\n    color:#fff!important;\n    opacity:1!important;\n    font-size:12px!important;\n    font-weight:700!important;\n    line-height:1!important;\n    text-indent:0!important;\n    white-space:nowrap!important;\n  }\n  body.admin-mode .content-editor-action-buttons .editor-footer-preview-button{\n    background:#fff!important;\n    border-color:#fff!important;\n    color:#111!important;\n  }\n  body.admin-mode .content-editor-action-buttons .editor-save-button{\n    background:#0a84ff!important;\n    border-color:#0a84ff!important;\n    color:#fff!important;\n  }\n}\n@media(max-width:420px){\n  body.admin-mode .ios-editor-stepbar{grid-auto-columns:minmax(102px,1fr)!important}\n  body.admin-mode .gallery-desktop-actions .gallery-header-action{font-size:11.5px!important;padding:0 7px!important}\n}";
   document.head.appendChild(style);
+})();
+
+
+(()=>{
+  'use strict';
+  const STYLE_ID='be-admin-content-editor-layout-20260821';
+
+  function injectStyles(){
+    if(document.getElementById(STYLE_ID)) return;
+    const style=document.createElement('style');
+    style.id=STYLE_ID;
+    style.textContent=`
+body.admin-mode .content-editor-header-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+body.admin-mode .content-editor-header .editor-header-preview-button{min-width:118px;white-space:nowrap;background:rgba(255,255,255,.96)!important;border-color:rgba(255,255,255,.96)!important;color:#111!important}
+body.admin-mode .content-editor-header .editor-header-preview-button:hover{background:#fff!important;border-color:#fff!important}
+@media(min-width:1024px){
+  body.admin-mode .admin-content.admin-editor-active{max-width:none!important;padding:18px 20px 26px!important}
+  body.admin-mode .content-editor-inline-shell{width:100%!important;max-width:none!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout{
+    width:min(1480px,calc(100vw - 40px))!important;
+    max-width:none!important;
+    max-height:calc(100dvh - 24px)!important;
+    display:grid!important;
+    grid-template-columns:240px minmax(0,1fr)!important;
+    grid-template-rows:auto minmax(0,1fr)!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-header{
+    grid-column:1/-1!important;
+    display:flex!important;
+    align-items:flex-start!important;
+    justify-content:space-between!important;
+    gap:16px!important;
+    padding:24px 28px 18px!important;
+    border-bottom:1px solid rgba(255,255,255,.08)!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-heading{max-width:900px!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-heading p{max-width:760px!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .ios-editor-stepbar-wrap{
+    grid-column:1!important;
+    grid-row:2!important;
+    display:flex!important;
+    flex-direction:column!important;
+    gap:14px!important;
+    min-width:0!important;
+    padding:18px 16px 20px!important;
+    border-right:1px solid rgba(255,255,255,.08)!important;
+    border-bottom:0!important;
+    background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.015))!important;
+    overflow:hidden!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .ios-editor-stepbar-wrap:after{display:none!important}
+  body.admin-mode .editor-sidebar-title{display:grid;gap:4px;padding:2px 6px 0}
+  body.admin-mode .editor-sidebar-title span{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(235,235,245,.42)}
+  body.admin-mode .editor-sidebar-title strong{font-size:18px;line-height:1.1;color:#fff}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .ios-editor-stepbar{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+    align-content:start!important;
+    overflow:auto!important;
+    padding:2px 4px 2px 0!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .ios-editor-stepbar button{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:12px!important;
+    width:100%!important;
+    min-height:54px!important;
+    padding:0 14px!important;
+    border-radius:16px!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .ios-editor-stepbar button>span{
+    display:grid!important;
+    place-items:center!important;
+    flex:0 0 26px!important;
+    width:26px!important;
+    height:26px!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .ios-editor-stepbar button strong{
+    display:block!important;
+    max-width:none!important;
+    font-size:13px!important;
+    line-height:1.25!important;
+    white-space:normal!important;
+    text-align:left!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .modern-content-form{
+    grid-column:2!important;
+    grid-row:2!important;
+    display:grid!important;
+    grid-template-rows:minmax(0,1fr) auto!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-layout{display:block!important;min-height:0!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-fields{
+    height:100%!important;
+    max-height:none!important;
+    overflow:auto!important;
+    padding:20px 24px 24px!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-fields>.editor-field-group{
+    display:grid!important;
+    gap:18px!important;
+    margin:0 0 18px!important;
+    padding:20px!important;
+    border:1px solid rgba(255,255,255,.08)!important;
+    border-radius:24px!important;
+    background:rgba(255,255,255,.03)!important;
+    box-shadow:none!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-fields>.editor-field-group:last-child{margin-bottom:0!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .editor-group-heading{margin-bottom:0!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .modern-form-grid{gap:14px 16px!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-actions{
+    padding:14px 24px 18px!important;
+    border-top:1px solid rgba(255,255,255,.08)!important;
+    background:rgba(8,10,15,.94)!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-action-buttons{margin-left:auto!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-editor-action-buttons .editor-footer-preview-button{display:none!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .editor-step-summary{padding-right:20px!important}
+  body.admin-mode .content-editor-modal.inline.editor-two-column-layout .content-live-preview{z-index:80!important}
+}
+@media(max-width:1023px){
+  body.admin-mode .content-editor-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  body.admin-mode .content-editor-header .content-editor-heading{flex:1 1 240px}
+  body.admin-mode .content-editor-header .content-editor-header-actions{margin-left:auto}
+  body.admin-mode .content-editor-actions .editor-footer-preview-button{display:none!important}
+}
+`;
+    document.head.appendChild(style);
+  }
+
+  function enhanceEditor(shell){
+    if(!shell || shell.dataset.betvEditorLayoutEnhanced==='true') return;
+    const modal=shell.querySelector('.content-editor-modal.inline');
+    const stepbarWrap=shell.querySelector('.ios-editor-stepbar-wrap');
+    const form=shell.querySelector('#editorForm');
+    const header=shell.querySelector('.content-editor-header');
+    if(!modal || !stepbarWrap || !form || !header) return;
+
+    shell.dataset.betvEditorLayoutEnhanced='true';
+    modal.classList.add('editor-two-column-layout');
+
+    let sidebarTitle=stepbarWrap.querySelector('.editor-sidebar-title');
+    if(!sidebarTitle){
+      sidebarTitle=document.createElement('div');
+      sidebarTitle.className='editor-sidebar-title';
+      sidebarTitle.innerHTML='<span>Etapas</span><strong>Configurações</strong>';
+      stepbarWrap.prepend(sidebarTitle);
+    }
+
+    let headerActions=header.querySelector('.content-editor-header-actions');
+    if(!headerActions){
+      headerActions=document.createElement('div');
+      headerActions.className='content-editor-header-actions';
+      header.appendChild(headerActions);
+    }
+
+    const previewButton=form.querySelector('[data-preview-toggle]');
+    if(previewButton){
+      previewButton.classList.add('editor-header-preview-button');
+      if(previewButton.parentElement!==headerActions){
+        headerActions.appendChild(previewButton);
+      }
+    }
+
+    const summary=form.querySelector('.editor-step-summary');
+    if(summary) summary.classList.add('editor-step-summary-compact');
+  }
+
+  function scan(scope=document){
+    scope.querySelectorAll?.('.content-editor-inline-shell').forEach(enhanceEditor);
+  }
+
+  injectStyles();
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>scan(),{once:true});
+  }else{
+    scan();
+  }
+
+  const observer=new MutationObserver(mutations=>{
+    mutations.forEach(mutation=>{
+      mutation.addedNodes.forEach(node=>{
+        if(!(node instanceof Element)) return;
+        if(node.matches?.('.content-editor-inline-shell')) enhanceEditor(node);
+        else scan(node);
+      });
+    });
+  });
+  observer.observe(document.documentElement,{childList:true,subtree:true});
 })();
