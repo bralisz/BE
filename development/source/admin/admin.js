@@ -2304,7 +2304,7 @@ body.admin-preview-open{overflow:hidden}
     }).join('')}`;
   }
 
-  async function uploadMovieSubtitleFile(file, locale, folderKey) {
+  async function uploadMovieSubtitleFile(file, locale, folderKey, collection = 'movies') {
     if (!(file instanceof File) || !file.size) return '';
     if (file.size > 5 * 1024 * 1024) throw new Error('Cada arquivo de legenda pode ter no máximo 5 MB.');
     const name = String(file.name || '').trim();
@@ -2317,7 +2317,8 @@ body.admin-preview-open{overflow:hidden}
     const random = new Uint32Array(1);
     if (window.crypto?.getRandomValues) window.crypto.getRandomValues(random);
     const nonce = random[0] || Math.floor(Math.random() * 1e9);
-    const path = `movies/${cleanFolder}/${locale}-${Date.now()}-${nonce}.${extension}`;
+    const subtitleCollection = String(collection || '').toLowerCase() === 'series' ? 'series' : 'movies';
+    const path = `${subtitleCollection}/${cleanFolder}/${locale}-${Date.now()}-${nonce}.${extension}`;
     const contentType = extension === 'vtt' ? 'text/vtt' : 'application/x-subrip';
     const bucket = client.storage.from(MOVIE_SUBTITLE_BUCKET);
     const { data: uploadData, error } = await bucket.upload(path, file, {
@@ -2818,7 +2819,7 @@ body.admin-preview-open{overflow:hidden}
           ${name === 'videos' ? imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. A logo aparece somente ao abrir os detalhes do conteúdo e não é exibida nos cards.' }) : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
           ${name === 'movies' ? `<div class="field full"><label>Google Drive para Smart TV <span style="font-weight:500;opacity:.7">(opcional)</span></label><input class="a-input" name="tvDriveUrl" value="${esc(item.tvDriveUrl || item.mobileAppDriveUrl || '')}" placeholder="https://drive.google.com/file/d/..."><small>Usado somente na TV/Smart TV. No PC, navegador mobile e app instalado, o site continua usando o “Link do conteúdo” acima. Se ficar vazio, a TV também usa o link principal.</small></div>` : ''}
-          ${name === 'movies' ? movieSubtitleUploadFields(item) : ''}
+          ${['movies','series'].includes(name) ? movieSubtitleUploadFields(item) : ''}
         </div>
       </section>
 
@@ -3330,6 +3331,24 @@ body.admin-preview-open{overflow:hidden}
           delete data.contentUrl;
           delete data.link;
         }
+        if (['movies','series'].includes(name)) {
+          const subtitleTracks = {};
+          const subtitleFolderKey = item?.id || `draft-${generatePublicId(`${String(data.title || '').trim()}-${Date.now()}`)}`;
+          for (const [locale, , suffix] of MOVIE_SUBTITLE_LANGUAGES) {
+            const existingUrl = String(data[`subtitleExisting${suffix}`] || '').trim();
+            const removeExisting = String(data[`subtitleRemove${suffix}`] || '').toLowerCase() === 'true';
+            const file = formData.get(`subtitleFile${suffix}`);
+            let url = removeExisting ? '' : existingUrl;
+            if (file instanceof File && file.size) url = await uploadMovieSubtitleFile(file, locale, subtitleFolderKey, name);
+            if (url) subtitleTracks[locale] = url;
+            delete data[`subtitleExisting${suffix}`];
+            delete data[`subtitleFile${suffix}`];
+            delete data[`subtitleRemove${suffix}`];
+          }
+          data.subtitleTracks = subtitleTracks;
+          // Mantém um fallback em português para versões antigas do catálogo/player.
+          data.subtitleUrl = String(subtitleTracks.pt || subtitleTracks.es || subtitleTracks.fr || '').trim();
+        }
         if (name === 'movies') {
           // O segundo link do editor é exclusivo da TV. Mantemos também a
           // chave legada mobileAppDriveUrl para não quebrar filmes antigos,
@@ -3339,22 +3358,6 @@ body.admin-preview-open{overflow:hidden}
             throw new Error('O link opcional para TV deve ser um link HTTPS do Google Drive.');
           }
           data.mobileAppDriveUrl = data.tvDriveUrl;
-          const subtitleTracks = {};
-          const subtitleFolderKey = item?.id || `draft-${generatePublicId(`${String(data.title || '').trim()}-${Date.now()}`)}`;
-          for (const [locale, , suffix] of MOVIE_SUBTITLE_LANGUAGES) {
-            const existingUrl = String(data[`subtitleExisting${suffix}`] || '').trim();
-            const removeExisting = String(data[`subtitleRemove${suffix}`] || '').toLowerCase() === 'true';
-            const file = formData.get(`subtitleFile${suffix}`);
-            let url = removeExisting ? '' : existingUrl;
-            if (file instanceof File && file.size) url = await uploadMovieSubtitleFile(file, locale, subtitleFolderKey);
-            if (url) subtitleTracks[locale] = url;
-            delete data[`subtitleExisting${suffix}`];
-            delete data[`subtitleFile${suffix}`];
-            delete data[`subtitleRemove${suffix}`];
-          }
-          data.subtitleTracks = subtitleTracks;
-          // Mantém um fallback em português para versões antigas do catálogo/player.
-          data.subtitleUrl = String(subtitleTracks.pt || subtitleTracks.es || subtitleTracks.fr || '').trim();
           // Persiste os streamings marcados e o link direto do filme em cada serviço.
           const selectedStreaming = [];
           const streamingLinks = {};
