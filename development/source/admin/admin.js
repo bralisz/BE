@@ -6470,3 +6470,295 @@ body.admin-mode .content-editor-header .editor-header-preview-button:hover{backg
   });
   observer.observe(document.documentElement,{childList:true,subtree:true});
 })();
+
+
+(()=>{
+  'use strict';
+  const STYLE_ID='be-admin-content-editor-layout-refined-20260821';
+
+  function injectStyles(){
+    if(document.getElementById(STYLE_ID)) return;
+    const style=document.createElement('style');
+    style.id=STYLE_ID;
+    style.textContent=`
+@media(min-width:1024px){
+  body.admin-mode .admin-content.admin-editor-active{max-width:none!important;padding:18px 24px 28px!important}
+  body.admin-mode .content-editor-inline-shell{width:100%!important;max-width:none!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout{
+    width:min(1560px,calc(100vw - 48px))!important;
+    max-width:none!important;
+    max-height:none!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+    overflow:visible!important;
+    display:grid!important;
+    grid-template-columns:250px minmax(0,1fr)!important;
+    grid-template-areas:
+      "header header"
+      "sidebar panel"
+      ". actions"!important;
+    gap:18px 26px!important;
+    align-items:start!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-header{
+    grid-area:header!important;
+    display:flex!important;
+    align-items:flex-start!important;
+    justify-content:space-between!important;
+    gap:18px!important;
+    padding:0 4px!important;
+    margin:0!important;
+    border:0!important;
+    background:transparent!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-heading{max-width:940px!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-heading p{max-width:720px!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-header-actions{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:10px!important;
+    margin-left:auto!important;
+    padding-top:28px!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .editor-header-preview-button{
+    min-width:144px!important;
+    min-height:50px!important;
+    padding:0 24px!important;
+    border-radius:18px!important;
+    background:#f4f4f5!important;
+    border-color:#f4f4f5!important;
+    color:#111!important;
+    box-shadow:none!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar-wrap{
+    grid-area:sidebar!important;
+    display:grid!important;
+    gap:14px!important;
+    align-content:start!important;
+    min-width:0!important;
+    padding:28px 0 0!important;
+    border:0!important;
+    background:transparent!important;
+    overflow:visible!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar-wrap:after{display:none!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .editor-sidebar-title{
+    display:grid!important;
+    gap:3px!important;
+    padding:0 10px!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .editor-sidebar-title span{
+    font-size:12px!important;
+    font-weight:800!important;
+    letter-spacing:.08em!important;
+    text-transform:uppercase!important;
+    color:rgba(235,235,245,.48)!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .editor-sidebar-title strong{
+    font-size:18px!important;
+    line-height:1.08!important;
+    color:#fff!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:12px!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar button{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:14px!important;
+    width:100%!important;
+    min-height:72px!important;
+    padding:0 18px!important;
+    border:1px solid rgba(255,255,255,.08)!important;
+    border-radius:22px!important;
+    background:rgba(255,255,255,.035)!important;
+    color:rgba(255,255,255,.76)!important;
+    box-shadow:none!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar button:hover{
+    border-color:rgba(255,255,255,.14)!important;
+    background:rgba(255,255,255,.055)!important;
+    color:#fff!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar button>span{
+    display:grid!important;
+    place-items:center!important;
+    width:30px!important;
+    height:30px!important;
+    flex:0 0 30px!important;
+    border-radius:999px!important;
+    background:rgba(255,255,255,.08)!important;
+    color:rgba(255,255,255,.72)!important;
+    font-size:13px!important;
+    font-weight:800!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar button strong{
+    display:block!important;
+    max-width:none!important;
+    font-size:17px!important;
+    line-height:1.08!important;
+    white-space:normal!important;
+    text-align:left!important;
+    color:inherit!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar button.active{
+    background:rgba(255,255,255,.10)!important;
+    border-color:rgba(255,255,255,.12)!important;
+    color:#fff!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar button.active>span{
+    background:rgba(10,132,255,.88)!important;
+    color:#fff!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar button.done{
+    color:rgba(255,255,255,.72)!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .ios-editor-stepbar button.done>span{
+    background:rgba(255,255,255,.08)!important;
+    color:rgba(255,255,255,.72)!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .modern-content-form{
+    display:contents!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-layout{
+    grid-area:panel!important;
+    display:block!important;
+    min-height:0!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-fields{
+    width:100%!important;
+    min-width:0!important;
+    min-height:640px!important;
+    max-height:calc(100dvh - 250px)!important;
+    padding:26px 28px!important;
+    overflow:auto!important;
+    border:1px solid rgba(255,255,255,.08)!important;
+    border-radius:34px!important;
+    background:linear-gradient(180deg,rgba(26,27,31,.96),rgba(14,15,18,.96))!important;
+    box-shadow:0 26px 60px rgba(0,0,0,.22)!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-fields>.editor-field-group{
+    margin:0!important;
+    padding:18px 0 0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-fields>.editor-field-group:first-child{padding-top:0!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-fields>.editor-field-group[hidden]{display:none!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-fields>.editor-field-group.is-step-active{display:grid!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .editor-group-heading{
+    margin:0 0 18px!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .modern-form-grid{
+    gap:14px 16px!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-actions{
+    grid-area:actions!important;
+    display:flex!important;
+    justify-content:flex-end!important;
+    align-items:center!important;
+    gap:14px!important;
+    min-height:auto!important;
+    padding:0 0 0 0!important;
+    border:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .editor-step-summary{display:none!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-action-buttons{
+    display:flex!important;
+    justify-content:flex-end!important;
+    align-items:center!important;
+    gap:12px!important;
+    margin-left:auto!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-action-buttons .editor-footer-preview-button{display:none!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-action-buttons .a-btn{
+    min-width:126px!important;
+    min-height:50px!important;
+    padding:0 26px!important;
+    border-radius:18px!important;
+  }
+}
+@media(max-width:1023px){
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-header{
+    display:flex!important;
+    align-items:flex-start!important;
+    justify-content:space-between!important;
+    gap:12px!important;
+    flex-wrap:wrap!important;
+  }
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-heading{flex:1 1 260px!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-header-actions{margin-left:auto!important}
+  body.admin-mode .content-editor-modal.inline.editor-outside-panel-layout .content-editor-actions .editor-footer-preview-button{display:none!important}
+}
+`;
+    document.head.appendChild(style);
+  }
+
+  function enhanceEditor(shell){
+    if(!shell || shell.dataset.betvEditorLayoutRefined==='true') return;
+    const modal=shell.querySelector('.content-editor-modal.inline');
+    const stepbarWrap=shell.querySelector('.ios-editor-stepbar-wrap');
+    const form=shell.querySelector('#editorForm');
+    const header=shell.querySelector('.content-editor-header');
+    if(!modal || !stepbarWrap || !form || !header) return;
+
+    shell.dataset.betvEditorLayoutRefined='true';
+    modal.classList.remove('editor-two-column-layout');
+    modal.classList.add('editor-outside-panel-layout');
+
+    let sidebarTitle=stepbarWrap.querySelector('.editor-sidebar-title');
+    if(!sidebarTitle){
+      sidebarTitle=document.createElement('div');
+      sidebarTitle.className='editor-sidebar-title';
+      sidebarTitle.innerHTML='<span>Etapas</span><strong>Configurações</strong>';
+      stepbarWrap.prepend(sidebarTitle);
+    }
+
+    let headerActions=header.querySelector('.content-editor-header-actions');
+    if(!headerActions){
+      headerActions=document.createElement('div');
+      headerActions.className='content-editor-header-actions';
+      header.appendChild(headerActions);
+    }
+
+    const previewButton=form.querySelector('[data-preview-toggle]') || header.querySelector('[data-preview-toggle]');
+    if(previewButton){
+      previewButton.classList.add('editor-header-preview-button');
+      if(previewButton.parentElement!==headerActions){
+        headerActions.appendChild(previewButton);
+      }
+    }
+  }
+
+  function scan(scope=document){
+    scope.querySelectorAll?.('.content-editor-inline-shell').forEach(enhanceEditor);
+  }
+
+  injectStyles();
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>scan(),{once:true});
+  else scan();
+
+  const observer=new MutationObserver(mutations=>{
+    mutations.forEach(mutation=>{
+      mutation.addedNodes.forEach(node=>{
+        if(!(node instanceof Element)) return;
+        if(node.matches?.('.content-editor-inline-shell')) enhanceEditor(node);
+        else scan(node);
+      });
+    });
+  });
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+})();
