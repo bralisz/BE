@@ -123,31 +123,6 @@ function safeLink(value, allowLocal = true) {
   }
 }
 
-function subtitleLocaleFromUrl(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  try {
-    const url = new URL(raw, 'https://billieilishtv.site');
-    const path = decodeURIComponent(url.pathname || '').toLowerCase();
-    const match = path.match(/(?:^|\/)(pt-br|pt|en-us|en|es|fr)[-_][^/]+\.(?:srt|vtt)$/i);
-    if (!match) return '';
-    const code = String(match[1] || '').toLowerCase();
-    if (code === 'pt' || code === 'pt-br') return 'pt-br';
-    if (code === 'en' || code === 'en-us') return 'en-us';
-    if (code === 'es') return 'es';
-    if (code === 'fr') return 'fr';
-  } catch (_) {}
-  return '';
-}
-
-function subtitleMatchesLocale(value, locale) {
-  const requestedLocale = normalizeLocale(locale);
-  const uploadedLocale = subtitleLocaleFromUrl(value);
-  // URLs antigas sem idioma identificado pertencem ao fallback histórico em
-  // português. Nunca as exponha como legenda de inglês, espanhol ou francês.
-  return uploadedLocale ? uploadedLocale === requestedLocale : requestedLocale === 'pt-br';
-}
-
 
 function sanitizeTranslations(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
@@ -166,7 +141,7 @@ function sanitizeTranslations(value) {
   return result;
 }
 
-function sanitizeItem(collection, row, locale = 'pt-br') {
+function sanitizeItem(collection, row) {
   const wrapped = row && typeof row === 'object'
     ? (row.get_public_content_items || row.item || row)
     : null;
@@ -186,7 +161,6 @@ function sanitizeItem(collection, row, locale = 'pt-br') {
   for (const field of ['contentUrl', 'videoUrl', 'link', 'subtitleUrl', 'mobileAppDriveUrl']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeLink(source[field], true);
   }
-  if (source.subtitleUrl && !subtitleMatchesLocale(source.subtitleUrl, locale)) source.subtitleUrl = '';
   for (const field of ['title', 'type', 'category', 'description', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? 4000 : 500);
   }
@@ -340,15 +314,15 @@ async function fetchRowsUncached(name, id, locale) {
       p_locale: locale
     });
     const rows = Array.isArray(payload) ? payload : [];
-    return rows.map(row => sanitizeItem(name, row, locale)).filter(Boolean);
+    return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
   } catch (_) {
     try {
       const payload = await callRpc('get_public_content_items', { p_collection: name, p_id: id || null });
       const rows = Array.isArray(payload) ? payload : [];
-      return rows.map(row => sanitizeItem(name, row, locale)).filter(Boolean);
+      return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
     } catch (_) {
       const rows = await fetchLegacyRows(name, id);
-      return rows.map(row => sanitizeItem(name, row, locale)).filter(Boolean);
+      return rows.map(row => sanitizeItem(name, row)).filter(Boolean);
     }
   }
 }
