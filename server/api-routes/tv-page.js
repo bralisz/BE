@@ -160,6 +160,24 @@ function vkInfo(value) {
   }
 }
 
+
+function isLegacyTvRequest(req) {
+  const ua = String((req && req.headers && req.headers['user-agent']) || '').toLowerCase();
+  if (!ua) return false;
+  if (/netcast|maple|hbbtv|viera|aquos|nettv|inettvbrowser/i.test(ua)) return true;
+  const tizen = ua.match(/tizen[\s\/](\d+)(?:\.|\b)/i);
+  if (tizen) return Number(tizen[1]) <= 4;
+  const webos = ua.match(/(?:web0s|webos)[\s\/](\d+)(?:\.|\b)/i);
+  if (webos) return Number(webos[1]) <= 4;
+  // Samsung Orsay e outros aparelhos pré-Tizen costumam expor apenas SMART-TV.
+  if (/smart-tv|smarttv/i.test(ua)) return true;
+  const chrome = ua.match(/(?:chrome|chromium)\/(\d+)/i);
+  if (chrome && Number(chrome[1]) < 60) return true;
+  const safari = ua.match(/version\/(\d+)(?:\.\d+)?[^)]*safari/i);
+  if (safari && Number(safari[1]) < 10) return true;
+  return false;
+}
+
 function qs(items) {
   return Object.keys(items)
     .filter(key => items[key] !== '' && items[key] != null)
@@ -277,7 +295,7 @@ async function inlinePairingQr(connectUrl) {
   }
 }
 
-function renderMedia(media) {
+function renderMedia(media, legacyPlayback) {
   if (!media || typeof media !== 'object') return '';
   const selected = preferredMediaUrl(media);
   const drive = driveInfo(selected);
@@ -288,25 +306,41 @@ function renderMedia(media) {
   let provider = '';
 
   if (drive) {
-    // Na Smart TV o Google Drive usa diretamente o player oficial do próprio
-    // Google. Isso evita baixar/proxiar filmes longos pelo site e deixa buffering,
-    // seek e qualidade sob responsabilidade do player do Drive.
     const preview = `https://drive.google.com/file/d/${encodeURIComponent(drive.id)}/preview?${qs({ autoplay: '1', resourcekey: drive.resourceKey })}`;
     provider = 'drive';
-    player = `<iframe id="legacyTvFrame" src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0;background:#000"></iframe>`;
+    if (legacyPlayback) {
+      // Players oficiais do Drive usam JavaScript moderno e costumam falhar em
+      // browsers antigos de Smart TV. No modo legado usamos HTML5 nativo e
+      // deixamos o Google entregar o arquivo diretamente após um 302 do resolver.
+      const resolved = `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey, tv: '1' })}`;
+      const direct = `https://drive.usercontent.google.com/download?${qs({ id: drive.id, export: 'download', confirm: 't', authuser: '0', resourcekey: drive.resourceKey })}`;
+      const alternate = `https://drive.google.com/uc?${qs({ id: drive.id, export: 'download', confirm: 't', resourcekey: drive.resourceKey })}`;
+      player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="auto" src="${escapeHtml(resolved)}" data-drive-src-1="${escapeHtml(resolved)}" data-drive-src-2="${escapeHtml(direct)}" data-drive-src-3="${escapeHtml(alternate)}" style="width:100%;height:100%;background:#000"></video>` +
+        `<iframe id="legacyDriveFallback" src="about:blank" data-src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
+    } else {
+      // TVs novas continuam usando o player oficial do Google Drive.
+      player = `<iframe id="legacyTvFrame" src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0" style="width:100%;height:100%;border:0;background:#000"></iframe>`;
+    }
   } else if (yt) {
     const path = yt.id ? `embed/${encodeURIComponent(yt.id)}` : 'embed/videoseries';
     const src = `https://www.youtube-nocookie.com/${path}?${qs({ autoplay: '1', controls: '1', rel: '0', list: yt.list })}`;
     provider = 'youtube';
     player = `<iframe id="legacyTvFrame" src="${escapeHtml(src)}" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>`;
   } else if (vk) {
-    // Na Smart TV o vídeo também abre no player oficial incorporado do VK.
-    // vk.com é a primeira opção; vkvideo.ru permanece apenas como fallback do
-    // próprio VK para navegadores de TV que rejeitem o domínio principal.
-    const src = `https://vk.com/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', js_api: '1', hash: vk.hash })}`;
     provider = 'vk';
-    const fallbackSrc = `https://vkvideo.ru/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', js_api: '1', hash: vk.hash })}`;
-    player = `<iframe id="legacyTvFrame" src="${escapeHtml(src)}" data-fallback-src="${escapeHtml(fallbackSrc)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+    const official = `https://vk.com/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', js_api: '1', hash: vk.hash })}`;
+    const officialAlt = `https://vkvideo.ru/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', js_api: '1', hash: vk.hash })}`;
+    if (legacyPlayback) {
+      // O iframe atual do VK também depende de APIs modernas. Para TVs antigas,
+      // o servidor resolve uma URL MP4 temporária e o <video> nativo reproduz o
+      // arquivo. Se a resolução falhar, o player oficial ainda fica como fallback.
+      const resolved = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '720' })}`;
+      player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="auto" src="${escapeHtml(resolved)}" style="width:100%;height:100%;background:#000" onerror="this.style.display='none';var f=document.getElementById('legacyTvFrame');if(f){f.style.display='block';var u=f.getAttribute('data-src')||'';if(u){f.src=u;}}"></video>` +
+        `<iframe id="legacyTvFrame" src="about:blank" data-src="${escapeHtml(official)}" data-fallback-src="${escapeHtml(officialAlt)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
+    } else {
+      // TVs novas usam diretamente o player oficial incorporado do VK.
+      player = `<iframe id="legacyTvFrame" src="${escapeHtml(official)}" data-fallback-src="${escapeHtml(officialAlt)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0"></iframe>`;
+    }
   } else if (/^https?:\/\//i.test(selected) && /\.(?:mp4|m4v|webm)(?:$|[?#])/i.test(selected)) {
     provider = 'native';
     player = `<video id="legacyTvVideo" controls autoplay playsinline preload="metadata" src="${escapeHtml(selected)}"></video>`;
@@ -329,13 +363,12 @@ function renderMedia(media) {
       <div class="tv-now-playing">
         <div class="tv-now-playing-copy">
           <strong class="tv-now-playing-title">${title}</strong>
-          <span class="tv-now-playing-meta">${meta}</span>
+          ${meta ? `<span class="tv-now-playing-meta">${meta}</span>` : ''}
         </div>
         <span class="tv-receiver-badge"><span class="pulse"></span>Conectado ao celular</span>
       </div>
     </div>${playbackLoadingRuntimeScript(provider)}${subtitleScript}`;
 }
-
 function playbackLoadingRuntimeScript(provider) {
   const safeProvider = JSON.stringify(String(provider || '')).replace(/</g, '\\u003c');
   return `<script type="text/javascript">
@@ -426,8 +459,15 @@ function playbackLoadingRuntimeScript(provider) {
     if(provider==='drive')armWatchdog();
     if(video.readyState>=3)hide();
   }
-  if(frame&&frame.addEventListener)frame.addEventListener('load',hide,false);
-  if(driveFrame&&driveFrame.addEventListener)driveFrame.addEventListener('load',hide,false);
+  function frameLoaded(target){
+    if(!target)return;
+    var src='';try{src=String(target.getAttribute('src')||target.src||'');}catch(e){}
+    if(target.style&&target.style.display==='none')return;
+    if(!src||src==='about:blank')return;
+    hide();
+  }
+  if(frame&&frame.addEventListener)frame.addEventListener('load',function(){frameLoaded(frame);},false);
+  if(driveFrame&&driveFrame.addEventListener)driveFrame.addEventListener('load',function(){frameLoaded(driveFrame);},false);
 })();
 </script>`;
 }
@@ -516,6 +556,7 @@ function subtitleRuntimeScript(subtitleUrl, provider, initialEnabled) {
       if(driveFallback){return Math.max(0,driveFallbackBase+((new Date().getTime()-driveFallbackStartedAt)/1000));}
       return Number(video&&video.currentTime)||0;
     }
+    if(provider==='vk'&&video&&(!video.style||video.style.display!=='none'))return Number(video.currentTime)||0;
     if(provider==='vk'&&vkReady&&vkPlayer&&typeof vkPlayer.getCurrentTime==='function'){
       try{captureVkTime(vkPlayer.getCurrentTime());}catch(e){}
       return vkTime;
@@ -634,7 +675,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   <meta name="theme-color" content="#020409">
   <title>Conectar Smart TV — Billie Eilish TV</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260821-tv-drive-qr-loader-v1">
+  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260821-tv-legacy-media-fallback-v2">
 </head>
 <body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
   <main class="tv-shell">
@@ -763,7 +804,7 @@ module.exports = async function handler(req, res) {
       const media = state.current_media && typeof state.current_media === 'object' ? state.current_media : {};
       const hasMedia = Object.keys(media).length > 0;
       if (hasMedia) {
-        const rendered = renderMedia(media);
+        const rendered = renderMedia(media, isLegacyTvRequest(req));
         if (rendered) {
           const html = baseHtml({
             body: rendered,

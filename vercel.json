@@ -101,6 +101,10 @@
       "destination": "/api?route=media&handler=drive-media"
     },
     {
+      "source": "/api/vk-media",
+      "destination": "/api?route=media&handler=vk-media"
+    },
+    {
       "source": "/robots.txt",
       "destination": "/api?route=meta&handler=robots"
     },
