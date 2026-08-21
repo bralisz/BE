@@ -479,7 +479,7 @@
     localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
     localStorage.setItem(ACTIVE_CODE_KEY, activeCode);
     showConnected();
-    try { await syncProfileToTv(); } catch (error) { console.warn('Não foi possível sincronizar o perfil com a TV:', error); }
+    try { await syncProfileToTv(); } catch (error) { (void 0); }
     try { history.replaceState(null, '', '/connect-tv/'); } catch (_) {}
     return true;
   }
@@ -509,7 +509,7 @@
       syncSubtitleRemote();
       return true;
     } catch (error) {
-      console.error('Falha ao transmitir:', error);
+      (void 0);
       sendButton.classList.remove('is-transmitted');
       setMessage(connectedMessage, tr('sendError'), 'error');
       sendButton.disabled = false;
@@ -551,7 +551,7 @@
     try {
       await loadAccountProfile();
     } catch (error) {
-      console.warn('Não foi possível carregar o perfil na transmissão:', error);
+      (void 0);
     }
     accountMarkup(accountHost);
     accountMarkup(connectedAccountHost);
@@ -583,7 +583,7 @@
         localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
         if (activeCode) localStorage.setItem(ACTIVE_CODE_KEY, activeCode);
         if (!desktopControllerMode()) showConnected();
-        try { await syncProfileToTv(); } catch (error) { console.warn('Não foi possível sincronizar o perfil com a TV:', error); }
+        try { await syncProfileToTv(); } catch (error) { (void 0); }
         if (pendingMedia) await sendPending({ automatic: true });
         if (desktopControllerMode()) returnHome();
         showConnected();
@@ -591,7 +591,7 @@
         showForm();
       }
     } catch (error) {
-      console.warn('Não foi possível recuperar TVs anteriores:', error);
+      (void 0);
       showForm();
     }
   }
@@ -656,7 +656,7 @@
       syncSubtitleRemote();
       showCastToast(next ? tr('subtitlesOn') : tr('subtitlesOff'));
     } catch (error) {
-      console.error('Falha ao controlar legendas da TV:', error);
+      (void 0);
       setMessage(connectedMessage, tr('subtitlesError'), 'error');
       subtitleRemoteButton.disabled = false;
     } finally { busy = false; }
@@ -670,7 +670,7 @@
     try {
       await client.rpc('tv_disconnect_session', { p_session_id: activeSessionId });
     } catch (error) {
-      console.warn('Falha ao encerrar a sessão da TV:', error);
+      (void 0);
     }
     localStorage.removeItem(ACTIVE_SESSION_KEY);
     localStorage.removeItem(ACTIVE_CODE_KEY);
@@ -687,7 +687,7 @@
   applyStaticTranslations();
 
   boot().catch(error => {
-    console.error(error);
+    (void 0);
     loading.hidden = true;
     formView.hidden = false;
     setMessage(message, tr('bootError'), 'error');

@@ -84,7 +84,8 @@
     </section>
     <div class="status" id="status" aria-live="polite"></div>
   </main>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"></script>
+  <script data-runtime-privacy="1">(function(){var h=String(location.hostname||'').toLowerCase();if(h==='localhost'||h==='127.0.0.1'||h==='::1')return;var c=window.console,n=function(){};if(c)['log','info','warn','error','debug','trace','table','dir','group','groupCollapsed','groupEnd','time','timeEnd','timeLog','assert'].forEach(function(k){try{c[k]=n;}catch(_){}});window.addEventListener('unhandledrejection',function(e){e.preventDefault();});})();</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"></script>
   <script>
     window.BE_SUPABASE_CONFIG=Object.freeze({
       url:'https://cxkevnnxibhezvospkce.supabase.co',
@@ -157,11 +158,11 @@
           if(response.error)throw response.error;
           if(!response.data||!response.data.redirect_url)throw new Error('O Supabase não retornou o endereço de redirecionamento.');
           location.assign(response.data.redirect_url);
-        }catch(decisionError){status.textContent=copy.decisionFailed;console.error('OAuth decision failed:',decisionError);approve.disabled=false;deny.disabled=false;}
+        }catch(decisionError){status.textContent=copy.decisionFailed;(void 0);approve.disabled=false;deny.disabled=false;}
       }
       document.getElementById('approve').onclick=function(){decide(true)};
       document.getElementById('deny').onclick=function(){decide(false)};
-    }catch(err){fail();console.error('Falha no consentimento OAuth:',err);}
+    }catch(err){fail();(void 0);}
   })();
   </script>
   <script defer src="/assets/js/lazy-loading.js?v=1"></script>

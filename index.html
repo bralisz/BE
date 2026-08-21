@@ -34,6 +34,22 @@
       try{sessionStorage.setItem('betv-pwa-session','1')}catch(_){}
       window.__BETVInstalledAppLaunch=true;
       document.documentElement.classList.add('betv-installed-app');
+
+      // Quando o navegador abriu o PWA por um protocol handler, restaura a
+      // rota em que a pessoa estava antes de tocar em "Abrir app".
+      try{
+        var target=query.get('target')||'';
+        var protocolPayload=query.get('protocol')||'';
+        if(!target&&protocolPayload){
+          var protocolUrl=new URL(protocolPayload);
+          var nested=protocolUrl.searchParams.get('url')||'';
+          if(nested){
+            var nestedUrl=new URL(nested);
+            if(nestedUrl.origin===location.origin)target=nestedUrl.searchParams.get('target')||'';
+          }
+        }
+        if(target&&target.charAt(0)==='/'&&target.slice(0,2)!=='//')history.replaceState(history.state||{},'',target);
+      }catch(_){}
     }
   }catch(_){}
 })();
@@ -72,18 +88,27 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-home-pc-32x32.png?v=20260807-home-site-v1">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-home-pc-16x16.png?v=20260807-home-site-v1">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20260807-betv-logo-v4">
-<link rel="manifest" href="/site.webmanifest?rev=20260821-mobile-vk-combined-v1">
+<link rel="manifest" href="/site.webmanifest?rev=20260821-profile-privacy-v3">
 <meta name="theme-color" content="#050816">
 <meta name="application-name" content="Billie Eilish TV">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Billie Eilish TV">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<!-- Vercel Web Analytics -->
 <script>
-window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+(function(){
+  var host=String(location.hostname||'').toLowerCase();
+  if(host==='localhost'||host==='127.0.0.1'||host==='::1')return;
+  var c=window.console;
+  if(c){
+    var noop=function(){};
+    ['log','info','warn','error','debug','trace','table','dir','group','groupCollapsed','groupEnd','time','timeEnd','timeLog','assert'].forEach(function(name){
+      try{c[name]=noop;}catch(_){ }
+    });
+  }
+  window.addEventListener('unhandledrejection',function(event){event.preventDefault();});
+})( );
 </script>
-<script defer src="/_vercel/insights/script.js"></script>
 <script src="/assets/js/locale-routing.js?rev=20260810-fr-locale-v2"></script>
 <script>
 (function(){
@@ -102,7 +127,7 @@ window.va = window.va || function () { (window.vaq = window.vaq || []).push(argu
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es'&&slug!=='fr')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260821-mobile-vk-combined-v1';
+    var href='/assets/i18n/'+slug+'.json?rev=20260821-profile-privacy-v3';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -186,21 +211,21 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260821-mobile-vk-combined-v1">
-<link rel="stylesheet" href="/assets/css/community.css?rev=20260821-mobile-vk-combined-v1">
-<link rel="stylesheet" href="/assets/css/tv-session-widget.css?rev=20260821-mobile-vk-combined-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260821-profile-privacy-v3">
+<link rel="stylesheet" href="/assets/css/community.css?rev=20260821-profile-privacy-v3">
+<link rel="stylesheet" href="/assets/css/tv-session-widget.css?rev=20260821-profile-privacy-v3">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"></script>
-<script defer src="/assets/js/i18n.js?rev=20260821-mobile-vk-combined-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260821-mobile-vk-combined-v1"></script>
-<script defer src="/assets/js/tv-session-widget.js?rev=20260821-mobile-vk-combined-v1"></script>
-<script defer src="/assets/js/community.js?rev=20260821-mobile-vk-combined-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260821-profile-privacy-v3"></script>
+<script defer src="/assets/js/site.js?rev=20260821-profile-privacy-v3"></script>
+<script defer src="/assets/js/tv-session-widget.js?rev=20260821-profile-privacy-v3"></script>
+<script defer src="/assets/js/community.js?rev=20260821-profile-privacy-v3"></script>
 <script>
 (function(){
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost')return;
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js?rev=20260821-mobile-vk-combined-v1',{scope:'/',updateViaCache:'none'}).catch(function(error){
-      console.warn('Não foi possível registrar o app instalável:',error&&error.message?error.message:error);
+    navigator.serviceWorker.register('/sw.js?rev=20260821-profile-privacy-v3',{scope:'/',updateViaCache:'none'}).catch(function(error){
+      (void 0);
     });
   },{once:true});
 })();
@@ -867,7 +892,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   <span class="ios-ban-toast-icon" aria-hidden="true">!</span>
   <div class="ios-ban-toast-copy">
     <strong>Usuário banido</strong>
-    <a id="accountBanAppeal" href="mailto:billieilishtv@gmail.com?subject=Apela%C3%A7%C3%A3o%20de%20desbanimento" target="_blank" rel="noopener noreferrer">Faça uma apelação de desbanimento</a>
+    <a id="accountBanAppeal" href="/suporte?topic=ban-appeal">Faça uma apelação de desbanimento</a>
   </div>
   <button class="ios-ban-toast-close" id="accountBanToastClose" type="button" aria-label="Fechar aviso">×</button>
 </div>
@@ -1074,7 +1099,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
         </details>
         <details class="support-faq-item">
           <summary><span>O conteúdo que procuro não aparece na busca.</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
-          <div class="support-faq-answer"><p>Pesquise pelo título e confira também as abas Filmes e Vídeos. O catálogo é atualizado gradualmente, então alguns conteúdos podem ainda não estar disponíveis. Caso não encontre, abra um ticket no <a class="support-inline-link" href="mailto:billieilishtv@gmail.com?subject=Solicita%C3%A7%C3%A3o%20de%20conte%C3%BAdo&amp;body=Ol%C3%A1%2C%20gostaria%20de%20solicitar%20o%20seguinte%20conte%C3%BAdo%3A%20" target="_blank" rel="noopener noreferrer">suporte</a>, mencionando qual conteúdo está faltando.</p></div>
+          <div class="support-faq-answer"><p>Pesquise pelo título e confira também as abas Filmes e Vídeos. O catálogo é atualizado gradualmente, então alguns conteúdos podem ainda não estar disponíveis. Caso não encontre, abra um ticket no <a class="support-inline-link" href="/suporte?topic=content-request">suporte</a>, mencionando qual conteúdo está faltando.</p></div>
         </details>
         <details class="support-faq-item">
           <summary><span>O BETV é um site oficial da Billie Eilish?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
@@ -1186,7 +1211,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     <section class="support-contact" aria-labelledby="supportContactTitle">
       <h2 id="supportContactTitle">Não encontrou seu problema?</h2>
       <p>Conte o que aconteceu e nossa equipe analisará sua mensagem.</p>
-      <a class="support-contact-button" href="mailto:billieilishtv@gmail.com?subject=Relato%20de%20problema&amp;body=Ol%C3%A1%2C%20gostaria%20de%20relatar%20o%20seguinte%20problema%3A%0D%0A%0D%0A" target="_blank" rel="noopener noreferrer">Relate o seu problema</a>
+      <a class="support-contact-button" href="/suporte?topic=bug-report">Relate o seu problema</a>
     </section>
   </div>
 </section>

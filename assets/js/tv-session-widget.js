@@ -219,7 +219,7 @@
       render();
       return row;
     } catch (error) {
-      console.warn('Não foi possível confirmar a Smart TV conectada:', error);
+      (void 0);
       if (!storedId) clearSession();
       return null;
     }
@@ -247,7 +247,7 @@
       try { window.dispatchEvent(new CustomEvent('be:tv-media-sent', { detail: { media: source } })); } catch (_) {}
       return true;
     } catch (error) {
-      console.warn('Falha ao enviar conteúdo para a Smart TV:', error);
+      (void 0);
       clearSession();
       return false;
     } finally {
@@ -273,7 +273,7 @@
       try { localStorage.setItem(CURRENT_MEDIA_KEY, JSON.stringify(currentMedia)); } catch (_) {}
       return true;
     } catch (error) {
-      console.warn('Não foi possível controlar a reprodução da TV:', error);
+      (void 0);
       return false;
     } finally {
       busy = false;
@@ -289,7 +289,7 @@
       const client = await clientReady();
       if (client) await client.rpc('tv_disconnect_session', { p_session_id: activeSessionId });
     } catch (error) {
-      console.warn('Falha ao encerrar a conexão da Smart TV:', error);
+      (void 0);
     }
     clearSession();
     busy = false;

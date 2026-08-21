@@ -625,7 +625,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     // endereço de e-mail no JavaScript público para conceder acesso.
     if (user.role === 'admin') return user;
 
-    console.warn('Não foi possível confirmar as permissões administrativas da sessão.');
+    (void 0);
     return { ...user, role: 'member' };
   }
 
@@ -643,13 +643,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (retryDelay) await wait(retryDelay);
 
       const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-      if (sessionError) console.warn('Não foi possível recuperar a sessão após o login:', sessionError.message);
+      if (sessionError) (void 0);
       const sessionUser = sessionData?.session?.user || null;
       if (sessionUser) return hydratePrivileges(normalizeUser(sessionUser));
 
       const { data: userData, error: userError } = await supabaseClient.auth.getUser();
       if (userError && userError.name !== 'AuthSessionMissingError') {
-        console.warn('Não foi possível recuperar o usuário após o login:', userError.message);
+        (void 0);
       }
       if (userData?.user) return hydratePrivileges(normalizeUser(userData.user));
     }
@@ -660,7 +660,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function notify() {
     const snapshot = currentUser ? { ...currentUser } : null;
     listeners.forEach(listener => {
-      try { listener(snapshot); } catch (error) { console.error('Erro no listener de autenticação:', error); }
+      try { listener(snapshot); } catch (error) { (void 0); }
     });
   }
 
@@ -695,7 +695,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const parsed = JSON.parse(localStorage.getItem(DB_KEY) || 'null');
       if (parsed && parsed.version === 2 && parsed.accounts && parsed.collections) return parsed;
     } catch (error) {
-      console.warn('Banco local inválido; um novo será criado.', error);
+      (void 0);
     }
     const fresh = seedDatabase();
     localStorage.setItem(DB_KEY, JSON.stringify(fresh));
@@ -1000,7 +1000,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               body: { collection: normalizedCollection, ids: batch.map(record => String(record.id)), locales: ['fr'] }
             });
             if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
-              console.warn('Não foi possível completar a tradução francesa das notificações:', result?.error?.message || 'resposta inválida');
+              (void 0);
               continue;
             }
             const translatedById = new Map();
@@ -1015,7 +1015,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             });
           }
         } catch (error) {
-          console.warn('Tradução francesa das notificações indisponível; mantendo o conteúdo original:', error?.message || error);
+          (void 0);
         } finally {
           pending.forEach(record => translationWarmupInFlight.delete(`${normalizedCollection}:${record.id}:${slug}`));
         }
@@ -1032,8 +1032,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
         body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es','fr'], force: true }
       }).then(result => {
-        if (result?.error) console.warn('Não foi possível atualizar as traduções automáticas:', result.error.message || result.error);
-      }).catch(error => console.warn('Não foi possível atualizar as traduções automáticas:', error?.message || error));
+        if (result?.error) (void 0);
+      }).catch(error => (void 0));
     }, 0);
   }
 
@@ -1646,7 +1646,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           if (error && metadataUsername) {
             const mappedError = mapAuthError(error);
             if (mappedError.code === 'username-in-use') {
-              console.warn('O nome de usuário salvo nos metadados já está em uso; carregando o perfil sem ele.');
+              (void 0);
               ({ data: rows, error } = await supabaseClient.rpc('ensure_my_profile', {
                 ...profileArgs,
                 p_username: null
@@ -1683,7 +1683,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               const repaired = repairedRows && repairedRows[0] ? profileFromRow(repairedRows[0]) : null;
               if (repaired) Object.assign(profile, repaired);
             } catch (repairError) {
-              console.warn('Não foi possível reparar o identificador do avatar antigo:', repairError?.message || repairError);
+              (void 0);
             }
           }
           const cachedBanner = readProfileBannerCache(user.uid);
@@ -1774,7 +1774,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         savedProfile = await this.update(userId, { avatarUrl: normalizedUrl, avatarId: effectiveAvatarId });
       } catch (error) {
         databaseError = error;
-        console.warn('Avatar salvo por compatibilidade; o perfil remoto não aceitou a atualização:', error?.message || error);
+        (void 0);
       }
 
       // Mantém a escolha também nos metadados da autenticação. Assim o avatar
@@ -1793,7 +1793,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           if (error) throw error;
           currentUser = { ...normalizeUser(authResult?.user || currentUser.raw || currentUser), profile: savedProfile || previousProfile };
         } catch (metadataError) {
-          console.warn('O avatar ficou salvo neste navegador, mas não nos metadados da conta:', metadataError?.message || metadataError);
+          (void 0);
         }
       }
 
@@ -1839,7 +1839,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         // Mantém o seletor funcionando mesmo quando a instalação ainda não
         // executou a migração banner_url/banner_id no Supabase.
         databaseError = error;
-        console.warn('Banner salvo por compatibilidade; atualize o schema do Supabase quando possível:', error?.message || error);
+        (void 0);
       }
 
       writeProfileBannerCache(userId, normalizedUrl, normalizedId);
@@ -1857,7 +1857,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           if (error) throw error;
           currentUser = { ...normalizeUser(authResult?.user || currentUser.raw || currentUser), profile: savedProfile || previousProfile };
         } catch (metadataError) {
-          console.warn('O banner ficou salvo neste navegador, mas não nos metadados da conta:', metadataError?.message || metadataError);
+          (void 0);
         }
       }
 
@@ -1959,7 +1959,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (change.eventType === 'DELETE') {
         invalidateProfileCache(entry.userId);
         entry.listeners.profile.forEach(listener => {
-          try { listener(null, compatibilityPayload); } catch (error) { console.error('Falha ao remover perfil sincronizado:', error); }
+          try { listener(null, compatibilityPayload); } catch (error) { (void 0); }
         });
         return;
       }
@@ -1969,7 +1969,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       cacheProfile(profile);
       if (currentUser?.uid === entry.userId) currentUser = { ...currentUser, photoURL: profile.avatarUrl || '', profile };
       entry.listeners.profile.forEach(listener => {
-        try { listener(clone(profile), compatibilityPayload); } catch (error) { console.error('Falha ao aplicar perfil sincronizado:', error); }
+        try { listener(clone(profile), compatibilityPayload); } catch (error) { (void 0); }
       });
       return;
     }
@@ -1978,7 +1978,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (change.eventType === 'DELETE') {
         preferenceCache.delete(entry.userId);
         entry.listeners.preferences.forEach(listener => {
-          try { listener(null, compatibilityPayload); } catch (error) { console.error('Falha ao remover preferências sincronizadas:', error); }
+          try { listener(null, compatibilityPayload); } catch (error) { (void 0); }
         });
         return;
       }
@@ -1986,7 +1986,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const preference = preferenceFromRow(change.new);
       cachePreference(preference);
       entry.listeners.preferences.forEach(listener => {
-        try { listener(clone(preference), compatibilityPayload); } catch (error) { console.error('Falha ao aplicar preferências sincronizadas:', error); }
+        try { listener(clone(preference), compatibilityPayload); } catch (error) { (void 0); }
       });
     }
   }
@@ -2004,11 +2004,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       entry.channel = channel;
       channel.subscribe(status => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('A sincronização entre dispositivos foi interrompida:', status);
+          (void 0);
         }
       });
     }).catch(error => {
-      console.warn('Não foi possível iniciar a sincronização entre dispositivos:', error?.message || error);
+      (void 0);
     }).finally(() => {
       entry.starting = null;
     });
@@ -2309,7 +2309,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!validUsername(normalizedHandle)) throw backendError('username-invalid', 'O @ informado não é válido.');
       const { data, error } = await supabaseClient.rpc('username_available', { p_username: normalizedHandle });
       if (error) {
-        console.warn('Não foi possível verificar o nome de usuário:', error.message);
+        (void 0);
         return null;
       }
       return Boolean(data);
@@ -2333,7 +2333,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try {
         await profiles.ensure(currentUser);
       } catch (profileError) {
-        console.warn('O login foi concluído, mas o perfil será carregado novamente pela página:', profileError?.message || profileError);
+        (void 0);
       }
       notify();
       return { user: currentUser, session: result?.session || null };
@@ -2675,19 +2675,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               return;
             }
             if (previousUser) {
-              console.warn('Evento de autenticação sem sessão ignorado para evitar logout transitório.');
+              (void 0);
               return;
             }
             currentUser = null;
             notify();
           } catch (latestError) {
-            console.warn('Não foi possível confirmar a sessão:', latestError?.message || latestError);
+            (void 0);
           }
         }, 0);
       });
 
       const { data: sessionData, error } = await supabaseClient.auth.getSession();
-      if (error) console.warn('Não foi possível restaurar a sessão:', error.message);
+      if (error) (void 0);
       currentUser = await hydratePrivileges(normalizeUser(sessionData?.session?.user || null));
 
       // O processamento do callback pode terminar alguns instantes depois da
@@ -2720,7 +2720,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   const ready = initialize().catch(error => {
-    console.error('Falha ao inicializar o backend:', error);
+    (void 0);
     throw error;
   });
 
@@ -2902,7 +2902,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       await window.beBackend.ready;
       if (window.beBackend.data && typeof window.beBackend.data.preloadHome === 'function') {
         await window.beBackend.data.preloadHome().catch(error => {
-          console.warn('Pré-carregamento do catálogo indisponível; usando leituras individuais:', error?.message || error);
+          (void 0);
         });
       }
       const contentTasks = await Promise.allSettled([
@@ -2911,13 +2911,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         renderVideoCatalog()
       ]);
       contentTasks.forEach(result => {
-        if (result.status === 'rejected') console.warn('Parte do conteúdo dinâmico não pôde ser carregada:', result.reason?.message || result.reason);
+        if (result.status === 'rejected') (void 0);
       });
       setupHomeNavigation();
       setupDetailControls();
       await openContentDetailFromRoute();
     } catch (error) {
-      console.warn('Conteúdo dinâmico indisponível:', error.message);
+      (void 0);
     } finally {
       window.__beContentReady = true;
       window.dispatchEvent(new Event('be:content-ready'));
@@ -2953,7 +2953,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       } catch (_) {}
       if (window.__beContentReady) await renderVideoCatalog();
     } catch (error) {
-      console.warn('Não foi possível atualizar os Destaques ao retomar a página:', error?.message || error);
+      (void 0);
     } finally {
       featuredResumeRefreshRunning = false;
       featuredPageHiddenAt = 0;
@@ -4667,7 +4667,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         closeDetailCommentActionSheet();
         if (activeDetailCommentsKey) await loadVideoComments(activeDetailCommentsKey, detailCommentsRequestToken);
       } catch (error) {
-        console.warn('Não foi possível apagar o comentário:', error);
+        (void 0);
         confirmButton.disabled = false;
         if (trigger) trigger.disabled = false;
         const head = wrap.querySelector('.detail-comment-sheet-head p');
@@ -4742,7 +4742,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             <button type="button" class="detail-comment-sheet-button primary" data-comment-sheet-close>${escapeHtml(localizedUiText('Concluir'))}</button>
           </div>`;
       } catch (error) {
-        console.warn('Não foi possível enviar a denúncia:', error);
+        (void 0);
         if (status) status.textContent = localizedUiText('Não foi possível enviar a denúncia. Tente novamente.');
         submit.disabled = false;
       }
@@ -4779,7 +4779,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       setDetailCommentStatus('');
     } catch (error) {
-      console.warn('Não foi possível atualizar a curtida do comentário:', error);
+      (void 0);
       setDetailCommentStatus(localizedUiText('Não foi possível curtir o comentário.'));
     } finally {
       button.disabled = false;
@@ -4898,7 +4898,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       empty.textContent = localizedUiText('Ainda não há comentários.');
       if (!silent) setDetailCommentStatus('');
     } catch (error) {
-      console.warn('Não foi possível carregar os comentários:', error);
+      (void 0);
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
       if (silent) return;
       list.innerHTML = '';
@@ -4963,11 +4963,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       detailCommentsRealtimeKey = videoKey;
       channel.subscribe(status => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('A sincronização dos comentários foi interrompida:', status);
+          (void 0);
         }
       });
     } catch (error) {
-      console.warn('Não foi possível iniciar a sincronização dos comentários:', error?.message || error);
+      (void 0);
     }
   }
 
@@ -5002,7 +5002,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setDetailCommentStatus(localizedUiText('Comentário enviado.'));
       await loadVideoComments(videoKey, requestToken);
     } catch (error) {
-      console.warn('Não foi possível enviar o comentário:', error);
+      (void 0);
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
       const raw = String(error?.message || error?.details || '').toLowerCase();
       if (raw.includes('comment_too_fast')) {
@@ -8651,7 +8651,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           if (sent) return;
         }
       } catch (error) {
-        console.warn('Não foi possível enviar direto para a TV:', error);
+        (void 0);
       }
     }
 
@@ -9792,7 +9792,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         renderUserSearchResults(rows);
       } catch (error) {
         if (requestId !== userSearchRequest) return;
-        console.warn('Não foi possível pesquisar perfis:', error?.message || error);
+        (void 0);
         renderUserSearchState(localizedUiText('Não foi possível pesquisar usuários.'));
       } finally {
         if (requestId === userSearchRequest) userSearchHost.removeAttribute('aria-busy');
@@ -10241,6 +10241,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       rememberInstalledApp();
       return true;
     }
+    // Quando o navegador oferece getInstalledRelatedApps(), a resposta real
+    // tem prioridade sobre marcadores locais que podem ficar obsoletos após
+    // uma desinstalação.
+    if (supportsInstalledRelatedApps && relatedInstallCheckDone) return relatedPwaInstalled;
     if (relatedPwaInstalled) return true;
     try { return localStorage.getItem(INSTALL_MARKER) === '1'; }
     catch (_) { return false; }
@@ -10265,8 +10269,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         );
       });
       if (relatedPwaInstalled) rememberInstalledApp();
-      // Alguns navegadores móveis expõem getInstalledRelatedApps(), mas retornam []
-      // para PWAs já instalados. Não apagamos o marcador local nesse caso.
+      else forgetInstalledApp();
     } catch (_) {
       // Mantém o marcador local como fallback quando a API não puder responder.
     } finally {
@@ -10328,40 +10331,73 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     // Já estamos dentro do PWA: não recarrega a página no navegador.
     if (isStandaloneApp()) return;
 
-    const appUrl = `${location.origin}/?source=pwa&launch=app`;
-    const protocolUrl = `web+betv://open?url=${encodeURIComponent(appUrl)}`;
+    let targetUrl = location.origin + '/?source=pwa&launch=app';
+    try {
+      const current = new URL(location.href);
+      current.searchParams.delete('source');
+      current.searchParams.delete('launch');
+      const next = new URL(location.origin + '/');
+      next.searchParams.set('source', 'pwa');
+      next.searchParams.set('launch', 'app');
+      next.searchParams.set('target', current.pathname + current.search + current.hash);
+      targetUrl = next.href;
+    } catch (_) {}
+
+    const protocolUrl = `web+betv:open?url=${encodeURIComponent(targetUrl)}`;
+    const isAndroid = /android/i.test(String(navigator.userAgent || ''));
     let appWasLaunched = false;
     let fallbackTimer = null;
 
-    const markLaunched = () => {
-      appWasLaunched = true;
+    const cleanup = () => {
       if (fallbackTimer) clearTimeout(fallbackTimer);
+      fallbackTimer = null;
       window.removeEventListener('blur', markLaunched, true);
       document.removeEventListener('visibilitychange', onVisibilityChange, true);
+      window.removeEventListener('pagehide', markLaunched, true);
+    };
+    const markLaunched = () => {
+      appWasLaunched = true;
+      cleanup();
     };
     const onVisibilityChange = () => {
       if (document.hidden) markLaunched();
     };
+    const clickLaunchLink = href => {
+      const link = document.createElement('a');
+      link.href = href;
+      link.hidden = true;
+      link.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(link);
+      try { link.click(); } finally { window.setTimeout(() => link.remove(), 0); }
+    };
 
-    // Tenta primeiro o protocolo registrado pelo PWA tanto no desktop quanto
-    // no navegador mobile. Em navegadores compatíveis isso entrega o link
-    // diretamente ao Billie Eilish TV instalado. Se o sistema não abrir o app,
-    // mantemos uma navegação normal como fallback para não deixar o botão morto.
     window.addEventListener('blur', markLaunched, true);
     document.addEventListener('visibilitychange', onVisibilityChange, true);
+    window.addEventListener('pagehide', markLaunched, true);
 
+    // Protocol handlers de PWA são disparados de forma mais consistente por
+    // uma navegação de link real. No Android, uma Intent para o mesmo esquema
+    // é usada primeiro, mantendo o protocolo web+betv como alvo registrado.
     try {
-      window.location.href = protocolUrl;
-    } catch (_) {}
+      if (isAndroid) {
+        const intentFallback = encodeURIComponent(location.href);
+        clickLaunchLink(`intent://open?url=${encodeURIComponent(targetUrl)}#Intent;scheme=web+betv;S.browser_fallback_url=${intentFallback};end`);
+      } else {
+        clickLaunchLink(protocolUrl);
+      }
+    } catch (_) {
+      try { clickLaunchLink(protocolUrl); } catch (_) {}
+    }
 
-    fallbackTimer = setTimeout(() => {
+    fallbackTimer = window.setTimeout(() => {
       if (appWasLaunched) return;
-      window.removeEventListener('blur', markLaunched, true);
-      document.removeEventListener('visibilitychange', onVisibilityChange, true);
-      // Se o protocolo não abrir, permanece no navegador. Não navegamos para
-      // ?source=pwa porque isso confundiria a aba web com o app instalado.
+      cleanup();
+      // Em navegadores que não permitem abrir um PWA instalado por protocolo,
+      // mantém a página no navegador e atualiza o estado em vez de fingir que
+      // a abertura funcionou.
+      refreshInstalledRelatedAppState();
       updateInstallButton();
-    }, isMobile() ? 1100 : 1400);
+    }, isMobile() ? 1500 : 1800);
   }
 
   function openInstallSheet(options = {}) {
@@ -10603,7 +10639,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       await auth.signOut();
       clickHomeView('home');
     } catch (error) {
-      console.warn('Não foi possível sair:', error?.message || error);
+      (void 0);
     }
   }
 
@@ -11756,7 +11792,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         rebuildInlineTagPanel();
         window.setTimeout(closeInlineTagPanel,180);
       }catch(error){
-        console.warn('Não foi possível trocar a tag do perfil:',error&&error.message?error.message:error);
+        (void 0);
         rebuildInlineTagPanel();
       }finally{
         profileInlineTagSaving=false;
@@ -11903,7 +11939,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           }
         }
       }catch(error){
-        console.warn('Não foi possível desfazer totalmente as alterações do perfil:',error);
+        (void 0);
       }
       viewedProfile={...(viewedProfile||{}),...(currentProfile||{}),displayName:profileInlineOriginalName,profileColor:profileInlineOriginalProfileColor,avatarBorderColor:profileInlineOriginalAvatarBorderColor,avatarUrl:profileInlineOriginalAvatarUrl,bannerUrl:profileInlineOriginalBannerUrl,bannerId:profileInlineOriginalBannerId};
       renderProfilePage();
@@ -11929,7 +11965,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         renderProfilePage();
         stopInlineProfileEdit(true);
       }catch(error){
-        console.error('Não foi possível salvar o perfil:',error);
+        (void 0);
         if(button){button.disabled=false;button.textContent=localizedProfileText('Tentar novamente');}
       }
     }
@@ -12295,7 +12331,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.setItem('beCommunityRankingsPublic:'+String(userId),data.communityRankingsPublic===false?'false':'true');
         localStorage.setItem(syncedUserCacheKey(userId),JSON.stringify({data:data,updatedAt:data.updatedAt||beBackend.now()}));
         localStorage.setItem('beSyncedDataOwner',String(userId));
-      }catch(error){console.warn('Não foi possível atualizar o cache sincronizado:',error);}
+      }catch(error){(void 0);}
       applyingRemotePreferences=false;
       profileFavoritesItems=data.profileTopFavorites.slice(0,4);
       profileLovedAlbumsItems=data.profileLovedAlbums.slice(0,4);
@@ -12324,7 +12360,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           setSettingsSyncStatus('active','Sincronizado entre celular e computador.');
         }
       }catch(error){
-        console.warn('Não foi possível sincronizar as preferências:',error&&error.message?error.message:error);
+        (void 0);
         setSettingsSyncStatus('error','Alterações mantidas neste aparelho. A sincronização será tentada novamente.');
       }
     }
@@ -12393,7 +12429,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(beBackend.profiles&&typeof beBackend.profiles.subscribe==='function')profileDeviceSyncStop=beBackend.profiles.subscribe(userId,function(profile){applyRemoteProfile(profile,userId);});
         setSettingsSyncStatus('active','Sincronizado entre celular e computador.');
       }catch(error){
-        console.warn('Sincronização entre dispositivos indisponível:',error&&error.message?error.message:error);
+        (void 0);
         setSettingsSyncStatus('error','Os dados continuam salvos neste aparelho; verifique a conexão para sincronizar.');
       }finally{preferenceSyncStarting=false;}
     }
@@ -12481,7 +12517,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           setTimeout(closeAvatarPicker,120);
         }catch(error){
           button.disabled=false;
-          console.warn('Avatar não salvo no perfil:',error.message);
+          (void 0);
           alert('Não foi possível salvar o avatar. Tente novamente.');
         }
       });
@@ -12509,7 +12545,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         setupAvatarRails();
         syncAvatarPickerSelection();
         activatePickerImages(avatarPickerBody,'avatar');
-      }catch(error){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Não foi possível carregar a galeria.</div>';console.warn(error);}
+      }catch(error){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Não foi possível carregar a galeria.</div>';(void 0);}
     }
 
 
@@ -12678,7 +12714,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(requestId!==profileLikeRequest||handle!==currentViewedProfileHandle())return;
         profileLikeState={...profileLikeState,loading:false};
         renderProfileLikeUi();
-        console.warn('Não foi possível carregar as curtidas do perfil:',error);
+        (void 0);
       }
     }
     async function toggleProfileLike(){
@@ -12704,7 +12740,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(requestId!==profileLikeRequest||handle!==currentViewedProfileHandle())return;
         profileLikeState={...profileLikeState,loading:false};
         renderProfileLikeUi();
-        console.error('Não foi possível atualizar a curtida do perfil:',error);
+        (void 0);
       }
     }
     function setProfilePageAvatar(url){
@@ -12793,7 +12829,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     function profileCatalogContents(){
       var source=[];
-      try{source=typeof window.beGetCatalogContents==='function'?window.beGetCatalogContents():[];}catch(error){console.warn('Não foi possível carregar o catálogo para favoritos:',error);}
+      try{source=typeof window.beGetCatalogContents==='function'?window.beGetCatalogContents():[];}catch(error){(void 0);}
       var result=[];
       source.map(normalizeProfileFavorite).forEach(function(item){
         var identity=profileFavoriteIdentity(item);
@@ -12893,7 +12929,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           if(identity&&!result.some(function(current){return profileFavoriteIdentity(current)===identity;}))result.unshift(item);
         });
         return result;
-      }catch(error){console.warn('Não foi possível carregar os álbuns para o perfil:',error);return profileLovedAlbumsItems.slice();}
+      }catch(error){(void 0);return profileLovedAlbumsItems.slice();}
     }
     function renderProfileLovedAlbums(){
       if(!profileLovedAlbumsSection||!profileLovedAlbumsContent)return;
@@ -13219,7 +13255,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileSavedSection.hidden=!publicReady;
       if(!publicReady){profileSavedItems=[];profileSavedGrid.innerHTML='';if(profileSavedCount)profileSavedCount.textContent='';return;}
       if(ownProfile){
-        try{profileSavedItems=typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[];}catch(error){console.warn('Não foi possível carregar os conteúdos salvos:',error);profileSavedItems=[];}
+        try{profileSavedItems=typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[];}catch(error){(void 0);profileSavedItems=[];}
       }else profileSavedItems=Array.isArray(viewedProfile.savedContents)?viewedProfile.savedContents.map(normalizeProfileFavorite).slice(0,20):[];
       profileSavedItems=profileSavedItems.map(function(item){return normalizeProfileFavorite(trustedProfileContent(item));});
       if(profileSavedCount)profileSavedCount.textContent=profileSavedItems.length?(profileSavedItems.length+' '+(profileSavedItems.length===1?'salvo':'salvos')):'';
@@ -13547,7 +13583,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           var savedProfile=await beBackend.profiles.setBanner(auth.currentUser.uid,bannerUrl,bannerId);
           if(savedProfile)currentProfile={...savedProfile,bannerUrl:bannerUrl,bannerId:bannerId};
         }catch(error){
-          console.warn('O banner foi mantido no perfil local; o banco não aceitou a atualização:',error&&error.message?error.message:error);
+          (void 0);
         }
         renderProfilePage();
         if(returnView==='settings'||document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();showSettingsSaved();}
@@ -13578,7 +13614,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         bannerGalleryRendered=true;
         syncBannerPickerSelection();
         activatePickerImages(bannerPickerBody,'banner');
-      }catch(error){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Não foi possível carregar os banners.</div>';console.warn(error);}
+      }catch(error){bannerPickerBody.innerHTML='<div class="banner-picker-empty">Não foi possível carregar os banners.</div>';(void 0);}
     }
     function closeDetailBeforeDedicatedPage(){
       var detailSection=document.getElementById('contentDetailSection');
@@ -13621,7 +13657,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         viewedProfile=profile;viewedProfileStatus=profile?'ready':'missing';renderProfilePage();if(profile)refreshProfileLikeState();
       }catch(error){
         if(requestId!==viewedProfileRequest||(!isProfileRoute()&&!document.body.classList.contains('profile-page-active')))return;
-        console.error('Falha ao carregar perfil público:',error);viewedProfile=null;viewedProfileStatus='error';renderProfilePage();
+        (void 0);viewedProfile=null;viewedProfileStatus='error';renderProfilePage();
       }
     }
 
@@ -13637,7 +13673,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       settingsPage.hidden=true;settingsPage.setAttribute('hidden','');settingsPage.setAttribute('aria-hidden','true');settingsPage.dataset.renderReady='false';
       document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active');
       document.body.classList.add('settings-page-active');
-      try{renderSettingsPage();}catch(error){console.error('Falha ao renderizar configurações:',error);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
+      try{renderSettingsPage();}catch(error){(void 0);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
       settingsPage.dataset.renderReady='true';
       settingsPage.hidden=false;settingsPage.removeAttribute('hidden');settingsPage.setAttribute('aria-hidden','false');
       if(window.BETVReleaseConfigPaint){
@@ -13713,7 +13749,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }catch(error){
         profilePageLogout.disabled=false;
         profilePageLogout.removeAttribute('aria-busy');
-        console.error('Não foi possível sair da conta:',error);
+        (void 0);
         alert('Não foi possível sair da conta. Tente novamente.');
       }
     }
@@ -13772,22 +13808,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         document.body.dataset.homeView='home';
       }
       window.scrollTo({top:0,left:0,behavior:'auto'});
-    });document.querySelectorAll('button[data-home-view],a[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});});window.addEventListener('popstate',function(){
+    });document.querySelectorAll('button[data-home-view],a[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){openPublicProfile(false).catch(function(error){(void 0);});});window.addEventListener('popstate',function(){
       if(!avatarPicker.hidden)closeAvatarPicker(false);
       if(!bannerPicker.hidden)closeBannerPicker(false);
       if(isConfigRoute()){if(auth.currentUser)openSettingsPage(false);else window.BETVPublicRoutes.go('/login');}
-      else if(isProfileRoute())openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});
+      else if(isProfileRoute())openPublicProfile(false).catch(function(error){(void 0);});
       else closePublicPages(false);
     });
     auth.onChange(async function(currentUser){
       dashboard.hidden=true;
       var isAdmin=false;
       if(currentUser){
-        try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){console.warn('Perfil:',error.message);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
+        try{isAdmin=beBackend.isAdmin(currentUser);currentProfile=await beBackend.profiles.ensure(currentUser);}catch(error){(void 0);currentProfile={displayName:currentUser.displayName||'',avatarUrl:''};}
         if(currentProfile&&currentProfile.banned){window.dispatchEvent(new CustomEvent('be:user-banned',{detail:{email:currentUser.email||'',reason:currentProfile.banReason||'',bannedAt:currentProfile.bannedAt||''}}));try{await auth.signOut();}catch(_){ }return;}
         var restoredBanner=resolvedProfileBanner(currentUser);if(restoredBanner.bannerUrl){currentProfile.bannerUrl=restoredBanner.bannerUrl;currentProfile.bannerId=restoredBanner.bannerId;}
-        setLiteralText(username,currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário'));selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);applyOwnAvatarBorder(currentProfile,currentUser.uid);syncAuthActionLabel();updateProfileActionVisibility();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();startCrossDeviceSync(currentUser).catch(function(error){console.warn('Falha ao iniciar sincronização:',error);});if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
-      }else{stopCrossDeviceSync();setInterfaceText(username,'Visitante');currentProfile={};applyOwnAvatarBorder(null,'');selectedAvatar='';setMainAvatar('');syncAuthActionLabel();updateProfileActionVisibility();if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);else{viewedProfile=null;viewedProfileStatus='idle';}if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
+        setLiteralText(username,currentProfile.username?'@'+currentProfile.username:(currentProfile.displayName||currentUser.displayName||'Usuário'));selectedAvatar=selectedProfileAvatar(currentProfile)||localStorage.getItem(avatarCacheKey(currentUser))||'';setMainAvatar(selectedAvatar);applyOwnAvatarBorder(currentProfile,currentUser.uid);syncAuthActionLabel();updateProfileActionVisibility();if(document.body.classList.contains('settings-page-active'))renderSettingsPage();startCrossDeviceSync(currentUser).catch(function(error){(void 0);});if(isConfigRoute())setTimeout(function(){openSettingsPage(false);},0);else if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){(void 0);});},0);if(sessionStorage.getItem('beOpenSettingsAfterDiscord')==='1'){sessionStorage.removeItem('beOpenSettingsAfterDiscord');setTimeout(function(){openSettingsPage(true);},180);}if(!isAdmin&&!String(currentProfile.username||'').trim()&&onboardingShownFor!==currentUser.uid)setTimeout(function(){openOnboarding(currentUser);},220);
+      }else{stopCrossDeviceSync();setInterfaceText(username,'Visitante');currentProfile={};applyOwnAvatarBorder(null,'');selectedAvatar='';setMainAvatar('');syncAuthActionLabel();updateProfileActionVisibility();if(isProfileRoute())setTimeout(function(){openPublicProfile(false).catch(function(error){(void 0);});},0);else{viewedProfile=null;viewedProfileStatus='idle';}if(document.body.classList.contains('settings-page-active'))renderSettingsPage();onboardingShownFor='';closeOnboarding(true);}
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
@@ -13823,9 +13859,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();}
     });
     document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(settingsSaveConfirm&&!settingsSaveConfirm.hidden){resolveSettingsConfirm(false);return;}closeAvatarPicker();closeBannerPicker();closeProfile();closeOnboarding(false);}});
-    setTimeout(function(){if(isConfigRoute()){if(auth.currentUser)openSettingsPage(false);}else if(isProfileRoute())openPublicProfile(false).catch(function(error){console.error('Falha ao abrir perfil público:',error);});},0);
+    setTimeout(function(){if(isConfigRoute()){if(auth.currentUser)openSettingsPage(false);}else if(isProfileRoute())openPublicProfile(false).catch(function(error){(void 0);});},0);
   }
-  function startPublicAccount(){setupPublicAccount().catch(function(error){console.error('Falha ao iniciar conta pública:',error);});}
+  function startPublicAccount(){setupPublicAccount().catch(function(error){(void 0);});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startPublicAccount,{once:true});else startPublicAccount();
 
   
@@ -13942,14 +13978,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var accountEmail=String(detail.email||selectedAuthEmail||'').trim();
     var reason=String(detail.reason||'').trim();
     if(appeal){
-      var appealSubject='Apelação a banimento';
-      var appealBody='Olá, gostaria de solicitar a revisão do banimento da minha conta BETV.'+(accountEmail?'\n\nE-mail da conta: '+accountEmail:'')+(reason?'\nMotivo informado: '+reason:'')+'\n\nExplique aqui por que o acesso deve ser restaurado:';
-      function encodeEmailField(value){
-        return encodeURIComponent(String(value||'').replace(/\r?\n/g,'\r\n'));
-      }
-      appeal.href='mailto:billieilishtv@gmail.com?subject='+encodeEmailField(appealSubject)+'&body='+encodeEmailField(appealBody);
+      appeal.href='/suporte?topic=ban-appeal';
       appeal.removeAttribute('target');
       appeal.removeAttribute('rel');
+      if(accountEmail)appeal.dataset.accountEmailAvailable='true';else delete appeal.dataset.accountEmailAvailable;
+      if(reason)appeal.dataset.banReasonAvailable='true';else delete appeal.dataset.banReasonAvailable;
     }
     toast.hidden=false;window.requestAnimationFrame(function(){toast.classList.add('show');});
     window.clearTimeout(banToastTimer);banToastTimer=window.setTimeout(hideBannedToast,10000);
@@ -14102,7 +14135,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!user)return true;
     var status={banned:Boolean(currentProfile&&currentProfile.banned),reason:currentProfile&&currentProfile.banReason||''};
     if(typeof auth.accountStatus==='function'){
-      try{var latest=await auth.accountStatus();if(latest)status={...status,...latest,banned:Boolean(status.banned||latest.banned)};}catch(error){console.warn('Não foi possível confirmar o status da conta:',error);}
+      try{var latest=await auth.accountStatus();if(latest)status={...status,...latest,banned:Boolean(status.banned||latest.banned)};}catch(error){(void 0);}
     }
     if(!status.banned)return true;
     var detail={email:user.email||'',reason:status.reason||'',bannedAt:status.bannedAt||''};
@@ -14117,7 +14150,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);
     localStorage.setItem('beAuthExpected','1');
     localStorage.setItem('beSessionUid',user.uid);
-    try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){console.warn('Perfil não pôde ser carregado:',error);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
+    try{currentProfile=await beBackend.profiles.ensure(user);}catch(error){(void 0);currentProfile={uid:user.uid,email:user.email||'',displayName:user.displayName||'',username:'',avatarUrl:''};}
     if(!(await enforceAccountAccess(user)))return null;
     setStatus('');
     if(isPasswordRecoveryRoute()){showPasswordRecovery();return user;}
@@ -14261,7 +14294,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           try{
             var recoveredUser=await recoverAuthenticatedUser(null);
             if(recoveredUser){await finishPublicLogin(recoveredUser);return;}
-          }catch(recoveryError){console.warn('Não foi possível confirmar a sessão:',recoveryError);}
+          }catch(recoveryError){(void 0);}
         }
         localStorage.removeItem('beSessionUid');
         localStorage.removeItem('beAuthExpected');
@@ -14330,7 +14363,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function startAuthentication(){
-    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){hideSiteSkeleton();if(isDonateRoute())showDonateRoute();else if(isSupportRoute())showSupportRoute();else if(isAlbumsRoute())showAlbumsRoute();else if(isBillieRoute())showBillieRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else enterHome(true);}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}console.error('Falha ao iniciar autenticação:',error);}
+    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){hideSiteSkeleton();if(isDonateRoute())showDonateRoute();else if(isSupportRoute())showSupportRoute();else if(isAlbumsRoute())showAlbumsRoute();else if(isBillieRoute())showBillieRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else enterHome(true);}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}(void 0);}
   }
 
   document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode(isPasswordRecoveryRoute()?'recovery':'email');startAuthentication()});
@@ -15270,7 +15303,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);
       }catch(error){
-        console.warn('Não foi possível carregar as notificações:',error);
+        (void 0);
         notifications=[];
         loaded=true;
         renderPreviews();
@@ -16389,7 +16422,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var saved=await data.get('settings','billie-eilish');
         if(saved)settings={...settings,...saved};
       }
-    }catch(error){console.warn('Não foi possível carregar as configurações da página Billie Eilish:',error);}
+    }catch(error){(void 0);}
     if(token!==loadToken)return;
     renderBase(settings);
     if(String(settings.sourceMode||'manual').toLowerCase()==='wikipedia')loadWikipedia(settings,token);
@@ -16970,7 +17003,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(supportersHasMore)observeSupportersEnd();
         return records;
       }catch(error){
-        console.warn('Não foi possível carregar os apoiadores:',error);
+        (void 0);
         supportersSection.hidden=true;
         return [];
       }finally{
@@ -16992,7 +17025,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(!supportersHasMore)disconnectSupportersObserver();
         return records;
       }catch(error){
-        console.warn('Não foi possível carregar mais apoiadores:',error);
+        (void 0);
         return [];
       }finally{
         setSupportersLoader('',false);
@@ -17056,7 +17089,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         notificationLoaded=true;
         renderNotificationPreview();
       }catch(error){
-        console.warn('Não foi possível carregar as notificações na página de ONGs:',error);
+        (void 0);
         notificationItems=[];
         notificationLoaded=true;
         if(notificationPreviewList)notificationPreviewList.innerHTML='<div class="notification-preview-empty"><strong>Não foi possível carregar</strong></div>';
@@ -17122,7 +17155,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         loadSupporters(force);
         signalDonateVisualReady();
       }catch(error){
-        console.warn('Não foi possível carregar as ONGs:',error);
+        (void 0);
         list.innerHTML='';
         status.hidden=false;
         status.textContent='Não foi possível carregar as ONGs agora. Tente novamente em instantes.';
@@ -17390,7 +17423,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     status.hidden=false;status.textContent=t('Carregando fãs…');
     loading=(async function(){
       try{var records=await fetchBatch(INITIAL_LIMIT,0);render(records,false);offset=records.length;hasMore=records.length===INITIAL_LIMIT;loaded=true;setLoader('',false);if(hasMore)observe();}
-      catch(error){console.warn('Não foi possível carregar os fãs e comunidades:',error);list.innerHTML='';status.hidden=false;status.textContent=t('Não foi possível carregar os fãs agora.');hasMore=false;}
+      catch(error){(void 0);list.innerHTML='';status.hidden=false;status.textContent=t('Não foi possível carregar os fãs agora.');hasMore=false;}
       finally{loading=null;}
     })();
     return loading;
@@ -17400,7 +17433,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     setLoader(t('Carregando mais fãs…'),true);
     loading=(async function(){
       try{var records=await fetchBatch(BATCH_LIMIT,offset);offset+=records.length;render(records,true);hasMore=records.length===BATCH_LIMIT;if(hasMore)observe();else disconnect();}
-      catch(error){console.warn('Não foi possível carregar mais fãs:',error);hasMore=false;disconnect();}
+      catch(error){(void 0);hasMore=false;disconnect();}
       finally{setLoader('',false);loading=null;}
     })();
     return loading;
@@ -17568,7 +17601,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         records=(Array.isArray(values)?values:[]).filter(function(album){return album&&album.active!==false&&String(album.title||'').trim();}).sort(function(a,b){return Number(a.order||0)-Number(b.order||0)||String(a.title||'').localeCompare(String(b.title||''),'pt-BR');});
         loaded=true;
         renderSearch(activeSearch);
-      }catch(error){console.warn('Não foi possível carregar os álbuns:',error);records=[];status.hidden=false;status.textContent=t('Não foi possível carregar os álbuns agora.');detail.hidden=true;}
+      }catch(error){(void 0);records=[];status.hidden=false;status.textContent=t('Não foi possível carregar os álbuns agora.');detail.hidden=true;}
       finally{loading=null;}
     })();
     return loading;
@@ -17698,7 +17731,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(user.uid||''),tag:'billie_fan'}}));}catch(_){ }
       return true;
     }catch(error){
-      console.warn('Não foi possível conceder a tag Fã da Billie pelo compartilhamento do perfil:',error&&error.message?error.message:error);
+      (void 0);
       return false;
     }
   }
@@ -17790,7 +17823,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }catch(_){ }
       try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(userId||''),tag:'billie_fan'}}));}catch(_){ }
       return true;
-    }catch(error){console.warn('Não foi possível aplicar a tag Fã da Billie:',error&&error.message?error.message:error);return false;}
+    }catch(error){(void 0);return false;}
   }
   function profileUrl(username){
     var path='/@'+String(username||'').replace(/^@/,'');
@@ -17919,7 +17952,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return;
       }
       buildPrompt(campaign,user,snapshot.profile,snapshot.favorites);
-    }catch(error){console.warn('Não foi possível verificar o convite de perfil:',error&&error.message?error.message:error);}
+    }catch(error){(void 0);}
     finally{checking=false;}
   }
   function schedule(delay){window.clearTimeout(retryTimer);retryTimer=window.setTimeout(check,Number(delay)||600);}

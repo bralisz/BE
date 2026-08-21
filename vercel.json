@@ -1,6 +1,38 @@
 {
   "rewrites": [
     {
+      "source": "/development/:path*",
+      "destination": "/api?route=__private"
+    },
+    {
+      "source": "/docs/:path*",
+      "destination": "/api?route=__private"
+    },
+    {
+      "source": "/migrations/:path*",
+      "destination": "/api?route=__private"
+    },
+    {
+      "source": "/supabase/:path*",
+      "destination": "/api?route=__private"
+    },
+    {
+      "source": "/server/:path*",
+      "destination": "/api?route=__private"
+    },
+    {
+      "source": "/README.md",
+      "destination": "/api?route=__private"
+    },
+    {
+      "source": "/package.json",
+      "destination": "/api?route=__private"
+    },
+    {
+      "source": "/vercel.json",
+      "destination": "/api?route=__private"
+    },
+    {
       "source": "/api/account",
       "destination": "/api?route=account"
     },

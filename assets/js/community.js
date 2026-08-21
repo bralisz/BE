@@ -396,7 +396,7 @@
       renderPayload(result&&result.data&&typeof result.data==='object'?result.data:{});
     }catch(error){
       if(requestId!==state.requestId||!document.body.classList.contains('community-page-active'))return;
-      console.warn('Comunidade:',error&&error.message?error.message:error);
+      (void 0);
       renderRail('communityContinueContent',[],currentUser()?t('Não foi possível carregar seu histórico agora.'):t('Entre na sua conta para ver os vídeos assistidos recentemente.'));
       renderRail('communityFavoritesContent',[],t('Não foi possível carregar os favoritos da comunidade agora.'));
       renderProfileRanking([]);renderOwnRanking('communityOwnProfile',null,readRankingPreference(currentUser()&&currentUser().uid),false);
@@ -406,7 +406,7 @@
   async function recordWatchFromPlay(play){
     var user=currentUser();if(!user||!play)return false;
     var recordId=String(play.dataset.recordId||'');if(!validUuid(recordId))return false;
-    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;state.lastPayload=null;return result&&result.data!==false;}catch(error){console.warn('Não foi possível registrar o conteúdo recente:',error&&error.message?error.message:error);return false;}
+    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;state.lastPayload=null;return result&&result.data!==false;}catch(error){(void 0);return false;}
   }
 
   function recordRecentFromPlay(play){

@@ -1,7 +1,7 @@
 'use strict';
 
 const PAGE_TITLE = 'Billie_Eilish';
-const USER_AGENT = 'BETV/1.1 (+https://billieilishtv.site; contato: billieilishtv@gmail.com)';
+const USER_AGENT = 'BETV/1.2 (+https://billieilishtv.site)';
 const WIKIPEDIA_SITES = Object.freeze({
   'pt-br': Object.freeze({
     slug: 'pt-br',

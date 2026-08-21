@@ -224,7 +224,7 @@
       apply(document.documentElement);
     }catch(error){
       batch.forEach(function(text){translatedThisSession.delete(text);});
-      console.warn('Tradução complementar indisponível:',error&&error.message||error);
+      (void 0);
     }finally{
       translationBusy=false;
       if(missingTexts.size)scheduleMissingTranslation(800);
@@ -248,7 +248,7 @@
         var payload=await response.json();
         if(payload&&typeof payload==='object')Object.keys(payload).forEach(function(key){map[key]=payload[key];});
       }
-    }catch(error){console.warn('Não foi possível carregar o idioma do site:',error&&error.message||error);}
+    }catch(error){(void 0);}
     window.BETVI18n=api;
     apply(document.documentElement);
     startObserver();
