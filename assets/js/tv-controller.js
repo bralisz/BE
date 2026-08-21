@@ -8,6 +8,118 @@
   const PENDING_MEDIA_KEY = 'beTvPendingMedia';
   const CURRENT_MEDIA_KEY = 'beTvCurrentMedia';
   const POST_AUTH_KEY = 'bePostAuthReturn';
+  const LOCALE_STORAGE_KEY = 'betvPreferredLocale';
+  const TV_I18N = {
+    'pt-br': {
+      lang: 'pt-BR', pageTitle: 'Transmitir para TV — Billie Eilish TV', back: 'Voltar', heading: 'Transmitir para a TV',
+      description: 'Conecte sua conta a uma Smart TV e envie vídeos e filmes diretamente do Billie Eilish TV.', checkingAccount: 'Verificando sua conta…',
+      codeShown: 'Código exibido na TV', connectSmartTv: 'Conectar Smart TV',
+      pairHelp: 'Na televisão, abra <strong>billieilishtv.site/tv</strong>. Você também pode escanear o QR Code mostrado na TV.',
+      smartTvConnected: 'Smart TV conectada', ready: 'Pronta para receber conteúdo', readyWithCode: 'Código {code} • pronta para receber conteúdo',
+      selectedContent: 'Conteúdo selecionado', sendNow: 'Transmitir agora', transmitted: 'Transmitido', chooseOther: 'Escolher outro conteúdo', disconnectTv: 'Desconectar TV',
+      yourAccount: 'Sua conta', profile: 'Perfil Billie Eilish TV', movie: 'Filme', series: 'Série', video: 'Vídeo',
+      enterCode: 'Digite o código de 8 caracteres mostrado na TV.', sending: 'Enviando para sua TV…', transmitting: 'Transmitindo…',
+      sendError: 'Não foi possível enviar o conteúdo. Reconecte a TV e tente novamente.', expired: 'Esse código expirou. Gere um novo código na TV.',
+      alreadyUsed: 'Esse código já foi conectado a outra conta.', invalidCode: 'Confira o código exibido na TV.', pairError: 'Não foi possível conectar a TV. Confira o código e tente novamente.',
+      connectingSmartTv: 'Conectando à sua Smart TV…', connecting: 'Conectando…', enableSubtitles: 'Ativar legendas na TV', disableSubtitles: 'Desativar legendas na TV',
+      subtitlesOn: 'Legendas ativadas na TV.', subtitlesOff: 'Legendas desativadas na TV.', subtitlesError: 'Não foi possível alterar as legendas da TV.',
+      disconnecting: 'Desconectando…', bootError: 'Não foi possível iniciar a conexão com a TV. Atualize a página.'
+    },
+    'en-us': {
+      lang: 'en-US', pageTitle: 'Cast to TV — Billie Eilish TV', back: 'Back', heading: 'Cast to TV',
+      description: 'Connect your account to a Smart TV and send videos and movies directly from Billie Eilish TV.', checkingAccount: 'Checking your account…',
+      codeShown: 'Code shown on TV', connectSmartTv: 'Connect Smart TV',
+      pairHelp: 'On your TV, open <strong>billieilishtv.site/tv</strong>. You can also scan the QR code shown on the TV.',
+      smartTvConnected: 'Smart TV connected', ready: 'Ready to receive content', readyWithCode: 'Code {code} • ready to receive content',
+      selectedContent: 'Selected content', sendNow: 'Cast now', transmitted: 'Cast', chooseOther: 'Choose another title', disconnectTv: 'Disconnect TV',
+      yourAccount: 'Your account', profile: 'Billie Eilish TV profile', movie: 'Movie', series: 'Series', video: 'Video',
+      enterCode: 'Enter the 8-character code shown on the TV.', sending: 'Sending to your TV…', transmitting: 'Casting…',
+      sendError: 'Could not send the content. Reconnect the TV and try again.', expired: 'This code has expired. Generate a new code on the TV.',
+      alreadyUsed: 'This code is already connected to another account.', invalidCode: 'Check the code shown on the TV.', pairError: 'Could not connect the TV. Check the code and try again.',
+      connectingSmartTv: 'Connecting to your Smart TV…', connecting: 'Connecting…', enableSubtitles: 'Turn on subtitles on TV', disableSubtitles: 'Turn off subtitles on TV',
+      subtitlesOn: 'Subtitles turned on on the TV.', subtitlesOff: 'Subtitles turned off on the TV.', subtitlesError: 'Could not change the TV subtitles.',
+      disconnecting: 'Disconnecting…', bootError: 'Could not start the TV connection. Refresh the page.'
+    },
+    es: {
+      lang: 'es-ES', pageTitle: 'Transmitir a la TV — Billie Eilish TV', back: 'Volver', heading: 'Transmitir a la TV',
+      description: 'Conecta tu cuenta a una Smart TV y envía videos y películas directamente desde Billie Eilish TV.', checkingAccount: 'Verificando tu cuenta…',
+      codeShown: 'Código que aparece en la TV', connectSmartTv: 'Conectar Smart TV',
+      pairHelp: 'En la televisión, abre <strong>billieilishtv.site/tv</strong>. También puedes escanear el código QR que aparece en la TV.',
+      smartTvConnected: 'Smart TV conectada', ready: 'Lista para recibir contenido', readyWithCode: 'Código {code} • lista para recibir contenido',
+      selectedContent: 'Contenido seleccionado', sendNow: 'Transmitir ahora', transmitted: 'Transmitido', chooseOther: 'Elegir otro contenido', disconnectTv: 'Desconectar TV',
+      yourAccount: 'Tu cuenta', profile: 'Perfil de Billie Eilish TV', movie: 'Película', series: 'Serie', video: 'Vídeo',
+      enterCode: 'Introduce el código de 8 caracteres que aparece en la TV.', sending: 'Enviando a tu TV…', transmitting: 'Transmitiendo…',
+      sendError: 'No se pudo enviar el contenido. Vuelve a conectar la TV e inténtalo de nuevo.', expired: 'Este código ha caducado. Genera un código nuevo en la TV.',
+      alreadyUsed: 'Este código ya está conectado a otra cuenta.', invalidCode: 'Comprueba el código que aparece en la TV.', pairError: 'No se pudo conectar la TV. Comprueba el código e inténtalo de nuevo.',
+      connectingSmartTv: 'Conectando a tu Smart TV…', connecting: 'Conectando…', enableSubtitles: 'Activar subtítulos en la TV', disableSubtitles: 'Desactivar subtítulos en la TV',
+      subtitlesOn: 'Subtítulos activados en la TV.', subtitlesOff: 'Subtítulos desactivados en la TV.', subtitlesError: 'No se pudieron cambiar los subtítulos de la TV.',
+      disconnecting: 'Desconectando…', bootError: 'No se pudo iniciar la conexión con la TV. Actualiza la página.'
+    },
+    fr: {
+      lang: 'fr-FR', pageTitle: 'Diffuser sur la TV — Billie Eilish TV', back: 'Retour', heading: 'Diffuser sur la TV',
+      description: 'Connectez votre compte à une Smart TV et envoyez des vidéos et des films directement depuis Billie Eilish TV.', checkingAccount: 'Vérification de votre compte…',
+      codeShown: 'Code affiché sur la TV', connectSmartTv: 'Connecter la Smart TV',
+      pairHelp: 'Sur votre téléviseur, ouvrez <strong>billieilishtv.site/tv</strong>. Vous pouvez aussi scanner le QR code affiché sur la TV.',
+      smartTvConnected: 'Smart TV connectée', ready: 'Prête à recevoir du contenu', readyWithCode: 'Code {code} • prête à recevoir du contenu',
+      selectedContent: 'Contenu sélectionné', sendNow: 'Diffuser maintenant', transmitted: 'Diffusé', chooseOther: 'Choisir un autre contenu', disconnectTv: 'Déconnecter la TV',
+      yourAccount: 'Votre compte', profile: 'Profil Billie Eilish TV', movie: 'Film', series: 'Série', video: 'Vidéo',
+      enterCode: 'Saisissez le code à 8 caractères affiché sur la TV.', sending: 'Envoi vers votre TV…', transmitting: 'Diffusion…',
+      sendError: 'Impossible d’envoyer le contenu. Reconnectez la TV et réessayez.', expired: 'Ce code a expiré. Générez un nouveau code sur la TV.',
+      alreadyUsed: 'Ce code est déjà connecté à un autre compte.', invalidCode: 'Vérifiez le code affiché sur la TV.', pairError: 'Impossible de connecter la TV. Vérifiez le code et réessayez.',
+      connectingSmartTv: 'Connexion à votre Smart TV…', connecting: 'Connexion…', enableSubtitles: 'Activer les sous-titres sur la TV', disableSubtitles: 'Désactiver les sous-titres sur la TV',
+      subtitlesOn: 'Sous-titres activés sur la TV.', subtitlesOff: 'Sous-titres désactivés sur la TV.', subtitlesError: 'Impossible de modifier les sous-titres de la TV.',
+      disconnecting: 'Déconnexion…', bootError: 'Impossible de démarrer la connexion à la TV. Actualisez la page.'
+    }
+  };
+
+  function normalizeUiLocale(value) {
+    const raw = String(value || '').trim().toLowerCase().replace('_', '-');
+    if (raw === 'pt' || raw === 'pt-br' || raw.startsWith('pt-')) return 'pt-br';
+    if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
+    if (raw === 'es' || raw.startsWith('es-')) return 'es';
+    if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
+    return '';
+  }
+
+  function detectControllerLocale() {
+    try {
+      const query = normalizeUiLocale(new URLSearchParams(location.search).get('lang'));
+      if (query) return query;
+    } catch (_) {}
+    try {
+      const stored = normalizeUiLocale(localStorage.getItem(LOCALE_STORAGE_KEY));
+      if (stored) return stored;
+    } catch (_) {}
+    try {
+      const languages = Array.isArray(navigator.languages) && navigator.languages.length ? navigator.languages : [navigator.language || navigator.userLanguage || ''];
+      for (const language of languages) {
+        const locale = normalizeUiLocale(language);
+        if (locale) return locale;
+      }
+    } catch (_) {}
+    return 'pt-br';
+  }
+
+  const CONTROLLER_LOCALE = detectControllerLocale();
+  const COPY = TV_I18N[CONTROLLER_LOCALE] || TV_I18N['pt-br'];
+
+  function tr(key, variables = {}) {
+    return String(COPY[key] || TV_I18N['pt-br'][key] || key).replace(/\{([a-zA-Z0-9_]+)\}/g, (_, name) => Object.prototype.hasOwnProperty.call(variables, name) ? String(variables[name]) : _);
+  }
+
+  function applyStaticTranslations() {
+    document.documentElement.lang = COPY.lang || 'pt-BR';
+    document.documentElement.dataset.locale = CONTROLLER_LOCALE;
+    document.title = tr('pageTitle');
+    document.querySelectorAll('[data-tv-i18n]').forEach(node => {
+      const key = node.getAttribute('data-tv-i18n');
+      if (key) node.textContent = tr(key);
+    });
+    document.querySelectorAll('[data-tv-i18n-html]').forEach(node => {
+      const key = node.getAttribute('data-tv-i18n-html');
+      if (key) node.innerHTML = tr(key);
+    });
+  }
 
   const loading = document.getElementById('controllerLoading');
   const formView = document.getElementById('controllerFormView');
@@ -64,7 +176,7 @@
   function accountProfile() {
     const metadata = profileMetadata();
     return {
-      displayName: String(userProfile?.display_name || metadata.display_name || metadata.full_name || user?.email || 'Sua conta').trim(),
+      displayName: String(userProfile?.display_name || metadata.display_name || metadata.full_name || user?.email || tr('yourAccount')).trim(),
       username: String(userProfile?.username || metadata.username || metadata.user_name || '').trim().replace(/^@+/, ''),
       avatarUrl: String(userProfile?.avatar_url || metadata.profile_avatar_url || '').trim(),
       bannerUrl: String(userProfile?.banner_url || metadata.profile_banner_url || metadata.banner_url || '').trim()
@@ -72,11 +184,7 @@
   }
 
   function currentLocaleSlug() {
-    const raw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase();
-    if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
-    if (raw === 'es' || raw.startsWith('es-')) return 'es';
-    if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
-    return 'pt-br';
+    return CONTROLLER_LOCALE;
   }
 
   function mediaLocale(media) {
@@ -198,7 +306,7 @@
   function accountMarkup(target) {
     if (!target || !user) return;
     const profile = accountProfile();
-    const name = profile.displayName || 'Sua conta';
+    const name = profile.displayName || tr('yourAccount');
     const initial = (name.trim()[0] || 'B').toUpperCase();
     target.textContent = '';
     target.classList.toggle('has-banner', Boolean(profile.bannerUrl));
@@ -235,7 +343,7 @@
     const strong = document.createElement('strong');
     strong.textContent = name;
     const small = document.createElement('span');
-    small.textContent = profile.username ? `@${profile.username}` : 'Perfil Billie Eilish TV';
+    small.textContent = profile.username ? `@${profile.username}` : tr('profile');
     copy.append(strong, small);
     target.append(avatar, copy);
   }
@@ -271,7 +379,7 @@
     subtitleRemoteButton.classList.toggle('is-active', hasSubtitle && tvSubtitlesEnabled);
     subtitleRemoteButton.setAttribute('aria-pressed', tvSubtitlesEnabled ? 'true' : 'false');
     const label = subtitleRemoteButton.querySelector('span:last-child');
-    if (label) label.textContent = tvSubtitlesEnabled ? 'Desativar legendas na TV' : 'Ativar legendas na TV';
+    if (label) label.textContent = tvSubtitlesEnabled ? tr('disableSubtitles') : tr('enableSubtitles');
   }
 
   function readPendingMedia() {
@@ -309,8 +417,8 @@
       return;
     }
 
-    pendingTitle.textContent = String(previewMedia.title || 'Conteúdo selecionado');
-    pendingMeta.textContent = [previewMedia.collection === 'movies' ? 'Filme' : previewMedia.collection === 'series' ? 'Série' : 'Vídeo', previewMedia.duration].filter(Boolean).join(' • ');
+    pendingTitle.textContent = String(previewMedia.title || tr('selectedContent'));
+    pendingMeta.textContent = [previewMedia.collection === 'movies' ? tr('movie') : previewMedia.collection === 'series' ? tr('series') : tr('video'), previewMedia.duration].filter(Boolean).join(' • ');
     pendingThumb.textContent = '';
     const imageUrl = String(previewMedia.imageUrl || previewMedia.bannerUrl || '').trim();
     if (imageUrl) {
@@ -324,7 +432,7 @@
 
     pendingPreview.hidden = false;
     sendButton.hidden = false;
-    sendButton.textContent = alreadyTransmitted ? 'Transmitido' : 'Transmitir agora';
+    sendButton.textContent = alreadyTransmitted ? tr('transmitted') : tr('sendNow');
     sendButton.classList.toggle('is-transmitted', alreadyTransmitted);
     sendButton.disabled = alreadyTransmitted;
   }
@@ -342,7 +450,7 @@
     formView.hidden = true;
     connectedView.hidden = false;
     accountMarkup(connectedAccountHost);
-    connectedCode.textContent = activeCode ? `Código ${activeCode} • pronta para receber conteúdo` : 'Pronta para receber conteúdo';
+    connectedCode.textContent = activeCode ? tr('readyWithCode', { code: activeCode }) : tr('ready');
     renderPending();
     syncSubtitleRemote();
   }
@@ -359,7 +467,7 @@
   async function claim(code) {
     const normalized = safeCode(code);
     if (normalized.length !== 8) {
-      setMessage(message, 'Digite o código de 8 caracteres mostrado na TV.', 'error');
+      setMessage(message, tr('enterCode'), 'error');
       return false;
     }
     const { data, error } = await client.rpc('tv_claim_session', { p_pairing_code: normalized });
@@ -382,7 +490,7 @@
     if (busy) return false;
     busy = true;
     sendButton.disabled = true;
-    setMessage(connectedMessage, automatic ? 'Enviando para sua TV…' : 'Transmitindo…');
+    setMessage(connectedMessage, automatic ? tr('sending') : tr('transmitting'));
     try {
       const mediaToSend = mediaWithTvState(pendingMedia, false);
       const { error } = await client.rpc('tv_send_media', {
@@ -395,7 +503,7 @@
       try { localStorage.setItem(CURRENT_MEDIA_KEY, JSON.stringify(mediaToSend)); } catch (_) {}
       localStorage.removeItem(PENDING_MEDIA_KEY);
       setMessage(connectedMessage, '');
-      sendButton.textContent = 'Transmitido';
+      sendButton.textContent = tr('transmitted');
       sendButton.classList.add('is-transmitted');
       sendButton.disabled = true;
       syncSubtitleRemote();
@@ -403,7 +511,7 @@
     } catch (error) {
       console.error('Falha ao transmitir:', error);
       sendButton.classList.remove('is-transmitted');
-      setMessage(connectedMessage, 'Não foi possível enviar o conteúdo. Reconecte a TV e tente novamente.', 'error');
+      setMessage(connectedMessage, tr('sendError'), 'error');
       sendButton.disabled = false;
       return false;
     } finally {
@@ -413,10 +521,10 @@
 
   function friendlyPairError(error) {
     const text = String(error?.message || '').toLowerCase();
-    if (text.includes('pairing_code_expired')) return 'Esse código expirou. Gere um novo código na TV.';
-    if (text.includes('pairing_code_already_used')) return 'Esse código já foi conectado a outra conta.';
-    if (text.includes('invalid_pairing_code')) return 'Confira o código exibido na TV.';
-    return 'Não foi possível conectar a TV. Confira o código e tente novamente.';
+    if (text.includes('pairing_code_expired')) return tr('expired');
+    if (text.includes('pairing_code_already_used')) return tr('alreadyUsed');
+    if (text.includes('invalid_pairing_code')) return tr('invalidCode');
+    return tr('pairError');
   }
 
   async function boot() {
@@ -451,7 +559,7 @@
     const queryCode = safeCode(new URLSearchParams(location.search).get('code'));
     if (queryCode.length === 8) {
       codeInput.value = queryCode;
-      loading.querySelector('span:last-child').textContent = 'Conectando à sua Smart TV…';
+      loading.querySelector('span:last-child').textContent = tr('connectingSmartTv');
       try {
         const ok = await claim(queryCode);
         if (ok && pendingMedia) await sendPending({ automatic: true });
@@ -500,7 +608,7 @@
     busy = true;
     const button = event.submitter || form.querySelector('button[type="submit"]');
     button.disabled = true;
-    setMessage(message, 'Conectando…');
+    setMessage(message, tr('connecting'));
     try {
       const ok = await claim(codeInput.value);
       if (ok && readPendingMedia()) await sendPending({ automatic: true });
@@ -546,10 +654,10 @@
       tvSubtitlesEnabled = next;
       setMessage(connectedMessage, '');
       syncSubtitleRemote();
-      showCastToast(next ? 'Legendas ativadas na TV.' : 'Legendas desativadas na TV.');
+      showCastToast(next ? tr('subtitlesOn') : tr('subtitlesOff'));
     } catch (error) {
       console.error('Falha ao controlar legendas da TV:', error);
-      setMessage(connectedMessage, 'Não foi possível alterar as legendas da TV.', 'error');
+      setMessage(connectedMessage, tr('subtitlesError'), 'error');
       subtitleRemoteButton.disabled = false;
     } finally { busy = false; }
   });
@@ -558,7 +666,7 @@
     if (!activeSessionId || busy) return;
     busy = true;
     disconnectButton.disabled = true;
-    setMessage(connectedMessage, 'Desconectando…');
+    setMessage(connectedMessage, tr('disconnecting'));
     try {
       await client.rpc('tv_disconnect_session', { p_session_id: activeSessionId });
     } catch (error) {
@@ -576,10 +684,12 @@
     disconnectButton.disabled = false;
   });
 
+  applyStaticTranslations();
+
   boot().catch(error => {
     console.error(error);
     loading.hidden = true;
     formView.hidden = false;
-    setMessage(message, 'Não foi possível iniciar a conexão com a TV. Atualize a página.', 'error');
+    setMessage(message, tr('bootError'), 'error');
   });
 })();

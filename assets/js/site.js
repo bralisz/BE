@@ -8564,7 +8564,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       collection: String(data.collection || 'videos')
     };
 
-    const target = '/connect-tv/?from=cast';
+    const castLocaleRaw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase();
+    const castLocale = castLocaleRaw === 'en' || castLocaleRaw === 'en-us' || castLocaleRaw.startsWith('en-') ? 'en-us'
+      : castLocaleRaw === 'es' || castLocaleRaw.startsWith('es-') ? 'es'
+        : castLocaleRaw === 'fr' || castLocaleRaw.startsWith('fr-') ? 'fr' : 'pt-br';
+    const target = `/connect-tv/?from=cast&lang=${encodeURIComponent(castLocale)}`;
     const account = window.beBackend?.auth?.currentUser || null;
     if (!account) {
       try { localStorage.setItem('beTvPendingMedia', JSON.stringify(payload)); } catch (_) {}

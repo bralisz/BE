@@ -7,6 +7,70 @@ const SUPABASE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const DEVICE_TOKEN = /^[a-f0-9]{64}$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const TV_UI = {
+  'pt-br': {
+    lang: 'pt-BR', title: 'Conectar Smart TV — Billie Eilish TV', exit: 'Sair', connectPhone: 'Conecte seu celular',
+    pairDescription: 'Escaneie o QR Code com a câmera do celular. Você entra na sua conta e a TV fica pronta para receber os vídeos do site.',
+    qrAlt: 'QR Code para conectar esta TV', yourCode: 'Seu código', tvCode: 'Código da TV', howToConnect: 'Como conectar',
+    step1: 'Escaneie o QR Code.', step2: 'Entre na sua conta.', step3: 'Abra um vídeo ou filme e toque no ícone de transmissão.',
+    expires: 'O código expira em 5 minutos se não for usado.', connectedTitle: 'Conectado à sua conta', connectedDescription: 'Agora escolha um vídeo ou filme no celular e toque no ícone de transmissão.',
+    connectedAccount: 'Conta conectada', errorTitle: 'Não foi possível conectar', errorDescription: 'Atualize a página para tentar novamente.', errorStatus: 'Falha ao preparar a conexão.',
+    loadingVideo: 'Carregando vídeo', connectedToPhone: 'Conectado ao celular', enableSubtitles: 'Ativar legendas', disableSubtitles: 'Desativar legendas'
+  },
+  'en-us': {
+    lang: 'en-US', title: 'Connect Smart TV — Billie Eilish TV', exit: 'Exit', connectPhone: 'Connect your phone',
+    pairDescription: 'Scan the QR code with your phone camera. Sign in to your account and the TV will be ready to receive videos from the site.',
+    qrAlt: 'QR code to connect this TV', yourCode: 'Your code', tvCode: 'TV code', howToConnect: 'How to connect',
+    step1: 'Scan the QR code.', step2: 'Sign in to your account.', step3: 'Open a video or movie and tap the cast icon.',
+    expires: 'The code expires in 5 minutes if it is not used.', connectedTitle: 'Connected to your account', connectedDescription: 'Now choose a video or movie on your phone and tap the cast icon.',
+    connectedAccount: 'Connected account', errorTitle: 'Could not connect', errorDescription: 'Refresh the page to try again.', errorStatus: 'Could not prepare the connection.',
+    loadingVideo: 'Loading video', connectedToPhone: 'Connected to phone', enableSubtitles: 'Turn on subtitles', disableSubtitles: 'Turn off subtitles'
+  },
+  es: {
+    lang: 'es-ES', title: 'Conectar Smart TV — Billie Eilish TV', exit: 'Salir', connectPhone: 'Conecta tu celular',
+    pairDescription: 'Escanea el código QR con la cámara del celular. Inicia sesión en tu cuenta y la TV quedará lista para recibir los videos del sitio.',
+    qrAlt: 'Código QR para conectar esta TV', yourCode: 'Tu código', tvCode: 'Código de la TV', howToConnect: 'Cómo conectar',
+    step1: 'Escanea el código QR.', step2: 'Inicia sesión en tu cuenta.', step3: 'Abre un video o una película y toca el icono de transmisión.',
+    expires: 'El código caduca en 5 minutos si no se utiliza.', connectedTitle: 'Conectado a tu cuenta', connectedDescription: 'Ahora elige un video o una película en el celular y toca el icono de transmisión.',
+    connectedAccount: 'Cuenta conectada', errorTitle: 'No se pudo conectar', errorDescription: 'Actualiza la página para intentarlo de nuevo.', errorStatus: 'No se pudo preparar la conexión.',
+    loadingVideo: 'Cargando video', connectedToPhone: 'Conectado al celular', enableSubtitles: 'Activar subtítulos', disableSubtitles: 'Desactivar subtítulos'
+  },
+  fr: {
+    lang: 'fr-FR', title: 'Connecter la Smart TV — Billie Eilish TV', exit: 'Quitter', connectPhone: 'Connectez votre téléphone',
+    pairDescription: 'Scannez le QR code avec l’appareil photo de votre téléphone. Connectez-vous à votre compte et la TV sera prête à recevoir les vidéos du site.',
+    qrAlt: 'QR code pour connecter cette TV', yourCode: 'Votre code', tvCode: 'Code de la TV', howToConnect: 'Comment se connecter',
+    step1: 'Scannez le QR code.', step2: 'Connectez-vous à votre compte.', step3: 'Ouvrez une vidéo ou un film et appuyez sur l’icône de diffusion.',
+    expires: 'Le code expire au bout de 5 minutes s’il n’est pas utilisé.', connectedTitle: 'Connecté à votre compte', connectedDescription: 'Choisissez maintenant une vidéo ou un film sur votre téléphone, puis appuyez sur l’icône de diffusion.',
+    connectedAccount: 'Compte connecté', errorTitle: 'Impossible de se connecter', errorDescription: 'Actualisez la page pour réessayer.', errorStatus: 'Impossible de préparer la connexion.',
+    loadingVideo: 'Chargement de la vidéo', connectedToPhone: 'Connecté au téléphone', enableSubtitles: 'Activer les sous-titres', disableSubtitles: 'Désactiver les sous-titres'
+  }
+};
+
+function normalizeUiLocale(value) {
+  const raw = String(value || '').trim().toLowerCase().replace('_', '-');
+  if (raw === 'pt' || raw === 'pt-br' || raw.indexOf('pt-') === 0) return 'pt-br';
+  if (raw === 'en' || raw === 'en-us' || raw.indexOf('en-') === 0) return 'en-us';
+  if (raw === 'es' || raw.indexOf('es-') === 0) return 'es';
+  if (raw === 'fr' || raw.indexOf('fr-') === 0) return 'fr';
+  return '';
+}
+
+function requestUiLocale(req) {
+  const queryLocale = normalizeUiLocale(req && req.query && req.query.lang);
+  if (queryLocale) return queryLocale;
+  const accept = String((req && req.headers && req.headers['accept-language']) || '');
+  const parts = accept.split(',');
+  for (let i = 0; i < parts.length; i += 1) {
+    const locale = normalizeUiLocale(parts[i].split(';')[0]);
+    if (locale) return locale;
+  }
+  return 'pt-br';
+}
+
+function uiCopy(locale) {
+  return TV_UI[normalizeUiLocale(locale) || 'pt-br'] || TV_UI['pt-br'];
+}
+
 function escapeHtml(value) {
   return String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -295,7 +359,7 @@ async function inlinePairingQr(connectUrl) {
   }
 }
 
-function renderMedia(media, legacyPlayback) {
+function renderMedia(media, legacyPlayback, copy) {
   if (!media || typeof media !== 'object') return '';
   const selected = preferredMediaUrl(media);
   const drive = driveInfo(selected);
@@ -356,18 +420,18 @@ function renderMedia(media, legacyPlayback) {
     ? `<div class="tv-subtitle-overlay" id="tvSubtitleOverlay" hidden></div>`
     : '';
   const subtitleScript = subtitleUrl && (provider === 'native' || provider === 'drive' || provider === 'vk')
-    ? subtitleRuntimeScript(subtitleUrl, provider, Boolean(media.subtitleEnabled))
+    ? subtitleRuntimeScript(subtitleUrl, provider, Boolean(media.subtitleEnabled), copy)
     : '';
 
   return `
     <div class="tv-card-inner" id="receiverPlayer">
-      <div class="tv-player-wrap" id="receiverPlayerHost" data-provider="${escapeHtml(provider)}">${player}${subtitleControls}<div class="tv-playback-loading" id="tvPlaybackLoading" role="status" aria-label="Carregando vídeo"><span class="tv-playback-spinner" aria-hidden="true"></span></div></div>
+      <div class="tv-player-wrap" id="receiverPlayerHost" data-provider="${escapeHtml(provider)}">${player}${subtitleControls}<div class="tv-playback-loading" id="tvPlaybackLoading" role="status" aria-label="${escapeHtml(copy.loadingVideo)}"><span class="tv-playback-spinner" aria-hidden="true"></span></div></div>
       <div class="tv-now-playing">
         <div class="tv-now-playing-copy">
           <strong class="tv-now-playing-title">${title}</strong>
           ${meta ? `<span class="tv-now-playing-meta">${meta}</span>` : ''}
         </div>
-        <span class="tv-receiver-badge"><span class="pulse"></span>Conectado ao celular</span>
+        <span class="tv-receiver-badge"><span class="pulse"></span>${escapeHtml(copy.connectedToPhone)}</span>
       </div>
     </div>${playbackLoadingRuntimeScript(provider)}${playbackRemoteRuntimeScript(provider)}${subtitleScript}`;
 }
@@ -603,14 +667,18 @@ function playbackRemoteRuntimeScript(provider) {
 </script>`;
 }
 
-function subtitleRuntimeScript(subtitleUrl, provider, initialEnabled) {
+function subtitleRuntimeScript(subtitleUrl, provider, initialEnabled, copy) {
   const safeUrl = JSON.stringify(String(subtitleUrl || '')).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
   const safeProvider = JSON.stringify(String(provider || '')).replace(/</g, '\\u003c');
   const safeInitialEnabled = initialEnabled ? 'true' : 'false';
+  const safeEnableLabel = JSON.stringify(String((copy && copy.enableSubtitles) || 'Ativar legendas')).replace(/</g, '\\u003c');
+  const safeDisableLabel = JSON.stringify(String((copy && copy.disableSubtitles) || 'Desativar legendas')).replace(/</g, '\\u003c');
   return `<script type="text/javascript">
 (function(){
   var subtitleUrl=${safeUrl};
   var provider=${safeProvider};
+  var enableLabel=${safeEnableLabel};
+  var disableLabel=${safeDisableLabel};
   var button=null;
   var overlay=document.getElementById('tvSubtitleOverlay');
   var video=document.getElementById('legacyTvVideo');
@@ -697,7 +765,7 @@ function subtitleRuntimeScript(subtitleUrl, provider, initialEnabled) {
   function tick(){show(cueAt(currentTime()));timer=setTimeout(tick,250);}
   function setEnabled(value){
     enabled=!!value;
-    if(button){button.className='tv-subtitle-toggle'+(enabled?' is-active':'');button.setAttribute('aria-pressed',enabled?'true':'false');button.setAttribute('aria-label',enabled?'Desativar legendas':'Ativar legendas');}
+    if(button){button.className='tv-subtitle-toggle'+(enabled?' is-active':'');button.setAttribute('aria-pressed',enabled?'true':'false');button.setAttribute('aria-label',enabled?disableLabel:enableLabel);}
     if(!enabled)show('');
   }
   function load(){
@@ -742,7 +810,7 @@ function codeMarkup(code) {
   return String(code || '').split('').map(char => `<span>${escapeHtml(char)}</span>`).join('');
 }
 
-function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion = 0, mediaKey = '', subtitleEnabled = false, remoteNonce = '' }) {
+function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion = 0, mediaKey = '', subtitleEnabled = false, remoteNonce = '', locale = 'pt-br', copy = uiCopy(locale) }) {
   const initialStatus = JSON.stringify(String(stateStatus || 'waiting'));
   const initialMediaKey = JSON.stringify(String(mediaKey || ''));
   const initialRemoteNonce = JSON.stringify(String(remoteNonce || ''));
@@ -802,16 +870,32 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   schedule(4000);
 })();
 </script>`;
+  const localeBootstrap = `
+<script type="text/javascript">
+(function(){
+  var current=${JSON.stringify(String(locale || 'pt-br'))};
+  var search=String(location.search||'');
+  if(/(?:^|[?&])lang=(?:pt-br|pt|en-us|en|es|fr)(?:&|$)/i.test(search))return;
+  var raw='';
+  try{raw=String(navigator.language||navigator.userLanguage||'').toLowerCase().replace('_','-');}catch(e){}
+  var next='';
+  if(raw.indexOf('pt')===0)next='pt-br';else if(raw.indexOf('es')===0)next='es';else if(raw.indexOf('fr')===0)next='fr';else if(raw.indexOf('en')===0)next='en-us';
+  if(next&&next!==current){
+    var path=location.pathname||'/api/tv-page';
+    try{location.replace(path+'?lang='+encodeURIComponent(next));}catch(e){location.href=path+'?lang='+encodeURIComponent(next);}
+  }
+})();
+</script>`;
 
   return `<!doctype html>
-<html lang="pt-BR">
+<html lang="${escapeHtml(copy.lang)}">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="theme-color" content="#020409">
-  <title>Conectar Smart TV — Billie Eilish TV</title>
+  <title>${escapeHtml(copy.title)}</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
   <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260821-tv-vk-legacy-retry-v3">
 </head>
@@ -820,7 +904,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
     <div class="tv-content">
       <header class="tv-topbar">
         <a class="tv-brand" href="/" aria-label="Billie Eilish TV"><img src="/assets/images/brand/logo-tv.png?v=20260820-tv-legacy-v3" alt="Billie Eilish TV"></a>
-        <a class="tv-back" href="/">Sair</a>
+        <a class="tv-back" href="/">${escapeHtml(copy.exit)}</a>
       </header>
       <section class="tv-main">
         <article class="tv-card tv-receiver-card${playing ? ' is-playing' : ''}">
@@ -828,42 +912,42 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
         </article>
       </section>
     </div>
-  </main>${poll}
+  </main>${localeBootstrap}${poll}
 </body>
 </html>`;
 }
-function pairingBody(code, connectUrl, inlineQr) {
+function pairingBody(code, connectUrl, inlineQr, copy) {
   return `
     <div class="tv-card-inner" id="receiverPairing">
-      <h1>Conecte seu celular</h1>
-      <p>Escaneie o QR Code com a câmera do celular. Você entra na sua conta e a TV fica pronta para receber os vídeos do site.</p>
+      <h1>${escapeHtml(copy.connectPhone)}</h1>
+      <p>${escapeHtml(copy.pairDescription)}</p>
       <div class="tv-pair-grid">
-        <div class="tv-qr"><img src="${escapeHtml(inlineQr || `/api/tv-qr?code=${encodeURIComponent(code)}&v=2`)}" data-fallback-src="/api/tv-qr?code=${encodeURIComponent(code)}&v=2" onerror="var f=this.getAttribute('data-fallback-src');if(f&&this.src.indexOf(f)<0){this.src=f;}" alt="QR Code para conectar esta TV"></div>
+        <div class="tv-qr"><img src="${escapeHtml(inlineQr || `/api/tv-qr?code=${encodeURIComponent(code)}&v=2`)}" data-fallback-src="/api/tv-qr?code=${encodeURIComponent(code)}&v=2" onerror="var f=this.getAttribute('data-fallback-src');if(f&&this.src.indexOf(f)<0){this.src=f;}" alt="${escapeHtml(copy.qrAlt)}"></div>
         <div class="tv-code-panel">
-          <span class="tv-code-label">Seu código</span>
-          <div class="tv-code" aria-label="Código da TV">${codeMarkup(code)}</div>
-          <div class="tv-note" aria-label="Como conectar">
-            <div class="tv-note-step"><strong>1.</strong><span>Escaneie o QR Code.</span></div>
-            <div class="tv-note-step"><strong>2.</strong><span>Entre na sua conta.</span></div>
-            <div class="tv-note-step"><strong>3.</strong><span>Abra um vídeo ou filme e toque no ícone de transmissão.</span></div>
+          <span class="tv-code-label">${escapeHtml(copy.yourCode)}</span>
+          <div class="tv-code" aria-label="${escapeHtml(copy.tvCode)}">${codeMarkup(code)}</div>
+          <div class="tv-note" aria-label="${escapeHtml(copy.howToConnect)}">
+            <div class="tv-note-step"><strong>1.</strong><span>${escapeHtml(copy.step1)}</span></div>
+            <div class="tv-note-step"><strong>2.</strong><span>${escapeHtml(copy.step2)}</span></div>
+            <div class="tv-note-step"><strong>3.</strong><span>${escapeHtml(copy.step3)}</span></div>
           </div>
-          <span class="tv-help">O código expira em 5 minutos se não for usado.</span>
+          <span class="tv-help">${escapeHtml(copy.expires)}</span>
         </div>
       </div>
     </div>`;
 }
-function connectedBody(owner, media) {
+function connectedBody(owner, media, copy) {
   const embedded = media && typeof media === 'object' && !Array.isArray(media) && media.tvProfile && typeof media.tvProfile === 'object' ? media.tvProfile : null;
   const profile = embedded || (owner && typeof owner === 'object' ? owner : { displayName: owner });
-  const displayName = escapeHtml(profile.displayName || profile.username || 'Conta conectada');
+  const displayName = escapeHtml(profile.displayName || profile.username || copy.connectedAccount);
   const username = String(profile.username || '').trim().replace(/^@+/, '');
   const avatarUrl = String(profile.avatarUrl || '').trim();
   const bannerUrl = String(profile.bannerUrl || '').trim();
   const initial = escapeHtml((String(profile.displayName || username || 'B').trim().charAt(0) || 'B').toUpperCase());
   return `
     <div class="tv-card-inner" id="receiverConnected">
-      <h1>Conectado à sua conta</h1>
-      <p>Agora escolha um vídeo ou filme no celular e toque no ícone de transmissão.</p>
+      <h1>${escapeHtml(copy.connectedTitle)}</h1>
+      <p>${escapeHtml(copy.connectedDescription)}</p>
       <div class="tv-receiver-profile${bannerUrl ? ' has-banner' : ''}">
         ${bannerUrl ? `<img class="tv-receiver-profile-banner" src="${escapeHtml(bannerUrl)}" alt="">` : ''}
         <div class="tv-receiver-profile-shade"></div>
@@ -876,12 +960,12 @@ function connectedBody(owner, media) {
     </div>`;
 }
 
-function errorBody() {
+function errorBody(copy) {
   return `
     <div class="tv-card-inner">
-      <h1>Não foi possível conectar</h1>
-      <p>Atualize a página para tentar novamente.</p>
-      <div class="tv-status error"><span class="pulse"></span><span>Falha ao preparar a conexão.</span></div>
+      <h1>${escapeHtml(copy.errorTitle)}</h1>
+      <p>${escapeHtml(copy.errorDescription)}</p>
+      <div class="tv-status error"><span class="pulse"></span><span>${escapeHtml(copy.errorStatus)}</span></div>
     </div>`;
 }
 
@@ -896,6 +980,8 @@ module.exports = async function handler(req, res) {
     return res.status(405).end();
   }
 
+  const locale = requestUiLocale(req);
+  const copy = uiCopy(locale);
   const cookies = parseCookies(req);
   let sessionId = String(cookies.be_tv_sid || '');
   let deviceToken = String(cookies.be_tv_token || '');
@@ -934,7 +1020,7 @@ module.exports = async function handler(req, res) {
       }
       const connectUrl = `https://billieilishtv.site/connect-tv/?code=${encodeURIComponent(pairingCode)}`;
       const inlineQr = await inlinePairingQr(connectUrl);
-      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl, inlineQr), stateStatus: 'waiting', mediaVersion: state.media_version, mediaKey: mediaStateKey(state.current_media) });
+      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl, inlineQr, copy), locale, copy, stateStatus: 'waiting', mediaVersion: state.media_version, mediaKey: mediaStateKey(state.current_media) });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
     }
 
@@ -942,10 +1028,12 @@ module.exports = async function handler(req, res) {
       const media = state.current_media && typeof state.current_media === 'object' ? state.current_media : {};
       const hasMedia = Object.keys(media).length > 0;
       if (hasMedia) {
-        const rendered = renderMedia(media, isLegacyTvRequest(req));
+        const rendered = renderMedia(media, isLegacyTvRequest(req), copy);
         if (rendered) {
           const html = baseHtml({
             body: rendered,
+            locale,
+            copy,
             stateStatus: 'paired',
             playing: true,
             mediaVersion: state.media_version,
@@ -956,15 +1044,15 @@ module.exports = async function handler(req, res) {
           return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
         }
       }
-      const html = baseHtml({ body: connectedBody(state.owner_display_name, media), stateStatus: 'paired', mediaVersion: state.media_version, mediaKey: mediaStateKey(media) });
+      const html = baseHtml({ body: connectedBody(state.owner_display_name, media, copy), locale, copy, stateStatus: 'paired', mediaVersion: state.media_version, mediaKey: mediaStateKey(media) });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
     }
 
-    const html = baseHtml({ body: errorBody(), stateStatus: 'error' });
+    const html = baseHtml({ body: errorBody(copy), locale, copy, stateStatus: 'error' });
     return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
   } catch (error) {
     console.error('TV legacy page failed:', error);
-    const html = baseHtml({ body: errorBody(), stateStatus: 'error' });
+    const html = baseHtml({ body: errorBody(copy), locale, copy, stateStatus: 'error' });
     return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
   }
 };

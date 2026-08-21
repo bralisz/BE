@@ -5,11 +5,24 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <meta http-equiv="refresh" content="0;url=/api/tv-page">
+  <meta http-equiv="refresh" content="2;url=/api/tv-page">
   <title>Conectar Smart TV — Billie Eilish TV</title>
 </head>
 <body style="margin:0;background:#020409;color:#fff;font-family:Arial,sans-serif">
-  <p style="padding:24px">Abrindo modo Smart TV…</p>
-  <script type="text/javascript">location.replace('/api/tv-page');</script>
+  <p id="tvFallbackMessage" style="padding:24px">Abrindo modo Smart TV…</p>
+  <script type="text/javascript">
+(function(){
+  var raw='';try{raw=String(navigator.language||navigator.userLanguage||'').toLowerCase();}catch(e){}
+  var lang=raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('en')===0?'en-us':'pt-br';
+  var messages={
+    'pt-br':['Conectar Smart TV — Billie Eilish TV','Abrindo modo Smart TV…'],
+    'en-us':['Connect Smart TV — Billie Eilish TV','Opening Smart TV mode…'],
+    es:['Conectar Smart TV — Billie Eilish TV','Abriendo el modo Smart TV…'],
+    fr:['Connecter la Smart TV — Billie Eilish TV','Ouverture du mode Smart TV…']
+  };
+  var copy=messages[lang]||messages['pt-br'];document.title=copy[0];document.getElementById('tvFallbackMessage').innerHTML=copy[1];
+  location.replace('/api/tv-page?lang='+encodeURIComponent(lang));
+})();
+</script>
 </body>
 </html>

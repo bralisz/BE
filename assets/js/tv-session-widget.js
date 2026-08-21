@@ -41,10 +41,10 @@
 
   function widgetText() {
     const texts = {
-      'pt-br': { watching: 'Assistindo na TV', empty: 'Escolha algo para assistir na TV' },
-      'en-us': { watching: 'Watching on TV', empty: 'Choose something to watch on TV' },
-      es: { watching: 'Viendo en la TV', empty: 'Elige algo para ver en la TV' },
-      fr: { watching: 'Lecture sur la TV', empty: 'Choisissez quelque chose à regarder à la TV' }
+      'pt-br': { watching: 'Assistindo na TV', empty: 'Escolha algo para assistir na TV', disconnect: 'Desconectar da TV', aria: 'Controle da Smart TV conectada' },
+      'en-us': { watching: 'Watching on TV', empty: 'Choose something to watch on TV', disconnect: 'Disconnect from TV', aria: 'Connected Smart TV controls' },
+      es: { watching: 'Viendo en la TV', empty: 'Elige algo para ver en la TV', disconnect: 'Desconectar de la TV', aria: 'Controles de la Smart TV conectada' },
+      fr: { watching: 'Lecture sur la TV', empty: 'Choisissez quelque chose à regarder à la TV', disconnect: 'Déconnecter la TV', aria: 'Commandes de la Smart TV connectée' }
     };
     return texts[currentLocaleSlug()] || texts['pt-br'];
   }
@@ -88,7 +88,7 @@
     widget.className = 'betv-tv-session-widget';
     widget.id = 'betvTvSessionWidget';
     widget.hidden = true;
-    widget.setAttribute('aria-label', 'Controle da Smart TV conectada');
+    widget.setAttribute('aria-label', widgetText().aria);
     widget.innerHTML = `
       <div class="betv-tv-session-shell">
         <div class="betv-tv-session-art" aria-hidden="true"></div>
@@ -135,6 +135,9 @@
     if (!valid) return;
     const source = currentMedia && typeof currentMedia === 'object' ? currentMedia : {};
     const copy = widgetText();
+    widget.setAttribute('aria-label', copy.aria);
+    const disconnectButton = widget.querySelector('.betv-tv-session-disconnect');
+    if (disconnectButton) disconnectButton.textContent = copy.disconnect;
     const hasMedia = hasPlayableMedia(source);
     widget.classList.toggle('is-empty', !hasMedia);
     if (hasMedia) {
