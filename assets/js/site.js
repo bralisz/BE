@@ -7329,6 +7329,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setInteractive(false);
       setLoading('Carregando vídeo do Google Drive...');
       syncFullscreen();
+      // O aviso de legendas aparece assim que a pessoa entra em um vídeo do
+      // Drive que possui legenda, antes de qualquer interação com o botão CC.
+      if (activeSubtitleUrl) showSubtitleSyncNotice(shell, { sequence: true });
 
       // O link do Drive pode não indicar a extensão. Enquanto o carregamento
       // começa normalmente, consultamos o tipo real do arquivo. Se for áudio,
@@ -7449,7 +7452,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas';
         syncDriveSubtitle();
-        showSubtitleSyncNotice(shell, { sequence: true });
       } catch (_) {
         if (token !== subtitleLoadToken) return;
         clearFrameSubtitleSync();
