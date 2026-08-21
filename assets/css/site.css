@@ -18842,3 +18842,160 @@ html.betv-installed-app .user-dropdown .install-app-action{display:none!importan
     display:block!important;
   }
 }
+
+/* 21/08/2026 — o aro público acompanha o avatar dos autores nos comentários. */
+.detail-comment-avatar.has-custom-ring{
+  box-sizing:border-box!important;
+  padding:2px!important;
+  border:2px solid var(--detail-comment-avatar-ring,#fff)!important;
+  border-radius:50%!important;
+  background:#08090b!important;
+  overflow:hidden!important;
+  box-shadow:none!important;
+}
+.detail-comment-avatar.has-custom-ring>img{
+  width:100%!important;
+  height:100%!important;
+  border:0!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+  display:block!important;
+}
+
+/* 21/08/2026 — preserva a leitura do perfil sem apagar banners naturalmente escuros. */
+body.profile-page-active .profile-page-banner img{
+  filter:brightness(.92) saturate(.96)!important;
+}
+@media(min-width:761px){
+  body.profile-page-active .profile-page-hero::after,
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    background:
+      linear-gradient(180deg,rgba(0,0,0,.03) 0%,rgba(0,0,0,.08) 36%,rgba(0,0,0,.28) 66%,rgba(0,0,0,.70) 100%),
+      linear-gradient(90deg,rgba(0,0,0,.16) 0%,rgba(0,0,0,.05) 44%,rgba(0,0,0,.28) 100%)!important;
+  }
+}
+@media(max-width:760px){
+  body.profile-page-active .profile-page-banner img{
+    filter:brightness(.94) saturate(.97)!important;
+  }
+  body.profile-page-active .profile-page-hero::after,
+  body.profile-page-active.profile-color-customized .profile-page-hero::after{
+    background:linear-gradient(180deg,
+      rgba(0,0,0,.02) 0%,
+      rgba(0,0,0,.06) 34%,
+      rgba(0,0,0,.22) 58%,
+      rgba(0,0,0,.50) 78%,
+      rgba(0,0,0,.78) 100%)!important;
+
+/* =========================================================
+   21/08/2026 — MOBILE: auto-hide da tab de ações em 5s.
+   Quando a tab some, uma camada transparente recebe somente o primeiro toque
+   para reexibir os controles; em seguida ela libera o iframe/vídeo novamente.
+   ========================================================= */
+@media (max-width:820px), (pointer:coarse) and (max-height:620px){
+  /* YouTube/VK: agora a tab também some no mobile. */
+  .external-native-player-overlay.controls-idle .external-native-player-toolbar{
+    opacity:0!important;
+    pointer-events:none!important;
+    transform:translateX(-50%) translateY(10px)!important;
+  }
+  .external-native-player-overlay.controls-idle[data-provider="vk"] .external-native-player-bottom-shade{
+    opacity:.28!important;
+  }
+
+  /* Com os controles ocultos, o primeiro toque em qualquer ponto da tela
+     acorda a tab. Fora do estado idle a camada volta a não existir. */
+  .external-native-player-overlay.controls-idle .external-native-player-wake-zone{
+    display:block!important;
+    position:absolute!important;
+    inset:0!important;
+    left:0!important;
+    right:0!important;
+    top:0!important;
+    bottom:0!important;
+    width:auto!important;
+    height:auto!important;
+    transform:none!important;
+    pointer-events:auto!important;
+    background:transparent!important;
+    z-index:23!important;
+  }
+
+  /* Drive MP4: inclusive no fallback por iframe, a tab de ícones pode sumir. */
+  .drive-video-player-overlay.is-frame-mode.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-actionbar,
+  .drive-video-player-overlay.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-actionbar{
+    opacity:0!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+    transform:translateX(-50%) translateY(8px)!important;
+  }
+  .drive-video-player-overlay.is-frame-mode.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-actionbar{
+    transform:translateY(8px)!important;
+  }
+  .drive-video-player-overlay.controls-idle:not(.is-loading):not(.is-error) .drive-video-player-action-wake-zone{
+    display:block!important;
+    position:absolute!important;
+    inset:0!important;
+    left:0!important;
+    right:0!important;
+    top:0!important;
+    bottom:0!important;
+    width:auto!important;
+    height:auto!important;
+    transform:none!important;
+    pointer-events:auto!important;
+    background:transparent!important;
+    z-index:23!important;
+  }
+}
+
+
+/* 21/08/2026 — ajuste SOMENTE da caixa de pesquisa no mobile */
+@media (max-width:760px){
+  body.mobile-search-open .mobile-app-bar{
+    gap:10px;
+  }
+  body.mobile-search-open .mobile-header-actions{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    gap:0!important;
+  }
+  body.mobile-search-open .mobile-notification-button{
+    display:none!important;
+  }
+  body.mobile-search-open .mobile-header-actions .mobile-search-control{
+    width:100%!important;
+    min-width:0!important;
+    height:48px!important;
+    padding:1px!important;
+    overflow:hidden!important;
+    border:1px solid rgba(255,255,255,.16)!important;
+    border-radius:999px!important;
+    background:rgba(16,18,20,.92)!important;
+    box-shadow:0 10px 30px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.07)!important;
+    -webkit-backdrop-filter:blur(22px) saturate(140%)!important;
+    backdrop-filter:blur(22px) saturate(140%)!important;
+  }
+  body.mobile-search-open .mobile-search-control input{
+    flex:1 1 auto!important;
+    width:auto!important;
+    min-width:0!important;
+    height:46px!important;
+    padding:0 10px 0 17px!important;
+    font-size:15px!important;
+    line-height:46px!important;
+  }
+  body.mobile-search-open .mobile-search-button{
+    width:44px!important;
+    height:44px!important;
+    flex:0 0 44px!important;
+    margin:0!important;
+    border:0!important;
+    background:rgba(255,255,255,.045)!important;
+    box-shadow:none!important;
+  }
+  body.mobile-search-open .mobile-search-button span svg{
+    width:21px!important;
+    height:21px!important;
+  }
+}

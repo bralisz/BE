@@ -73,3 +73,5 @@ As migrations marcadas como `noop` são registros históricos intencionais e pre
 - `20260809181425_video_comment_likes.sql` — adiciona curtidas nos comentários, contador público e estado de curtida do usuário autenticado.
 - `20260811031200_community_hub.sql` — adiciona a aba Comunidade: histórico privado de conteúdos iniciados, favoritos agregados, rankings públicos com opt-out e RPCs seguras para leitura/gravação.
 
+
+- `20260821080000_public_avatar_rings_comments_rankings.sql` — publica somente a cor do aro do avatar nos comentários e no ranking da comunidade.

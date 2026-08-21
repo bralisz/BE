@@ -300,3 +300,21 @@ body.community-page-active .site-footer{
     -webkit-text-fill-color:#0c0d0f!important;
   }
 }
+
+/* 21/08/2026 — exibe para todos o aro escolhido por cada perfil no ranking. */
+.community-rank-avatar.has-custom-ring{
+  box-sizing:border-box!important;
+  padding:1px!important;
+  border:2px solid var(--community-avatar-ring,#fff)!important;
+  border-radius:50%!important;
+  background:#08090b!important;
+  overflow:hidden!important;
+}
+.community-rank-avatar.has-custom-ring img{
+  width:100%!important;
+  height:100%!important;
+  border:0!important;
+  border-radius:50%!important;
+  object-fit:cover!important;
+  display:block!important;
+}

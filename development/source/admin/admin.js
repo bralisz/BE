@@ -1621,8 +1621,8 @@ body.admin-preview-open{overflow:hidden}
     };
 
     const draw = () => {
-      const search = String($('#search').value || '').trim().toLowerCase();
-      const status = $('#statusFilter').value;
+      const search = String($('#search')?.value || '').trim().toLowerCase();
+      const status = String($('#statusFilter')?.value || '');
       const itemMatchesFilters = item => {
         const title = String(item.title || item.name || '').toLowerCase();
         return (!search || title.includes(search)) && (!status || String(item.active) === status);
@@ -1668,8 +1668,10 @@ body.admin-preview-open{overflow:hidden}
       $('#list').innerHTML = rows.length ? `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || (isFeatured ? 'Conteúdo em destaque' : item.id))}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}</small></td><td>${esc(isFeatured ? 'Destaque' : (item.type || label))}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">${isFeatured ? 'Nenhum destaque cadastrado.' : 'Nenhum item encontrado nesta categoria.'}</div>`;
       bindRowActions();
     };
-    $('#search').oninput = draw;
-    $('#statusFilter').onchange = draw;
+    const searchInput = $('#search');
+    const statusInput = $('#statusFilter');
+    if (searchInput) searchInput.oninput = draw;
+    if (statusInput) statusInput.onchange = draw;
     draw();
     if (!isFeatured) await maybeResumePendingContentEditor();
   }
@@ -2100,8 +2102,8 @@ body.admin-preview-open{overflow:hidden}
     };
 
     const draw = () => {
-      const search = String($('#userSearch').value || '').trim().toLowerCase().replace(/^@+/, '');
-      const status = $('#userStatus').value;
+      const search = String($('#userSearch')?.value || '').trim().toLowerCase().replace(/^@+/, '');
+      const status = String($('#userStatus')?.value || '');
       const rows = items.filter(item => {
         const haystack = [item.displayName, item.username, item.email, item.id].join(' ').toLowerCase();
         const matchesSearch = !search || haystack.includes(search);
@@ -2209,11 +2211,13 @@ body.admin-preview-open{overflow:hidden}
       });
     };
 
-    $('#userSearch').oninput = () => {
+    const userSearchInput = $('#userSearch');
+    const userStatusInput = $('#userStatus');
+    if (userSearchInput) userSearchInput.oninput = () => {
       window.clearTimeout(usersSearchTimer);
       usersSearchTimer = window.setTimeout(() => loadUsersBatch(true), 280);
     };
-    $('#userStatus').onchange = () => loadUsersBatch(true);
+    if (userStatusInput) userStatusInput.onchange = () => loadUsersBatch(true);
     draw();
     refreshUsersOverview();
   }
@@ -2229,8 +2233,8 @@ body.admin-preview-open{overflow:hidden}
     const items = await db.list('gallery', { orderBy: 'order', direction: 'asc' });
     const itemType = item => String(item.itemType || item.mediaType || 'avatar').toLowerCase() === 'banner' ? 'banner' : 'avatar';
     const draw = () => {
-      const search = $('#gallerySearch').value.trim().toLowerCase();
-      const status = $('#galleryStatus').value;
+      const search = String($('#gallerySearch')?.value || '').trim().toLowerCase();
+      const status = String($('#galleryStatus')?.value || '');
       const filtered = items.filter(item => {
         const type = itemType(item);
         const category = String(item.category || (type === 'banner' ? 'Banners de perfil' : 'Sem categoria'));
@@ -2252,12 +2256,15 @@ body.admin-preview-open{overflow:hidden}
         ? `<section class="gallery-category-panel banner-panel gallery-banner-panel"><header><div><small>Banners de fundo</small><h2>Banners de perfil</h2></div><span>${banners.length} ${banners.length === 1 ? 'banner' : 'banners'}</span></header><div class="gallery-avatar-grid gallery-banner-grid">${banners.map(item => card(item, 'banner', 'Banners de perfil')).join('')}</div></section>`
         : '<div class="empty">Nenhum banner encontrado.</div>';
       const board = $('#galleryAdminBoard');
+      if (!board) return;
       board.innerHTML = `<section class="gallery-type-section"><div class="gallery-type-heading"><div><span class="dashboard-kicker">Avatar</span><h2>Avatares</h2><p>Os nomes aparecem apenas nas categorias.</p></div></div>${avatarContent}</section><section class="gallery-type-section"><div class="gallery-type-heading"><div><span class="dashboard-kicker">Banner</span><h2>Banners de perfil</h2><p>Imagens horizontais sem nome individual.</p></div></div>${bannerContent}</section>`;
       board.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => openEditor('gallery', items.find(item => item.id === button.dataset.edit)));
       board.querySelectorAll('[data-del]').forEach(button => button.onclick = () => confirmDelete('gallery', button.dataset.del));
     };
-    $('#gallerySearch').oninput = draw;
-    $('#galleryStatus').onchange = draw;
+    const gallerySearchInput = $('#gallerySearch');
+    const galleryStatusInput = $('#galleryStatus');
+    if (gallerySearchInput) gallerySearchInput.oninput = draw;
+    if (galleryStatusInput) galleryStatusInput.onchange = draw;
     draw();
   }
 
@@ -2299,7 +2306,7 @@ body.admin-preview-open{overflow:hidden}
     }
     const items = await db.list(name, { orderBy: 'order', direction: 'asc' });
     const draw = () => {
-      const search = $('#search').value.toLowerCase();
+      const search = String($('#search')?.value || '').toLowerCase();
       const statusFilter = $('#statusFilter');
       const status = statusFilter ? statusFilter.value : '';
       const rows = items.filter(item => (!search || String(item.title || item.name || item.displayName || item.email || '').toLowerCase().includes(search)) && (!status || String(item.active) === status));
@@ -2313,7 +2320,8 @@ body.admin-preview-open{overflow:hidden}
       document.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => openEditor(name, items.find(item => item.id === button.dataset.edit)));
       document.querySelectorAll('[data-del]').forEach(button => button.onclick = () => confirmDelete(name, button.dataset.del));
     };
-    $('#search').oninput = draw;
+    const collectionSearchInput = $('#search');
+    if (collectionSearchInput) collectionSearchInput.oninput = draw;
     const statusFilter = $('#statusFilter');
     if (statusFilter) statusFilter.onchange = draw;
     draw();

@@ -4497,6 +4497,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `<img loading="${eager ? 'eager' : 'lazy'}" decoding="async" src="${escapeHtml(resolved || fallback)}" data-avatar-fallback="${escapeHtml(fallback)}" alt="${escapeHtml(alt)}">`;
   }
 
+  function detailCommentAvatarBorderColor(value) {
+    const normalized = String(value || '').trim().toUpperCase();
+    return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : '';
+  }
+
   const VIDEO_COMMENT_REPORT_REASONS = [
     ['spam_abuse', 'Spam ou comportamento abusivo'],
     ['impersonation', 'Falsidade de identidade'],
@@ -4544,6 +4549,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const isOwner = Boolean(commentId && authorUserId && currentUserId && authorUserId === currentUserId);
     const profileHref = username ? `/@${encodeURIComponent(username)}` : '#';
     const avatar = String(row?.avatar_url || row?.avatarUrl || '').trim();
+    const avatarBorderColor = detailCommentAvatarBorderColor(row?.avatar_border_color || row?.avatarBorderColor);
     const communityTag = String(row?.community_tag || row?.communityTag || '').trim();
     const likesCount = Math.max(0, Number(row?.likes_count ?? row?.likesCount ?? 0) || 0);
     const likedByMe = row?.liked_by_me === true || row?.likedByMe === true;
@@ -4553,7 +4559,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ? `<button type="button" class="detail-comment-action danger" data-comment-delete="${escapeHtml(commentId)}" aria-label="${escapeHtml(localizedUiText('Apagar comentário'))}" title="${escapeHtml(localizedUiText('Apagar comentário'))}">${detailCommentActionIcon('delete')}</button>`
       : `<button type="button" class="detail-comment-action" data-comment-report="${escapeHtml(commentId)}" data-comment-user="${escapeHtml(username)}" aria-label="${escapeHtml(localizedUiText('Denunciar comentário'))}" title="${escapeHtml(localizedUiText('Denunciar comentário'))}">${detailCommentActionIcon('report')}</button>`;
     return `<article class="detail-comment-item${isOwner ? ' is-current-user' : ''}" data-comment-id="${escapeHtml(commentId)}" data-comment-author-id="${escapeHtml(authorUserId)}">
-      <a class="detail-comment-avatar" href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
+      <a class="detail-comment-avatar${avatarBorderColor ? ' has-custom-ring' : ''}"${avatarBorderColor ? ` style="--detail-comment-avatar-ring:${avatarBorderColor}"` : ''} href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
         ${detailCommentAvatarMarkup(avatar, '', index < 8)}
       </a>
       <div class="detail-comment-body">
@@ -5725,7 +5731,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const menusOpen = () => !qualityMenu.hidden || !audioMenu.hidden;
 
     const youtubeDesktopAutoHideEnabled = () => activeProvider === 'youtube' && window.matchMedia('(min-width:821px) and (hover:hover) and (pointer:fine)').matches;
-    const providerUsesAutoHide = () => activeProvider === 'vk' || youtubeDesktopAutoHideEnabled();
+    const mobilePlayerAutoHideEnabled = () => window.matchMedia('(max-width:820px), (pointer:coarse) and (max-height:620px)').matches;
+    const providerUsesAutoHide = () => mobilePlayerAutoHideEnabled() || activeProvider === 'vk' || youtubeDesktopAutoHideEnabled();
+    const controlsAutoHideDelay = () => mobilePlayerAutoHideEnabled() ? 5000 : 2000;
 
     const hideControlsForInactivity = () => {
       clearInactivityTimer();
@@ -5739,7 +5747,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.remove('controls-idle');
       if (!providerUsesAutoHide()) return;
       if (!keepVisible && !controlsInteracting && !menusOpen()) {
-        inactivityTimer = window.setTimeout(hideControlsForInactivity, 2000);
+        inactivityTimer = window.setTimeout(hideControlsForInactivity, controlsAutoHideDelay());
       }
     };
 
@@ -6260,7 +6268,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       syncBodyLock();
-      if (normalizedProvider === 'youtube' && youtubeDesktopAutoHideEnabled()) showControls(false);
+      if (mobilePlayerAutoHideEnabled()) showControls(false);
+      else if (normalizedProvider === 'youtube' && youtubeDesktopAutoHideEnabled()) showControls(false);
       else showControls(normalizedProvider !== 'vk');
       if (normalizedProvider === 'vk') {
         frame.addEventListener('load', bindVkApi, { once: true });
@@ -6393,12 +6402,42 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(false);
     };
 
-    wakeZone.addEventListener('pointerenter', enterHoverArea);
-    wakeZone.addEventListener('pointermove', () => showControls(true));
-    wakeZone.addEventListener('pointerleave', leaveHoverArea);
-    toolbar.addEventListener('pointerenter', enterHoverArea);
-    toolbar.addEventListener('pointermove', () => showControls(true));
-    toolbar.addEventListener('pointerleave', leaveHoverArea);
+    wakeZone.addEventListener('pointerenter', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen' || mobilePlayerAutoHideEnabled()) {
+        controlsInteracting = false;
+        showControls(false);
+        return;
+      }
+      enterHoverArea();
+    });
+    wakeZone.addEventListener('pointermove', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen' || mobilePlayerAutoHideEnabled()) return;
+      showControls(true);
+    });
+    wakeZone.addEventListener('pointerdown', () => {
+      controlsInteracting = false;
+      showControls(false);
+    });
+    wakeZone.addEventListener('pointerleave', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen' || mobilePlayerAutoHideEnabled()) return;
+      leaveHoverArea();
+    });
+    toolbar.addEventListener('pointerenter', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen' || mobilePlayerAutoHideEnabled()) {
+        controlsInteracting = false;
+        showControls(false);
+        return;
+      }
+      enterHoverArea();
+    });
+    toolbar.addEventListener('pointermove', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen' || mobilePlayerAutoHideEnabled()) return;
+      showControls(true);
+    });
+    toolbar.addEventListener('pointerleave', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen' || mobilePlayerAutoHideEnabled()) return;
+      leaveHoverArea();
+    });
     shell.addEventListener('pointermove', () => showControls(false));
     shell.addEventListener('pointerdown', event => {
       if (event.target.closest('.external-native-player-toolbar,.external-native-player-menu')) return;
@@ -6746,7 +6785,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       inactivityTimer = 0;
       overlay.classList.remove('controls-idle');
       if (!keepVisible && !controlsInteracting && !overlay.classList.contains('is-loading') && !overlay.classList.contains('is-error')) {
-        inactivityTimer = window.setTimeout(hideControlsForInactivity, 2000);
+        const delay = window.matchMedia('(max-width:820px), (pointer:coarse) and (max-height:620px)').matches ? 5000 : 2000;
+        inactivityTimer = window.setTimeout(hideControlsForInactivity, delay);
       }
     };
 
@@ -7109,12 +7149,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       controlsInteracting = false;
       showControls(false);
     };
-    actionWakeZone.addEventListener('pointerenter', enterActionHoverArea);
-    actionWakeZone.addEventListener('pointermove', () => showControls(true));
-    actionWakeZone.addEventListener('pointerleave', leaveActionHoverArea);
-    actionbar.addEventListener('pointerenter', enterActionHoverArea);
-    actionbar.addEventListener('pointermove', () => showControls(true));
-    actionbar.addEventListener('pointerleave', leaveActionHoverArea);
+    actionWakeZone.addEventListener('pointerenter', event => {
+      const mobileTouch = event.pointerType === 'touch' || event.pointerType === 'pen' || window.matchMedia('(max-width:820px), (pointer:coarse) and (max-height:620px)').matches;
+      if (mobileTouch) {
+        controlsInteracting = false;
+        showControls(false);
+        return;
+      }
+      enterActionHoverArea();
+    });
+    actionWakeZone.addEventListener('pointermove', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen') return;
+      showControls(true);
+    });
+    actionWakeZone.addEventListener('pointerdown', () => {
+      controlsInteracting = false;
+      showControls(false);
+    });
+    actionWakeZone.addEventListener('pointerleave', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen') return;
+      leaveActionHoverArea();
+    });
+    actionbar.addEventListener('pointerenter', event => {
+      const mobileTouch = event.pointerType === 'touch' || event.pointerType === 'pen' || window.matchMedia('(max-width:820px), (pointer:coarse) and (max-height:620px)').matches;
+      if (mobileTouch) {
+        controlsInteracting = false;
+        showControls(false);
+        return;
+      }
+      enterActionHoverArea();
+    });
+    actionbar.addEventListener('pointermove', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen') return;
+      showControls(true);
+    });
+    actionbar.addEventListener('pointerleave', event => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen') return;
+      leaveActionHoverArea();
+    });
 
     shell.addEventListener('pointermove', () => showControls(false));
     shell.addEventListener('pointerdown', event => {
@@ -9227,33 +9299,69 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function searchEditDistanceWithin(left, right, limit) {
     if (left === right) return true;
-    if (Math.abs(left.length - right.length) > limit) return false;
+    if (!left || !right || Math.abs(left.length - right.length) > limit) return false;
+
+    // Distância de Damerau-Levenshtein limitada: além de letras faltando/trocadas,
+    // considera duas letras vizinhas invertidas como um único erro (ex.: "biilie").
+    let previousPrevious = null;
     let previous = Array.from({ length:right.length + 1 }, (_, index) => index);
     for (let i = 1; i <= left.length; i += 1) {
       const current = [i];
       let rowMin = current[0];
       for (let j = 1; j <= right.length; j += 1) {
-        const value = Math.min(
+        let value = Math.min(
           current[j - 1] + 1,
           previous[j] + 1,
           previous[j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1)
         );
+        if (
+          previousPrevious && i > 1 && j > 1 &&
+          left[i - 1] === right[j - 2] && left[i - 2] === right[j - 1]
+        ) {
+          value = Math.min(value, previousPrevious[j - 2] + 1);
+        }
         current[j] = value;
         if (value < rowMin) rowMin = value;
       }
       if (rowMin > limit) return false;
+      previousPrevious = previous;
       previous = current;
     }
     return previous[right.length] <= limit;
   }
 
+  function searchTypoLimit(candidate) {
+    const length = String(candidate || '').length;
+    if (length <= 1) return 0;
+    if (length <= 4) return 1;
+    if (length <= 7) return 2;
+    return 3;
+  }
+
   function fuzzySearchTokenMatch(indexTokens, candidate) {
-    if (!candidate || candidate.length < 4) return false;
-    const limit = candidate.length >= 8 ? 2 : 1;
+    if (!candidate || candidate.length < 2) return false;
+    const limit = searchTypoLimit(candidate);
     return indexTokens.some(token => {
-      if (token.startsWith(candidate) || candidate.startsWith(token)) return Math.min(token.length, candidate.length) >= 4;
-      return searchEditDistanceWithin(token, candidate, limit);
+      if (!token) return false;
+      if (token.startsWith(candidate) || candidate.startsWith(token)) {
+        return Math.min(token.length, candidate.length) >= 2;
+      }
+      return searchEditDistanceWithin(token, candidate, Math.min(limit, searchTypoLimit(token)));
     });
+  }
+
+  function buildJoinedSearchTokens(tokens) {
+    const joined = [];
+    // Permite encontrar títulos mesmo quando o usuário esquece/adiciona espaços,
+    // como "lostcause" ou "happierthanever".
+    for (let start = 0; start < tokens.length; start += 1) {
+      let value = '';
+      for (let end = start; end < tokens.length && end < start + 5; end += 1) {
+        value += tokens[end];
+        if (end > start) joined.push(value);
+      }
+    }
+    return joined;
   }
 
   function contentSearchMatches(indexValue, queryValue) {
@@ -9270,9 +9378,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const queryTokens = query.split(' ').filter(token => token && !CONTENT_SEARCH_STOP_WORDS.has(token));
     if (!queryTokens.length) return index.includes(query);
 
+    // Uma consulta sem espaços também pode representar várias palavras do título.
+    // Só monta as combinações nesse caso para manter a digitação rápida no mobile.
+    if (queryTokens.length === 1) {
+      const joinedIndexTokens = buildJoinedSearchTokens(indexTokens);
+      if (fuzzySearchTokenMatch(indexTokens.concat(joinedIndexTokens), queryTokens[0])) return true;
+    }
+
     return queryTokens.every(token => {
       const variants = searchAliasVariants(token);
-      return variants.some(variant => index.includes(variant) || fuzzySearchTokenMatch(indexTokens, variant));
+      return variants.some(variant => {
+        const directMatch = variant.length <= 2 ? indexTokens.includes(variant) : index.includes(variant);
+        return directMatch || fuzzySearchTokenMatch(indexTokens, variant);
+      });
     });
   }
 
@@ -10174,12 +10292,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const mobileButton = document.getElementById('mobileInstallButton');
     const desktopButton = document.getElementById('desktopInstallButton');
     if (mobileButton) {
-      // No celular, o botão é somente de instalação. Se o PWA já estiver
-      // instalado, ele desaparece do menu em vez de virar "Abrir app".
+      // No app/PWA instalado o botão some. No navegador mobile ele segue o
+      // mesmo comportamento do desktop: "Instalar app" quando disponível e
+      // "Abrir app" quando já detectamos uma instalação neste dispositivo.
       const waitingInstalledCheck = supportsInstalledRelatedApps && !relatedInstallCheckDone;
-      mobileButton.hidden = !isMobile() || runningAsApp || installed || waitingInstalledCheck;
+      mobileButton.hidden = !isMobile() || runningAsApp || waitingInstalledCheck;
       mobileButton.classList.toggle('is-ready', ready && !installed);
-      setInstallButtonState(mobileButton, false);
+      setInstallButtonState(mobileButton, installed);
     }
     if (desktopButton) {
       // O botão do menu do avatar é exclusivo do desktop. No mobile, a
@@ -10216,31 +10335,28 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (document.hidden) markLaunched();
     };
 
-    // No desktop, tenta primeiro o protocolo registrado pelo PWA. Isso permite
-    // que Chrome/Edge entreguem o link diretamente ao app instalado.
-    if (!isMobile()) {
-      window.addEventListener('blur', markLaunched, true);
-      document.addEventListener('visibilitychange', onVisibilityChange, true);
+    // Tenta primeiro o protocolo registrado pelo PWA tanto no desktop quanto
+    // no navegador mobile. Em navegadores compatíveis isso entrega o link
+    // diretamente ao Billie Eilish TV instalado. Se o sistema não abrir o app,
+    // mantemos uma navegação normal como fallback para não deixar o botão morto.
+    window.addEventListener('blur', markLaunched, true);
+    document.addEventListener('visibilitychange', onVisibilityChange, true);
 
-      try {
-        window.location.href = protocolUrl;
-      } catch (_) {}
+    try {
+      window.location.href = protocolUrl;
+    } catch (_) {}
 
-      // Se o protocolo ainda não estiver registrado (por exemplo, instalação
-      // antiga antes desta atualização), tenta um link do escopo do PWA em nova
-      // janela. Navegadores com captura de links do app abrem o PWA; os demais
-      // pelo menos mantêm a navegação funcionando no navegador.
-      fallbackTimer = setTimeout(() => {
-        if (appWasLaunched) return;
-        window.removeEventListener('blur', markLaunched, true);
-        document.removeEventListener('visibilitychange', onVisibilityChange, true);
-        const opened = window.open(appUrl, '_blank', 'noopener,noreferrer');
-        if (!opened) location.assign(appUrl);
-      }, 1400);
-      return;
-    }
-
-    location.assign(appUrl);
+    fallbackTimer = setTimeout(() => {
+      if (appWasLaunched) return;
+      window.removeEventListener('blur', markLaunched, true);
+      document.removeEventListener('visibilitychange', onVisibilityChange, true);
+      if (isMobile()) {
+        location.assign(appUrl);
+        return;
+      }
+      const opened = window.open(appUrl, '_blank', 'noopener,noreferrer');
+      if (!opened) location.assign(appUrl);
+    }, isMobile() ? 1100 : 1400);
   }
 
   function openInstallSheet(options = {}) {
@@ -10332,7 +10448,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('resize', updateInstallButton, { passive:true });
   refreshInstalledRelatedAppState();
   window.BETVRequestAppInstall = requestAppInstall;
-  window.BETVIsAppInstalled = isStandaloneApp;
+  window.BETVIsAppInstalled = isAppKnownInstalled;
+  window.BETVIsAppRunning = isStandaloneApp;
 
   document.addEventListener('click', event => {
     const button = event.target?.closest?.('[data-public-action="install"],#desktopInstallButton');
@@ -14593,14 +14710,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   });
 
   // Mantém a aba Suporte visualmente selecionada enquanto o usuário interage
-  // com pesquisa, FAQs ou qualquer outra área interna da página. Alguns módulos
-  // da barra superior também atualizam o indicador compartilhado e podiam movê-lo
-  // de volta para a logo depois de um clique no conteúdo do Suporte.
-  page.addEventListener('click',function(){
+  // com a página. Em especial, cliques em áreas vazias não devem escapar para
+  // controladores globais e fazer o indicador branco tentar voltar para a logo.
+  page.addEventListener('click',function(event){
+    if(!document.body.classList.contains('support-page-active')||page.hidden)return;
+    var interactive=event.target&&event.target.closest?event.target.closest('a,button,input,textarea,select,summary,label,[role="button"],[contenteditable="true"]'):null;
+    if(!interactive)event.stopPropagation();
+    setSupportTab(true);
     window.requestAnimationFrame(function(){
       if(document.body.classList.contains('support-page-active')&&!page.hidden)setSupportTab(true);
     });
-  });
+  },true);
 
   input.addEventListener('input',filterFaq);
   input.addEventListener('keydown',function(event){

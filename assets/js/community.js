@@ -281,8 +281,15 @@
     var rail=document.createElement('div');rail.className='community-rail';rows.forEach(function(row){rail.appendChild(createVideoCard(row,options));});host.appendChild(rail);
   }
 
-  function createRankAvatar(url,name){
+  function normalizeProfileAvatarRing(value){
+    var normalized=String(value||'').trim().toUpperCase();
+    return /^#[0-9A-F]{6}$/.test(normalized)?normalized:'';
+  }
+
+  function createRankAvatar(url,name,borderColor){
     var avatar=document.createElement('span');avatar.className='community-rank-avatar';
+    var ring=normalizeProfileAvatarRing(borderColor);
+    if(ring){avatar.classList.add('has-custom-ring');avatar.style.setProperty('--community-avatar-ring',ring);}
     var img=document.createElement('img');img.loading='lazy';img.decoding='async';img.alt='';img.src=window.BETVResolveAvatar?window.BETVResolveAvatar(url):mediaUrl(url||'/assets/images/profile/default-avatar.png');avatar.appendChild(img);return avatar;
   }
 
@@ -322,7 +329,7 @@
     rows.forEach(function(item){
       var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+rankToneClass(item)+(isCurrentProfilePerson(item)?' is-current-user':'');
       var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position||'—');button.appendChild(pos);
-      button.appendChild(createRankAvatar(item.avatarUrl,item.displayName));
+      button.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color));
       var copy=document.createElement('span');copy.className='community-rank-copy';var nameLine=document.createElement('span');nameLine.className='community-rank-name-line';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');nameLine.appendChild(strong);var tagMarkup=communityTagMarkup(item&&item.communityTag);if(tagMarkup){var tagWrap=document.createElement('span');tagWrap.className='community-rank-tag';tagWrap.innerHTML=tagMarkup;nameLine.appendChild(tagWrap);}copy.appendChild(nameLine);var handle=document.createElement('span');handle.className='community-rank-handle';handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.appendChild(handle);button.appendChild(copy);
       var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});button.appendChild(value);
       button.addEventListener('click',function(){closeCommunity(false);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});
@@ -338,7 +345,7 @@
     own.hidden=false;own.className='community-ranking-own';
     var row=document.createElement('div');row.className='community-ranking-own-row';
     var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position);row.appendChild(pos);
-    row.appendChild(createRankAvatar(item.avatarUrl,item.displayName));
+    row.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color));
     var copy=document.createElement('span');copy.className='community-rank-copy';var nameLine=document.createElement('span');nameLine.className='community-rank-name-line';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');nameLine.appendChild(strong);var ownTagMarkup=communityTagMarkup(item&&item.communityTag);if(ownTagMarkup){var ownTag=document.createElement('span');ownTag.className='community-rank-tag';ownTag.innerHTML=ownTagMarkup;nameLine.appendChild(ownTag);}copy.appendChild(nameLine);row.appendChild(copy);
     var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});row.appendChild(value);
     own.appendChild(row);
@@ -401,7 +408,7 @@
     mobileMenu.addEventListener('click',function(event){var button=event.target.closest('[data-mobile-account]');if(!button)return;var action=button.dataset.mobileAccount;closeMobileAccountMenu();if(action==='community'){openCommunity();return;}if(action==='profile'){var p=document.querySelector('#userDropdown [data-public-action="profile"]');if(p)p.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='settings'){var s=document.querySelector('#userDropdown [data-public-action="settings"]');if(s)s.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='install'){if(typeof window.BETVRequestAppInstall==='function')window.BETVRequestAppInstall();return;}if(action==='logout'){var a=document.getElementById('publicAuthAction');if(a)a.click();}});
   }
   function positionMobileAccountMenu(){if(!mobileMenu)return;var trigger=document.getElementById('mobileProfileButton');if(!trigger)return;var rect=trigger.getBoundingClientRect();var width=Math.min(260,Math.max(180,window.innerWidth-24));var height=Math.max(1,mobileMenu.offsetHeight||210);var left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));var top=Math.max(8,Math.min(rect.bottom+8,window.innerHeight-height-8));mobileMenu.style.left=left+'px';mobileMenu.style.top=top+'px';}
-  function openMobileAccountMenu(){if(!window.matchMedia('(max-width:760px)').matches)return;createMobileAccountMenu();var user=currentUser();var logout=mobileMenu.querySelector('[data-mobile-account="logout"]');if(logout)logout.hidden=!user;var install=mobileMenu.querySelector('[data-mobile-account="install"]');if(install)install.hidden=typeof window.BETVIsAppInstalled==='function'&&window.BETVIsAppInstalled();positionMobileAccountMenu();document.body.classList.add('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','true');}
+  function openMobileAccountMenu(){if(!window.matchMedia('(max-width:760px)').matches)return;createMobileAccountMenu();var user=currentUser();var logout=mobileMenu.querySelector('[data-mobile-account="logout"]');if(logout)logout.hidden=!user;var install=mobileMenu.querySelector('[data-mobile-account="install"]');if(install){var running=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installed=typeof window.BETVIsAppInstalled==='function'&&window.BETVIsAppInstalled();install.hidden=running;install.textContent=installed&&!running?'Abrir app':'Instalar app';install.classList.toggle('is-installed',installed&&!running);}positionMobileAccountMenu();document.body.classList.add('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','true');}
   function closeMobileAccountMenu(){document.body.classList.remove('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','false');}
   function toggleMobileAccountMenu(){if(document.body.classList.contains('mobile-account-menu-open'))closeMobileAccountMenu();else openMobileAccountMenu();}
 
