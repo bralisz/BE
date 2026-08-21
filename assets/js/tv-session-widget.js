@@ -41,10 +41,10 @@
 
   function widgetText() {
     const texts = {
-      'pt-br': { watching: 'Assistindo na TV', empty: 'Escolha o que assistir' },
-      'en-us': { watching: 'Watching on TV', empty: 'Choose what to watch' },
-      es: { watching: 'Viendo en la TV', empty: 'Elige qué ver' },
-      fr: { watching: 'Lecture sur la TV', empty: 'Choisissez quoi regarder' }
+      'pt-br': { watching: 'Assistindo na TV', empty: 'Escolha algo para assistir na TV' },
+      'en-us': { watching: 'Watching on TV', empty: 'Choose something to watch on TV' },
+      es: { watching: 'Viendo en la TV', empty: 'Elige algo para ver en la TV' },
+      fr: { watching: 'Lecture sur la TV', empty: 'Choisissez quelque chose à regarder à la TV' }
     };
     return texts[currentLocaleSlug()] || texts['pt-br'];
   }
@@ -53,7 +53,7 @@
     const source = media && typeof media === 'object' ? media : {};
     return Boolean(String(
       source.contentUrl || source.tvDriveUrl || source.mobileAppDriveUrl || source.driveUrl ||
-      source.vkUrl || source.videoUrl || source.embedUrl || source.url || source.title || ''
+      source.vkUrl || source.videoUrl || source.embedUrl || source.url || ''
     ).trim());
   }
 
@@ -136,10 +136,18 @@
     const source = currentMedia && typeof currentMedia === 'object' ? currentMedia : {};
     const copy = widgetText();
     const hasMedia = hasPlayableMedia(source);
-    statusNode.textContent = hasMedia ? copy.watching : copy.empty;
-    titleNode.textContent = hasMedia ? String(source.title || 'Billie Eilish TV') : 'Billie Eilish TV';
+    widget.classList.toggle('is-empty', !hasMedia);
+    if (hasMedia) {
+      statusNode.hidden = false;
+      statusNode.textContent = copy.watching;
+      titleNode.textContent = String(source.title || 'Billie Eilish TV');
+    } else {
+      statusNode.hidden = true;
+      statusNode.textContent = '';
+      titleNode.textContent = copy.empty;
+    }
     const artwork = cleanCssUrl(mediaArtwork(source));
-    widget.style.setProperty('--betv-tv-cover', artwork || 'linear-gradient(135deg,#171a20,#08090b)');
+    widget.style.setProperty('--betv-tv-cover', hasMedia && artwork ? artwork : 'linear-gradient(135deg,#171a20,#08090b)');
     widget.classList.toggle('is-busy', busy);
     widget.querySelectorAll('button').forEach(button => { button.disabled = busy; });
   }

@@ -2,11 +2,14 @@
 .betv-tv-session-widget{position:fixed;top:18px;left:22px;z-index:2200;width:260px;color:#fff;font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;filter:drop-shadow(0 16px 40px rgba(0,0,0,.34));transition:opacity .2s ease,transform .2s ease}
 .betv-tv-session-widget[hidden]{display:none!important}
 .betv-tv-session-shell{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.19);border-radius:24px;background:rgba(17,19,23,.82);box-shadow:inset 0 1px 0 rgba(255,255,255,.10);backdrop-filter:blur(26px) saturate(1.25);-webkit-backdrop-filter:blur(26px) saturate(1.25)}
-.betv-tv-session-art{position:absolute;inset:0;background-image:linear-gradient(90deg,rgba(7,8,10,.88) 0%,rgba(7,8,10,.72) 55%,rgba(7,8,10,.58) 100%),var(--betv-tv-cover,linear-gradient(135deg,#15181d,#08090b));background-position:center;background-size:cover;filter:saturate(.9);transform:scale(1.03);pointer-events:none}
+.betv-tv-session-art{position:absolute;top:0;left:0;right:0;height:60px;background-image:linear-gradient(90deg,rgba(7,8,10,.88) 0%,rgba(7,8,10,.72) 55%,rgba(7,8,10,.58) 100%),var(--betv-tv-cover,linear-gradient(135deg,#15181d,#08090b));background-position:center;background-size:cover;filter:saturate(.9);transform:scale(1.03);pointer-events:none}
 .betv-tv-session-summary{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:center;gap:8px;width:100%;min-height:60px;padding:9px 12px 9px 16px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
 .betv-tv-session-copy{display:grid;gap:3px;min-width:0}
 .betv-tv-session-copy small{font-size:11px;font-weight:700;letter-spacing:.02em;color:rgba(255,255,255,.68)}
 .betv-tv-session-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:1.25;font-weight:750;text-shadow:0 1px 10px rgba(0,0,0,.55)}
+
+.betv-tv-session-widget.is-empty .betv-tv-session-copy{gap:0}
+.betv-tv-session-widget.is-empty .betv-tv-session-title{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.2}
 .betv-tv-session-chevron{display:grid;place-items:center;width:32px;height:32px;border:1px solid rgba(255,255,255,.12);border-radius:50%;background:rgba(12,13,16,.52);transition:transform .2s ease,background .2s ease}
 .betv-tv-session-chevron svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .betv-tv-session-widget.is-open .betv-tv-session-chevron{transform:rotate(180deg);background:rgba(255,255,255,.13)}
