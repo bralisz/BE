@@ -369,9 +369,13 @@ module.exports = async function driveMediaProxy(req, res) {
     // Isso protege Fast Origin Transfer, Fast Data Transfer e CPU/Functions.
     if (kind === 'video' && upstream.url) {
       try { await upstream.body?.cancel(); } catch (_) { /* sem ação */ }
-      res.statusCode = 307;
+      // 302 é entendido por browsers de Smart TV bem antigos e mantém o GET.
+      // O vídeo passa a ser lido diretamente do Google, sem limite de duração da
+      // Function, e os próximos Range requests continuam indo para a origem.
+      res.statusCode = 302;
       res.setHeader('Location', upstream.url);
       res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+      res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('X-BETV-Media-Kind', 'video');
       return res.end();
     }

@@ -260,6 +260,23 @@ function subtitleClientUrl(value) {
   }
 }
 
+async function inlinePairingQr(connectUrl) {
+  try {
+    const QRCode = require('qrcode');
+    const png = await QRCode.toBuffer(String(connectUrl || ''), {
+      type: 'png',
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 360,
+      color: { dark: '#000000', light: '#ffffff' }
+    });
+    return `data:image/png;base64,${png.toString('base64')}`;
+  } catch (error) {
+    console.error('TV inline QR generation failed:', error);
+    return '';
+  }
+}
+
 function renderMedia(media) {
   if (!media || typeof media !== 'object') return '';
   const selected = preferredMediaUrl(media);
@@ -271,23 +288,21 @@ function renderMedia(media) {
   let provider = '';
 
   if (drive) {
-    // Tenta mais de uma URL nativa antes do preview oficial. Isso cobre TVs que
-    // aceitam vídeo HTML5, mas não seguem uma das variantes de download do Drive.
-    const direct = `https://drive.usercontent.google.com/download?${qs({ id: drive.id, export: 'download', confirm: 't', authuser: '0', resourcekey: drive.resourceKey })}`;
-    const alternate = `https://drive.google.com/uc?${qs({ id: drive.id, export: 'download', confirm: 't', resourcekey: drive.resourceKey })}`;
-    const resolved = `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey })}`;
+    // Na Smart TV o Google Drive usa diretamente o player oficial do próprio
+    // Google. Isso evita baixar/proxiar filmes longos pelo site e deixa buffering,
+    // seek e qualidade sob responsabilidade do player do Drive.
     const preview = `https://drive.google.com/file/d/${encodeURIComponent(drive.id)}/preview?${qs({ autoplay: '1', resourcekey: drive.resourceKey })}`;
     provider = 'drive';
-    player = `<video id="legacyTvVideo" controls autoplay playsinline preload="metadata" style="width:100%;height:100%;background:#000" onerror="this.style.display='none';var f=document.getElementById('legacyDriveFallback');if(f){f.style.display='block';}window.BETVTVDriveFallbackPending=true;if(typeof window.BETVTVDriveFallback==='function'){window.BETVTVDriveFallback();}"><source src="${escapeHtml(direct)}"><source src="${escapeHtml(alternate)}"><source src="${escapeHtml(resolved)}"></video>` +
-      `<iframe id="legacyDriveFallback" src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
+    player = `<iframe id="legacyTvFrame" src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0" referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0;background:#000"></iframe>`;
   } else if (yt) {
     const path = yt.id ? `embed/${encodeURIComponent(yt.id)}` : 'embed/videoseries';
     const src = `https://www.youtube-nocookie.com/${path}?${qs({ autoplay: '1', controls: '1', rel: '0', list: yt.list })}`;
     provider = 'youtube';
     player = `<iframe id="legacyTvFrame" src="${escapeHtml(src)}" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>`;
   } else if (vk) {
-    // O domínio vk.com e 720p são mais compatíveis com navegadores antigos de
-    // Smart TV; vkvideo.ru permanece como alternativa.
+    // Na Smart TV o vídeo também abre no player oficial incorporado do VK.
+    // vk.com é a primeira opção; vkvideo.ru permanece apenas como fallback do
+    // próprio VK para navegadores de TV que rejeitem o domínio principal.
     const src = `https://vk.com/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', js_api: '1', hash: vk.hash })}`;
     provider = 'vk';
     const fallbackSrc = `https://vkvideo.ru/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', js_api: '1', hash: vk.hash })}`;
@@ -310,7 +325,7 @@ function renderMedia(media) {
 
   return `
     <div class="tv-card-inner" id="receiverPlayer">
-      <div class="tv-player-wrap" id="receiverPlayerHost" data-provider="${escapeHtml(provider)}">${player}${subtitleControls}</div>
+      <div class="tv-player-wrap" id="receiverPlayerHost" data-provider="${escapeHtml(provider)}">${player}${subtitleControls}<div class="tv-playback-loading" id="tvPlaybackLoading" role="status" aria-label="Carregando vídeo"><span class="tv-playback-spinner" aria-hidden="true"></span></div></div>
       <div class="tv-now-playing">
         <div class="tv-now-playing-copy">
           <strong class="tv-now-playing-title">${title}</strong>
@@ -318,7 +333,103 @@ function renderMedia(media) {
         </div>
         <span class="tv-receiver-badge"><span class="pulse"></span>Conectado ao celular</span>
       </div>
-    </div>${subtitleScript}`;
+    </div>${playbackLoadingRuntimeScript(provider)}${subtitleScript}`;
+}
+
+function playbackLoadingRuntimeScript(provider) {
+  const safeProvider = JSON.stringify(String(provider || '')).replace(/</g, '\\u003c');
+  return `<script type="text/javascript">
+(function(){
+  var provider=${safeProvider};
+  var loader=document.getElementById('tvPlaybackLoading');
+  var video=document.getElementById('legacyTvVideo');
+  var frame=document.getElementById('legacyTvFrame');
+  var driveFrame=document.getElementById('legacyDriveFallback');
+  var driveAttempt=1;
+  var driveWatchdog=0;
+  var spinnerTimer=0;
+  var spinnerAngle=0;
+
+  function show(){if(loader){loader.style.display='block';loader.setAttribute('aria-hidden','false');}}
+  function hide(){if(loader){loader.style.display='none';loader.setAttribute('aria-hidden','true');}}
+  function clearWatchdog(){if(driveWatchdog){clearTimeout(driveWatchdog);driveWatchdog=0;}}
+  function armWatchdog(){
+    clearWatchdog();
+    if(provider!=='drive'||!video||video.style.display==='none')return;
+    driveWatchdog=setTimeout(function(){
+      if(!video||video.style.display==='none')return;
+      if(video.readyState>=3&&!video.error)return;
+      nextDriveSource();
+    },18000);
+  }
+  function startSpinnerFallback(){
+    var ring=loader&&loader.getElementsByTagName('span')[0];
+    if(!ring||spinnerTimer)return;
+    var style=ring.style;
+    var supportsAnimation=('animationName' in style)||('webkitAnimationName' in style);
+    if(supportsAnimation)return;
+    spinnerTimer=setInterval(function(){
+      spinnerAngle=(spinnerAngle+30)%360;
+      ring.style.transform='rotate('+spinnerAngle+'deg)';
+      ring.style.webkitTransform='rotate('+spinnerAngle+'deg)';
+    },90);
+  }
+  function showDriveFallback(){
+    clearWatchdog();
+    show();
+    if(video){try{video.pause();}catch(e){}video.style.display='none';try{video.removeAttribute('src');video.load();}catch(e){}}
+    if(driveFrame){
+      driveFrame.style.display='block';
+      var target=driveFrame.getAttribute('data-src')||'';
+      if(target&&driveFrame.src!==target)driveFrame.src=target;
+    }
+    window.BETVTVDriveFallbackPending=true;
+    if(typeof window.BETVTVDriveFallback==='function')window.BETVTVDriveFallback();
+  }
+  function nextDriveSource(){
+    if(provider!=='drive'||!video){showDriveFallback();return;}
+    if(video.style.display==='none')return;
+    clearWatchdog();
+    driveAttempt++;
+    var next=video.getAttribute('data-drive-src-'+driveAttempt)||'';
+    if(!next){showDriveFallback();return;}
+    show();
+    try{
+      video.src=next;
+      video.load();
+      var promise=video.play();
+      if(promise&&typeof promise.catch==='function')promise.catch(function(){});
+    }catch(e){}
+    armWatchdog();
+  }
+  function onVideoReady(){clearWatchdog();hide();}
+  function onVideoBusy(){show();if(provider==='drive')armWatchdog();}
+  function onVideoError(){if(video&&video.style.display==='none')return;show();if(provider==='drive')nextDriveSource();}
+
+  window.BETVTVShowLoader=show;
+  window.BETVTVHideLoader=hide;
+  window.BETVTVNextDriveSource=nextDriveSource;
+  window.BETVTVShowDriveFallback=showDriveFallback;
+  startSpinnerFallback();
+  show();
+
+  if(video&&video.addEventListener){
+    video.addEventListener('loadstart',onVideoBusy,false);
+    video.addEventListener('waiting',onVideoBusy,false);
+    video.addEventListener('stalled',onVideoBusy,false);
+    video.addEventListener('seeking',onVideoBusy,false);
+    video.addEventListener('loadeddata',onVideoReady,false);
+    video.addEventListener('canplay',onVideoReady,false);
+    video.addEventListener('playing',onVideoReady,false);
+    video.addEventListener('seeked',onVideoReady,false);
+    video.addEventListener('error',onVideoError,false);
+    if(provider==='drive')armWatchdog();
+    if(video.readyState>=3)hide();
+  }
+  if(frame&&frame.addEventListener)frame.addEventListener('load',hide,false);
+  if(driveFrame&&driveFrame.addEventListener)driveFrame.addEventListener('load',hide,false);
+})();
+</script>`;
 }
 
 function subtitleRuntimeScript(subtitleUrl, provider, initialEnabled) {
@@ -523,7 +634,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   <meta name="theme-color" content="#020409">
   <title>Conectar Smart TV — Billie Eilish TV</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260820-tv-cc-title-v5">
+  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260821-tv-drive-qr-loader-v1">
 </head>
 <body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
   <main class="tv-shell">
@@ -542,13 +653,13 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
 </body>
 </html>`;
 }
-function pairingBody(code, connectUrl) {
+function pairingBody(code, connectUrl, inlineQr) {
   return `
     <div class="tv-card-inner" id="receiverPairing">
       <h1>Conecte seu celular</h1>
       <p>Escaneie o QR Code com a câmera do celular. Você entra na sua conta e a TV fica pronta para receber os vídeos do site.</p>
       <div class="tv-pair-grid">
-        <div class="tv-qr"><img src="/api/tv-qr?url=${encodeURIComponent(connectUrl)}&format=png" alt="QR Code para conectar esta TV"></div>
+        <div class="tv-qr"><img src="${escapeHtml(inlineQr || `/api/tv-qr?code=${encodeURIComponent(code)}&v=2`)}" data-fallback-src="/api/tv-qr?code=${encodeURIComponent(code)}&v=2" onerror="var f=this.getAttribute('data-fallback-src');if(f&&this.src.indexOf(f)<0){this.src=f;}" alt="QR Code para conectar esta TV"></div>
         <div class="tv-code-panel">
           <span class="tv-code-label">Seu código</span>
           <div class="tv-code" aria-label="Código da TV">${codeMarkup(code)}</div>
@@ -643,7 +754,8 @@ module.exports = async function handler(req, res) {
         ]);
       }
       const connectUrl = `https://billieilishtv.site/connect-tv/?code=${encodeURIComponent(pairingCode)}`;
-      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl), stateStatus: 'waiting', mediaVersion: state.media_version, mediaKey: mediaStateKey(state.current_media) });
+      const inlineQr = await inlinePairingQr(connectUrl);
+      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl, inlineQr), stateStatus: 'waiting', mediaVersion: state.media_version, mediaKey: mediaStateKey(state.current_media) });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
     }
 

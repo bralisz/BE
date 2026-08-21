@@ -78,6 +78,16 @@ button,a{-webkit-tap-highlight-color:transparent}
 .tv-receiver.is-playing .tv-player-wrap video{object-fit:contain}
 
 
+
+/* Loading indicator shown over Smart TV playback. Uses only basic CSS so it
+   remains visible on older Tizen/WebOS/NetCast engines. */
+.tv-playback-loading{position:absolute;z-index:12;top:0;right:0;bottom:0;left:0;display:block;background:rgba(0,0,0,.18);pointer-events:none}
+.tv-playback-spinner{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border:4px solid rgba(255,255,255,.22);border-top-color:#fff;border-right-color:rgba(255,255,255,.72);border-radius:50%;-webkit-animation:tvPlaybackSpin .82s linear infinite;animation:tvPlaybackSpin .82s linear infinite;box-shadow:0 1px 12px rgba(0,0,0,.28)}
+@-webkit-keyframes tvPlaybackSpin{to{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}
+@keyframes tvPlaybackSpin{to{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}
+.legacy-tv .tv-playback-loading{background:rgba(0,0,0,.12)}
+.legacy-tv .tv-playback-spinner{width:44px;height:44px;margin:-22px 0 0 -22px;border-width:4px}
+
 /* Connected Smart TV profile */
 .tv-receiver-profile{position:relative;isolation:isolate;display:flex;align-items:center;gap:16px;min-height:92px;margin-top:24px;padding:14px 18px;border:1px solid rgba(255,255,255,.14);border-radius:24px;overflow:hidden;background:rgba(255,255,255,.055)}
 .tv-receiver-profile.has-banner{background:#101318;border-color:rgba(255,255,255,.2)}
