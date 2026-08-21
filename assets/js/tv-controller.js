@@ -360,7 +360,6 @@
       tvSubtitlesEnabled = false;
       localStorage.removeItem(PENDING_MEDIA_KEY);
       setMessage(connectedMessage, '');
-      showCastToast('Enviado para a TV. A reprodução começa por lá.');
       sendButton.textContent = 'Transmitido';
       sendButton.classList.add('is-transmitted');
       sendButton.disabled = true;
@@ -531,7 +530,6 @@
     codeInput.value = '';
     setMessage(connectedMessage, '');
     showForm();
-    setMessage(message, 'TV desconectada.', 'ok');
     busy = false;
     disconnectButton.disabled = false;
   });
