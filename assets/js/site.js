@@ -3630,7 +3630,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     spotlight.setAttribute('aria-label', localizedUiText('Conheça Billie Eilish'));
     spotlight.innerHTML = `
       <div class="billie-home-spotlight-frame">
-        <img src="${defaultBanner}" alt="Billie Eilish" loading="lazy" decoding="async">
+        <img src="${defaultBanner}" alt="Billie Eilish" decoding="async">
         <div class="billie-home-spotlight-overlay" aria-hidden="true"></div>
         <div class="billie-home-spotlight-copy">
           <strong>${escapeHtml(localizedUiText('Conheça um dos maiores nomes da música atual.'))}</strong>
@@ -3684,7 +3684,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             const year = String(album.year || '');
             const route = localizedRoute('/albuns/' + encodeURIComponent(String(album.id || '')));
             return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml('/albuns/' + encodeURIComponent(String(album.id || '')))}" aria-label="${escapeHtml(title)}">
-              <span class="album-home-cover">${image ? `<img src="${directImageUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}</span>
+              <span class="album-home-cover">${image ? `<img src="${directImageUrl(image)}" alt="${escapeHtml(title)}" decoding="async" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}</span>
               <strong class="notranslate" translate="no">${escapeHtml(title)}</strong>
               <small>${escapeHtml([localizedUiText(type), year].filter(Boolean).join(' • '))}</small>
             </a>`;
@@ -3720,7 +3720,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     spotlight.setAttribute('aria-label', 'Apoie uma ONG');
     spotlight.innerHTML = `
       <div class="donate-home-spotlight-frame">
-        <img src="${banner}" alt="Apoie uma ONG" loading="lazy" decoding="async">
+        <img src="${banner}" alt="Apoie uma ONG" decoding="async">
         <div class="donate-home-spotlight-overlay" aria-hidden="true"></div>
         <a class="donate-home-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a>
       </div>`;
@@ -3873,7 +3873,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const mobileList = document.getElementById('detailStreamingMobileList');
     const mobileSheet = document.getElementById('detailStreamingMobileSheet');
     if (!store || !panel || !button || !list) return;
-    const services = String(collection || '').toLowerCase() === 'movies'
+    const streamingCollection = String(collection || '').toLowerCase();
+    const services = ['movies', 'series'].includes(streamingCollection)
       ? normalizeMovieStreamingAvailability(availability)
       : [];
     const directLinks = normalizeMovieStreamingLinks(streamingLinks);
@@ -3939,8 +3940,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(video.streamingAvailability).join(','))}"
               data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(video.streamingLinks))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}">
-      <img class="video-card-thumbnail" src="${safeAssetUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async">
-      ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo)}" alt="" loading="lazy" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
+      <img class="video-card-thumbnail" src="${safeAssetUrl(image)}" alt="${escapeHtml(video.title || '')}" decoding="async">
+      ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo)}" alt="" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
     </a>`;
   }
 
@@ -4432,7 +4433,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(data.streamingLinks))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}"
       aria-label="Abrir ${escapeHtml(title)}">
-      <span class="detail-reco-thumb">${image && image !== '#' ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">` : '<span class="ph ph-wide" style="height:100%"></span>'}</span>
+      <span class="detail-reco-thumb">${image && image !== '#' ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" decoding="async">` : '<span class="ph ph-wide" style="height:100%"></span>'}</span>
       <span class="detail-reco-name">${escapeHtml(title)}</span>
     </a>`;
   }
@@ -5351,7 +5352,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         </div>
         <video class="drive-player-video" id="drivePlayerVideo" preload="metadata" playsinline></video>
         <div class="drive-player-frame-shell" id="drivePlayerFrameShell" hidden>
-          <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor de mídia" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor de mídia" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
         <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span><a class="drive-player-support-link" href="/suporte" data-public-action="support" data-support-target="contact" hidden>Informe o erro ao suporte</a></div>
         <div class="drive-player-wake-zone" id="drivePlayerWakeZone" aria-hidden="true"></div>
@@ -5678,7 +5679,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `<div class="external-native-player-overlay" id="externalNativePlayerOverlay" hidden aria-hidden="true" data-provider="">
       <section class="external-native-player-shell" id="externalNativePlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo externo">
         <div class="external-native-player-frame-shell">
-          <iframe class="external-native-player-frame" id="externalNativePlayerFrame" title="Reprodutor de vídeo" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          <iframe class="external-native-player-frame" id="externalNativePlayerFrame" title="Reprodutor de vídeo" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
         <div class="external-native-player-subtitle-overlay" id="externalNativePlayerSubtitleOverlay" hidden aria-live="off"></div>
         <div class="external-native-player-bottom-shade" id="externalNativePlayerBottomShade" aria-hidden="true"></div>
@@ -6456,7 +6457,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       <section class="drive-video-player-shell" id="driveVideoPlayerShell" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo do Google Drive">
         <video class="drive-video-player-video" id="driveVideoPlayerVideo" preload="metadata" playsinline></video>
         <div class="drive-video-player-frame-shell" id="driveVideoPlayerFrameShell" hidden>
-          <iframe class="drive-video-player-frame" id="driveVideoPlayerFrame" title="Reprodutor de vídeo do Google Drive" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          <iframe class="drive-video-player-frame" id="driveVideoPlayerFrame" title="Reprodutor de vídeo do Google Drive" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
         <div class="drive-video-player-subtitle-overlay" id="driveVideoPlayerSubtitleOverlay" hidden aria-live="off"></div>
         <div class="drive-video-player-loading" id="driveVideoPlayerLoading" role="status" aria-label="Carregando vídeo">
@@ -9757,7 +9758,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const rawAvatar = String(profile?.avatar_url || profile?.avatarUrl || '').trim();
         const avatar = window.BETVResolveAvatar ? window.BETVResolveAvatar(rawAvatar) : (rawAvatar || '/assets/images/profile/default-avatar.png');
         return `<button class="public-user-search-item" type="button" role="option" data-profile-username="${escapeHtml(username)}">
-          <span class="public-user-search-avatar"><img loading="lazy" decoding="async" src="${escapeHtml(avatar)}" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt=""></span>
+          <span class="public-user-search-avatar"><img decoding="async" src="${escapeHtml(avatar)}" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt=""></span>
           <strong class="notranslate" translate="no">@${escapeHtml(username)}</strong>
         </button>`;
       }).join('');
@@ -10895,17 +10896,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
 
-    if (!image.getAttribute('loading')) image.loading = 'lazy';
     if (!image.getAttribute('fetchpriority')) {
       try { image.fetchPriority = 'low'; } catch (_) {}
     }
   };
 
-  const applyFramePolicy = frame => {
-    if (frame instanceof HTMLIFrameElement && !frame.getAttribute('loading')) {
-      frame.loading = 'lazy';
-    }
-  };
+  const applyFramePolicy = frame => { void frame; };
 
   const revealDeferredSource = element => {
     if (!(element instanceof Element)) return;
@@ -12539,7 +12535,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var groups={};
         items.forEach(function(item){var cat=(item.category||'Outros').trim()||'Outros';(groups[cat]||(groups[cat]=[])).push(item);});
         avatarPickerBody.innerHTML='<div class="avatar-category-columns">'+Object.keys(groups).map(function(cat){
-          return '<section class="avatar-category"><h3>'+escapePublic(avatarCategoryTitle(cat))+'</h3><div class="avatar-rail-shell"><button class="avatar-rail-arrow prev" type="button" aria-label="Ver avatares anteriores" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button><div class="avatar-options">'+groups[cat].map(function(item){var imageUrl=window.beMediaUrl?window.beMediaUrl(item.imageUrl):item.imageUrl;return '<button class="avatar-option" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'" aria-label="Avatar da categoria '+escapePublic(cat)+'"><img data-picker-src="'+escapePublic(imageUrl)+'" loading="lazy" decoding="async" fetchpriority="low" width="160" height="160" alt="Avatar da categoria '+escapePublic(cat)+'"></button>';}).join('')+'</div><button class="avatar-rail-arrow next" type="button" aria-label="Ver mais avatares"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button></div></section>';
+          return '<section class="avatar-category"><h3>'+escapePublic(avatarCategoryTitle(cat))+'</h3><div class="avatar-rail-shell"><button class="avatar-rail-arrow prev" type="button" aria-label="Ver avatares anteriores" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button><div class="avatar-options">'+groups[cat].map(function(item){var imageUrl=window.beMediaUrl?window.beMediaUrl(item.imageUrl):item.imageUrl;return '<button class="avatar-option" type="button" data-avatar-url="'+escapePublic(item.imageUrl)+'" data-avatar-id="'+escapePublic(item.id)+'" aria-label="Avatar da categoria '+escapePublic(cat)+'"><img data-picker-src="'+escapePublic(imageUrl)+'" decoding="async" fetchpriority="low" width="160" height="160" alt="Avatar da categoria '+escapePublic(cat)+'"></button>';}).join('')+'</div><button class="avatar-rail-arrow next" type="button" aria-label="Ver mais avatares"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button></div></section>';
         }).join('')+'</div>';
         avatarGalleryRendered=true;
         setupAvatarRails();
@@ -12859,7 +12855,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       profileFavoritesContent.innerHTML='<div class="profile-favorites-ranking">'+profileFavoritesItems.map(function(item,index){
         var image=profileFavoriteImage(item);
-        var imageAttrs=index===0?' loading="eager" fetchpriority="high" decoding="async"':(index===1?' loading="eager" decoding="async"':' loading="lazy" decoding="async"');
+        var imageAttrs=index===0?' loading="eager" fetchpriority="high" decoding="async"':(index===1?' loading="eager" decoding="async"':' decoding="async"');
         var rank=String(index+1);
         var gradientId='profileFavoriteRankGradient'+rank;
         var clipId='profileFavoriteRankClip'+rank;
@@ -12950,7 +12946,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       profileLovedAlbumsContent.innerHTML='<div class="profile-favorites-ranking">'+profileLovedAlbumsItems.map(function(item,index){
         var image=profileFavoriteImage(item);
-        var imageAttrs=index===0?' loading="eager" fetchpriority="high" decoding="async"':(index===1?' loading="eager" decoding="async"':' loading="lazy" decoding="async"');
+        var imageAttrs=index===0?' loading="eager" fetchpriority="high" decoding="async"':(index===1?' loading="eager" decoding="async"':' decoding="async"');
         var rank=String(index+1);
         var gradientId='profileLovedAlbumRankGradient'+rank;
         var clipId='profileLovedAlbumRankClip'+rank;
@@ -12980,7 +12976,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           var selectedIndex=profileLovedAlbumsDraft.findIndex(function(current){return profileFavoriteIdentity(current)===profileFavoriteIdentity(item);});
           var selected=selectedIndex>=0,image=profileFavoriteImage(item);
           return '<button class="profile-favorites-option'+(selected?' selected':'')+'" type="button" data-profile-loved-album-option="'+catalogIndex+'" data-no-content-open="true" aria-pressed="'+String(selected)+'">'
-            +'<span class="profile-favorites-option-media">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
+            +'<span class="profile-favorites-option-media">'+(image?'<img decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
             +'<span class="profile-favorites-option-order">'+(selected?selectedIndex+1:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>')+'</span></span>'
             +'<span class="profile-favorites-option-copy"><strong class="notranslate" translate="no">'+escapePublic(item.title||'Álbum')+'</strong><small>ÁLBUM'+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
             +'</button>';
@@ -13099,7 +13095,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           var selected=selectedIndex>=0;
           var image=profileFavoriteImage(item);
           return '<button class="profile-favorites-option'+(selected?' selected':'')+'" type="button" data-profile-favorite-option="'+catalogIndex+'" data-no-content-open="true" aria-pressed="'+String(selected)+'">'
-            +'<span class="profile-favorites-option-media">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
+            +'<span class="profile-favorites-option-media">'+(image?'<img decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-favorite-placeholder"></span>')
             +'<span class="profile-favorites-option-order">'+(selected?selectedIndex+1:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>')+'</span></span>'
             +'<span class="profile-favorites-option-copy"><strong class="notranslate" translate="no">'+escapePublic(item.title||'Conteúdo')+'</strong><small>'+profileFavoriteCollectionLabel(item)+(item.year?' • '+escapePublic(item.year):'')+'</small></span>'
             +'</button>';
@@ -13268,7 +13264,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var isAlbum=String(item.collection||'').toLowerCase()==='albums';
         var meta=[isAlbum?'Álbum':'',item.year,item.duration].filter(Boolean).join(' • ');
         return '<button class="profile-saved-card'+(isAlbum?' is-album':'')+'" type="button" data-saved-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'conteúdo salvo')+'">'
-          +'<span class="profile-saved-thumb">'+(image?'<img loading="lazy" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-saved-placeholder" aria-hidden="true"></span>')+'<span class="profile-saved-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7Z"></path></svg></span></span>'
+          +'<span class="profile-saved-thumb">'+(image?'<img decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-saved-placeholder" aria-hidden="true"></span>')+'<span class="profile-saved-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7Z"></path></svg></span></span>'
           +'<span class="profile-saved-copy"><strong class="notranslate" translate="no">'+escapePublic(item.title||'Conteúdo salvo')+'</strong>'+(meta?'<small>'+escapePublic(meta)+'</small>':'')+'</span>'
           +'</button>';
       }).join('');
@@ -13609,7 +13605,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var groups={};
         items.forEach(function(item){var cat=(item.category||'Banners de perfil').trim()||'Banners de perfil';(groups[cat]||(groups[cat]=[])).push(item);});
         bannerPickerBody.innerHTML=Object.keys(groups).map(function(cat){
-          return '<section class="banner-group"><h3>'+escapePublic(cat)+'</h3><div class="banner-grid">'+groups[cat].map(function(item){var imageUrl=window.beMediaUrl?window.beMediaUrl(item.imageUrl):item.imageUrl;return '<button class="banner-option" type="button" data-banner-url="'+escapePublic(item.imageUrl)+'" data-banner-id="'+escapePublic(item.id)+'" aria-label="Selecionar banner de perfil"><img data-picker-src="'+escapePublic(imageUrl)+'" loading="lazy" decoding="async" fetchpriority="low" width="640" height="220" alt="Banner de perfil"></button>';}).join('')+'</div></section>';
+          return '<section class="banner-group"><h3>'+escapePublic(cat)+'</h3><div class="banner-grid">'+groups[cat].map(function(item){var imageUrl=window.beMediaUrl?window.beMediaUrl(item.imageUrl):item.imageUrl;return '<button class="banner-option" type="button" data-banner-url="'+escapePublic(item.imageUrl)+'" data-banner-id="'+escapePublic(item.id)+'" aria-label="Selecionar banner de perfil"><img data-picker-src="'+escapePublic(imageUrl)+'" decoding="async" fetchpriority="low" width="640" height="220" alt="Banner de perfil"></button>';}).join('')+'</div></section>';
         }).join('');
         bannerGalleryRendered=true;
         syncBannerPickerSelection();
@@ -15030,7 +15026,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           var imageWrapper=document.createElement('span');
           imageWrapper.className='notification-markdown-image notification-discord-image';
           var image=document.createElement('img');
-          image.loading='lazy';
+          
           image.decoding='async';
           image.referrerPolicy='no-referrer';
           image.src=safeUrl;
@@ -15064,7 +15060,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var token='BETVNOTIFICATIONIMAGE'+images.length+'TOKEN';
       var fallbackUrl=isDiscordNotificationImageUrl(safeUrl)?'':notificationImageProxyUrl(safeUrl);
       images.push('<span class="notification-markdown-image">'+
-        '<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(safeUrl)+'"'+(fallbackUrl?' data-notification-fallback-src="'+esc(fallbackUrl)+'"':'')+' alt="'+esc(alt||'Imagem da notificação')+'">'+
+        '<img decoding="async" referrerpolicy="no-referrer" src="'+esc(safeUrl)+'"'+(fallbackUrl?' data-notification-fallback-src="'+esc(fallbackUrl)+'"':'')+' alt="'+esc(alt||'Imagem da notificação')+'">'+
       '</span>');
       return token;
     });
@@ -16717,7 +16713,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var amountPlaceholder=(minimumCents/100).toLocaleString(DONATION_LOCALE,{minimumFractionDigits:2,maximumFractionDigits:2});
       return '<article class="donate-ngo-card" data-ngo-card>'+ 
         '<button class="donate-ngo-toggle" data-i18n-ignore type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="'+esc(i18nText('Conhecer {name}',{name:title}))+'" data-ngo-title="'+esc(title)+'">'+
-          (image?'<img loading="lazy" decoding="async" src="'+esc(image)+'" alt="'+esc(i18nText('Banner da {name}',{name:title}))+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
+          (image?'<img decoding="async" src="'+esc(image)+'" alt="'+esc(i18nText('Banner da {name}',{name:title}))+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
         '</button>'+ 
         '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3 class="donate-ngo-name notranslate" translate="no">'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
           '<div class="donate-ngo-donation" data-donation-box data-ngo-reference="'+esc(ngoReference)+'" data-minimum-donation-cents="'+esc(minimumCents)+'" data-currency="'+esc(DONATION_CURRENCY)+'">'+
@@ -16852,10 +16848,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var initials=supporterInitials(displayName);
     var route='/@'+encodeURIComponent(username);
     return '<a class="donate-supporter-card" href="'+esc(route)+'" data-supporter-profile aria-label="'+esc(i18nText('Abrir perfil de {name}',{name:displayName}))+'">'+
-      '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
+      '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
       '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
       '<span class="donate-supporter-content">'+
-        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'"><img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatarUrl||window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="'+esc(i18nText('Avatar de {name}',{name:displayName}))+'"></span>'+ 
+        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'"><img class="donate-supporter-avatar-image" decoding="async" src="'+esc(avatarUrl||window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="'+esc(i18nText('Avatar de {name}',{name:displayName}))+'"></span>'+ 
         '<span class="donate-supporter-copy notranslate" translate="no"><strong>'+esc(displayName)+'</strong><small>@'+esc(username)+'</small></span>'+ 
       '</span>'+ 
     '</a>';
@@ -17370,7 +17366,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var label=partner?t('Abrir comunidade {name}',{name:displayName}):t('Abrir perfil de {name}',{name:displayName});
     var avatarAlt=partner?t('Ícone de {name}',{name:displayName}):t('Avatar de {name}',{name:displayName});
     var attributes=partner?' target="_blank" rel="noopener noreferrer" data-fans-community':' data-fans-profile data-profile-route="'+esc(route)+'"';
-    var avatarMarkup=avatar?'<img class="donate-supporter-avatar-image" loading="lazy" decoding="async" src="'+esc(avatar)+'"'+(partner?'':' data-avatar-fallback="/assets/images/profile/default-avatar.png"')+' alt="'+esc(avatarAlt)+'">':'<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(initials(displayName))+'</span>';
+    var avatarMarkup=avatar?'<img class="donate-supporter-avatar-image" decoding="async" src="'+esc(avatar)+'"'+(partner?'':' data-avatar-fallback="/assets/images/profile/default-avatar.png"')+' alt="'+esc(avatarAlt)+'">':'<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(initials(displayName))+'</span>';
     var locale=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
     var tag='';
     if(community){
@@ -17379,7 +17375,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       tag=locale==='en-us'?'Content Creator':(locale==='es'?'Creador de contenido':(locale==='fr'?'Créateur de contenu':'Criador de conteúdo'));
     }
     return '<a class="donate-supporter-card '+(creator?'is-creator':(community?'is-community':'is-user'))+'" href="'+esc(href)+'"'+attributes+' aria-label="'+esc(label)+'">'+
-      '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" loading="lazy" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
+      '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
       '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
       '<span class="donate-supporter-content">'+
         '<span class="donate-supporter-avatar" data-initials="'+esc(initials(displayName))+'">'+avatarMarkup+'</span>'+ 
@@ -17468,7 +17464,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('be:guest-access',syncAccount);
   window.addEventListener('be:i18n-ready',function(){if(!page.hidden&&window.BETVI18n)window.BETVI18n.apply(page);syncAccount();if(window.BETVI18n)footerLinks.forEach(function(footerLink){window.BETVI18n.apply(footerLink);});});
   window.addEventListener('be:content-ready',function(){loaded=false;if(isRoute())load(true);});
-  window.addEventListener('be:favorites-changed',function(){if(currentAlbum&&!page.hidden)syncAlbumFavorite();});
   window.addEventListener('popstate',function(){if(!isRoute()&&document.body.classList.contains('fans-page-active'))close();});
   window.addEventListener('hashchange',function(){if(!isRoute()&&document.body.classList.contains('fans-page-active'))close();});
   window.addEventListener('resize',function(){if(isRoute()&&!page.hidden)window.requestAnimationFrame(function(){window.scrollTo(0,window.scrollY);});});
@@ -17550,7 +17545,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var albumTitle=String(album.title||'Álbum');
       var albumImage=image(album.imageUrl||album.thumbnailUrl||album.bannerUrl);
       return '<a class="album-page-cover-card'+(active?' active':'')+'" href="'+esc(localized('/albuns/'+encodeURIComponent(String(album.id))))+'" data-album-id="'+esc(String(album.id))+'" aria-current="'+(active?'true':'false')+'">'+
-        '<span>'+(albumImage?'<img src="'+esc(albumImage)+'" alt="'+esc(albumTitle)+'" loading="lazy" decoding="async" referrerpolicy="no-referrer">':'<i aria-hidden="true">♪</i>')+'</span>'+
+        '<span>'+(albumImage?'<img src="'+esc(albumImage)+'" alt="'+esc(albumTitle)+'" decoding="async" referrerpolicy="no-referrer">':'<i aria-hidden="true">♪</i>')+'</span>'+
         '<strong class="notranslate" translate="no">'+esc(albumTitle)+'</strong><small>'+esc([albumTypeLabel(album.type),String(album.year||'')].filter(Boolean).join(' • '))+'</small></a>';
     }).join('');
   }
@@ -17625,6 +17620,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('be:album-search',function(event){if(!isRoute()||page.hidden)return;renderSearch(event&&event.detail?event.detail.query:'');});
   window.addEventListener('be:album-search-commit',function(event){if(!isRoute()||page.hidden)return;var query=event&&event.detail?event.detail.query:activeSearch;var match=findBySearch(query)||currentAlbum;if(match)navigate('/albuns/'+encodeURIComponent(String(match.id)),false);});
   window.addEventListener('be:content-ready',function(){loaded=false;if(isRoute())load(true);});
+  window.addEventListener('be:favorites-changed',function(){if(currentAlbum&&!page.hidden)syncAlbumFavorite();});
   window.addEventListener('be:i18n-ready',function(){if(!page.hidden){if(window.BETVI18n)window.BETVI18n.apply(page);setSearchContext(true);renderSearch(activeSearch);}});
   window.addEventListener('popstate',function(){if(isRoute()){if(document.body.classList.contains('album-page-active'))load(false);}else if(document.body.classList.contains('album-page-active'))close();});
   window.addEventListener('hashchange',function(){if(isRoute()){if(document.body.classList.contains('album-page-active'))load(false);}else if(document.body.classList.contains('album-page-active'))close();});
@@ -17864,7 +17860,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return favorites.slice(0,4).map(function(item){
       var src=cleanFavoriteImage(item);
       var title=String(item&&item.title||'Favorito');
-      return '<div class="profile-share-campaign-favorite" title="'+esc(title)+'">'+(src?'<img loading="lazy" decoding="async" src="'+esc(src)+'" alt="'+esc(title)+'">':'<span aria-hidden="true"></span>')+'</div>';
+      return '<div class="profile-share-campaign-favorite" title="'+esc(title)+'">'+(src?'<img decoding="async" src="'+esc(src)+'" alt="'+esc(title)+'">':'<span aria-hidden="true"></span>')+'</div>';
     }).join('');
   }
   function buildPrompt(campaign,user,profile,favorites){

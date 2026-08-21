@@ -15,6 +15,12 @@ function envConfig() {
       process.env.SUPABASE_ANON_KEY ||
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
       DEFAULT_PUBLISHABLE_KEY,
+    serviceRoleKey: String(
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SECRET_KEY ||
+      process.env.SUPABASE_SERVICE_KEY ||
+      ''
+    ).trim(),
     vercelToken: String(
       process.env.VERCEL_API_TOKEN ||
       process.env.VERCEL_ACCESS_TOKEN ||
@@ -63,6 +69,88 @@ async function assertAdmin(supabaseUrl, publishableKey, accessToken) {
     throw apiError(allowed, 'Apenas o administrador pode liberar uma atualização.', 403);
   }
   return user;
+}
+
+function serviceHeaders(serviceRoleKey) {
+  return {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    Accept: 'application/json'
+  };
+}
+
+async function loadTopCommentedContent(config) {
+  if (!config.serviceRoleKey) {
+    const error = new Error('A métrica de comentários precisa da chave secreta do Supabase configurada no servidor.');
+    error.status = 503;
+    throw error;
+  }
+
+  const counts = new Map();
+  const latestByKey = new Map();
+  const pageSize = 1000;
+  const maxPages = 50;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const url = new URL(`${config.supabaseUrl}/rest/v1/video_comments`);
+    url.searchParams.set('select', 'video_key,created_at');
+    url.searchParams.set('order', 'created_at.desc');
+    url.searchParams.set('limit', String(pageSize));
+    url.searchParams.set('offset', String(page * pageSize));
+
+    const response = await fetch(url, {
+      headers: serviceHeaders(config.serviceRoleKey),
+      cache: 'no-store'
+    });
+    const rows = await readJson(response);
+    if (!response.ok) throw apiError(rows, 'Não foi possível consultar os comentários.', response.status);
+    if (!Array.isArray(rows) || rows.length === 0) break;
+
+    for (const row of rows) {
+      const videoKey = String(row?.video_key || '').trim();
+      if (!/^(videos|movies):.+/.test(videoKey)) continue;
+      counts.set(videoKey, (counts.get(videoKey) || 0) + 1);
+      if (!latestByKey.has(videoKey)) latestByKey.set(videoKey, String(row?.created_at || ''));
+    }
+
+    if (rows.length < pageSize) break;
+  }
+
+  const ranked = [...counts.entries()].sort((a, b) => {
+    const countDiff = b[1] - a[1];
+    if (countDiff) return countDiff;
+    return String(latestByKey.get(b[0]) || '').localeCompare(String(latestByKey.get(a[0]) || ''));
+  });
+  if (!ranked.length) return {};
+
+  const [videoKey, value] = ranked[0];
+  const separator = videoKey.indexOf(':');
+  const collection = videoKey.slice(0, separator);
+  const id = videoKey.slice(separator + 1);
+  if (!id) return {};
+
+  const contentUrl = new URL(`${config.supabaseUrl}/rest/v1/content_items`);
+  contentUrl.searchParams.set('select', 'id,collection,data');
+  contentUrl.searchParams.set('collection', `eq.${collection}`);
+  contentUrl.searchParams.set('id', `eq.${id}`);
+  contentUrl.searchParams.set('limit', '1');
+
+  const contentResponse = await fetch(contentUrl, {
+    headers: serviceHeaders(config.serviceRoleKey),
+    cache: 'no-store'
+  });
+  const contentRows = await readJson(contentResponse);
+  if (!contentResponse.ok) throw apiError(contentRows, 'Não foi possível identificar o conteúdo mais comentado.', contentResponse.status);
+  const item = Array.isArray(contentRows) ? contentRows[0] : null;
+  const data = item?.data && typeof item.data === 'object' ? item.data : {};
+
+  return {
+    id,
+    collection,
+    title: String(data.title || 'Sem título'),
+    imageUrl: String(data.imageUrl || data.bannerUrl || ''),
+    value: Number(value || 0)
+  };
 }
 
 function sameOriginRequest(req) {
@@ -204,19 +292,27 @@ module.exports = async function adminDeploymentRelease(req, res) {
   if (!accessToken) return res.status(401).json({ error: 'Sessão administrativa não encontrada.' });
 
   const config = envConfig();
-  if (!config.vercelToken) {
-    return res.status(503).json({
-      error: 'Integração com a Vercel não configurada. Adicione VERCEL_API_TOKEN nas variáveis de ambiente da Vercel.'
-    });
-  }
-  if (!config.projectId) {
-    return res.status(503).json({
-      error: 'VERCEL_PROJECT_ID não está disponível. Ative “Automatically expose System Environment Variables” na Vercel.'
-    });
-  }
 
   try {
     const admin = await assertAdmin(config.supabaseUrl, config.publishableKey, accessToken);
+    const requestedMetric = String(req.query?.metric || '').trim().toLowerCase();
+
+    if (req.method === 'GET' && requestedMetric === 'top-commented') {
+      const topCommented = await loadTopCommentedContent(config);
+      return res.status(200).json({ ok: true, topCommented });
+    }
+
+    if (!config.vercelToken) {
+      return res.status(503).json({
+        error: 'Integração com a Vercel não configurada. Adicione VERCEL_API_TOKEN nas variáveis de ambiente da Vercel.'
+      });
+    }
+    if (!config.projectId) {
+      return res.status(503).json({
+        error: 'VERCEL_PROJECT_ID não está disponível. Ative “Automatically expose System Environment Variables” na Vercel.'
+      });
+    }
+
     const state = await deploymentStateForProject(config);
 
     if (req.method === 'GET') {

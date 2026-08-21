@@ -236,12 +236,8 @@ function localizeStaticText(html, routeInfo) {
   });
 }
 
-function injectLocalePreload(html, routeInfo) {
-  if (routeInfo.slug === 'pt-br') return html;
-  const href = `/assets/i18n/${routeInfo.slug}.json?rev=${I18N_REV}`;
-  const preload = `<link rel="preload" href="${attr(href)}" as="fetch" fetchpriority="high" data-betv-i18n-preload="${attr(routeInfo.slug)}">`;
-  return html.replace('</head>', `${preload}
-</head>`);
+function injectLocalePreload(html) {
+  return html;
 }
 
 function isLegalRouteInfo(routeInfo) {

@@ -24,17 +24,12 @@
       return;
     }
 
-    if (!image.getAttribute('loading')) image.loading = 'lazy';
     if (!image.getAttribute('fetchpriority')) {
       try { image.fetchPriority = 'low'; } catch (_) {}
     }
   };
 
-  const applyFramePolicy = frame => {
-    if (frame instanceof HTMLIFrameElement && !frame.getAttribute('loading')) {
-      frame.loading = 'lazy';
-    }
-  };
+  const applyFramePolicy = frame => { void frame; };
 
   const revealDeferredSource = element => {
     if (!(element instanceof Element)) return;

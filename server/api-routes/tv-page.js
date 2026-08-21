@@ -380,16 +380,16 @@ function renderMedia(media, legacyPlayback, copy) {
       const direct = `https://drive.usercontent.google.com/download?${qs({ id: drive.id, export: 'download', confirm: 't', authuser: '0', resourcekey: drive.resourceKey })}`;
       const alternate = `https://drive.google.com/uc?${qs({ id: drive.id, export: 'download', confirm: 't', resourcekey: drive.resourceKey })}`;
       player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="auto" src="${escapeHtml(resolved)}" data-drive-src-1="${escapeHtml(resolved)}" data-drive-src-2="${escapeHtml(direct)}" data-drive-src-3="${escapeHtml(alternate)}" style="width:100%;height:100%;background:#000"></video>` +
-        `<iframe id="legacyDriveFallback" src="about:blank" data-src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
+        `<iframe id="legacyDriveFallback" src="about:blank" data-src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media" frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
     } else {
       // TVs novas continuam usando o player oficial do Google Drive.
-      player = `<iframe id="legacyTvFrame" src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0" style="width:100%;height:100%;border:0;background:#000"></iframe>`;
+      player = `<iframe id="legacyTvFrame" src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" frameborder="0" style="width:100%;height:100%;border:0;background:#000"></iframe>`;
     }
   } else if (yt) {
     const path = yt.id ? `embed/${encodeURIComponent(yt.id)}` : 'embed/videoseries';
     const src = `https://www.youtube-nocookie.com/${path}?${qs({ autoplay: '1', controls: '1', rel: '0', list: yt.list })}`;
     provider = 'youtube';
-    player = `<iframe id="legacyTvFrame" src="${escapeHtml(src)}" allow="autoplay; fullscreen" allowfullscreen frameborder="0"></iframe>`;
+    player = `<iframe id="legacyTvFrame" src="${escapeHtml(src)}" allow="autoplay; fullscreen" frameborder="0"></iframe>`;
   } else if (vk) {
     provider = 'vk';
     const official = `https://vk.com/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', js_api: '1', hash: vk.hash })}`;
@@ -402,10 +402,10 @@ function renderMedia(media, legacyPlayback, copy) {
       const resolved360 = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '360' })}`;
       const resolved240 = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '240' })}`;
       player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="metadata" src="${escapeHtml(resolved480)}" data-vk-src-1="${escapeHtml(resolved480)}" data-vk-src-2="${escapeHtml(resolved360)}" data-vk-src-3="${escapeHtml(resolved240)}" style="width:100%;height:100%;background:#000"></video>` +
-        `<iframe id="legacyTvFrame" src="about:blank" data-src="${escapeHtml(official)}" data-fallback-src="${escapeHtml(officialAlt)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
+        `<iframe id="legacyTvFrame" src="about:blank" data-src="${escapeHtml(official)}" data-fallback-src="${escapeHtml(officialAlt)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
     } else {
       // TVs novas usam diretamente o player oficial incorporado do VK.
-      player = `<iframe id="legacyTvFrame" src="${escapeHtml(official)}" data-fallback-src="${escapeHtml(officialAlt)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen frameborder="0"></iframe>`;
+      player = `<iframe id="legacyTvFrame" src="${escapeHtml(official)}" data-fallback-src="${escapeHtml(officialAlt)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" frameborder="0"></iframe>`;
     }
   } else if (/^https?:\/\//i.test(selected) && /\.(?:mp4|m4v|webm)(?:$|[?#])/i.test(selected)) {
     provider = 'native';

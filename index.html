@@ -107,6 +107,8 @@
     });
   }
   window.addEventListener('unhandledrejection',function(event){event.preventDefault();});
+  window.addEventListener('error',function(event){try{event.preventDefault();}catch(_){ }},true);
+  try{window.onerror=function(){return true;};}catch(_){ }
 })( );
 </script>
 <script src="/assets/js/locale-routing.js?rev=20260810-fr-locale-v2"></script>
@@ -122,19 +124,7 @@
   }catch(_){ }
 })();
 </script>
-<script>
-(function(){
-  try{
-    var slug=window.BETVLocale&&window.BETVLocale.slug;
-    if(slug!=='en-us'&&slug!=='es'&&slug!=='fr')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260821-profile-privacy-v3';
-    if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
-    var preload=document.createElement('link');
-    preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
-    document.head.appendChild(preload);
-  }catch(_){ }
-})();
-</script>
+
 <script>
 (function(){
   try{
@@ -214,9 +204,9 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260821-profile-privacy-v3">
 <link rel="stylesheet" href="/assets/css/community.css?rev=20260821-profile-privacy-v3">
 <link rel="stylesheet" href="/assets/css/tv-session-widget.css?rev=20260821-profile-privacy-v3">
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"></script>
+<script defer src="/api/runtime"></script>
 <script defer src="/assets/js/i18n.js?rev=20260821-profile-privacy-v3"></script>
-<script defer src="/assets/js/site.js?rev=20260821-profile-privacy-v3"></script>
+<script defer src="/assets/js/site.js?rev=20260821-series-streaming-v1"></script>
 <script defer src="/assets/js/tv-session-widget.js?rev=20260821-profile-privacy-v3"></script>
 <script defer src="/assets/js/community.js?rev=20260821-profile-privacy-v3"></script>
 <script>
@@ -224,7 +214,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost')return;
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js?rev=20260821-profile-privacy-v3',{scope:'/',updateViaCache:'none'}).catch(function(error){
+    navigator.serviceWorker.register('/sw.js?rev=20260821-console-clean-v4',{scope:'/',updateViaCache:'none'}).catch(function(error){
       (void 0);
     });
   },{once:true});
@@ -919,7 +909,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
       <aside class="billie-portrait-column">
         <figure class="billie-portrait-frame">
           <div class="billie-portrait-inner">
-            <img id="billiePagePortrait" src="/assets/images/pages/billie-portrait-default.webp" alt="Billie Eilish" loading="lazy" decoding="async">
+            <img id="billiePagePortrait" src="/assets/images/pages/billie-portrait-default.webp" alt="Billie Eilish" decoding="async">
           </div>
         </figure>
       </aside>
@@ -1308,7 +1298,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 <section class="legal-page-shell" id="legalPage" hidden aria-label="Informações legais do BETV">
   <header class="legal-page-header">
     <button class="legal-avatar-button is-login" id="legalAvatarButton" type="button" aria-label="Entrar na plataforma">
-      <img loading="lazy" decoding="async" id="legalAvatarImage" alt="" hidden>
+      <img decoding="async" id="legalAvatarImage" alt="" hidden>
       <span id="legalAvatarFallback">Entrar</span>
     </button>
     <button class="legal-home-button" id="legalHomeButton" type="button" aria-label="Voltar para a página inicial">
