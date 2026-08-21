@@ -6882,6 +6882,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let openingToken = 0;
     let activeSourceLink = null;
     let activeSubtitleUrl = '';
+    let activeSubtitleOffset = 0;
     let subtitleCues = [];
     let subtitlesEnabled = false;
     let subtitlesVisible = false;
@@ -7011,19 +7012,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return;
       }
       if (frameMode) {
-        renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime(), subtitlesVisible);
+        renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime() - activeSubtitleOffset, subtitlesVisible);
         if (!subtitleOverlay.hidden) subtitleOverlay.style.setProperty('display', 'block', 'important');
         else subtitleOverlay.style.removeProperty('display');
         return;
       }
       subtitleOverlay.style.removeProperty('display');
-      renderSubtitleCue(subtitleOverlay, subtitleCues, video.currentTime, subtitlesVisible);
+      renderSubtitleCue(subtitleOverlay, subtitleCues, video.currentTime - activeSubtitleOffset, subtitlesVisible);
     };
 
     const resetDriveSubtitles = () => {
       subtitleLoadToken += 1;
       clearFrameSubtitleSync(true);
       activeSubtitleUrl = '';
+      activeSubtitleOffset = 0;
       subtitleCues = [];
       subtitlesEnabled = false;
       subtitlesVisible = false;
@@ -7036,9 +7038,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderSubtitleCue(subtitleOverlay, [], 0, false);
     };
 
-    const configureDriveSubtitles = value => {
+    const configureDriveSubtitles = (value, offsetSeconds = 0) => {
       resetDriveSubtitles();
       activeSubtitleUrl = String(value || '').trim();
+      const parsedOffset = Number(offsetSeconds);
+      activeSubtitleOffset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
       subtitleButton.hidden = !activeSubtitleUrl;
       subtitleButton.style.removeProperty('display');
     };
@@ -7161,7 +7165,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.remove('is-error', 'is-source-syncing');
       overlay.classList.add('is-frame-mode');
       syncFrameSubtitleButton();
-      renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime(), subtitlesEnabled && subtitlesVisible && !!activeSubtitleUrl);
+      renderSubtitleCue(subtitleOverlay, subtitleCues, readFrameSubtitleTime() - activeSubtitleOffset, subtitlesEnabled && subtitlesVisible && !!activeSubtitleUrl);
       if (!subtitleOverlay.hidden) subtitleOverlay.style.setProperty('display', 'block', 'important');
       else subtitleOverlay.style.removeProperty('display');
       if (subtitlesEnabled && activeSubtitleUrl) {
@@ -7311,7 +7315,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeFileId = fileId;
       activeResourceKey = resourceKey;
       activeSourceLink = context?.sourceLink instanceof Element ? context.sourceLink : null;
-      configureDriveSubtitles(context?.subtitleUrl);
+      configureDriveSubtitles(context?.subtitleUrl, context?.subtitleOffset);
       const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
       activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
       previousFocus = document.activeElement;
@@ -7385,10 +7389,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       event.stopImmediatePropagation();
       window.dispatchEvent(new Event('be:close-external-video-players'));
       window.dispatchEvent(new Event('be:close-drive-player'));
+      const contentIdentity = String(linkedContent.itemId || linkedContent.recordId || link.dataset.itemId || link.dataset.recordId || '').trim();
+      const normalizedTitle = String(title || '').trim().toLowerCase();
+      const subtitleOffset = contentIdentity === '71854182' || normalizedTitle === 'prime video x billie eilish' ? 25 : 0;
       openPlayer(fileId, googleDriveResourceKey(mediaUrl), {
         title,
         sourceLink: link,
-        subtitleUrl: linkedContent.subtitleUrl || link.dataset.subtitleUrl || ''
+        subtitleUrl: linkedContent.subtitleUrl || link.dataset.subtitleUrl || '',
+        subtitleOffset
       });
     }, true);
 

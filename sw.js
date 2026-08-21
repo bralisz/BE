@@ -1,5 +1,5 @@
 /* Service worker do PWA; os arquivos continuam vindo da rede. */
-const SW_VERSION = '20260821-drive-entry-subtitle-notice-v4';
+const SW_VERSION = '20260821-prime-video-subtitle-offset-v5';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
