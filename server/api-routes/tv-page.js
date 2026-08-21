@@ -313,9 +313,15 @@ function renderMedia(media, legacyPlayback) {
       // browsers antigos de Smart TV. No modo legado usamos HTML5 nativo e
       // deixamos o Google entregar o arquivo diretamente após um 302 do resolver.
       const resolved = `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey, tv: '1' })}`;
+      const metadata = `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey, metadata: '1' })}`;
       const direct = `https://drive.usercontent.google.com/download?${qs({ id: drive.id, export: 'download', confirm: 't', authuser: '0', resourcekey: drive.resourceKey })}`;
       const alternate = `https://drive.google.com/uc?${qs({ id: drive.id, export: 'download', confirm: 't', resourcekey: drive.resourceKey })}`;
-      player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="auto" src="${escapeHtml(resolved)}" data-drive-src-1="${escapeHtml(resolved)}" data-drive-src-2="${escapeHtml(direct)}" data-drive-src-3="${escapeHtml(alternate)}" style="width:100%;height:100%;background:#000"></video>` +
+      // Primeiro tenta a origem direta (sem custo de transferência para a Vercel).
+      // Se a TV travar, a segunda tentativa usa nosso endpoint em modo TV: o
+      // servidor mantém os cookies de confirmação do Google e responde aos Range
+      // requests da TV em blocos menores. Formatos pouco seguros para TVs antigas
+      // vão direto para o preview/transcode oficial do Drive.
+      player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="auto" src="${escapeHtml(direct)}" data-drive-src-1="${escapeHtml(direct)}" data-drive-src-2="${escapeHtml(resolved)}" data-drive-src-3="${escapeHtml(alternate)}" data-drive-meta="${escapeHtml(metadata)}" style="width:100%;height:100%;background:#000"></video>` +
         `<iframe id="legacyDriveFallback" src="about:blank" data-src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
     } else {
       // TVs novas continuam usando o player oficial do Google Drive.
@@ -381,6 +387,7 @@ function playbackLoadingRuntimeScript(provider) {
   var frame=document.getElementById('legacyTvFrame');
   var driveFrame=document.getElementById('legacyDriveFallback');
   var driveAttempt=1;
+  var driveMetadataChecked=false;
   var driveWatchdog=0;
   var vkAttempt=1;
   var vkWatchdog=0;
@@ -398,7 +405,7 @@ function playbackLoadingRuntimeScript(provider) {
       if(!video||video.style.display==='none')return;
       if(video.readyState>=3&&!video.error)return;
       nextDriveSource();
-    },18000);
+    },9000);
   }
   function armVkWatchdog(){
     clearVkWatchdog();
@@ -408,6 +415,38 @@ function playbackLoadingRuntimeScript(provider) {
       if(video.readyState>=2&&!video.error)return;
       nextVkSource();
     },12000);
+  }
+  function isLegacySafeDriveMetadata(data){
+    if(!data||typeof data!=='object')return true;
+    var kind=String(data.kind||'').toLowerCase();
+    var type=String(data.contentType||'').toLowerCase().split(';')[0];
+    var name=String(data.filename||'').toLowerCase();
+    if(kind&&kind!=='video')return false;
+    if(type==='video/mp4'||type==='video/x-m4v')return true;
+    if(!type||type==='application/octet-stream'||type==='binary/octet-stream'){
+      return !name||/\.(?:mp4|m4v)$/i.test(name);
+    }
+    // WebM/MKV/MOV/HEVC containers are much less reliable on old TV browsers.
+    return false;
+  }
+  function checkDriveMetadata(){
+    if(provider!=='drive'||!video||driveMetadataChecked)return;
+    driveMetadataChecked=true;
+    var endpoint=video.getAttribute('data-drive-meta')||'';
+    if(!endpoint||!window.XMLHttpRequest)return;
+    try{
+      var xhr=new XMLHttpRequest();
+      xhr.open('GET',endpoint,true);
+      xhr.timeout=6500;
+      xhr.onreadystatechange=function(){
+        if(xhr.readyState!==4||xhr.status<200||xhr.status>=300)return;
+        try{
+          var data=JSON.parse(xhr.responseText||'{}');
+          if(!isLegacySafeDriveMetadata(data))showDriveFallback();
+        }catch(e){}
+      };
+      xhr.send(null);
+    }catch(e){}
   }
   function startSpinnerFallback(){
     var ring=loader&&loader.getElementsByTagName('span')[0];
@@ -487,6 +526,7 @@ function playbackLoadingRuntimeScript(provider) {
   window.BETVTVShowVkFallback=showVkFallback;
   startSpinnerFallback();
   show();
+  checkDriveMetadata();
 
   if(video&&video.addEventListener){
     video.addEventListener('loadstart',onVideoBusy,false);
