@@ -6108,8 +6108,8 @@ body.login-mode .login-brand img{
   display:flex;
   align-items:flex-end;
   justify-content:flex-start;
-  width:min(440px,40vw);
-  height:120px;
+  width:min(520px,46vw);
+  height:150px;
   max-width:100%;
   margin:0;
   overflow:visible;
@@ -6128,9 +6128,13 @@ body.login-mode .login-brand img{
 }
 @media(max-width:760px){
   .detail-logo-media--video{
-    width:min(78vw,320px);
-    height:92px;
-    max-width:calc(100vw - 44px);
+    width:min(88vw,390px);
+    height:128px;
+    max-width:calc(100vw - 36px);
+  }
+  .detail-logo-media--video > img{
+    transform:scale(1.08);
+    transform-origin:left bottom;
   }
 }
 
