@@ -21,12 +21,18 @@
   "theme_color": "#050816",
   "background_color": "#050816",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "id": "/",
   "start_url": "/?source=pwa",
   "scope": "/",
   "orientation": "any",
-  "categories": ["entertainment", "social"],
+  "categories": [
+    "entertainment",
+    "social"
+  ],
   "prefer_related_applications": false,
   "shortcuts": [
     {
@@ -43,6 +49,19 @@
       "name": "Fãs da Billie",
       "short_name": "Fãs",
       "url": "/fãs"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+betv",
+      "url": "/?source=pwa&protocol=%s"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://billieilishtv.site/site.webmanifest",
+      "id": "https://billieilishtv.site/"
     }
   ]
 }

@@ -18661,11 +18661,18 @@ body.profile-page-active.profile-avatar-border-customized .profile-page-avatar>i
   }
 }
 
-/* Drive mobile: correção exclusivamente visual do ícone de tela cheia. */
+/* Player: ícone de tela cheia no padrão visual de players de streaming. */
 .drive-video-player-fullscreen .fullscreen-enter,
 .drive-video-player-fullscreen .fullscreen-exit{
   grid-area:1 / 1!important;
+  width:22px!important;
+  height:22px!important;
   margin:0!important;
+  fill:none!important;
+}
+.drive-player-fullscreen .fullscreen-enter,
+.drive-player-fullscreen .fullscreen-exit{
+  fill:none!important;
 }
 .drive-video-player-fullscreen .fullscreen-enter{display:block}
 .drive-video-player-fullscreen .fullscreen-exit{display:none}

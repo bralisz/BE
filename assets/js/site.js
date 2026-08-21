@@ -5307,10 +5307,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-fullscreen" id="drivePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
             <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M10 5H5v5M5 5l6 6M14 19h5v-5M19 19l-6-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 9h4a1 1 0 0 0 1-1V4M20 9h-4a1 1 0 0 1-1-1V4M4 15h4a1 1 0 0 1 1 1v4M20 15h-4a1 1 0 0 0-1 1v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
           <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
@@ -6481,8 +6481,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-video-player-action-wake-zone" id="driveVideoPlayerActionWakeZone" aria-hidden="true"></div>
         <div class="drive-video-player-actionbar" id="driveVideoPlayerActionbar" aria-label="Controles do vídeo">
           <button class="drive-video-player-action drive-video-player-fullscreen" id="driveVideoPlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
-            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v5M5 5l6 6M14 19h5v-5M19 19l-6-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4a1 1 0 0 0 1-1V4M20 9h-4a1 1 0 0 1-1-1V4M4 15h4a1 1 0 0 1 1 1v4M20 15h-4a1 1 0 0 0-1 1v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div class="drive-video-player-actions-right">
             <button class="drive-video-player-action drive-video-player-volume" id="driveVideoPlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
@@ -8519,7 +8519,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!response.ok) return source;
       const latest = await response.json();
       if (!latest || typeof latest !== 'object') return source;
-      const dashboardDrive = String(latest.mobileAppDriveUrl || latest.tvDriveUrl || '').trim();
+      const dashboardDrive = String(latest.tvDriveUrl || latest.mobileAppDriveUrl || '').trim();
       return {
         ...source,
         mobileAppDriveUrl: dashboardDrive || String(source.mobileAppDriveUrl || '').trim(),
@@ -8763,11 +8763,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const duration = data.duration || '';
     const collection = String(data.collection || '').toLowerCase();
     const defaultContentUrl = data.contentUrl || '#';
-    const requestedMobileDriveUrl = String(data.mobileAppDriveUrl || data.appDriveUrl || '').trim();
-    const mobileDriveUrl = requestedMobileDriveUrl && googleDriveFileId(requestedMobileDriveUrl) ? requestedMobileDriveUrl : '';
-    const contentUrl = collection === 'movies' && isInstalledMobileApp() && mobileDriveUrl
-      ? mobileDriveUrl
-      : defaultContentUrl;
+    // O Google Drive cadastrado no Dashboard para filmes é exclusivo da Smart TV.
+    // No PC, navegador mobile e PWA, o botão Assistir sempre usa o link normal
+    // de reprodução configurado no Dashboard.
+    const requestedMobileDriveUrl = String(data.tvDriveUrl || data.mobileAppDriveUrl || data.appDriveUrl || '').trim();
+    const contentUrl = defaultContentUrl;
     const subtitleUrl = data.subtitleUrl || '';
     const thumbnailUrl = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
     const bannerUrl = ['movies', 'series'].includes(collection)
@@ -8836,6 +8836,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     play.dataset.duration = duration;
     play.dataset.contentUrl = contentUrl;
     play.dataset.mobileAppDriveUrl = requestedMobileDriveUrl;
+    play.dataset.tvDriveUrl = requestedMobileDriveUrl;
     play.dataset.subtitleUrl = subtitleUrl;
     play.dataset.imageUrl = thumbnailUrl;
     play.dataset.bannerUrl = bannerUrl;
@@ -9318,7 +9319,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       year:String(data?.year || ''),
       duration:String(data?.duration || ''),
       contentUrl:String(data?.contentUrl || '#'),
-      mobileAppDriveUrl:String(data?.mobileAppDriveUrl || data?.appDriveUrl || ''),
+      mobileAppDriveUrl:String(data?.mobileAppDriveUrl || data?.appDriveUrl || data?.tvDriveUrl || ''),
+      tvDriveUrl:String(data?.tvDriveUrl || data?.mobileAppDriveUrl || data?.appDriveUrl || ''),
       subtitleUrl:String(data?.subtitleUrl || ''),
       imageUrl:String(data?.imageUrl || data?.thumbnailUrl || data?.bannerUrl || ''),
       bannerUrl:String(data?.bannerUrl || data?.imageUrl || data?.thumbnailUrl || ''),
@@ -9350,7 +9352,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       year:dataset.year || element.dataset?.year || '',
       duration:dataset.duration || element.dataset?.duration || '',
       contentUrl:dataset.contentUrl || element.dataset?.contentUrl || '#',
-      mobileAppDriveUrl:dataset.mobileAppDriveUrl || element.dataset?.mobileAppDriveUrl || '',
+      mobileAppDriveUrl:dataset.mobileAppDriveUrl || element.dataset?.mobileAppDriveUrl || dataset.tvDriveUrl || element.dataset?.tvDriveUrl || '',
+      tvDriveUrl:dataset.tvDriveUrl || element.dataset?.tvDriveUrl || dataset.mobileAppDriveUrl || element.dataset?.mobileAppDriveUrl || '',
       subtitleUrl:dataset.subtitleUrl || element.dataset?.subtitleUrl || '',
       imageUrl:dataset.imageUrl || element.dataset?.imageUrl || '',
       bannerUrl:dataset.bannerUrl || element.dataset?.bannerUrl || '',
@@ -10072,6 +10075,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const MOBILE_QUERY = '(max-width:760px)';
   const isMobile = () => window.matchMedia(MOBILE_QUERY).matches;
   let deferredInstallPrompt = null;
+  const supportsInstalledRelatedApps = typeof navigator.getInstalledRelatedApps === 'function';
+  let relatedInstallCheckDone = !supportsInstalledRelatedApps;
+  let relatedPwaInstalled = false;
 
   const isStandaloneApp = () => {
     let sessionFlag = false;
@@ -10109,13 +10115,47 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try { localStorage.setItem(INSTALL_MARKER, '1'); } catch (_) {}
   }
 
+  function forgetInstalledApp() {
+    try { localStorage.removeItem(INSTALL_MARKER); } catch (_) {}
+  }
+
   function isAppKnownInstalled() {
     if (isStandaloneApp()) {
       rememberInstalledApp();
       return true;
     }
+    if (relatedPwaInstalled) return true;
     try { return localStorage.getItem(INSTALL_MARKER) === '1'; }
     catch (_) { return false; }
+  }
+
+  async function refreshInstalledRelatedAppState() {
+    if (!supportsInstalledRelatedApps) {
+      relatedInstallCheckDone = true;
+      updateInstallButton();
+      return false;
+    }
+    try {
+      const apps = await navigator.getInstalledRelatedApps();
+      relatedPwaInstalled = Array.isArray(apps) && apps.some(app => {
+        const platform = String(app?.platform || '').toLowerCase();
+        const id = String(app?.id || '').replace(/\/$/, '');
+        const url = String(app?.url || '');
+        const origin = String(location.origin || '').replace(/\/$/, '');
+        return platform === 'webapp' && (
+          !id || id === origin || id === `${origin}/` ||
+          /site\.webmanifest(?:$|[?#])/i.test(url)
+        );
+      });
+      if (relatedPwaInstalled) rememberInstalledApp();
+      else forgetInstalledApp();
+    } catch (_) {
+      // Mantém o marcador local como fallback quando a API não puder responder.
+    } finally {
+      relatedInstallCheckDone = true;
+      updateInstallButton();
+    }
+    return relatedPwaInstalled;
   }
 
   function setInstallButtonState(button, installed) {
@@ -10134,9 +10174,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const mobileButton = document.getElementById('mobileInstallButton');
     const desktopButton = document.getElementById('desktopInstallButton');
     if (mobileButton) {
-      mobileButton.hidden = !isMobile() || runningAsApp;
+      // No celular, o botão é somente de instalação. Se o PWA já estiver
+      // instalado, ele desaparece do menu em vez de virar "Abrir app".
+      const waitingInstalledCheck = supportsInstalledRelatedApps && !relatedInstallCheckDone;
+      mobileButton.hidden = !isMobile() || runningAsApp || installed || waitingInstalledCheck;
       mobileButton.classList.toggle('is-ready', ready && !installed);
-      setInstallButtonState(mobileButton, installed);
+      setInstallButtonState(mobileButton, false);
     }
     if (desktopButton) {
       desktopButton.hidden = runningAsApp;
@@ -10152,7 +10195,50 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function launchInstalledApp() {
     closeInstallSheet();
-    location.assign('/');
+
+    // Já estamos dentro do PWA: não recarrega a página no navegador.
+    if (isStandaloneApp()) return;
+
+    const appUrl = `${location.origin}/?source=pwa&launch=app`;
+    const protocolUrl = `web+betv://open?url=${encodeURIComponent(appUrl)}`;
+    let appWasLaunched = false;
+    let fallbackTimer = null;
+
+    const markLaunched = () => {
+      appWasLaunched = true;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      window.removeEventListener('blur', markLaunched, true);
+      document.removeEventListener('visibilitychange', onVisibilityChange, true);
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) markLaunched();
+    };
+
+    // No desktop, tenta primeiro o protocolo registrado pelo PWA. Isso permite
+    // que Chrome/Edge entreguem o link diretamente ao app instalado.
+    if (!isMobile()) {
+      window.addEventListener('blur', markLaunched, true);
+      document.addEventListener('visibilitychange', onVisibilityChange, true);
+
+      try {
+        window.location.href = protocolUrl;
+      } catch (_) {}
+
+      // Se o protocolo ainda não estiver registrado (por exemplo, instalação
+      // antiga antes desta atualização), tenta um link do escopo do PWA em nova
+      // janela. Navegadores com captura de links do app abrem o PWA; os demais
+      // pelo menos mantêm a navegação funcionando no navegador.
+      fallbackTimer = setTimeout(() => {
+        if (appWasLaunched) return;
+        window.removeEventListener('blur', markLaunched, true);
+        document.removeEventListener('visibilitychange', onVisibilityChange, true);
+        const opened = window.open(appUrl, '_blank', 'noopener,noreferrer');
+        if (!opened) location.assign(appUrl);
+      }, 1400);
+      return;
+    }
+
+    location.assign(appUrl);
   }
 
   function openInstallSheet(options = {}) {
@@ -10231,12 +10317,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   });
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
+    relatedPwaInstalled = true;
+    relatedInstallCheckDone = true;
     rememberInstalledApp();
     updateInstallButton();
     openInstallSheet({ installed:true });
   });
-  window.addEventListener('pageshow', updateInstallButton);
+  window.addEventListener('pageshow', () => {
+    updateInstallButton();
+    refreshInstalledRelatedAppState();
+  });
   window.addEventListener('resize', updateInstallButton, { passive:true });
+  refreshInstalledRelatedAppState();
   window.BETVRequestAppInstall = requestAppInstall;
   window.BETVIsAppInstalled = isStandaloneApp;
 
