@@ -1,7 +1,7 @@
 /* Billie Eilish TV — service worker mínimo para instalação como app.
    O site continua sempre buscando os arquivos pela rede; nenhum conteúdo
    de vídeo, conta ou preferências é armazenado pelo service worker. */
-const SW_VERSION = '20260821-vk-fullscreen-v2';
+const SW_VERSION = '20260821-mobile-vk-combined-v1';
 
 self.addEventListener('install', event => {
   self.skipWaiting();

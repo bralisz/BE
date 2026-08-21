@@ -5354,6 +5354,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           <iframe class="drive-player-frame" id="drivePlayerFrame" title="Reprodutor de mídia" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
         </div>
         <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span><a class="drive-player-support-link" href="/suporte" data-public-action="support" data-support-target="contact" hidden>Informe o erro ao suporte</a></div>
+        <div class="drive-player-wake-zone" id="drivePlayerWakeZone" aria-hidden="true"></div>
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-fullscreen is-streaming-fullscreen-icon" id="drivePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
             <svg class="fullscreen-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 10 20 4"/><path d="M15 4h5v5"/><path d="M10 14 4 20"/><path d="M4 15v5h5"/></svg>
@@ -5689,15 +5690,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           <button type="button" class="external-native-player-menu-item" data-vk-quality="2" role="menuitemradio" aria-checked="false"><span>480p</span></button>
           <button type="button" class="external-native-player-menu-item" data-vk-quality="1" role="menuitemradio" aria-checked="false"><span>360p</span></button>
         </div>
-        <div class="external-native-player-menu external-native-player-audio-menu" id="externalNativePlayerAudioMenu" hidden role="menu" aria-label="Faixa de áudio">
-          <button type="button" class="external-native-player-menu-item is-active" data-vk-audio-track="default" role="menuitemradio" aria-checked="true"><span>Original</span></button>
-        </div>
         <header class="external-native-player-toolbar" id="externalNativePlayerToolbar" aria-label="Ações do vídeo">
           <button class="external-native-player-action external-native-player-quality" id="externalNativePlayerQuality" type="button" aria-label="Alterar qualidade do vídeo" title="Qualidade" aria-expanded="false" aria-controls="externalNativePlayerQualityMenu">
             <span class="external-native-player-quality-badge notranslate" aria-hidden="true" data-i18n-ignore="true" translate="no">FHD</span>
-          </button>
-          <button class="external-native-player-action external-native-player-audio" id="externalNativePlayerAudio" type="button" aria-label="Alterar faixa de áudio" title="Faixa de áudio" aria-expanded="false" aria-controls="externalNativePlayerAudioMenu">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.9"/></svg>
           </button>
           <button class="external-native-player-action external-native-player-volume" id="externalNativePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar" aria-pressed="false">
             <svg class="volume-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10v4h3.2l4.3 3.5v-11L7.7 10H4.5Z"/><path d="M15.2 9.1a4.2 4.2 0 0 1 0 5.8M17.6 6.8a7.3 7.3 0 0 1 0 10.4"/></svg>
@@ -5730,14 +5725,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const wakeZone = document.getElementById('externalNativePlayerWakeZone');
     const closeButton = document.getElementById('externalNativePlayerClose');
     const qualityButton = document.getElementById('externalNativePlayerQuality');
-    const audioButton = document.getElementById('externalNativePlayerAudio');
     const volumeButton = document.getElementById('externalNativePlayerVolume');
     const subtitleButton = document.getElementById('externalNativePlayerSubtitle');
     const fullscreenButton = document.getElementById('externalNativePlayerFullscreen');
     const subtitleOverlay = document.getElementById('externalNativePlayerSubtitleOverlay');
     const qualityMenu = document.getElementById('externalNativePlayerQualityMenu');
-    const audioMenu = document.getElementById('externalNativePlayerAudioMenu');
-    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !volumeButton || !subtitleButton || !fullscreenButton || !subtitleOverlay || !qualityMenu || !audioMenu) return;
+    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !volumeButton || !subtitleButton || !fullscreenButton || !subtitleOverlay || !qualityMenu) return;
 
     let previousFocus = null;
     let activeProvider = '';
@@ -5747,8 +5740,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let vkApiReady = false;
     let vkBindToken = 0;
     let vkSelectedQuality = 4;
-    let vkAudioTracks = [];
-    let vkSelectedAudioTrack = 'default';
     let vkMuted = false;
     let vkVolume = 1;
     let vkLastAudibleVolume = 1;
@@ -5811,7 +5802,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       inactivityTimer = 0;
     };
 
-    const menusOpen = () => !qualityMenu.hidden || !audioMenu.hidden;
+    const menusOpen = () => !qualityMenu.hidden;
 
     const youtubeDesktopAutoHideEnabled = () => activeProvider === 'youtube' && window.matchMedia('(min-width:821px) and (hover:hover) and (pointer:fine)').matches;
     const mobilePlayerAutoHideEnabled = () => window.matchMedia('(max-width:820px), (pointer:coarse) and (max-height:620px)').matches;
@@ -5829,18 +5820,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       clearInactivityTimer();
       overlay.classList.remove('controls-idle');
       if (!providerUsesAutoHide()) return;
-      if (!keepVisible && !controlsInteracting && !menusOpen()) {
+      const forceMobileAutoHide = mobilePlayerAutoHideEnabled();
+      if ((!keepVisible || forceMobileAutoHide) && !controlsInteracting && !menusOpen()) {
         inactivityTimer = window.setTimeout(hideControlsForInactivity, controlsAutoHideDelay());
       }
     };
 
     const closeMenus = except => {
-      [qualityMenu, audioMenu].forEach(menu => {
-        if (menu === except) return;
-        menu.hidden = true;
-      });
+      if (qualityMenu !== except) qualityMenu.hidden = true;
       qualityButton.setAttribute('aria-expanded', String(!qualityMenu.hidden));
-      audioButton.setAttribute('aria-expanded', String(!audioMenu.hidden));
       if (activeProvider === 'vk') showControls(except || menusOpen());
     };
 
@@ -6008,71 +5996,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return applied;
     };
 
-    const normalizeVkAudioTracks = raw => {
-      const list = Array.isArray(raw) ? raw : [];
-      const result = [];
-      list.forEach((item, index) => {
-        const source = item && typeof item === 'object' ? item : { id: item, label: item };
-        const idValue = source.id ?? source.trackId ?? source.track_id ?? source.audioTrackId ?? source.audio_track_id ?? source.value ?? index;
-        const id = String(idValue ?? index);
-        if (!id) return;
-        const label = String(source.label ?? source.title ?? source.name ?? source.langName ?? source.languageName ?? source.language ?? source.lang ?? `Faixa ${index + 1}`).trim() || `Faixa ${index + 1}`;
-        const active = Boolean(source.active ?? source.selected ?? source.enabled ?? source.current);
-        if (!result.some(track => track.id === id)) result.push({ id, label, raw: source, active });
-      });
-      return result;
-    };
-
-    const renderVkAudioTracks = tracks => {
-      const normalized = normalizeVkAudioTracks(tracks);
-      vkAudioTracks = normalized;
-      if (!normalized.length) {
-        audioMenu.innerHTML = '<button type="button" class="external-native-player-menu-item is-active" data-vk-audio-track="default" role="menuitemradio" aria-checked="true"><span>Original</span></button>';
-        vkSelectedAudioTrack = 'default';
-        audioButton.classList.remove('has-multiple-tracks');
-        return;
-      }
-      const selected = normalized.find(track => track.active)?.id || (normalized.some(track => track.id === vkSelectedAudioTrack) ? vkSelectedAudioTrack : normalized[0].id);
-      vkSelectedAudioTrack = selected;
-      audioMenu.innerHTML = normalized.map(track => {
-        const active = track.id === selected;
-        return `<button type="button" class="external-native-player-menu-item${active ? ' is-active' : ''}" data-vk-audio-track="${escapeHtml(track.id)}" role="menuitemradio" aria-checked="${active ? 'true' : 'false'}"><span>${escapeHtml(track.label)}</span></button>`;
-      }).join('');
-      audioButton.classList.toggle('has-multiple-tracks', normalized.length > 1);
-    };
-
-    const extractTracksFromMessage = value => {
-      if (!value || typeof value !== 'object') return [];
-      const keys = ['audioTracks', 'audio_tracks', 'audioTrackList', 'audio_track_list', 'availableAudioTracks', 'available_audio_tracks'];
-      for (const key of keys) {
-        if (Array.isArray(value[key])) return value[key];
-      }
-      for (const key of ['data', 'payload', 'state', 'params', 'player']) {
-        const nested = value[key];
-        if (nested && typeof nested === 'object') {
-          const found = extractTracksFromMessage(nested);
-          if (found.length) return found;
-        }
-      }
-      return [];
-    };
-
-    const discoverVkAudioTracks = async () => {
-      if (!vkPlayer || !vkApiReady) return;
-      const getterNames = ['getAudioTracks', 'getAudioTrackList', 'getAudioTracksList', 'getAvailableAudioTracks'];
-      for (const name of getterNames) {
-        if (typeof vkPlayer[name] !== 'function') continue;
-        try {
-          const value = await Promise.resolve(vkPlayer[name]());
-          const tracks = normalizeVkAudioTracks(value);
-          if (tracks.length) {
-            renderVkAudioTracks(tracks);
-            return;
-          }
-        } catch (_) {}
-      }
-    };
-
     const extractVkPlaybackTime = (value, depth = 0) => {
       if (depth > 4 || value === null || value === undefined) return NaN;
       if (typeof value === 'number') return Number.isFinite(value) && value >= 0 && value <= 86400 ? value : NaN;
@@ -6124,7 +6047,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               try { quality = vkPlayer.getQuality(); } catch (_) {}
             }
             if (quality !== undefined && quality !== null && String(quality).trim()) syncQualityMenu(quality);
-            discoverVkAudioTracks();
           };
           const syncVolumeFromApi = state => {
             if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden) return;
@@ -6152,7 +6074,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           else readVkVolumeState();
           window.setTimeout(() => syncQualityFromApi({}), 180);
           window.setTimeout(readVkVolumeState, 320);
-          window.setTimeout(discoverVkAudioTracks, 600);
         } catch (_) {
           vkApiReady = false;
           vkPlayer = null;
@@ -6255,45 +6176,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.setTimeout(bindVkApi, 900);
     };
 
-    const setVkAudioTrack = async trackId => {
-      if (activeProvider !== 'vk' || !frame.contentWindow) return false;
-      const id = String(trackId || 'default');
-      const track = vkAudioTracks.find(item => item.id === id) || null;
-      const candidates = [id, track?.raw?.id, track?.raw?.trackId, track?.raw?.track_id].filter(value => value !== undefined && value !== null);
-      if (vkPlayer && vkApiReady) {
-        const setterNames = ['setAudioTrack', 'selectAudioTrack', 'changeAudioTrack'];
-        for (const name of setterNames) {
-          if (typeof vkPlayer[name] !== 'function') continue;
-          for (const value of candidates) {
-            try {
-              await Promise.resolve(vkPlayer[name](value));
-              vkSelectedAudioTrack = id;
-              renderVkAudioTracks(vkAudioTracks.map(item => ({ ...item.raw, id: item.id, label: item.label, active: item.id === id })));
-              return true;
-            } catch (_) {}
-          }
-        }
-      }
-      const payloads = [
-        { method: 'set_audio_track', track: id, id, value: id },
-        { method: 'setAudioTrack', track: id, id, value: id },
-        { event: 'command', func: 'setAudioTrack', args: [id] },
-        { event: 'command', func: 'selectAudioTrack', args: [id] }
-      ];
-      let sent = false;
-      payloads.forEach(payload => {
-        try { frame.contentWindow.postMessage(payload, '*'); sent = true; } catch (_) {}
-      });
-      if (sent) {
-        vkSelectedAudioTrack = id;
-        audioMenu.querySelectorAll('[data-vk-audio-track]').forEach(button => {
-          const active = button.dataset.vkAudioTrack === id;
-          button.classList.toggle('is-active', active);
-          button.setAttribute('aria-checked', String(active));
-        });
-      }
-      return sent;
-    };
 
     const closeExternalPlayer = (restoreFocus = true) => {
       if (overlay.hidden) return;
@@ -6316,8 +6198,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       fullscreenButton.setAttribute('aria-label', 'Entrar em tela cheia');
       fullscreenButton.title = 'Tela cheia';
       activeVkInfo = null;
-      vkAudioTracks = [];
-      renderVkAudioTracks([]);
       vkMuted = false;
       vkVolume = 1;
       vkLastAudibleVolume = 1;
@@ -6343,7 +6223,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeVkInfo = normalizedProvider === 'vk' ? info : null;
       configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '');
       vkSelectedQuality = 4;
-      renderVkAudioTracks([]);
       vkMuted = false;
       vkVolume = 1;
       vkLastAudibleVolume = 1;
@@ -6401,15 +6280,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(willOpen);
     });
 
-    audioButton.addEventListener('click', () => {
-      if (activeProvider !== 'vk') return;
-      const willOpen = audioMenu.hidden;
-      closeMenus(willOpen ? audioMenu : null);
-      audioMenu.hidden = !willOpen;
-      audioButton.setAttribute('aria-expanded', String(!audioMenu.hidden));
-      if (willOpen) discoverVkAudioTracks();
-      showControls(willOpen);
-    });
 
     volumeButton.addEventListener('click', () => {
       if (activeProvider !== 'vk') return;
@@ -6426,15 +6296,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       showControls(false);
     });
 
-    audioMenu.addEventListener('click', event => {
-      const option = event.target.closest('[data-vk-audio-track]');
-      if (!option) return;
-      const trackId = option.dataset.vkAudioTrack || 'default';
-      if (trackId !== 'default' || vkAudioTracks.length) setVkAudioTrack(trackId);
-      audioMenu.hidden = true;
-      audioButton.setAttribute('aria-expanded', 'false');
-      showControls(false);
-    });
 
     fullscreenButton.addEventListener('click', toggleBrowserFullscreen);
 
@@ -6557,8 +6418,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (typeof payload === 'string') {
         try { payload = JSON.parse(payload); } catch (_) { return; }
       }
-      const tracks = extractTracksFromMessage(payload);
-      if (tracks.length) renderVkAudioTracks(tracks);
       const quality = payload && typeof payload === 'object' ? (payload.quality ?? payload?.data?.quality ?? payload?.state?.quality) : null;
       if (quality !== null && quality !== undefined) syncQualityMenu(quality);
       const volumeState = extractVkVolumeState(payload);
@@ -6570,7 +6429,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (overlay.hidden) return;
       if (event.key === 'Escape') {
         if (playerOwnsFullscreen()) return;
-        if (!qualityMenu.hidden || !audioMenu.hidden) {
+        if (!qualityMenu.hidden.hidden) {
           event.preventDefault();
           closeMenus();
           return;
@@ -6887,8 +6746,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.clearTimeout(inactivityTimer);
       inactivityTimer = 0;
       overlay.classList.remove('controls-idle');
-      if (!keepVisible && !controlsInteracting && !overlay.classList.contains('is-loading') && !overlay.classList.contains('is-error')) {
-        const delay = window.matchMedia('(max-width:820px), (pointer:coarse) and (max-height:620px)').matches ? 5000 : 2000;
+      const mobileAutoHide = window.matchMedia('(max-width:820px), (pointer:coarse) and (max-height:620px)').matches;
+      if ((!keepVisible || mobileAutoHide) && !controlsInteracting && !overlay.classList.contains('is-loading') && !overlay.classList.contains('is-error')) {
+        const delay = mobileAutoHide ? 5000 : 2000;
         inactivityTimer = window.setTimeout(hideControlsForInactivity, delay);
       }
     };
@@ -7427,6 +7287,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const loading = document.getElementById('drivePlayerLoading');
     const loadingText = loading?.querySelector('.drive-player-loading-message');
     const supportLink = loading?.querySelector('.drive-player-support-link');
+    const wakeZone = document.getElementById('drivePlayerWakeZone');
     const fullscreenButton = document.getElementById('drivePlayerFullscreen');
     const closeButton = document.getElementById('drivePlayerClose');
     const externalButton = document.getElementById('drivePlayerExternal');
@@ -7438,7 +7299,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const bottomControls = overlay.querySelector('.drive-player-bottom-controls');
     const currentLabel = document.getElementById('drivePlayerCurrent');
     const durationLabel = document.getElementById('drivePlayerDuration');
-    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !fullscreenButton || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !bottomControls || !currentLabel || !durationLabel) return;
+    if (!overlay || !shell || !backdrop || !backdropImage || !video || !frameShell || !frame || !loading || !loadingText || !supportLink || !wakeZone || !fullscreenButton || !closeButton || !externalButton || !volumeButton || !toggleButton || !backButton || !forwardButton || !progress || !bottomControls || !currentLabel || !durationLabel) return;
 
     let fallbackTimer = 0;
     let controlsTimer = 0;
@@ -7910,11 +7771,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setAudioMode(shouldUseAudioMode);
     };
 
+    const mobilePlayerAutoHideEnabled = () => window.matchMedia('(max-width:820px), (pointer:coarse) and (max-height:620px)').matches;
+
+    const hideControlsForInactivity = () => {
+      window.clearTimeout(controlsTimer);
+      controlsTimer = 0;
+      if (overlay.hidden || controlsInteracting || overlay.classList.contains('is-loading') || overlay.classList.contains('is-error')) return;
+      if (!mobilePlayerAutoHideEnabled()) return;
+      overlay.classList.add('controls-idle');
+    };
+
     const showControls = (_keepVisible = false) => {
       window.clearTimeout(controlsTimer);
+      controlsTimer = 0;
       overlay.classList.remove('controls-idle');
       overlay.classList.add('controls-visible');
       if (activeProvider !== 'vkvideo') registerCenterSkipActivity();
+      if (mobilePlayerAutoHideEnabled() && !controlsInteracting && !overlay.classList.contains('is-loading') && !overlay.classList.contains('is-error')) {
+        controlsTimer = window.setTimeout(hideControlsForInactivity, 5000);
+      }
     };
 
     const syncPlayerState = () => {
@@ -8483,6 +8358,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     progress.addEventListener('change', () => {
       controlsInteracting = false;
       showControls();
+    });
+
+    wakeZone.addEventListener('pointerdown', event => {
+      if (!mobilePlayerAutoHideEnabled() || !overlay.classList.contains('controls-idle')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      showControls();
+      registerFullscreenActivity();
+      registerCenterSkipActivity();
     });
 
     shell.addEventListener('pointermove', () => {
@@ -10309,20 +10193,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       launchedFromPwa = new URLSearchParams(location.search || '').get('source') === 'pwa';
       androidAppReferrer = /^android-app:\/\//i.test(String(document.referrer || ''));
     } catch (_) {}
+
+    const browserDisplay = Boolean(window.matchMedia?.('(display-mode: browser)').matches);
     const standaloneDisplay = Boolean(
       window.matchMedia?.('(display-mode: standalone)').matches ||
-      window.matchMedia?.('(display-mode: fullscreen)').matches ||
       window.matchMedia?.('(display-mode: minimal-ui)').matches ||
       window.matchMedia?.('(display-mode: window-controls-overlay)').matches
     );
+    const iosStandalone = window.navigator.standalone === true;
+    const nativeAppContext = standaloneDisplay || iosStandalone || androidAppReferrer;
+
+    // Navegador e app são contextos diferentes. Um ?source=pwa aberto em uma
+    // aba normal nunca pode transformar o navegador em "app".
+    if (browserDisplay && !nativeAppContext) {
+      try { sessionStorage.removeItem('betv-pwa-session'); } catch (_) {}
+      window.__BETVInstalledAppLaunch = false;
+      document.documentElement.classList.remove('betv-installed-app');
+      return false;
+    }
+
     const installed = Boolean(
+      nativeAppContext ||
       window.__BETVInstalledAppLaunch === true ||
       document.documentElement.classList.contains('betv-installed-app') ||
       sessionFlag ||
-      launchedFromPwa ||
-      androidAppReferrer ||
-      standaloneDisplay ||
-      window.navigator.standalone === true
+      (!browserDisplay && launchedFromPwa)
     );
     if (installed) {
       try { sessionStorage.setItem('betv-pwa-session', '1'); } catch (_) {}
@@ -10401,8 +10296,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       // No app/PWA instalado o botão some. No navegador mobile ele segue o
       // mesmo comportamento do desktop: "Instalar app" quando disponível e
       // "Abrir app" quando já detectamos uma instalação neste dispositivo.
-      const waitingInstalledCheck = supportsInstalledRelatedApps && !relatedInstallCheckDone;
-      mobileButton.hidden = !isMobile() || runningAsApp || waitingInstalledCheck;
+      mobileButton.hidden = !isMobile() || runningAsApp;
       mobileButton.classList.toggle('is-ready', ready && !installed);
       setInstallButtonState(mobileButton, installed);
     }
@@ -10417,9 +10311,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       // O menu compacto da comunidade tinha um segundo atalho de instalação.
       // Ele também deve desaparecer dentro do PWA e virar "Abrir app" no navegador
       // quando a instalação já é conhecida.
-      mobileAccountInstall.hidden = runningAsApp;
-      mobileAccountInstall.textContent = installed ? 'Abrir app' : 'Instalar app';
-      mobileAccountInstall.dataset.installState = installed ? 'installed' : 'available';
+      mobileAccountInstall.hidden = runningAsApp || !isMobile();
+      mobileAccountInstall.textContent = installed && !runningAsApp ? 'Abrir app' : 'Instalar app';
+      mobileAccountInstall.dataset.installState = installed && !runningAsApp ? 'installed' : 'available';
     }
   }
 
@@ -10464,12 +10358,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (appWasLaunched) return;
       window.removeEventListener('blur', markLaunched, true);
       document.removeEventListener('visibilitychange', onVisibilityChange, true);
-      if (isMobile()) {
-        location.assign(appUrl);
-        return;
-      }
-      const opened = window.open(appUrl, '_blank', 'noopener,noreferrer');
-      if (!opened) location.assign(appUrl);
+      // Se o protocolo não abrir, permanece no navegador. Não navegamos para
+      // ?source=pwa porque isso confundiria a aba web com o app instalado.
+      updateInstallButton();
     }, isMobile() ? 1100 : 1400);
   }
 
@@ -10522,7 +10413,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
     if (isAppKnownInstalled()) {
-      openInstallSheet({ installed:true });
+      launchInstalledApp();
       updateInstallButton();
       return;
     }
@@ -10545,6 +10436,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     deferredInstallPrompt = event;
+    relatedPwaInstalled = false;
+    relatedInstallCheckDone = true;
+    forgetInstalledApp();
     updateInstallButton();
   });
   window.addEventListener('appinstalled', () => {

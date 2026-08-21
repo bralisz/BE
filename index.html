@@ -13,17 +13,24 @@
   try{
     var query=new URLSearchParams(location.search||'');
     var launchedFromPwa=query.get('source')==='pwa';
+    var browserDisplay=Boolean(window.matchMedia&&window.matchMedia('(display-mode: browser)').matches);
     var standaloneDisplay=Boolean(
       window.matchMedia&&(
         window.matchMedia('(display-mode: standalone)').matches||
-        window.matchMedia('(display-mode: fullscreen)').matches||
         window.matchMedia('(display-mode: minimal-ui)').matches||
         window.matchMedia('(display-mode: window-controls-overlay)').matches
       )
     );
     var iosStandalone=window.navigator.standalone===true;
     var androidAppReferrer=/^android-app:\/\//i.test(String(document.referrer||''));
-    if(launchedFromPwa||standaloneDisplay||iosStandalone||androidAppReferrer){
+    var nativeAppContext=standaloneDisplay||iosStandalone||androidAppReferrer;
+    if(browserDisplay&&!nativeAppContext){
+      try{sessionStorage.removeItem('betv-pwa-session')}catch(_){}
+      window.__BETVInstalledAppLaunch=false;
+      document.documentElement.classList.remove('betv-installed-app');
+      return;
+    }
+    if(nativeAppContext||(!browserDisplay&&launchedFromPwa)){
       try{sessionStorage.setItem('betv-pwa-session','1')}catch(_){}
       window.__BETVInstalledAppLaunch=true;
       document.documentElement.classList.add('betv-installed-app');
@@ -65,7 +72,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-home-pc-32x32.png?v=20260807-home-site-v1">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-home-pc-16x16.png?v=20260807-home-site-v1">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20260807-betv-logo-v4">
-<link rel="manifest" href="/site.webmanifest?rev=20260821-support-faq-tab-v2">
+<link rel="manifest" href="/site.webmanifest?rev=20260821-mobile-vk-combined-v1">
 <meta name="theme-color" content="#050816">
 <meta name="application-name" content="Billie Eilish TV">
 <meta name="mobile-web-app-capable" content="yes">
@@ -95,7 +102,7 @@ window.va = window.va || function () { (window.vaq = window.vaq || []).push(argu
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es'&&slug!=='fr')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260821-support-faq-tab-v2';
+    var href='/assets/i18n/'+slug+'.json?rev=20260821-mobile-vk-combined-v1';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -179,20 +186,20 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260821-vk-fullscreen-v2">
-<link rel="stylesheet" href="/assets/css/community.css?rev=20260821-vk-fullscreen-v2">
-<link rel="stylesheet" href="/assets/css/tv-session-widget.css?rev=20260821-desktop-tv-disconnect-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260821-mobile-vk-combined-v1">
+<link rel="stylesheet" href="/assets/css/community.css?rev=20260821-mobile-vk-combined-v1">
+<link rel="stylesheet" href="/assets/css/tv-session-widget.css?rev=20260821-mobile-vk-combined-v1">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"></script>
-<script defer src="/assets/js/i18n.js?rev=20260821-support-faq-tab-v2"></script>
-<script defer src="/assets/js/site.js?rev=20260821-vk-fullscreen-v2"></script>
-<script defer src="/assets/js/tv-session-widget.js?rev=20260821-tv-i18n-v1"></script>
-<script defer src="/assets/js/community.js?rev=20260821-vk-fullscreen-v2"></script>
+<script defer src="/assets/js/i18n.js?rev=20260821-mobile-vk-combined-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260821-mobile-vk-combined-v1"></script>
+<script defer src="/assets/js/tv-session-widget.js?rev=20260821-mobile-vk-combined-v1"></script>
+<script defer src="/assets/js/community.js?rev=20260821-mobile-vk-combined-v1"></script>
 <script>
 (function(){
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost')return;
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js?rev=20260821-vk-fullscreen-v2',{scope:'/',updateViaCache:'none'}).catch(function(error){
+    navigator.serviceWorker.register('/sw.js?rev=20260821-mobile-vk-combined-v1',{scope:'/',updateViaCache:'none'}).catch(function(error){
       console.warn('Não foi possível registrar o app instalável:',error&&error.message?error.message:error);
     });
   },{once:true});

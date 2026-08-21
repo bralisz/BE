@@ -13647,17 +13647,6 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
   text-transform:uppercase;
   pointer-events:none;
 }
-.external-native-player-audio{position:relative}
-.external-native-player-audio.has-multiple-tracks::after{
-  content:"";
-  position:absolute;
-  width:6px;
-  height:6px;
-  margin:22px 0 0 22px;
-  border-radius:50%;
-  background:#fff;
-  box-shadow:0 0 0 2px rgba(17,19,19,.9);
-}
 .external-native-player-volume{
   -webkit-tap-highlight-color:transparent;
 }
@@ -13681,7 +13670,6 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
 .external-native-player-overlay.is-muted .external-native-player-volume .volume-on{display:none}
 .external-native-player-overlay.is-muted .external-native-player-volume .volume-off{display:block}
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-quality,
-.external-native-player-overlay:not([data-provider="vk"]) .external-native-player-audio,
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-volume,
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-fullscreen,
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-menu{display:none!important}
@@ -18445,11 +18433,6 @@ body.profile-page-active .profile-page-name{
   letter-spacing:0!important;
   text-align:center!important;
 }
-.external-native-player-audio.has-multiple-tracks::after{
-  right:6px!important;
-  bottom:6px!important;
-  margin:0!important;
-}
 .drive-video-player-actions-right{
   display:contents!important;
 }
@@ -19032,3 +19015,35 @@ body.profile-page-active .profile-page-banner img{
 /* 21/08/2026 — instalação: oculta também o segundo atalho do menu mobile dentro do PWA. */
 [data-mobile-account="install"][hidden],
 html.betv-installed-app [data-mobile-account="install"]{display:none!important}
+
+
+/* 21/08/2026 — Mobile: a tab do player principal some após 5s e o
+   primeiro toque em qualquer área do vídeo a reabre, inclusive sobre iframes. */
+.drive-player-wake-zone{
+  display:none;
+  pointer-events:none;
+}
+@media (max-width:820px), (pointer:coarse) and (max-height:620px){
+  .drive-player-overlay.controls-idle:not(.is-loading):not(.is-error) .drive-player-wake-zone{
+    display:block!important;
+    position:absolute!important;
+    inset:0!important;
+    z-index:5!important;
+    pointer-events:auto!important;
+    background:transparent!important;
+    -webkit-tap-highlight-color:transparent!important;
+  }
+}
+
+
+/* 21/08/2026 — separação mobile navegador x app instalado. */
+html.betv-installed-app #mobileInstallButton,
+html.betv-installed-app [data-mobile-account="install"],
+html.betv-installed-app .install-app-action{
+  display:none!important;
+}
+@media (max-width:760px){
+  html:not(.betv-installed-app) #mobileInstallButton:not([hidden]){
+    display:flex!important;
+  }
+}
