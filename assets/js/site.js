@@ -8573,19 +8573,28 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
 
-    // Se já existe uma TV conectada, envia o novo conteúdo diretamente e
-    // mantém a pessoa na página atual. O painel volta a ser necessário apenas
-    // para conectar/reconectar uma televisão.
-    try {
-      const storedSession = String(localStorage.getItem('beTvActiveSessionId') || '').trim();
-      if (storedSession && window.BETVTVSession && typeof window.BETVTVSession.sendMedia === 'function') {
-        const sent = await window.BETVTVSession.sendMedia(payload);
-        if (sent) return;
+    // No PC, o widget estilo iOS substitui a página dedicada depois que a TV
+    // já foi conectada. No mobile, mantemos sempre o painel /connect-tv para
+    // controlar a sessão, exatamente como antes.
+    let desktopTvWidgetMode = false;
+    try { desktopTvWidgetMode = window.matchMedia('(min-width: 1000px)').matches; }
+    catch (_) { desktopTvWidgetMode = Number(window.innerWidth || 0) >= 1000; }
+
+    if (desktopTvWidgetMode) {
+      try {
+        const storedSession = String(localStorage.getItem('beTvActiveSessionId') || '').trim();
+        if (storedSession && window.BETVTVSession && typeof window.BETVTVSession.sendMedia === 'function') {
+          const sent = await window.BETVTVSession.sendMedia(payload);
+          if (sent) return;
+        }
+      } catch (error) {
+        console.warn('Não foi possível enviar direto para a TV:', error);
       }
-    } catch (error) {
-      console.warn('Não foi possível enviar direto para a TV:', error);
     }
 
+    // No mobile (e também quando ainda não existe sessão no PC), abre o painel
+    // dedicado. O tv-controller envia o conteúdo pendente e permanece na página
+    // em telas menores, enquanto o desktop volta para a Home após conectar.
     try { localStorage.setItem('beTvPendingMedia', JSON.stringify(payload)); } catch (_) {}
     location.assign(target);
   }
