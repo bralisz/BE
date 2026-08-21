@@ -15751,7 +15751,7 @@ body.detail-streaming-mobile-open{overflow:hidden}
   background-size:cover;
   overflow:hidden;
 }
-.detail-streaming-service-icon[data-streaming-icon="netflix"]{background-image:url('/assets/images/streaming/netflix.png')}
+.detail-streaming-service-icon[data-streaming-icon="netflix"]{background-image:url('/assets/images/streaming/netflix.webp')}
 .detail-streaming-service-icon[data-streaming-icon="apple-tv"]{background-image:url('/assets/images/streaming/apple-tv.webp')}
 .detail-streaming-service-icon[data-streaming-icon="prime-video"]{background-image:url('/assets/images/streaming/prime-video.webp')}
 .detail-streaming-service-icon[data-streaming-icon="paramount-plus"]{background-image:url('/assets/images/streaming/paramount-plus.webp')}
