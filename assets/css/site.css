@@ -13683,7 +13683,13 @@ body.drive-video-player-open{overflow:hidden!important;overscroll-behavior:none}
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-quality,
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-audio,
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-volume,
+.external-native-player-overlay:not([data-provider="vk"]) .external-native-player-fullscreen,
 .external-native-player-overlay:not([data-provider="vk"]) .external-native-player-menu{display:none!important}
+.external-native-player-fullscreen .fullscreen-exit{display:none!important}
+.external-native-player-overlay.is-browser-fullscreen .external-native-player-fullscreen .fullscreen-enter{display:none!important}
+.external-native-player-overlay.is-browser-fullscreen .external-native-player-fullscreen .fullscreen-exit{display:block!important}
+.external-native-player-fullscreen .fullscreen-enter path,
+.external-native-player-fullscreen .fullscreen-exit path{fill:currentColor!important;stroke:none!important}
 .external-native-player-menu{
   position:absolute;
   z-index:26;
@@ -18836,10 +18842,30 @@ html.betv-installed-app .user-dropdown .install-app-action{display:none!importan
     backdrop-filter:blur(14px)!important;
   }
   .drive-player-top-controls .drive-player-fullscreen svg,
-  .drive-video-player-action.drive-video-player-fullscreen svg{
+  .drive-video-player-action.drive-video-player-fullscreen svg,
+  .external-native-player-fullscreen svg{
     width:24px!important;
     height:24px!important;
-    display:block!important;
+  }
+  .drive-player-top-controls .drive-player-fullscreen .fullscreen-enter,
+  .drive-video-player-action.drive-video-player-fullscreen .fullscreen-enter,
+  .external-native-player-fullscreen .fullscreen-enter{display:block!important}
+  .drive-player-top-controls .drive-player-fullscreen .fullscreen-exit,
+  .drive-video-player-action.drive-video-player-fullscreen .fullscreen-exit,
+  .external-native-player-fullscreen .fullscreen-exit{display:none!important}
+  .external-native-player-overlay.is-browser-fullscreen .external-native-player-fullscreen .fullscreen-enter{display:none!important}
+  .external-native-player-overlay.is-browser-fullscreen .external-native-player-fullscreen .fullscreen-exit{display:block!important}
+  .is-streaming-fullscreen-icon{
+    color:#fff!important;
+  }
+  .is-streaming-fullscreen-icon svg{
+    width:25px!important;
+    height:25px!important;
+    shape-rendering:geometricPrecision;
+  }
+  .is-streaming-fullscreen-icon svg path{
+    fill:#fff!important;
+    stroke:none!important;
   }
 }
 
@@ -18886,6 +18912,8 @@ body.profile-page-active .profile-page-banner img{
       rgba(0,0,0,.22) 58%,
       rgba(0,0,0,.50) 78%,
       rgba(0,0,0,.78) 100%)!important;
+  }
+}
 
 /* =========================================================
    21/08/2026 — MOBILE: auto-hide da tab de ações em 5s.
@@ -18999,3 +19027,8 @@ body.profile-page-active .profile-page-banner img{
     height:21px!important;
   }
 }
+
+
+/* 21/08/2026 — instalação: oculta também o segundo atalho do menu mobile dentro do PWA. */
+[data-mobile-account="install"][hidden],
+html.betv-installed-app [data-mobile-account="install"]{display:none!important}

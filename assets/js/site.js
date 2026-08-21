@@ -4502,6 +4502,49 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return /^#[0-9A-F]{6}$/.test(normalized) ? normalized : '';
   }
 
+  const publicAvatarRingCache = new Map();
+
+  async function resolvePublicAvatarRing(username) {
+    const normalizedUsername = String(username || '').trim().replace(/^@+/, '').toLowerCase();
+    if (!normalizedUsername) return '';
+    if (publicAvatarRingCache.has(normalizedUsername)) {
+      return publicAvatarRingCache.get(normalizedUsername) || '';
+    }
+    const pending = (async () => {
+      const backend = window.beBackend;
+      try {
+        if (backend?.ready) await backend.ready;
+        if (!backend?.client || backend.mode !== 'supabase') return '';
+        const { data, error } = await backend.client.rpc('get_public_profile', { p_username: normalizedUsername });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : data;
+        return detailCommentAvatarBorderColor(row?.avatar_border_color || row?.avatarBorderColor);
+      } catch (_) {
+        return '';
+      }
+    })();
+    publicAvatarRingCache.set(normalizedUsername, pending);
+    const color = await pending;
+    publicAvatarRingCache.set(normalizedUsername, color);
+    return color;
+  }
+
+  window.BETVGetPublicAvatarRing = resolvePublicAvatarRing;
+
+  function hydrateDetailCommentAvatarRings(list) {
+    if (!list) return;
+    const avatars = Array.from(list.querySelectorAll('.detail-comment-avatar:not(.has-custom-ring)[data-comment-username]'));
+    avatars.forEach(avatar => {
+      const username = String(avatar.dataset.commentUsername || '').trim();
+      if (!username) return;
+      resolvePublicAvatarRing(username).then(color => {
+        if (!color || !avatar.isConnected) return;
+        avatar.classList.add('has-custom-ring');
+        avatar.style.setProperty('--detail-comment-avatar-ring', color);
+      });
+    });
+  }
+
   const VIDEO_COMMENT_REPORT_REASONS = [
     ['spam_abuse', 'Spam ou comportamento abusivo'],
     ['impersonation', 'Falsidade de identidade'],
@@ -4559,7 +4602,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ? `<button type="button" class="detail-comment-action danger" data-comment-delete="${escapeHtml(commentId)}" aria-label="${escapeHtml(localizedUiText('Apagar comentário'))}" title="${escapeHtml(localizedUiText('Apagar comentário'))}">${detailCommentActionIcon('delete')}</button>`
       : `<button type="button" class="detail-comment-action" data-comment-report="${escapeHtml(commentId)}" data-comment-user="${escapeHtml(username)}" aria-label="${escapeHtml(localizedUiText('Denunciar comentário'))}" title="${escapeHtml(localizedUiText('Denunciar comentário'))}">${detailCommentActionIcon('report')}</button>`;
     return `<article class="detail-comment-item${isOwner ? ' is-current-user' : ''}" data-comment-id="${escapeHtml(commentId)}" data-comment-author-id="${escapeHtml(authorUserId)}">
-      <a class="detail-comment-avatar${avatarBorderColor ? ' has-custom-ring' : ''}"${avatarBorderColor ? ` style="--detail-comment-avatar-ring:${avatarBorderColor}"` : ''} href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
+      <a class="detail-comment-avatar${avatarBorderColor ? ' has-custom-ring' : ''}" data-comment-username="${escapeHtml(username)}"${avatarBorderColor ? ` style="--detail-comment-avatar-ring:${avatarBorderColor}"` : ''} href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
         ${detailCommentAvatarMarkup(avatar, '', index < 8)}
       </a>
       <div class="detail-comment-body">
@@ -4849,6 +4892,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
       const rows = Array.isArray(data) ? data : [];
       list.innerHTML = rows.map((row, index) => detailCommentMarkup(row, index)).join('');
+      hydrateDetailCommentAvatarRings(list);
       setupDetailCommentItemActions();
       empty.hidden = rows.length > 0;
       empty.textContent = localizedUiText('Ainda não há comentários.');
@@ -5311,7 +5355,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         </div>
         <div class="drive-player-loading" id="drivePlayerLoading" role="status" aria-label="Carregando mídia"><span class="drive-player-loader" aria-hidden="true"></span><span class="drive-player-loading-message" hidden></span><a class="drive-player-support-link" href="/suporte" data-public-action="support" data-support-target="contact" hidden>Informe o erro ao suporte</a></div>
         <div class="drive-player-top-controls">
-          <button class="drive-player-icon drive-player-fullscreen" id="drivePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
+          <button class="drive-player-icon drive-player-fullscreen is-streaming-fullscreen-icon" id="drivePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
             <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 5h6v2H7v4H5V5Zm8 0h6v6h-2V7h-4V5ZM5 13h2v4h4v2H5v-6Zm12 0h2v6h-6v-2h4v-4Z" fill="currentColor"/>
             </svg>
@@ -5666,6 +5710,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           <button class="external-native-player-action external-native-player-subtitle" id="externalNativePlayerSubtitle" type="button" aria-label="Ativar legendas" title="Legendas" aria-pressed="false" hidden>
             <span class="player-cc-icon" aria-hidden="true">CC</span>
           </button>
+          <button class="external-native-player-action external-native-player-fullscreen is-streaming-fullscreen-icon" id="externalNativePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h6v2H7v4H5V5Zm8 0h6v6h-2V7h-4V5ZM5 13h2v4h4v2H5v-6Zm12 0h2v6h-6v-2h4v-4Z" fill="currentColor"/></svg>
+            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h2v6H5V9h4V5Zm4 0h2v4h4v2h-6V5ZM5 13h6v6H9v-4H5v-2Zm8 0h6v2h-4v4h-2v-6Z" fill="currentColor"/></svg>
+          </button>
           <button class="external-native-player-action external-native-player-close" id="externalNativePlayerClose" type="button" aria-label="Fechar vídeo" title="Fechar">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
           </button>
@@ -5689,10 +5737,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const audioButton = document.getElementById('externalNativePlayerAudio');
     const volumeButton = document.getElementById('externalNativePlayerVolume');
     const subtitleButton = document.getElementById('externalNativePlayerSubtitle');
+    const fullscreenButton = document.getElementById('externalNativePlayerFullscreen');
     const subtitleOverlay = document.getElementById('externalNativePlayerSubtitleOverlay');
     const qualityMenu = document.getElementById('externalNativePlayerQualityMenu');
     const audioMenu = document.getElementById('externalNativePlayerAudioMenu');
-    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !volumeButton || !subtitleButton || !subtitleOverlay || !qualityMenu || !audioMenu) return;
+    if (!overlay || !shell || !frame || !toolbar || !wakeZone || !closeButton || !qualityButton || !audioButton || !volumeButton || !subtitleButton || !fullscreenButton || !subtitleOverlay || !qualityMenu || !audioMenu) return;
 
     let previousFocus = null;
     let activeProvider = '';
@@ -5721,6 +5770,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const syncBodyLock = () => {
       document.body.classList.toggle('external-video-player-open', !overlay.hidden);
+    };
+
+    const currentFullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+
+    const playerOwnsFullscreen = () => {
+      const fullscreenElement = currentFullscreenElement();
+      return Boolean(fullscreenElement && (fullscreenElement === shell || fullscreenElement === overlay || shell.contains(fullscreenElement)));
+    };
+
+    const syncFullscreenButton = () => {
+      const active = playerOwnsFullscreen();
+      overlay.classList.toggle('is-browser-fullscreen', active);
+      fullscreenButton.setAttribute('aria-label', active ? 'Sair da tela cheia' : 'Entrar em tela cheia');
+      fullscreenButton.title = active ? 'Sair da tela cheia' : 'Tela cheia';
+    };
+
+    const toggleBrowserFullscreen = async () => {
+      if (activeProvider !== 'vk') return;
+      closeMenus();
+      showControls(true);
+      try {
+        if (playerOwnsFullscreen()) {
+          if (typeof document.exitFullscreen === 'function') await document.exitFullscreen();
+          else if (typeof document.webkitExitFullscreen === 'function') document.webkitExitFullscreen();
+        } else if (typeof shell.requestFullscreen === 'function') {
+          await shell.requestFullscreen();
+        } else if (typeof shell.webkitRequestFullscreen === 'function') {
+          shell.webkitRequestFullscreen();
+        } else if (typeof overlay.requestFullscreen === 'function') {
+          await overlay.requestFullscreen();
+        } else if (typeof overlay.webkitRequestFullscreen === 'function') {
+          overlay.webkitRequestFullscreen();
+        }
+      } catch (_) {
+        // Alguns navegadores mobile recusam fullscreen quando o sistema não oferece a API.
+      }
+      syncFullscreenButton();
+      showControls(false);
     };
 
     const clearInactivityTimer = () => {
@@ -6214,15 +6301,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const closeExternalPlayer = (restoreFocus = true) => {
       if (overlay.hidden) return;
+      const wasFullscreen = playerOwnsFullscreen();
+      if (wasFullscreen) {
+        try {
+          if (typeof document.exitFullscreen === 'function') document.exitFullscreen();
+          else if (typeof document.webkitExitFullscreen === 'function') document.webkitExitFullscreen();
+        } catch (_) {}
+      }
       closeMenus();
       resetVkPlayer();
       resetExternalSubtitles();
       frame.src = 'about:blank';
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
-      overlay.classList.remove('is-open', 'is-youtube', 'is-vk');
+      overlay.classList.remove('is-open', 'is-youtube', 'is-vk', 'is-browser-fullscreen');
       overlay.dataset.provider = '';
       activeProvider = '';
+      fullscreenButton.setAttribute('aria-label', 'Entrar em tela cheia');
+      fullscreenButton.title = 'Tela cheia';
       activeVkInfo = null;
       vkAudioTracks = [];
       renderVkAudioTracks([]);
@@ -6267,6 +6363,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frame.src = embedUrl;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
+      syncFullscreenButton();
       syncBodyLock();
       if (mobilePlayerAutoHideEnabled()) showControls(false);
       else if (normalizedProvider === 'youtube' && youtubeDesktopAutoHideEnabled()) showControls(false);
@@ -6342,6 +6439,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       audioButton.setAttribute('aria-expanded', 'false');
       showControls(false);
     });
+
+    fullscreenButton.addEventListener('click', toggleBrowserFullscreen);
 
     subtitleButton.addEventListener('click', async () => {
       if (activeProvider !== 'vk' || !activeSubtitleUrl) return;
@@ -6474,6 +6573,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('keydown', event => {
       if (overlay.hidden) return;
       if (event.key === 'Escape') {
+        if (playerOwnsFullscreen()) return;
         if (!qualityMenu.hidden || !audioMenu.hidden) {
           event.preventDefault();
           closeMenus();
@@ -6483,6 +6583,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         closeExternalPlayer(true);
       }
     });
+
+    const handleExternalFullscreenChange = () => {
+      syncFullscreenButton();
+      if (!overlay.hidden) showControls(false);
+    };
+    document.addEventListener('fullscreenchange', handleExternalFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleExternalFullscreenChange);
 
     window.addEventListener('pagehide', () => closeExternalPlayer(false));
     window.addEventListener('be:close-external-video-players', () => closeExternalPlayer(false));
@@ -6519,7 +6626,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         </div>
         <div class="drive-video-player-action-wake-zone" id="driveVideoPlayerActionWakeZone" aria-hidden="true"></div>
         <div class="drive-video-player-actionbar" id="driveVideoPlayerActionbar" aria-label="Controles do vídeo">
-          <button class="drive-video-player-action drive-video-player-fullscreen" id="driveVideoPlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
+          <button class="drive-video-player-action drive-video-player-fullscreen is-streaming-fullscreen-icon" id="driveVideoPlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
             <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h6v2H7v4H5V5Zm8 0h6v6h-2V7h-4V5ZM5 13h2v4h4v2H5v-6Zm12 0h2v6h-6v-2h4v-4Z" fill="currentColor"/></svg>
             <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h2v6H5V9h4V5Zm4 0h2v4h4v2h-6V5ZM5 13h6v6H9v-4H5v-2Zm8 0h6v2h-4v4h-2v-6Z" fill="currentColor"/></svg>
           </button>
@@ -10214,6 +10321,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     );
     const installed = Boolean(
       window.__BETVInstalledAppLaunch === true ||
+      document.documentElement.classList.contains('betv-installed-app') ||
       sessionFlag ||
       launchedFromPwa ||
       androidAppReferrer ||
@@ -10266,7 +10374,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         );
       });
       if (relatedPwaInstalled) rememberInstalledApp();
-      else forgetInstalledApp();
+      // Alguns navegadores móveis expõem getInstalledRelatedApps(), mas retornam []
+      // para PWAs já instalados. Não apagamos o marcador local nesse caso.
     } catch (_) {
       // Mantém o marcador local como fallback quando a API não puder responder.
     } finally {
@@ -10291,6 +10400,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const ready = Boolean(deferredInstallPrompt);
     const mobileButton = document.getElementById('mobileInstallButton');
     const desktopButton = document.getElementById('desktopInstallButton');
+    const mobileAccountInstall = document.querySelector('[data-mobile-account="install"]');
     if (mobileButton) {
       // No app/PWA instalado o botão some. No navegador mobile ele segue o
       // mesmo comportamento do desktop: "Instalar app" quando disponível e
@@ -10306,6 +10416,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       desktopButton.hidden = runningAsApp || isMobile();
       desktopButton.classList.toggle('is-ready', ready && !installed && !isMobile());
       setInstallButtonState(desktopButton, installed);
+    }
+    if (mobileAccountInstall) {
+      // O menu compacto da comunidade tinha um segundo atalho de instalação.
+      // Ele também deve desaparecer dentro do PWA e virar "Abrir app" no navegador
+      // quando a instalação já é conhecida.
+      mobileAccountInstall.hidden = runningAsApp;
+      mobileAccountInstall.textContent = installed ? 'Abrir app' : 'Instalar app';
+      mobileAccountInstall.dataset.installState = installed ? 'installed' : 'available';
     }
   }
 
@@ -10448,6 +10566,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('resize', updateInstallButton, { passive:true });
   refreshInstalledRelatedAppState();
   window.BETVRequestAppInstall = requestAppInstall;
+  window.BETVSyncInstallUi = updateInstallButton;
   window.BETVIsAppInstalled = isAppKnownInstalled;
   window.BETVIsAppRunning = isStandaloneApp;
 
