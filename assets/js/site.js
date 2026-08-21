@@ -7391,7 +7391,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.dispatchEvent(new Event('be:close-drive-player'));
       const contentIdentity = String(linkedContent.itemId || linkedContent.recordId || link.dataset.itemId || link.dataset.recordId || '').trim();
       const normalizedTitle = String(title || '').trim().toLowerCase();
-      const subtitleOffset = contentIdentity === '71854182' || normalizedTitle === 'prime video x billie eilish' ? 25 : 0;
+      const subtitleOffset = contentIdentity === '71854182' || normalizedTitle === 'prime video x billie eilish' ? 19 : 0;
       openPlayer(fileId, googleDriveResourceKey(mediaUrl), {
         title,
         sourceLink: link,

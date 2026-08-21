@@ -1,5 +1,5 @@
 /* Service worker do PWA; os arquivos continuam vindo da rede. */
-const SW_VERSION = '20260821-prime-video-subtitle-offset-v5';
+const SW_VERSION = '20260821-prime-video-subtitle-offset-19s-v1';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
