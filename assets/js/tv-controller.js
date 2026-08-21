@@ -279,8 +279,19 @@
       const raw = localStorage.getItem(PENDING_MEDIA_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object' || !parsed.contentUrl) return null;
+      if (!parsed || typeof parsed !== 'object' || !hasPlayableMedia(parsed)) return null;
       return parsed;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function readStoredCurrentMedia() {
+    try {
+      const raw = localStorage.getItem(CURRENT_MEDIA_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' && hasPlayableMedia(parsed) ? parsed : null;
     } catch (_) {
       return null;
     }
@@ -288,27 +299,34 @@
 
   function renderPending() {
     pendingMedia = readPendingMedia();
-    if (!pendingMedia) {
+    const currentMedia = hasPlayableMedia(currentTvMedia) ? currentTvMedia : readStoredCurrentMedia();
+    const previewMedia = pendingMedia || currentMedia;
+    const alreadyTransmitted = !pendingMedia && Boolean(currentMedia);
+
+    if (!previewMedia) {
       pendingPreview.hidden = true;
       sendButton.hidden = true;
       return;
     }
-    pendingTitle.textContent = String(pendingMedia.title || 'Conteúdo selecionado');
-    pendingMeta.textContent = [pendingMedia.collection === 'movies' ? 'Filme' : pendingMedia.collection === 'series' ? 'Série' : 'Vídeo', pendingMedia.duration].filter(Boolean).join(' • ');
+
+    pendingTitle.textContent = String(previewMedia.title || 'Conteúdo selecionado');
+    pendingMeta.textContent = [previewMedia.collection === 'movies' ? 'Filme' : previewMedia.collection === 'series' ? 'Série' : 'Vídeo', previewMedia.duration].filter(Boolean).join(' • ');
     pendingThumb.textContent = '';
-    const imageUrl = String(pendingMedia.imageUrl || pendingMedia.bannerUrl || '').trim();
+    const imageUrl = String(previewMedia.imageUrl || previewMedia.bannerUrl || '').trim();
     if (imageUrl) {
       const img = document.createElement('img');
       img.src = imageUrl;
       img.alt = '';
       img.loading = 'eager';
+      img.decoding = 'async';
       pendingThumb.appendChild(img);
     }
+
     pendingPreview.hidden = false;
     sendButton.hidden = false;
-    sendButton.textContent = 'Transmitir agora';
-    sendButton.classList.remove('is-transmitted');
-    sendButton.disabled = false;
+    sendButton.textContent = alreadyTransmitted ? 'Transmitido' : 'Transmitir agora';
+    sendButton.classList.toggle('is-transmitted', alreadyTransmitted);
+    sendButton.disabled = alreadyTransmitted;
   }
 
   function showForm() {

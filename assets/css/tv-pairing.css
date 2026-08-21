@@ -201,7 +201,7 @@ button,a{-webkit-tap-highlight-color:transparent}
   .tv-controller .tv-controller-icon{width:54px;height:54px;border-radius:18px;margin-bottom:12px}
   .tv-controller .tv-controller-icon svg{width:29px;height:29px}
   .tv-controller .tv-controller-header h1{font-size:clamp(27px,8vw,34px);line-height:1;white-space:nowrap}
-  .tv-controller .tv-controller-header .tv-controller-description{margin-top:10px;font-size:clamp(8px,2.45vw,11px);line-height:1.25;white-space:nowrap;letter-spacing:-.035em}
+  .tv-controller .tv-controller-header .tv-controller-description{max-width:340px;margin:10px auto 0;font-size:13px;line-height:1.45;white-space:normal;letter-spacing:-.015em;color:rgba(255,255,255,.72)}
   .tv-controller .tv-controller-body{padding:14px 14px 18px}
   .tv-controller .tv-loading{min-height:190px}
 
