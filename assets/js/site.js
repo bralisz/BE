@@ -5490,6 +5490,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (match) {
           ownerId = match[1] || '';
           videoId = match[2] || '';
+          // Alguns links compartilhados carregam a chave de incorporacao como
+          // hash= ou h=. Quando ela existir, preserve-a no video_ext.php.
+          hash = String(url.searchParams.get('hash') || url.searchParams.get('h') || '').trim();
         }
       }
 
@@ -5537,21 +5540,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function vkVideoEmbedHostOrder() {
-    // Mobile e Smart TV priorizam vk.com, que tende a evitar a tela intermediaria
-    // "Open VK" do vkvideo.ru. Desktop preserva o comportamento anterior.
-    const preferVkCom = isMobileOrientationDevice() || isSmartTvBrowser();
-    return preferVkCom ? ['vk.com', 'vkvideo.ru'] : ['vkvideo.ru', 'vk.com'];
+    // Usa o endpoint classico do VK como rota principal em todas as plataformas.
+    // O vkvideo.ru continua como fallback porque os dois hosts podem oscilar
+    // independentemente, mas nenhuma tentativa passa pela Vercel.
+    return ['vk.com', 'vkvideo.ru'];
   }
 
   function vkVideoEmbedAttemptHost(attempt = 0) {
     const hosts = vkVideoEmbedHostOrder();
     const index = Math.max(0, Math.floor(Number(attempt) || 0));
-    // No maximo: host principal -> alternativo -> uma nova tentativa do principal.
+    // No maximo: vk.com -> vkvideo.ru -> uma ultima tentativa no vk.com.
     return index === 1 ? hosts[1] : hosts[0];
   }
 
   function shouldAutoFallbackVkEmbed() {
-    return isMobileOrientationDevice() || isSmartTvBrowser();
+    // O fallback e inteiramente client-side (troca apenas o src do iframe),
+    // portanto tambem pode proteger o desktop sem consumir Functions/Bandwidth
+    // da Vercel.
+    return true;
   }
 
   function vkVideoEmbedUrl(info, options = {}) {
@@ -6218,7 +6224,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const scheduleVkFallback = () => {
       clearVkFallbackTimer();
       if (!shouldAutoFallbackVkEmbed() || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed || vkEmbedAttempt >= 2) return;
-      const delay = vkEmbedAttempt === 0 ? 8000 : 9000;
+      // Tempo suficiente para conexoes lentas/TVs antigas iniciarem o player,
+      // mas curto o bastante para escapar automaticamente da tela temporaria
+      // "This video is temporarily unavailable" do proprio VK.
+      const delay = vkEmbedAttempt === 0 ? 10000 : 11000;
       vkFallbackTimer = window.setTimeout(() => {
         if (activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed) return;
         tryVkEmbedFallback();
@@ -6462,7 +6471,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             ['inited', 'volumechange'].forEach(eventName => {
               try { vkPlayer.on(eventName, syncVolumeFromApi); } catch (_) {}
             });
-            ['inited', 'started', 'resumed', 'timeupdate'].forEach(eventName => {
+            // 'inited' significa apenas que o iframe/API iniciou. A propria tela
+            // de indisponibilidade do VK pode chegar a esse ponto; so cancelamos
+            // o fallback quando houver sinal real de reproducao.
+            ['started', 'resumed', 'timeupdate'].forEach(eventName => {
               try { vkPlayer.on(eventName, confirmVkPlayback); } catch (_) {}
             });
             try {
@@ -6484,6 +6496,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           else readVkVolumeState();
           window.setTimeout(() => syncQualityFromApi({}), 180);
           window.setTimeout(readVkVolumeState, 320);
+          // Autoplay pode ser bloqueado no mobile/TV. Nesse caso o video esta
+          // disponivel, apenas pausado; uma duracao valida evita trocar de host
+          // sem necessidade. A tela de erro do VK normalmente nao expoe duracao.
+          const confirmIfPlayable = async () => {
+            if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed || !vkPlayer) return;
+            try {
+              const rawDuration = typeof vkPlayer.getDuration === 'function'
+                ? await Promise.resolve(vkPlayer.getDuration())
+                : NaN;
+              const duration = Number(rawDuration);
+              if (Number.isFinite(duration) && duration > 0) confirmVkPlayback();
+            } catch (_) {}
+          };
+          window.setTimeout(confirmIfPlayable, 650);
+          window.setTimeout(confirmIfPlayable, 1800);
         } catch (_) {
           vkApiReady = false;
           vkPlayer = null;
@@ -6831,6 +6858,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeMenus();
     }, true);
 
+    const vkPayloadSignalsPlayback = (value, depth = 0) => {
+      if (depth > 4 || value === null || value === undefined) return false;
+      if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        return /^(?:play|playing|started|start|resumed|resume|timeupdate|progress)$/.test(normalized);
+      }
+      if (typeof value !== 'object') return false;
+      for (const key of ['event', 'eventName', 'event_name', 'type', 'name', 'state', 'status', 'method']) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        if (vkPayloadSignalsPlayback(value[key], depth + 1)) return true;
+      }
+      for (const key of ['data', 'payload', 'params', 'player', 'detail']) {
+        if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+        if (vkPayloadSignalsPlayback(value[key], depth + 1)) return true;
+      }
+      return false;
+    };
+
     window.addEventListener('message', event => {
       if (activeProvider !== 'vk' || overlay.hidden || event.source !== frame.contentWindow) return;
       if (event.origin && event.origin !== 'null') {
@@ -6846,7 +6891,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (quality !== null && quality !== undefined) syncQualityMenu(quality);
       const volumeState = extractVkVolumeState(payload);
       if (volumeState.volume !== undefined || volumeState.muted !== undefined) syncVkVolumeUi(volumeState);
-      if (payload && typeof payload === 'object' && updateVkSubtitleTime(payload)) syncVkSubtitle();
+      const hasPlaybackTime = payload && typeof payload === 'object' && updateVkSubtitleTime(payload);
+      if (hasPlaybackTime) syncVkSubtitle();
+      if ((hasPlaybackTime && vkSubtitleTime > 0) || vkPayloadSignalsPlayback(payload)) confirmVkPlayback();
     });
 
     window.addEventListener('keydown', event => {
@@ -8005,7 +8052,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }, 10000);
         return;
       }
-      const delay = vkEmbedAttempt === 0 ? 8000 : 9000;
+      const delay = vkEmbedAttempt === 0 ? 10000 : 11000;
       vkFallbackTimer = window.setTimeout(() => {
         if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken || vkPlaybackConfirmed) return;
         tryVkEmbedFallback(token);
@@ -8040,8 +8087,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const volume = Number(state && state.volume);
       const muted = state && typeof state.muted === 'boolean' ? state.muted : null;
       const stateName = String((state && state.state) || eventName || '').trim().toLowerCase();
+      // Nao trate 'inited' como sucesso: o VK pode inicializar a API mesmo
+      // exibindo a pagina de indisponibilidade. Duracao valida ou estado real
+      // de reproducao/pausa confirmam que o video existe no player.
       const hasPlaybackSignal = Number.isFinite(duration) && duration > 0
-        || ['inited', 'started', 'resumed', 'playing', 'paused', 'ended', 'timeupdate'].includes(stateName);
+        || ['started', 'resumed', 'playing', 'paused', 'ended', 'timeupdate'].includes(stateName);
 
       if (Number.isFinite(time) && time >= 0) vkCurrentTime = time;
       if (Number.isFinite(duration) && duration > 0) vkDuration = duration;

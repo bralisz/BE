@@ -1,5 +1,5 @@
 /* Service worker do PWA; os arquivos continuam vindo da rede. */
-const SW_VERSION = '20260821-vk-mobile-tv-fallback-v1';
+const SW_VERSION = '20260821-vk-reliable-embed-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

@@ -203,13 +203,13 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260821-prime-video-subtitle-offset-19s-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/site.js?rev=20260821-vk-mobile-tv-fallback-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260821-vk-reliable-embed-v2"></script>
 <script>
 (function(){
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost')return;
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js?rev=20260821-vk-mobile-tv-fallback-v1',{scope:'/',updateViaCache:'none'}).catch(function(error){
+    navigator.serviceWorker.register('/sw.js?rev=20260821-vk-reliable-embed-v2',{scope:'/',updateViaCache:'none'}).catch(function(error){
       (void 0);
     });
   },{once:true});
@@ -1196,7 +1196,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     <section class="support-contact" aria-labelledby="supportContactTitle">
       <h2 id="supportContactTitle">Não encontrou seu problema?</h2>
       <p>Conte o que aconteceu e nossa equipe analisará sua mensagem.</p>
-      <a class="support-contact-button" href="/suporte?topic=bug-report">Relate o seu problema</a>
+      <a class="support-contact-button" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=billieilishtv@gmail.com" target="_blank" rel="noopener noreferrer">Relate o seu problema</a>
     </section>
   </div>
 </section>
