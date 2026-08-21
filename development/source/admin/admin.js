@@ -2596,6 +2596,35 @@ body.admin-preview-open{overflow:hidden}
     ) || null;
   }
 
+
+  function setupVideoCardLogoToggle(root) {
+    const form = $('#editorForm', root);
+    const checkbox = form?.elements?.showCardLogo;
+    const toggle = $('[data-video-card-logo-toggle]', root);
+    if (!checkbox || !toggle) return;
+
+    const syncToggle = () => {
+      const checked = checkbox.checked === true;
+      toggle.classList.toggle('is-checked', checked);
+      toggle.setAttribute('aria-pressed', String(checked));
+    };
+
+    toggle.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const scroller = $('.content-editor-fields', root);
+      const previousScrollTop = scroller ? scroller.scrollTop : 0;
+      checkbox.checked = !checkbox.checked;
+      syncToggle();
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      requestAnimationFrame(() => {
+        if (scroller) scroller.scrollTop = previousScrollTop;
+      });
+    });
+
+    syncToggle();
+  }
+
   function setupImagePreviews(root, options = {}) {
     const galleryMode = String(options.collection || '') === 'gallery';
     const currentGalleryId = String(options.currentId || '');
@@ -2816,7 +2845,7 @@ body.admin-preview-open{overflow:hidden}
         <div class="form-grid modern-form-grid">
           ${imageField(isVisualTitle ? 'Imagem / thumbnail *' : 'Imagem / thumbnail *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
-          ${name === 'videos' ? `${imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. Você pode usar a logo somente nos detalhes ou também exibi-la no card.' })}<label class="video-card-logo-check field full" data-festivals-shows-card-logo-option${festivalsShowsVideo ? '' : ' hidden'}><input type="checkbox" name="showCardLogo" value="true" ${(item.showCardLogo === true || String(item.showCardLogo || '').toLowerCase() === 'true') ? 'checked' : ''}><span class="video-card-logo-checkmark" aria-hidden="true">✓</span><span class="video-card-logo-check-copy"><strong>Exibir logo no card</strong><small>Mostra a logo sobre a thumbnail do vídeo, como nos cards de filmes.</small></span></label>` : ''}
+          ${name === 'videos' ? `${imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. Você pode usar a logo somente nos detalhes ou também exibi-la no card.' })}<div class="video-card-logo-check field full" data-festivals-shows-card-logo-option${festivalsShowsVideo ? '' : ' hidden'}><input type="checkbox" name="showCardLogo" value="true" ${(item.showCardLogo === true || String(item.showCardLogo || '').toLowerCase() === 'true') ? 'checked' : ''} hidden><button type="button" class="video-card-logo-toggle" data-video-card-logo-toggle aria-pressed="${(item.showCardLogo === true || String(item.showCardLogo || '').toLowerCase() === 'true') ? 'true' : 'false'}"><span class="video-card-logo-checkmark" aria-hidden="true">✓</span><span class="video-card-logo-check-copy"><strong>Exibir logo no card</strong><small>Mostra a logo sobre a thumbnail do vídeo, como nos cards de filmes.</small></span></button></div>` : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
           ${name === 'movies' ? `<div class="field full"><label>Google Drive para Smart TV <span style="font-weight:500;opacity:.7">(opcional)</span></label><input class="a-input" name="tvDriveUrl" value="${esc(item.tvDriveUrl || item.mobileAppDriveUrl || '')}" placeholder="https://drive.google.com/file/d/..."><small>Usado somente na TV/Smart TV. No PC, navegador mobile e app instalado, o site continua usando o “Link do conteúdo” acima. Se ficar vazio, a TV também usa o link principal.</small></div>` : ''}
           ${['movies','series'].includes(name) ? movieSubtitleUploadFields(item) : ''}
@@ -3227,6 +3256,7 @@ body.admin-preview-open{overflow:hidden}
     if (modernEditor && $('#footerCancelButton', root)) $('#footerCancelButton', root).onclick = closeEditor;
     if (!modernEditor) wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
     setupImagePreviews(root, { collection: name, currentId: item?.id || '' });
+    if (name === 'videos') setupVideoCardLogoToggle(root);
     if (name === 'featured') setupFeaturedContentPicker(root, context, draft);
     if (modernEditor) draftController = setupModernContentEditor(root, name, item, draftKey, storedDraft);
     if (name === 'news') setupAlbumTrackEditor(root);
@@ -5299,13 +5329,15 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
   const style = document.createElement('style');
   style.id = 'be-admin-video-card-logo-option-style';
   style.textContent = `
-    body.admin-mode .video-card-logo-check{grid-column:1/-1;display:flex!important;align-items:center;gap:9px;width:max-content;max-width:100%;margin-top:-5px;padding:2px 1px;color:#dbe6f3;cursor:pointer;user-select:none}
+    body.admin-mode .video-card-logo-check{grid-column:1/-1;display:block!important;width:max-content;max-width:100%;margin-top:-5px;padding:0;color:#dbe6f3;user-select:none}
     body.admin-mode .video-card-logo-check[hidden]{display:none!important}
-    body.admin-mode .video-card-logo-check>input{position:absolute;opacity:0;pointer-events:none}
+    body.admin-mode .video-card-logo-check>input[hidden]{display:none!important}
+    body.admin-mode .video-card-logo-toggle{display:flex;align-items:center;gap:9px;width:max-content;max-width:100%;margin:0;padding:2px 1px;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}
     body.admin-mode .video-card-logo-checkmark{width:18px;height:18px;flex:0 0 18px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:5px;background:rgba(255,255,255,.025);color:transparent;font-size:11px;font-weight:900;line-height:1;transition:.15s ease}
-    body.admin-mode .video-card-logo-check:hover .video-card-logo-checkmark{border-color:rgba(255,255,255,.42)}
-    body.admin-mode .video-card-logo-check>input:checked+.video-card-logo-checkmark{border-color:#43d19e;background:#43d19e;color:#062119}
-    body.admin-mode .video-card-logo-check>input:focus-visible+.video-card-logo-checkmark{outline:2px solid #5ac8fa;outline-offset:3px}
+    body.admin-mode .video-card-logo-toggle:hover .video-card-logo-checkmark{border-color:rgba(255,255,255,.42)}
+    body.admin-mode .video-card-logo-toggle.is-checked .video-card-logo-checkmark{border-color:#43d19e;background:#43d19e;color:#062119}
+    body.admin-mode .video-card-logo-toggle:focus-visible{outline:none}
+    body.admin-mode .video-card-logo-toggle:focus-visible .video-card-logo-checkmark{outline:2px solid #5ac8fa;outline-offset:3px}
     body.admin-mode .video-card-logo-check-copy{display:grid;gap:1px;min-width:0}
     body.admin-mode .video-card-logo-check-copy strong{font-size:12px;font-weight:750;color:#eef5fc}
     body.admin-mode .video-card-logo-check-copy small{font-size:10.5px;line-height:1.35;color:rgba(235,235,245,.48)}
