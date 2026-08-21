@@ -5530,6 +5530,30 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  function isSmartTvBrowser() {
+    const ua = String(navigator.userAgent || '').toLowerCase();
+    if (!ua) return false;
+    return /tizen|webos|web0s|netcast|maple|hbbtv|viera|aquos|nettv|inettvbrowser|smart-tv|smarttv|bravia|philips.*tv|hisense|vidaa/i.test(ua);
+  }
+
+  function vkVideoEmbedHostOrder() {
+    // Mobile e Smart TV priorizam vk.com, que tende a evitar a tela intermediaria
+    // "Open VK" do vkvideo.ru. Desktop preserva o comportamento anterior.
+    const preferVkCom = isMobileOrientationDevice() || isSmartTvBrowser();
+    return preferVkCom ? ['vk.com', 'vkvideo.ru'] : ['vkvideo.ru', 'vk.com'];
+  }
+
+  function vkVideoEmbedAttemptHost(attempt = 0) {
+    const hosts = vkVideoEmbedHostOrder();
+    const index = Math.max(0, Math.floor(Number(attempt) || 0));
+    // No maximo: host principal -> alternativo -> uma nova tentativa do principal.
+    return index === 1 ? hosts[1] : hosts[0];
+  }
+
+  function shouldAutoFallbackVkEmbed() {
+    return isMobileOrientationDevice() || isSmartTvBrowser();
+  }
+
   function vkVideoEmbedUrl(info, options = {}) {
     if (!info) return '';
     const requestedHd = Number(options?.hd);
@@ -5544,11 +5568,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const startSeconds = Number(options?.startSeconds);
     if (Number.isFinite(startSeconds) && startSeconds > 0) params.set('t', vkVideoTimeParam(startSeconds));
     if (info.hash) params.set('hash', info.hash);
-    // No app/PWA mobile usamos o endpoint de embed do vk.com. O domínio
-    // vkvideo.ru pode redirecionar o iframe instalado para a tela "Abrir VK".
-    const embedHost = isStandalonePlayerApp() && isMobileOrientationDevice()
-      ? 'vk.com'
-      : 'vkvideo.ru';
+    const requestedHost = String(options?.host || '').trim().toLowerCase();
+    const embedHost = requestedHost === 'vk.com' || requestedHost === 'vkvideo.ru'
+      ? requestedHost
+      : vkVideoEmbedAttemptHost(Number(options?.attempt) || 0);
     return `https://${embedHost}/video_ext.php?${params.toString()}`;
   }
 
@@ -6089,6 +6112,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let vkSubtitleTime = 0;
     let vkSubtitleReadPending = false;
     let vkSubtitleReadToken = 0;
+    let vkEmbedAttempt = 0;
+    let vkFallbackTimer = 0;
+    let vkPlaybackConfirmed = false;
 
     const syncBodyLock = () => {
       document.body.classList.toggle('external-video-player-open', !overlay.hidden);
@@ -6176,6 +6202,46 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       vkPlayer = null;
       vkApiReady = false;
+    };
+
+    const clearVkFallbackTimer = () => {
+      window.clearTimeout(vkFallbackTimer);
+      vkFallbackTimer = 0;
+    };
+
+    const confirmVkPlayback = () => {
+      if (activeProvider !== 'vk' || overlay.hidden) return;
+      vkPlaybackConfirmed = true;
+      clearVkFallbackTimer();
+    };
+
+    const scheduleVkFallback = () => {
+      clearVkFallbackTimer();
+      if (!shouldAutoFallbackVkEmbed() || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed || vkEmbedAttempt >= 2) return;
+      const delay = vkEmbedAttempt === 0 ? 8000 : 9000;
+      vkFallbackTimer = window.setTimeout(() => {
+        if (activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed) return;
+        tryVkEmbedFallback();
+      }, delay);
+    };
+
+    const tryVkEmbedFallback = () => {
+      if (!shouldAutoFallbackVkEmbed() || activeProvider !== 'vk' || !activeVkInfo || overlay.hidden || vkPlaybackConfirmed || vkEmbedAttempt >= 2) return;
+      clearVkFallbackTimer();
+      const currentTime = readVkCurrentTime();
+      const paused = readVkPaused();
+      vkEmbedAttempt += 1;
+      vkPlaybackConfirmed = false;
+      resetVkPlayer();
+      frame.src = vkVideoEmbedUrl(activeVkInfo, {
+        hd: vkSelectedQuality,
+        startSeconds: currentTime,
+        autoplay: !paused,
+        host: vkVideoEmbedAttemptHost(vkEmbedAttempt)
+      });
+      frame.addEventListener('load', bindVkApi, { once: true });
+      window.setTimeout(bindVkApi, 900);
+      scheduleVkFallback();
     };
 
     const ensureVkVideoApiForExternalPlayer = () => {
@@ -6396,6 +6462,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             ['inited', 'volumechange'].forEach(eventName => {
               try { vkPlayer.on(eventName, syncVolumeFromApi); } catch (_) {}
             });
+            ['inited', 'started', 'resumed', 'timeupdate'].forEach(eventName => {
+              try { vkPlayer.on(eventName, confirmVkPlayback); } catch (_) {}
+            });
+            try {
+              vkPlayer.on('error', () => {
+                if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed) return;
+                tryVkEmbedFallback();
+              });
+            } catch (_) {}
             const syncSubtitleFromApi = state => {
               if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden) return;
               if (!updateVkSubtitleTime(state)) readVkCurrentTime();
@@ -6505,10 +6580,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const paused = readVkPaused();
       vkSelectedQuality = hd;
       syncQualityMenu(hd);
+      clearVkFallbackTimer();
+      vkPlaybackConfirmed = false;
       resetVkPlayer();
-      frame.src = vkVideoEmbedUrl(activeVkInfo, { hd, startSeconds: currentTime, autoplay: !paused });
+      frame.src = vkVideoEmbedUrl(activeVkInfo, {
+        hd,
+        startSeconds: currentTime,
+        autoplay: !paused,
+        host: vkVideoEmbedAttemptHost(vkEmbedAttempt)
+      });
       frame.addEventListener('load', bindVkApi, { once: true });
       window.setTimeout(bindVkApi, 900);
+      scheduleVkFallback();
     };
 
 
@@ -6522,8 +6605,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         } catch (_) {}
       }
       closeMenus();
+      clearVkFallbackTimer();
       resetVkPlayer();
       resetExternalSubtitles();
+      vkEmbedAttempt = 0;
+      vkPlaybackConfirmed = false;
       frame.src = 'about:blank';
       overlay.hidden = true;
       overlay.setAttribute('aria-hidden', 'true');
@@ -6556,6 +6642,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = document.activeElement;
       activeProvider = normalizedProvider;
       activeVkInfo = normalizedProvider === 'vk' ? info : null;
+      vkEmbedAttempt = 0;
+      vkPlaybackConfirmed = false;
       configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '');
       vkSelectedQuality = 4;
       vkMuted = false;
@@ -6581,6 +6669,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (normalizedProvider === 'vk') {
         frame.addEventListener('load', bindVkApi, { once: true });
         window.setTimeout(bindVkApi, 900);
+        scheduleVkFallback();
         window.setTimeout(() => {
           if (!overlay.hidden && activeProvider === 'vk') showControls(false);
         }, 80);
@@ -7745,6 +7834,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let vkApiReady = false;
     let vkApiPromise = null;
     let vkInitTimer = 0;
+    let vkFallbackTimer = 0;
+    let vkEmbedAttempt = 0;
+    let vkPlaybackConfirmed = false;
+    let activeVkInfo = null;
     let vkCurrentTime = 0;
     let vkDuration = 0;
     let vkPaused = true;
@@ -7885,6 +7978,61 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.remove('is-vk-api-mode');
     };
 
+    const clearVkEmbedFallbackTimer = () => {
+      window.clearTimeout(vkFallbackTimer);
+      vkFallbackTimer = 0;
+    };
+
+    const confirmVkPlayback = () => {
+      if (activeProvider !== 'vkvideo' || overlay.hidden) return;
+      vkPlaybackConfirmed = true;
+      clearVkEmbedFallbackTimer();
+      if (!mediaReady) mediaReady = true;
+      setLoadingMessage('', false);
+      setPlayerInteractive(true);
+    };
+
+    const scheduleVkEmbedFallback = token => {
+      clearVkEmbedFallbackTimer();
+      if (!shouldAutoFallbackVkEmbed() || activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken || vkPlaybackConfirmed) return;
+      if (vkEmbedAttempt >= 2) {
+        // Sem loop infinito: apos host principal, alternativo e uma ultima tentativa,
+        // apenas liberamos o iframe do VK para mostrar a resposta original.
+        vkFallbackTimer = window.setTimeout(() => {
+          if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken || vkPlaybackConfirmed) return;
+          setLoadingMessage('', false);
+          loading.hidden = true;
+        }, 10000);
+        return;
+      }
+      const delay = vkEmbedAttempt === 0 ? 8000 : 9000;
+      vkFallbackTimer = window.setTimeout(() => {
+        if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken || vkPlaybackConfirmed) return;
+        tryVkEmbedFallback(token);
+      }, delay);
+    };
+
+    const tryVkEmbedFallback = token => {
+      if (!shouldAutoFallbackVkEmbed() || activeProvider !== 'vkvideo' || !activeVkInfo || overlay.hidden || token !== openingToken || vkPlaybackConfirmed || vkEmbedAttempt >= 2) return;
+      clearVkEmbedFallbackTimer();
+      const resumeTime = Number.isFinite(vkCurrentTime) ? vkCurrentTime : 0;
+      const resumePaused = vkPaused;
+      vkEmbedAttempt += 1;
+      vkPlaybackConfirmed = false;
+      resetVkState();
+      frame.title = activeTitle ? `VK Video — ${activeTitle}` : 'Reprodutor do VK Video';
+      setPlayerInteractive(false);
+      setLoadingMessage(vkEmbedAttempt === 1 ? 'Tentando uma rota alternativa do VK Video...' : 'Tentando novamente o VK Video...', true);
+      frame.src = vkVideoEmbedUrl(activeVkInfo, {
+        hd: 4,
+        startSeconds: resumeTime,
+        autoplay: !resumePaused,
+        host: vkVideoEmbedAttemptHost(vkEmbedAttempt)
+      });
+      window.setTimeout(() => bindVkPlayerApi(token), 120);
+      scheduleVkEmbedFallback(token);
+    };
+
     const syncVkPlayerState = (state = {}, eventName = '') => {
       if (activeProvider !== 'vkvideo' || !frameMode) return;
       const time = Number(state && state.time);
@@ -7892,6 +8040,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const volume = Number(state && state.volume);
       const muted = state && typeof state.muted === 'boolean' ? state.muted : null;
       const stateName = String((state && state.state) || eventName || '').trim().toLowerCase();
+      const hasPlaybackSignal = Number.isFinite(duration) && duration > 0
+        || ['inited', 'started', 'resumed', 'playing', 'paused', 'ended', 'timeupdate'].includes(stateName);
 
       if (Number.isFinite(time) && time >= 0) vkCurrentTime = time;
       if (Number.isFinite(duration) && duration > 0) vkDuration = duration;
@@ -7913,11 +8063,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       volumeButton.setAttribute('aria-label', vkMuted || vkVolume === 0 ? 'Ativar som' : 'Silenciar');
       volumeButton.title = vkMuted || vkVolume === 0 ? 'Ativar som' : 'Silenciar';
 
-      if (!mediaReady) {
-        mediaReady = true;
-        setLoadingMessage('', false);
-        setPlayerInteractive(true);
-      }
+      if (hasPlaybackSignal) confirmVkPlayback();
       showControls(vkPaused);
     };
 
@@ -7958,8 +8104,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           vkPlayer = window.VK.VideoPlayer(frame);
           vkApiReady = true;
           overlay.classList.add('is-vk-api-mode');
-          setPlayerInteractive(true);
-          setLoadingMessage('', false);
 
           const onState = eventName => state => syncVkPlayerState(state || {}, eventName);
           ['inited', 'timeupdate', 'volumechange', 'started', 'resumed', 'paused', 'ended'].forEach(eventName => {
@@ -7967,11 +8111,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           });
           if (vkPlayer && typeof vkPlayer.on === 'function') {
             vkPlayer.on('error', () => {
-              // O iframe continua utilizável mesmo quando a API não consegue controlar uma mídia específica.
               overlay.classList.remove('is-vk-api-mode');
               vkApiReady = false;
               setPlayerInteractive(false);
-              loading.hidden = true;
+              if (!vkPlaybackConfirmed && shouldAutoFallbackVkEmbed()) tryVkEmbedFallback(token);
+              else loading.hidden = true;
             });
           }
           readVkPlayerState();
@@ -7985,7 +8129,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             vkApiReady = false;
             overlay.classList.remove('is-vk-api-mode');
             setPlayerInteractive(false);
-            loading.hidden = true;
+            if (!vkPlaybackConfirmed && shouldAutoFallbackVkEmbed()) tryVkEmbedFallback(token);
+            else loading.hidden = true;
           }
         }
       }).catch(() => {
@@ -7993,7 +8138,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         vkApiReady = false;
         overlay.classList.remove('is-vk-api-mode');
         setPlayerInteractive(false);
-        loading.hidden = true;
+        if (!vkPlaybackConfirmed && shouldAutoFallbackVkEmbed()) scheduleVkEmbedFallback(token);
+        else loading.hidden = true;
       });
     };
 
@@ -8002,6 +8148,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.clearTimeout(controlsTimer);
       window.clearTimeout(fullscreenUiTimer);
       window.clearTimeout(centerSkipTimer);
+      clearVkEmbedFallbackTimer();
       fallbackTimer = 0;
       controlsTimer = 0;
       fullscreenUiTimer = 0;
@@ -8422,6 +8569,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeMediaKind = '';
       activeProvider = '';
       activeExternalUrl = '';
+      activeVkInfo = null;
+      vkEmbedAttempt = 0;
+      vkPlaybackConfirmed = false;
       streamAttempt = '';
       metadataProbeFinished = false;
       legacySmartTvMode = false;
@@ -8556,11 +8706,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const openVkVideoPlayer = (info, context = {}) => {
       enableMobilePlayerRotation();
-      const embedUrl = vkVideoEmbedUrl(info);
-      if (!embedUrl) return;
+      if (!info) return;
       closePlayer();
       const token = ++openingToken;
       activeProvider = 'vkvideo';
+      activeVkInfo = info;
+      vkEmbedAttempt = 0;
+      vkPlaybackConfirmed = false;
       activeExternalUrl = vkVideoWatchUrl(info);
       activeTitle = String(context?.title || '').trim();
       activeMediaKind = 'video';
@@ -8583,10 +8735,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       frame.title = activeTitle ? `VK Video — ${activeTitle}` : 'Reprodutor do VK Video';
       setPlayerInteractive(false);
       setLoadingMessage('Sincronizando VK Video com o player...', true);
-      frame.src = embedUrl;
+      frame.src = vkVideoEmbedUrl(info, { hd: 4, host: vkVideoEmbedAttemptHost(0) });
       externalButton.setAttribute('aria-label', 'Abrir no VK Video');
       externalButton.title = 'Abrir no VK Video';
       bindVkPlayerApi(token);
+      scheduleVkEmbedFallback(token);
       registerCenterSkipActivity();
       closeButton.focus({ preventScroll: true });
     };

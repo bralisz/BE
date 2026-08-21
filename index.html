@@ -203,13 +203,13 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260821-prime-video-subtitle-offset-19s-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/site.js?rev=20260821-prime-video-subtitle-offset-19s-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260821-vk-mobile-tv-fallback-v1"></script>
 <script>
 (function(){
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost')return;
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js?rev=20260821-prime-video-subtitle-offset-19s-v1',{scope:'/',updateViaCache:'none'}).catch(function(error){
+    navigator.serviceWorker.register('/sw.js?rev=20260821-vk-mobile-tv-fallback-v1',{scope:'/',updateViaCache:'none'}).catch(function(error){
       (void 0);
     });
   },{once:true});
