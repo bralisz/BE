@@ -8535,7 +8535,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!play || play.getAttribute('aria-disabled') === 'true') return;
     let data = contentDataFromElement(play);
     data = await refreshMovieTvSource(data);
-    const contentUrl = String(data.contentUrl || '').trim();
+    // Na Smart TV, filmes que possuem um Google Drive cadastrado no Dashboard
+    // devem usar esse Drive como fonte principal. Isso evita que um contentUrl
+    // alternativo (por exemplo, VK) seja escolhido para o mesmo filme.
+    const dashboardTvDrive = String(data.tvDriveUrl || data.mobileAppDriveUrl || '').trim();
+    const movieHasDashboardDrive = String(data.collection || '').trim().toLowerCase() === 'movies'
+      && Boolean(googleDriveFileId(dashboardTvDrive));
+    const contentUrl = movieHasDashboardDrive
+      ? dashboardTvDrive
+      : String(data.contentUrl || '').trim();
     if (!contentUrl || contentUrl === '#') return;
 
     const payload = {
@@ -8546,8 +8554,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       year: String(data.year || ''),
       duration: String(data.duration || ''),
       contentUrl,
-      mobileAppDriveUrl: String(data.mobileAppDriveUrl || ''),
-      tvDriveUrl: String(data.tvDriveUrl || data.mobileAppDriveUrl || ''),
+      mobileAppDriveUrl: movieHasDashboardDrive ? dashboardTvDrive : String(data.mobileAppDriveUrl || ''),
+      tvDriveUrl: movieHasDashboardDrive ? dashboardTvDrive : String(data.tvDriveUrl || data.mobileAppDriveUrl || ''),
       subtitleUrl: String(data.subtitleUrl || ''),
       subtitleLocale: String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase(),
       imageUrl: String(data.imageUrl || ''),
