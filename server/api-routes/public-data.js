@@ -9,7 +9,7 @@ const HOME_BOOTSTRAP_COLLECTIONS = Object.freeze(['sections', 'videos', 'movies'
 const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
-  'mediaType', 'mobileAppDriveUrl', 'tvDriveUrl', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'slug',
+  'mediaType', 'mobileAppDriveUrl', 'tvDriveUrl', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'showCardLogo', 'slug',
   'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
 ]);
@@ -219,6 +219,9 @@ function sanitizeItem(collection, row) {
       .filter(track => track.title);
   }
   if (Object.prototype.hasOwnProperty.call(source, 'translations')) source.translations = sanitizeTranslations(source.translations);
+  if (Object.prototype.hasOwnProperty.call(source, 'showCardLogo')) {
+    source.showCardLogo = source.showCardLogo === true || String(source.showCardLogo || '').toLowerCase() === 'true';
+  }
   source.active = source.active !== false && String(source.active).toLowerCase() !== 'false';
   if (collection === 'ongs') {
     const minimumDonationCents = Number(source.minimumDonationCents);

@@ -610,7 +610,7 @@
       ? image
       : (video.bannerUrl || video.imageUrl || video.thumbnailUrl || '');
     const logo = video.logoUrl || '';
-    const showCardLogo = logo && logo !== '#' && String(collection).toLowerCase() !== 'videos';
+    const showCardLogo = logo && logo !== '#' && (String(collection).toLowerCase() !== 'videos' || video.showCardLogo === true || String(video.showCardLogo || '').toLowerCase() === 'true');
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
     const routeHref = detailRoutePath(itemId);
@@ -627,6 +627,7 @@
       data-image-url="${safeUrl(image)}"
       data-banner-url="${safeUrl(banner)}"
       data-logo-url="${safeUrl(logo)}"
+      data-show-card-logo="${showCardLogo ? 'true' : 'false'}"
       data-title-search="${escapeHtml(normalizeText(title))}"
       data-category="${escapeHtml(normalizeText(category))}"
       data-collection="${escapeHtml(normalizeText(collection))}">

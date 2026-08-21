@@ -2816,7 +2816,7 @@ body.admin-preview-open{overflow:hidden}
         <div class="form-grid modern-form-grid">
           ${imageField(isVisualTitle ? 'Imagem / thumbnail *' : 'Imagem / thumbnail *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
-          ${name === 'videos' ? imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. A logo aparece somente ao abrir os detalhes do conteúdo e não é exibida nos cards.' }) : ''}
+          ${name === 'videos' ? `${imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. Você pode usar a logo somente nos detalhes ou também exibi-la no card.' })}<label class="video-card-logo-check field full" data-festivals-shows-card-logo-option${festivalsShowsVideo ? '' : ' hidden'}><input type="checkbox" name="showCardLogo" value="true" ${(item.showCardLogo === true || String(item.showCardLogo || '').toLowerCase() === 'true') ? 'checked' : ''}><span class="video-card-logo-checkmark" aria-hidden="true">✓</span><span class="video-card-logo-check-copy"><strong>Exibir logo no card</strong><small>Mostra a logo sobre a thumbnail do vídeo, como nos cards de filmes.</small></span></label>` : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
           ${name === 'movies' ? `<div class="field full"><label>Google Drive para Smart TV <span style="font-weight:500;opacity:.7">(opcional)</span></label><input class="a-input" name="tvDriveUrl" value="${esc(item.tvDriveUrl || item.mobileAppDriveUrl || '')}" placeholder="https://drive.google.com/file/d/..."><small>Usado somente na TV/Smart TV. No PC, navegador mobile e app instalado, o site continua usando o “Link do conteúdo” acima. Se ficar vazio, a TV também usa o link principal.</small></div>` : ''}
           ${['movies','series'].includes(name) ? movieSubtitleUploadFields(item) : ''}
@@ -2875,7 +2875,7 @@ body.admin-preview-open{overflow:hidden}
         </div>
         <div class="editor-preview-rail">
           <small>Card da seção</small>
-          <div class="editor-preview-card" data-preview-card><span>Imagem do conteúdo</span></div>
+          <div class="editor-preview-card" data-preview-card><span>Imagem do conteúdo</span><span class="editor-preview-card-logo" data-preview-card-logo hidden></span></div>
         </div>
       </div>
       <div class="preview-help"><span>✓</span><p>A prévia é atualizada enquanto você edita. O rascunho é salvo no navegador ao trocar de aba ou recarregar a página.</p></div>
@@ -2895,6 +2895,7 @@ body.admin-preview-open{overflow:hidden}
     const previewYear = $('[data-preview-year]', root);
     const previewDuration = $('[data-preview-duration]', root);
     const previewCard = $('[data-preview-card]', root);
+    const previewCardLogo = $('[data-preview-card-logo]', root);
     const previewPane = $('.content-live-preview', root);
     const previewToggle = $('[data-preview-toggle]', root);
     const previewClose = $('[data-preview-close]', root);
@@ -2949,12 +2950,22 @@ body.admin-preview-open{overflow:hidden}
       } else {
         previewLogo.textContent = title;
       }
+      if (previewCardLogo) {
+        const logoOnCard = name !== 'videos' || form.elements.showCardLogo?.checked === true;
+        const showPreviewCardLogo = Boolean(logo && logoOnCard && (name !== 'videos' || festivalDetailLogo));
+        previewCardLogo.hidden = !showPreviewCardLogo;
+        previewCardLogo.innerHTML = showPreviewCardLogo ? `<img loading="lazy" decoding="async" src="${esc(media(logo))}" alt="">` : '';
+      }
       if (previewDescription) previewDescription.innerHTML = adminMarkdownToHtml(descriptionText);
       previewYear.textContent = year;
       previewDuration.textContent = duration;
       if (descriptionCount && description) descriptionCount.textContent = String(description.value.length);
     };
-    const snapshot = () => Object.fromEntries(new FormData(form).entries());
+    const snapshot = () => {
+      const data = Object.fromEntries(new FormData(form).entries());
+      if (name === 'videos' && form.elements.showCardLogo) data.showCardLogo = form.elements.showCardLogo.checked ? 'true' : 'false';
+      return data;
+    };
     const saveDraft = immediate => {
       if (timer) clearTimeout(timer);
       const execute = () => {
@@ -3230,8 +3241,11 @@ body.admin-preview-open{overflow:hidden}
         hidden.value = match ? match.id : '';
         search.setCustomValidity(match ? '' : 'Selecione uma seção criada em Seções do site.');
         if (name === 'videos') {
+          const festivalsShows = isFestivalsShowsSection(match || search.value);
           const logoField = $('[data-festivals-shows-logo-field]', root);
-          if (logoField) logoField.hidden = !isFestivalsShowsSection(match || search.value);
+          const cardLogoOption = $('[data-festivals-shows-card-logo-option]', root);
+          if (logoField) logoField.hidden = !festivalsShows;
+          if (cardLogoOption) cardLogoOption.hidden = !festivalsShows;
         }
       };
       search.addEventListener('input', syncSection);
@@ -3398,7 +3412,12 @@ body.admin-preview-open{overflow:hidden}
           data.sectionName = String(selected.title || selected.category || selected.id).trim();
           data.category = String(selected.category || selected.slug || selected.id).trim().toLowerCase();
           data.type = data.sectionName;
-          if (name === 'videos' && !isFestivalsShowsSection(selected)) data.logoUrl = '';
+          if (name === 'videos') {
+            const festivalsShows = isFestivalsShowsSection(selected);
+            data.showCardLogo = festivalsShows && form.elements.showCardLogo?.checked === true;
+            if (!festivalsShows) data.logoUrl = '';
+            if (!String(data.logoUrl || '').trim()) data.showCardLogo = false;
+          }
           delete data.sectionSearch;
         }
         if (name === 'videos') {
@@ -5273,6 +5292,30 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
   document.head.appendChild(style);
 })();
 
+
+/* Opção minimalista para exibir a logo também no card de Vídeos. */
+(() => {
+  if (document.getElementById('be-admin-video-card-logo-option-style')) return;
+  const style = document.createElement('style');
+  style.id = 'be-admin-video-card-logo-option-style';
+  style.textContent = `
+    body.admin-mode .video-card-logo-check{grid-column:1/-1;display:flex!important;align-items:center;gap:9px;width:max-content;max-width:100%;margin-top:-5px;padding:2px 1px;color:#dbe6f3;cursor:pointer;user-select:none}
+    body.admin-mode .video-card-logo-check[hidden]{display:none!important}
+    body.admin-mode .video-card-logo-check>input{position:absolute;opacity:0;pointer-events:none}
+    body.admin-mode .video-card-logo-checkmark{width:18px;height:18px;flex:0 0 18px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.24);border-radius:5px;background:rgba(255,255,255,.025);color:transparent;font-size:11px;font-weight:900;line-height:1;transition:.15s ease}
+    body.admin-mode .video-card-logo-check:hover .video-card-logo-checkmark{border-color:rgba(255,255,255,.42)}
+    body.admin-mode .video-card-logo-check>input:checked+.video-card-logo-checkmark{border-color:#43d19e;background:#43d19e;color:#062119}
+    body.admin-mode .video-card-logo-check>input:focus-visible+.video-card-logo-checkmark{outline:2px solid #5ac8fa;outline-offset:3px}
+    body.admin-mode .video-card-logo-check-copy{display:grid;gap:1px;min-width:0}
+    body.admin-mode .video-card-logo-check-copy strong{font-size:12px;font-weight:750;color:#eef5fc}
+    body.admin-mode .video-card-logo-check-copy small{font-size:10.5px;line-height:1.35;color:rgba(235,235,245,.48)}
+    body.admin-mode .editor-preview-card{position:relative;overflow:hidden}
+    body.admin-mode .editor-preview-card-logo{position:absolute;left:12px;right:12px;bottom:11px;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
+    body.admin-mode .editor-preview-card-logo[hidden]{display:none!important}
+    body.admin-mode .editor-preview-card-logo img{display:block;max-width:min(72%,190px);max-height:54px;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(0,0,0,.52))}
+  `;
+  document.head.appendChild(style);
+})();
 
 /* Painel administrativo. */
 (() => {
