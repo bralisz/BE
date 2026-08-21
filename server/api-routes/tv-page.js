@@ -897,7 +897,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   <meta name="theme-color" content="#020409">
   <title>${escapeHtml(copy.title)}</title>
   <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260821-tv-vk-legacy-retry-v3">
+  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260821-tv-bg-billie-v1">
 </head>
 <body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
   <main class="tv-shell">

@@ -2635,13 +2635,66 @@ body.admin-preview-open{overflow:hidden}
     return /^https?:\/\//i.test(value) || /^\/?assets\//i.test(value);
   }
 
-  function setupImagePreviews(root) {
+  function normalizeGalleryImageLink(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+      const url = new URL(raw, location.origin);
+      url.hash = '';
+      if (url.origin === location.origin && /^\/assets\//i.test(url.pathname)) {
+        return `${url.pathname}${url.search}`;
+      }
+      return url.href;
+    } catch (_) {
+      return raw.replace(/^assets\//i, '/assets/').replace(/#.*$/, '');
+    }
+  }
+
+  async function findGalleryDuplicateByLink(value, currentId = '') {
+    const normalized = normalizeGalleryImageLink(value);
+    if (!normalized) return null;
+    const items = await db.list('gallery');
+    return (Array.isArray(items) ? items : []).find(entry =>
+      String(entry?.id || '') !== String(currentId || '') &&
+      normalizeGalleryImageLink(entry?.imageUrl || entry?.bannerUrl || '') === normalized
+    ) || null;
+  }
+
+  function setupImagePreviews(root, options = {}) {
+    const galleryMode = String(options.collection || '') === 'gallery';
+    const currentGalleryId = String(options.currentId || '');
     root.querySelectorAll('.image-url-field').forEach(field => {
       const input = $('.image-url-input', field);
       const preview = $('.image-live-preview', field);
       const wrap = $('.image-preview-wrap', field);
       const validation = $('.image-validation', field);
       const clear = $('.image-clear', field);
+      let duplicateTimer = 0;
+      let duplicateSequence = 0;
+      const checkGalleryDuplicate = async () => {
+        if (!galleryMode) return;
+        const value = input.value.trim();
+        const sequence = ++duplicateSequence;
+        delete field.dataset.galleryDuplicate;
+        if (!value || !validImageSource(value)) return;
+        try {
+          const duplicate = await findGalleryDuplicateByLink(value, currentGalleryId);
+          if (sequence !== duplicateSequence) return;
+          if (duplicate) {
+            field.dataset.galleryDuplicate = 'true';
+            const type = String(duplicate.itemType || duplicate.mediaType || '').toLowerCase() === 'banner' ? 'banner' : 'avatar';
+            validation.textContent = type === 'banner' ? 'Este link já foi adicionado como banner.' : 'Este link já foi adicionado como avatar.';
+            validation.className = 'image-validation err';
+          }
+        } catch (_) {
+          // A validação definitiva também é feita ao salvar.
+        }
+      };
+      const scheduleGalleryDuplicateCheck = () => {
+        if (!galleryMode) return;
+        clearTimeout(duplicateTimer);
+        duplicateTimer = setTimeout(checkGalleryDuplicate, 350);
+      };
       const update = () => {
         const value = input.value.trim();
         validation.textContent = '';
@@ -2662,19 +2715,24 @@ body.admin-preview-open{overflow:hidden}
         validation.textContent = value.startsWith('http') ? 'Imagem externa' : 'Imagem da pasta assets';
         validation.classList.add('ok');
       };
-      input.addEventListener('input', update);
+      input.addEventListener('input', () => {
+        update();
+        scheduleGalleryDuplicateCheck();
+      });
+      input.addEventListener('blur', checkGalleryDuplicate);
       preview.addEventListener('error', () => {
         validation.textContent = 'Não foi possível carregar esta imagem. Verifique o endereço ou publique o arquivo em assets.';
         validation.className = 'image-validation err';
       });
       preview.addEventListener('load', () => {
-        if (input.value.trim()) {
+        if (input.value.trim() && field.dataset.galleryDuplicate !== 'true') {
           validation.textContent = 'Imagem carregada corretamente.';
           validation.className = 'image-validation ok';
         }
       });
-      clear.onclick = () => { input.value = ''; update(); input.focus(); };
+      clear.onclick = () => { input.value = ''; delete field.dataset.galleryDuplicate; update(); input.focus(); };
       update();
+      scheduleGalleryDuplicateCheck();
     });
   }
 
@@ -2824,6 +2882,7 @@ body.admin-preview-open{overflow:hidden}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
           ${name === 'videos' ? imageField('Logo do título (opcional)', 'logoUrl', item.logoUrl || '', { festivalsShowsOnly: true, hidden: !festivalsShowsVideo, help: 'Disponível para vídeos da seção Festivals & Shows. A logo aparece somente ao abrir os detalhes do conteúdo e não é exibida nos cards.' }) : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
+          ${name === 'movies' ? `<div class="field full"><label>Google Drive para o app mobile <span style="font-weight:500;opacity:.7">(opcional)</span></label><input class="a-input" name="mobileAppDriveUrl" value="${esc(item.mobileAppDriveUrl || '')}" placeholder="https://drive.google.com/file/d/..."><small>No app instalado no celular, este link substitui o “Link do conteúdo”. Se ficar vazio, o app usa o link padrão acima.</small></div>` : ''}
           ${name === 'movies' ? movieSubtitleUploadFields(item) : ''}
         </div>
       </section>
@@ -3220,7 +3279,7 @@ body.admin-preview-open{overflow:hidden}
     if (!modernEditor && $('#cancelModal', root)) $('#cancelModal', root).onclick = closeEditor;
     if (modernEditor && $('#footerCancelButton', root)) $('#footerCancelButton', root).onclick = closeEditor;
     if (!modernEditor) wrap.onclick = event => { if (event.target === wrap) wrap.remove(); };
-    setupImagePreviews(root);
+    setupImagePreviews(root, { collection: name, currentId: item?.id || '' });
     if (name === 'featured') setupFeaturedContentPicker(root, context, draft);
     if (modernEditor) draftController = setupModernContentEditor(root, name, item, draftKey, storedDraft);
     if (name === 'news') setupAlbumTrackEditor(root);
@@ -3272,7 +3331,17 @@ body.admin-preview-open{overflow:hidden}
             ? data.category.trim()
             : data.category.trim().toLowerCase().replace(/\s+/g, '-');
         }
-        if (name === 'gallery') data.itemType = data.itemType === 'banner' ? 'banner' : 'avatar';
+        if (name === 'gallery') {
+          data.itemType = data.itemType === 'banner' ? 'banner' : 'avatar';
+          const galleryImageLink = String(data.imageUrl || '').trim();
+          if (galleryImageLink) {
+            const duplicateGalleryItem = await findGalleryDuplicateByLink(galleryImageLink, item?.id || '');
+            if (duplicateGalleryItem) {
+              const duplicateType = String(duplicateGalleryItem.itemType || duplicateGalleryItem.mediaType || '').toLowerCase() === 'banner' ? 'banner' : 'avatar';
+              throw new Error(duplicateType === 'banner' ? 'Este link já foi adicionado como banner.' : 'Este link já foi adicionado como avatar.');
+            }
+          }
+        }
 
         if (name === 'news') {
           data.title = String(data.title || '').trim();
@@ -3327,6 +3396,10 @@ body.admin-preview-open{overflow:hidden}
           delete data.link;
         }
         if (name === 'movies') {
+          data.mobileAppDriveUrl = String(data.mobileAppDriveUrl || '').trim();
+          if (data.mobileAppDriveUrl && !/^https:\/\/(?:drive\.google\.com|drive\.usercontent\.google\.com)\//i.test(data.mobileAppDriveUrl)) {
+            throw new Error('O link opcional do app mobile deve ser um link HTTPS do Google Drive.');
+          }
           const subtitleTracks = {};
           const subtitleFolderKey = item?.id || `draft-${generatePublicId(`${String(data.title || '').trim()}-${Date.now()}`)}`;
           for (const [locale, , suffix] of MOVIE_SUBTITLE_LANGUAGES) {

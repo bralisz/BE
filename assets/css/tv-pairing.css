@@ -16,7 +16,7 @@ button,input,a{font:inherit}
 button,a{-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 .tv-shell{position:relative;min-height:100svh;overflow:hidden;background:#03050a}
-.tv-shell::before{content:"";position:fixed;inset:0;background:url('/assets/images/tv/connect-bg-tv.jpg') center/cover no-repeat;transform:scale(1.02);filter:saturate(.88) brightness(.62);z-index:0}
+.tv-shell::before{content:"";position:fixed;inset:0;background:url('/assets/images/tv/connect-bg-tv-billie-20260821.jpg') center/cover no-repeat;transform:scale(1.02);filter:saturate(.88) brightness(.62);z-index:0}
 .tv-shell::after{content:"";position:fixed;inset:0;background:linear-gradient(180deg,rgba(1,4,10,.28),rgba(1,4,10,.72) 60%,rgba(1,4,10,.92)),radial-gradient(circle at 50% 28%,rgba(35,126,215,.16),transparent 42%);z-index:0}
 .tv-content{position:relative;z-index:1;min-height:100svh;display:flex;flex-direction:column;padding:max(22px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left))}
 .tv-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;width:min(1180px,100%);margin:0 auto}
@@ -273,7 +273,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 /* Smart TV legacy compatibility (old Tizen/WebOS/NetCast browsers). */
 .legacy-tv,.legacy-tv body{background:#020409;color:#f7f9ff}
 .legacy-tv .tv-shell{min-height:100vh}
-.legacy-tv .tv-shell::before{top:0;right:0;bottom:0;left:0;background-image:url('/assets/images/tv/connect-bg-tv.jpg');background-position:center center;background-repeat:no-repeat;background-size:cover}
+.legacy-tv .tv-shell::before{top:0;right:0;bottom:0;left:0;background-image:url('/assets/images/tv/connect-bg-tv-billie-20260821.jpg');background-position:center center;background-repeat:no-repeat;background-size:cover}
 .legacy-tv .tv-shell::after{top:0;right:0;bottom:0;left:0}
 .legacy-tv .tv-content{min-height:100vh;padding:22px}
 .legacy-tv .tv-topbar{width:100%;max-width:1180px}

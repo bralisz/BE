@@ -18812,3 +18812,33 @@ html.betv-installed-app .user-dropdown .install-app-action{display:none!importan
 }
 .mobile-install-sheet.is-installed .mobile-install-sheet-icon svg{width:31px;height:31px}
 .mobile-install-sheet.is-installed .mobile-install-sheet-done{cursor:pointer}
+
+
+/* 2026-08-21 — Fullscreen mobile no estilo dos players de streaming/YouTube. */
+.drive-player-fullscreen .fullscreen-enter path,
+.drive-player-fullscreen .fullscreen-exit path,
+.drive-video-player-fullscreen .fullscreen-enter path,
+.drive-video-player-fullscreen .fullscreen-exit path{
+  fill:currentColor!important;
+  stroke:none!important;
+}
+@media(max-width:700px){
+  .drive-player-top-controls .drive-player-fullscreen,
+  .drive-video-player-action.drive-video-player-fullscreen{
+    width:42px!important;
+    height:42px!important;
+    flex:0 0 42px!important;
+    border-radius:50%!important;
+    border:1px solid rgba(255,255,255,.13)!important;
+    background:rgba(31,31,33,.88)!important;
+    box-shadow:0 5px 18px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.06)!important;
+    -webkit-backdrop-filter:blur(14px)!important;
+    backdrop-filter:blur(14px)!important;
+  }
+  .drive-player-top-controls .drive-player-fullscreen svg,
+  .drive-video-player-action.drive-video-player-fullscreen svg{
+    width:24px!important;
+    height:24px!important;
+    display:block!important;
+  }
+}

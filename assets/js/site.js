@@ -5307,10 +5307,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-player-top-controls">
           <button class="drive-player-icon drive-player-fullscreen" id="drivePlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
             <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 5h6v2H7v4H5V5Zm8 0h6v6h-2V7h-4V5ZM5 13h2v4h4v2H5v-6Zm12 0h2v6h-6v-2h4v-4Z" fill="currentColor"/>
             </svg>
             <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 5h2v6H5V9h4V5Zm4 0h2v4h4v2h-6V5ZM5 13h6v6H9v-4H5v-2Zm8 0h6v2h-4v4h-2v-6Z" fill="currentColor"/>
             </svg>
           </button>
           <button class="drive-player-icon drive-player-volume" id="drivePlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
@@ -6481,8 +6481,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <div class="drive-video-player-action-wake-zone" id="driveVideoPlayerActionWakeZone" aria-hidden="true"></div>
         <div class="drive-video-player-actionbar" id="driveVideoPlayerActionbar" aria-label="Controles do vídeo">
           <button class="drive-video-player-action drive-video-player-fullscreen" id="driveVideoPlayerFullscreen" type="button" aria-label="Entrar em tela cheia" title="Tela cheia">
-            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h6v2H7v4H5V5Zm8 0h6v6h-2V7h-4V5ZM5 13h2v4h4v2H5v-6Zm12 0h2v6h-6v-2h4v-4Z" fill="currentColor"/></svg>
+            <svg class="fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h2v6H5V9h4V5Zm4 0h2v4h4v2h-6V5ZM5 13h6v6H9v-4H5v-2Zm8 0h6v2h-4v4h-2v-6Z" fill="currentColor"/></svg>
           </button>
           <div class="drive-video-player-actions-right">
             <button class="drive-video-player-action drive-video-player-volume" id="driveVideoPlayerVolume" type="button" aria-label="Silenciar" title="Silenciar">
@@ -10182,8 +10182,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setInstallButtonState(mobileButton, false);
     }
     if (desktopButton) {
-      desktopButton.hidden = runningAsApp;
-      desktopButton.classList.toggle('is-ready', ready && !installed);
+      // O botão do menu do avatar é exclusivo do desktop. No mobile, a
+      // instalação continua sendo tratada pelo botão/fluxo próprio do celular.
+      desktopButton.hidden = runningAsApp || isMobile();
+      desktopButton.classList.toggle('is-ready', ready && !installed && !isMobile());
       setInstallButtonState(desktopButton, installed);
     }
   }
@@ -14587,6 +14589,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     item.addEventListener('toggle',function(){
       if(!item.open)return;
       faqItems.forEach(function(other){if(other!==item)other.open=false;});
+    });
+  });
+
+  // Mantém a aba Suporte visualmente selecionada enquanto o usuário interage
+  // com pesquisa, FAQs ou qualquer outra área interna da página. Alguns módulos
+  // da barra superior também atualizam o indicador compartilhado e podiam movê-lo
+  // de volta para a logo depois de um clique no conteúdo do Suporte.
+  page.addEventListener('click',function(){
+    window.requestAnimationFrame(function(){
+      if(document.body.classList.contains('support-page-active')&&!page.hidden)setSupportTab(true);
     });
   });
 

@@ -65,7 +65,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-home-pc-32x32.png?v=20260807-home-site-v1">
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-home-pc-16x16.png?v=20260807-home-site-v1">
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20260807-betv-logo-v4">
-<link rel="manifest" href="/site.webmanifest?rev=20260821-all-fixes-v1">
+<link rel="manifest" href="/site.webmanifest?rev=20260821-support-faq-tab-v2">
 <meta name="theme-color" content="#050816">
 <meta name="application-name" content="Billie Eilish TV">
 <meta name="mobile-web-app-capable" content="yes">
@@ -95,7 +95,7 @@ window.va = window.va || function () { (window.vaq = window.vaq || []).push(argu
   try{
     var slug=window.BETVLocale&&window.BETVLocale.slug;
     if(slug!=='en-us'&&slug!=='es'&&slug!=='fr')return;
-    var href='/assets/i18n/'+slug+'.json?rev=20260821-all-fixes-v1';
+    var href='/assets/i18n/'+slug+'.json?rev=20260821-support-faq-tab-v2';
     if(document.querySelector('link[data-betv-i18n-preload="'+slug+'"]'))return;
     var preload=document.createElement('link');
     preload.rel='preload';preload.as='fetch';preload.href=href;preload.setAttribute('data-betv-i18n-preload',slug);
@@ -179,12 +179,12 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260821-all-fixes-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260821-mobile-pwa-fs-tvbg-v1">
 <link rel="stylesheet" href="/assets/css/community.css?rev=20260820-mobile-install-white-bg-v2">
 <link rel="stylesheet" href="/assets/css/tv-session-widget.css?rev=20260821-desktop-tv-disconnect-v1">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"></script>
-<script defer src="/assets/js/i18n.js?rev=20260821-all-fixes-v1"></script>
-<script defer src="/assets/js/site.js?rev=20260821-all-fixes-v1"></script>
+<script defer src="/assets/js/i18n.js?rev=20260821-support-faq-tab-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260821-mobile-pwa-fs-tvbg-v1"></script>
 <script defer src="/assets/js/tv-session-widget.js?rev=20260821-tv-i18n-v1"></script>
 <script defer src="/assets/js/community.js?rev=20260820-avatar-ring-pwa-v1"></script>
 <script>
@@ -1042,8 +1042,8 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
           <div class="support-faq-answer"><p>Na televisão, abra billieilishtv.site/tv e use o código ou QR Code exibido na tela. Depois, no celular ou computador, abra o conteúdo, toque em transmitir para a TV e conclua a conexão.</p></div>
         </details>
         <details class="support-faq-item">
-          <summary><span>Como funcionam as legendas ao transmitir para a TV?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
-          <div class="support-faq-answer"><p>Quando o conteúdo possui legendas, a legenda usada na TV segue o idioma do site selecionado no seu perfil em Configurações. Se não existir uma legenda disponível naquele idioma para o conteúdo, ela pode não aparecer.</p></div>
+          <summary><span>Como funcionam as legendas no site e no app?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
+          <div class="support-faq-answer"><p>Quando houver legendas disponíveis, o idioma das legendas segue o idioma do site selecionado no seu perfil em Configurações. Se o conteúdo não tiver legendas disponíveis no idioma selecionado, elas podem não aparecer.</p></div>
         </details>
         <details class="support-faq-item">
           <summary><span>Por que alguns filmes podem não funcionar em Smart TVs antigas?</span><span class="support-faq-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
