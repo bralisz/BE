@@ -5549,8 +5549,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function vkVideoEmbedAttemptHost(attempt = 0) {
     const hosts = vkVideoEmbedHostOrder();
     const index = Math.max(0, Math.floor(Number(attempt) || 0));
-    // No maximo: vk.com -> vkvideo.ru -> uma ultima tentativa no vk.com.
-    return index === 1 ? hosts[1] : hosts[0];
+    // Mantem vk.com como rota principal. A primeira recuperacao repete o
+    // endpoint principal; vkvideo.ru so entra depois de um erro real da API.
+    // Isso evita trocar um video que estava carregando por uma tela de
+    // "Video indisponivel" do host alternativo.
+    return index >= 2 ? hosts[1] : hosts[0];
   }
 
   function shouldAutoFallbackVkEmbed() {
@@ -6224,14 +6227,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const scheduleVkFallback = () => {
       clearVkFallbackTimer();
       if (!shouldAutoFallbackVkEmbed() || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed || vkEmbedAttempt >= 2) return;
-      // Tempo suficiente para conexoes lentas/TVs antigas iniciarem o player,
-      // mas curto o bastante para escapar automaticamente da tela temporaria
-      // "This video is temporarily unavailable" do proprio VK.
-      const delay = vkEmbedAttempt === 0 ? 10000 : 11000;
-      vkFallbackTimer = window.setTimeout(() => {
-        if (activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed) return;
-        tryVkEmbedFallback();
-      }, delay);
+      // Nao troca mais de host apenas porque um cronometro venceu. Em alguns
+      // celulares, PCs e Smart TVs a API do VK demora (ou o autoplay e bloqueado)
+      // mesmo com o video valido. A troca automatica por tempo era justamente o
+      // que fazia a tela "Video indisponivel" aparecer de forma intermitente.
+      // O fallback agora so e acionado pelo evento de erro real do player VK.
     };
 
     const tryVkEmbedFallback = () => {
@@ -6480,7 +6480,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             try {
               vkPlayer.on('error', () => {
                 if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed) return;
-                tryVkEmbedFallback();
+                // Um erro real faz uma recuperacao controlada: primeiro recarrega
+                // vk.com uma vez e, apenas se houver outro erro, tenta vkvideo.ru.
+                // Tudo continua client-side, sem proxy/Function da Vercel.
+                window.clearTimeout(vkFallbackTimer);
+                vkFallbackTimer = window.setTimeout(() => {
+                  if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed) return;
+                  tryVkEmbedFallback();
+                }, 900);
               });
             } catch (_) {}
             const syncSubtitleFromApi = state => {
@@ -8042,21 +8049,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const scheduleVkEmbedFallback = token => {
       clearVkEmbedFallbackTimer();
       if (!shouldAutoFallbackVkEmbed() || activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken || vkPlaybackConfirmed) return;
+      // Smart TVs tambem nao devem trocar de host so porque o carregamento/API
+      // demorou. WebViews antigos frequentemente demoram mais de 10 segundos e
+      // a troca por tempo fazia surgir a pagina "Video indisponivel" do VK.
+      // O host alternativo fica reservado para um erro real informado pela API.
       if (vkEmbedAttempt >= 2) {
-        // Sem loop infinito: apos host principal, alternativo e uma ultima tentativa,
-        // apenas liberamos o iframe do VK para mostrar a resposta original.
-        vkFallbackTimer = window.setTimeout(() => {
-          if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken || vkPlaybackConfirmed) return;
-          setLoadingMessage('', false);
-          loading.hidden = true;
-        }, 10000);
-        return;
+        setLoadingMessage('', false);
+        loading.hidden = true;
       }
-      const delay = vkEmbedAttempt === 0 ? 10000 : 11000;
-      vkFallbackTimer = window.setTimeout(() => {
-        if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken || vkPlaybackConfirmed) return;
-        tryVkEmbedFallback(token);
-      }, delay);
     };
 
     const tryVkEmbedFallback = token => {
@@ -8164,8 +8164,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               overlay.classList.remove('is-vk-api-mode');
               vkApiReady = false;
               setPlayerInteractive(false);
-              if (!vkPlaybackConfirmed && shouldAutoFallbackVkEmbed()) tryVkEmbedFallback(token);
-              else loading.hidden = true;
+              if (!vkPlaybackConfirmed && shouldAutoFallbackVkEmbed()) {
+                clearVkEmbedFallbackTimer();
+                vkFallbackTimer = window.setTimeout(() => {
+                  if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken || vkPlaybackConfirmed) return;
+                  tryVkEmbedFallback(token);
+                }, 1100);
+              } else loading.hidden = true;
             });
           }
           readVkPlayerState();
@@ -8178,18 +8183,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           } else {
             vkApiReady = false;
             overlay.classList.remove('is-vk-api-mode');
-            setPlayerInteractive(false);
-            if (!vkPlaybackConfirmed && shouldAutoFallbackVkEmbed()) tryVkEmbedFallback(token);
-            else loading.hidden = true;
+            // Falha ao anexar a API nao prova que o video esta indisponivel.
+            // Mantemos o iframe atual em vez de navegar para outro host.
+            setLoadingMessage('', false);
+            loading.hidden = true;
           }
         }
       }).catch(() => {
         if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken) return;
         vkApiReady = false;
         overlay.classList.remove('is-vk-api-mode');
-        setPlayerInteractive(false);
-        if (!vkPlaybackConfirmed && shouldAutoFallbackVkEmbed()) scheduleVkEmbedFallback(token);
-        else loading.hidden = true;
+        // Se apenas a biblioteca JS do VK falhar/demorar, nao alteramos o src:
+        // o iframe pode continuar reproduzindo normalmente na TV.
+        setLoadingMessage('', false);
+        loading.hidden = true;
       });
     };
 
