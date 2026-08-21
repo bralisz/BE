@@ -1,29 +1,22 @@
-/* BETV Smart TV remote — desktop iOS-inspired floating controller */
-.betv-tv-session-widget{position:fixed;top:16px;left:16px;z-index:2200;width:260px;color:#fff;font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;filter:drop-shadow(0 16px 40px rgba(0,0,0,.34));transition:opacity .2s ease,transform .2s ease}
+/* BETV Smart TV — desktop iOS-inspired status widget */
+.betv-tv-session-widget{position:fixed;top:18px;left:22px;z-index:2200;width:260px;color:#fff;font-family:Inter,-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;filter:drop-shadow(0 16px 40px rgba(0,0,0,.34));transition:opacity .2s ease,transform .2s ease}
 .betv-tv-session-widget[hidden]{display:none!important}
-.betv-tv-session-shell{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.19);border-radius:24px;background:rgba(17,19,23,.74);box-shadow:inset 0 1px 0 rgba(255,255,255,.10);backdrop-filter:blur(26px) saturate(1.25);-webkit-backdrop-filter:blur(26px) saturate(1.25)}
+.betv-tv-session-shell{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.19);border-radius:24px;background:rgba(17,19,23,.82);box-shadow:inset 0 1px 0 rgba(255,255,255,.10);backdrop-filter:blur(26px) saturate(1.25);-webkit-backdrop-filter:blur(26px) saturate(1.25)}
 .betv-tv-session-art{position:absolute;inset:0;background-image:linear-gradient(90deg,rgba(7,8,10,.88) 0%,rgba(7,8,10,.72) 55%,rgba(7,8,10,.58) 100%),var(--betv-tv-cover,linear-gradient(135deg,#15181d,#08090b));background-position:center;background-size:cover;filter:saturate(.9);transform:scale(1.03);pointer-events:none}
-.betv-tv-session-summary{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:center;gap:8px;width:100%;min-height:74px;padding:13px 12px 13px 16px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.betv-tv-session-summary{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:center;gap:8px;width:100%;min-height:60px;padding:9px 12px 9px 16px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
 .betv-tv-session-copy{display:grid;gap:3px;min-width:0}
 .betv-tv-session-copy small{font-size:11px;font-weight:700;letter-spacing:.02em;color:rgba(255,255,255,.68)}
 .betv-tv-session-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:1.25;font-weight:750;text-shadow:0 1px 10px rgba(0,0,0,.55)}
-.betv-tv-session-chevron{display:grid;place-items:center;width:32px;height:32px;border:1px solid rgba(255,255,255,.12);border-radius:50%;background:rgba(12,13,16,.42);transition:transform .2s ease,background .2s ease}
+.betv-tv-session-chevron{display:grid;place-items:center;width:32px;height:32px;border:1px solid rgba(255,255,255,.12);border-radius:50%;background:rgba(12,13,16,.52);transition:transform .2s ease,background .2s ease}
 .betv-tv-session-chevron svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .betv-tv-session-widget.is-open .betv-tv-session-chevron{transform:rotate(180deg);background:rgba(255,255,255,.13)}
-.betv-tv-session-panel{position:relative;z-index:1;padding:0 12px 12px}
+.betv-tv-session-panel{position:relative;z-index:3;padding:11px 12px 12px;border-top:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.94)}
 .betv-tv-session-panel[hidden]{display:none!important}
-.betv-tv-session-controls{display:grid;grid-template-columns:1fr 1.08fr 1fr;gap:8px;padding:10px 2px 12px;border-top:1px solid rgba(255,255,255,.12)}
-.betv-tv-session-control{display:grid;place-items:center;height:48px;border:1px solid rgba(255,255,255,.14);border-radius:17px;background:rgba(20,22,27,.62);color:#fff;cursor:pointer;transition:transform .15s ease,background .15s ease}
-.betv-tv-session-control:hover{background:rgba(255,255,255,.15)}
-.betv-tv-session-control:active{transform:scale(.95)}
-.betv-tv-session-control:disabled{opacity:.45;cursor:wait}
-.betv-tv-session-control svg{width:22px;height:22px;fill:currentColor;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.betv-tv-session-control[data-action="pause"]{height:52px;border-radius:18px;background:rgba(255,255,255,.94);color:#111}
-.betv-tv-session-control[data-action="pause"]:hover{background:#fff}
-.betv-tv-session-disconnect{display:flex;align-items:center;justify-content:center;width:100%;height:42px;border:1px solid rgba(255,69,79,.28);border-radius:15px;background:rgba(255,59,69,.12);color:#ff5a64;font-size:13px;font-weight:750;cursor:pointer;transition:background .15s ease,transform .15s ease}
-.betv-tv-session-disconnect:hover{background:rgba(255,59,69,.19)}
+.betv-tv-session-disconnect{display:flex;align-items:center;justify-content:center;width:100%;height:44px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:#ff3b30;color:#fff;font-size:13px;font-weight:750;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.16);transition:background .15s ease,transform .15s ease,opacity .15s ease}
+.betv-tv-session-disconnect:hover{background:#ff453a}
 .betv-tv-session-disconnect:active{transform:scale(.98)}
+.betv-tv-session-disconnect:disabled{opacity:.55;cursor:wait}
 .betv-tv-session-widget.is-busy .betv-tv-session-summary{cursor:progress}
 body.drive-player-open .betv-tv-session-widget,body.player-open .betv-tv-session-widget{opacity:0;pointer-events:none;transform:translateY(-6px)}
 @media(max-width:999px),(pointer:coarse){.betv-tv-session-widget{display:none!important}}
-@media(prefers-reduced-motion:reduce){.betv-tv-session-widget,.betv-tv-session-chevron,.betv-tv-session-control,.betv-tv-session-disconnect{transition:none!important}}
+@media(prefers-reduced-motion:reduce){.betv-tv-session-widget,.betv-tv-session-chevron,.betv-tv-session-disconnect{transition:none!important}}

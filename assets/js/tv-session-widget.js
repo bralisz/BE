@@ -13,7 +13,7 @@
   let panel = null;
   let summary = null;
   let titleNode = null;
-  let playButton = null;
+  let statusNode = null;
   let disconnected = false;
   let busy = false;
   let paused = false;
@@ -28,6 +28,33 @@
   function desktopWidgetEnabled() {
     try { return window.matchMedia('(min-width: 1000px)').matches; }
     catch (_) { return Number(window.innerWidth || 0) >= 1000; }
+  }
+
+
+  function currentLocaleSlug() {
+    const raw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase();
+    if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
+    if (raw === 'es' || raw.startsWith('es-')) return 'es';
+    if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
+    return 'pt-br';
+  }
+
+  function widgetText() {
+    const texts = {
+      'pt-br': { watching: 'Assistindo na TV', empty: 'Escolha o que assistir' },
+      'en-us': { watching: 'Watching on TV', empty: 'Choose what to watch' },
+      es: { watching: 'Viendo en la TV', empty: 'Elige qué ver' },
+      fr: { watching: 'Lecture sur la TV', empty: 'Choisissez quoi regarder' }
+    };
+    return texts[currentLocaleSlug()] || texts['pt-br'];
+  }
+
+  function hasPlayableMedia(media) {
+    const source = media && typeof media === 'object' ? media : {};
+    return Boolean(String(
+      source.contentUrl || source.tvDriveUrl || source.mobileAppDriveUrl || source.driveUrl ||
+      source.vkUrl || source.videoUrl || source.embedUrl || source.url || source.title || ''
+    ).trim());
   }
 
   function mediaArtwork(media) {
@@ -48,6 +75,13 @@
     return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.7" height="14" rx="1" stroke="none"></rect><rect x="13.3" y="5" width="3.7" height="14" rx="1" stroke="none"></rect></svg>';
   }
 
+  function closeWidgetPanel() {
+    if (!widget || !widget.classList.contains('is-open')) return;
+    widget.classList.remove('is-open');
+    if (panel) panel.hidden = true;
+    if (summary) summary.setAttribute('aria-expanded', 'false');
+  }
+
   function ensureWidget() {
     if (widget) return widget;
     widget = document.createElement('aside');
@@ -59,23 +93,18 @@
       <div class="betv-tv-session-shell">
         <div class="betv-tv-session-art" aria-hidden="true"></div>
         <button class="betv-tv-session-summary" type="button" aria-expanded="false">
-          <span class="betv-tv-session-copy"><small>Reproduzindo na TV</small><strong class="betv-tv-session-title">Billie Eilish TV</strong></span>
+          <span class="betv-tv-session-copy"><small class="betv-tv-session-status notranslate" translate="no">Assistindo na TV</small><strong class="betv-tv-session-title notranslate" translate="no">Billie Eilish TV</strong></span>
           <span class="betv-tv-session-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg></span>
         </button>
         <div class="betv-tv-session-panel" hidden>
-          <div class="betv-tv-session-controls">
-            <button class="betv-tv-session-control" type="button" data-action="rewind" aria-label="Voltar 10 segundos">${iconMarkup('rewind')}</button>
-            <button class="betv-tv-session-control" type="button" data-action="pause" aria-label="Pausar">${iconMarkup('pause')}</button>
-            <button class="betv-tv-session-control" type="button" data-action="forward" aria-label="Avançar 10 segundos">${iconMarkup('forward')}</button>
-          </div>
           <button class="betv-tv-session-disconnect" type="button">Desconectar da TV</button>
         </div>
       </div>`;
     document.body.appendChild(widget);
     panel = widget.querySelector('.betv-tv-session-panel');
     summary = widget.querySelector('.betv-tv-session-summary');
+    statusNode = widget.querySelector('.betv-tv-session-status');
     titleNode = widget.querySelector('.betv-tv-session-title');
-    playButton = widget.querySelector('[data-action="pause"]');
 
     summary.addEventListener('click', () => {
       const open = !widget.classList.contains('is-open');
@@ -83,10 +112,15 @@
       panel.hidden = !open;
       summary.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
-    widget.querySelector('[data-action="rewind"]').addEventListener('click', () => remote('seek_relative', -10));
-    widget.querySelector('[data-action="forward"]').addEventListener('click', () => remote('seek_relative', 10));
-    playButton.addEventListener('click', () => remote(paused ? 'play' : 'pause', 0));
     widget.querySelector('.betv-tv-session-disconnect').addEventListener('click', disconnect);
+
+    // Ao interagir com qualquer outra área do site, recolhe o widget.
+    document.addEventListener('click', event => {
+      if (!widget || widget.hidden || !widget.classList.contains('is-open')) return;
+      if (widget.contains(event.target)) return;
+      closeWidgetPanel();
+    });
+
     return widget;
   }
 
@@ -100,11 +134,12 @@
     widget.hidden = !valid;
     if (!valid) return;
     const source = currentMedia && typeof currentMedia === 'object' ? currentMedia : {};
-    titleNode.textContent = String(source.title || 'Smart TV conectada');
+    const copy = widgetText();
+    const hasMedia = hasPlayableMedia(source);
+    statusNode.textContent = hasMedia ? copy.watching : copy.empty;
+    titleNode.textContent = hasMedia ? String(source.title || 'Billie Eilish TV') : 'Billie Eilish TV';
     const artwork = cleanCssUrl(mediaArtwork(source));
     widget.style.setProperty('--betv-tv-cover', artwork || 'linear-gradient(135deg,#171a20,#08090b)');
-    playButton.innerHTML = iconMarkup(paused ? 'play' : 'pause');
-    playButton.setAttribute('aria-label', paused ? 'Continuar reprodução' : 'Pausar');
     widget.classList.toggle('is-busy', busy);
     widget.querySelectorAll('button').forEach(button => { button.disabled = busy; });
   }
@@ -121,6 +156,7 @@
     currentMedia = null;
     disconnected = true;
     paused = false;
+    closeWidgetPanel();
     try {
       localStorage.removeItem(ACTIVE_SESSION_KEY);
       localStorage.removeItem(ACTIVE_CODE_KEY);
@@ -257,6 +293,7 @@
   window.addEventListener('storage', event => {
     if (event.key === ACTIVE_SESSION_KEY || event.key === CURRENT_MEDIA_KEY) loadActiveSession();
   });
+  window.addEventListener('be:i18n-ready', () => render());
   try {
     const desktopMedia = window.matchMedia('(min-width: 1000px)');
     const onDesktopChange = () => render();
