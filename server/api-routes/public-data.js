@@ -190,7 +190,7 @@ function sanitizeItem(collection, row) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? 4000 : 500);
   }
   if (Object.prototype.hasOwnProperty.call(source, 'streamingAvailability')) {
-    const allowedStreamingServices = new Set(['apple-tv', 'prime-video', 'paramount-plus', 'disney-plus']);
+    const allowedStreamingServices = new Set(['netflix', 'apple-tv', 'prime-video', 'paramount-plus', 'disney-plus']);
     const rawStreaming = Array.isArray(source.streamingAvailability)
       ? source.streamingAvailability
       : String(source.streamingAvailability || '').split(',');
@@ -199,7 +199,7 @@ function sanitizeItem(collection, row) {
       .filter(value => allowedStreamingServices.has(value))));
   }
   if (Object.prototype.hasOwnProperty.call(source, 'streamingLinks')) {
-    const allowedStreamingServices = new Set(['apple-tv', 'prime-video', 'paramount-plus', 'disney-plus']);
+    const allowedStreamingServices = new Set(['netflix', 'apple-tv', 'prime-video', 'paramount-plus', 'disney-plus']);
     const rawLinks = source.streamingLinks && typeof source.streamingLinks === 'object' && !Array.isArray(source.streamingLinks)
       ? source.streamingLinks
       : {};

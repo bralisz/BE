@@ -1,7 +1,7 @@
 /* Billie Eilish TV — service worker mínimo para instalação como app.
    O site continua sempre buscando os arquivos pela rede; nenhum conteúdo
    de vídeo, conta ou preferências é armazenado pelo service worker. */
-const SW_VERSION = '20260821-console-clean-v4';
+const SW_VERSION = '20260821-series-subtitles-netflix-v1';
 
 self.addEventListener('install', event => {
   self.skipWaiting();

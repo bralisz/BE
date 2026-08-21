@@ -1,3 +1,284 @@
+/* Billie Eilish TV production bundle — i18n + site + TV widget + community */
+;(function(){
+  'use strict';
+
+  var localeApi=window.BETVLocale||{slug:'pt-br',locale:'pt-BR',target:'pt'};
+  var slug=String(localeApi.slug||'pt-br').toLowerCase();
+  var locale=String(localeApi.locale||'pt-BR');
+  var target=String(localeApi.target||({'en-us':'en','es':'es','fr':'fr'}[slug]||'pt'));
+  var map=Object.create(null);
+  var readyResolve;
+  var ready=new Promise(function(resolve){readyResolve=resolve;});
+  var observer=null;
+  var queued=false;
+  var pendingRoots=[];
+  var translateTimer=0;
+  var translationBusy=false;
+  var missingTexts=new Set();
+  var translatedThisSession=new Set();
+  var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
+  var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
+  var PROTECTED_EXACT=new Set([
+    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Avocado','Eyelash','Blohsh','Discord','Google','Instagram','TikTok','Twitter / X','Spotify','YouTube',
+    'Apple TV','Prime Video','Paramount+','Disney+','Stripe','Supabase','CC BY-SA 4.0','LGPD','DMCA','HTTPS','BRL','USD',
+    'WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','HIT ME HARD AND SOFT','Happier Than Ever','dont smile at me','Guitar Songs',
+    'all the good girls go to hell','bad guy','Bellyache','BIRDS OF A FEATHER','Bored','bury a friend','CHIHIRO','everything i wanted',
+    'Guess','hostage','idontwannabeyouanymore','Lo Vas A Olvidar','Lost Cause','lovely','LUNCH','Male Fantasy','my future','NDA',
+    'Never Felt So Alone','No Time To Die','Ocean Eyes','ocean eyes','Therefore I Am','watch','What Was I Made For?',
+    "when the party's over",'xanny','you should see me in a crown','Your Power','THE GREATEST','SKINNY',"L'AMOUR DE MA VIE",
+    'Billie Bossa Nova','Getting Older','TV','bitches broken hearts','listen before i go','come out and play','One Less Lonely Girl',
+    'Have Yourself A Merry Little Christmas','localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
+  ]);
+  var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a']);
+  var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux']);
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v8-es-native-music-only';
+  var STATIC_REV='20260821-tv-faq-drive-v1';
+
+  function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
+  function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
+  function preserveWhitespace(raw,translated){
+    var leading=(String(raw).match(/^\s*/)||[''])[0];
+    var trailing=(String(raw).match(/\s*$/)||[''])[0];
+    return leading+translated+trailing;
+  }
+  function translateExact(value){
+    var key=normalize(value);
+    if(!key)return String(value||'');
+    return Object.prototype.hasOwnProperty.call(map,key)?map[key]:String(value||'');
+  }
+  function parentSkipped(node){
+    var element=node&&node.nodeType===1?node:node&&node.parentElement;
+    return Boolean(element&&element.closest&&element.closest(SKIP_SELECTOR));
+  }
+  function protectedText(value){
+    var key=normalize(value);
+    return PROTECTED_EXACT.has(key)||/^https?:\/\//i.test(key)||/^[@#][\w.-]+$/.test(key)||/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(key)||/^be_[a-z0-9_]+$/i.test(key);
+  }
+  function protectExact(value){
+    var key=normalize(value);
+    if(!key)return;
+    PROTECTED_EXACT.add(key);
+    map[key]=key;
+    missingTexts.delete(key);
+    translatedThisSession.delete(key);
+  }
+  function eligibleText(value){
+    var key=normalize(value);
+    if(!key||key.length<2||key.length>1800||!/\p{L}/u.test(key))return false;
+    if(protectedText(key))return false;
+    return true;
+  }
+  function rememberMissing(value){
+    if(slug==='pt-br'||isAdmin())return;
+    var key=normalize(value);
+    if(!eligibleText(key)||Object.prototype.hasOwnProperty.call(map,key)||translatedThisSession.has(key))return;
+    missingTexts.add(key);
+    scheduleMissingTranslation();
+  }
+  function translateTextNode(node){
+    if(!node||node.nodeType!==3||parentSkipped(node))return;
+    var raw=node.nodeValue||'';
+    var key=normalize(raw);
+    if(!eligibleText(key))return;
+    var translated=map[key];
+    if(translated&&translated!==key)node.nodeValue=preserveWhitespace(raw,translated);
+    else rememberMissing(key);
+  }
+  function translateAttributes(element){
+    if(!element||element.nodeType!==1||parentSkipped(element))return;
+    TRANSLATABLE_ATTRIBUTES.forEach(function(attribute){
+      if(!element.hasAttribute(attribute))return;
+      if(attribute==='value'&&!['BUTTON','INPUT'].includes(element.tagName))return;
+      var raw=element.getAttribute(attribute)||'';
+      var key=normalize(raw);
+      if(!eligibleText(key))return;
+      var translated=map[key];
+      if(translated&&translated!==raw)element.setAttribute(attribute,translated);
+      else rememberMissing(key);
+    });
+  }
+  function apply(root){
+    if(slug==='pt-br'||!root||isAdmin())return;
+    if(root.nodeType===3){translateTextNode(root);return;}
+    if(root.nodeType!==1&&root.nodeType!==9&&root.nodeType!==11)return;
+    if(root.nodeType===1)translateAttributes(root);
+    var walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT,{
+      acceptNode:function(node){
+        if(parentSkipped(node))return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var node;
+    while((node=walker.nextNode())){
+      if(node.nodeType===3)translateTextNode(node);
+      else translateAttributes(node);
+    }
+  }
+  function flushQueue(){
+    queued=false;
+    var roots=pendingRoots.splice(0,pendingRoots.length);
+    roots.forEach(apply);
+  }
+  function queueApply(root){
+    if(!root||isAdmin())return;
+    pendingRoots.push(root);
+    if(queued)return;
+    queued=true;
+    (window.requestAnimationFrame||window.setTimeout)(flushQueue,16);
+  }
+  function startObserver(){
+    if(slug==='pt-br'||observer||!document.documentElement||isAdmin())return;
+    observer=new MutationObserver(function(mutations){
+      mutations.forEach(function(mutation){
+        if(mutation.type==='characterData')queueApply(mutation.target);
+        mutation.addedNodes&&mutation.addedNodes.forEach(queueApply);
+        if(mutation.type==='attributes')queueApply(mutation.target);
+      });
+    });
+    observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:TRANSLATABLE_ATTRIBUTES});
+  }
+  function interpolation(value,variables){
+    return String(value||'').replace(/\{([a-zA-Z0-9_]+)\}/g,function(_,key){
+      return Object.prototype.hasOwnProperty.call(variables||{},key)?String(variables[key]):_;
+    });
+  }
+  function t(source,variables){return interpolation(translateExact(source),variables||{});}
+  function recordTranslation(record){
+    if(!record||typeof record!=='object'||slug==='pt-br')return record;
+    var translations=record.translations&&typeof record.translations==='object'?record.translations:{};
+    var localized=translations[slug]||translations[target]||null;
+    if(!localized||typeof localized!=='object')return record;
+    var merged=Object.assign({},record,localized);
+    var collection=String(record.collection||'').toLowerCase();
+    var sectionId=String(record.sectionId||'').trim();
+    var sectionName=String(record.sectionName||record.sourceSectionTitle||'').trim().toLowerCase();
+    var explicit=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true';
+    var keepTitle=['es','fr'].includes(slug)&&(explicit||['albums','albuns','álbuns'].includes(collection)||(collection==='videos'&&(MUSIC_TITLE_SECTION_IDS.has(sectionId)||MUSIC_TITLE_SECTION_NAMES.has(sectionName))));
+    if(keepTitle){
+      if(Object.prototype.hasOwnProperty.call(record,'title')){merged.title=record.title;protectExact(record.title);}
+      if(Object.prototype.hasOwnProperty.call(record,'name')){merged.name=record.name;protectExact(record.name);}
+    }
+    return merged;
+  }
+  function regionalCurrency(){
+    var value=window.BETVRegional&&window.BETVRegional.currency;
+    return String(value||'BRL').toUpperCase()==='USD'?'USD':'BRL';
+  }
+  function currencyFormatter(currency){return new Intl.NumberFormat(locale,{style:'currency',currency:currency||regionalCurrency()});}
+  function loadDynamicCache(){
+    try{
+      var cached=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
+      if(cached&&typeof cached==='object')Object.keys(cached).forEach(function(key){if(typeof cached[key]==='string')map[key]=cached[key];});
+    }catch(_){ }
+  }
+  function saveDynamicCache(){
+    try{
+      var dynamic={};
+      translatedThisSession.forEach(function(key){if(map[key])dynamic[key]=map[key];});
+      var previous=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
+      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},previous&&typeof previous==='object'?previous:{},dynamic)));
+    }catch(_){ }
+  }
+  function translationEndpoint(){
+    var base=String((window.BE_SUPABASE_CONFIG&&window.BE_SUPABASE_CONFIG.url)||(window.BE_SITE_CONFIG&&window.BE_SITE_CONFIG.supabaseUrl)||'https://cxkevnnxibhezvospkce.supabase.co').replace(/\/$/,'');
+    return base+'/functions/v1/translate-content-record';
+  }
+  function publishableKey(){return String((window.BE_SUPABASE_CONFIG&&window.BE_SUPABASE_CONFIG.publishableKey)||(window.BE_SITE_CONFIG&&window.BE_SITE_CONFIG.supabasePublishableKey)||'');}
+  function takeBatch(){
+    var batch=[];
+    var chars=0;
+    missingTexts.forEach(function(text){
+      if(batch.length>=60||chars+text.length>9000)return;
+      batch.push(text);chars+=text.length;
+    });
+    batch.forEach(function(text){missingTexts.delete(text);translatedThisSession.add(text);});
+    return batch;
+  }
+  async function translateMissingNow(){
+    if(translationBusy||slug==='pt-br'||isAdmin()||!missingTexts.size)return;
+    var batch=takeBatch();
+    if(!batch.length)return;
+    translationBusy=true;
+    try{
+      var key=publishableKey();
+      var headers={'Content-Type':'application/json'};
+      if(key)headers.apikey=key;
+      var response=await fetch(translationEndpoint(),{
+        method:'POST',
+        mode:'cors',
+        credentials:'omit',
+        headers:headers,
+        body:JSON.stringify({mode:'texts',locale:slug,style:'informal-native',texts:batch})
+      });
+      var payload=await response.json().catch(function(){return null;});
+      if(!response.ok||!payload||!Array.isArray(payload.translations))throw new Error(payload&&payload.error||'translation_failed');
+      payload.translations.forEach(function(item,index){
+        var source=batch[index];
+        var translated=String(item||'').trim();
+        if(source&&translated){
+          map[source]=translated;
+          map[translated]=translated;
+          translatedThisSession.add(translated);
+        }
+      });
+      saveDynamicCache();
+      apply(document.documentElement);
+    }catch(error){
+      batch.forEach(function(text){translatedThisSession.delete(text);});
+      (void error);
+    }finally{
+      translationBusy=false;
+      if(missingTexts.size)scheduleMissingTranslation(800);
+    }
+  }
+  function scheduleMissingTranslation(delay){
+    if(slug==='pt-br'||isAdmin())return;
+    clearTimeout(translateTimer);
+    translateTimer=setTimeout(translateMissingNow,Number(delay||350));
+  }
+  async function load(){
+    if(slug==='pt-br'||isAdmin()){
+      window.BETVI18n=api;
+      readyResolve(api);
+      return;
+    }
+    loadDynamicCache();
+    try{
+      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV),{credentials:'same-origin',cache:'force-cache'});
+      if(response.ok){
+        var payload=await response.json();
+        if(payload&&typeof payload==='object')Object.keys(payload).forEach(function(key){map[key]=payload[key];});
+      }
+    }catch(error){(void error);}
+    window.BETVI18n=api;
+    apply(document.documentElement);
+    startObserver();
+    readyResolve(api);
+    try{window.dispatchEvent(new CustomEvent('be:i18n-ready',{detail:api}));}catch(_){ }
+  }
+
+  var api={
+    slug:slug,
+    locale:locale,
+    target:target,
+    ready:ready,
+    t:t,
+    apply:apply,
+    translateExact:translateExact,
+    protectExact:protectExact,
+    localizeRecord:recordTranslation,
+    currency:regionalCurrency,
+    switchLanguage:function(nextSlug){return Boolean(window.BETVLocale&&window.BETVLocale.switchTo&&window.BETVLocale.switchTo(nextSlug));},
+    formatCurrency:function(cents,currency){return currencyFormatter(currency).format(Number(cents||0)/100);}
+  };
+  window.BETVI18n=api;
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});
+  else load();
+})();
+
+;
+/* bundled: site.js */
 ;(function(){
   'use strict';
   window.BETVGuestAccess=window.BETVGuestAccess||{
@@ -1178,7 +1459,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       // que abas móveis mantidas em segundo plano continuem exibindo uma lista
       // antiga depois de uma alteração no Admin. A coleção `featured` continua
       // protegida pelo cache da CDN na API pública.
-      if (name === 'featured') continue;
+      if (name === 'featured' && !featuredFresh) continue;
       const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
       publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt });
     }
@@ -3750,6 +4031,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   const MOVIE_STREAMING_SERVICES = Object.freeze({
+    'netflix': { label:'Netflix', url:'https://www.netflix.com/' },
     'apple-tv': { label:'Apple TV', url:'https://tv.apple.com/' },
     'prime-video': { label:'Prime Video', url:'https://www.primevideo.com/' },
     'paramount-plus': { label:'Paramount+', url:'https://www.paramountplus.com/' },
@@ -6831,7 +7113,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setLoading('Tentando uma rota alternativa do Google Drive...');
       video.pause();
       // O endpoint apenas encontra a URL final do Google e responde com
-      // redirecionamento; o arquivo de vídeo não é retransmitido pela Vercel.
+      // redirecionamento; o arquivo de vídeo não é retransmitido pelo servidor do site.
       video.src = googleDriveStreamUrl(activeFileId, activeResourceKey);
       video.load();
       requestPlayback();
@@ -6949,7 +7231,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
 
       // Tenta primeiro a entrega direta pelo Google Drive. Isso evita que o
-      // arquivo de vídeo seja retransmitido por /api/drive-media na Vercel.
+      // arquivo de vídeo seja retransmitido pelo servidor do site.
       tryDirectStream();
       window.setTimeout(() => {
         if (token === openingToken && !overlay.hidden) showControls(false);
@@ -8865,7 +9147,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const playableUrl = safeUrlValue(contentUrl);
     const hasContentLink = playableUrl !== '#';
-    const castableCollection = ['videos', 'movies'].includes(collection || 'videos');
+    const castableCollection = ['videos', 'movies', 'series'].includes(collection || 'videos');
     cast.hidden = !(hasContentLink && castableCollection);
     if (!cast.hidden) cast.removeAttribute('hidden'); else cast.setAttribute('hidden', '');
     play.innerHTML = hasContentLink
@@ -15490,10 +15772,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   var ENDPOINT = '/api/deployment-version';
   // A versão é compartilhada em localStorage entre abas e reloads. Cada navegador
-  // consulta a Vercel no máximo uma vez por hora em uso normal.
-  var CHECK_INTERVAL = 60 * 60 * 1000;
-  var MIN_CHECK_GAP_MS = 30 * 60 * 1000;
-  var SHARED_CHECK_TTL_MS = 60 * 60 * 1000;
+  // consulta a versão do site no máximo uma vez a cada duas horas em uso normal.
+  var CHECK_INTERVAL = 2 * 60 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 60 * 60 * 1000;
+  var SHARED_CHECK_TTL_MS = 2 * 60 * 60 * 1000;
   var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV2';
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
@@ -18219,3 +18501,821 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bootRestore();
   }
 })();
+
+;
+/* bundled: tv-session-widget.js */
+(() => {
+  'use strict';
+
+  const ACTIVE_SESSION_KEY = 'beTvActiveSessionId';
+  const ACTIVE_CODE_KEY = 'beTvActivePairCode';
+  const CURRENT_MEDIA_KEY = 'beTvCurrentMedia';
+  const PENDING_MEDIA_KEY = 'beTvPendingMedia';
+
+  let activeSessionId = '';
+  let activeCode = '';
+  let currentMedia = null;
+  let widget = null;
+  let panel = null;
+  let summary = null;
+  let titleNode = null;
+  let statusNode = null;
+  let disconnected = false;
+  let busy = false;
+  let paused = false;
+
+  function readJson(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+
+  function desktopWidgetEnabled() {
+    try { return window.matchMedia('(min-width: 1000px)').matches; }
+    catch (_) { return Number(window.innerWidth || 0) >= 1000; }
+  }
+
+
+  function currentLocaleSlug() {
+    const raw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase();
+    if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
+    if (raw === 'es' || raw.startsWith('es-')) return 'es';
+    if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
+    return 'pt-br';
+  }
+
+  function widgetText() {
+    const texts = {
+      'pt-br': { watching: 'Assistindo na TV', empty: 'Escolha algo para assistir na TV', disconnect: 'Desconectar da TV', aria: 'Controle da Smart TV conectada' },
+      'en-us': { watching: 'Watching on TV', empty: 'Choose something to watch on TV', disconnect: 'Disconnect from TV', aria: 'Connected Smart TV controls' },
+      es: { watching: 'Viendo en la TV', empty: 'Elige algo para ver en la TV', disconnect: 'Desconectar de la TV', aria: 'Controles de la Smart TV conectada' },
+      fr: { watching: 'Lecture sur la TV', empty: 'Choisissez quelque chose à regarder à la TV', disconnect: 'Déconnecter la TV', aria: 'Commandes de la Smart TV connectée' }
+    };
+    return texts[currentLocaleSlug()] || texts['pt-br'];
+  }
+
+  function hasPlayableMedia(media) {
+    const source = media && typeof media === 'object' ? media : {};
+    return Boolean(String(
+      source.contentUrl || source.tvDriveUrl || source.mobileAppDriveUrl || source.driveUrl ||
+      source.vkUrl || source.videoUrl || source.embedUrl || source.url || ''
+    ).trim());
+  }
+
+  function mediaArtwork(media) {
+    const source = media && typeof media === 'object' ? media : {};
+    return String(source.bannerUrl || source.imageUrl || source.logoUrl || '').trim();
+  }
+
+  function cleanCssUrl(value) {
+    const raw = String(value || '').trim();
+    if (!/^https?:\/\//i.test(raw) && !/^\//.test(raw)) return '';
+    return `url("${raw.replace(/["\\\n\r]/g, char => `\\${char}`)}")`;
+  }
+
+  function iconMarkup(kind) {
+    if (kind === 'rewind') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 7 7 11l4 4" fill="none"></path><path d="M8 11h6a5 5 0 1 1-4.5 7.2" fill="none"></path><text x="10.5" y="14.7" font-size="6.2" stroke="none" text-anchor="middle">10</text></svg>';
+    if (kind === 'forward') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 7 4 4-4 4" fill="none"></path><path d="M16 11h-6a5 5 0 1 0 4.5 7.2" fill="none"></path><text x="13.5" y="14.7" font-size="6.2" stroke="none" text-anchor="middle">10</text></svg>';
+    if (kind === 'play') return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 5.7 18 12l-9.8 6.3Z" stroke="none"></path></svg>';
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.7" height="14" rx="1" stroke="none"></rect><rect x="13.3" y="5" width="3.7" height="14" rx="1" stroke="none"></rect></svg>';
+  }
+
+  function closeWidgetPanel() {
+    if (!widget || !widget.classList.contains('is-open')) return;
+    widget.classList.remove('is-open');
+    if (panel) panel.hidden = true;
+    if (summary) summary.setAttribute('aria-expanded', 'false');
+  }
+
+  function ensureWidget() {
+    if (widget) return widget;
+    widget = document.createElement('aside');
+    widget.className = 'betv-tv-session-widget';
+    widget.id = 'betvTvSessionWidget';
+    widget.hidden = true;
+    widget.setAttribute('aria-label', widgetText().aria);
+    widget.innerHTML = `
+      <div class="betv-tv-session-shell">
+        <div class="betv-tv-session-art" aria-hidden="true"></div>
+        <button class="betv-tv-session-summary" type="button" aria-expanded="false">
+          <span class="betv-tv-session-copy"><small class="betv-tv-session-status notranslate" translate="no">Assistindo na TV</small><strong class="betv-tv-session-title notranslate" translate="no">Billie Eilish TV</strong></span>
+          <span class="betv-tv-session-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"></path></svg></span>
+        </button>
+        <div class="betv-tv-session-panel" hidden>
+          <button class="betv-tv-session-disconnect" type="button">Desconectar da TV</button>
+        </div>
+      </div>`;
+    document.body.appendChild(widget);
+    panel = widget.querySelector('.betv-tv-session-panel');
+    summary = widget.querySelector('.betv-tv-session-summary');
+    statusNode = widget.querySelector('.betv-tv-session-status');
+    titleNode = widget.querySelector('.betv-tv-session-title');
+
+    summary.addEventListener('click', () => {
+      const open = !widget.classList.contains('is-open');
+      widget.classList.toggle('is-open', open);
+      panel.hidden = !open;
+      summary.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    widget.querySelector('.betv-tv-session-disconnect').addEventListener('click', disconnect);
+
+    // Ao interagir com qualquer outra área do site, recolhe o widget.
+    document.addEventListener('click', event => {
+      if (!widget || widget.hidden || !widget.classList.contains('is-open')) return;
+      if (widget.contains(event.target)) return;
+      closeWidgetPanel();
+    });
+
+    return widget;
+  }
+
+  function render() {
+    if (!desktopWidgetEnabled()) {
+      if (widget) widget.hidden = true;
+      return;
+    }
+    ensureWidget();
+    const valid = Boolean(activeSessionId && !disconnected);
+    widget.hidden = !valid;
+    if (!valid) return;
+    const source = currentMedia && typeof currentMedia === 'object' ? currentMedia : {};
+    const copy = widgetText();
+    widget.setAttribute('aria-label', copy.aria);
+    const disconnectButton = widget.querySelector('.betv-tv-session-disconnect');
+    if (disconnectButton) disconnectButton.textContent = copy.disconnect;
+    const hasMedia = hasPlayableMedia(source);
+    widget.classList.toggle('is-empty', !hasMedia);
+    if (hasMedia) {
+      statusNode.hidden = false;
+      statusNode.textContent = copy.watching;
+      titleNode.textContent = String(source.title || 'Billie Eilish TV');
+    } else {
+      statusNode.hidden = true;
+      statusNode.textContent = '';
+      titleNode.textContent = copy.empty;
+    }
+    const artwork = cleanCssUrl(mediaArtwork(source));
+    widget.style.setProperty('--betv-tv-cover', hasMedia && artwork ? artwork : 'linear-gradient(135deg,#171a20,#08090b)');
+    widget.classList.toggle('is-busy', busy);
+    widget.querySelectorAll('button').forEach(button => { button.disabled = busy; });
+  }
+
+  function persistMedia(media) {
+    currentMedia = media && typeof media === 'object' ? media : null;
+    if (!currentMedia) return;
+    try { localStorage.setItem(CURRENT_MEDIA_KEY, JSON.stringify(currentMedia)); } catch (_) {}
+  }
+
+  function clearSession() {
+    activeSessionId = '';
+    activeCode = '';
+    currentMedia = null;
+    disconnected = true;
+    paused = false;
+    closeWidgetPanel();
+    try {
+      localStorage.removeItem(ACTIVE_SESSION_KEY);
+      localStorage.removeItem(ACTIVE_CODE_KEY);
+      localStorage.removeItem(CURRENT_MEDIA_KEY);
+      localStorage.removeItem(PENDING_MEDIA_KEY);
+    } catch (_) {}
+    render();
+  }
+
+  async function clientReady() {
+    if (!window.beBackend) return null;
+    await window.beBackend.ready;
+    return window.beBackend.client || null;
+  }
+
+  async function loadActiveSession() {
+    disconnected = false;
+    const storedId = String(localStorage.getItem(ACTIVE_SESSION_KEY) || '').trim();
+    const cachedMedia = readJson(CURRENT_MEDIA_KEY);
+    if (cachedMedia) currentMedia = cachedMedia;
+    if (storedId) {
+      activeSessionId = storedId;
+      activeCode = String(localStorage.getItem(ACTIVE_CODE_KEY) || '');
+      render();
+    }
+
+    try {
+      const client = await clientReady();
+      if (!client || !window.beBackend?.auth?.currentUser) { if (!storedId) clearSession(); return null; }
+      const { data, error } = await client.rpc('tv_my_sessions');
+      if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
+      if (!rows.length) { clearSession(); return null; }
+      const row = rows.find(item => String(item.session_id || '') === storedId) || rows[0];
+      activeSessionId = String(row.session_id || '');
+      activeCode = String(row.pairing_code || activeCode || '');
+      disconnected = false;
+      try {
+        localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
+        if (activeCode) localStorage.setItem(ACTIVE_CODE_KEY, activeCode);
+      } catch (_) {}
+      const remoteMedia = row.current_media && typeof row.current_media === 'object' ? row.current_media : null;
+      if (remoteMedia && Object.keys(remoteMedia).length) {
+        // O cache local preserva a arte da capa para sessões antigas em que o
+        // payload da TV ainda não incluía imageUrl/bannerUrl.
+        const cached = currentMedia && typeof currentMedia === 'object' ? currentMedia : {};
+        persistMedia({ ...cached, ...remoteMedia, imageUrl: remoteMedia.imageUrl || cached.imageUrl || '', bannerUrl: remoteMedia.bannerUrl || cached.bannerUrl || '' });
+      }
+      render();
+      return row;
+    } catch (error) {
+      (void error);
+      if (!storedId) clearSession();
+      return null;
+    }
+  }
+
+  async function sendMedia(media) {
+    if (busy) return false;
+    const source = media && typeof media === 'object' ? { ...media } : null;
+    if (!source || !String(source.contentUrl || '').trim()) return false;
+    if (!activeSessionId) await loadActiveSession();
+    if (!activeSessionId) return false;
+    busy = true;
+    paused = false;
+    render();
+    try {
+      const client = await clientReady();
+      if (!client) return false;
+      delete source.remoteControl;
+      const { error } = await client.rpc('tv_send_media', { p_session_id: activeSessionId, p_media: source });
+      if (error) throw error;
+      persistMedia(source);
+      try { localStorage.removeItem(PENDING_MEDIA_KEY); } catch (_) {}
+      disconnected = false;
+      render();
+      try { window.dispatchEvent(new CustomEvent('be:tv-media-sent', { detail: { media: source } })); } catch (_) {}
+      return true;
+    } catch (error) {
+      (void error);
+      clearSession();
+      return false;
+    } finally {
+      busy = false;
+      render();
+    }
+  }
+
+  async function remote(action, value) {
+    if (busy || !activeSessionId || !currentMedia) return false;
+    busy = true;
+    render();
+    const nextPaused = action === 'pause' ? true : action === 'play' ? false : paused;
+    try {
+      const client = await clientReady();
+      if (!client) return false;
+      const nonce = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const payload = { ...currentMedia, remoteControl: { action: String(action || ''), value: Number(value) || 0, nonce } };
+      const { error } = await client.rpc('tv_send_media', { p_session_id: activeSessionId, p_media: payload });
+      if (error) throw error;
+      currentMedia = payload;
+      paused = nextPaused;
+      try { localStorage.setItem(CURRENT_MEDIA_KEY, JSON.stringify(currentMedia)); } catch (_) {}
+      return true;
+    } catch (error) {
+      (void error);
+      return false;
+    } finally {
+      busy = false;
+      render();
+    }
+  }
+
+  async function disconnect() {
+    if (busy || !activeSessionId) return;
+    busy = true;
+    render();
+    try {
+      const client = await clientReady();
+      if (client) await client.rpc('tv_disconnect_session', { p_session_id: activeSessionId });
+    } catch (error) {
+      (void error);
+    }
+    clearSession();
+    busy = false;
+  }
+
+  window.BETVTVSession = { loadActiveSession, sendMedia, disconnect, remote };
+
+  Promise.resolve(window.beBackend?.ready)
+    .catch(() => null)
+    .then(() => loadActiveSession());
+
+  window.addEventListener('storage', event => {
+    if (event.key === ACTIVE_SESSION_KEY || event.key === CURRENT_MEDIA_KEY) loadActiveSession();
+  });
+  window.addEventListener('be:i18n-ready', () => render());
+  try {
+    const desktopMedia = window.matchMedia('(min-width: 1000px)');
+    const onDesktopChange = () => render();
+    if (typeof desktopMedia.addEventListener === 'function') desktopMedia.addEventListener('change', onDesktopChange);
+    else if (typeof desktopMedia.addListener === 'function') desktopMedia.addListener(onDesktopChange);
+  } catch (_) {}
+})();
+
+;
+/* bundled: community.js */
+;(function(){
+  'use strict';
+  if(String(location.hash||'').startsWith('#/admin')) return;
+
+  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null)};
+  var page=null;
+  var mobileMenu=null;
+  var preferenceRequest=0;
+
+  function t(source,vars){
+    if(window.BETVI18n&&typeof window.BETVI18n.t==='function')return window.BETVI18n.t(source,vars||{});
+    return String(source||'').replace(/\{([a-zA-Z0-9_]+)\}/g,function(_,key){return Object.prototype.hasOwnProperty.call(vars||{},key)?String(vars[key]):_;});
+  }
+  function applyI18n(root){if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(root||document);}
+  function currentUser(){return window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;}
+  function mediaUrl(value){var raw=String(value||'').trim();return raw&&window.beMediaUrl?window.beMediaUrl(raw):raw;}
+  function validUuid(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));}
+  function numericPublicId(value){
+    var text=String(value||'video').trim();
+    if(/^\d{8}$/.test(text))return text;
+    var hash=2166136261;
+    for(var index=0;index<text.length;index+=1){hash^=text.charCodeAt(index);hash=Math.imul(hash,16777619);}
+    return String(10000000+((hash>>>0)%90000000));
+  }
+  function rankingPreferenceKey(userId){return 'beCommunityRankingsPublic:'+String(userId||'guest');}
+  function readRankingPreference(userId){
+    try{var value=localStorage.getItem(rankingPreferenceKey(userId));if(value==='false')return false;if(value==='true')return true;}catch(_){ }
+    return true;
+  }
+  function writeRankingPreference(userId,value){try{localStorage.setItem(rankingPreferenceKey(userId),value?'true':'false');}catch(_){ }}
+  function setHomeTab(tab){try{window.dispatchEvent(new CustomEvent('be:set-home-tab',{detail:{tab:String(tab||'home')}}));}catch(_){ }}
+
+  function normalizeCommunityTag(value){
+    var normalized=String(value||'').trim().toLowerCase();
+    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'?normalized:'';
+  }
+  function communityTagMeta(value){
+    var tag=normalizeCommunityTag(value);
+    if(tag==='avocado')return {key:'avocado',label:'Avocado',className:'is-avocado'};
+    if(tag==='eyelash')return {key:'eyelash',label:'Eyelash',className:'is-eyelash'};
+    if(tag==='blohsh')return {key:'blohsh',label:'Blohsh',className:'is-blohsh'};
+    if(tag==='billie_fan')return {key:'billie_fan',label:t('Fã da Billie'),className:'is-billie-fan'};
+    return null;
+  }
+  function communityTagMarkup(value){
+    var meta=communityTagMeta(value);
+    if(!meta)return '';
+    return '<span class="community-award-tag '+meta.className+' notranslate" data-i18n-ignore translate="no">'+meta.label+'</span>';
+  }
+
+  async function loadCommunityOngBanner(){
+    var spotlight=document.getElementById('communityOngSpotlight');
+    var image=document.getElementById('communityOngSpotlightImage');
+    if(!spotlight||!image)return;
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var dataApi=window.beBackend&&window.beBackend.data;
+      if(!dataApi||typeof dataApi.get!=='function')return;
+      var settings=await dataApi.get('settings','ong');
+      var raw=String(settings&&settings.bannerUrl||'').trim();
+      if(!raw)return;
+      var banner=mediaUrl(raw);
+      if(!banner||banner==='#')return;
+      image.src=banner;
+      image.addEventListener('load',function(){spotlight.hidden=false;},{once:true});
+      image.addEventListener('error',function(){spotlight.hidden=true;image.removeAttribute('src');},{once:true});
+      if(image.complete&&image.naturalWidth>0)spotlight.hidden=false;
+    }catch(_){spotlight.hidden=true;}
+  }
+
+  function createPage(){
+    if(document.getElementById('communityPage')){page=document.getElementById('communityPage');return page;}
+    var main=document.querySelector('body > main');
+    if(!main)return null;
+    page=document.createElement('section');
+    page.id='communityPage';
+    page.className='community-page';
+    page.hidden=true;
+    page.setAttribute('aria-label','Comunidade dos Avocados');
+    page.innerHTML=''
+      +'<div class="community-page-inner">'
+      +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/assets/images/community/community-hero-banner.jpg" alt="Banner da comunidade dos Avocados" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
+      +  '<div class="community-content-shell">'
+      +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
+      +    '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
+      +    '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
+      +    '<section class="community-section"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2>Perfis em destaque</h2><p class="community-section-subtitle">Compartilhe seu perfil para receber curtidas e aparecer no ranking.</p></div><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado notranslate" data-i18n-ignore translate="no">Avocado</span></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash notranslate" data-i18n-ignore translate="no">Eyelash</span></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh notranslate" data-i18n-ignore translate="no">Blohsh</span></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
+      +    '<div class="community-supporters-cta-wrap"><button class="community-supporters-cta" id="communitySupportersButton" type="button">Ver fãs que apoiam o site</button></div>'
+      +    '<section class="community-ong-spotlight" id="communityOngSpotlight" hidden aria-label="Apoie uma ONG"><div class="community-ong-spotlight-frame"><img id="communityOngSpotlightImage" alt="Apoie uma ONG" decoding="async"><div class="community-ong-spotlight-overlay" aria-hidden="true"></div><a class="community-ong-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a></div></section>'
+      +  '</div>'
+      +'</div>';
+    main.appendChild(page);
+    page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
+    var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
+    var rulesDetails=page.querySelector('.community-rules-details');
+    var rulesButton=page.querySelector('.community-rules-button');
+    if(rulesDetails&&rulesButton)rulesButton.addEventListener('click',function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      rulesDetails.open=!rulesDetails.open;
+      document.body.classList.add('community-page-active');
+      page.hidden=false;
+      setHomeTab('community');
+    });
+    page.addEventListener('click',function(event){
+      var interactive=event.target&&event.target.closest?event.target.closest('a,button,summary,input,select,textarea,[role="button"],.video-card,.community-ranking-row'):null;
+      if(interactive)return;
+      event.preventDefault();
+      event.stopPropagation();
+      document.body.classList.add('community-page-active');
+      page.hidden=false;
+      setHomeTab('community');
+    });
+    loadCommunityOngBanner();
+    applyI18n(page);
+    return page;
+  }
+
+  function setCommunityNavActive(active){
+    var communityButton=document.querySelector('[data-community-tab]');
+    if(communityButton){communityButton.classList.toggle('active',Boolean(active));if(active){communityButton.setAttribute('aria-current','page');communityButton.setAttribute('aria-pressed','true');setHomeTab('community');}else{communityButton.removeAttribute('aria-current');communityButton.setAttribute('aria-pressed','false');}}
+    document.querySelectorAll('[data-mobile-destination]').forEach(function(button){
+      if(button.dataset.mobileDestination==='community'){
+        button.classList.toggle('active',Boolean(active));
+        button.setAttribute('aria-current',active?'page':'false');
+      }else if(active){
+        button.classList.remove('active');
+        button.setAttribute('aria-current','false');
+      }
+    });
+  }
+
+  function toggleCatalogVisibility(showCommunity){
+    function rememberAndHide(node){
+      if(!node)return;
+      // A Comunidade pode reaplicar esta proteção ao focar/digitar na pesquisa.
+      // Guarde o estado original apenas na primeira vez; sobrescrever o snapshot
+      // enquanto o catálogo já está oculto fazia ele continuar escondido ao voltar.
+      if(!Object.prototype.hasOwnProperty.call(node.dataset||{},'communityPrevHidden')){
+        node.dataset.communityPrevHidden=node.hidden?'1':'0';
+      }
+      node.hidden=true;
+      node.style.setProperty('display','none','important');
+    }
+    function restoreNode(node){
+      if(!node)return;
+      if(Object.prototype.hasOwnProperty.call(node.dataset||{},'communityPrevHidden')){
+        node.hidden=node.dataset.communityPrevHidden==='1';
+        delete node.dataset.communityPrevHidden;
+      }
+      node.style.removeProperty('display');
+    }
+    var main=document.querySelector('body > main');
+    if(main){
+      Array.prototype.slice.call(main.children||[]).forEach(function(child){
+        if(child===page){
+          child.hidden=!showCommunity;
+          if(showCommunity)child.style.setProperty('display','block','important');
+          else child.style.removeProperty('display');
+          return;
+        }
+        if(showCommunity)rememberAndHide(child);
+        else restoreNode(child);
+      });
+    }
+    var catalog=document.getElementById('dynamicSections');
+    if(catalog){
+      if(showCommunity)rememberAndHide(catalog);
+      else restoreNode(catalog);
+    }
+  }
+
+  function rememberCatalogHomeView(){
+    var view=String(document.body.dataset.homeView||'').trim().toLowerCase();
+    if(view&&view!=='community')state.catalogHomeView=view;
+  }
+  function catalogTabForView(view){
+    view=String(view||'home').toLowerCase();
+    if(view==='films'||view==='movies'||view==='series')return 'films';
+    if(view==='videos')return 'videos';
+    return 'home';
+  }
+
+  function closeCommunity(resetView,tabAfter){
+    if(document.body.classList.contains('community-page-active')){
+      document.body.classList.remove('community-page-active');
+      toggleCatalogVisibility(false);
+      if(page)page.hidden=true;
+    }
+    setCommunityNavActive(false);
+    if(resetView!==false&&document.body.dataset.homeView==='community')document.body.dataset.homeView=state.catalogHomeView||'home';
+    if(tabAfter)setHomeTab(tabAfter);
+  }
+
+  function establishCatalogBase(){
+    if(document.body.classList.contains('community-page-active'))return;
+    var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('donate-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active');
+    if(!dedicated)return;
+    var logo=document.getElementById('logoBtn');
+    if(logo){logo.dataset.beHistoryMode='none';logo.click();delete logo.dataset.beHistoryMode;}
+  }
+
+  function preserveCommunitySurfaceForHeaderUtility(){
+    var shouldRestore=document.body.classList.contains('community-page-active')||document.body.dataset.homeView==='community';
+    if(!shouldRestore)return;
+    window.requestAnimationFrame(function(){
+      var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('legal-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('donate-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active');
+      if(dedicated)return;
+      createPage();
+      if(!page)return;
+      document.body.classList.add('community-page-active');
+      document.body.dataset.homeView='community';
+      page.hidden=false;
+      toggleCatalogVisibility(true);
+      setCommunityNavActive(true);
+      setHomeTab('community');
+    });
+  }
+
+  function openCommunity(){
+    closeMobileAccountMenu();
+    establishCatalogBase();
+    createPage();
+    if(!page)return;
+    if(!document.body.classList.contains('community-page-active'))rememberCatalogHomeView();
+    document.body.classList.add('community-page-active');
+    document.body.dataset.homeView='community';
+    page.hidden=false;
+    toggleCatalogVisibility(true);
+    document.querySelectorAll('.home-nav-link.active,#logoBtn.active').forEach(function(button){if(!button.matches('[data-community-tab]')){button.classList.remove('active');button.removeAttribute('aria-current');button.setAttribute('aria-pressed','false');}});
+    setCommunityNavActive(true);
+    try{window.dispatchEvent(new CustomEvent('be:close-public-search'));window.dispatchEvent(new CustomEvent('be:close-mobile-search'));}catch(_){ }
+    window.scrollTo({top:0,left:0,behavior:'auto'});
+    refreshCommunity();
+  }
+  window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity};
+  window.addEventListener('be:open-community',openCommunity);
+  // Fechar o pop-up de notificações não é navegação. Se ele foi aberto sobre a
+  // Comunidade, restaura a superfície da Comunidade sem mudar URL, rolagem ou aba.
+  window.addEventListener('be:restore-community-surface',function(){preserveCommunitySurfaceForHeaderUtility();});
+  ['be:open-profile-route','be:open-config','be:open-notifications','be:open-support','be:open-donate-page','be:open-fans-page','be:open-billie-page','be:open-album-page','be:open-legal-route'].forEach(function(name){window.addEventListener(name,function(){state.detailReturnToCommunity=false;closeCommunity(false);});});
+  window.addEventListener('be:home-entered',function(){state.detailReturnToCommunity=false;closeCommunity(true,'home');});
+
+  function catalogData(row){
+    row=row&&typeof row==='object'?row:{};
+    var contentId=String(row.contentId||row.content_id||'');
+    var escapedContentId=contentId?(window.CSS&&typeof window.CSS.escape==='function'?window.CSS.escape(contentId):contentId.replace(/([\"'\\.#:[\](),>+~*=\s])/g,'\\$1')):'';
+    var original=contentId?document.querySelector('[data-open-detail="true"][data-record-id="'+escapedContentId+'"]'):null;
+    if(original){
+      var d=original.dataset||{};
+      return {itemId:String(d.itemId||numericPublicId(contentId)),recordId:contentId,favoriteId:(d.collection||row.collection||'videos')+':'+contentId,title:String(d.title||'Conteúdo'),description:String(d.description||''),year:String(d.year||''),duration:String(d.duration||''),contentUrl:String(d.contentUrl||'#'),imageUrl:String(d.imageUrl||''),bannerUrl:String(d.bannerUrl||d.imageUrl||''),logoUrl:String(d.logoUrl||''),collection:String(d.collection||row.collection||'videos'),sectionId:String(d.sectionId||''),sectionName:String(d.sectionName||''),streamingAvailability:String(d.streamingAvailability||''),streamingLinks:String(d.streamingLinks||''),category:String(d.category||''),contentType:String(d.contentType||''),mediaType:String(d.mediaType||''),preserveTitle:String(d.preserveTitle||'')==='true'};
+    }
+    var data=row.data&&typeof row.data==='object'?row.data:{};
+    var collection=String(row.collection||data.collection||'videos');
+    var recordId=contentId||String(data.id||'');
+    return {itemId:numericPublicId(data.publicId||recordId||data.title),recordId:recordId,favoriteId:recordId?collection+':'+recordId:'',title:String(data.title||'Conteúdo'),description:String(data.description||''),year:String(data.year||''),duration:String(data.duration||data.videoDuration||data.runtime||''),contentUrl:String(data.videoUrl||data.contentUrl||data.link||'#'),imageUrl:String(data.thumbnailUrl||data.imageUrl||data.bannerUrl||''),bannerUrl:String(collection==='movies'||collection==='series'?(data.thumbnailUrl||data.imageUrl||data.bannerUrl||''):(data.bannerUrl||data.imageUrl||data.thumbnailUrl||'')),logoUrl:String(data.logoUrl||''),collection:collection,sectionId:String(data.sectionId||''),sectionName:String(data.sectionName||''),streamingAvailability:data.streamingAvailability||[],streamingLinks:data.streamingLinks||{},category:String(data.category||data.type||''),contentType:String(data.contentType||''),mediaType:String(data.mediaType||''),preserveTitle:Boolean(data.preserveTitle)};
+  }
+
+  function createVideoCard(row,options){
+    options=options&&typeof options==='object'?options:{};
+    var data=catalogData(row);
+    var card=document.createElement('a');
+    card.className='video-card'+(data.preserveTitle?' notranslate':'');
+    if(data.preserveTitle)card.setAttribute('translate','no');
+    card.href='/'+encodeURIComponent(data.itemId);
+    card.setAttribute('aria-label',data.title);
+    card.dataset.itemId=data.itemId;card.dataset.recordId=data.recordId;card.dataset.openDetail='true';card.dataset.title=data.title;card.dataset.description=data.description;card.dataset.year=data.year;card.dataset.duration=data.duration;card.dataset.contentUrl=data.contentUrl;card.dataset.imageUrl=data.imageUrl;card.dataset.bannerUrl=data.bannerUrl;card.dataset.logoUrl=data.logoUrl;card.dataset.collection=data.collection;card.dataset.sectionId=data.sectionId;card.dataset.sectionName=data.sectionName;card.dataset.category=data.category||'';card.dataset.contentType=data.contentType||'';card.dataset.mediaType=data.mediaType||'';card.dataset.streamingAvailability=Array.isArray(data.streamingAvailability)?data.streamingAvailability.join(','):String(data.streamingAvailability||'');card.dataset.streamingLinks=typeof data.streamingLinks==='string'?data.streamingLinks:JSON.stringify(data.streamingLinks||{});card.dataset.preserveTitle=data.preserveTitle?'true':'false';
+    var image=document.createElement('img');image.className='video-card-thumbnail';image.decoding='async';image.alt=data.title;image.src=mediaUrl(data.imageUrl||data.bannerUrl||'/assets/images/pages/billie-home-banner-default.webp');card.appendChild(image);
+    var watched=Boolean(options.showWatched&&((row&&row.lastWatchedAt)||state.watchedContentIds[String(data.recordId||'')]));
+    if(watched){var watchedBadge=document.createElement('span');watchedBadge.className='community-watched-badge';watchedBadge.textContent='WATCHED';watchedBadge.setAttribute('aria-label','Watched');card.appendChild(watchedBadge);}
+    if(data.logoUrl&&data.logoUrl!=='#'&&String(data.collection).toLowerCase()!=='videos'){var logoSlot=document.createElement('span');logoSlot.className='video-card-logo-slot';logoSlot.setAttribute('aria-hidden','true');var logo=document.createElement('img');logo.className='video-card-logo';logo.decoding='async';logo.alt='';logo.src=mediaUrl(data.logoUrl);logo.addEventListener('error',function(){logoSlot.remove();},{once:true});logoSlot.appendChild(logo);card.appendChild(logoSlot);}
+    if(Number(row&&row.saves)>0){var social=document.createElement('span');social.className='community-favorite-social';social.setAttribute('aria-label',t('{count} curtidas',{count:Number(row.saves)||0}));var faces=document.createElement('span');faces.className='community-favorite-faces';var avatars=Array.isArray(row.fanAvatars)?row.fanAvatars.slice(0,3):[];avatars.forEach(function(person){var face=document.createElement('span');face.className='community-favorite-face'+(isCurrentProfilePerson(person)?' is-current-user':'');var faceImg=document.createElement('img');faceImg.decoding='async';faceImg.alt='';faceImg.src=window.BETVResolveAvatar?window.BETVResolveAvatar(person&&person.avatarUrl):mediaUrl(person&&person.avatarUrl||'/assets/images/profile/default-avatar.png');face.appendChild(faceImg);faces.appendChild(face);});social.appendChild(faces);var extra=Math.max(0,(Number(row.saves)||0)-avatars.length);var count=document.createElement('span');count.className='community-favorite-count';count.textContent=extra>0?'+'+extra:String(Number(row.saves)||0);social.appendChild(count);card.appendChild(social);}
+    card.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();state.detailReturnToCommunity=true;closeCommunity(false,'community');if(typeof window.beOpenSavedContent==='function')window.beOpenSavedContent(data);else location.assign('/'+encodeURIComponent(data.itemId));});
+    return card;
+  }
+
+  function renderRail(hostId,rows,emptyText,options){
+    var host=document.getElementById(hostId);if(!host)return;
+    host.innerHTML='';
+    if(!Array.isArray(rows)||!rows.length){var empty=document.createElement('div');empty.className='community-empty';empty.textContent=emptyText;host.appendChild(empty);return;}
+    var rail=document.createElement('div');rail.className='community-rail';rows.forEach(function(row){rail.appendChild(createVideoCard(row,options));});host.appendChild(rail);
+  }
+
+  function normalizeProfileAvatarRing(value){
+    var normalized=String(value||'').trim().toUpperCase();
+    return /^#[0-9A-F]{6}$/.test(normalized)?normalized:'';
+  }
+
+  function createRankAvatar(url,name,borderColor,username){
+    var avatar=document.createElement('span');avatar.className='community-rank-avatar';
+    var normalizedUsername=String(username||'').replace(/^@/,'').trim();
+    if(normalizedUsername)avatar.dataset.ringUsername=normalizedUsername;
+    var ring=normalizeProfileAvatarRing(borderColor);
+    if(ring){avatar.classList.add('has-custom-ring');avatar.style.setProperty('--community-avatar-ring',ring);}
+    var img=document.createElement('img');img.decoding='async';img.alt='';img.src=window.BETVResolveAvatar?window.BETVResolveAvatar(url):mediaUrl(url||'/assets/images/profile/default-avatar.png');avatar.appendChild(img);return avatar;
+  }
+
+  function hydrateRankingAvatarRings(root){
+    if(!root||typeof window.BETVGetPublicAvatarRing!=='function')return;
+    Array.prototype.forEach.call(root.querySelectorAll('.community-rank-avatar:not(.has-custom-ring)[data-ring-username]'),function(avatar){
+      var username=String(avatar.dataset.ringUsername||'').trim();if(!username)return;
+      Promise.resolve(window.BETVGetPublicAvatarRing(username)).then(function(color){
+        var ring=normalizeProfileAvatarRing(color);if(!ring||!avatar.isConnected)return;
+        avatar.classList.add('has-custom-ring');avatar.style.setProperty('--community-avatar-ring',ring);
+      }).catch(function(){});
+    });
+  }
+
+  function isCurrentProfilePerson(person){
+    var me=currentUser();if(!me)return false;
+    if(sameRankingUser(person,me))return true;
+    var personUsername=String(person&&person.username||'').replace(/^@/,'').trim().toLowerCase();
+    var meUsername=String(me&&((me.profile&&me.profile.username)||me.username)||'').replace(/^@/,'').trim().toLowerCase();
+    return Boolean(personUsername&&meUsername&&personUsername===meUsername);
+  }
+
+  function sameRankingUser(left,right){
+    var leftId=String(left&&(left.userId||left.user_id||left.uid)||'').trim();
+    var rightId=String(right&&(right.userId||right.user_id||right.uid)||'').trim();
+    if(leftId&&rightId)return leftId===rightId;
+    var leftUsername=String(left&&left.username||'').replace(/^@/,'').trim().toLowerCase();
+    var rightUsername=String(right&&right.username||'').replace(/^@/,'').trim().toLowerCase();
+    return Boolean(leftUsername&&rightUsername&&leftUsername===rightUsername);
+  }
+
+  function rankingContainsUser(rows,item){
+    if(!item||!item.position||!Array.isArray(rows)||!rows.length)return false;
+    return rows.some(function(row){return sameRankingUser(row,item)||Number(row.position||0)===Number(item.position||0);});
+  }
+
+  function rankToneClass(item){
+    var position=Number(item&&item.position||0);
+    if(position===1)return ' rank-first';
+    if(position===2)return ' rank-second';
+    if(position===3)return ' rank-third';
+    return position>0&&position<=3?' top-three':'';
+  }
+
+  function renderProfileRanking(rows){
+    var host=document.getElementById('communityProfileRanking');if(!host)return;host.innerHTML='';
+    if(!Array.isArray(rows)||!rows.length){var empty=document.createElement('div');empty.className='community-ranking-empty';empty.textContent=t('Ainda não há perfis suficientes para este ranking.');host.appendChild(empty);return;}
+    rows.forEach(function(item){
+      var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+rankToneClass(item)+(isCurrentProfilePerson(item)?' is-current-user':'');
+      var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position||'—');button.appendChild(pos);
+      button.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username));
+      var copy=document.createElement('span');copy.className='community-rank-copy';var nameLine=document.createElement('span');nameLine.className='community-rank-name-line';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');nameLine.appendChild(strong);var tagMarkup=communityTagMarkup(item&&item.communityTag);if(tagMarkup){var tagWrap=document.createElement('span');tagWrap.className='community-rank-tag';tagWrap.innerHTML=tagMarkup;nameLine.appendChild(tagWrap);}copy.appendChild(nameLine);var handle=document.createElement('span');handle.className='community-rank-handle';handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.appendChild(handle);button.appendChild(copy);
+      var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});button.appendChild(value);
+      button.addEventListener('click',function(){closeCommunity(false);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});
+      host.appendChild(button);
+    });
+    hydrateRankingAvatarRings(host);
+  }
+
+  function renderOwnRanking(hostId,item,visibility,hideBecauseListed){
+    var own=document.getElementById(hostId);if(!own)return;own.innerHTML='';
+    if(!currentUser()||hideBecauseListed){own.hidden=true;return;}
+    if(visibility===false){own.hidden=false;own.className='community-ranking-own is-message';own.textContent=t('Você não está participando dos rankings públicos.');return;}
+    if(!item||!item.position){own.hidden=false;own.className='community-ranking-own is-message';own.textContent=t('Ainda não há perfis suficientes para este ranking.');return;}
+    own.hidden=false;own.className='community-ranking-own';
+    var row=document.createElement('div');row.className='community-ranking-own-row';
+    var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position);row.appendChild(pos);
+    row.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username));
+    var copy=document.createElement('span');copy.className='community-rank-copy';var nameLine=document.createElement('span');nameLine.className='community-rank-name-line';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');nameLine.appendChild(strong);var ownTagMarkup=communityTagMarkup(item&&item.communityTag);if(ownTagMarkup){var ownTag=document.createElement('span');ownTag.className='community-rank-tag';ownTag.innerHTML=ownTagMarkup;nameLine.appendChild(ownTag);}copy.appendChild(nameLine);row.appendChild(copy);
+    var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});row.appendChild(value);
+    own.appendChild(row);
+    hydrateRankingAvatarRings(own);
+  }
+
+  function renderPayload(payload){
+    state.lastPayload=payload||{};
+    state.watchedContentIds=Object.create(null);
+    (Array.isArray(payload&&payload.recent)?payload.recent:[]).forEach(function(item){var id=String(item&&(item.contentId||item.content_id)||'').trim();if(id)state.watchedContentIds[id]=true;});
+    var user=currentUser();
+    var recentEmpty=user?t('Os vídeos que você assistir aparecerão aqui.'):t('Entre na sua conta para ver os vídeos assistidos recentemente.');
+    renderRail('communityContinueContent',user?(payload.recent||[]):[],recentEmpty,{showWatched:true});
+    renderRail('communityFavoritesContent',payload.fanFavorites||[],t('Os favoritos da comunidade aparecerão aqui.'));
+    var profileRows=payload.profileRanking||[];
+    renderProfileRanking(profileRows);
+    renderOwnRanking('communityOwnProfile',payload.myProfilePosition,payload.rankingVisibility!==false,rankingContainsUser(profileRows,payload.myProfilePosition));
+    if(user&&payload.rankingVisibility!==null&&payload.rankingVisibility!==undefined)writeRankingPreference(user.uid,payload.rankingVisibility!==false);
+    applyI18n(page);
+  }
+
+  async function refreshCommunity(){
+    if(!document.body.classList.contains('community-page-active'))return;
+    var requestId=++state.requestId;
+    state.loading=true;
+    var profileLimit=15;
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')throw new Error('community_backend_unavailable');
+      var result=await client.rpc('get_community_overview',{p_profile_limit:profileLimit});
+      if(result&&result.error)throw result.error;
+      if(requestId!==state.requestId||!document.body.classList.contains('community-page-active'))return;
+      renderPayload(result&&result.data&&typeof result.data==='object'?result.data:{});
+    }catch(error){
+      if(requestId!==state.requestId||!document.body.classList.contains('community-page-active'))return;
+      (void 0);
+      renderRail('communityContinueContent',[],currentUser()?t('Não foi possível carregar seu histórico agora.'):t('Entre na sua conta para ver os vídeos assistidos recentemente.'));
+      renderRail('communityFavoritesContent',[],t('Não foi possível carregar os favoritos da comunidade agora.'));
+      renderProfileRanking([]);renderOwnRanking('communityOwnProfile',null,readRankingPreference(currentUser()&&currentUser().uid),false);
+    }finally{if(requestId===state.requestId)state.loading=false;}
+  }
+
+  async function recordWatchFromPlay(play){
+    var user=currentUser();if(!user||!play)return false;
+    var recordId=String(play.dataset.recordId||'');if(!validUuid(recordId))return false;
+    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;state.lastPayload=null;return result&&result.data!==false;}catch(error){(void 0);return false;}
+  }
+
+  function recordRecentFromPlay(play){
+    if(!play)return;
+    recordWatchFromPlay(play);
+  }
+
+  function createMobileAccountMenu(){
+    if(document.getElementById('mobileAccountPopover')){mobileMenu=document.getElementById('mobileAccountPopover');return;}
+    var trigger=document.getElementById('mobileProfileButton');if(trigger){trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-expanded','false');}
+    mobileMenu=document.createElement('div');mobileMenu.className='mobile-account-popover';mobileMenu.id='mobileAccountPopover';mobileMenu.setAttribute('role','menu');mobileMenu.setAttribute('aria-label','Conta');
+    var runningAsMobileApp=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installItem=runningAsMobileApp?'':'<button type="button" role="menuitem" data-mobile-account="install">Instalar app</button>';mobileMenu.innerHTML='<button type="button" role="menuitem" data-mobile-account="profile">Perfil</button><button type="button" role="menuitem" data-mobile-account="community">Comunidade</button><button type="button" role="menuitem" data-mobile-account="settings">Configurações</button>'+installItem+'<div class="mobile-account-divider" aria-hidden="true"></div><button class="danger" type="button" role="menuitem" data-mobile-account="logout">Sair</button>';
+    document.body.appendChild(mobileMenu);applyI18n(mobileMenu);if(typeof window.BETVSyncInstallUi==='function')window.BETVSyncInstallUi();
+    mobileMenu.addEventListener('click',function(event){var button=event.target.closest('[data-mobile-account]');if(!button)return;var action=button.dataset.mobileAccount;closeMobileAccountMenu();if(action==='community'){openCommunity();return;}if(action==='profile'){var p=document.querySelector('#userDropdown [data-public-action="profile"]');if(p)p.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='settings'){var s=document.querySelector('#userDropdown [data-public-action="settings"]');if(s)s.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='install'){if(typeof window.BETVRequestAppInstall==='function')window.BETVRequestAppInstall();return;}if(action==='logout'){var a=document.getElementById('publicAuthAction');if(a)a.click();}});
+  }
+  function positionMobileAccountMenu(){if(!mobileMenu)return;var trigger=document.getElementById('mobileProfileButton');if(!trigger)return;var rect=trigger.getBoundingClientRect();var width=Math.min(260,Math.max(180,window.innerWidth-24));var height=Math.max(1,mobileMenu.offsetHeight||210);var left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));var top=Math.max(8,Math.min(rect.bottom+8,window.innerHeight-height-8));mobileMenu.style.left=left+'px';mobileMenu.style.top=top+'px';}
+  function openMobileAccountMenu(){if(!window.matchMedia('(max-width:760px)').matches)return;createMobileAccountMenu();var user=currentUser();var logout=mobileMenu.querySelector('[data-mobile-account="logout"]');if(logout)logout.hidden=!user;var install=mobileMenu.querySelector('[data-mobile-account="install"]');if(install){var running=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installed=typeof window.BETVIsAppInstalled==='function'&&window.BETVIsAppInstalled();install.hidden=running;install.textContent=installed&&!running?'Abrir app':'Instalar app';install.classList.toggle('is-installed',installed&&!running);}positionMobileAccountMenu();document.body.classList.add('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','true');}
+  function closeMobileAccountMenu(){document.body.classList.remove('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','false');}
+  function toggleMobileAccountMenu(){if(document.body.classList.contains('mobile-account-menu-open'))closeMobileAccountMenu();else openMobileAccountMenu();}
+
+  async function loadRankingPreference(input,status,user){
+    var request=++preferenceRequest;var local=readRankingPreference(user.uid);input.checked=local;
+    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var pref=window.beBackend&&window.beBackend.preferences;if(!pref||typeof pref.get!=='function')return;var row=await pref.get(user.uid,{force:true});if(request!==preferenceRequest||!document.body.contains(input))return;var value=!(row&&row.data&&row.data.communityRankingsPublic===false);writeRankingPreference(user.uid,value);input.checked=value;}catch(_){ }
+  }
+
+  function injectPrivacySettings(){
+    var body=document.getElementById('settingsPageBody');var panel=body&&body.querySelector('[data-settings-panel="profile"]');var user=currentUser();if(!panel||!user||panel.querySelector('.community-privacy-card'))return;
+    var card=document.createElement('div');card.className='settings-panel-card community-privacy-card';
+    card.innerHTML='<div class="community-privacy-copy"><h2>Rankings da Comunidade</h2><p>Escolha se seu perfil pode aparecer no ranking público de perfis mais curtidos da Comunidade.</p></div><label class="community-privacy-toggle" for="communityRankingVisibility"><span>Participar do ranking público da Comunidade</span><span class="community-privacy-switch"><input id="communityRankingVisibility" type="checkbox"><i aria-hidden="true"></i></span></label><div class="community-privacy-status" id="communityRankingVisibilityStatus" aria-live="polite"></div>';
+    panel.appendChild(card);applyI18n(card);
+    var input=card.querySelector('#communityRankingVisibility');var status=card.querySelector('#communityRankingVisibilityStatus');loadRankingPreference(input,status,user);
+    input.addEventListener('change',async function(){var enabled=input.checked;writeRankingPreference(user.uid,enabled);status.textContent=t('Salvando…');status.className='community-privacy-status';input.disabled=true;try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var pref=window.beBackend&&window.beBackend.preferences;if(!pref||typeof pref.get!=='function'||typeof pref.save!=='function')throw new Error('preferences_unavailable');var current=await pref.get(user.uid,{force:true});var payload=Object.assign({},current&&current.data||{}, {communityRankingsPublic:enabled,updatedAt:new Date().toISOString()});await pref.save(user.uid,payload);if(typeof window.beScheduleUserDataSync==='function')window.beScheduleUserDataSync('community-ranking-privacy');status.textContent=t('Preferência salva.');status.className='community-privacy-status ok';window.dispatchEvent(new CustomEvent('be:community-ranking-visibility',{detail:{enabled:enabled}}));if(document.body.classList.contains('community-page-active'))refreshCommunity();}catch(error){input.checked=!enabled;writeRankingPreference(user.uid,!enabled);status.textContent=t('Não foi possível salvar agora.');status.className='community-privacy-status err';}finally{input.disabled=false;}});
+  }
+
+  function bind(){
+    createPage();createMobileAccountMenu();
+    var tab=document.querySelector('[data-community-tab]');if(tab)tab.addEventListener('click',function(event){event.preventDefault();openCommunity();});
+    var play=document.getElementById('contentDetailPlay');
+    if(play&&play.dataset.communityRecentBound!=='true'){
+      play.dataset.communityRecentBound='true';
+      play.addEventListener('pointerup',function(){recordRecentFromPlay(play);});
+      play.addEventListener('keydown',function(event){if(event.key==='Enter')recordRecentFromPlay(play);});
+    }
+    document.addEventListener('click',function(event){
+      var insideCommunity=event.target&&event.target.closest?event.target.closest('#communityPage'):null;
+      if(insideCommunity&&document.body.classList.contains('community-page-active')){
+        if(page)page.hidden=false;
+        setHomeTab('community');
+        return;
+      }
+      var headerUtility=event.target&&event.target.closest?event.target.closest('#userChip,#notificationButton,#mobileProfileButton,#mobileNotificationButton,#homeSearchToggle,#homeSearchInput,#mobileSearchButton,#mobileSearchInput'):null;
+      if(headerUtility)preserveCommunitySurfaceForHeaderUtility();
+      if(document.body.classList.contains('mobile-account-menu-open')){var trigger=event.target&&event.target.closest?event.target.closest('#mobileProfileButton'):null;if(!trigger&&mobileMenu&&!mobileMenu.contains(event.target))closeMobileAccountMenu();}
+      var profileRoute=event.target&&event.target.closest?event.target.closest('[data-public-action="profile"],[data-public-action="settings"]'):null;
+      if(profileRoute&&document.body.classList.contains('community-page-active'))closeCommunity(false);
+      var notificationHome=event.target&&event.target.closest?event.target.closest('#notificationPageClose,#notificationPageHome'):null;
+      if(notificationHome)setHomeTab('home');
+      var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;
+      if(nav&&!nav.matches('[data-community-tab]')){var target='home';if(nav.dataset&&nav.dataset.homeView)target=nav.dataset.homeView;else if(nav.matches('[data-public-action="support"]'))target='support';closeCommunity(false,target);}
+    },true);
+    // A pesquisa é uma utilidade da barra, não uma navegação. Mantém a página
+    // Comunidade ativa ao abrir a lupa e enquanto o usuário digita, tanto no
+    // desktop quanto no mobile. Perfis/resultados continuam podendo abrir suas
+    // rotas normalmente quando o usuário seleciona um item.
+    document.addEventListener('input',function(event){
+      var searchField=event.target&&event.target.closest?event.target.closest('#homeSearchInput,#mobileSearchInput'):null;
+      if(searchField)preserveCommunitySurfaceForHeaderUtility();
+    },true);
+    document.addEventListener('focusin',function(event){
+      var searchField=event.target&&event.target.closest?event.target.closest('#homeSearchInput,#mobileSearchInput'):null;
+      if(searchField)preserveCommunitySurfaceForHeaderUtility();
+    },true);
+    window.addEventListener('be:toggle-mobile-account-menu',toggleMobileAccountMenu);
+    window.addEventListener('be:close-notification-menus',closeMobileAccountMenu);
+    window.addEventListener('popstate',function(){closeMobileAccountMenu();if(document.body.classList.contains('community-page-active'))closeCommunity(true);window.setTimeout(function(){if(state.detailReturnToCommunity&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')){state.detailReturnToCommunity=false;openCommunity();return;}if(!document.body.classList.contains('community-page-active')&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')&&!document.body.classList.contains('support-page-active')&&!document.body.classList.contains('legal-page-active')&&!document.body.classList.contains('billie-page-active')&&!document.body.classList.contains('donate-page-active')&&!document.body.classList.contains('fans-page-active')&&!document.body.classList.contains('album-page-active'))setHomeTab(catalogTabForView(state.catalogHomeView));},0);});
+    window.addEventListener('hashchange',closeMobileAccountMenu);
+    window.addEventListener('resize',function(){if(!window.matchMedia('(max-width:760px)').matches)closeMobileAccountMenu();else if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();});
+    document.addEventListener('keydown',function(event){if(event.key==='Escape')closeMobileAccountMenu();});
+    var settingsBody=document.getElementById('settingsPageBody');if(settingsBody){new MutationObserver(function(){injectPrivacySettings();}).observe(settingsBody,{childList:true,subtree:true});}
+    window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('community-page-active')){toggleCatalogVisibility(true);setHomeTab('community');}});
+    window.addEventListener('be:open-config',function(){setTimeout(injectPrivacySettings,0);});
+    window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
+    window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});
+    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(){setTimeout(injectPrivacySettings,50);if(document.body.classList.contains('community-page-active'))refreshCommunity();});
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
+})();
+
