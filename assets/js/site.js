@@ -5589,6 +5589,123 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `https://vkvideo.ru/video${encodeURIComponent(info.ownerId)}_${encodeURIComponent(info.videoId)}`;
   }
 
+  // Fallback exclusivo do navegador interno do Instagram em celulares/tablets.
+  // Safari, Chrome e outros navegadores externos não entram nesta condição.
+  function isInstagramMobileBrowser() {
+    const ua = String(navigator.userAgent || '');
+    return /Instagram/i.test(ua) && /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
+  }
+
+  function instagramBrowserHelpCopy() {
+    const lang = String(document.documentElement.lang || navigator.language || 'pt').toLowerCase();
+    if (lang.startsWith('es')) return {
+      title: 'Mejora la reproducción de los videos',
+      text: 'El navegador de Instagram puede limitar algunos videos. Toca ••• y elige “Abrir en el navegador” para una mejor compatibilidad.',
+      button: 'Entendido'
+    };
+    if (lang.startsWith('fr')) return {
+      title: 'Améliorez la lecture des vidéos',
+      text: 'Le navigateur Instagram peut limiter certaines vidéos. Touchez ••• puis choisissez « Ouvrir dans le navigateur » pour une meilleure compatibilité.',
+      button: 'Compris'
+    };
+    if (lang.startsWith('en')) return {
+      title: 'Improve video playback',
+      text: 'Instagram’s browser can limit some videos. Tap ••• and choose “Open in browser” for better compatibility.',
+      button: 'Got it'
+    };
+    return {
+      title: 'Melhore a reprodução dos vídeos',
+      text: 'O navegador do Instagram pode limitar alguns vídeos. Toque em ••• e escolha “Abrir no navegador” para ter melhor compatibilidade.',
+      button: 'Entendi'
+    };
+  }
+
+  function showInstagramMobileBrowserHelp() {
+    if (!isInstagramMobileBrowser() || document.getElementById('beInstagramBrowserHelp')) return;
+    const copy = instagramBrowserHelpCopy();
+    const wrap = document.createElement('div');
+    wrap.id = 'beInstagramBrowserHelp';
+    wrap.setAttribute('role', 'dialog');
+    wrap.setAttribute('aria-modal', 'true');
+    wrap.setAttribute('aria-labelledby', 'beInstagramBrowserHelpTitle');
+    wrap.innerHTML = `<div class="be-instagram-browser-help-backdrop"></div>
+      <section class="be-instagram-browser-help-card">
+        <h2 id="beInstagramBrowserHelpTitle"></h2>
+        <p></p>
+        <button type="button"></button>
+      </section>`;
+    wrap.querySelector('h2').textContent = copy.title;
+    wrap.querySelector('p').textContent = copy.text;
+    wrap.querySelector('button').textContent = copy.button;
+    const close = () => wrap.remove();
+    wrap.querySelector('button').addEventListener('click', close);
+    wrap.querySelector('.be-instagram-browser-help-backdrop').addEventListener('click', close);
+    document.body.appendChild(wrap);
+    if (!document.getElementById('beInstagramBrowserHelpStyle')) {
+      const style = document.createElement('style');
+      style.id = 'beInstagramBrowserHelpStyle';
+      style.textContent = `#beInstagramBrowserHelp{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:20px}.be-instagram-browser-help-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(7px)}.be-instagram-browser-help-card{position:relative;width:min(92vw,390px);box-sizing:border-box;padding:22px 20px 18px;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:#111;color:#fff;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.45)}.be-instagram-browser-help-card h2{margin:0 0 9px;font-size:20px;line-height:1.2}.be-instagram-browser-help-card p{margin:0 0 18px;color:rgba(255,255,255,.78);font-size:14px;line-height:1.5}.be-instagram-browser-help-card button{width:100%;border:0;border-radius:14px;padding:13px 16px;font:inherit;font-weight:700;background:#fff;color:#111}`;
+      document.head.appendChild(style);
+    }
+    wrap.querySelector('button').focus({ preventScroll: true });
+  }
+
+  // Aviso geral do navegador interno do Instagram.
+  // Conta 2 minutos de uso VISÍVEL no próprio aparelho, sem requests, polling,
+  // Vercel Functions ou chamadas ao Supabase. Pausa enquanto a aba/app está oculto.
+  function scheduleInstagramMobileSiteHelp() {
+    if (!isInstagramMobileBrowser() || window.__beInstagramMobileSiteHelpScheduled) return 0;
+    window.__beInstagramMobileSiteHelpScheduled = true;
+
+    const requiredVisibleMs = 2 * 60 * 1000;
+    let visibleMs = 0;
+    let visibleStartedAt = document.visibilityState === 'visible' ? Date.now() : 0;
+    let timer = 0;
+    let shown = false;
+
+    const remainingMs = () => Math.max(0, requiredVisibleMs - visibleMs - (visibleStartedAt ? Date.now() - visibleStartedAt : 0));
+    const clearTimer = () => { if (timer) { window.clearTimeout(timer); timer = 0; } };
+    const showOnce = () => {
+      if (shown) return;
+      shown = true;
+      clearTimer();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      showInstagramMobileBrowserHelp();
+    };
+    const arm = () => {
+      clearTimer();
+      if (shown || document.visibilityState !== 'visible') return;
+      const wait = remainingMs();
+      if (wait <= 0) { showOnce(); return; }
+      timer = window.setTimeout(showOnce, wait);
+    };
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        if (!visibleStartedAt) visibleStartedAt = Date.now();
+        arm();
+      } else {
+        if (visibleStartedAt) visibleMs += Date.now() - visibleStartedAt;
+        visibleStartedAt = 0;
+        clearTimer();
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    arm();
+    return timer;
+  }
+
+  // Mantido apenas por compatibilidade com os pontos antigos do player.
+  // O aviso deixou de ser disparado por falha/timeout de vídeo e agora aparece
+  // exclusivamente após 2 minutos de uso visível do site no Instagram mobile.
+  function scheduleInstagramMobilePlayerHelp() { return 0; }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', scheduleInstagramMobileSiteHelp, { once: true });
+  } else {
+    scheduleInstagramMobileSiteHelp();
+  }
+
   function googleDrivePreviewUrl(fileId, resourceKey = '') {
     const params = new URLSearchParams({ autoplay: '1' });
     if (resourceKey) params.set('resourcekey', resourceKey);
@@ -6676,6 +6793,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = document.activeElement;
       activeProvider = normalizedProvider;
       activeVkInfo = normalizedProvider === 'vk' ? info : null;
+      let instagramMobileFrameLoaded = false;
       vkEmbedAttempt = 0;
       vkPlaybackConfirmed = false;
       configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '');
@@ -6692,6 +6810,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeButton.setAttribute('aria-label', `Fechar ${providerLabel}`);
       overlay.dataset.provider = normalizedProvider;
       overlay.classList.add('is-open', normalizedProvider === 'vk' ? 'is-vk' : 'is-youtube');
+      if (normalizedProvider === 'youtube' && isInstagramMobileBrowser()) {
+        frame.addEventListener('load', () => { instagramMobileFrameLoaded = true; }, { once: true });
+      }
       frame.src = embedUrl;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
@@ -6704,9 +6825,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         frame.addEventListener('load', bindVkApi, { once: true });
         window.setTimeout(bindVkApi, 900);
         scheduleVkFallback();
+        scheduleInstagramMobilePlayerHelp(() => !overlay.hidden && activeProvider === 'vk' && !vkPlaybackConfirmed, 9000);
         window.setTimeout(() => {
           if (!overlay.hidden && activeProvider === 'vk') showControls(false);
         }, 80);
+      } else if (normalizedProvider === 'youtube') {
+        scheduleInstagramMobilePlayerHelp(() => !overlay.hidden && activeProvider === 'youtube' && !instagramMobileFrameLoaded, 9000);
       }
       closeButton.focus({ preventScroll: true });
     };
@@ -7019,6 +7143,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let legacySmartTvMode = false;
     let mediaReady = false;
     let frameMode = false;
+    let instagramMobileDriveFrameLoaded = false;
     let fallbackTimer = 0;
     let inactivityTimer = 0;
     let controlsInteracting = false;
@@ -7303,7 +7428,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       video.removeAttribute('src');
       video.load();
       frame.title = 'Reprodutor nativo do Google Drive';
+      instagramMobileDriveFrameLoaded = false;
       frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
+      scheduleInstagramMobilePlayerHelp(() => !overlay.hidden && frameMode && !instagramMobileDriveFrameLoaded, 9000);
       frameShell.hidden = false;
       overlay.classList.remove('is-error', 'is-source-syncing');
       overlay.classList.add('is-frame-mode');
@@ -7722,6 +7849,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     frame.addEventListener('load', () => {
       if (overlay.hidden || !frameMode || frame.src === 'about:blank') return;
+      instagramMobileDriveFrameLoaded = true;
       setFrameSubtitleClock(readFrameSubtitleTime(), true);
       syncDriveSubtitle();
       syncMobileDriveFrameViewport();
@@ -17404,7 +17532,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">'+esc(currencySymbol)+'</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="'+esc(amountPlaceholder)+'" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
             '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">'+esc(i18nText('Valor mínimo: {amount}',{amount:minimumLabel}))+'</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
             '<button class="donate-ngo-support-button" type="button" data-stripe-donation aria-disabled="true" disabled>'+esc(i18nText('Doar'))+'</button>'+
-            '<small class="donate-payment-note">'+esc(i18nText('O pagamento é processado em ambiente seguro. O BETV não recebe os dados completos do seu cartão.'))+'</small>'+
           '</div>'+
         '</div></div></div></article>';
     }).join('');
