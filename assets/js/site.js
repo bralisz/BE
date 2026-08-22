@@ -17342,6 +17342,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var avatar=document.getElementById('donatePageAvatar');
 
   var CHECKOUT_FUNCTION_NAME='create-donation-checkout';
+  var PIX_FUNCTION_NAME='create-mercadopago-pix';
+  var PIX_STATUS_FUNCTION_NAME='mercadopago-payment-status';
   var DONATION_LOCALE=String(window.BETVLocale&&window.BETVLocale.locale||navigator.language||'pt-BR');
   var DONATION_CURRENCY=String(window.BETVRegional&&window.BETVRegional.currency||'BRL').toUpperCase()==='USD'?'USD':'BRL';
   var DEFAULT_MINIMUM_DONATION_CENTS={BRL:500,USD:100};
@@ -17425,6 +17427,66 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(parsed.protocol!=='https:'||!/(^|\.)stripe\.com$/i.test(parsed.hostname))throw new Error('invalid_checkout_url');
     }catch(_){throw new Error(i18nText('A Stripe não retornou um checkout válido.'));}
     return url;
+  }
+
+  async function createDonationPix(ngoId,cents,requestId){
+    var client=window.beBackend&&window.beBackend.client;
+    if(!client||!client.functions||typeof client.functions.invoke!=='function')throw new Error(i18nText('O Pix seguro não está disponível.'));
+    var result=await client.functions.invoke(PIX_FUNCTION_NAME,{body:{ngoId:String(ngoId||''),amountCents:cents,requestId:requestId}});
+    var data=result&&result.data&&typeof result.data==='object'?result.data:null;
+    if(result&&result.error){
+      try{if(result.error.context&&typeof result.error.context.json==='function')data=await result.error.context.json();}catch(_){}
+      var failure=new Error(checkoutErrorMessage(result.error,data));failure.data=data;throw failure;
+    }
+    if(!data||!data.paymentId||(!data.qrCode&&!data.qrCodeBase64))throw new Error(i18nText('Não foi possível gerar o QR Code Pix.'));
+    return data;
+  }
+
+  function ensureDonationPayStyle(){
+    if(document.getElementById('beDonationPayStyle'))return;
+    var style=document.createElement('style');style.id='beDonationPayStyle';
+    style.textContent='.be-pay-overlay{position:fixed;inset:0;z-index:12000;background:rgba(3,7,18,.72);display:grid;place-items:center;padding:18px}.be-pay-card{width:min(420px,100%);background:#0f172a;border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:20px;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.45)}.be-pay-card h3{margin:0 0 8px;font-size:20px}.be-pay-card p{margin:0 0 16px;color:#aeb8c8}.be-pay-actions{display:grid;gap:10px}.be-pay-btn{border:0;border-radius:14px;padding:14px 16px;font:inherit;font-weight:700;cursor:pointer}.be-pay-btn.primary{background:#1769ff;color:#fff}.be-pay-btn.secondary{background:#1b2538;color:#fff}.be-pay-close{float:right;background:transparent;border:0;color:#fff;font-size:24px;cursor:pointer}.be-pix-qr{width:220px;height:220px;display:block;margin:12px auto;border-radius:14px;background:#fff;padding:10px}.be-pix-code{width:100%;box-sizing:border-box;min-height:74px;background:#0a1020;color:#dce5f5;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;resize:none}.be-pix-status{text-align:center;margin-top:12px;font-weight:700}.be-pix-timer{text-align:center;color:#aeb8c8;margin-bottom:8px}';
+    document.head.appendChild(style);
+  }
+  function openPaymentChoice(onCard,onPix){
+    ensureDonationPayStyle();
+    var w=document.createElement('div');w.className='be-pay-overlay';
+    w.innerHTML='<div class="be-pay-card"><button class="be-pay-close" type="button">×</button><h3>'+esc(i18nText('Escolha como pagar'))+'</h3><p>'+esc(i18nText('Selecione uma forma de pagamento.'))+'</p><div class="be-pay-actions"><button class="be-pay-btn primary" data-card type="button">'+esc(i18nText('Cartão'))+'</button><button class="be-pay-btn secondary" data-pix type="button">Pix</button></div></div>';
+    function close(){w.remove();}
+    w.querySelector('.be-pay-close').onclick=close;
+    w.addEventListener('click',function(e){if(e.target===w)close();});
+    w.querySelector('[data-card]').onclick=function(){close();onCard();};
+    w.querySelector('[data-pix]').onclick=function(){close();onPix();};
+    document.body.appendChild(w);
+  }
+  function openPixModal(data,requestId){
+    ensureDonationPayStyle();
+    var w=document.createElement('div');w.className='be-pay-overlay';
+    var qr=data.qrCodeBase64?'data:image/png;base64,'+data.qrCodeBase64:'';
+    w.innerHTML='<div class="be-pay-card"><button class="be-pay-close" type="button">×</button><h3>Pix</h3><div class="be-pix-timer"></div>'+(qr?'<img class="be-pix-qr" alt="QR Code Pix">':'')+'<textarea class="be-pix-code" readonly></textarea><div class="be-pay-actions"><button class="be-pay-btn primary" data-copy type="button">'+esc(i18nText('Copiar código Pix'))+'</button></div><div class="be-pix-status">'+esc(i18nText('Aguardando pagamento...'))+'</div></div>';
+    if(qr)w.querySelector('.be-pix-qr').src=qr;
+    w.querySelector('.be-pix-code').value=String(data.qrCode||'');
+    var closed=false, pollTimer=null, timerId=null, started=Date.now();
+    function close(){closed=true;if(pollTimer)clearTimeout(pollTimer);if(timerId)clearInterval(timerId);w.remove();}
+    w.querySelector('.be-pay-close').onclick=close;
+    w.addEventListener('click',function(e){if(e.target===w)close();});
+    w.querySelector('[data-copy]').onclick=async function(){try{await navigator.clipboard.writeText(String(data.qrCode||''));this.textContent=i18nText('Código copiado');}catch(_){w.querySelector('.be-pix-code').select();document.execCommand('copy');}};
+    var expires=new Date(data.expiresAt||Date.now()+30*60*1000).getTime();
+    function tick(){var ms=Math.max(0,expires-Date.now()),m=Math.floor(ms/60000),sec=Math.floor(ms%60000/1000);w.querySelector('.be-pix-timer').textContent=i18nText('Expira em')+' '+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');if(ms<=0){w.querySelector('.be-pix-status').textContent=i18nText('Pix expirado');if(timerId)clearInterval(timerId);}}
+    tick();timerId=setInterval(tick,1000);
+    async function poll(){
+      if(closed||Date.now()-started>10*60*1000)return;
+      try{
+        var client=window.beBackend&&window.beBackend.client;
+        var r=await client.functions.invoke(PIX_STATUS_FUNCTION_NAME,{body:{paymentId:String(data.paymentId),requestId:String(requestId)}});
+        var st=String(r&&r.data&&r.data.status||'');
+        if(st==='paid'){w.querySelector('.be-pix-status').textContent=i18nText('Pagamento confirmado');return;}
+        if(st==='failed'||st==='refunded'||st==='charged_back'){w.querySelector('.be-pix-status').textContent=i18nText('Pagamento não concluído');return;}
+      }catch(_){}
+      pollTimer=setTimeout(poll,Date.now()-started<60000?4000:10000);
+    }
+    pollTimer=setTimeout(poll,4000);
+    document.body.appendChild(w);
   }
 
   function applyPageBanner(settings){
@@ -17617,18 +17679,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var cents=updateDonationButton(true);
         if(!cents||checkoutBusy){if(!cents)amountInput.focus();return;}
         amountError.hidden=true;
-        setCheckoutBusy(true);
-        try{
-          var requestId=donationRequestId();
-          var checkoutUrl=await createDonationCheckout(donationBox.getAttribute('data-ngo-reference'),cents,requestId);
-          location.assign(checkoutUrl);
-        }catch(error){
-          amountField.classList.add('is-invalid');
-          amountError.hidden=false;
-          amountError.textContent=checkoutErrorMessage(error,error&&error.data);
-          setCheckoutBusy(false);
-          updateDonationButton(false);
+        var ngoRef=donationBox.getAttribute('data-ngo-reference');
+        async function payCard(){
+          setCheckoutBusy(true);
+          try{var requestId=donationRequestId();var checkoutUrl=await createDonationCheckout(ngoRef,cents,requestId);location.assign(checkoutUrl);}
+          catch(error){amountField.classList.add('is-invalid');amountError.hidden=false;amountError.textContent=checkoutErrorMessage(error,error&&error.data);setCheckoutBusy(false);updateDonationButton(false);}
         }
+        async function payPix(){
+          setCheckoutBusy(true);
+          try{var requestId=donationRequestId();var pix=await createDonationPix(ngoRef,cents,requestId);setCheckoutBusy(false);updateDonationButton(false);openPixModal(pix,requestId);}
+          catch(error){amountField.classList.add('is-invalid');amountError.hidden=false;amountError.textContent=checkoutErrorMessage(error,error&&error.data);setCheckoutBusy(false);updateDonationButton(false);}
+        }
+        if(DONATION_CURRENCY==='BRL')openPaymentChoice(payCard,payPix);else payCard();
       });
       updateDonationButton(false);
     });
