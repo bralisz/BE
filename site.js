@@ -17442,18 +17442,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return data;
   }
 
+  function closeDonationPaymentOverlays(){
+    document.querySelectorAll('.be-pay-overlay[data-be-donation-payment="true"]').forEach(function(overlay){
+      if(typeof overlay._beDonationClose==='function'){overlay._beDonationClose();return;}
+      overlay.remove();
+    });
+  }
+
   function ensureDonationPayStyle(){
     if(document.getElementById('beDonationPayStyle'))return;
     var style=document.createElement('style');style.id='beDonationPayStyle';
-    style.textContent='.be-pay-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.56);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);display:grid;place-items:center;padding:18px}.be-pay-card{position:relative;width:min(420px,calc(100vw - 32px));background:rgba(20,24,35,.97);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:24px 20px 20px;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.48);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,sans-serif}.be-pay-choice-card{width:min(390px,calc(100vw - 32px));background:rgba(28,28,30,.97);padding:22px 18px 18px}.be-pay-choice-card h3{margin:8px 38px 6px;text-align:center;font-size:21px;line-height:1.2;font-weight:750;letter-spacing:-.02em}.be-pay-choice-card p{margin:0 18px 20px;text-align:center;color:#a1a1a6;font-size:14px;line-height:1.35}.be-pay-choice-card .be-pay-actions{gap:12px}.be-pay-choice-card .be-pay-btn{min-height:54px;border-radius:16px;font-size:17px;font-weight:750;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);transition:transform .14s ease,filter .14s ease}.be-pay-choice-card .be-pay-btn:active{transform:scale(.985);filter:brightness(.92)}.be-pay-choice-card .be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-choice-card .be-pay-btn.pix{background:#30d158;color:#07160b}.be-pay-close{position:absolute;right:16px;top:16px;float:none;width:32px;height:32px;padding:0;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(118,118,128,.24);color:#a7a7ad;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;font-size:20px;font-weight:400;line-height:1;cursor:pointer;appearance:none;-webkit-appearance:none}.be-pay-close:hover{background:rgba(118,118,128,.34)}.be-pay-card h3{margin:4px 40px 10px;font-size:22px;font-weight:750;letter-spacing:-.02em}.be-pay-card p{margin:0 0 16px;color:#aeb8c8}.be-pay-actions{display:grid;gap:10px}.be-pay-btn{border:0;border-radius:16px;padding:14px 16px;font:inherit;font-weight:700;cursor:pointer}.be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-btn.secondary{background:#1b2538;color:#fff}.be-pix-card{width:min(390px,calc(100vw - 32px));background:rgba(18,22,32,.98);padding:24px 20px 20px}.be-pix-card h3{text-align:left;margin:4px 40px 2px 4px}.be-pix-timer{text-align:center;color:#a1a1a6;margin:2px 0 14px;font-size:15px;font-weight:500}.be-pix-qr{width:min(228px,68vw);height:auto;aspect-ratio:1;display:block;margin:8px auto 18px;border-radius:18px;background:#fff;padding:12px}.be-pix-copy{min-height:54px;border-radius:16px}.be-pix-status{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;margin-top:14px;color:#a1a1a6;font-size:13px;font-weight:500;letter-spacing:0}.be-pix-status.is-waiting:before{content:"";width:13px;height:13px;border:1.7px solid rgba(255,255,255,.24);border-top-color:#ffd60a;border-radius:50%;animation:bePixSpin .8s linear infinite}.be-pix-status.is-paid{color:#30d158;font-weight:650}.be-pix-status.is-error{color:#ff9f0a}.be-pix-status.is-expired{color:#a1a1a6}@keyframes bePixSpin{to{transform:rotate(360deg)}}@media(max-width:520px){.be-pay-overlay{padding:14px}.be-pay-card{border-radius:26px}.be-pix-qr{width:min(220px,70vw)}}';
+    style.textContent='.be-pay-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.56);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);display:grid;place-items:center;padding:18px}.be-pay-card{position:relative;width:min(420px,calc(100vw - 32px));background:rgba(20,24,35,.97);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:24px 20px 20px;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.48);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,sans-serif}.be-pay-choice-card{width:min(390px,calc(100vw - 32px));background:rgba(28,28,30,.97);padding:22px 18px 18px}.be-pay-choice-card h3{margin:8px 38px 6px;text-align:center;font-size:21px;line-height:1.2;font-weight:750;letter-spacing:-.02em}.be-pay-choice-card p{margin:0 18px 20px;text-align:center;color:#a1a1a6;font-size:14px;line-height:1.35}.be-pay-choice-card .be-pay-actions{gap:12px}.be-pay-choice-card .be-pay-btn{min-height:54px;border-radius:16px;font-size:17px;font-weight:750;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);transition:transform .14s ease,filter .14s ease}.be-pay-choice-card .be-pay-btn:active{transform:scale(.985);filter:brightness(.92)}.be-pay-choice-card .be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-choice-card .be-pay-btn.pix{background:#30d158;color:#07160b}body:not(.donate-page-active)>.be-pay-overlay[data-be-donation-payment="true"]{display:none!important}.be-pay-close{position:absolute;right:16px;top:16px;float:none;width:32px;height:32px;padding:0;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(118,118,128,.24);color:#a7a7ad;cursor:pointer;appearance:none;-webkit-appearance:none}.be-pay-close svg{display:block;width:14px;height:14px;flex:0 0 14px;pointer-events:none}.be-pay-close:hover{background:rgba(118,118,128,.34)}.be-pay-card h3{margin:4px 40px 10px;font-size:22px;font-weight:750;letter-spacing:-.02em}.be-pay-card p{margin:0 0 16px;color:#aeb8c8}.be-pay-actions{display:grid;gap:10px}.be-pay-btn{border:0;border-radius:16px;padding:14px 16px;font:inherit;font-weight:700;cursor:pointer}.be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-btn.secondary{background:#1b2538;color:#fff}.be-pix-card{width:min(390px,calc(100vw - 32px));background:rgba(18,22,32,.98);padding:24px 20px 20px}.be-pix-card h3{text-align:left;margin:4px 40px 2px 4px}.be-pix-timer{text-align:center;color:#a1a1a6;margin:2px 0 14px;font-size:15px;font-weight:500}.be-pix-qr{width:min(228px,68vw);height:auto;aspect-ratio:1;display:block;margin:8px auto 18px;border-radius:18px;background:#fff;padding:12px}.be-pix-copy{min-height:54px;border-radius:16px}.be-pix-status{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;margin-top:14px;color:#a1a1a6;font-size:13px;font-weight:500;letter-spacing:0}.be-pix-status.is-waiting:before{content:"";width:13px;height:13px;border:1.7px solid rgba(255,255,255,.24);border-top-color:#ffd60a;border-radius:50%;animation:bePixSpin .8s linear infinite}.be-pix-status.is-paid{color:#30d158;font-weight:650}.be-pix-status.is-error{color:#ff9f0a}.be-pix-status.is-expired{color:#a1a1a6}@keyframes bePixSpin{to{transform:rotate(360deg)}}@media(max-width:520px){.be-pay-overlay{padding:14px}.be-pay-card{border-radius:26px}.be-pix-qr{width:min(220px,70vw)}}';
     document.head.appendChild(style);
   }
   function openPaymentChoice(onCard,onPix){
     if(!isRoute()||!document.body.classList.contains('donate-page-active'))return;
     ensureDonationPayStyle();
-    var w=document.createElement('div');w.className='be-pay-overlay';
-    w.innerHTML='<div class="be-pay-card be-pay-choice-card" style="position:relative"><button class="be-pay-close" type="button" aria-label="'+esc(i18nText('Fechar'))+'">×</button><h3>'+esc(i18nText('Como você quer pagar?'))+'</h3><p>'+esc(i18nText('Escolha uma forma de pagamento para continuar.'))+'</p><div class="be-pay-actions"><button class="be-pay-btn primary" data-card type="button">'+esc(i18nText('Cartão'))+'</button><button class="be-pay-btn pix" data-pix type="button">Pix</button></div></div>';
-    function close(){w.remove();}
+    var w=document.createElement('div');w.className='be-pay-overlay';w.setAttribute('data-be-donation-payment','true');
+    w.innerHTML='<div class="be-pay-card be-pay-choice-card" style="position:relative"><button class="be-pay-close" type="button" aria-label="'+esc(i18nText('Fechar'))+'"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button><h3>'+esc(i18nText('Como você quer pagar?'))+'</h3><p>'+esc(i18nText('Escolha uma forma de pagamento para continuar.'))+'</p><div class="be-pay-actions"><button class="be-pay-btn primary" data-card type="button">'+esc(i18nText('Cartão'))+'</button><button class="be-pay-btn pix" data-pix type="button">Pix</button></div></div>';
+    function close(){w._beDonationClose=null;w.remove();}
+    w._beDonationClose=close;
     w.querySelector('.be-pay-close').onclick=close;
     w.addEventListener('click',function(e){if(e.target===w)close();});
     w.querySelector('[data-card]').onclick=function(){close();onCard();};
@@ -17463,13 +17471,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function openPixModal(data,requestId){
     if(!isRoute()||!document.body.classList.contains('donate-page-active'))return;
     ensureDonationPayStyle();
-    var w=document.createElement('div');w.className='be-pay-overlay';
+    var w=document.createElement('div');w.className='be-pay-overlay';w.setAttribute('data-be-donation-payment','true');
     var qr=data.qrCodeBase64?'data:image/png;base64,'+data.qrCodeBase64:'';
-    w.innerHTML='<div class="be-pay-card be-pix-card"><button class="be-pay-close" type="button" aria-label="'+esc(i18nText('Fechar'))+'">×</button><h3>Pix</h3><div class="be-pix-timer"></div>'+(qr?'<img class="be-pix-qr" alt="QR Code Pix">':'')+'<div class="be-pay-actions"><button class="be-pay-btn primary be-pix-copy" data-copy type="button">'+esc(i18nText('Copiar código Pix'))+'</button></div><div class="be-pix-status is-waiting">'+esc(i18nText('Aguardando pagamento'))+'</div></div>';
+    w.innerHTML='<div class="be-pay-card be-pix-card"><button class="be-pay-close" type="button" aria-label="'+esc(i18nText('Fechar'))+'"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button><h3>Pix</h3><div class="be-pix-timer"></div>'+(qr?'<img class="be-pix-qr" alt="QR Code Pix">':'')+'<div class="be-pay-actions"><button class="be-pay-btn primary be-pix-copy" data-copy type="button">'+esc(i18nText('Copiar código Pix'))+'</button></div><div class="be-pix-status is-waiting">'+esc(i18nText('Aguardando pagamento'))+'</div></div>';
     if(qr)w.querySelector('.be-pix-qr').src=qr;
     var pixCode=String(data.qrCode||'');
     var closed=false, pollTimer=null, timerId=null, started=Date.now();
-    function close(){closed=true;if(pollTimer)clearTimeout(pollTimer);if(timerId)clearInterval(timerId);w.remove();}
+    function close(){closed=true;if(pollTimer)clearTimeout(pollTimer);if(timerId)clearInterval(timerId);w._beDonationClose=null;w.remove();}
+    w._beDonationClose=close;
     w.querySelector('.be-pay-close').onclick=close;
     w.addEventListener('click',function(e){if(e.target===w)close();});
     w.querySelector('[data-copy]').onclick=async function(){
@@ -17763,6 +17772,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         try{
           var requestId=donationRequestId();
           var checkoutUrl=await createDonationCheckout(ngoRef,cents,requestId);
+          if(!isRoute()||!document.body.classList.contains('donate-page-active')){setBusy(false);return;}
           location.assign(checkoutUrl);
         }catch(error){
           amountField.classList.add('is-invalid');
@@ -17777,6 +17787,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         try{
           var requestId=donationRequestId();
           var pix=await createDonationPix(ngoRef,cents,requestId);
+          if(!isRoute()||!document.body.classList.contains('donate-page-active')){setBusy(false);return;}
           setBusy(false);
           openPixModal(pix,requestId);
         }catch(error){
@@ -18143,6 +18154,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function close(){
+    closeDonationPaymentOverlays();
     closeNotificationPopup();
     disconnectSupportersObserver();
     document.body.classList.remove('donate-page-active');
