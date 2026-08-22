@@ -17703,6 +17703,83 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
   }
 
+  // Intercepta o botão de doação no nível Window antes dos roteadores globais.
+  // Isso mantém a rota /ong ativa e impede que o clique seja tratado como navegação para a Home.
+  if(!window.beDonationWindowCaptureBound){
+    window.beDonationWindowCaptureBound=true;
+    window.addEventListener('click',function(event){
+      var donationButton=event.target&&event.target.closest?event.target.closest('[data-stripe-donation]'):null;
+      if(!donationButton||!document.body.classList.contains('donate-page-active'))return;
+      var donationBox=donationButton.closest('[data-donation-box]');
+      if(!donationBox)return;
+      event.preventDefault();
+      event.stopPropagation();
+      if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
+
+      var amountInput=donationBox.querySelector('.donate-ngo-amount-input');
+      var amountField=donationBox.querySelector('[data-donation-field]');
+      var amountError=donationBox.querySelector('.donate-ngo-amount-error');
+      if(!amountInput||!amountField||!amountError)return;
+      var minimumCents=minimumDonationCents(donationBox.getAttribute('data-minimum-donation-cents'));
+      var cents=parseDonationCents(amountInput.value.trim());
+      var valid=Number.isFinite(cents)&&Number.isInteger(cents)&&cents>=minimumCents&&cents<=100000000;
+      if(!valid){
+        amountField.classList.add('is-invalid');
+        amountInput.setAttribute('aria-invalid','true');
+        amountError.hidden=false;
+        amountError.textContent=Number.isFinite(cents)&&cents<minimumCents
+          ? i18nText('O valor mínimo desta ONG é {amount}.',{amount:formatDonationCents(minimumCents)})
+          : i18nText('Digite um valor válido.');
+        amountInput.focus();
+        return;
+      }
+      amountField.classList.remove('is-invalid');
+      amountInput.setAttribute('aria-invalid','false');
+      amountError.hidden=true;
+      var ngoRef=donationBox.getAttribute('data-ngo-reference');
+      var originalText=donationButton.textContent;
+      var busy=false;
+      function setBusy(value){
+        busy=value;
+        donationButton.classList.toggle('is-loading',value);
+        donationButton.setAttribute('aria-busy',String(value));
+        donationButton.disabled=value;
+        donationButton.textContent=value?i18nText('Abrindo checkout…'):originalText;
+      }
+      async function payCard(){
+        if(busy)return;
+        setBusy(true);
+        try{
+          var requestId=donationRequestId();
+          var checkoutUrl=await createDonationCheckout(ngoRef,cents,requestId);
+          location.assign(checkoutUrl);
+        }catch(error){
+          amountField.classList.add('is-invalid');
+          amountError.hidden=false;
+          amountError.textContent=checkoutErrorMessage(error,error&&error.data);
+          setBusy(false);
+        }
+      }
+      async function payPix(){
+        if(busy)return;
+        setBusy(true);
+        try{
+          var requestId=donationRequestId();
+          var pix=await createDonationPix(ngoRef,cents,requestId);
+          setBusy(false);
+          openPixModal(pix,requestId);
+        }catch(error){
+          amountField.classList.add('is-invalid');
+          amountError.hidden=false;
+          amountError.textContent=checkoutErrorMessage(error,error&&error.data);
+          setBusy(false);
+        }
+      }
+      if(DONATION_CURRENCY==='BRL')openPaymentChoice(payCard,payPix);
+      else payCard();
+    },true);
+  }
+
   function supporterInitials(value){
     var parts=String(value||'Apoiador').trim().split(/\s+/).filter(Boolean);
     return (parts.slice(0,2).map(function(part){return part.charAt(0);}).join('')||'A').toUpperCase();

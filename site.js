@@ -5599,23 +5599,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function instagramBrowserHelpCopy() {
     const lang = String(document.documentElement.lang || navigator.language || 'pt').toLowerCase();
     if (lang.startsWith('es')) return {
-      title: 'Mejora la reproducción de los videos',
-      text: 'El navegador de Instagram puede limitar algunos videos. Toca ••• y elige “Abrir en el navegador” para una mejor compatibilidad.',
+      title: 'Este navegador puede bloquear el video',
+      text: 'Si el video no cargó, toca ••• en Instagram y elige “Abrir en el navegador”.',
       button: 'Entendido'
     };
     if (lang.startsWith('fr')) return {
-      title: 'Améliorez la lecture des vidéos',
-      text: 'Le navigateur Instagram peut limiter certaines vidéos. Touchez ••• puis choisissez « Ouvrir dans le navigateur » pour une meilleure compatibilité.',
+      title: 'Ce navigateur peut bloquer la vidéo',
+      text: 'Si la vidéo ne se charge pas, touchez ••• dans Instagram puis choisissez « Ouvrir dans le navigateur ».',
       button: 'Compris'
     };
     if (lang.startsWith('en')) return {
-      title: 'Improve video playback',
-      text: 'Instagram’s browser can limit some videos. Tap ••• and choose “Open in browser” for better compatibility.',
+      title: 'This browser may block the video',
+      text: 'If the video did not load, tap ••• in Instagram and choose “Open in browser”.',
       button: 'Got it'
     };
     return {
-      title: 'Melhore a reprodução dos vídeos',
-      text: 'O navegador do Instagram pode limitar alguns vídeos. Toque em ••• e escolha “Abrir no navegador” para ter melhor compatibilidade.',
+      title: 'Este navegador pode bloquear o vídeo',
+      text: 'Se o vídeo não carregou, toque em ••• no Instagram e escolha “Abrir no navegador”.',
       button: 'Entendi'
     };
   }
@@ -5630,6 +5630,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     wrap.setAttribute('aria-labelledby', 'beInstagramBrowserHelpTitle');
     wrap.innerHTML = `<div class="be-instagram-browser-help-backdrop"></div>
       <section class="be-instagram-browser-help-card">
+        <div class="be-instagram-browser-help-visual" aria-hidden="true">
+          <span class="be-instagram-browser-help-arrow">↑</span>
+          <span class="be-instagram-browser-help-dots">•••</span>
+        </div>
         <h2 id="beInstagramBrowserHelpTitle"></h2>
         <p></p>
         <button type="button"></button>
@@ -5644,66 +5648,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!document.getElementById('beInstagramBrowserHelpStyle')) {
       const style = document.createElement('style');
       style.id = 'beInstagramBrowserHelpStyle';
-      style.textContent = `#beInstagramBrowserHelp{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:20px}.be-instagram-browser-help-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(7px)}.be-instagram-browser-help-card{position:relative;width:min(92vw,390px);box-sizing:border-box;padding:22px 20px 18px;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:#111;color:#fff;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.45)}.be-instagram-browser-help-card h2{margin:0 0 9px;font-size:20px;line-height:1.2}.be-instagram-browser-help-card p{margin:0 0 18px;color:rgba(255,255,255,.78);font-size:14px;line-height:1.5}.be-instagram-browser-help-card button{width:100%;border:0;border-radius:14px;padding:13px 16px;font:inherit;font-weight:700;background:#fff;color:#111}`;
+      style.textContent = `#beInstagramBrowserHelp{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:20px}.be-instagram-browser-help-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(7px)}.be-instagram-browser-help-card{position:relative;width:min(92vw,390px);box-sizing:border-box;padding:22px 20px 18px;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:#111;color:#fff;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.45)}.be-instagram-browser-help-card h2{margin:8px 0 9px;font-size:20px;line-height:1.2}.be-instagram-browser-help-card p{margin:0 0 18px;color:rgba(255,255,255,.78);font-size:14px;line-height:1.5}.be-instagram-browser-help-card button{width:100%;border:0;border-radius:14px;padding:13px 16px;font:inherit;font-weight:700;background:#fff;color:#111}.be-instagram-browser-help-visual{height:58px;display:flex;align-items:flex-start;justify-content:flex-end;gap:8px;padding-right:9px}.be-instagram-browser-help-dots{font-size:25px;letter-spacing:2px;line-height:1}.be-instagram-browser-help-arrow{font-size:34px;line-height:1;transform:rotate(18deg);animation:beInstagramHelpArrow 1.1s ease-in-out infinite alternate}@keyframes beInstagramHelpArrow{to{transform:translateY(-7px) rotate(18deg)}}`;
       document.head.appendChild(style);
     }
     wrap.querySelector('button').focus({ preventScroll: true });
   }
 
-  // Aviso geral do navegador interno do Instagram.
-  // Conta 2 minutos de uso VISÍVEL no próprio aparelho, sem requests, polling,
-  // Vercel Functions ou chamadas ao Supabase. Pausa enquanto a aba/app está oculto.
-  function scheduleInstagramMobileSiteHelp() {
-    if (!isInstagramMobileBrowser() || window.__beInstagramMobileSiteHelpScheduled) return 0;
-    window.__beInstagramMobileSiteHelpScheduled = true;
-
-    const requiredVisibleMs = 2 * 60 * 1000;
-    let visibleMs = 0;
-    let visibleStartedAt = document.visibilityState === 'visible' ? Date.now() : 0;
-    let timer = 0;
-    let shown = false;
-
-    const remainingMs = () => Math.max(0, requiredVisibleMs - visibleMs - (visibleStartedAt ? Date.now() - visibleStartedAt : 0));
-    const clearTimer = () => { if (timer) { window.clearTimeout(timer); timer = 0; } };
-    const showOnce = () => {
-      if (shown) return;
-      shown = true;
-      clearTimer();
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      showInstagramMobileBrowserHelp();
-    };
-    const arm = () => {
-      clearTimer();
-      if (shown || document.visibilityState !== 'visible') return;
-      const wait = remainingMs();
-      if (wait <= 0) { showOnce(); return; }
-      timer = window.setTimeout(showOnce, wait);
-    };
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        if (!visibleStartedAt) visibleStartedAt = Date.now();
-        arm();
-      } else {
-        if (visibleStartedAt) visibleMs += Date.now() - visibleStartedAt;
-        visibleStartedAt = 0;
-        clearTimer();
-      }
-    }
-
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    arm();
-    return timer;
-  }
-
-  // Mantido apenas por compatibilidade com os pontos antigos do player.
-  // O aviso deixou de ser disparado por falha/timeout de vídeo e agora aparece
-  // exclusivamente após 2 minutos de uso visível do site no Instagram mobile.
-  function scheduleInstagramMobilePlayerHelp() { return 0; }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', scheduleInstagramMobileSiteHelp, { once: true });
-  } else {
-    scheduleInstagramMobileSiteHelp();
+  function scheduleInstagramMobilePlayerHelp(shouldStillShow, delay = 9000) {
+    if (!isInstagramMobileBrowser()) return 0;
+    return window.setTimeout(() => {
+      try { if (typeof shouldStillShow !== 'function' || shouldStillShow()) showInstagramMobileBrowserHelp(); } catch (_) {}
+    }, delay);
   }
 
   function googleDrivePreviewUrl(fileId, resourceKey = '') {
@@ -17342,8 +17297,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var avatar=document.getElementById('donatePageAvatar');
 
   var CHECKOUT_FUNCTION_NAME='create-donation-checkout';
-  var PIX_FUNCTION_NAME='create-mercadopago-pix';
-  var PIX_STATUS_FUNCTION_NAME='mercadopago-payment-status';
   var DONATION_LOCALE=String(window.BETVLocale&&window.BETVLocale.locale||navigator.language||'pt-BR');
   var DONATION_CURRENCY=String(window.BETVRegional&&window.BETVRegional.currency||'BRL').toUpperCase()==='USD'?'USD':'BRL';
   var DEFAULT_MINIMUM_DONATION_CENTS={BRL:500,USD:100};
@@ -17427,66 +17380,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(parsed.protocol!=='https:'||!/(^|\.)stripe\.com$/i.test(parsed.hostname))throw new Error('invalid_checkout_url');
     }catch(_){throw new Error(i18nText('A Stripe não retornou um checkout válido.'));}
     return url;
-  }
-
-  async function createDonationPix(ngoId,cents,requestId){
-    var client=window.beBackend&&window.beBackend.client;
-    if(!client||!client.functions||typeof client.functions.invoke!=='function')throw new Error(i18nText('O Pix seguro não está disponível.'));
-    var result=await client.functions.invoke(PIX_FUNCTION_NAME,{body:{ngoId:String(ngoId||''),amountCents:cents,requestId:requestId}});
-    var data=result&&result.data&&typeof result.data==='object'?result.data:null;
-    if(result&&result.error){
-      try{if(result.error.context&&typeof result.error.context.json==='function')data=await result.error.context.json();}catch(_){}
-      var failure=new Error(checkoutErrorMessage(result.error,data));failure.data=data;throw failure;
-    }
-    if(!data||!data.paymentId||(!data.qrCode&&!data.qrCodeBase64))throw new Error(i18nText('Não foi possível gerar o QR Code Pix.'));
-    return data;
-  }
-
-  function ensureDonationPayStyle(){
-    if(document.getElementById('beDonationPayStyle'))return;
-    var style=document.createElement('style');style.id='beDonationPayStyle';
-    style.textContent='.be-pay-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.58);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);display:grid;place-items:center;padding:18px}.be-pay-card{width:min(420px,100%);background:#0f172a;border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:20px;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.45)}.be-pay-choice-card{width:min(390px,calc(100vw - 32px));background:rgba(28,28,30,.96);border:1px solid rgba(255,255,255,.10);border-radius:28px;padding:22px 18px 18px;box-shadow:0 24px 70px rgba(0,0,0,.55);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,sans-serif}.be-pay-choice-card h3{margin:8px 32px 6px;text-align:center;font-size:21px;line-height:1.2;font-weight:750;letter-spacing:-.02em}.be-pay-choice-card p{margin:0 18px 20px;text-align:center;color:#a1a1a6;font-size:14px;line-height:1.35}.be-pay-choice-card .be-pay-actions{gap:12px}.be-pay-choice-card .be-pay-btn{min-height:54px;border-radius:16px;font-size:17px;font-weight:750;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);transition:transform .14s ease,filter .14s ease}.be-pay-choice-card .be-pay-btn:active{transform:scale(.985);filter:brightness(.92)}.be-pay-choice-card .be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-choice-card .be-pay-btn.pix{background:#30d158;color:#07160b}.be-pay-choice-card .be-pay-close{position:absolute;right:18px;top:16px;float:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgba(118,118,128,.24);color:#98989d;font-size:22px;line-height:1}.be-pay-card h3{margin:0 0 8px;font-size:20px}.be-pay-card p{margin:0 0 16px;color:#aeb8c8}.be-pay-actions{display:grid;gap:10px}.be-pay-btn{border:0;border-radius:14px;padding:14px 16px;font:inherit;font-weight:700;cursor:pointer}.be-pay-btn.primary{background:#1769ff;color:#fff}.be-pay-btn.secondary{background:#1b2538;color:#fff}.be-pay-close{float:right;background:transparent;border:0;color:#fff;font-size:24px;cursor:pointer}.be-pix-qr{width:220px;height:220px;display:block;margin:12px auto;border-radius:14px;background:#fff;padding:10px}.be-pix-code{width:100%;box-sizing:border-box;min-height:74px;background:#0a1020;color:#dce5f5;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;resize:none}.be-pix-status{text-align:center;margin-top:12px;font-weight:700}.be-pix-timer{text-align:center;color:#aeb8c8;margin-bottom:8px}';
-    document.head.appendChild(style);
-  }
-  function openPaymentChoice(onCard,onPix){
-    ensureDonationPayStyle();
-    var w=document.createElement('div');w.className='be-pay-overlay';
-    w.innerHTML='<div class="be-pay-card be-pay-choice-card" style="position:relative"><button class="be-pay-close" type="button" aria-label="'+esc(i18nText('Fechar'))+'">×</button><h3>'+esc(i18nText('Como você quer pagar?'))+'</h3><p>'+esc(i18nText('Escolha uma forma de pagamento para continuar.'))+'</p><div class="be-pay-actions"><button class="be-pay-btn primary" data-card type="button">'+esc(i18nText('Cartão'))+'</button><button class="be-pay-btn pix" data-pix type="button">Pix</button></div></div>';
-    function close(){w.remove();}
-    w.querySelector('.be-pay-close').onclick=close;
-    w.addEventListener('click',function(e){if(e.target===w)close();});
-    w.querySelector('[data-card]').onclick=function(){close();onCard();};
-    w.querySelector('[data-pix]').onclick=function(){close();onPix();};
-    document.body.appendChild(w);
-  }
-  function openPixModal(data,requestId){
-    ensureDonationPayStyle();
-    var w=document.createElement('div');w.className='be-pay-overlay';
-    var qr=data.qrCodeBase64?'data:image/png;base64,'+data.qrCodeBase64:'';
-    w.innerHTML='<div class="be-pay-card"><button class="be-pay-close" type="button">×</button><h3>Pix</h3><div class="be-pix-timer"></div>'+(qr?'<img class="be-pix-qr" alt="QR Code Pix">':'')+'<textarea class="be-pix-code" readonly></textarea><div class="be-pay-actions"><button class="be-pay-btn primary" data-copy type="button">'+esc(i18nText('Copiar código Pix'))+'</button></div><div class="be-pix-status">'+esc(i18nText('Aguardando pagamento...'))+'</div></div>';
-    if(qr)w.querySelector('.be-pix-qr').src=qr;
-    w.querySelector('.be-pix-code').value=String(data.qrCode||'');
-    var closed=false, pollTimer=null, timerId=null, started=Date.now();
-    function close(){closed=true;if(pollTimer)clearTimeout(pollTimer);if(timerId)clearInterval(timerId);w.remove();}
-    w.querySelector('.be-pay-close').onclick=close;
-    w.addEventListener('click',function(e){if(e.target===w)close();});
-    w.querySelector('[data-copy]').onclick=async function(){try{await navigator.clipboard.writeText(String(data.qrCode||''));this.textContent=i18nText('Código copiado');}catch(_){w.querySelector('.be-pix-code').select();document.execCommand('copy');}};
-    var expires=new Date(data.expiresAt||Date.now()+30*60*1000).getTime();
-    function tick(){var ms=Math.max(0,expires-Date.now()),m=Math.floor(ms/60000),sec=Math.floor(ms%60000/1000);w.querySelector('.be-pix-timer').textContent=i18nText('Expira em')+' '+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');if(ms<=0){w.querySelector('.be-pix-status').textContent=i18nText('Pix expirado');if(timerId)clearInterval(timerId);}}
-    tick();timerId=setInterval(tick,1000);
-    async function poll(){
-      if(closed||Date.now()-started>10*60*1000)return;
-      try{
-        var client=window.beBackend&&window.beBackend.client;
-        var r=await client.functions.invoke(PIX_STATUS_FUNCTION_NAME,{body:{paymentId:String(data.paymentId),requestId:String(requestId)}});
-        var st=String(r&&r.data&&r.data.status||'');
-        if(st==='paid'){w.querySelector('.be-pix-status').textContent=i18nText('Pagamento confirmado');return;}
-        if(st==='failed'||st==='refunded'||st==='charged_back'){w.querySelector('.be-pix-status').textContent=i18nText('Pagamento não concluído');return;}
-      }catch(_){}
-      pollTimer=setTimeout(poll,Date.now()-started<60000?4000:10000);
-    }
-    pollTimer=setTimeout(poll,4000);
-    document.body.appendChild(w);
   }
 
   function applyPageBanner(settings){
@@ -17593,7 +17486,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">'+esc(i18nText('Qual valor você deseja doar?'))+'</label>'+
             '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">'+esc(currencySymbol)+'</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="'+esc(amountPlaceholder)+'" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
             '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">'+esc(i18nText('Valor mínimo: {amount}',{amount:minimumLabel}))+'</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
+            '<div class="donate-payment-methods" aria-label="'+esc(i18nText('Formas de pagamento'))+'">'+
+              '<span class="donate-payment-method-pill">'+esc(i18nText('Cartão de crédito ou débito'))+'</span>'+
+              (DONATION_CURRENCY==='BRL'?'<span class="donate-payment-method-pill is-pix">Pix</span>':'')+
+            '</div>'+
             '<button class="donate-ngo-support-button" type="button" data-stripe-donation aria-disabled="true" disabled>'+esc(i18nText('Doar'))+'</button>'+
+            '<button class="donate-paypal-button" type="button" data-paypal-donation disabled aria-disabled="true" title="'+esc(i18nText('PayPal será disponibilizado assim que a integração segura estiver conectada.'))+'"><span>PayPal</span><small>'+esc(i18nText('em configuração'))+'</small></button>'+
+            '<small class="donate-payment-note">'+esc(i18nText('O pagamento é processado em ambiente seguro. O BETV não recebe os dados completos do seu cartão.'))+'</small>'+
           '</div>'+
         '</div></div></div></article>';
     }).join('');
@@ -17675,32 +17574,102 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           if(updateDonationButton(true))donationLink.click();
         }
       });
-      donationLink.addEventListener('click',async function(event){
-        if(event){
-          event.preventDefault();
-          event.stopPropagation();
-          if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
-        }
+      donationLink.addEventListener('click',async function(){
         var cents=updateDonationButton(true);
         if(!cents||checkoutBusy){if(!cents)amountInput.focus();return;}
         amountError.hidden=true;
-        var ngoRef=donationBox.getAttribute('data-ngo-reference');
-        async function payCard(){
-          setCheckoutBusy(true);
-          try{var requestId=donationRequestId();var checkoutUrl=await createDonationCheckout(ngoRef,cents,requestId);location.assign(checkoutUrl);}
-          catch(error){amountField.classList.add('is-invalid');amountError.hidden=false;amountError.textContent=checkoutErrorMessage(error,error&&error.data);setCheckoutBusy(false);updateDonationButton(false);}
+        setCheckoutBusy(true);
+        try{
+          var requestId=donationRequestId();
+          var checkoutUrl=await createDonationCheckout(donationBox.getAttribute('data-ngo-reference'),cents,requestId);
+          location.assign(checkoutUrl);
+        }catch(error){
+          amountField.classList.add('is-invalid');
+          amountError.hidden=false;
+          amountError.textContent=checkoutErrorMessage(error,error&&error.data);
+          setCheckoutBusy(false);
+          updateDonationButton(false);
         }
-        async function payPix(){
-          setCheckoutBusy(true);
-          try{var requestId=donationRequestId();var pix=await createDonationPix(ngoRef,cents,requestId);setCheckoutBusy(false);updateDonationButton(false);openPixModal(pix,requestId);}
-          catch(error){amountField.classList.add('is-invalid');amountError.hidden=false;amountError.textContent=checkoutErrorMessage(error,error&&error.data);setCheckoutBusy(false);updateDonationButton(false);}
-        }
-        if(DONATION_CURRENCY==='BRL'){
-          window.requestAnimationFrame(function(){openPaymentChoice(payCard,payPix);});
-        }else payCard();
       });
       updateDonationButton(false);
     });
+  }
+
+  // Intercepta o botão de doação no nível Window antes dos roteadores globais.
+  // Isso mantém a rota /ong ativa e impede que o clique seja tratado como navegação para a Home.
+  if(!window.beDonationWindowCaptureBound){
+    window.beDonationWindowCaptureBound=true;
+    window.addEventListener('click',function(event){
+      var donationButton=event.target&&event.target.closest?event.target.closest('[data-stripe-donation]'):null;
+      if(!donationButton||!document.body.classList.contains('donate-page-active'))return;
+      var donationBox=donationButton.closest('[data-donation-box]');
+      if(!donationBox)return;
+      event.preventDefault();
+      event.stopPropagation();
+      if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
+
+      var amountInput=donationBox.querySelector('.donate-ngo-amount-input');
+      var amountField=donationBox.querySelector('[data-donation-field]');
+      var amountError=donationBox.querySelector('.donate-ngo-amount-error');
+      if(!amountInput||!amountField||!amountError)return;
+      var minimumCents=minimumDonationCents(donationBox.getAttribute('data-minimum-donation-cents'));
+      var cents=parseDonationCents(amountInput.value.trim());
+      var valid=Number.isFinite(cents)&&Number.isInteger(cents)&&cents>=minimumCents&&cents<=100000000;
+      if(!valid){
+        amountField.classList.add('is-invalid');
+        amountInput.setAttribute('aria-invalid','true');
+        amountError.hidden=false;
+        amountError.textContent=Number.isFinite(cents)&&cents<minimumCents
+          ? i18nText('O valor mínimo desta ONG é {amount}.',{amount:formatDonationCents(minimumCents)})
+          : i18nText('Digite um valor válido.');
+        amountInput.focus();
+        return;
+      }
+      amountField.classList.remove('is-invalid');
+      amountInput.setAttribute('aria-invalid','false');
+      amountError.hidden=true;
+      var ngoRef=donationBox.getAttribute('data-ngo-reference');
+      var originalText=donationButton.textContent;
+      var busy=false;
+      function setBusy(value){
+        busy=value;
+        donationButton.classList.toggle('is-loading',value);
+        donationButton.setAttribute('aria-busy',String(value));
+        donationButton.disabled=value;
+        donationButton.textContent=value?i18nText('Abrindo checkout…'):originalText;
+      }
+      async function payCard(){
+        if(busy)return;
+        setBusy(true);
+        try{
+          var requestId=donationRequestId();
+          var checkoutUrl=await createDonationCheckout(ngoRef,cents,requestId);
+          location.assign(checkoutUrl);
+        }catch(error){
+          amountField.classList.add('is-invalid');
+          amountError.hidden=false;
+          amountError.textContent=checkoutErrorMessage(error,error&&error.data);
+          setBusy(false);
+        }
+      }
+      async function payPix(){
+        if(busy)return;
+        setBusy(true);
+        try{
+          var requestId=donationRequestId();
+          var pix=await createDonationPix(ngoRef,cents,requestId);
+          setBusy(false);
+          openPixModal(pix,requestId);
+        }catch(error){
+          amountField.classList.add('is-invalid');
+          amountError.hidden=false;
+          amountError.textContent=checkoutErrorMessage(error,error&&error.data);
+          setBusy(false);
+        }
+      }
+      if(DONATION_CURRENCY==='BRL')openPaymentChoice(payCard,payPix);
+      else payCard();
+    },true);
   }
 
   function supporterInitials(value){
