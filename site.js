@@ -5599,23 +5599,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function instagramBrowserHelpCopy() {
     const lang = String(document.documentElement.lang || navigator.language || 'pt').toLowerCase();
     if (lang.startsWith('es')) return {
-      title: 'Mejora la reproducción de los videos',
-      text: 'El navegador de Instagram puede limitar algunos videos. Toca ••• y elige “Abrir en el navegador” para una mejor compatibilidad.',
+      title: 'Este navegador puede bloquear el video',
+      text: 'Si el video no cargó, toca ••• en Instagram y elige “Abrir en el navegador”.',
       button: 'Entendido'
     };
     if (lang.startsWith('fr')) return {
-      title: 'Améliorez la lecture des vidéos',
-      text: 'Le navigateur Instagram peut limiter certaines vidéos. Touchez ••• puis choisissez « Ouvrir dans le navigateur » pour une meilleure compatibilité.',
+      title: 'Ce navigateur peut bloquer la vidéo',
+      text: 'Si la vidéo ne se charge pas, touchez ••• dans Instagram puis choisissez « Ouvrir dans le navigateur ».',
       button: 'Compris'
     };
     if (lang.startsWith('en')) return {
-      title: 'Improve video playback',
-      text: 'Instagram’s browser can limit some videos. Tap ••• and choose “Open in browser” for better compatibility.',
+      title: 'This browser may block the video',
+      text: 'If the video did not load, tap ••• in Instagram and choose “Open in browser”.',
       button: 'Got it'
     };
     return {
-      title: 'Melhore a reprodução dos vídeos',
-      text: 'O navegador do Instagram pode limitar alguns vídeos. Toque em ••• e escolha “Abrir no navegador” para ter melhor compatibilidade.',
+      title: 'Este navegador pode bloquear o vídeo',
+      text: 'Se o vídeo não carregou, toque em ••• no Instagram e escolha “Abrir no navegador”.',
       button: 'Entendi'
     };
   }
@@ -5654,60 +5654,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     wrap.querySelector('button').focus({ preventScroll: true });
   }
 
-  // Aviso geral do navegador interno do Instagram.
-  // Conta 5 minutos de uso VISÍVEL no próprio aparelho, sem requests, polling,
-  // Vercel Functions ou chamadas ao Supabase. Pausa enquanto a aba/app está oculto.
-  function scheduleInstagramMobileSiteHelp() {
-    if (!isInstagramMobileBrowser() || window.__beInstagramMobileSiteHelpScheduled) return 0;
-    window.__beInstagramMobileSiteHelpScheduled = true;
-
-    const requiredVisibleMs = 5 * 60 * 1000;
-    let visibleMs = 0;
-    let visibleStartedAt = document.visibilityState === 'visible' ? Date.now() : 0;
-    let timer = 0;
-    let shown = false;
-
-    const remainingMs = () => Math.max(0, requiredVisibleMs - visibleMs - (visibleStartedAt ? Date.now() - visibleStartedAt : 0));
-    const clearTimer = () => { if (timer) { window.clearTimeout(timer); timer = 0; } };
-    const showOnce = () => {
-      if (shown) return;
-      shown = true;
-      clearTimer();
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      showInstagramMobileBrowserHelp();
-    };
-    const arm = () => {
-      clearTimer();
-      if (shown || document.visibilityState !== 'visible') return;
-      const wait = remainingMs();
-      if (wait <= 0) { showOnce(); return; }
-      timer = window.setTimeout(showOnce, wait);
-    };
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        if (!visibleStartedAt) visibleStartedAt = Date.now();
-        arm();
-      } else {
-        if (visibleStartedAt) visibleMs += Date.now() - visibleStartedAt;
-        visibleStartedAt = 0;
-        clearTimer();
-      }
-    }
-
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    arm();
-    return timer;
-  }
-
-  // Mantido apenas por compatibilidade com os pontos antigos do player.
-  // O aviso deixou de ser disparado por falha/timeout de vídeo e agora aparece
-  // exclusivamente após 5 minutos de uso visível do site no Instagram mobile.
-  function scheduleInstagramMobilePlayerHelp() { return 0; }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', scheduleInstagramMobileSiteHelp, { once: true });
-  } else {
-    scheduleInstagramMobileSiteHelp();
+  function scheduleInstagramMobilePlayerHelp(shouldStillShow, delay = 9000) {
+    if (!isInstagramMobileBrowser()) return 0;
+    return window.setTimeout(() => {
+      try { if (typeof shouldStillShow !== 'function' || shouldStillShow()) showInstagramMobileBrowserHelp(); } catch (_) {}
+    }, delay);
   }
 
   function googleDrivePreviewUrl(fileId, resourceKey = '') {
@@ -17535,7 +17486,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">'+esc(i18nText('Qual valor você deseja doar?'))+'</label>'+
             '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">'+esc(currencySymbol)+'</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="'+esc(amountPlaceholder)+'" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
             '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">'+esc(i18nText('Valor mínimo: {amount}',{amount:minimumLabel}))+'</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
+            '<div class="donate-payment-methods" aria-label="'+esc(i18nText('Formas de pagamento'))+'">'+
+              '<span class="donate-payment-method-pill">'+esc(i18nText('Cartão de crédito ou débito'))+'</span>'+
+              (DONATION_CURRENCY==='BRL'?'<span class="donate-payment-method-pill is-pix">Pix</span>':'')+
+            '</div>'+
             '<button class="donate-ngo-support-button" type="button" data-stripe-donation aria-disabled="true" disabled>'+esc(i18nText('Doar'))+'</button>'+
+            '<button class="donate-paypal-button" type="button" data-paypal-donation disabled aria-disabled="true" title="'+esc(i18nText('PayPal será disponibilizado assim que a integração segura estiver conectada.'))+'"><span>PayPal</span><small>'+esc(i18nText('em configuração'))+'</small></button>'+
+            '<small class="donate-payment-note">'+esc(i18nText('O pagamento é processado em ambiente seguro. O BETV não recebe os dados completos do seu cartão.'))+'</small>'+
           '</div>'+
         '</div></div></div></article>';
     }).join('');

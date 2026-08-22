@@ -17403,7 +17403,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">'+esc(i18nText('Qual valor você deseja doar?'))+'</label>'+
             '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">'+esc(currencySymbol)+'</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="'+esc(amountPlaceholder)+'" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
             '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">'+esc(i18nText('Valor mínimo: {amount}',{amount:minimumLabel}))+'</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
+            '<div class="donate-payment-methods" aria-label="'+esc(i18nText('Formas de pagamento'))+'">'+
+              '<span class="donate-payment-method-pill">'+esc(i18nText('Cartão de crédito ou débito'))+'</span>'+
+              (DONATION_CURRENCY==='BRL'?'<span class="donate-payment-method-pill is-pix">Pix</span>':'')+
+            '</div>'+
             '<button class="donate-ngo-support-button" type="button" data-stripe-donation aria-disabled="true" disabled>'+esc(i18nText('Doar'))+'</button>'+
+            '<button class="donate-paypal-button" type="button" data-paypal-donation disabled aria-disabled="true" title="'+esc(i18nText('PayPal será disponibilizado assim que a integração segura estiver conectada.'))+'"><span>PayPal</span><small>'+esc(i18nText('em configuração'))+'</small></button>'+
+            '<small class="donate-payment-note">'+esc(i18nText('O pagamento é processado em ambiente seguro. O BETV não recebe os dados completos do seu cartão.'))+'</small>'+
           '</div>'+
         '</div></div></div></article>';
     }).join('');

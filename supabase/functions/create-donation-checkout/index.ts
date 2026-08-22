@@ -196,6 +196,10 @@ Deno.serve(async (req: Request) => {
   stripeBody.set("cancel_url", cancelUrl);
   stripeBody.set("locale", locale.stripe);
   stripeBody.set("submit_type", "donate");
+  // Keep cards enabled for credit/debit cards and add Pix for BRL donations.
+  // Stripe treats eligible debit cards through the `card` payment method.
+  stripeBody.set("payment_method_types[0]", "card");
+  if (currency === "brl") stripeBody.set("payment_method_types[1]", "pix");
   stripeBody.set("client_reference_id", `${user.id}:${ngoId}`.slice(0, 200));
   stripeBody.set("line_items[0][price_data][currency]", currency);
   stripeBody.set("line_items[0][price_data][unit_amount]", String(amountCents));
