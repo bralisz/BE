@@ -9624,7 +9624,7 @@ body.donate-page-active{
   overflow-x:hidden;
   background:#070809;
 }
-body.donate-page-active > :not(#donatePage):not(#authLoading):not(footer):not(.ios-ban-toast):not(.betv-update-popup):not(script):not(style){display:none!important}
+body.donate-page-active > :not(#donatePage):not(#authLoading):not(footer):not(.ios-ban-toast):not(.betv-update-popup):not(.be-pay-overlay):not(script):not(style){display:none!important}
 body.donate-page-active #donatePage{display:block!important}
 body.donate-page-active > footer{
   display:block!important;
