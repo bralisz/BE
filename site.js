@@ -5589,9 +5589,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `https://vkvideo.ru/video${encodeURIComponent(info.ownerId)}_${encodeURIComponent(info.videoId)}`;
   }
 
-  function isInstagramIosBrowser() {
+  // Fallback exclusivo do navegador interno do Instagram em celulares/tablets.
+  // Safari, Chrome e outros navegadores externos não entram nesta condição.
+  function isInstagramMobileBrowser() {
     const ua = String(navigator.userAgent || '');
-    return /Instagram/i.test(ua) && /iPhone|iPad|iPod/i.test(ua);
+    return /Instagram/i.test(ua) && /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
   }
 
   function instagramBrowserHelpCopy() {
@@ -5618,8 +5620,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
   }
 
-  function showInstagramIosBrowserHelp() {
-    if (!isInstagramIosBrowser() || document.getElementById('beInstagramBrowserHelp')) return;
+  function showInstagramMobileBrowserHelp() {
+    if (!isInstagramMobileBrowser() || document.getElementById('beInstagramBrowserHelp')) return;
     const copy = instagramBrowserHelpCopy();
     const wrap = document.createElement('div');
     wrap.id = 'beInstagramBrowserHelp';
@@ -5652,10 +5654,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     wrap.querySelector('button').focus({ preventScroll: true });
   }
 
-  function scheduleInstagramIosPlayerHelp(shouldStillShow, delay = 9000) {
-    if (!isInstagramIosBrowser()) return 0;
+  function scheduleInstagramMobilePlayerHelp(shouldStillShow, delay = 9000) {
+    if (!isInstagramMobileBrowser()) return 0;
     return window.setTimeout(() => {
-      try { if (typeof shouldStillShow !== 'function' || shouldStillShow()) showInstagramIosBrowserHelp(); } catch (_) {}
+      try { if (typeof shouldStillShow !== 'function' || shouldStillShow()) showInstagramMobileBrowserHelp(); } catch (_) {}
     }, delay);
   }
 
@@ -6746,7 +6748,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = document.activeElement;
       activeProvider = normalizedProvider;
       activeVkInfo = normalizedProvider === 'vk' ? info : null;
-      let instagramIosFrameLoaded = false;
+      let instagramMobileFrameLoaded = false;
       vkEmbedAttempt = 0;
       vkPlaybackConfirmed = false;
       configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '');
@@ -6763,8 +6765,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeButton.setAttribute('aria-label', `Fechar ${providerLabel}`);
       overlay.dataset.provider = normalizedProvider;
       overlay.classList.add('is-open', normalizedProvider === 'vk' ? 'is-vk' : 'is-youtube');
-      if (normalizedProvider === 'youtube' && isInstagramIosBrowser()) {
-        frame.addEventListener('load', () => { instagramIosFrameLoaded = true; }, { once: true });
+      if (normalizedProvider === 'youtube' && isInstagramMobileBrowser()) {
+        frame.addEventListener('load', () => { instagramMobileFrameLoaded = true; }, { once: true });
       }
       frame.src = embedUrl;
       overlay.hidden = false;
@@ -6778,12 +6780,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         frame.addEventListener('load', bindVkApi, { once: true });
         window.setTimeout(bindVkApi, 900);
         scheduleVkFallback();
-        scheduleInstagramIosPlayerHelp(() => !overlay.hidden && activeProvider === 'vk' && !vkPlaybackConfirmed, 9000);
+        scheduleInstagramMobilePlayerHelp(() => !overlay.hidden && activeProvider === 'vk' && !vkPlaybackConfirmed, 9000);
         window.setTimeout(() => {
           if (!overlay.hidden && activeProvider === 'vk') showControls(false);
         }, 80);
       } else if (normalizedProvider === 'youtube') {
-        scheduleInstagramIosPlayerHelp(() => !overlay.hidden && activeProvider === 'youtube' && !instagramIosFrameLoaded, 9000);
+        scheduleInstagramMobilePlayerHelp(() => !overlay.hidden && activeProvider === 'youtube' && !instagramMobileFrameLoaded, 9000);
       }
       closeButton.focus({ preventScroll: true });
     };
@@ -7096,7 +7098,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let legacySmartTvMode = false;
     let mediaReady = false;
     let frameMode = false;
-    let instagramIosDriveFrameLoaded = false;
+    let instagramMobileDriveFrameLoaded = false;
     let fallbackTimer = 0;
     let inactivityTimer = 0;
     let controlsInteracting = false;
@@ -7381,9 +7383,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       video.removeAttribute('src');
       video.load();
       frame.title = 'Reprodutor nativo do Google Drive';
-      instagramIosDriveFrameLoaded = false;
+      instagramMobileDriveFrameLoaded = false;
       frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
-      scheduleInstagramIosPlayerHelp(() => !overlay.hidden && frameMode && !instagramIosDriveFrameLoaded, 9000);
+      scheduleInstagramMobilePlayerHelp(() => !overlay.hidden && frameMode && !instagramMobileDriveFrameLoaded, 9000);
       frameShell.hidden = false;
       overlay.classList.remove('is-error', 'is-source-syncing');
       overlay.classList.add('is-frame-mode');
@@ -7802,7 +7804,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     frame.addEventListener('load', () => {
       if (overlay.hidden || !frameMode || frame.src === 'about:blank') return;
-      instagramIosDriveFrameLoaded = true;
+      instagramMobileDriveFrameLoaded = true;
       setFrameSubtitleClock(readFrameSubtitleTime(), true);
       syncDriveSubtitle();
       syncMobileDriveFrameViewport();
