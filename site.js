@@ -5599,23 +5599,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function instagramBrowserHelpCopy() {
     const lang = String(document.documentElement.lang || navigator.language || 'pt').toLowerCase();
     if (lang.startsWith('es')) return {
-      title: 'Este navegador puede bloquear el video',
-      text: 'Si el video no cargó, toca ••• en Instagram y elige “Abrir en el navegador”.',
+      title: 'Mejora la reproducción de los videos',
+      text: 'El navegador de Instagram puede limitar algunos videos. Toca ••• y elige “Abrir en el navegador” para una mejor compatibilidad.',
       button: 'Entendido'
     };
     if (lang.startsWith('fr')) return {
-      title: 'Ce navigateur peut bloquer la vidéo',
-      text: 'Si la vidéo ne se charge pas, touchez ••• dans Instagram puis choisissez « Ouvrir dans le navigateur ».',
+      title: 'Améliorez la lecture des vidéos',
+      text: 'Le navigateur Instagram peut limiter certaines vidéos. Touchez ••• puis choisissez « Ouvrir dans le navigateur » pour une meilleure compatibilité.',
       button: 'Compris'
     };
     if (lang.startsWith('en')) return {
-      title: 'This browser may block the video',
-      text: 'If the video did not load, tap ••• in Instagram and choose “Open in browser”.',
+      title: 'Improve video playback',
+      text: 'Instagram’s browser can limit some videos. Tap ••• and choose “Open in browser” for better compatibility.',
       button: 'Got it'
     };
     return {
-      title: 'Este navegador pode bloquear o vídeo',
-      text: 'Se o vídeo não carregou, toque em ••• no Instagram e escolha “Abrir no navegador”.',
+      title: 'Melhore a reprodução dos vídeos',
+      text: 'O navegador do Instagram pode limitar alguns vídeos. Toque em ••• e escolha “Abrir no navegador” para ter melhor compatibilidade.',
       button: 'Entendi'
     };
   }
@@ -5654,11 +5654,60 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     wrap.querySelector('button').focus({ preventScroll: true });
   }
 
-  function scheduleInstagramMobilePlayerHelp(shouldStillShow, delay = 9000) {
-    if (!isInstagramMobileBrowser()) return 0;
-    return window.setTimeout(() => {
-      try { if (typeof shouldStillShow !== 'function' || shouldStillShow()) showInstagramMobileBrowserHelp(); } catch (_) {}
-    }, delay);
+  // Aviso geral do navegador interno do Instagram.
+  // Conta 5 minutos de uso VISÍVEL no próprio aparelho, sem requests, polling,
+  // Vercel Functions ou chamadas ao Supabase. Pausa enquanto a aba/app está oculto.
+  function scheduleInstagramMobileSiteHelp() {
+    if (!isInstagramMobileBrowser() || window.__beInstagramMobileSiteHelpScheduled) return 0;
+    window.__beInstagramMobileSiteHelpScheduled = true;
+
+    const requiredVisibleMs = 5 * 60 * 1000;
+    let visibleMs = 0;
+    let visibleStartedAt = document.visibilityState === 'visible' ? Date.now() : 0;
+    let timer = 0;
+    let shown = false;
+
+    const remainingMs = () => Math.max(0, requiredVisibleMs - visibleMs - (visibleStartedAt ? Date.now() - visibleStartedAt : 0));
+    const clearTimer = () => { if (timer) { window.clearTimeout(timer); timer = 0; } };
+    const showOnce = () => {
+      if (shown) return;
+      shown = true;
+      clearTimer();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      showInstagramMobileBrowserHelp();
+    };
+    const arm = () => {
+      clearTimer();
+      if (shown || document.visibilityState !== 'visible') return;
+      const wait = remainingMs();
+      if (wait <= 0) { showOnce(); return; }
+      timer = window.setTimeout(showOnce, wait);
+    };
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        if (!visibleStartedAt) visibleStartedAt = Date.now();
+        arm();
+      } else {
+        if (visibleStartedAt) visibleMs += Date.now() - visibleStartedAt;
+        visibleStartedAt = 0;
+        clearTimer();
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    arm();
+    return timer;
+  }
+
+  // Mantido apenas por compatibilidade com os pontos antigos do player.
+  // O aviso deixou de ser disparado por falha/timeout de vídeo e agora aparece
+  // exclusivamente após 5 minutos de uso visível do site no Instagram mobile.
+  function scheduleInstagramMobilePlayerHelp() { return 0; }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', scheduleInstagramMobileSiteHelp, { once: true });
+  } else {
+    scheduleInstagramMobileSiteHelp();
   }
 
   function googleDrivePreviewUrl(fileId, resourceKey = '') {
