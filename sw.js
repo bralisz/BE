@@ -1,5 +1,5 @@
 /* Service worker do PWA; os arquivos continuam vindo da rede. */
-const SW_VERSION = '20260822-donation-route-capture-v1';
+const SW_VERSION = '20260822-ong-pay-ios-v5';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

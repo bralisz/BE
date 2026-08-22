@@ -17445,10 +17445,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function ensureDonationPayStyle(){
     if(document.getElementById('beDonationPayStyle'))return;
     var style=document.createElement('style');style.id='beDonationPayStyle';
-    style.textContent='.be-pay-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.58);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);display:grid;place-items:center;padding:18px}.be-pay-card{width:min(420px,100%);background:#0f172a;border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:20px;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.45)}.be-pay-choice-card{width:min(390px,calc(100vw - 32px));background:rgba(28,28,30,.96);border:1px solid rgba(255,255,255,.10);border-radius:28px;padding:22px 18px 18px;box-shadow:0 24px 70px rgba(0,0,0,.55);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,sans-serif}.be-pay-choice-card h3{margin:8px 32px 6px;text-align:center;font-size:21px;line-height:1.2;font-weight:750;letter-spacing:-.02em}.be-pay-choice-card p{margin:0 18px 20px;text-align:center;color:#a1a1a6;font-size:14px;line-height:1.35}.be-pay-choice-card .be-pay-actions{gap:12px}.be-pay-choice-card .be-pay-btn{min-height:54px;border-radius:16px;font-size:17px;font-weight:750;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);transition:transform .14s ease,filter .14s ease}.be-pay-choice-card .be-pay-btn:active{transform:scale(.985);filter:brightness(.92)}.be-pay-choice-card .be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-choice-card .be-pay-btn.pix{background:#30d158;color:#07160b}.be-pay-choice-card .be-pay-close{position:absolute;right:18px;top:16px;float:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgba(118,118,128,.24);color:#98989d;font-size:22px;line-height:1}.be-pay-card h3{margin:0 0 8px;font-size:20px}.be-pay-card p{margin:0 0 16px;color:#aeb8c8}.be-pay-actions{display:grid;gap:10px}.be-pay-btn{border:0;border-radius:14px;padding:14px 16px;font:inherit;font-weight:700;cursor:pointer}.be-pay-btn.primary{background:#1769ff;color:#fff}.be-pay-btn.secondary{background:#1b2538;color:#fff}.be-pay-close{float:right;background:transparent;border:0;color:#fff;font-size:24px;cursor:pointer}.be-pix-qr{width:220px;height:220px;display:block;margin:12px auto;border-radius:14px;background:#fff;padding:10px}.be-pix-code{width:100%;box-sizing:border-box;min-height:74px;background:#0a1020;color:#dce5f5;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px;resize:none}.be-pix-status{text-align:center;margin-top:12px;font-weight:700}.be-pix-timer{text-align:center;color:#aeb8c8;margin-bottom:8px}';
+    style.textContent='.be-pay-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.56);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);display:grid;place-items:center;padding:18px}.be-pay-card{position:relative;width:min(420px,calc(100vw - 32px));background:rgba(20,24,35,.97);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:24px 20px 20px;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.48);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,sans-serif}.be-pay-choice-card{width:min(390px,calc(100vw - 32px));background:rgba(28,28,30,.97);padding:22px 18px 18px}.be-pay-choice-card h3{margin:8px 38px 6px;text-align:center;font-size:21px;line-height:1.2;font-weight:750;letter-spacing:-.02em}.be-pay-choice-card p{margin:0 18px 20px;text-align:center;color:#a1a1a6;font-size:14px;line-height:1.35}.be-pay-choice-card .be-pay-actions{gap:12px}.be-pay-choice-card .be-pay-btn{min-height:54px;border-radius:16px;font-size:17px;font-weight:750;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);transition:transform .14s ease,filter .14s ease}.be-pay-choice-card .be-pay-btn:active{transform:scale(.985);filter:brightness(.92)}.be-pay-choice-card .be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-choice-card .be-pay-btn.pix{background:#30d158;color:#07160b}.be-pay-close{position:absolute;right:16px;top:16px;float:none;width:32px;height:32px;padding:0;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(118,118,128,.24);color:#a7a7ad;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;font-size:20px;font-weight:400;line-height:1;cursor:pointer;appearance:none;-webkit-appearance:none}.be-pay-close:hover{background:rgba(118,118,128,.34)}.be-pay-card h3{margin:4px 40px 10px;font-size:22px;font-weight:750;letter-spacing:-.02em}.be-pay-card p{margin:0 0 16px;color:#aeb8c8}.be-pay-actions{display:grid;gap:10px}.be-pay-btn{border:0;border-radius:16px;padding:14px 16px;font:inherit;font-weight:700;cursor:pointer}.be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-btn.secondary{background:#1b2538;color:#fff}.be-pix-card{width:min(390px,calc(100vw - 32px));background:rgba(18,22,32,.98);padding:24px 20px 20px}.be-pix-card h3{text-align:left;margin:4px 40px 2px 4px}.be-pix-timer{text-align:center;color:#a1a1a6;margin:2px 0 14px;font-size:15px;font-weight:500}.be-pix-qr{width:min(228px,68vw);height:auto;aspect-ratio:1;display:block;margin:8px auto 18px;border-radius:18px;background:#fff;padding:12px}.be-pix-copy{min-height:54px;border-radius:16px}.be-pix-status{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;margin-top:14px;color:#a1a1a6;font-size:13px;font-weight:500;letter-spacing:0}.be-pix-status.is-waiting:before{content:"";width:13px;height:13px;border:1.7px solid rgba(255,255,255,.24);border-top-color:#ffd60a;border-radius:50%;animation:bePixSpin .8s linear infinite}.be-pix-status.is-paid{color:#30d158;font-weight:650}.be-pix-status.is-error{color:#ff9f0a}.be-pix-status.is-expired{color:#a1a1a6}@keyframes bePixSpin{to{transform:rotate(360deg)}}@media(max-width:520px){.be-pay-overlay{padding:14px}.be-pay-card{border-radius:26px}.be-pix-qr{width:min(220px,70vw)}}';
     document.head.appendChild(style);
   }
   function openPaymentChoice(onCard,onPix){
+    if(!isRoute()||!document.body.classList.contains('donate-page-active'))return;
     ensureDonationPayStyle();
     var w=document.createElement('div');w.className='be-pay-overlay';
     w.innerHTML='<div class="be-pay-card be-pay-choice-card" style="position:relative"><button class="be-pay-close" type="button" aria-label="'+esc(i18nText('Fechar'))+'">×</button><h3>'+esc(i18nText('Como você quer pagar?'))+'</h3><p>'+esc(i18nText('Escolha uma forma de pagamento para continuar.'))+'</p><div class="be-pay-actions"><button class="be-pay-btn primary" data-card type="button">'+esc(i18nText('Cartão'))+'</button><button class="be-pay-btn pix" data-pix type="button">Pix</button></div></div>';
@@ -17460,19 +17461,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.appendChild(w);
   }
   function openPixModal(data,requestId){
+    if(!isRoute()||!document.body.classList.contains('donate-page-active'))return;
     ensureDonationPayStyle();
     var w=document.createElement('div');w.className='be-pay-overlay';
     var qr=data.qrCodeBase64?'data:image/png;base64,'+data.qrCodeBase64:'';
-    w.innerHTML='<div class="be-pay-card"><button class="be-pay-close" type="button">×</button><h3>Pix</h3><div class="be-pix-timer"></div>'+(qr?'<img class="be-pix-qr" alt="QR Code Pix">':'')+'<textarea class="be-pix-code" readonly></textarea><div class="be-pay-actions"><button class="be-pay-btn primary" data-copy type="button">'+esc(i18nText('Copiar código Pix'))+'</button></div><div class="be-pix-status">'+esc(i18nText('Aguardando pagamento...'))+'</div></div>';
+    w.innerHTML='<div class="be-pay-card be-pix-card"><button class="be-pay-close" type="button" aria-label="'+esc(i18nText('Fechar'))+'">×</button><h3>Pix</h3><div class="be-pix-timer"></div>'+(qr?'<img class="be-pix-qr" alt="QR Code Pix">':'')+'<div class="be-pay-actions"><button class="be-pay-btn primary be-pix-copy" data-copy type="button">'+esc(i18nText('Copiar código Pix'))+'</button></div><div class="be-pix-status is-waiting">'+esc(i18nText('Aguardando pagamento'))+'</div></div>';
     if(qr)w.querySelector('.be-pix-qr').src=qr;
-    w.querySelector('.be-pix-code').value=String(data.qrCode||'');
+    var pixCode=String(data.qrCode||'');
     var closed=false, pollTimer=null, timerId=null, started=Date.now();
     function close(){closed=true;if(pollTimer)clearTimeout(pollTimer);if(timerId)clearInterval(timerId);w.remove();}
     w.querySelector('.be-pay-close').onclick=close;
     w.addEventListener('click',function(e){if(e.target===w)close();});
-    w.querySelector('[data-copy]').onclick=async function(){try{await navigator.clipboard.writeText(String(data.qrCode||''));this.textContent=i18nText('Código copiado');}catch(_){w.querySelector('.be-pix-code').select();document.execCommand('copy');}};
+    w.querySelector('[data-copy]').onclick=async function(){
+      var button=this,original=i18nText('Copiar código Pix');
+      try{await navigator.clipboard.writeText(pixCode);}
+      catch(_){
+        var helper=document.createElement('textarea');helper.value=pixCode;helper.setAttribute('readonly','');helper.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0';document.body.appendChild(helper);helper.select();try{document.execCommand('copy');}catch(__){}helper.remove();
+      }
+      button.textContent=i18nText('Código copiado');
+      window.setTimeout(function(){if(button.isConnected)button.textContent=original;},1800);
+    };
     var expires=new Date(data.expiresAt||Date.now()+30*60*1000).getTime();
-    function tick(){var ms=Math.max(0,expires-Date.now()),m=Math.floor(ms/60000),sec=Math.floor(ms%60000/1000);w.querySelector('.be-pix-timer').textContent=i18nText('Expira em')+' '+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');if(ms<=0){w.querySelector('.be-pix-status').textContent=i18nText('Pix expirado');if(timerId)clearInterval(timerId);}}
+    function setStatus(text,state){var el=w.querySelector('.be-pix-status');if(!el)return;el.className='be-pix-status '+(state||'');el.textContent=text;}
+    function tick(){var ms=Math.max(0,expires-Date.now()),m=Math.floor(ms/60000),sec=Math.floor(ms%60000/1000);w.querySelector('.be-pix-timer').textContent=i18nText('Expira em')+' '+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');if(ms<=0){setStatus(i18nText('Pix expirado'),'is-expired');if(timerId)clearInterval(timerId);}}
     tick();timerId=setInterval(tick,1000);
     async function poll(){
       if(closed||Date.now()-started>10*60*1000)return;
@@ -17480,8 +17491,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var client=window.beBackend&&window.beBackend.client;
         var r=await client.functions.invoke(PIX_STATUS_FUNCTION_NAME,{body:{paymentId:String(data.paymentId),requestId:String(requestId)}});
         var st=String(r&&r.data&&r.data.status||'');
-        if(st==='paid'){w.querySelector('.be-pix-status').textContent=i18nText('Pagamento confirmado');return;}
-        if(st==='failed'||st==='refunded'||st==='charged_back'){w.querySelector('.be-pix-status').textContent=i18nText('Pagamento não concluído');return;}
+        if(st==='paid'){setStatus(i18nText('Pagamento confirmado'),'is-paid');return;}
+        if(st==='failed'||st==='refunded'||st==='charged_back'){setStatus(i18nText('Pagamento não concluído'),'is-error');return;}
       }catch(_){}
       pollTimer=setTimeout(poll,Date.now()-started<60000?4000:10000);
     }
@@ -17709,7 +17720,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.beDonationWindowCaptureBound=true;
     window.addEventListener('click',function(event){
       var donationButton=event.target&&event.target.closest?event.target.closest('[data-stripe-donation]'):null;
-      if(!donationButton||!document.body.classList.contains('donate-page-active'))return;
+      if(!donationButton||!isRoute()||!document.body.classList.contains('donate-page-active'))return;
       var donationBox=donationButton.closest('[data-donation-box]');
       if(!donationBox)return;
       event.preventDefault();
