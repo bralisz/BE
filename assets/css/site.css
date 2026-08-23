@@ -19330,3 +19330,35 @@ body.drive-player-open .betv-tv-session-widget,body.player-open .betv-tv-session
 @media(max-width:999px),(pointer:coarse){.betv-tv-session-widget{display:none!important}}
 @media(prefers-reduced-motion:reduce){.betv-tv-session-widget,.betv-tv-session-chevron,.betv-tv-session-disconnect{transition:none!important}}
 
+
+
+/* BETV performance pass 2026-08-23
+   Reduz composição/GPU em aparelhos fracos sem criar tarjas sólidas atrás
+   de elementos que originalmente usam transparência. */
+@media (max-width:760px){
+  html.mobile-optimized #dynamicSections>.video-rail-section,
+  html.mobile-optimized .album-home-section,
+  html.mobile-optimized .film-library-section{
+    content-visibility:auto;
+    contain-intrinsic-size:320px;
+  }
+  html.mobile-lite .user-dropdown,
+  html.mobile-lite .notification-dropdown,
+  html.mobile-lite .mobile-notification-popover,
+  html.mobile-lite .mobile-account-popover{
+    background:rgba(8,10,12,.90)!important;
+  }
+  html.mobile-lite .video-card,
+  html.mobile-lite .album-home-card,
+  html.mobile-lite .detail-reco-card{
+    box-shadow:none!important;
+  }
+  html.mobile-lite .bg-grain{display:none!important}
+}
+html.performance-lite .f-slide:not(.active),
+html.performance-lite .login-bg-slide:not(.active){
+  animation:none!important;
+}
+html.performance-lite .f-slide:not(.active) img{
+  content-visibility:auto;
+}

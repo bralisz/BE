@@ -115,6 +115,13 @@
 <script src="/assets/js/locale-routing.js?rev=20260823-it-locale-v1"></script>
 <script>
 (function(){
+  // Traduções críticas de /it embutidas no HTML para a primeira pintura.
+  // O bundle completo compartilhado chega junto do bootstrap público.
+  window.__BETV_INLINE_I18N__ = {"it":{"1 curtida":"1 Mi piace","A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.":"La pagina verrà ricaricata nella lingua scelta e la preferenza verrà salvata su questo dispositivo.","Abra Configurações e procure a seção Idioma. Escolha Português, English, Español, Français ou Italiano. O site reabrirá a página atual no idioma selecionado e salvará a preferência neste dispositivo.":"Apri Impostazioni e cerca la sezione Lingua. Scegli Português, English, Español, Français o Italiano. Il sito riaprirà la pagina attuale nella lingua selezionata e salverà la preferenza su questo dispositivo.","Abrindo checkout…":"Apertura del pagamento…","Abrir":"Apri","Abrir app":"Apri app","Abrir comunidade {name}":"Apri la community {name}","Abrir notificações":"Apri notifiche","Abrir o app":"Apri l’app","Abrir perfil":"Apri profilo","Abrir pesquisa":"Apri la ricerca","Acessar como convidado":"Continua come ospite","Acessar ou criar conta":"Accedi o crea un account","Adicionar aos favoritos":"Aggiungi ai preferiti","Algo deu errado.":"Qualcosa è andato storto.","Ano":"Anno","Apoie uma ONG":"Sostieni un’organizzazione","Assistir":"Guarda","Atualizações":"Aggiornamenti","Biografia":"Biografia","Buscar":"Cerca","Cancelar":"Annulla","Carregando":"Caricamento","Carregando fãs…":"Caricamento dei fan…","Carregando mais fãs…":"Caricamento di altri fan…","Carregando…":"Caricamento…","Comentar":"Commenta","Comentários":"Commenti","Como altero o idioma do site?":"Come cambio la lingua del sito?","Compartilhar":"Condividi","Compartilhar perfil":"Condividi profilo","Comunidade":"Comunità","Comunidade BETV":"Comunità BETV","Conectar Discord":"Collega Discord","Conexões e Redes Sociais":"Connessioni e social","Configurações":"Impostazioni","Confirmar":"Conferma","Conta":"Account","Conteúdo":"Contenuto","Conteúdos":"Contenuti","Continuar":"Continua","Continuar para pagamento":"Continua al pagamento","Criar conta":"Crea account","Curtidas":"Mi piace","Denunciar":"Segnala","Descrição":"Descrizione","Discord":"Discord","Discord conectado":"Discord collegato","Doar":"Dona","Duração":"Durata","E-mail":"Email","Entendi":"Ho capito","Entrar":"Accedi","Entrar com Google":"Accedi con Google","Enviar":"Invia","Escolha o idioma usado em todas as áreas públicas do site.":"Scegli la lingua usata in tutte le aree pubbliche del sito.","Espanhol":"Spagnolo","Esqueci minha senha":"Password dimenticata","Excluir":"Elimina","Excluir conta":"Elimina account","Exportar meus dados":"Esporta i miei dati","Favoritos":"Preferiti","Fechar":"Chiudi","Filmes":"Film","Francês":"Francese","Fãs":"Fan","Fã da Billie":"Fan di Billie","Live":"Dal vivo","Ao vivo":"Dal vivo","Live Performances & TV":"Spettacoli dal vivo e TV","Idioma":"Lingua","Inglês":"Inglese","Instagram":"Instagram","Instalar app":"Installa app","Início":"Home","Italiano":"Italiano","Link copiado!":"Link copiato!","Marcar todas como lidas":"Segna tutte come lette","Meu perfil":"Il mio profilo","Meus Dados":"I miei dati","Músicas":"Brani","Nenhum resultado encontrado.":"Nessun risultato trovato.","Nome":"Nome","Notificações":"Notifiche","Nova senha":"Nuova password","Perfil":"Profilo","Pesquisar":"Cerca","Política de Cookies":"Informativa sui cookie","Política de Privacidade":"Informativa sulla privacy","Português":"Portoghese","Próximo":"Avanti","Redefinir senha":"Reimposta password","Redes sociais":"Social","Sair":"Esci","Sair da conta":"Esci dall’account","Salvar":"Salva","Salvar alterações":"Salva modifiche","Senha":"Password","Sessão":"Sessione","Site oficial":"Sito ufficiale","Suporte":"Assistenza","Séries":"Serie","Tente novamente":"Riprova","Termos e Condições":"Termini e condizioni","TikTok":"TikTok","Valor da doação":"Importo della donazione","Ver Termos de Privacidade":"Vedi informativa sulla privacy","Ver fãs que apoiam o site":"Vedi i fan che sostengono il sito","Voltar":"Indietro","Vídeos":"Video","Álbuns":"Album","Film":"Film","Home":"Home","Escuro":"Scuro","Limpar":"Cancella","Faixa":"Traccia","Apoiar":"Sostieni","Apoie":"Sostieni","Apoio":"Supporto","Wikipédia em português":"Wikipedia in italiano","Página legal":"Pagina legale","Abrir suporte":"Apri assistenza","Limite de 4 favoritos":"Limite di 4 preferiti","Ocean Eyes":"Ocean Eyes","Twitter / X":"Twitter / X"}};
+})();
+</script>
+<script>
+(function(){
   try{
     var path=String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';
     var hash=String(location.hash||'').toLowerCase();
@@ -192,8 +199,12 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
     var mobile=window.matchMedia&&window.matchMedia('(max-width: 760px)').matches;
     var memory=Number(navigator.deviceMemory||0);
     var cores=Number(navigator.hardwareConcurrency||0);
-    var saveData=Boolean(navigator.connection&&navigator.connection.saveData);
-    var lite=saveData||(memory&&memory<=4)||(cores&&cores<=4);
+    var connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection||null;
+    var saveData=Boolean(connection&&connection.saveData);
+    var effectiveType=String(connection&&connection.effectiveType||'').toLowerCase();
+    var slowNetwork=/^(slow-2g|2g)$/.test(effectiveType);
+    var reducedMotion=Boolean(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var lite=saveData||slowNetwork||reducedMotion||(memory&&memory<=4)||(cores&&cores<=4);
     if(mobile)document.documentElement.classList.add('mobile-optimized');
     if(lite){
       document.documentElement.classList.add('performance-lite');
@@ -202,9 +213,9 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/assets/css/site.css?rev=20260822-ong-payment-panel-v1">
+<link rel="stylesheet" href="/assets/css/site.css?rev=20260823-performance-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/site.js?rev=20260823-update-cache-v2"></script>
+<script defer src="/assets/js/site.js?rev=20260823-it-wiki-live-v1"></script>
 <!-- Vercel Web Analytics: mantém o console público oculto e restaura apenas a coleta de pageviews/visitors. -->
 <script defer src="/_vercel/insights/script.js"></script>
 <script>
@@ -212,7 +223,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost')return;
   window.addEventListener('load',function(){
-    var build=String(window.__BETV_DEPLOYMENT_VERSION__||'20260823-update-cache-v2');
+    var build=String(window.__BETV_DEPLOYMENT_VERSION__||'20260823-it-wiki-live-v1');
     var cleanup=window.__BETV_UPDATE_CACHE_CLEANUP__;
     Promise.resolve(cleanup).catch(function(){}).then(function(){
       return navigator.serviceWorker.register('/sw.js?build='+encodeURIComponent(build),{scope:'/',updateViaCache:'none'});

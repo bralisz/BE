@@ -27,12 +27,12 @@
     'Never Felt So Alone','No Time To Die','Ocean Eyes','ocean eyes','Therefore I Am','watch','What Was I Made For?',
     "when the party's over",'xanny','you should see me in a crown','Your Power','THE GREATEST','SKINNY',"L'AMOUR DE MA VIE",
     'Billie Bossa Nova','Getting Older','TV','bitches broken hearts','listen before i go','come out and play','One Less Lonely Girl',
-    'Have Yourself A Merry Little Christmas','localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
+    'Have Yourself A Merry Little Christmas','localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences','Film'
   ]);
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v11-it-official-title-lock';
-  var STATIC_REV='20260823-it-official-title-lock-v1';
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v14-it-wiki-live';
+  var STATIC_REV='20260823-it-wiki-live-v1';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -67,6 +67,74 @@
     map[key]=key;
     missingTexts.delete(key);
     translatedThisSession.delete(key);
+  }
+  function repairPlaceholders(source,translated){
+    var src=String(source||''),out=String(translated||'');
+    var sourceTokens=src.match(/\{[a-zA-Z0-9_]+\}/g)||[];
+    if(!sourceTokens.length)return out;
+    var translatedTokens=out.match(/\{[^{}]+\}/g)||[];
+    if(sourceTokens.length!==translatedTokens.length)return out;
+    translatedTokens.forEach(function(token,index){out=out.replace(token,sourceTokens[index]);});
+    return out;
+  }
+  function normalizeImportedTranslation(source,translated){
+    var out=repairPlaceholders(source,translated);
+    if(slug==='it'){
+      if(String(source||'').indexOf('Discord')>=0)out=out.replace(/Discordia/g,'Discord');
+      if(String(source||'').indexOf('YouTube')>=0)out=out.replace(/Billie EilishYouTube/g,'YouTube di Billie Eilish');
+      if(String(source||'').toLowerCase().indexOf('banner')>=0)out=out.replace(/\bbandiera\b/gi,'banner');
+      if(normalize(source)==='Fã da Billie')out='Fan di Billie';
+      if(normalize(source)==='Live'||normalize(source)==='Ao vivo')out='Dal vivo';
+      if(normalize(source)==='Live Performances & TV')out='Spettacoli dal vivo e TV';
+    }
+    return out;
+  }
+  function enforceItalianCanonicalLabels(root){
+    if(slug!=='it')return;
+    var scope=(root&&root.querySelectorAll)?root:document;
+    var buttons=[];
+    if(root&&root.nodeType===1&&root.matches&&root.matches('[data-home-view="films"]'))buttons.push(root);
+    if(scope&&scope.querySelectorAll)buttons=buttons.concat(Array.from(scope.querySelectorAll('[data-home-view="films"]')));
+    buttons.forEach(function(button){
+      var label=button.querySelector&&button.querySelector('span');
+      if(label)label.textContent='Film';else button.textContent='Film';
+    });
+    if(scope&&scope.querySelectorAll)scope.querySelectorAll('[data-mobile-destination="films"] span').forEach(function(label){label.textContent='Film';});
+  }
+  function mergeTranslations(values,options){
+    if(!values||typeof values!=='object')return 0;
+    var count=0;
+    Object.keys(values).forEach(function(source){
+      var translated=values[source];
+      if(typeof translated!=='string'||!translated.trim())return;
+      var key=normalize(source);
+      if(!key)return;
+      var stable=normalizeImportedTranslation(key,translated.trim());
+      map[key]=stable;
+      map[stable]=stable;
+      missingTexts.delete(key);
+      count+=1;
+    });
+    if(slug==='it'){
+      map.Filmes='Film';map.Film='Film';PROTECTED_EXACT.add('Film');
+      map['Fã da Billie']='Fan di Billie';map['Fan di Billie']='Fan di Billie';
+      map.Live='Dal vivo';map['Ao vivo']='Dal vivo';map['Dal vivo']='Dal vivo';
+      map['Live Performances & TV']='Spettacoli dal vivo e TV';
+    }
+    if(options&&options.persist){
+      try{
+        var previous=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
+        var stableBundle={};
+        Object.keys(values).forEach(function(source){
+          var translated=values[source];
+          if(typeof translated==='string'&&translated.trim())stableBundle[source]=normalizeImportedTranslation(source,translated.trim());
+        });
+        localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},previous&&typeof previous==='object'?previous:{},stableBundle)));
+      }catch(_){ }
+    }
+    if(options&&options.shared)window.__BETV_ITALIAN_SHARED_I18N_READY__=true;
+    if(!options||options.applyNow!==false){apply(document.documentElement);enforceItalianCanonicalLabels(document);}
+    return count;
   }
   function eligibleText(value){
     var key=normalize(value);
@@ -119,6 +187,7 @@
       if(node.nodeType===3)translateTextNode(node);
       else translateAttributes(node);
     }
+    enforceItalianCanonicalLabels(root);
   }
   function flushQueue(){
     queued=false;
@@ -231,6 +300,7 @@
         var source=batch[index];
         var translated=String(item||'').trim();
         if(source&&translated){
+          translated=normalizeImportedTranslation(source,translated);
           map[source]=translated;
           map[translated]=translated;
           translatedThisSession.add(translated);
@@ -249,7 +319,30 @@
   function scheduleMissingTranslation(delay){
     if(slug==='pt-br'||isAdmin())return;
     clearTimeout(translateTimer);
-    translateTimer=setTimeout(translateMissingNow,Number(delay||350));
+    var requested=Number(delay||350);
+    if(slug==='it'&&!window.__BETV_ITALIAN_SHARED_I18N_READY__)requested=Math.max(requested,1800);
+    translateTimer=setTimeout(translateMissingNow,requested);
+  }
+  function italianHomeRoute(){
+    if(slug!=='it')return false;
+    try{
+      var path=String(location.pathname||'/').replace(/^\/it(?=\/|$)/i,'')||'/';
+      return path==='/'||path==='';
+    }catch(_){return false;}
+  }
+  function loadItalianSharedBundle(){
+    if(slug!=='it'||italianHomeRoute())return Promise.resolve(null);
+    if(window.__BETV_ITALIAN_SHARED_I18N_PROMISE__)return window.__BETV_ITALIAN_SHARED_I18N_PROMISE__;
+    var promise=fetch('/api/public-data?name=settings&id=site&locale=it',{credentials:'same-origin',cache:'default',headers:{Accept:'application/json'}})
+      .then(function(response){return response.ok?response.json():null;})
+      .then(function(settings){
+        var bundle=settings&&settings.italianUiTranslations;
+        if(bundle&&typeof bundle==='object')mergeTranslations(bundle,{applyNow:true,persist:true,shared:true});
+        return bundle||null;
+      })
+      .catch(function(){return null;});
+    window.__BETV_ITALIAN_SHARED_I18N_PROMISE__=promise;
+    return promise;
   }
   async function load(){
     if(slug==='pt-br'||isAdmin()){
@@ -258,11 +351,31 @@
       return;
     }
     loadDynamicCache();
+    var inlineBundle=window.__BETV_INLINE_I18N__&&window.__BETV_INLINE_I18N__[slug];
+    if(inlineBundle&&typeof inlineBundle==='object')mergeTranslations(inlineBundle,{applyNow:false});
+
+    // O núcleo italiano entra antes de qualquer fetch. Assim a primeira visita
+    // não exibe PT-BR enquanto espera o arquivo ou a tradução dinâmica.
+    if(slug==='it'){
+      window.BETVI18n=api;
+      apply(document.documentElement);
+      startObserver();
+      enforceItalianCanonicalLabels(document);
+      readyResolve(api);
+      try{window.dispatchEvent(new CustomEvent('be:i18n-ready',{detail:api}));}catch(_){ }
+      fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'})
+        .then(function(response){return response.ok?response.json():null;})
+        .then(function(payload){if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:true});})
+        .catch(function(){});
+      loadItalianSharedBundle();
+      return;
+    }
+
     try{
       var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
       if(response.ok){
         var payload=await response.json();
-        if(payload&&typeof payload==='object')Object.keys(payload).forEach(function(key){map[key]=payload[key];});
+        if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:false});
       }
     }catch(error){(void error);}
     window.BETVI18n=api;
@@ -281,6 +394,7 @@
     apply:apply,
     translateExact:translateExact,
     protectExact:protectExact,
+    mergeTranslations:mergeTranslations,
     localizeRecord:recordTranslation,
     currency:regionalCurrency,
     switchLanguage:function(nextSlug){return Boolean(window.BETVLocale&&window.BETVLocale.switchTo&&window.BETVLocale.switchTo(nextSlug));},
@@ -1165,9 +1279,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
   const ITALIAN_TRANSLATION_FUNCTION_NAME = 'translate-content-record-it';
-  const SPANISH_TRANSLATION_REV = '20260810-music-album-lock-v4';
-  const RECORD_TRANSLATION_FIELDS = ['title','name','description','subtitle','body','summary','buttonLabel','buttonText','actionLabel','ctaLabel','label','text','manualBio','kicker','footerText','sectionName','siteName'];
-  const translationWarmupInFlight = new Set();
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
@@ -1243,163 +1354,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return result;
   }
 
-  function recordSourceSignature(record) {
-    const source = {};
-    [...RECORD_TRANSLATION_FIELDS,'duration','runtime','videoDuration'].forEach(field => {
-      if (Object.prototype.hasOwnProperty.call(record || {}, field)) source[field] = record[field];
-    });
-    const serialized = JSON.stringify(source);
-    let hash = 2166136261;
-    for (let index = 0; index < serialized.length; index += 1) {
-      hash ^= serialized.charCodeAt(index);
-      hash = Math.imul(hash, 16777619);
-    }
-    return `src-${(hash >>> 0).toString(16)}`;
-  }
-
-  function recordTranslationIsComplete(record, localized, collection = '', slug = activeLocaleSlug()) {
-    if (!localized || typeof localized !== 'object') return false;
-    const keepTitle = preservesSourceRecordTitle(collection, record, slug);
-    for (const field of RECORD_TRANSLATION_FIELDS) {
-      if (keepTitle && (field === 'title' || field === 'name')) continue;
-      const sourceValue = record && record[field];
-      if (typeof sourceValue !== 'string' || !sourceValue.trim() || /^https?:\/\//i.test(sourceValue.trim())) continue;
-      if (typeof localized[field] !== 'string' || !localized[field].trim()) return false;
-    }
-    return true;
-  }
-
-  function recordNeedsTranslation(record, slug, collection = '') {
-    if (!record || !record.id || slug === 'pt-br') return false;
-    const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
-    const localized = translations[slug] || (slug === 'en-us' ? translations.en : null);
-    if (!localized || typeof localized !== 'object') return true;
-    if (!recordTranslationIsComplete(record, localized, collection, slug)) return true;
-    if (['fr','it'].includes(slug) && String(collection || '').toLowerCase() === 'notifications') {
-      // Notificações podem ser editadas depois de publicadas. Se a fonte mudou,
-      // reaquece a tradução persistida para evitar texto antigo em FR/IT.
-      if (String(localized.sourceUpdatedAt || '') !== recordSourceSignature(record)) return true;
-    }
-    if (slug === 'es') {
-      // Traduções antigas podem conter português ou ter sido salvas quando seções inteiras
-      // eram bloqueadas. Só considera o cache espanhol válido na revisão atual.
-      if (String(localized.revision || '') !== SPANISH_TRANSLATION_REV) return true;
-      if (!preservesSourceRecordTitle(collection, record, slug)) {
-        if (Object.prototype.hasOwnProperty.call(record, 'title') && !Object.prototype.hasOwnProperty.call(localized, 'title')) return true;
-        if (Object.prototype.hasOwnProperty.call(record, 'name') && !Object.prototype.hasOwnProperty.call(localized, 'name')) return true;
-      }
-    }
-    return false;
-  }
-
-  function warmItalianTranslationsInBackground(collection, records) {
-    const values = Array.isArray(records) ? records : [];
-    const normalizedCollection = String(collection || '').toLowerCase();
-    if (activeLocaleSlug() !== 'it' || !supabaseClient?.functions?.invoke || !TRANSLATABLE_COLLECTIONS.has(normalizedCollection)) return;
-
-    const missing = values.filter(record => recordNeedsTranslation(record, 'it', normalizedCollection));
-    const maxWarmup = normalizedCollection === 'notifications' ? 10 : 20;
-    const pending = missing.filter(record => {
-      const key = `${normalizedCollection}:${record.id}:it`;
-      if (translationWarmupInFlight.has(key)) return false;
-      translationWarmupInFlight.add(key);
-      return true;
-    }).slice(0, maxWarmup);
-
-    // Nunca bloqueia a renderização do catálogo. Se algum registro ainda não tiver
-    // italiano persistido, ele é aquecido em segundo plano e fica pronto para a
-    // próxima leitura/visita. Isso é essencial para visitantes novos sem cache.
-    if (!pending.length) return;
-    Promise.resolve().then(async () => {
-      try {
-        const batchSize = normalizedCollection === 'notifications' ? 5 : 10;
-        for (let offset = 0; offset < pending.length; offset += batchSize) {
-          const batch = pending.slice(offset, offset + batchSize);
-          const result = await supabaseClient.functions.invoke(ITALIAN_TRANSLATION_FUNCTION_NAME, {
-            body: { collection: normalizedCollection, ids: batch.map(record => String(record.id)), locales: ['it'] }
-          });
-          if (result?.error || !result?.data || !Array.isArray(result.data.records)) continue;
-          const translatedById = new Map();
-          result.data.records.forEach(item => {
-            if (item && item.id && item.translation && typeof item.translation === 'object') translatedById.set(String(item.id), item.translation);
-          });
-          batch.forEach(record => {
-            const translation = translatedById.get(String(record.id));
-            if (!translation) return;
-            if (!record.translations || typeof record.translations !== 'object') record.translations = {};
-            record.translations.it = translation;
-          });
-        }
-      } catch (_) {
-        // A tradução em segundo plano nunca deve impedir o conteúdo de aparecer.
-      } finally {
-        pending.forEach(record => translationWarmupInFlight.delete(`${normalizedCollection}:${record.id}:it`));
-      }
-    });
-  }
-
   async function ensureTranslatedRecords(collection, records) {
     const values = Array.isArray(records) ? records : [];
     const slug = activeLocaleSlug();
     const normalizedCollection = String(collection || '').toLowerCase();
 
-    if (slug === 'it') warmItalianTranslationsInBackground(normalizedCollection, values);
-
-    // O francês das notificações é reparado sob demanda uma única vez quando
-    // encontramos um registro antigo, incompleto ou desatualizado. A Edge Function
-    // persiste a tradução inteira no Supabase; os próximos acessos usam o cache salvo.
-    if (slug === 'fr' && normalizedCollection === 'notifications' && supabaseClient?.functions?.invoke) {
-      const missing = values.filter(record => recordNeedsTranslation(record, slug, normalizedCollection));
-      const pending = missing.filter(record => {
-        const key = `${normalizedCollection}:${record.id}:${slug}`;
-        if (translationWarmupInFlight.has(key)) return false;
-        translationWarmupInFlight.add(key);
-        return true;
-      });
-      if (pending.length) {
-        try {
-          for (let offset = 0; offset < pending.length; offset += 20) {
-            const batch = pending.slice(offset, offset + 20);
-            const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-              body: { collection: normalizedCollection, ids: batch.map(record => String(record.id)), locales: ['fr'] }
-            });
-            if (result?.error || !result?.data || !Array.isArray(result.data.records)) continue;
-            const translatedById = new Map();
-            result.data.records.forEach(item => {
-              if (item && item.id && item.translation && typeof item.translation === 'object') translatedById.set(String(item.id), item.translation);
-            });
-            batch.forEach(record => {
-              const translation = translatedById.get(String(record.id));
-              if (!translation) return;
-              if (!record.translations || typeof record.translations !== 'object') record.translations = {};
-              record.translations.fr = translation;
-            });
-          }
-        } catch (_) {
-        } finally {
-          pending.forEach(record => translationWarmupInFlight.delete(`${normalizedCollection}:${record.id}:${slug}`));
-        }
-      }
-    }
-
+    // Traduções de conteúdo são persistidas no Supabase pelo trigger do Admin.
+    // Visitantes nunca chamam Edge Functions para reparar catálogo: isso evita
+    // multiplicar invocações conforme o tráfego cresce no plano gratuito.
     return values.map(record => localizeContentRecord(record, normalizedCollection));
   }
 
   function queueRecordTranslation(collection, id) {
-    if (!currentUser || currentUser.role !== 'admin' || !supabaseClient?.functions?.invoke) return;
-    if (collection !== 'settings' && !TRANSLATABLE_COLLECTIONS.has(String(collection || ''))) return;
-    window.setTimeout(() => {
-      supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
-        body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es','fr'], force: true }
-      }).then(result => {
-        if (result?.error) (void 0);
-      }).catch(error => (void 0));
-      supabaseClient.functions.invoke(ITALIAN_TRANSLATION_FUNCTION_NAME, {
-        body: { collection: String(collection), ids: [String(id)], locales: ['it'], force: true }
-      }).then(result => {
-        if (result?.error) (void 0);
-      }).catch(error => (void 0));
-    }, 0);
+    // O trigger private.enqueue_betv_translation já agenda EN/ES/FR/IT quando
+    // content_items/site_settings muda. Não duplicamos Edge Functions no browser.
+    return Boolean(collection && id);
   }
 
   function sortAndFilter(items, options = {}) {
@@ -1477,9 +1446,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const publicDataMemoryCache = new Map();
   const HOME_BOOTSTRAP_COLLECTIONS = new Set(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
   const homeBootstrapMemoryCache = new Map();
-  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV4:';
+  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV5:';
   const HOME_BOOTSTRAP_BROWSER_TTL_MS = 30 * 60 * 1000;
+  const HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS = 12 * 60 * 60 * 1000;
   const HOME_BOOTSTRAP_MEMORY_TTL_MS = 10 * 60 * 1000;
+  const homeBootstrapRefreshInFlight = new Map();
   // Destaques mudam com mais frequência no Admin. Eles podem vir junto do
   // bootstrap da Home, mas só são confiados por uma janela curta; o restante
   // do catálogo continua aproveitando o cache longo.
@@ -1494,10 +1465,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const key = homeBootstrapStorageKey(locale);
       const parsed = JSON.parse(localStorage.getItem(key) || 'null');
       if (!parsed || !parsed.savedAt || !parsed.bundle || typeof parsed.bundle !== 'object') return null;
-      if (Date.now() - Number(parsed.savedAt) >= HOME_BOOTSTRAP_BROWSER_TTL_MS) {
+      const age = Date.now() - Number(parsed.savedAt);
+      if (age >= HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS) {
         localStorage.removeItem(key);
         return null;
       }
+      parsed.__stale = age >= HOME_BOOTSTRAP_BROWSER_TTL_MS;
+      parsed.__age = Math.max(0, age);
       return parsed;
     } catch (_) { return null; }
   }
@@ -1549,8 +1523,34 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     const siteSettings = bundle && bundle.settings && bundle.settings.site;
     if (siteSettings && typeof siteSettings === 'object') {
+      if (String(locale || '').toLowerCase() === 'it' && siteSettings.italianUiTranslations && window.BETVI18n && typeof window.BETVI18n.mergeTranslations === 'function') {
+        window.BETVI18n.mergeTranslations(siteSettings.italianUiTranslations, { applyNow: true, persist: true, shared: true });
+      }
       publicDataMemoryCache.set(`settings:site:${locale}`, { promise: Promise.resolve(siteSettings), expiresAt });
     }
+  }
+
+  function refreshPublicHomeDataInBackground(locale) {
+    const normalizedLocale = String(locale || activeLocaleSlug());
+    const existing = homeBootstrapRefreshInFlight.get(normalizedLocale);
+    if (existing) return existing;
+    const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale });
+    const promise = fetch(`/api/public-data?${params.toString()}`, {
+      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+    }).then(response => {
+      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+      return response.json();
+    }).then(bundle => {
+      const generatedAt = Number(bundle && bundle.__generatedAt || 0);
+      const bundleAge = generatedAt > 0 ? Math.max(0, Date.now() - generatedAt) : 0;
+      hydrateHomeBootstrapBundle(bundle, normalizedLocale, HOME_BOOTSTRAP_MEMORY_TTL_MS, bundleAge);
+      writeHomeBootstrapBrowserCache(normalizedLocale, bundle);
+      const resolved = Promise.resolve(bundle);
+      homeBootstrapMemoryCache.set(normalizedLocale, { promise: resolved, expiresAt: Date.now() + HOME_BOOTSTRAP_MEMORY_TTL_MS });
+      return bundle;
+    }).finally(() => homeBootstrapRefreshInFlight.delete(normalizedLocale));
+    homeBootstrapRefreshInFlight.set(normalizedLocale, promise);
+    return promise;
   }
 
   async function preloadPublicHomeData() {
@@ -1561,40 +1561,38 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const browserCached = readHomeBootstrapBrowserCache(locale);
     if (browserCached) {
-      const savedAge = Math.max(0, nowMs - Number(browserCached.savedAt || nowMs));
+      const savedAge = Math.max(0, Number(browserCached.__age ?? (nowMs - Number(browserCached.savedAt || nowMs))));
       const generatedAt = Number(browserCached.bundle && browserCached.bundle.__generatedAt || 0);
       const generatedAge = generatedAt > 0 ? Math.max(0, nowMs - generatedAt) : 0;
       const featuredSavedAt = Number(browserCached.featuredSavedAt || 0);
       const featuredAge = featuredSavedAt > 0
         ? Math.max(0, nowMs - featuredSavedAt)
         : Math.max(savedAge, generatedAge);
-      const remaining = Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - savedAge);
+      const remaining = browserCached.__stale
+        ? 30000
+        : Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - savedAge);
       hydrateHomeBootstrapBundle(browserCached.bundle, locale, Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining), featuredAge);
       const browserPromise = Promise.resolve(browserCached.bundle);
       homeBootstrapMemoryCache.set(locale, {
         promise: browserPromise,
         expiresAt: nowMs + Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining)
       });
+      if (browserCached.__stale) {
+        const schedule = window.requestIdleCallback || (callback => window.setTimeout(callback, 350));
+        schedule(() => refreshPublicHomeDataInBackground(locale).then(() => {
+          if (window.__beContentReady && !document.hidden && !document.body.classList.contains('detail-page-active')) {
+            renderFeatured().catch(() => {});
+            renderVideoCatalog().catch(() => {});
+          }
+        }).catch(() => {}), { timeout: 1800 });
+      }
       return browserPromise;
     }
 
-    const params = new URLSearchParams({ name: 'home-bootstrap', locale });
-    const promise = fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
-    }).then(response => {
-      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-      return response.json();
-    }).then(bundle => {
-      const generatedAt = Number(bundle && bundle.__generatedAt || 0);
-      const bundleAge = generatedAt > 0 ? Math.max(0, Date.now() - generatedAt) : 0;
-      hydrateHomeBootstrapBundle(bundle, locale, HOME_BOOTSTRAP_MEMORY_TTL_MS, bundleAge);
-      writeHomeBootstrapBrowserCache(locale, bundle);
-      return bundle;
-    }).catch(error => {
+    const promise = refreshPublicHomeDataInBackground(locale).catch(error => {
       homeBootstrapMemoryCache.delete(locale);
       throw error;
     });
-
     homeBootstrapMemoryCache.set(locale, { promise, expiresAt: nowMs + HOME_BOOTSTRAP_MEMORY_TTL_MS });
     return promise;
   }
@@ -3532,7 +3530,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       scheduleNextFeatured();
     };
     const stop = () => { if (timer) clearInterval(timer); timer = null; };
-    const start = () => { stop(); if (slides.length > 1) timer = setInterval(() => go(index + 1), 10000); };
+    const start = () => {
+      stop();
+      if (document.documentElement.classList.contains('performance-lite')) return;
+      if (slides.length > 1) timer = setInterval(() => go(index + 1), 10000);
+    };
     dots.forEach(dot => dot.addEventListener('click', () => { go(Number(dot.dataset.goto || 0)); start(); }));
     host.addEventListener('mouseenter', stop);
     host.addEventListener('mouseleave', start);
@@ -3719,6 +3721,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     };
     const scheduleNextSlide = () => {
+      if (document.documentElement.classList.contains('performance-lite')) return;
       if (slides.length < 2) return;
       const nextSlide = slides[(activeIndex + 1) % slides.length];
       const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 700));
@@ -3738,6 +3741,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
     const start = () => {
       stop();
+      if (document.documentElement.classList.contains('performance-lite')) return;
       if (slides.length > 1) host._beRandomFeaturedTimer = setInterval(() => go(activeIndex + 1), 10000);
     };
 
@@ -3760,6 +3764,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function renderVideoCatalog() {
     const main = document.querySelector('main');
     if (!main) return;
+    sectionViewItemsMemory.clear();
 
     const [sectionRows, videoRows, movieRows, seriesRows, featuredRows, albumRows] = await Promise.all([
       beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }).catch(() => []),
@@ -3947,6 +3952,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         sectionContents = allSectionContents.slice(0, limit);
       }
 
+      sectionViewItemsMemory.set(String(section.id || ''), allSectionContents);
       const block = document.createElement('section');
       block.className = 'video-rail-section';
       block.dataset.sectionId = String(section.id || '');
@@ -3974,8 +3980,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           <button class="video-rail-arrow next" type="button" aria-label="Ver mais conteúdos">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 18 6-6-6-6"/></svg>
           </button>
-        </div>
-        <template class="section-view-all-items">${allSectionContents.length ? allSectionContents.map(item => videoCard(item)).join('') : '<p class="video-rail-empty">Nenhum conteúdo publicado nesta seção.</p>'}</template>`;
+        </div>`;
       host.append(block);
       setupRail(block);
     }
@@ -3997,7 +4002,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     spotlight.setAttribute('aria-label', localizedUiText('Conheça Billie Eilish'));
     spotlight.innerHTML = `
       <div class="billie-home-spotlight-frame">
-        <img src="${defaultBanner}" alt="Billie Eilish" decoding="async">
+        <img src="${defaultBanner}" alt="Billie Eilish" loading="lazy" decoding="async" fetchpriority="low">
         <div class="billie-home-spotlight-overlay" aria-hidden="true"></div>
         <div class="billie-home-spotlight-copy">
           <strong>${escapeHtml(localizedUiText('Conheça um dos maiores nomes da música atual.'))}</strong>
@@ -4051,7 +4056,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             const year = String(album.year || '');
             const route = localizedRoute('/albuns/' + encodeURIComponent(String(album.id || '')));
             return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml('/albuns/' + encodeURIComponent(String(album.id || '')))}" aria-label="${escapeHtml(title)}">
-              <span class="album-home-cover">${image ? `<img src="${directImageUrl(image)}" alt="${escapeHtml(title)}" decoding="async" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}</span>
+              <span class="album-home-cover">${image ? `<img src="${directImageUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}</span>
               <strong class="notranslate" translate="no">${escapeHtml(title)}</strong>
               <small>${escapeHtml([localizedUiText(type), year].filter(Boolean).join(' • '))}</small>
             </a>`;
@@ -4087,7 +4092,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     spotlight.setAttribute('aria-label', 'Apoie uma ONG');
     spotlight.innerHTML = `
       <div class="donate-home-spotlight-frame">
-        <img src="${banner}" alt="Apoie uma ONG" decoding="async">
+        <img src="${banner}" alt="Apoie uma ONG" loading="lazy" decoding="async" fetchpriority="low">
         <div class="donate-home-spotlight-overlay" aria-hidden="true"></div>
         <a class="donate-home-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a>
       </div>`;
@@ -4310,8 +4315,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-streaming-availability="${escapeHtml(normalizeMovieStreamingAvailability(video.streamingAvailability).join(','))}"
               data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(video.streamingLinks))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}">
-      <img class="video-card-thumbnail" src="${safeAssetUrl(image)}" alt="${escapeHtml(video.title || '')}" decoding="async">
-      ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo)}" alt="" decoding="async" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
+      <img class="video-card-thumbnail" src="${safeAssetUrl(image)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async" fetchpriority="low">
+      ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo)}" alt="" loading="lazy" decoding="async" fetchpriority="low" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
     </a>`;
   }
 
@@ -4439,6 +4444,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   let activeSectionView = null;
   let activeSectionReturnState = null;
+  const sectionViewItemsMemory = new Map();
 
   function isMobileCatalogViewport() {
     return window.matchMedia('(max-width:760px)').matches;
@@ -4546,23 +4552,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     section.classList.add('section-view-active');
     const rail = section.querySelector('.video-rail');
     const allItems = section.querySelector('.section-view-all-items');
-    if (rail && allItems) {
+    const memoryItems = sectionViewItemsMemory.get(String(section.dataset.sectionId || ''));
+    if (rail && Array.isArray(memoryItems)) {
       rail._beHomeMarkup = rail.innerHTML;
-      if (requestedCollection) {
-        const filteredItems = document.createElement('div');
-        filteredItems.innerHTML = allItems.innerHTML;
-        filteredItems.querySelectorAll('.video-card').forEach(card => {
-          const collection = normalizeText(card.dataset.collection || 'videos');
-          if (collection !== requestedCollection) card.remove();
-        });
-        const hasMatchingItems = Boolean(filteredItems.querySelector('.video-card'));
-        const emptyLabel = requestedCollection === 'movies' ? 'Nenhum filme publicado nesta seção.' : requestedCollection === 'series' ? 'Nenhuma série publicada nesta seção.' : 'Nenhum vídeo publicado nesta seção.';
-        rail.innerHTML = hasMatchingItems
-          ? filteredItems.innerHTML
-          : '<p class="video-rail-empty">'+emptyLabel+'</p>';
-      } else {
-        rail.innerHTML = allItems.innerHTML;
-      }
+      const filtered = requestedCollection
+        ? memoryItems.filter(item => normalizeText(item.collection || 'videos') === requestedCollection)
+        : memoryItems;
+      const emptyLabel = requestedCollection === 'movies' ? 'Nenhum filme publicado nesta seção.' : requestedCollection === 'series' ? 'Nenhuma série publicada nesta seção.' : 'Nenhum vídeo publicado nesta seção.';
+      rail.innerHTML = filtered.length
+        ? filtered.map(item => videoCard(item)).join('')
+        : '<p class="video-rail-empty">'+emptyLabel+'</p>';
+      setupContentDetailInteractions(rail);
+    } else if (rail && allItems) {
+      // Fallback para HTML antigo preservado em cache durante a transição.
+      rail._beHomeMarkup = rail.innerHTML;
+      rail.innerHTML = allItems.innerHTML;
       setupContentDetailInteractions(rail);
     }
 
@@ -17183,6 +17187,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       licenseSuffix:'licencia.',
       licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/deed.es'
     };
+    if(slug==='it')return {
+      loadingError:'Le informazioni non possono essere caricate in questo momento. Viene mostrata invece la biografia salvata sul sito.',
+      prepareError:'L’articolo di Wikipedia non può essere preparato per la visualizzazione.',
+      requestError:'L’articolo di Wikipedia non può essere caricato.',
+      summary:'Fonti e crediti',
+      prefix:'Contenuto adattato da',
+      sourceLabel:'Wikipedia in italiano',
+      suffix:'disponibile con licenza',
+      licenseSuffix:'.',
+      licenseUrl:'https://creativecommons.org/licenses/by-sa/4.0/deed.it'
+    };
     return {
       loadingError:'As informações não puderam ser carregadas agora. Exibindo o texto salvo no site.',
       prepareError:'Não foi possível preparar o conteúdo para exibição.',
@@ -17248,8 +17263,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     parser.querySelectorAll('sup,.reference,.mw-ref,.reflist,ol.references,[role="note"],a[href^="#cite_note"]').forEach(function(node){node.remove();});
     /* As tabelas da filmografia da Wikipédia não fazem parte do layout do BETV. */
     parser.querySelectorAll('table').forEach(function(node){node.remove();});
-    var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia','awards and nominations','see also','references','external links','filmography','premios y nominaciones','vease tambien','enlaces externos','filmografia','distinctions','prix et nominations','voir aussi','notes et references','references','liens externes','filmographie'];
+    var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia','awards and nominations','see also','references','external links','filmography','premios y nominaciones','vease tambien','enlaces externos','filmografia','distinctions','prix et nominations','voir aussi','notes et references','references','liens externes','filmographie','note','altri progetti','collegamenti esterni'];
     if(currentLocaleSlug()==='fr')blocked.push('podcast','podcasts');
+    if(currentLocaleSlug()==='it'){
+      var biographyHeading=Array.from(parser.querySelectorAll('h2,h3')).find(function(heading){return normalizedSectionLabel(heading.textContent)==='biografia';});
+      if(biographyHeading){
+        var biographyBoundary=biographyHeading.closest&&biographyHeading.closest('.mw-heading')||biographyHeading;
+        while(biographyBoundary.parentNode&&biographyBoundary.parentNode!==parser)biographyBoundary=biographyBoundary.parentNode;
+        if(biographyBoundary.parentNode===parser){
+          var introNode=parser.firstChild;
+          while(introNode&&introNode!==biographyBoundary){var nextIntro=introNode.nextSibling;introNode.remove();introNode=nextIntro;}
+        }
+      }
+    }
     Array.from(parser.querySelectorAll('h2,h3,h4')).forEach(function(heading){
       if(!heading.isConnected)return;
       var label=normalizedSectionLabel(heading.textContent);
@@ -17266,7 +17292,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return normalizedSectionLabel(item.textContent);
       }).filter(Boolean);
       if(!labels.length)return;
-      var externalLabels=['commons','wikinoticias','wikinews','pagina oficial','official website','sitio web oficial','site officiel','billie eilish no facebook','billie eilish on facebook','billie eilish en facebook','billie eilish sur facebook','billie eilish no x','billie eilish on x','billie eilish en x','billie eilish sur x','billie eilish no instagram','billie eilish on instagram','billie eilish en instagram','billie eilish sur instagram','canal de billie eilish no youtube','billie eilish youtube channel','canal de billie eilish en youtube','chaine youtube de billie eilish'];
+      var externalLabels=['commons','wikimedia commons','wikiquote','wikinoticias','wikinews','pagina oficial','official website','sitio web oficial','site officiel','sito ufficiale','billie eilish no facebook','billie eilish on facebook','billie eilish en facebook','billie eilish sur facebook','billie eilish no x','billie eilish on x','billie eilish en x','billie eilish sur x','billie eilish no instagram','billie eilish on instagram','billie eilish en instagram','billie eilish sur instagram','canal de billie eilish no youtube','billie eilish youtube channel','canal de billie eilish en youtube','chaine youtube de billie eilish','wikiquote contiene citazioni di o su billie eilish','wikimedia commons contiene immagini o altri file su billie eilish'];
       var matches=labels.filter(function(label){
         return externalLabels.some(function(item){return label===item||label.startsWith(item+' ');});
       }).length;
@@ -17317,7 +17343,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     paragraph.append(source,document.createTextNode(', '+copy.suffix+' '));
     var license=document.createElement('a');
     license.href=copy.licenseUrl;license.target='_blank';license.rel='noopener noreferrer';license.textContent='CC BY-SA 4.0';
-    paragraph.append(license,document.createTextNode(' '+copy.licenseSuffix));
+    paragraph.append(license,document.createTextNode((/^[.,;:!?]/.test(String(copy.licenseSuffix||''))?'':' ')+copy.licenseSuffix));
   }
   async function loadWikipedia(settings,token){
     var copy=wikipediaLocaleCopy();
@@ -19637,7 +19663,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     card.href='/'+encodeURIComponent(data.itemId);
     card.setAttribute('aria-label',data.title);
     card.dataset.itemId=data.itemId;card.dataset.recordId=data.recordId;card.dataset.openDetail='true';card.dataset.title=data.title;card.dataset.description=data.description;card.dataset.year=data.year;card.dataset.duration=data.duration;card.dataset.contentUrl=data.contentUrl;card.dataset.imageUrl=data.imageUrl;card.dataset.bannerUrl=data.bannerUrl;card.dataset.logoUrl=data.logoUrl;card.dataset.showCardLogo=data.showCardLogo?'true':'false';card.dataset.collection=data.collection;card.dataset.sectionId=data.sectionId;card.dataset.sectionName=data.sectionName;card.dataset.category=data.category||'';card.dataset.contentType=data.contentType||'';card.dataset.mediaType=data.mediaType||'';card.dataset.streamingAvailability=Array.isArray(data.streamingAvailability)?data.streamingAvailability.join(','):String(data.streamingAvailability||'');card.dataset.streamingLinks=typeof data.streamingLinks==='string'?data.streamingLinks:JSON.stringify(data.streamingLinks||{});card.dataset.preserveTitle=data.preserveTitle?'true':'false';
-    var image=document.createElement('img');image.className='video-card-thumbnail';image.decoding='async';image.alt=data.title;image.src=mediaUrl(data.imageUrl||data.bannerUrl||'/assets/images/pages/billie-home-banner-default.webp');card.appendChild(image);
+    var image=document.createElement('img');image.className='video-card-thumbnail';image.loading='lazy';image.decoding='async';image.fetchPriority='low';image.alt=data.title;image.src=mediaUrl(data.imageUrl||data.bannerUrl||'/assets/images/pages/billie-home-banner-default.webp');card.appendChild(image);
     var watched=Boolean(options.showWatched&&((row&&row.lastWatchedAt)||state.watchedContentIds[String(data.recordId||'')]));
     if(watched){var watchedBadge=document.createElement('span');watchedBadge.className='community-watched-badge';watchedBadge.textContent='WATCHED';watchedBadge.setAttribute('aria-label','Watched');card.appendChild(watchedBadge);}
     if(data.logoUrl&&data.logoUrl!=='#'&&(String(data.collection).toLowerCase()!=='videos'||data.showCardLogo)){var logoSlot=document.createElement('span');logoSlot.className='video-card-logo-slot';logoSlot.setAttribute('aria-hidden','true');var logo=document.createElement('img');logo.className='video-card-logo';logo.decoding='async';logo.alt='';logo.src=mediaUrl(data.logoUrl);logo.addEventListener('error',function(){logoSlot.remove();},{once:true});logoSlot.appendChild(logo);card.appendChild(logoSlot);}

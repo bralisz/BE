@@ -16,7 +16,7 @@ const PUBLIC_ITEM_FIELDS = new Set([
 const MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl']);
 const SITE_SETTING_FIELDS = new Set([
   'description', 'discordUrl', 'footerText', 'instagram', 'primaryColor',
-  'translations',
+  'italianUiTranslations', 'translations',
   'shareImage', 'siteName', 'website', 'xUrl', 'youtube',
   'updateReleaseEnabled', 'releasedDeploymentVersion'
 ]);
@@ -251,6 +251,15 @@ function sanitizeSettings(id, raw) {
     if (Object.prototype.hasOwnProperty.call(raw, field)) source[field] = raw[field];
   }
   if (Object.prototype.hasOwnProperty.call(source, 'translations')) source.translations = sanitizeTranslations(source.translations);
+  if (Object.prototype.hasOwnProperty.call(source, 'italianUiTranslations')) {
+    const rawUi = source.italianUiTranslations && typeof source.italianUiTranslations === 'object' && !Array.isArray(source.italianUiTranslations)
+      ? source.italianUiTranslations
+      : {};
+    source.italianUiTranslations = Object.fromEntries(Object.entries(rawUi)
+      .slice(0, 1000)
+      .filter(([key, value]) => typeof key === 'string' && typeof value === 'string' && key.trim() && value.trim())
+      .map(([key, value]) => [safeText(key, 1800), safeText(value, 2400)]));
+  }
   if (id === 'ong') {
     source.bannerUrl = mediaReference('settings', id, 'bannerUrl', source.bannerUrl);
   } else if (id === 'billie-eilish') {
@@ -367,13 +376,35 @@ async function fetchRows(name, id, locale) {
 }
 
 async function fetchHomeBootstrap(locale) {
+  // Caminho otimizado: uma única chamada PostgREST/RPC por rebuild do cache da
+  // Vercel. A função SQL agrega as coleções no Supabase, reduzindo round-trips.
+  try {
+    const raw = await callRpc('get_public_home_bootstrap_v1', { p_locale: locale });
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const bundle = {};
+      for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
+        const rows = Array.isArray(value[name]) ? value[name] : [];
+        bundle[name] = rows.map(row => sanitizeItem(name, row)).filter(Boolean);
+      }
+      // Alguns filmes antigos usam apenas o segundo link do Dashboard para TV.
+      // Mantém essa compatibilidade com só mais uma leitura privada, ainda muito
+      // abaixo das várias chamadas do bootstrap anterior.
+      bundle.movies = await mergeMovieDashboardDrive(bundle.movies || []);
+      const rawSite = value.settings && typeof value.settings === 'object' ? value.settings.site : null;
+      bundle.settings = { site: sanitizeSettings('site', rawSite) };
+      bundle.__generatedAt = Date.now();
+      return bundle;
+    }
+  } catch (_) {
+    // Compatibilidade durante rollout/migration: cai no fluxo antigo.
+  }
+
   const entries = await Promise.all(HOME_BOOTSTRAP_COLLECTIONS.map(async name => [name, await fetchRows(name, '', locale)]));
   const settingsRows = await fetchRows('settings', 'site', locale);
   return {
     ...Object.fromEntries(entries),
     settings: { site: settingsRows[0] || null },
-    // Permite ao navegador detectar quando recebeu um bootstrap antigo do CDN
-    // e refazer somente a leitura de Destaques, sem invalidar o catálogo todo.
     __generatedAt: Date.now()
   };
 }
@@ -393,9 +424,9 @@ function setPublicCacheHeaders(res, name, id, hasData) {
     // O navegador já mantém o bundle da Home por 30 minutos. Mantemos a borda
     // pelo mesmo período para que visitantes novos compartilhem a mesma resposta
     // sem aumentar o prazo máximo aceitável para um vídeo novo aparecer.
-    browserSeconds = 1800;
+    browserSeconds = 120;
     edgeSeconds = 1800;
-    staleSeconds = 1800;
+    staleSeconds = 21600;
   } else if (name === 'settings' && id === 'site') {
     browserSeconds = 300;
     edgeSeconds = 600;
@@ -433,7 +464,7 @@ function setPublicCacheHeaders(res, name, id, hasData) {
   } else {
     res.setHeader('Cache-Control', `public, max-age=${browserSeconds}, stale-while-revalidate=${Math.min(staleSeconds, 3600)}`);
   }
-  res.setHeader('Vercel-CDN-Cache-Control', `public, max-age=${edgeSeconds}, stale-while-revalidate=${staleSeconds}`);
+  res.setHeader('Vercel-CDN-Cache-Control', `public, max-age=${edgeSeconds}, stale-while-revalidate=${staleSeconds}, stale-if-error=86400`);
 }
 
 module.exports = async function publicData(req, res) {

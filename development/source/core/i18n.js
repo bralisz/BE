@@ -26,12 +26,12 @@
     'Never Felt So Alone','No Time To Die','Ocean Eyes','ocean eyes','Therefore I Am','watch','What Was I Made For?',
     "when the party's over",'xanny','you should see me in a crown','Your Power','THE GREATEST','SKINNY',"L'AMOUR DE MA VIE",
     'Billie Bossa Nova','Getting Older','TV','bitches broken hearts','listen before i go','come out and play','One Less Lonely Girl',
-    'Have Yourself A Merry Little Christmas','localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
+    'Have Yourself A Merry Little Christmas','localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences','Film'
   ]);
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v11-it-official-title-lock';
-  var STATIC_REV='20260823-it-official-title-lock-v1';
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v14-it-wiki-live';
+  var STATIC_REV='20260823-it-wiki-live-v1';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -66,6 +66,74 @@
     map[key]=key;
     missingTexts.delete(key);
     translatedThisSession.delete(key);
+  }
+  function repairPlaceholders(source,translated){
+    var src=String(source||''),out=String(translated||'');
+    var sourceTokens=src.match(/\{[a-zA-Z0-9_]+\}/g)||[];
+    if(!sourceTokens.length)return out;
+    var translatedTokens=out.match(/\{[^{}]+\}/g)||[];
+    if(sourceTokens.length!==translatedTokens.length)return out;
+    translatedTokens.forEach(function(token,index){out=out.replace(token,sourceTokens[index]);});
+    return out;
+  }
+  function normalizeImportedTranslation(source,translated){
+    var out=repairPlaceholders(source,translated);
+    if(slug==='it'){
+      if(String(source||'').indexOf('Discord')>=0)out=out.replace(/Discordia/g,'Discord');
+      if(String(source||'').indexOf('YouTube')>=0)out=out.replace(/Billie EilishYouTube/g,'YouTube di Billie Eilish');
+      if(String(source||'').toLowerCase().indexOf('banner')>=0)out=out.replace(/\bbandiera\b/gi,'banner');
+      if(normalize(source)==='Fã da Billie')out='Fan di Billie';
+      if(normalize(source)==='Live'||normalize(source)==='Ao vivo')out='Dal vivo';
+      if(normalize(source)==='Live Performances & TV')out='Spettacoli dal vivo e TV';
+    }
+    return out;
+  }
+  function enforceItalianCanonicalLabels(root){
+    if(slug!=='it')return;
+    var scope=(root&&root.querySelectorAll)?root:document;
+    var buttons=[];
+    if(root&&root.nodeType===1&&root.matches&&root.matches('[data-home-view="films"]'))buttons.push(root);
+    if(scope&&scope.querySelectorAll)buttons=buttons.concat(Array.from(scope.querySelectorAll('[data-home-view="films"]')));
+    buttons.forEach(function(button){
+      var label=button.querySelector&&button.querySelector('span');
+      if(label)label.textContent='Film';else button.textContent='Film';
+    });
+    if(scope&&scope.querySelectorAll)scope.querySelectorAll('[data-mobile-destination="films"] span').forEach(function(label){label.textContent='Film';});
+  }
+  function mergeTranslations(values,options){
+    if(!values||typeof values!=='object')return 0;
+    var count=0;
+    Object.keys(values).forEach(function(source){
+      var translated=values[source];
+      if(typeof translated!=='string'||!translated.trim())return;
+      var key=normalize(source);
+      if(!key)return;
+      var stable=normalizeImportedTranslation(key,translated.trim());
+      map[key]=stable;
+      map[stable]=stable;
+      missingTexts.delete(key);
+      count+=1;
+    });
+    if(slug==='it'){
+      map.Filmes='Film';map.Film='Film';PROTECTED_EXACT.add('Film');
+      map['Fã da Billie']='Fan di Billie';map['Fan di Billie']='Fan di Billie';
+      map.Live='Dal vivo';map['Ao vivo']='Dal vivo';map['Dal vivo']='Dal vivo';
+      map['Live Performances & TV']='Spettacoli dal vivo e TV';
+    }
+    if(options&&options.persist){
+      try{
+        var previous=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
+        var stableBundle={};
+        Object.keys(values).forEach(function(source){
+          var translated=values[source];
+          if(typeof translated==='string'&&translated.trim())stableBundle[source]=normalizeImportedTranslation(source,translated.trim());
+        });
+        localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},previous&&typeof previous==='object'?previous:{},stableBundle)));
+      }catch(_){ }
+    }
+    if(options&&options.shared)window.__BETV_ITALIAN_SHARED_I18N_READY__=true;
+    if(!options||options.applyNow!==false){apply(document.documentElement);enforceItalianCanonicalLabels(document);}
+    return count;
   }
   function eligibleText(value){
     var key=normalize(value);
@@ -118,6 +186,7 @@
       if(node.nodeType===3)translateTextNode(node);
       else translateAttributes(node);
     }
+    enforceItalianCanonicalLabels(root);
   }
   function flushQueue(){
     queued=false;
@@ -230,6 +299,7 @@
         var source=batch[index];
         var translated=String(item||'').trim();
         if(source&&translated){
+          translated=normalizeImportedTranslation(source,translated);
           map[source]=translated;
           map[translated]=translated;
           translatedThisSession.add(translated);
@@ -248,7 +318,30 @@
   function scheduleMissingTranslation(delay){
     if(slug==='pt-br'||isAdmin())return;
     clearTimeout(translateTimer);
-    translateTimer=setTimeout(translateMissingNow,Number(delay||350));
+    var requested=Number(delay||350);
+    if(slug==='it'&&!window.__BETV_ITALIAN_SHARED_I18N_READY__)requested=Math.max(requested,1800);
+    translateTimer=setTimeout(translateMissingNow,requested);
+  }
+  function italianHomeRoute(){
+    if(slug!=='it')return false;
+    try{
+      var path=String(location.pathname||'/').replace(/^\/it(?=\/|$)/i,'')||'/';
+      return path==='/'||path==='';
+    }catch(_){return false;}
+  }
+  function loadItalianSharedBundle(){
+    if(slug!=='it'||italianHomeRoute())return Promise.resolve(null);
+    if(window.__BETV_ITALIAN_SHARED_I18N_PROMISE__)return window.__BETV_ITALIAN_SHARED_I18N_PROMISE__;
+    var promise=fetch('/api/public-data?name=settings&id=site&locale=it',{credentials:'same-origin',cache:'default',headers:{Accept:'application/json'}})
+      .then(function(response){return response.ok?response.json():null;})
+      .then(function(settings){
+        var bundle=settings&&settings.italianUiTranslations;
+        if(bundle&&typeof bundle==='object')mergeTranslations(bundle,{applyNow:true,persist:true,shared:true});
+        return bundle||null;
+      })
+      .catch(function(){return null;});
+    window.__BETV_ITALIAN_SHARED_I18N_PROMISE__=promise;
+    return promise;
   }
   async function load(){
     if(slug==='pt-br'||isAdmin()){
@@ -257,11 +350,31 @@
       return;
     }
     loadDynamicCache();
+    var inlineBundle=window.__BETV_INLINE_I18N__&&window.__BETV_INLINE_I18N__[slug];
+    if(inlineBundle&&typeof inlineBundle==='object')mergeTranslations(inlineBundle,{applyNow:false});
+
+    // O núcleo italiano entra antes de qualquer fetch. Assim a primeira visita
+    // não exibe PT-BR enquanto espera o arquivo ou a tradução dinâmica.
+    if(slug==='it'){
+      window.BETVI18n=api;
+      apply(document.documentElement);
+      startObserver();
+      enforceItalianCanonicalLabels(document);
+      readyResolve(api);
+      try{window.dispatchEvent(new CustomEvent('be:i18n-ready',{detail:api}));}catch(_){ }
+      fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'})
+        .then(function(response){return response.ok?response.json():null;})
+        .then(function(payload){if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:true});})
+        .catch(function(){});
+      loadItalianSharedBundle();
+      return;
+    }
+
     try{
       var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
       if(response.ok){
         var payload=await response.json();
-        if(payload&&typeof payload==='object')Object.keys(payload).forEach(function(key){map[key]=payload[key];});
+        if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:false});
       }
     }catch(error){(void error);}
     window.BETVI18n=api;
@@ -280,6 +393,7 @@
     apply:apply,
     translateExact:translateExact,
     protectExact:protectExact,
+    mergeTranslations:mergeTranslations,
     localizeRecord:recordTranslation,
     currency:regionalCurrency,
     switchLanguage:function(nextSlug){return Boolean(window.BETVLocale&&window.BETVLocale.switchTo&&window.BETVLocale.switchTo(nextSlug));},
