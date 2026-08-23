@@ -1082,9 +1082,9 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     async accountExists(email) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
       if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw backendError('auth/invalid-email', 'Digite um e-mail válido.');
-      const { data, error } = await supabaseClient.rpc('account_exists', { p_email: normalizedEmail });
-      if (error) throw mapAuthError(error);
-      return data === true;
+      // Do not expose whether an arbitrary email is registered. The login flow
+      // asks for the password first and account creation remains an explicit action.
+      return null;
     },
     async usernameAvailable(username) {
       const normalizedHandle = normalizeUsername(username);

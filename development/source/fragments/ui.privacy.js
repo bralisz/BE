@@ -781,11 +781,10 @@
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando..');
       try{
-        var exists=typeof auth.accountExists==='function'?await auth.accountExists(email):null;
+        if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('Digite um e-mail válido.');
         selectedAuthEmail=email;
-        if(exists===true){setMode('password',email);}
-        else if(exists===false){setMode('signup',email);}
-        else{throw new Error('Não foi possível verificar este e-mail agora. Tente novamente.');}
+        // Avoid revealing whether an email is already registered.
+        setMode('password',email);
       }catch(err){setStatus(friendly(err),'error');}
       finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
