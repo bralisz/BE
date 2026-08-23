@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260823-it-wiki-live-v1';
+  var STATIC_REV='20260823-account-mfa-v1';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -1173,6 +1173,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (/invalid login credentials/i.test(message)) return backendError('auth/invalid-credential', 'E-mail ou senha incorretos.', error);
     if (/already registered|already been registered|user already/i.test(message)) return backendError('auth/email-already-in-use', 'Este e-mail já possui uma conta.', error);
     if (/password/i.test(message) && /6|weak|short/i.test(message)) return backendError('auth/weak-password', 'Use uma senha com pelo menos 6 caracteres.', error);
+    if (/totp|mfa|factor|challenge/i.test(`${code} ${message}`) && /invalid|expired|incorrect|verify|code/i.test(message)) return backendError('auth/mfa-invalid-code', 'Código do autenticador inválido ou expirado.', error);
+    if (/mfa.*disabled|verification disabled|factor.*disabled/i.test(`${code} ${message}`)) return backendError('auth/mfa-unavailable', 'A verificação em duas etapas está indisponível no momento.', error);
     if (/email/i.test(message) && /invalid/i.test(message)) return backendError('auth/invalid-email', 'Digite um e-mail válido.', error);
     if (
       /username already in use|username is already in use|profiles_username|username.*já.*uso/i.test(message) ||
@@ -2756,6 +2758,96 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       currentUser = normalizeUser(result.user) || currentUser;
       notify();
       return { user: currentUser };
+    },
+    async getMfaStatus() {
+      const mfa = supabaseClient && supabaseClient.auth && supabaseClient.auth.mfa;
+      if (!mfa || typeof mfa.listFactors !== 'function' || typeof mfa.getAuthenticatorAssuranceLevel !== 'function') {
+        return { supported: false, enabled: false, factor: null, currentLevel: null, nextLevel: null };
+      }
+      const factorsResult = await mfa.listFactors();
+      if (factorsResult.error) throw mapAuthError(factorsResult.error);
+      const aalResult = await mfa.getAuthenticatorAssuranceLevel();
+      if (aalResult.error) throw mapAuthError(aalResult.error);
+      const totp = Array.isArray(factorsResult.data && factorsResult.data.totp) ? factorsResult.data.totp : [];
+      const verified = totp.filter(factor => String(factor && factor.status || '').toLowerCase() === 'verified');
+      const aal = aalResult.data || {};
+      return {
+        supported: true,
+        enabled: verified.length > 0,
+        factor: verified[0] || null,
+        factors: totp,
+        currentLevel: aal.currentLevel || null,
+        nextLevel: aal.nextLevel || null
+      };
+    },
+    async requiresMfa() {
+      const status = await this.getMfaStatus();
+      return Boolean(status.supported && status.enabled && status.nextLevel === 'aal2' && status.currentLevel !== 'aal2');
+    },
+    async beginMfaEnrollment() {
+      const mfa = supabaseClient && supabaseClient.auth && supabaseClient.auth.mfa;
+      if (!mfa || typeof mfa.enroll !== 'function') throw backendError('auth/mfa-unavailable', 'A verificação em duas etapas não está disponível nesta conta.');
+      const status = await this.getMfaStatus();
+      if (status.enabled) return { alreadyEnabled: true, factor: status.factor };
+      const staleFactors = Array.isArray(status.factors) ? status.factors.filter(factor => String(factor && factor.status || '').toLowerCase() !== 'verified') : [];
+      if (typeof mfa.unenroll === 'function') {
+        for (const factor of staleFactors) {
+          try { if (factor && factor.id) await mfa.unenroll({ factorId: factor.id }); } catch (_) {}
+        }
+      }
+      const { data, error } = await mfa.enroll({ factorType: 'totp', friendlyName: 'Billie Eilish TV' });
+      if (error) throw mapAuthError(error);
+      return {
+        alreadyEnabled: false,
+        factorId: data && data.id || '',
+        qrCode: data && data.totp && data.totp.qr_code || '',
+        secret: data && data.totp && data.totp.secret || '',
+        uri: data && data.totp && data.totp.uri || ''
+      };
+    },
+    async cancelMfaEnrollment(factorId) {
+      const mfa = supabaseClient && supabaseClient.auth && supabaseClient.auth.mfa;
+      if (!mfa || typeof mfa.unenroll !== 'function' || !factorId) return;
+      const { error } = await mfa.unenroll({ factorId: String(factorId) });
+      if (error) throw mapAuthError(error);
+    },
+    async verifyMfaEnrollment({ factorId, code }) {
+      const mfa = supabaseClient && supabaseClient.auth && supabaseClient.auth.mfa;
+      const cleanCode = String(code || '').replace(/\D/g, '').slice(0, 6);
+      if (!mfa || typeof mfa.challengeAndVerify !== 'function') throw backendError('auth/mfa-unavailable', 'A verificação em duas etapas não está disponível nesta conta.');
+      if (!factorId || cleanCode.length !== 6) throw backendError('auth/mfa-invalid-code', 'Digite o código de 6 dígitos do aplicativo autenticador.');
+      const { data, error } = await mfa.challengeAndVerify({ factorId: String(factorId), code: cleanCode });
+      if (error) throw mapAuthError(error);
+      try { currentUser = await resolveSupabaseUser(data) || currentUser; } catch (_) {}
+      return this.getMfaStatus();
+    },
+    async verifyMfaCode({ code, factorId }) {
+      const mfa = supabaseClient && supabaseClient.auth && supabaseClient.auth.mfa;
+      const cleanCode = String(code || '').replace(/\D/g, '').slice(0, 6);
+      if (!mfa || typeof mfa.challengeAndVerify !== 'function') throw backendError('auth/mfa-unavailable', 'A verificação em duas etapas não está disponível nesta conta.');
+      if (cleanCode.length !== 6) throw backendError('auth/mfa-invalid-code', 'Digite o código de 6 dígitos do aplicativo autenticador.');
+      let targetFactorId = String(factorId || '');
+      if (!targetFactorId) {
+        const status = await this.getMfaStatus();
+        targetFactorId = String(status.factor && status.factor.id || '');
+      }
+      if (!targetFactorId) throw backendError('auth/mfa-factor-missing', 'Nenhum autenticador ativo foi encontrado para esta conta.');
+      const { data, error } = await mfa.challengeAndVerify({ factorId: targetFactorId, code: cleanCode });
+      if (error) throw mapAuthError(error);
+      try { currentUser = await resolveSupabaseUser(data) || currentUser; } catch (_) {}
+      return { user: currentUser, data };
+    },
+    async disableMfa(factorId) {
+      const mfa = supabaseClient && supabaseClient.auth && supabaseClient.auth.mfa;
+      if (!mfa || typeof mfa.unenroll !== 'function') throw backendError('auth/mfa-unavailable', 'A verificação em duas etapas não está disponível nesta conta.');
+      const status = await this.getMfaStatus();
+      const targetFactorId = String(factorId || status.factor && status.factor.id || '');
+      if (!targetFactorId) return { disabled: true };
+      if (status.currentLevel !== 'aal2') throw backendError('auth/mfa-needs-verification', 'Confirme o código do autenticador antes de desativar a verificação em duas etapas.');
+      const { error } = await mfa.unenroll({ factorId: targetFactorId });
+      if (error) throw mapAuthError(error);
+      try { if (typeof supabaseClient.auth.refreshSession === 'function') await supabaseClient.auth.refreshSession(); } catch (_) {}
+      return { disabled: true };
     },
     async resendSignupConfirmation(email) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -14295,7 +14387,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         +    '<section class="settings-section-panel settings-connections-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões e Redes Sociais</h1><p class="settings-panel-lead">Gerencie sua conexão de conta e as redes exibidas no perfil público.</p><div class="settings-panel-card"><div class="settings-social-heading"><h2>Conexões conectadas</h2><p>Gerencie os serviços vinculados à sua conta.</p></div><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div><div class="settings-panel-card settings-social-card"><div class="settings-social-heading"><h2>Redes sociais</h2><p>Adicione as redes que devem aparecer ao lado do seu nome no perfil público.</p></div><form id="settingsSocialForm"><div class="settings-social-fields"><div class="settings-social-field"><label for="settingsSocialX"><span class="settings-social-brand is-x">'+profileSocialIcon('x')+'</span><span>X</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">x.com/</span><input id="settingsSocialX" name="x" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.x||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialInstagram"><span class="settings-social-brand is-instagram">'+profileSocialIcon('instagram')+'</span><span>Instagram</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">instagram.com/</span><input id="settingsSocialInstagram" name="instagram" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.instagram||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialTikTok"><span class="settings-social-brand is-tiktok">'+profileSocialIcon('tiktok')+'</span><span>TikTok</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">tiktok.com/@</span><input id="settingsSocialTikTok" name="tiktok" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.tiktok||'')+'" placeholder="usuario"></div></div></div><div class="settings-status" id="settingsSocialStatus"></div><div class="settings-btn-row settings-social-actions"><button class="settings-button primary" type="submit">Salvar redes sociais</button></div></form></div></section>'
         +    '<section class="settings-section-panel settings-data-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Meus Dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-data-actions settings-data-actions-outside"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><a class="settings-data-privacy-button" href="/privacy">Ver Termos de Privacidade</a></div><div class="settings-status settings-data-status" id="settingsExportStatus"></div></section>'
         +    '<section class="settings-section-panel settings-language-panel" data-settings-panel="language"'+(settingsActiveTab==='language'?'':' hidden')+'><h1>Idioma</h1><p class="settings-panel-lead">Escolha o idioma usado em todas as áreas públicas do site.</p><div class="settings-panel-card"><div class="settings-language-options" role="radiogroup" aria-label="Idioma do site"><button class="settings-language-option" type="button" data-settings-language="pt-br" role="radio"><strong>Português (Brasil)</strong><span>Português</span></button><button class="settings-language-option" type="button" data-settings-language="en-us" role="radio"><strong>English (United States)</strong><span>Inglês</span></button><button class="settings-language-option" type="button" data-settings-language="es" role="radio"><strong>Español</strong><span>Espanhol</span></button><button class="settings-language-option" type="button" data-settings-language="fr" role="radio"><strong>Français</strong><span>Francês</span></button><button class="settings-language-option" type="button" data-settings-language="it" role="radio"><strong>Italiano</strong><span>Italiano</span></button></div><p class="settings-muted settings-language-note">A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.</p></div></section>'
-        +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input class="notranslate" translate="no" name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input class="notranslate" translate="no" name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="'+escapePublic(localizedProfileText('seunome'))+'"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div><div class="settings-session-section"><h1>Sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></div></section>'
+        +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input class="notranslate" translate="no" name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input class="notranslate" translate="no" name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="'+escapePublic(localizedProfileText('seunome'))+'"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div><div class="settings-panel-card settings-security-card"><div class="settings-security-row"><div class="settings-security-copy"><strong>Verificação em duas etapas</strong><span class="settings-muted" id="settingsMfaDescription">Adicione uma camada extra de segurança usando um aplicativo autenticador.</span></div><div class="settings-security-actions"><button class="settings-button primary" id="settingsMfaToggle" type="button" disabled>Verificando…</button><button class="settings-security-forgot" id="settingsForgotPassword" type="button">Esqueci a senha</button></div></div><div class="settings-mfa-setup" id="settingsMfaSetup" hidden><div class="settings-mfa-qr"><img id="settingsMfaQr" alt="QR Code para configurar o aplicativo autenticador" hidden><span id="settingsMfaQrFallback">QR Code</span></div><div class="settings-mfa-setup-copy"><strong>Configure seu autenticador</strong><p>Escaneie o QR Code no Google Authenticator, Microsoft Authenticator, Authy ou outro app compatível.</p><div class="settings-mfa-secret-row"><span>Chave manual</span><code class="notranslate" translate="no" id="settingsMfaSecret"></code></div><form id="settingsMfaVerifyForm"><div class="settings-field"><label for="settingsMfaCode">Código de 6 dígitos</label><input id="settingsMfaCode" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000"></div><div class="settings-btn-row settings-mfa-verify-actions"><button class="settings-button primary" type="submit">Confirmar e ativar</button><button class="settings-button" id="settingsMfaCancel" type="button">Cancelar</button></div></form></div></div><div class="settings-status" id="settingsMfaStatus"></div></div><div class="settings-session-section"><h1>Sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></div></section>'
         +  '</main>'
         +'</div>';
       if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(settingsPageBody);
@@ -14386,6 +14478,77 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           msg.textContent='As redes sociais foram salvas neste aparelho, mas a sincronização falhou.';msg.className='settings-status err';
         }finally{submit.disabled=false;}
       });
+      var settingsMfaEnrollment=null;
+      var settingsMfaToggle=document.getElementById('settingsMfaToggle');
+      var settingsMfaSetup=document.getElementById('settingsMfaSetup');
+      var settingsMfaStatus=document.getElementById('settingsMfaStatus');
+      var settingsMfaDescription=document.getElementById('settingsMfaDescription');
+      var settingsMfaQr=document.getElementById('settingsMfaQr');
+      var settingsMfaQrFallback=document.getElementById('settingsMfaQrFallback');
+      var settingsMfaSecret=document.getElementById('settingsMfaSecret');
+      var settingsMfaVerifyForm=document.getElementById('settingsMfaVerifyForm');
+      var settingsForgotPassword=document.getElementById('settingsForgotPassword');
+      function setSettingsMfaStatus(message,type){if(!settingsMfaStatus)return;settingsMfaStatus.textContent=message||'';settingsMfaStatus.className='settings-status '+(type||'');}
+      function closeSettingsMfaSetup(){settingsMfaEnrollment=null;if(settingsMfaSetup)settingsMfaSetup.hidden=true;if(settingsMfaQr){settingsMfaQr.hidden=true;settingsMfaQr.removeAttribute('src');}if(settingsMfaQrFallback)settingsMfaQrFallback.hidden=false;if(settingsMfaSecret)settingsMfaSecret.textContent='';if(settingsMfaVerifyForm)settingsMfaVerifyForm.reset();}
+      async function refreshSettingsMfa(){
+        if(!settingsMfaToggle)return;
+        if(typeof auth.getMfaStatus!=='function'){settingsMfaToggle.disabled=true;settingsMfaToggle.textContent='Indisponível';if(settingsMfaDescription)settingsMfaDescription.textContent='A verificação em duas etapas requer a autenticação online do site.';return;}
+        settingsMfaToggle.disabled=true;settingsMfaToggle.textContent='Verificando…';
+        try{
+          var status=await auth.getMfaStatus();
+          if(!status.supported){settingsMfaToggle.textContent='Indisponível';if(settingsMfaDescription)settingsMfaDescription.textContent='A verificação em duas etapas não está disponível nesta conta.';return;}
+          settingsMfaToggle.dataset.enabled=status.enabled?'true':'false';
+          settingsMfaToggle.dataset.factorId=status.factor&&status.factor.id?String(status.factor.id):'';
+          settingsMfaToggle.textContent=status.enabled?'Desativar':'Ativar';
+          settingsMfaToggle.classList.toggle('primary',!status.enabled);
+          if(settingsMfaDescription)settingsMfaDescription.textContent=status.enabled?'Ativada. Um código do autenticador será solicitado ao entrar na sua conta.':'Adicione uma camada extra de segurança usando um aplicativo autenticador.';
+          settingsMfaToggle.disabled=false;
+        }catch(error){settingsMfaToggle.textContent='Tentar novamente';settingsMfaToggle.disabled=false;setSettingsMfaStatus(error&&error.message?error.message:'Não foi possível verificar a segurança da conta.','err');}
+      }
+      if(settingsMfaToggle)settingsMfaToggle.onclick=async function(){
+        if(settingsMfaToggle.disabled)return;
+        var enabled=settingsMfaToggle.dataset.enabled==='true';
+        settingsMfaToggle.disabled=true;setSettingsMfaStatus(enabled?'Desativando…':'Preparando autenticação…');
+        if(enabled){
+          if(!confirm(localizedProfileText('Desativar a verificação em duas etapas desta conta?'))) {settingsMfaToggle.disabled=false;setSettingsMfaStatus('');return;}
+          try{await auth.disableMfa(settingsMfaToggle.dataset.factorId||'');closeSettingsMfaSetup();setSettingsMfaStatus('Verificação em duas etapas desativada.','ok');await refreshSettingsMfa();}
+          catch(error){setSettingsMfaStatus(error&&error.message?error.message:'Não foi possível desativar agora.','err');settingsMfaToggle.disabled=false;}
+          return;
+        }
+        try{
+          settingsMfaEnrollment=await auth.beginMfaEnrollment();
+          if(settingsMfaEnrollment&&settingsMfaEnrollment.alreadyEnabled){setSettingsMfaStatus('A verificação em duas etapas já está ativada.','ok');await refreshSettingsMfa();return;}
+          if(!settingsMfaEnrollment||!settingsMfaEnrollment.factorId)throw new Error('Não foi possível criar o autenticador.');
+          if(settingsMfaSetup)settingsMfaSetup.hidden=false;
+          if(settingsMfaSecret)settingsMfaSecret.textContent=String(settingsMfaEnrollment.secret||'');
+          if(settingsMfaQr&&settingsMfaEnrollment.qrCode){settingsMfaQr.src=String(settingsMfaEnrollment.qrCode);settingsMfaQr.hidden=false;if(settingsMfaQrFallback)settingsMfaQrFallback.hidden=true;}
+          else if(settingsMfaQrFallback)settingsMfaQrFallback.hidden=false;
+          settingsMfaToggle.textContent='Aguardando confirmação';
+          setSettingsMfaStatus('Escaneie o QR Code e confirme com o código gerado pelo aplicativo.');
+          var codeInput=document.getElementById('settingsMfaCode');if(codeInput)codeInput.focus({preventScroll:true});
+        }catch(error){closeSettingsMfaSetup();setSettingsMfaStatus(error&&error.message?error.message:'Não foi possível iniciar a verificação em duas etapas.','err');await refreshSettingsMfa();}
+      };
+      if(settingsMfaVerifyForm)settingsMfaVerifyForm.addEventListener('submit',async function(event){
+        event.preventDefault();
+        var submit=event.submitter||settingsMfaVerifyForm.querySelector('[type="submit"]');
+        var code=String(settingsMfaVerifyForm.elements.namedItem('code').value||'').replace(/\D/g,'').slice(0,6);
+        settingsMfaVerifyForm.elements.namedItem('code').value=code;
+        if(code.length!==6){setSettingsMfaStatus('Digite o código de 6 dígitos do aplicativo autenticador.','err');return;}
+        if(!settingsMfaEnrollment||!settingsMfaEnrollment.factorId){setSettingsMfaStatus('Inicie a ativação novamente.','err');return;}
+        if(submit)submit.disabled=true;setSettingsMfaStatus('Confirmando código…');
+        try{await auth.verifyMfaEnrollment({factorId:settingsMfaEnrollment.factorId,code:code});closeSettingsMfaSetup();setSettingsMfaStatus('Verificação em duas etapas ativada com sucesso.','ok');await refreshSettingsMfa();}
+        catch(error){setSettingsMfaStatus(error&&error.message?error.message:'Código inválido ou expirado.','err');}
+        finally{if(submit)submit.disabled=false;}
+      });
+      var settingsMfaCancel=document.getElementById('settingsMfaCancel');
+      if(settingsMfaCancel)settingsMfaCancel.onclick=async function(){var factorId=settingsMfaEnrollment&&settingsMfaEnrollment.factorId||'';closeSettingsMfaSetup();setSettingsMfaStatus('');try{if(factorId&&typeof auth.cancelMfaEnrollment==='function')await auth.cancelMfaEnrollment(factorId);}catch(_){ }await refreshSettingsMfa();};
+      if(settingsForgotPassword)settingsForgotPassword.onclick=async function(){
+        if(settingsForgotPassword.disabled)return;settingsForgotPassword.disabled=true;setSettingsMfaStatus('Enviando link para redefinir sua senha…');
+        try{await auth.sendPasswordReset(user.email);setSettingsMfaStatus('Enviamos um link de redefinição para o e-mail da sua conta.','ok');}
+        catch(error){setSettingsMfaStatus(error&&error.message?error.message:'Não foi possível enviar o link agora.','err');}
+        finally{settingsForgotPassword.disabled=false;}
+      };
+      refreshSettingsMfa();
       document.getElementById('settingsExportData').onclick=async function(){
         var button=this;
         var msg=document.getElementById('settingsExportStatus');
@@ -14838,7 +15001,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var initialCallbackDestination=new URLSearchParams(location.search||'').get('auth_callback');
   if(location.hash.startsWith('#/admin')||initialCallbackDestination==='admin') return;
 
-  var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='';
+  var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='',mfaChallengePending=false;
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
   var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false;
@@ -14912,6 +15075,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
       'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
       'auth/session-missing':'Não foi possível concluir a sessão de login. Tente entrar novamente.',
+      'auth/mfa-invalid-code':'Código do autenticador inválido ou expirado.',
+      'auth/mfa-factor-missing':'Nenhum autenticador ativo foi encontrado para esta conta.',
+      'auth/mfa-unavailable':'A verificação em duas etapas está indisponível no momento.',
+      'auth/mfa-needs-verification':'Confirme o código do autenticador antes de continuar.',
       'auth/user-banned':'',
       'auth/email-rate-limit':'O limite temporário de e-mails do Supabase foi atingido. Aguarde e tente novamente mais tarde ou continue com o Discord.',
       'auth/provider-not-enabled':'O login com Discord ainda não foi ativado no Supabase.',
@@ -14958,11 +15125,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(message)setStatus(message,type||'');
     hideSiteSkeleton();
   }
+  function showMfaLogin(email,message,type){
+    mfaChallengePending=true;
+    showLogin();
+    setMode('mfa',email||selectedAuthEmail||(auth&&auth.currentUser&&auth.currentUser.email)||'');
+    if(message)setStatus(message,type||'');
+    else setStatus('Digite o código do seu aplicativo autenticador para concluir o login.');
+    hideSiteSkeleton();
+  }
   function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:Boolean(preserveRoute)}}));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
   function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
-    var steps={email:q('emailStep'),password:q('passwordStep'),signup:q('signupStep'),recovery:q('passwordRecoveryStep')};
+    var steps={email:q('emailStep'),password:q('passwordStep'),mfa:q('mfaStep'),signup:q('signupStep'),recovery:q('passwordRecoveryStep')};
     Object.keys(steps).forEach(function(key){if(steps[key])steps[key].hidden=key!==mode;});
     q('authGate').dataset.authStep=mode;
     if(selectedAuthEmail){
@@ -14970,11 +15145,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       q('signupEmail').value=selectedAuthEmail;
       q('loginSelectedEmail').textContent=selectedAuthEmail;
       q('signupSelectedEmail').textContent=selectedAuthEmail;
+      if(q('mfaSelectedEmail'))q('mfaSelectedEmail').textContent=selectedAuthEmail;
       q('authEmail').value=selectedAuthEmail;
     }
     setStatus('');
     window.requestAnimationFrame(function(){
-      var target=mode==='email'?q('authEmail'):mode==='password'?q('loginPassword'):mode==='recovery'?q('recoveryNewPassword'):q('signupName');
+      var target=mode==='email'?q('authEmail'):mode==='password'?q('loginPassword'):mode==='mfa'?q('mfaCode'):mode==='recovery'?q('recoveryNewPassword'):q('signupName');
       if(target)target.focus({preventScroll:true});
     });
   }
@@ -15057,6 +15233,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function finishPublicLogin(user){
     user=await recoverAuthenticatedUser(user);
     if(!user){var sessionError=new Error('Não foi possível concluir a sessão de login. Tente entrar novamente.');sessionError.code='auth/session-missing';throw sessionError;}
+    if(typeof auth.requiresMfa==='function'){
+      try{if(await auth.requiresMfa()){showMfaLogin(user.email||selectedAuthEmail);return null;}}
+      catch(error){showMfaLogin(user.email||selectedAuthEmail,friendly(error),'error');return null;}
+    }
+    mfaChallengePending=false;
     if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);
     localStorage.setItem('beAuthExpected','1');
     localStorage.setItem('beSessionUid',user.uid);
@@ -15136,6 +15317,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var email=selectedAuthEmail||q('loginEmail').value.trim();
       if(!email){setMode('email');setStatus('Digite seu e-mail para receber o link de redefinição.','error');return;}
       try{await auth.sendPasswordReset(email);setStatus('Enviamos um link de redefinição para seu e-mail.','ok')}catch(err){setStatus(friendly(err),'error')}
+    };
+
+    q('mfaForm').addEventListener('submit',async function(e){
+      e.preventDefault();
+      var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),code=String(form.elements.namedItem('code').value||'').replace(/\D/g,'').slice(0,6);
+      form.elements.namedItem('code').value=code;
+      if(code.length!==6){setStatus('Digite o código de 6 dígitos do aplicativo autenticador.','error');return;}
+      if(authFlowBusy)return;
+      authFlowBusy=true;if(b)b.disabled=true;setStatus('Verificando código…');
+      try{
+        if(typeof auth.verifyMfaCode!=='function')throw new Error('A verificação em duas etapas não está disponível.');
+        await auth.verifyMfaCode({code:code});
+        mfaChallengePending=false;
+        form.reset();
+        setStatus('Código confirmado.','ok');
+        await finishPublicLogin(auth.currentUser);
+      }catch(err){showMfaLogin(selectedAuthEmail||(auth.currentUser&&auth.currentUser.email)||'',friendly(err),'error');}
+      finally{authFlowBusy=false;if(b)b.disabled=false;}
+    });
+    q('mfaUseOtherAccount').onclick=async function(){
+      if(authFlowBusy)return;authFlowBusy=true;
+      try{if(auth.currentUser)await auth.signOut();}catch(_){ }
+      finally{authFlowBusy=false;mfaChallengePending=false;selectedAuthEmail='';q('authEmail').value='';q('loginEmail').value='';q('signupEmail').value='';q('mfaCode').value='';showLogin();setMode('email');}
     };
 
     q('recoveryBackToLogin').onclick=async function(){
@@ -15248,6 +15452,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(location.hash.startsWith('#/admin'))return;
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
+      if(mfaChallengePending){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
       var guestActive=Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
       if(isPasswordRecoveryRoute()){if(auth.currentUser)showPasswordRecovery();else showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');return;}
       if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
