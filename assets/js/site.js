@@ -5599,29 +5599,42 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function instagramBrowserHelpCopy() {
     const lang = String(document.documentElement.lang || navigator.language || 'pt').toLowerCase();
     if (lang.startsWith('es')) return {
-      title: 'Mejora la reproducción de los videos',
+      title: 'Abre el sitio en tu navegador',
       text: 'El navegador de Instagram puede limitar algunos videos. Toca ••• y elige “Abrir en el navegador” para una mejor compatibilidad.',
       button: 'Entendido'
     };
     if (lang.startsWith('fr')) return {
-      title: 'Améliorez la lecture des vidéos',
+      title: 'Ouvrez le site dans votre navigateur',
       text: 'Le navigateur Instagram peut limiter certaines vidéos. Touchez ••• puis choisissez « Ouvrir dans le navigateur » pour une meilleure compatibilité.',
       button: 'Compris'
     };
     if (lang.startsWith('en')) return {
-      title: 'Improve video playback',
+      title: 'Open the site in your browser',
       text: 'Instagram’s browser can limit some videos. Tap ••• and choose “Open in browser” for better compatibility.',
       button: 'Got it'
     };
     return {
-      title: 'Melhore a reprodução dos vídeos',
+      title: 'Acesse o site no navegador',
       text: 'O navegador do Instagram pode limitar alguns vídeos. Toque em ••• e escolha “Abrir no navegador” para ter melhor compatibilidade.',
       button: 'Entendi'
     };
   }
 
+  const INSTAGRAM_BROWSER_HELP_SEEN_KEY = 'be_instagram_browser_help_seen_v1';
+
+  function hasSeenInstagramMobileBrowserHelp() {
+    try { return window.localStorage.getItem(INSTAGRAM_BROWSER_HELP_SEEN_KEY) === '1'; }
+    catch (_) { return false; }
+  }
+
+  function markInstagramMobileBrowserHelpSeen() {
+    try { window.localStorage.setItem(INSTAGRAM_BROWSER_HELP_SEEN_KEY, '1'); }
+    catch (_) {}
+  }
+
   function showInstagramMobileBrowserHelp() {
-    if (!isInstagramMobileBrowser() || document.getElementById('beInstagramBrowserHelp')) return;
+    if (!isInstagramMobileBrowser() || hasSeenInstagramMobileBrowserHelp() || document.getElementById('beInstagramBrowserHelp')) return;
+    markInstagramMobileBrowserHelpSeen();
     const copy = instagramBrowserHelpCopy();
     const wrap = document.createElement('div');
     wrap.id = 'beInstagramBrowserHelp';
@@ -5654,7 +5667,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   // Conta 2 minutos de uso VISÍVEL no próprio aparelho, sem requests, polling,
   // Vercel Functions ou chamadas ao Supabase. Pausa enquanto a aba/app está oculto.
   function scheduleInstagramMobileSiteHelp() {
-    if (!isInstagramMobileBrowser() || window.__beInstagramMobileSiteHelpScheduled) return 0;
+    if (!isInstagramMobileBrowser() || hasSeenInstagramMobileBrowserHelp() || window.__beInstagramMobileSiteHelpScheduled) return 0;
     window.__beInstagramMobileSiteHelpScheduled = true;
 
     const requiredVisibleMs = 2 * 60 * 1000;
