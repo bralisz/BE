@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#090b10">
   <title>Billie Eilish TV</title>
-  <link rel="icon" href="/assets/icons/favicon-home-pc.ico?v=20260807-home-site-v1" sizes="any">
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-home-pc-32x32.png?v=20260807-home-site-v1">
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=20260807-betv-logo-v4">
+  <link rel="icon" href="/_static/media/icons/favicon-home-pc.ico?v=20260807-home-site-v1" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/_static/media/icons/favicon-home-pc-32x32.png?v=20260807-home-site-v1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/_static/media/icons/apple-touch-icon.png?v=20260807-betv-logo-v4">
   <style>
     :root{
       color-scheme:dark;
@@ -25,7 +25,7 @@
       min-height:100svh;
       overflow:hidden;
       color:var(--text);
-      background:#090b10 url('/assets/images/pages/404-bg.webp') 62% 48% / cover no-repeat fixed;
+      background:#090b10 url("/_static/media/pages/404-bg.webp") 62% 48% / cover no-repeat fixed;
       font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     }
     body::before{
@@ -126,7 +126,7 @@
 <body>
   <main class="page">
     <a class="brand" href="/" aria-label="Voltar para a página inicial">
-      <img loading="eager" decoding="async" fetchpriority="high" src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE">
+      <img loading="eager" decoding="async" fetchpriority="high" src="/_static/media/brand/logo.webp?v=20260809-performance-v1" alt="BE">
     </a>
 
     <section class="content" aria-labelledby="error-title">
@@ -178,6 +178,6 @@
       document.getElementById('error-back').onclick=function(){history.length>1?history.back():location.assign(prefix);};
     })();
   </script>
-  <script defer src="/assets/js/lazy-loading.js?v=1"></script>
+  <script defer src="/_static/chunks/lazy.js?v=1"></script>
 </body>
 </html>

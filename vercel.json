@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/assets/:path*",
+      "destination": "/api?route=__private"
+    },
+    {
+      "source": "/scripts/:path*",
+      "destination": "/api?route=__private"
+    },
+    {
       "source": "/development/:path*",
       "destination": "/api?route=__private"
     },
@@ -1061,7 +1069,7 @@
       ]
     },
     {
-      "source": "/assets/(.*)",
+      "source": "/_static/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -1070,7 +1078,7 @@
       ]
     },
     {
-      "source": "/assets/css/(.*)",
+      "source": "/_static/chunks/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -1079,7 +1087,7 @@
       ]
     },
     {
-      "source": "/assets/js/(.*)",
+      "source": "/_static/styles/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -1088,29 +1096,20 @@
       ]
     },
     {
-      "source": "/assets/images/(.*)",
+      "source": "/_static/locales/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/_static/media/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=604800, stale-while-revalidate=2592000"
-        }
-      ]
-    },
-    {
-      "source": "/assets/i18n/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/assets/icons/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
         }
       ]
     }

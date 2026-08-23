@@ -6,13 +6,13 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "/assets/icons/android-chrome-192x192.png?v=20260807-betv-logo-v4",
+      "src": "/_static/media/icons/android-chrome-192x192.png?v=20260807-betv-logo-v4",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/icons/android-chrome-512x512.png?v=20260807-betv-logo-v4",
+      "src": "/_static/media/icons/android-chrome-512x512.png?v=20260807-betv-logo-v4",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

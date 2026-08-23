@@ -32,7 +32,8 @@ O Billie Eilish TV é um projeto independente que reúne conteúdos, comunidade,
 
 ## Estrutura do projeto
 
-- `assets/`: arquivos públicos de CSS, JavaScript, imagens, ícones e traduções;
+- `assets/`: fontes editáveis de CSS, JavaScript, imagens, ícones e traduções; essa rota é bloqueada no deploy;
+- `/_static/`: bundle público compacto gerado para o navegador;
 - `api/`: entrada única das rotas de API na Vercel;
 - `server/`: rotas, handlers e configurações executadas no servidor;
 - `development/source/`: fontes legíveis usadas para manutenção e referência;
@@ -44,9 +45,9 @@ O Billie Eilish TV é um projeto independente que reúne conteúdos, comunidade,
 
 ## Atenção ao editar
 
-O `package.json` não possui um processo automático de build. Alguns arquivos de `development/source/` possuem uma versão publicada ou empacotada em outro local. Por exemplo, o painel legível está em `development/source/admin/admin.js`, enquanto a versão servida está embutida em `server/handlers/admin-runtime.js`.
+O `package.json` possui `npm run build:static` para reconstruir a árvore pública `/_static/` a partir de `assets/`. Os nomes de produção são simples, sem hashes. Alguns arquivos de `development/source/` possuem uma versão publicada ou empacotada em outro local. Por exemplo, o painel legível está em `development/source/admin/admin.js`, enquanto a versão servida está embutida em `server/handlers/admin-runtime.js`.
 
-Antes de alterar um arquivo de desenvolvimento, confira se existe uma versão correspondente em `assets/` ou `server/` para evitar que a fonte e a versão publicada fiquem diferentes.
+Antes de alterar um arquivo de desenvolvimento, confira se existe uma versão correspondente em `assets/` ou `server/` para evitar que a fonte e a versão publicada fiquem diferentes. Depois de editar `assets/`, execute `npm run build:static` antes do deploy.
 
 ## Banco de dados
 

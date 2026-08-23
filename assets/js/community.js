@@ -133,9 +133,9 @@
   function toggleCatalogVisibility(showCommunity){
     function rememberAndHide(node){
       if(!node)return;
-      // A Comunidade pode reaplicar esta proteção ao focar/digitar na pesquisa.
-      // Guarde o estado original apenas na primeira vez; sobrescrever o snapshot
-      // enquanto o catálogo já está oculto fazia ele continuar escondido ao voltar.
+                                                                                
+                                                                                 
+                                                                                    
       if(!Object.prototype.hasOwnProperty.call(node.dataset||{},'communityPrevHidden')){
         node.dataset.communityPrevHidden=node.hidden?'1':'0';
       }
@@ -235,8 +235,8 @@
   }
   window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity};
   window.addEventListener('be:open-community',openCommunity);
-  // Fechar o pop-up de notificações não é navegação. Se ele foi aberto sobre a
-  // Comunidade, restaura a superfície da Comunidade sem mudar URL, rolagem ou aba.
+                                                                               
+                                                                                   
   window.addEventListener('be:restore-community-surface',function(){preserveCommunitySurfaceForHeaderUtility();});
   ['be:open-profile-route','be:open-config','be:open-notifications','be:open-support','be:open-donate-page','be:open-fans-page','be:open-billie-page','be:open-album-page','be:open-legal-route'].forEach(function(name){window.addEventListener(name,function(){state.detailReturnToCommunity=false;closeCommunity(false);});});
   window.addEventListener('be:home-entered',function(){state.detailReturnToCommunity=false;closeCommunity(true,'home');});
@@ -467,10 +467,10 @@
       var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;
       if(nav&&!nav.matches('[data-community-tab]')){var target='home';if(nav.dataset&&nav.dataset.homeView)target=nav.dataset.homeView;else if(nav.matches('[data-public-action="support"]'))target='support';closeCommunity(false,target);}
     },true);
-    // A pesquisa é uma utilidade da barra, não uma navegação. Mantém a página
-    // Comunidade ativa ao abrir a lupa e enquanto o usuário digita, tanto no
-    // desktop quanto no mobile. Perfis/resultados continuam podendo abrir suas
-    // rotas normalmente quando o usuário seleciona um item.
+                                                                              
+                                                                             
+                                                                               
+                                                            
     document.addEventListener('input',function(event){
       var searchField=event.target&&event.target.closest?event.target.closest('#homeSearchInput,#mobileSearchInput'):null;
       if(searchField)preserveCommunitySurfaceForHeaderUtility();

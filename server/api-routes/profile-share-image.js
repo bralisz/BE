@@ -242,7 +242,7 @@ async function renderProfileImage(profile, origin) {
     : [];
   const hasFavorites = favorites.length > 0;
 
-  const avatarUrl = profile && profile.avatarUrl ? profile.avatarUrl : '/assets/images/profile/default-avatar.png';
+  const avatarUrl = profile && profile.avatarUrl ? profile.avatarUrl : '/_static/media/profile/default-avatar.png';
   const bannerUrl = profile && profile.bannerUrl ? profile.bannerUrl : '';
   const assetRequests = [
     fetchImageBuffer(avatarUrl, origin),

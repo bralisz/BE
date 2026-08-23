@@ -1,4 +1,4 @@
-/* Billie Eilish TV — Comunidade */
+
 #communityPage[hidden]{display:none!important}
 body.community-page-active main > :not(#communityPage){display:none!important}
 body.community-page-active #dynamicSections{display:none!important}
@@ -252,7 +252,7 @@ body.community-page-active #footerFansLink,body.community-page-active #mobileFoo
   .community-award-tag{min-height:19px;padding:0 7px;font-size:9.5px}
 }
 
-/* Garante a primeira letra maiúscula no título da seção Continue assistindo em qualquer idioma. */
+
 #communityContinueSection .community-section-head h2::first-letter{text-transform:uppercase}
 
 

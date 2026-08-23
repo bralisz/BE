@@ -930,14 +930,14 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="theme-color" content="#020409">
   <title>${escapeHtml(copy.title)}</title>
-  <link rel="icon" href="/assets/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/assets/css/tv-pairing.css?rev=20260821-tv-bg-billie-v1">
+  <link rel="icon" href="/_static/media/icons/favicon-home-pc.ico">
+  <link rel="stylesheet" href="/_static/styles/tv.css?rev=20260823-static-simple-v1">
 </head>
 <body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
   <main class="tv-shell">
     <div class="tv-content">
       <header class="tv-topbar">
-        <a class="tv-brand" href="/" aria-label="Billie Eilish TV"><img src="/assets/images/brand/logo-tv.png?v=20260820-tv-legacy-v3" alt="Billie Eilish TV"></a>
+        <a class="tv-brand" href="/" aria-label="Billie Eilish TV"><img src="/_static/media/brand/logo-tv.png?v=20260820-tv-legacy-v3" alt="Billie Eilish TV"></a>
         <a class="tv-back" href="/">${escapeHtml(copy.exit)}</a>
       </header>
       <section class="tv-main">

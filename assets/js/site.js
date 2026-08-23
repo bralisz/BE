@@ -1,4 +1,4 @@
-/* Billie Eilish TV production bundle — i18n + site + TV widget + community */
+                                                                              
 ;(function(){
   'use strict';
 
@@ -354,8 +354,8 @@
     var inlineBundle=window.__BETV_INLINE_I18N__&&window.__BETV_INLINE_I18N__[slug];
     if(inlineBundle&&typeof inlineBundle==='object')mergeTranslations(inlineBundle,{applyNow:false});
 
-    // O núcleo italiano entra antes de qualquer fetch. Assim a primeira visita
-    // não exibe PT-BR enquanto espera o arquivo ou a tradução dinâmica.
+                                                                               
+                                                                        
     if(slug==='it'){
       window.BETVI18n=api;
       apply(document.documentElement);
@@ -363,7 +363,7 @@
       enforceItalianCanonicalLabels(document);
       readyResolve(api);
       try{window.dispatchEvent(new CustomEvent('be:i18n-ready',{detail:api}));}catch(_){ }
-      fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'})
+      fetch('/_static/locales/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'})
         .then(function(response){return response.ok?response.json():null;})
         .then(function(payload){if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:true});})
         .catch(function(){});
@@ -372,7 +372,7 @@
     }
 
     try{
-      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
+      var response=await fetch('/_static/locales/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
       if(response.ok){
         var payload=await response.json();
         if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:false});
@@ -407,7 +407,7 @@
 })();
 
 ;
-/* bundled: site.js */
+                      
 ;(function(){
   'use strict';
   window.BETVGuestAccess=window.BETVGuestAccess||{
@@ -663,9 +663,9 @@
     if (!raw || raw === '#') return raw || '#';
     if (/^(?:\/|data:|blob:)/i.test(raw)) return raw;
     if (!/^https:\/\//i.test(raw)) return '#';
-    // Primeira tentativa continua indo direto para a origem. Se este navegador
-    // já confirmou que a URL precisa do proxy, usa a cópia /api/media que fica
-    // com cache immutable no próprio navegador nos próximos carregamentos.
+                                                                               
+                                                                               
+                                                                           
     if (prefersMediaProxy(raw)) {
       const cachedProxy = window.BETVMediaProxyUrl ? window.BETVMediaProxyUrl(raw) : '';
       if (cachedProxy) return cachedProxy;
@@ -673,7 +673,7 @@
     return raw;
   };
 
-  const DEFAULT_AVATAR = '/assets/images/profile/default-avatar.png';
+  const DEFAULT_AVATAR = '/_static/media/profile/default-avatar.png';
   window.BETV_DEFAULT_AVATAR = DEFAULT_AVATAR;
   window.BETVResolveAvatar = function BETVResolveAvatar(value) {
     const raw = String(value || '').trim();
@@ -778,9 +778,9 @@
       isExternalHttps = parsed.protocol === 'https:' && parsed.origin !== location.origin;
     } catch (_) {}
 
-    // Direct-first: só usa a Function /api/media quando a origem externa falha.
-    // Interrompe os handlers deste primeiro erro para que eles aguardem a
-    // tentativa do proxy antes de remover a imagem ou trocar pelo placeholder.
+                                                                                
+                                                                          
+                                                                               
     if (isExternalHttps && !notificationOwnFallback && !image.hasAttribute('data-betv-proxy-attempted')) {
       const proxy = window.BETVMediaProxyUrl ? window.BETVMediaProxyUrl(currentSource) : '';
       if (proxy && proxy !== currentSource) {
@@ -911,8 +911,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function oauthRedirectUrl(destination = 'home') {
-    // OAuth sempre retorna por uma rota neutra e exclusiva. Não reutilize
-    // /login, /config ou a página atual como callback do provedor.
+                                                                          
+                                                                   
     const url = new URL('/auth/callback', location.origin);
     url.searchParams.set('auth_callback', String(destination || 'home'));
     return url.href;
@@ -1006,9 +1006,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function hydratePrivileges(user) {
     if (!user || MODE !== 'supabase' || !supabaseClient) return user;
 
-    // A função RPC é a confirmação principal. A leitura do próprio perfil é um
-    // fallback seguro para navegadores que ainda estejam usando o cache antigo
-    // do schema do Supabase logo após uma migração.
+                                                                               
+                                                                               
+                                                    
     let adminCheckFailed = false;
     try {
       const { data: allowed, error } = await supabaseClient.rpc('is_admin');
@@ -1018,8 +1018,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       adminCheckFailed = true;
     }
 
-    // Só faz a leitura adicional quando a verificação principal realmente
-    // falhar. Usuários comuns não geram duas consultas a cada login.
+                                                                          
+                                                                     
     if (adminCheckFailed) {
       try {
         const { data: profile, error } = await supabaseClient
@@ -1031,8 +1031,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       } catch (_) {}
     }
 
-    // Claims emitidas pelo servidor continuam válidas, mas nunca usamos o
-    // endereço de e-mail no JavaScript público para conceder acesso.
+                                                                          
+                                                                     
     if (user.role === 'admin') return user;
 
     (void 0);
@@ -1045,9 +1045,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const immediateUser = authResult?.user || authResult?.session?.user || null;
     if (immediateUser) return hydratePrivileges(normalizeUser(immediateUser));
 
-    // Em alguns navegadores o Supabase conclui o login alguns milissegundos
-    // antes de disponibilizar a sessão persistida. Tentamos novamente por um
-    // curto período para não devolver o usuário à tela de login por engano.
+                                                                            
+                                                                             
+                                                                            
     const retryDelays = [0, 80, 180, 360, 700];
     for (const retryDelay of retryDelays) {
       if (retryDelay) await wait(retryDelay);
@@ -1083,7 +1083,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         id,
         title: `Avatar ${index}`,
         category: 'Padrão',
-        imageUrl: `/assets/images/avatars/avatar-${String(index).padStart(2, '0')}.webp`,
+        imageUrl: `/_static/media/avatars/avatar-${String(index).padStart(2, '0')}.webp`,
         order: index,
         active: true,
         createdAt,
@@ -1359,15 +1359,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const slug = activeLocaleSlug();
     const normalizedCollection = String(collection || '').toLowerCase();
 
-    // Traduções de conteúdo são persistidas no Supabase pelo trigger do Admin.
-    // Visitantes nunca chamam Edge Functions para reparar catálogo: isso evita
-    // multiplicar invocações conforme o tráfego cresce no plano gratuito.
+                                                                               
+                                                                               
+                                                                          
     return values.map(record => localizeContentRecord(record, normalizedCollection));
   }
 
   function queueRecordTranslation(collection, id) {
-    // O trigger private.enqueue_betv_translation já agenda EN/ES/FR/IT quando
-    // content_items/site_settings muda. Não duplicamos Edge Functions no browser.
+                                                                              
+                                                                                  
     return Boolean(collection && id);
   }
 
@@ -1451,9 +1451,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS = 12 * 60 * 60 * 1000;
   const HOME_BOOTSTRAP_MEMORY_TTL_MS = 10 * 60 * 1000;
   const homeBootstrapRefreshInFlight = new Map();
-  // Destaques mudam com mais frequência no Admin. Eles podem vir junto do
-  // bootstrap da Home, mas só são confiados por uma janela curta; o restante
-  // do catálogo continua aproveitando o cache longo.
+                                                                          
+                                                                             
+                                                     
   const FEATURED_FRESH_TTL_MS = 30 * 1000;
 
   function homeBootstrapStorageKey(locale) {
@@ -1482,7 +1482,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const now = Date.now();
     const value = JSON.stringify({ savedAt: now, featuredSavedAt: now, bundle });
     try {
-      // Mantém somente o idioma atual para não acumular vários MB de catálogo.
+                                                                               
       for (let index = localStorage.length - 1; index >= 0; index -= 1) {
         const storedKey = String(localStorage.key(index) || '');
         if (storedKey.startsWith(HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX) && storedKey !== key) localStorage.removeItem(storedKey);
@@ -1513,10 +1513,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const expiresAt = nowMs + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
     const featuredFresh = Math.max(0, Number(bundleAgeMs) || 0) < FEATURED_FRESH_TTL_MS;
     for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
-      // Destaques não são hidratados pelo cache persistente da Home. Isso evita
-      // que abas móveis mantidas em segundo plano continuem exibindo uma lista
-      // antiga depois de uma alteração no Admin. A coleção `featured` continua
-      // protegida pelo cache da CDN na API pública.
+                                                                                
+                                                                               
+                                                                               
+                                                    
       if (name === 'featured' && !featuredFresh) continue;
       const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
       publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt });
@@ -1607,7 +1607,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const params = new URLSearchParams({ name: normalizedName, locale });
     if (normalizedId) params.set('id', normalizedId);
-    // Cache por coleção e idioma.
+                                  
     const ttl = normalizedName === 'settings' && normalizedId === 'site'
       ? 60000
       : normalizedName === 'notifications'
@@ -1994,8 +1994,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const ensurePromise = (async () => {
           const metadata = user.raw?.user_metadata || user.raw?.raw_user_meta_data || {};
           const metadataUsername = normalizeUsername(metadata.username || '');
-          // profile_avatar_url só é gravado quando a pessoa escolhe um avatar no site.
-          // Contas antigas podem ter a URL válida e ainda não possuir profile_avatar_id.
+                                                                                       
+                                                                                         
           const metadataAvatarUrl = String(metadata.profile_avatar_url || '').trim();
           const profileArgs = {
             p_display_name: String(user.displayName || metadata.display_name || metadata.full_name || '').trim() || null,
@@ -2031,8 +2031,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           profile.avatarId = recoveredAvatarId;
           if (profile.avatarUrl) writeProfileAvatarCache(user.uid, profile.avatarUrl);
 
-          // Repara contas antigas que tinham avatar_url, mas ficaram sem avatar_id.
-          // Antes, esse caso apagava a URL em memória e exibia o avatar padrão.
+                                                                                    
+                                                                                
           if (profile.avatarUrl && (!storedAvatarId || storedAvatarUrl !== profile.avatarUrl)) {
             try {
               const { data: repairedRows, error: repairError } = await supabaseClient
@@ -2138,8 +2138,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         (void 0);
       }
 
-      // Mantém a escolha também nos metadados da autenticação. Assim o avatar
-      // continua salvo após atualizar a página, trocar de aba ou entrar novamente.
+                                                                              
+                                                                                   
       if (MODE === 'supabase' && currentUser?.uid === userId) {
         try {
           const existingMetadata = currentUser.raw?.user_metadata || {};
@@ -2197,8 +2197,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try {
         savedProfile = await this.update(userId, { bannerUrl: normalizedUrl, bannerId: normalizedId });
       } catch (error) {
-        // Mantém o seletor funcionando mesmo quando a instalação ainda não
-        // executou a migração banner_url/banner_id no Supabase.
+                                                                           
+                                                                
         databaseError = error;
         (void 0);
       }
@@ -2661,8 +2661,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async accountExists(email) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
       if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw backendError('auth/invalid-email', 'Digite um e-mail válido.');
-      // Não consulta mais a existência do e-mail no banco. Isso evita enumeração
-      // de contas por uma API pública; o fluxo de login usa uma tela neutra.
+                                                                                 
+                                                                             
       return null;
     },
     async usernameAvailable(username) {
@@ -2690,7 +2690,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         );
       }
 
-      // Uma falha no perfil não deve desfazer uma autenticação que já foi aceita.
+                                                                                  
       try {
         await profiles.ensure(currentUser);
       } catch (profileError) {
@@ -2928,8 +2928,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         throw backendError('auth/delete-account-failed', detail);
       }
 
-      // A conta já foi removida no servidor. Encerra apenas a sessão local para
-      // que nenhum token antigo permaneça no navegador após a exclusão.
+                                                                                
+                                                                        
       try { await supabaseClient.auth.signOut({ scope: 'local' }); } catch (_) {}
       try {
         const storageKeys = [];
@@ -2959,18 +2959,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function initialize() {
     if (MODE === 'supabase') {
-      // Corrige callbacks antigos no formato #/admin/dashboard#access_token=...
-      // antes de o Supabase tentar detectar a sessão na URL.
+                                                                                
+                                                             
       normalizeLegacyAuthHash();
 
       const callbackActive = hasAuthCallbackPayload();
       const callbackDestination = authCallbackDestination();
       const callbackFailure = authCallbackError();
       const config = window.BE_SUPABASE_CONFIG;
-      // Versões anteriores guardavam o token apenas em sessionStorage. Isso
-      // fazia uma conta parecer desconectada ao abrir o site por outro link ou
-      // em uma nova aba. Migra a sessão existente uma única vez e passa a usar
-      // localStorage, que é compartilhado entre abas e restaurado ao reabrir o site.
+                                                                            
+                                                                               
+                                                                               
+                                                                                     
       try {
         for (let index = 0; index < sessionStorage.length; index += 1) {
           const key = sessionStorage.key(index);
@@ -2989,9 +2989,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
       });
 
-      // O listener é registrado imediatamente para não perder o evento SIGNED_IN
-      // emitido durante o retorno do Discord/Google. Eventos vazios nunca apagam
-      // uma sessão já confirmada; apenas SIGNED_OUT encerra a conta.
+                                                                                 
+                                                                                 
+                                                                     
       supabaseClient.auth.onAuthStateChange((event, session) => {
         if (event === 'PASSWORD_RECOVERY') {
           try { sessionStorage.setItem('bePasswordRecoveryActive', '1'); } catch (_) {}
@@ -3051,14 +3051,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (error) (void 0);
       currentUser = await hydratePrivileges(normalizeUser(sessionData?.session?.user || null));
 
-      // O processamento do callback pode terminar alguns instantes depois da
-      // criação do cliente. Nessas URLs aguardamos a sessão antes de liberar a UI.
+                                                                             
+                                                                                   
       if (!currentUser && callbackActive && !callbackFailure) {
         currentUser = await resolveSupabaseUser(sessionData);
       }
 
-      // O retorno do painel usa query string para não disputar o único fragmento
-      // (#) disponível com os tokens do fluxo implícito do Supabase.
+                                                                                 
+                                                                     
       if (callbackActive && callbackDestination === 'admin') {
         if (callbackFailure) {
           sessionStorage.setItem('adminAuthError', decodeURIComponent(String(callbackFailure).replace(/\+/g, ' ')));
@@ -3129,8 +3129,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return token(`<a href="${safeHref}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${escapeHtml(label)}</a>`);
     });
 
-    // Links simples também funcionam sem sintaxe Markdown. Assim, uma URL colada
-    // diretamente na descrição de um vídeo vira um link seguro no detalhe.
+                                                                                 
+                                                                           
     source = source.replace(/(?:https?:\/\/|www\.)[^\s<]+/gi, rawUrl => {
       let visible = rawUrl;
       let trailing = '';
@@ -3287,9 +3287,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startDynamicContent, { once: true });
   else startDynamicContent();
 
-  // Navegadores móveis frequentemente preservam a página em memória ao trocar
-  // de aplicativo/aba. Ao retornar depois de algum tempo, atualiza apenas a
-  // coleção de Destaques e reaproveita o restante do catálogo já em cache.
+                                                                              
+                                                                            
+                                                                           
   let featuredPageHiddenAt = 0;
   let featuredResumeRefreshRunning = false;
   const FEATURED_RESUME_REFRESH_MS = 30 * 1000;
@@ -3402,9 +3402,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }));
     const featuredSourceMaps = Object.fromEntries(featuredSourceEntries);
 
-    // O catálogo completo pode estar em cache por mais tempo que a lista de destaques.
-    // Se um destaque recém-selecionado não existir nessa cópia antiga, busca somente
-    // o conteúdo faltante pelo ID em vez de simplesmente esconder o card.
+                                                                                       
+                                                                                     
+                                                                          
     await Promise.all(featured.map(async item => {
       const requested = item.contentCollection || item.sourceCollection;
       const collection = ['videos', 'movies', 'series'].includes(requested) ? requested : 'videos';
@@ -3790,9 +3790,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       series: new Map(allSeries.map(item => [String(item.id), item]))
     };
 
-    // Destaques são atualizados quase imediatamente, enquanto o catálogo geral pode
-    // continuar em cache. Resolve apenas IDs ausentes para que um destaque novo não
-    // desapareça da faixa "Recomendação de um fã" por causa de um catálogo antigo.
+                                                                                    
+                                                                                    
+                                                                                   
     await Promise.all(featuredRows.map(async item => {
       if (item.active === false) return;
       const requested = item.contentCollection || item.sourceCollection;
@@ -3920,7 +3920,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         .filter(Boolean);
       if (itemKeys.some(value => sectionKeys.has(value))) return true;
 
-      // Compatibilidade com filmes e séries antigos que ainda não tinham sectionId.
+                                                                                    
       if (!item.sectionId && collection === 'movies') {
         return [...sectionKeys].some(value => ['filme', 'filmes', 'movie', 'movies'].includes(value));
       }
@@ -3996,7 +3996,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function addBillieHomeSpotlight(host) {
     if (!host || host.querySelector('.billie-home-spotlight')) return;
-    const defaultBanner = '/assets/images/pages/billie-home-banner-default.webp';
+    const defaultBanner = '/_static/media/pages/billie-home-banner-default.webp';
     const spotlight = document.createElement('section');
     spotlight.className = 'billie-home-spotlight';
     spotlight.setAttribute('aria-label', localizedUiText('Conheça Billie Eilish'));
@@ -4374,9 +4374,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return false;
     }
 
-    // A URL já é de um vídeo: isola a tela de detalhes imediatamente, antes
-    // de qualquer consulta assíncrona. Isso impede a Home de reaparecer entre
-    // Notificações -> Voltar -> Detalhes em aparelhos mais lentos.
+                                                                            
+                                                                              
+                                                                   
     document.body.classList.remove('notification-page-active');
     document.body.classList.add('detail-page-active');
     window.dispatchEvent(new CustomEvent('be:close-notifications'));
@@ -4396,7 +4396,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     for (const collection of ['videos', 'movies', 'series', 'contents']) {
       try {
         const items = await beBackend.data.list(collection, { orderBy: 'order', direction: 'asc' });
-        // Se o usuário já mudou de rota, ignora esta resposta atrasada.
+                                                                        
         if (requestToken !== detailRouteRequestToken || detailRouteId() !== itemId) return false;
         const item = (items || []).find(candidate => {
           const candidateId = numericPublicId(candidate.publicId || candidate.id || candidate.title);
@@ -4564,7 +4564,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         : '<p class="video-rail-empty">'+emptyLabel+'</p>';
       setupContentDetailInteractions(rail);
     } else if (rail && allItems) {
-      // Fallback para HTML antigo preservado em cache durante a transição.
+                                                                           
       rail._beHomeMarkup = rail.innerHTML;
       rail.innerHTML = allItems.innerHTML;
       setupContentDetailInteractions(rail);
@@ -4667,8 +4667,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             && section.dataset.hasSeries === 'true'
             && section.dataset.hasVideos !== 'true');
 
-        // A seção combinada da Home funciona como atalho para a aba Filmes,
-        // onde Filmes e Séries permanecem organizados em trilhos separados.
+                                                                            
+                                                                            
         if (isFilmsAndSeriesSection) {
           closeSectionView(false);
           const filmsButton = document.querySelector('[data-home-view="films"]');
@@ -4680,9 +4680,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return;
         }
 
-        // Filmes e Séries abrem em páginas dedicadas. Mesmo que uma seção
-        // tenha vínculos mistos no dashboard, o catálogo mostra somente o
-        // tipo indicado pelo título/categoria clicado.
+                                                                          
+                                                                          
+                                                       
         const explicitCollection = normalizeText(section.dataset.collection || '');
         const dedicatedCollection = explicitCollection === 'movies' || explicitCollection === 'series'
           ? explicitCollection
@@ -4707,9 +4707,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return;
         }
 
-        // Se a seção foi vinculada a conteúdos de Vídeos no dashboard,
-        // ativa a aba Vídeos e abre a seção clicada mostrando todos os
-        // vídeos vinculados a ela, sem misturar filmes ou séries.
+                                                                       
+                                                                       
+                                                                  
         if (section.dataset.hasVideos === 'true') {
           closeSectionView(false);
           const videosTab = document.querySelector('[data-home-view="videos"]');
@@ -4740,7 +4740,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.addEventListener('popstate', event => {
         const host = document.getElementById('dynamicSections');
         if (!host?.classList.contains('section-view-mode')) return;
-        // Ao voltar de um conteúdo aberto dentro da seção, mantém a seção visível.
+                                                                                   
         if (event.state?.beRoute === 'section') return;
         const fallback = activeSectionReturnState || {};
         const destination = event.state && event.state.beRoute === 'catalog'
@@ -4824,9 +4824,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return array.findIndex(other => String(other.itemId || other.title || '') === id) === index;
     });
 
-    // A seção de recomendações sempre usa nove conteúdos aleatórios do catálogo,
-    // excluindo o conteúdo que está aberto. Os cards continuam disponíveis no DOM
-    // mesmo quando uma aba ou seção dedicada está visualmente oculta.
+                                                                                 
+                                                                                  
+                                                                      
     const all = uniqueById(Array.from(catalog.querySelectorAll('.video-card'))
       .map(cardDataWithSection)
       .filter(item => String(item.itemId || item.title || '') !== currentId));
@@ -4860,7 +4860,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function defaultCommentAvatar() {
-    return String(window.BETV_DEFAULT_AVATAR || '/assets/images/profile/default-avatar.png');
+    return String(window.BETV_DEFAULT_AVATAR || '/_static/media/profile/default-avatar.png');
   }
 
   function detailCommentAvatarMarkup(url, alt = '', eager = false) {
@@ -5579,8 +5579,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (match) {
           ownerId = match[1] || '';
           videoId = match[2] || '';
-          // Alguns links compartilhados carregam a chave de incorporacao como
-          // hash= ou h=. Quando ela existir, preserve-a no video_ext.php.
+                                                                              
+                                                                          
           hash = String(url.searchParams.get('hash') || url.searchParams.get('h') || '').trim();
         }
       }
@@ -5629,26 +5629,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function vkVideoEmbedHostOrder() {
-    // Usa o endpoint classico do VK como rota principal em todas as plataformas.
-    // O vkvideo.ru continua como fallback porque os dois hosts podem oscilar
-    // independentemente, mas nenhuma tentativa passa pela Vercel.
+                                                                                 
+                                                                             
+                                                                  
     return ['vk.com', 'vkvideo.ru'];
   }
 
   function vkVideoEmbedAttemptHost(attempt = 0) {
     const hosts = vkVideoEmbedHostOrder();
     const index = Math.max(0, Math.floor(Number(attempt) || 0));
-    // Mantem vk.com como rota principal. A primeira recuperacao repete o
-    // endpoint principal; vkvideo.ru so entra depois de um erro real da API.
-    // Isso evita trocar um video que estava carregando por uma tela de
-    // "Video indisponivel" do host alternativo.
+                                                                         
+                                                                             
+                                                                       
+                                                
     return index >= 2 ? hosts[1] : hosts[0];
   }
 
   function shouldAutoFallbackVkEmbed() {
-    // O fallback e inteiramente client-side (troca apenas o src do iframe),
-    // portanto tambem pode proteger o desktop sem consumir Functions/Bandwidth
-    // da Vercel.
+                                                                            
+                                                                               
+                 
     return true;
   }
 
@@ -5678,8 +5678,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `https://vkvideo.ru/video${encodeURIComponent(info.ownerId)}_${encodeURIComponent(info.videoId)}`;
   }
 
-  // Fallback exclusivo do navegador interno do Instagram em celulares/tablets.
-  // Safari, Chrome e outros navegadores externos não entram nesta condição.
+                                                                               
+                                                                            
   function isInstagramMobileBrowser() {
     const ua = String(navigator.userAgent || '');
     return /Instagram/i.test(ua) && /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
@@ -5757,9 +5757,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     wrap.querySelector('button').focus({ preventScroll: true });
   }
 
-  // Aviso geral do navegador interno do Instagram.
-  // Conta 2 minutos de uso VISÍVEL no próprio aparelho, sem requests, polling,
-  // Vercel Functions ou chamadas ao Supabase. Pausa enquanto a aba/app está oculto.
+                                                   
+                                                                               
+                                                                                    
   function scheduleInstagramMobileSiteHelp() {
     if (!isInstagramMobileBrowser() || hasSeenInstagramMobileBrowserHelp() || window.__beInstagramMobileSiteHelpScheduled) return 0;
     window.__beInstagramMobileSiteHelpScheduled = true;
@@ -5802,9 +5802,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return timer;
   }
 
-  // Mantido apenas por compatibilidade com os pontos antigos do player.
-  // O aviso deixou de ser disparado por falha/timeout de vídeo e agora aparece
-  // exclusivamente após 2 minutos de uso visível do site no Instagram mobile.
+                                                                        
+                                                                               
+                                                                              
   function scheduleInstagramMobilePlayerHelp() { return 0; }
 
   if (document.readyState === 'loading') {
@@ -5888,7 +5888,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (contentType.startsWith('video/')) return 'video';
       return inferDriveMediaKind(payload?.filename, contentType);
     } catch (_) {
-      // O player continua e tenta a URL direta/preview quando a sondagem falha.
+                                                                                
       return '';
     } finally {
       window.clearTimeout(timeout);
@@ -5954,10 +5954,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
 
-  // Fora dos players, o site mobile tenta permanecer em retrato.
-  // Durante Drive/VK/YouTube, a trava e liberada para acompanhar a rotacao fisica.
-  // A Screen Orientation API e best-effort: navegadores que nao permitem lock fora
-  // de PWA/tela cheia simplesmente ignoram a tentativa sem quebrar a navegacao.
+                                                                 
+                                                                                   
+                                                                                   
+                                                                                
   let mobilePortraitRestoreTimer = 0;
 
   function isMobileOrientationDevice() {
@@ -6018,9 +6018,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
   }
 
-  // Mantem os players mobile livres para acompanhar a rotacao fisica do aparelho.
-  // O viewport visual tambem e sincronizado para evitar dimensoes antigas apos
-  // portrait <-> landscape.
+                                                                                  
+                                                                               
+                            
   function enableMobilePlayerRotation() {
     const root = document.documentElement;
     window.clearTimeout(mobilePortraitRestoreTimer);
@@ -6387,7 +6387,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           overlay.webkitRequestFullscreen();
         }
       } catch (_) {
-        // Alguns navegadores mobile recusam fullscreen quando o sistema não oferece a API.
+                                                                                           
       }
       syncFullscreenButton();
       showControls(false);
@@ -6453,11 +6453,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const scheduleVkFallback = () => {
       clearVkFallbackTimer();
       if (!shouldAutoFallbackVkEmbed() || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed || vkEmbedAttempt >= 2) return;
-      // Nao troca mais de host apenas porque um cronometro venceu. Em alguns
-      // celulares, PCs e Smart TVs a API do VK demora (ou o autoplay e bloqueado)
-      // mesmo com o video valido. A troca automatica por tempo era justamente o
-      // que fazia a tela "Video indisponivel" aparecer de forma intermitente.
-      // O fallback agora so e acionado pelo evento de erro real do player VK.
+                                                                             
+                                                                                  
+                                                                                
+                                                                              
+                                                                              
     };
 
     const tryVkEmbedFallback = () => {
@@ -6697,18 +6697,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             ['inited', 'volumechange'].forEach(eventName => {
               try { vkPlayer.on(eventName, syncVolumeFromApi); } catch (_) {}
             });
-            // 'inited' significa apenas que o iframe/API iniciou. A propria tela
-            // de indisponibilidade do VK pode chegar a esse ponto; so cancelamos
-            // o fallback quando houver sinal real de reproducao.
+                                                                                 
+                                                                                 
+                                                                 
             ['started', 'resumed', 'timeupdate'].forEach(eventName => {
               try { vkPlayer.on(eventName, confirmVkPlayback); } catch (_) {}
             });
             try {
               vkPlayer.on('error', () => {
                 if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed) return;
-                // Um erro real faz uma recuperacao controlada: primeiro recarrega
-                // vk.com uma vez e, apenas se houver outro erro, tenta vkvideo.ru.
-                // Tudo continua client-side, sem proxy/Function da Vercel.
+                                                                                  
+                                                                                   
+                                                                           
                 window.clearTimeout(vkFallbackTimer);
                 vkFallbackTimer = window.setTimeout(() => {
                   if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed) return;
@@ -6729,9 +6729,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           else readVkVolumeState();
           window.setTimeout(() => syncQualityFromApi({}), 180);
           window.setTimeout(readVkVolumeState, 320);
-          // Autoplay pode ser bloqueado no mobile/TV. Nesse caso o video esta
-          // disponivel, apenas pausado; uma duracao valida evita trocar de host
-          // sem necessidade. A tela de erro do VK normalmente nao expoe duracao.
+                                                                              
+                                                                                
+                                                                                 
           const confirmIfPlayable = async () => {
             if (token !== vkBindToken || activeProvider !== 'vk' || overlay.hidden || vkPlaybackConfirmed || !vkPlayer) return;
             try {
@@ -6816,8 +6816,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const configureExternalSubtitles = value => {
       resetExternalSubtitles();
-      // O iframe do VK não expõe controle público para a faixa de legenda nativa.
-      // A legenda enviada pelo site é renderizada separadamente sobre o player.
+                                                                                  
+                                                                                
       activeSubtitleUrl = activeProvider === 'vk' ? String(value || '').trim() : '';
       subtitleButton.hidden = !activeSubtitleUrl;
     };
@@ -7470,10 +7470,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     };
 
-    // No fallback nativo do Drive em celular retrato, damos ao iframe um
-    // viewport virtual 1280x720 e só então reduzimos visualmente. O player do
-    // Google monta seus controles como em uma tela larga, mas os toques ainda
-    // são mapeados corretamente pelo transform do navegador.
+                                                                         
+                                                                              
+                                                                              
+                                                             
     const syncMobileDriveFrameViewport = () => {
       const portraitMobile = window.matchMedia('(max-width: 820px) and (orientation: portrait)').matches;
       if (!frameMode || !portraitMobile || frameShell.hidden) {
@@ -7604,8 +7604,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.classList.add('is-source-syncing');
       setLoading('Tentando uma rota alternativa do Google Drive...');
       video.pause();
-      // O endpoint apenas encontra a URL final do Google e responde com
-      // redirecionamento; o arquivo de vídeo não é retransmitido pelo servidor do site.
+                                                                        
+                                                                                        
       video.src = googleDriveStreamUrl(activeFileId, activeResourceKey);
       video.load();
       requestPlayback();
@@ -7637,8 +7637,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (overlay.hidden || frameMode || mediaReady) return;
       window.clearTimeout(fallbackTimer);
       fallbackTimer = 0;
-      // Em filmes legendados tentamos primeiro uma segunda URL controlável,
-      // para que currentTime e seek continuem disponíveis para a legenda.
+                                                                            
+                                                                          
       if (streamAttempt === 'legacy-resolver') tryLegacyProxyStream();
       else if (streamAttempt === 'legacy-proxy') showLegacyPlaybackError('Esta Smart TV não conseguiu reproduzir o arquivo do Google Drive.');
       else if (streamAttempt === 'direct' && activeSubtitleUrl) tryRedirectStream();
@@ -7712,13 +7712,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setInteractive(false);
       setLoading('Carregando vídeo do Google Drive...');
       syncFullscreen();
-      // O aviso de legendas aparece assim que a pessoa entra em um vídeo do
-      // Drive que possui legenda, antes de qualquer interação com o botão CC.
+                                                                            
+                                                                              
       if (activeSubtitleUrl) showSubtitleSyncNotice(shell, { sequence: true });
 
-      // O link do Drive pode não indicar a extensão. Enquanto o carregamento
-      // começa normalmente, consultamos o tipo real do arquivo. Se for áudio,
-      // transferimos para o player de mídia com o banner deste conteúdo.
+                                                                             
+                                                                              
+                                                                         
       if (activeSourceLink) {
         googleDriveMediaKind(fileId, resourceKey).then(kind => {
           if (kind !== 'audio' || token !== openingToken || overlay.hidden || activeFileId !== fileId || !activeSourceLink) return;
@@ -7731,13 +7731,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
 
       if (legacySmartTvMode) {
-        // Em TVs antigas evitamos o iframe do Drive, que frequentemente fica
-        // preto. Primeiro resolvemos a URL no mesmo domínio e, se necessário,
-        // usamos o proxy same-origin com suporte a Range.
+                                                                             
+                                                                              
+                                                          
         tryLegacyResolverStream();
       } else {
-        // Navegadores atuais continuam tentando primeiro a entrega direta pelo
-        // Google Drive, sem retransmitir o vídeo pelo servidor do site.
+                                                                               
+                                                                        
         tryDirectStream();
       }
       window.setTimeout(() => {
@@ -7893,10 +7893,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     progress.addEventListener('pointercancel', releaseProgress);
     progress.addEventListener('change', releaseProgress);
 
-    // Área de hover maior ao redor do dock central. Isso é especialmente
-    // importante no fallback nativo do Drive, pois o iframe captura o mouse
-    // e o shell não recebe pointermove. A zona é invisível e só mantém os
-    // controles visíveis; o dock continua com o mesmo tamanho visual.
+                                                                         
+                                                                            
+                                                                          
+                                                                      
     const enterActionHoverArea = () => {
       controlsInteracting = true;
       showControls(true);
@@ -7965,9 +7965,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setLoading('', false);
     });
 
-    // O preview do Drive não possui uma API pública de player. Quando uma
-    // versão do iframe enviar estado por postMessage, aproveitamos o tempo e
-    // o estado recebidos; nas demais versões permanece o relógio de fallback.
+                                                                          
+                                                                             
+                                                                              
     window.addEventListener('message', event => {
       if (overlay.hidden || !frameMode || event.source !== frame.contentWindow) return;
       if (event.origin && event.origin !== 'null') {
@@ -7977,7 +7977,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       let payload = event.data;
       if (typeof payload === 'string') {
-        try { payload = JSON.parse(payload); } catch (_) { /* alguns eventos são texto simples */ }
+        try { payload = JSON.parse(payload); } catch (_) {                                        }
       }
       const time = extractDriveFrameTime(payload);
       const playing = extractDriveFramePlaying(payload);
@@ -8201,7 +8201,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           shell.webkitRequestFullscreen();
         }
       } catch (_) {
-        // Alguns navegadores recusam tela cheia fora de uma interação direta.
+                                                                              
       }
       syncFullscreenButton();
       showControls(true);
@@ -8286,10 +8286,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const scheduleVkEmbedFallback = token => {
       clearVkEmbedFallbackTimer();
       if (!shouldAutoFallbackVkEmbed() || activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken || vkPlaybackConfirmed) return;
-      // Smart TVs tambem nao devem trocar de host so porque o carregamento/API
-      // demorou. WebViews antigos frequentemente demoram mais de 10 segundos e
-      // a troca por tempo fazia surgir a pagina "Video indisponivel" do VK.
-      // O host alternativo fica reservado para um erro real informado pela API.
+                                                                               
+                                                                               
+                                                                            
+                                                                                
       if (vkEmbedAttempt >= 2) {
         setLoadingMessage('', false);
         loading.hidden = true;
@@ -8324,9 +8324,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const volume = Number(state && state.volume);
       const muted = state && typeof state.muted === 'boolean' ? state.muted : null;
       const stateName = String((state && state.state) || eventName || '').trim().toLowerCase();
-      // Nao trate 'inited' como sucesso: o VK pode inicializar a API mesmo
-      // exibindo a pagina de indisponibilidade. Duracao valida ou estado real
-      // de reproducao/pausa confirmam que o video existe no player.
+                                                                           
+                                                                              
+                                                                    
       const hasPlaybackSignal = Number.isFinite(duration) && duration > 0
         || ['started', 'resumed', 'playing', 'paused', 'ended', 'timeupdate'].includes(stateName);
 
@@ -8420,8 +8420,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           } else {
             vkApiReady = false;
             overlay.classList.remove('is-vk-api-mode');
-            // Falha ao anexar a API nao prova que o video esta indisponivel.
-            // Mantemos o iframe atual em vez de navegar para outro host.
+                                                                             
+                                                                         
             setLoadingMessage('', false);
             loading.hidden = true;
           }
@@ -8430,8 +8430,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (activeProvider !== 'vkvideo' || overlay.hidden || token !== openingToken) return;
         vkApiReady = false;
         overlay.classList.remove('is-vk-api-mode');
-        // Se apenas a biblioteca JS do VK falhar/demorar, nao alteramos o src:
-        // o iframe pode continuar reproduzindo normalmente na TV.
+                                                                               
+                                                                  
         setLoadingMessage('', false);
         loading.hidden = true;
       });
@@ -8902,8 +8902,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         ...(Array.isArray(context?.bannerCandidates) ? context.bannerCandidates : []),
         context?.imageUrl
       ];
-      // O MP3 reutiliza a arte do próprio conteúdo do site. Mantemos mais de
-      // uma opção para que uma URL antiga/quebrada não deixe o player sem fundo.
+                                                                             
+                                                                                 
       setBackdropCandidates(requestedBanners);
       activeTitle = String(context?.title || '').trim();
       activeProvider = 'drive';
@@ -8937,24 +8937,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         metadataProbeFinished = true;
         if (overlay.hidden || activeFileId !== fileId || token !== openingToken) return;
         applyMediaKind(kind);
-        // Se o tipo só foi identificado como áudio depois da abertura, troca
-        // para o fluxo de áudio. Vídeos continuam sempre fora do proxy.
+                                                                             
+                                                                        
         if (kind === 'audio' && !mediaReady && !frameMode && streamAttempt === 'direct') {
           loadProxyStream(false);
         }
       });
 
       if (activeMediaKind === 'audio') {
-        // Mantemos o proxy apenas para MP3, que depende do player HTML atual.
+                                                                              
         loadProxyStream(false);
       } else if (legacySmartTvMode) {
-        // TVs antigas recebem primeiro um endereço resolvido pelo mesmo domínio.
-        // Se o navegador não acompanhar bem o redirecionamento do Drive, o
-        // fallback retransmite apenas para esse modo legado, preservando Range.
+                                                                                 
+                                                                           
+                                                                                
         tryLegacyDriveResolver();
       } else {
-        // Navegadores atuais continuam usando o Drive diretamente e o iframe
-        // oficial como fallback, sem consumir transferência da Function.
+                                                                             
+                                                                         
         tryDirectDriveStream();
       }
       closeButton.focus({ preventScroll: true });
@@ -9096,8 +9096,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const itemId = String(link.dataset.itemId || linkedContent.itemId || '').trim();
       const collection = String(link.dataset.collection || linkedContent.collection || 'videos').trim().toLowerCase() || 'videos';
 
-      // O banner prioritário é sempre o do conteúdo que está aberto nos detalhes.
-      // Só buscamos outras fontes se esse conteúdo realmente não tiver banner.
+                                                                                  
+                                                                               
       let catalogMatch = null;
       try {
         const catalog = typeof window.beGetCatalogContents === 'function' ? window.beGetCatalogContents() : [];
@@ -9506,9 +9506,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!play || play.getAttribute('aria-disabled') === 'true') return;
     let data = contentDataFromElement(play);
     data = await refreshMovieTvSource(data);
-    // Na Smart TV, filmes que possuem um Google Drive cadastrado no Dashboard
-    // devem usar esse Drive como fonte principal. Isso evita que um contentUrl
-    // alternativo (por exemplo, VK) seja escolhido para o mesmo filme.
+                                                                              
+                                                                               
+                                                                       
     const dashboardTvDrive = String(data.tvDriveUrl || data.mobileAppDriveUrl || '').trim();
     const movieHasDashboardDrive = String(data.collection || '').trim().toLowerCase() === 'movies'
       && Boolean(googleDriveFileId(dashboardTvDrive));
@@ -9549,9 +9549,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
 
-    // No PC, o widget estilo iOS substitui a página dedicada depois que a TV
-    // já foi conectada. No mobile, mantemos sempre o painel /connect-tv para
-    // controlar a sessão, exatamente como antes.
+                                                                             
+                                                                             
+                                                 
     let desktopTvWidgetMode = false;
     try { desktopTvWidgetMode = window.matchMedia('(min-width: 1000px)').matches; }
     catch (_) { desktopTvWidgetMode = Number(window.innerWidth || 0) >= 1000; }
@@ -9571,9 +9571,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     }
 
-    // No mobile (e também quando ainda não existe sessão no PC), abre o painel
-    // dedicado. O tv-controller envia o conteúdo pendente e permanece na página
-    // em telas menores, enquanto o desktop volta para a Home após conectar.
+                                                                               
+                                                                                
+                                                                            
     try { localStorage.setItem('beTvPendingMedia', JSON.stringify(payload)); } catch (_) {}
     location.assign(target);
   }
@@ -9712,9 +9712,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function openContentDetail(data, options = {}) {
-    // Ao abrir um conteúdo a partir da pesquisa, feche imediatamente
-    // qualquer UI de busca (desktop e mobile) para que ela não fique
-    // renderizada sobre a tela de detalhes.
+                                                                     
+                                                                     
+                                            
     try { window.dispatchEvent(new CustomEvent('be:close-public-search')); } catch (_) {}
     try { window.dispatchEvent(new CustomEvent('be:close-mobile-search')); } catch (_) {}
 
@@ -9738,9 +9738,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const duration = data.duration || '';
     const collection = String(data.collection || '').toLowerCase();
     const defaultContentUrl = data.contentUrl || '#';
-    // O Google Drive cadastrado no Dashboard para filmes é exclusivo da Smart TV.
-    // No PC, navegador mobile e PWA, o botão Assistir sempre usa o link normal
-    // de reprodução configurado no Dashboard.
+                                                                                  
+                                                                               
+                                              
     const requestedMobileDriveUrl = String(data.tvDriveUrl || data.mobileAppDriveUrl || data.appDriveUrl || '').trim();
     const contentUrl = defaultContentUrl;
     const subtitleUrl = data.subtitleUrl || '';
@@ -10205,8 +10205,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (left === right) return true;
     if (!left || !right || Math.abs(left.length - right.length) > limit) return false;
 
-    // Distância de Damerau-Levenshtein limitada: além de letras faltando/trocadas,
-    // considera duas letras vizinhas invertidas como um único erro (ex.: "biilie").
+                                                                                   
+                                                                                    
     let previousPrevious = null;
     let previous = Array.from({ length:right.length + 1 }, (_, index) => index);
     for (let i = 1; i <= left.length; i += 1) {
@@ -10256,8 +10256,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function buildJoinedSearchTokens(tokens) {
     const joined = [];
-    // Permite encontrar títulos mesmo quando o usuário esquece/adiciona espaços,
-    // como "lostcause" ou "happierthanever".
+                                                                                 
+                                             
     for (let start = 0; start < tokens.length; start += 1) {
       let value = '';
       for (let end = start; end < tokens.length && end < start + 5; end += 1) {
@@ -10282,8 +10282,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const queryTokens = query.split(' ').filter(token => token && !CONTENT_SEARCH_STOP_WORDS.has(token));
     if (!queryTokens.length) return index.includes(query);
 
-    // Uma consulta sem espaços também pode representar várias palavras do título.
-    // Só monta as combinações nesse caso para manter a digitação rápida no mobile.
+                                                                                  
+                                                                                   
     if (queryTokens.length === 1) {
       const joinedIndexTokens = buildJoinedSearchTokens(indexTokens);
       if (fuzzySearchTokenMatch(indexTokens.concat(joinedIndexTokens), queryTokens[0])) return true;
@@ -10596,10 +10596,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       positionSharedTabIndicator(activeTabButton);
     };
 
-    // Não força a Home quando a navegação é inicializada depois de uma rota pública.
-    // Em conexões mais lentas, o Suporte pode abrir antes do catálogo terminar de
-    // preparar a topbar; nesse caso o antigo setActiveTab(logo) movia o indicador
-    // branco de volta para a logo.
+                                                                                     
+                                                                                  
+                                                                                  
+                                   
     const initialTabButton = document.body.classList.contains('support-page-active')
       ? supportButton
       : (document.body.classList.contains('community-page-active') ? communityButton : logo);
@@ -10614,9 +10614,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       else if (requested === 'home') button = logo;
       if (button) setActiveTab(button);
     });
-    // A rota de Suporte também sincroniza diretamente a barra principal.
-    // Isso evita que qualquer outro módulo que atualize a navegação no mesmo
-    // ciclo de eventos deixe o indicador compartilhado preso na logo.
+                                                                         
+                                                                             
+                                                                      
     window.addEventListener('be:open-support', () => {
       if (supportButton) setActiveTab(supportButton);
     });
@@ -10672,9 +10672,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const username = String(profile?.username || '').trim().replace(/^@+/, '');
         if (!username) return '';
         const rawAvatar = String(profile?.avatar_url || profile?.avatarUrl || '').trim();
-        const avatar = window.BETVResolveAvatar ? window.BETVResolveAvatar(rawAvatar) : (rawAvatar || '/assets/images/profile/default-avatar.png');
+        const avatar = window.BETVResolveAvatar ? window.BETVResolveAvatar(rawAvatar) : (rawAvatar || '/_static/media/profile/default-avatar.png');
         return `<button class="public-user-search-item" type="button" role="option" data-profile-username="${escapeHtml(username)}">
-          <span class="public-user-search-avatar"><img decoding="async" src="${escapeHtml(avatar)}" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt=""></span>
+          <span class="public-user-search-avatar"><img decoding="async" src="${escapeHtml(avatar)}" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt=""></span>
           <strong class="notranslate" translate="no">@${escapeHtml(username)}</strong>
         </button>`;
       }).join('');
@@ -10783,9 +10783,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (sectionActive) closeSectionView(false);
       if (detailActive) closeContentDetail(false, false);
 
-      // A pesquisa iniciada dentro dos detalhes volta ao catálogo sem criar
-      // uma nova entrada de histórico. Assim a página de detalhes não fica
-      // renderizada por baixo dos resultados e o botão Voltar não duplica rotas.
+                                                                            
+                                                                           
+                                                                                 
       try {
         const rootPath = window.BETVLocaleURL ? window.BETVLocaleURL('/') : '/';
         const rootUrl = new URL(rootPath, location.origin);
@@ -10808,11 +10808,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         window.dispatchEvent(new CustomEvent('be:album-search', { detail:{ query:rawQuery } }));
         return;
       }
-      // A lupa pode ser usada sem sair da Comunidade, mas a pesquisa não deve
-      // alterar o catálogo que está oculto por baixo dela. Filtrar esses cards
-      // enquanto a Comunidade estava aberta fazia títulos/metadados vazarem na
-      // página e deixava seções em estado incorreto quando o usuário voltava.
-      // A busca de perfis com @ continua funcionando pelo painel próprio acima.
+                                                                              
+                                                                               
+                                                                               
+                                                                              
+                                                                                
       if (document.body.classList.contains('community-page-active')) return;
       if (!userSearchMode) prepareCatalogForSearch(rawQuery);
       const host = document.getElementById('dynamicSections');
@@ -10940,9 +10940,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         delete button.dataset.beHistoryMode;
         if (historyMode === 'push') pushCatalogHistory(currentView, nextView, window.scrollY);
 
-        // Ao sair dos detalhes, encerra primeiro qualquer seção dedicada. Sem isso,
-        // o catálogo continuava em section-view-mode e Filmes/Vídeos herdavam apenas
-        // o trilho que estava aberto antes do detalhe.
+                                                                                    
+                                                                                     
+                                                       
         if (document.body.classList.contains('section-catalog-active')) {
           closeSectionView(false);
           document.body.classList.remove('section-catalog-active');
@@ -10956,7 +10956,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         document.body.dataset.homeView = currentView;
         setActiveTab(button);
         applyCatalogFilter(true);
-        // Ao alternar entre Filmes e Vídeos, sempre reposiciona a página no topo.
+                                                                                  
         window.requestAnimationFrame(() => {
           window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
         });
@@ -11120,8 +11120,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const iosStandalone = window.navigator.standalone === true;
     const nativeAppContext = standaloneDisplay || iosStandalone || androidAppReferrer;
 
-    // Navegador e app são contextos diferentes. Um ?source=pwa aberto em uma
-    // aba normal nunca pode transformar o navegador em "app".
+                                                                             
+                                                              
     if (browserDisplay && !nativeAppContext) {
       try { sessionStorage.removeItem('betv-pwa-session'); } catch (_) {}
       window.__BETVInstalledAppLaunch = false;
@@ -11158,9 +11158,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       rememberInstalledApp();
       return true;
     }
-    // Quando o navegador oferece getInstalledRelatedApps(), a resposta real
-    // tem prioridade sobre marcadores locais que podem ficar obsoletos após
-    // uma desinstalação.
+                                                                            
+                                                                            
+                         
     if (supportsInstalledRelatedApps && relatedInstallCheckDone) return relatedPwaInstalled;
     if (relatedPwaInstalled) return true;
     try { return localStorage.getItem(INSTALL_MARKER) === '1'; }
@@ -11188,7 +11188,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (relatedPwaInstalled) rememberInstalledApp();
       else forgetInstalledApp();
     } catch (_) {
-      // Mantém o marcador local como fallback quando a API não puder responder.
+                                                                                
     } finally {
       relatedInstallCheckDone = true;
       updateInstallButton();
@@ -11213,22 +11213,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const desktopButton = document.getElementById('desktopInstallButton');
     const mobileAccountInstall = document.querySelector('[data-mobile-account="install"]');
     if (mobileButton) {
-      // Instalação do app.
+                           
       mobileButton.hidden = !isMobile() || runningAsApp;
       mobileButton.classList.toggle('is-ready', ready && !installed);
       setInstallButtonState(mobileButton, installed);
     }
     if (desktopButton) {
-      // O botão do menu do avatar é exclusivo do desktop. No mobile, a
-      // instalação continua sendo tratada pelo botão/fluxo próprio do celular.
+                                                                       
+                                                                               
       desktopButton.hidden = runningAsApp || isMobile();
       desktopButton.classList.toggle('is-ready', ready && !installed && !isMobile());
       setInstallButtonState(desktopButton, installed);
     }
     if (mobileAccountInstall) {
-      // O menu compacto da comunidade tinha um segundo atalho de instalação.
-      // Ele também deve desaparecer dentro do PWA e virar "Abrir app" no navegador
-      // quando a instalação já é conhecida.
+                                                                             
+                                                                                   
+                                            
       mobileAccountInstall.hidden = runningAsApp || !isMobile();
       mobileAccountInstall.textContent = installed && !runningAsApp ? 'Abrir app' : 'Instalar app';
       mobileAccountInstall.dataset.installState = installed && !runningAsApp ? 'installed' : 'available';
@@ -11243,7 +11243,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function launchInstalledApp() {
     closeInstallSheet();
 
-    // Já estamos dentro do PWA: não recarrega a página no navegador.
+                                                                     
     if (isStandaloneApp()) return;
 
     let targetUrl = location.origin + '/?source=pwa&launch=app';
@@ -11290,9 +11290,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.addEventListener('visibilitychange', onVisibilityChange, true);
     window.addEventListener('pagehide', markLaunched, true);
 
-    // Protocol handlers de PWA são disparados de forma mais consistente por
-    // uma navegação de link real. No Android, uma Intent para o mesmo esquema
-    // é usada primeiro, mantendo o protocolo web+betv como alvo registrado.
+                                                                            
+                                                                              
+                                                                            
     try {
       if (isAndroid) {
         const intentFallback = encodeURIComponent(location.href);
@@ -11307,9 +11307,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     fallbackTimer = window.setTimeout(() => {
       if (appWasLaunched) return;
       cleanup();
-      // Em navegadores que não permitem abrir um PWA instalado por protocolo,
-      // mantém a página no navegador e atualiza o estado em vez de fingir que
-      // a abertura funcionou.
+                                                                              
+                                                                              
+                              
       refreshInstalledRelatedAppState();
       updateInstallButton();
     }, isMobile() ? 1500 : 1800);
@@ -11565,7 +11565,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bar.className = 'mobile-app-bar';
     bar.id = 'mobileAppBar';
     bar.innerHTML = `
-      <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar"><img loading="eager" decoding="async" src="/assets/images/profile/default-avatar.png" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="Avatar"></span></button>
+      <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar"><img loading="eager" decoding="async" src="/_static/media/profile/default-avatar.png" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="Avatar"></span></button>
       <div class="mobile-header-actions">
         <button class="mobile-notification-button" id="mobileNotificationButton" type="button" aria-label="Abrir notificações" aria-expanded="false">${icon('bell')}<span class="notification-unread-dot" id="mobileNotificationUnreadDot" hidden></span></button>
         <div class="mobile-search-control" id="mobileSearchControl">
@@ -11592,7 +11592,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     drawer.innerHTML = `
       <div class="mobile-drawer-top">
         <button class="mobile-drawer-profile" id="mobileDrawerProfile" type="button" aria-label="Abrir perfil">
-          <span class="mobile-drawer-avatar" id="mobileDrawerAvatar"><img loading="eager" decoding="async" src="/assets/images/profile/default-avatar.png" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="Avatar"></span>
+          <span class="mobile-drawer-avatar" id="mobileDrawerAvatar"><img loading="eager" decoding="async" src="/_static/media/profile/default-avatar.png" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="Avatar"></span>
           <span class="mobile-drawer-user"><strong id="mobileDrawerName">Visitante</strong><span id="mobileDrawerUsername">Entrar ou criar conta</span></span>
         </button>
         <button class="mobile-drawer-close" id="mobileDrawerClose" type="button" aria-label="Fechar menu">${icon('close')}</button>
@@ -11917,7 +11917,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     document.body.innerHTML='<div class="'+(mode==='login'?'protected-admin-login-page':'protected-admin-system-page')+'">'+content+'</div>';
   }
   function showLogin(message){
-    adminFrame('<section class="protected-admin-login-shell" aria-label="Entrar no Dashboard Admin"><a class="protected-admin-login-logo" href="/" aria-label="Voltar ao site"><img src="/assets/images/brand/logo.webp?v=20260809-performance-v1" alt="BE"></a><div class="protected-admin-login-card"><button id="protectedAdminGoogle" class="protected-admin-google-button" type="button"><span class="protected-admin-google-icon" aria-hidden="true">G</span><span class="protected-admin-google-label">Conectar via Google</span></button></div></section>','login');
+    adminFrame('<section class="protected-admin-login-shell" aria-label="Entrar no Dashboard Admin"><a class="protected-admin-login-logo" href="/" aria-label="Voltar ao site"><img src="/_static/media/brand/logo.webp?v=20260809-performance-v1" alt="BE"></a><div class="protected-admin-login-card"><button id="protectedAdminGoogle" class="protected-admin-google-button" type="button"><span class="protected-admin-google-icon" aria-hidden="true">G</span><span class="protected-admin-google-label">Conectar via Google</span></button></div></section>','login');
     var button=document.getElementById('protectedAdminGoogle');
     if(button)button.onclick=async function(){
       var label=button.querySelector('.protected-admin-google-label');
@@ -11960,9 +11960,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return fetch('/api/admin-runtime',{method:'GET',headers:{Authorization:'Bearer '+accessToken},cache:'no-store',credentials:'same-origin'});
       };
       var response=await fetchProtectedRuntime(token);
-      // O endpoint protegido usa 404 também para sessão inválida/expirada.
-      // Renovamos a sessão uma vez e repetimos a solicitação sem remover a
-      // checagem de administrador feita no servidor.
+                                                                           
+                                                                           
+                                                     
       if(response.status===404&&client&&client.auth&&typeof client.auth.refreshSession==='function'){
         try{
           var refreshed=await client.auth.refreshSession();
@@ -12463,8 +12463,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function avatarCacheKey(user){return 'beSelectedAvatar:'+(user&&user.uid?user.uid:'guest');}
     function selectedProfileAvatar(profile){return profile&&profile.avatarUrl?String(profile.avatarUrl):'';}
     function setMainAvatar(url){var shown=String(url||'').trim();if(window.BETVApplyAvatar)window.BETVApplyAvatar(photo,shown);else{photo.src=shown||window.BETV_DEFAULT_AVATAR;photo.hidden=false;}fallback.hidden=true;updateOnboardingAvatar();}
-    function fallbackAvatarSvg(){return '<img loading="eager" decoding="async" src="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" alt="Sem foto de perfil">';}
-    function updateOnboardingAvatar(){if(!onboardingAvatarPreview)return;var shown=selectedAvatar||selectedProfileAvatar(currentProfile)||window.BETV_DEFAULT_AVATAR;onboardingAvatarPreview.innerHTML='<img loading="eager" decoding="async" src="'+escapePublic(window.BETVResolveAvatar?window.BETVResolveAvatar(shown):shown)+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" alt="Foto do perfil">';}
+    function fallbackAvatarSvg(){return '<img loading="eager" decoding="async" src="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png')+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png')+'" alt="Sem foto de perfil">';}
+    function updateOnboardingAvatar(){if(!onboardingAvatarPreview)return;var shown=selectedAvatar||selectedProfileAvatar(currentProfile)||window.BETV_DEFAULT_AVATAR;onboardingAvatarPreview.innerHTML='<img loading="eager" decoding="async" src="'+escapePublic(window.BETVResolveAvatar?window.BETVResolveAvatar(shown):shown)+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png')+'" alt="Foto do perfil">';}
     function syncBodyScroll(){var locked=!avatarPicker.hidden||!bannerPicker.hidden||!profileModal.hidden||!profileOnboarding.hidden||(profileFavoritesPicker&&!profileFavoritesPicker.hidden)||(profileLovedAlbumsPicker&&!profileLovedAlbumsPicker.hidden)||(settingsSaveConfirm&&!settingsSaveConfirm.hidden);document.body.style.overflow=locked?'hidden':'';}
     function keepSettingsOpen(){
       if(!auth.currentUser)return;
@@ -12681,8 +12681,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var owned=ownedProfileCommunityTags(currentProfile||viewedProfile);
       if(!normalized||owned.indexOf(normalized)<0)return;
       var active=normalizeProfileCommunityTag((currentProfile&&currentProfile.communityTag)||(viewedProfile&&viewedProfile.communityTag)||'');
-      /* Tocar novamente na tag que já está em uso apenas oculta a tag do perfil.
-         A tag continua em communityTags para o usuário poder reativá-la depois. */
+                                                                                 
+                                                                                   
       var nextTag=normalized===active?'':normalized;
       profileInlineTagSaving=true;
       if(profileInlineTagPanel)profileInlineTagPanel.querySelectorAll('button').forEach(function(button){button.disabled=true;});
@@ -13459,7 +13459,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
 
-    function profileFallbackAvatar(){return '<img loading="eager" decoding="async" src="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" alt="Sem foto de perfil">';}
+    function profileFallbackAvatar(){return '<img loading="eager" decoding="async" src="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png')+'" data-avatar-fallback="'+escapePublic(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png')+'" alt="Sem foto de perfil">';}
     function publicProfileYear(profile){
       var source=profile&&profile.createdAt?profile.createdAt:beBackend.now();
       var date=new Date(source);
@@ -13483,10 +13483,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function pushPublicRoute(path){if(cleanPathname()!==path||location.hash)history.pushState({beRoute:'public'},'',path+(location.search||''));}
     function closePublicPages(updateRoute){
       if(profileInlineEditing)stopInlineProfileEdit(false);
-      // Cancela qualquer carregamento/retorno assíncrono do perfil antes de
-      // revelar a Home. Sem isso, um callback atrasado podia remover o hidden
-      // do profilePage depois da navegação e deixar parte do perfil renderizada
-      // abaixo do catálogo da Home.
+                                                                            
+                                                                              
+                                                                                
+                                    
       viewedProfileRequest++;
       profileLikeRequest++;
       document.body.classList.remove('profile-page-active','settings-page-active','profile-favorites-picker-active','profile-view-own');
@@ -13926,8 +13926,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileLovedAlbumsLastFocus=null;profileLovedAlbumsReturnPath='';
     }
     function restoreProfileLovedAlbumsContext(){
-      // Só restaura o contexto se o usuário ainda estiver realmente no perfil.
-      // Timers de seleção não podem reabrir o perfil depois de voltar à Home.
+                                                                               
+                                                                              
       if(!document.body.classList.contains('profile-page-active')&&!isProfileRoute())return;
       if(!profileLovedAlbumsReturnPath)return;
       document.body.classList.add('profile-page-active');document.body.classList.remove('detail-page-active');
@@ -14043,7 +14043,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileFavoritesReturnPath='';
     }
     function restoreProfileFavoritesContext(){
-      // Evita que callbacks atrasados do seletor reabram o perfil após a Home.
+                                                                               
       if(!document.body.classList.contains('profile-page-active')&&!isProfileRoute())return;
       if(!profileFavoritesReturnPath)return;
       document.body.classList.add('profile-page-active');
@@ -14324,8 +14324,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           }
           var tab=button.getAttribute('data-settings-tab');
           activateSettingsTab(tab,true);
-          // Mantém a rota e a tela de Configurações ativas ao trocar de aba.
-          // Isso impede que listeners globais de navegação tratem o clique como retorno à Home.
+                                                                             
+                                                                                                
           keepSettingsOpen();
           try{
             var configUrl='/config'+(location.search||'');
@@ -14598,7 +14598,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var user=auth.currentUser;
       if(!user){profileBody.innerHTML='<div class="profile-login-required"><h3>Entre para acessar seu perfil</h3><p>Use seu e-mail e senha para continuar.</p><button class="profile-btn primary" id="profileLogin" type="button">Entrar com e-mail</button></div>';document.getElementById('profileLogin').onclick=function(){closeProfile();window.BETVPublicRoutes.go('/login');document.body.classList.add('login-mode');};return;}
       var avatar=selectedProfileAvatar(currentProfile);
-      profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview"><img loading="eager" decoding="async" src="'+escapePublic(window.BETVResolveAvatar?window.BETVResolveAvatar(avatar):avatar||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="Avatar do perfil"></div><div><h3 class="notranslate" translate="no">'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p class="notranslate" translate="no" style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher foto</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input class="notranslate" translate="no" name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input class="notranslate" translate="no" name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input class="notranslate" translate="no" value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
+      profileBody.innerHTML='<div class="profile-intro"><div class="profile-avatar-preview"><img loading="eager" decoding="async" src="'+escapePublic(window.BETVResolveAvatar?window.BETVResolveAvatar(avatar):avatar||'/_static/media/profile/default-avatar.png')+'" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="Avatar do perfil"></div><div><h3 class="notranslate" translate="no">'+escapePublic(currentProfile.displayName||user.displayName||'Novo perfil')+'</h3><p class="notranslate" translate="no" style="color:var(--ice-faint);margin-top:6px">'+escapePublic(user.email||'')+'</p><div class="profile-avatar-actions"><button class="profile-btn" id="profileChooseAvatar" type="button">Escolher foto</button></div></div></div><form id="profileForm"><div class="profile-form"><div class="profile-field"><label>Nome exibido</label><input class="notranslate" translate="no" name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="profile-field"><label>@ de usuário</label><input class="notranslate" translate="no" name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required placeholder="ex.: billiefan" value="'+escapePublic(currentProfile.username||'')+'"></div><div class="profile-field full"><label>E-mail</label><input class="notranslate" translate="no" value="'+escapePublic(user.email||'')+'" readonly></div><div class="profile-field full"><label>Biografia</label><textarea name="bio" id="profileBio" rows="4" maxlength="180" placeholder="Conte um pouco sobre você…">'+escapePublic(currentProfile.bio||'')+'</textarea><div class="profile-counter"><span id="profileBioCount">0</span>/180</div></div></div><div class="profile-message" id="profileMessage"></div><div class="profile-actions"><button class="profile-btn" type="button" id="profileCancel">Cancelar</button><button class="profile-btn primary" type="submit">Salvar perfil</button></div></form>';
       document.getElementById('profileChooseAvatar').onclick=function(){closeProfile();openAvatarPicker();};document.getElementById('profileCancel').onclick=closeProfile;
       var bio=document.getElementById('profileBio'),count=document.getElementById('profileBioCount');function updateCount(){count.textContent=bio.value.length;}bio.addEventListener('input',updateCount);updateCount();
       document.getElementById('profileForm').addEventListener('submit',async function(e){e.preventDefault();var form=e.currentTarget,msg=document.getElementById('profileMessage'),submit=form.querySelector('[type="submit"]');var displayName=form.displayName.value.trim(),handle=beBackend.normalizeUsername(form.username.value),bioText=form.bio.value.trim();form.username.value=handle;if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='profile-message err';return;}submit.disabled=true;msg.textContent='Salvando…';msg.className='profile-message';try{var payload={displayName:displayName,username:handle,bio:bioText,updatedAt:beBackend.now()};currentProfile=await beBackend.profiles.update(user.uid,payload);await auth.updateCurrentUser({displayName:displayName});setLiteralText(username,handle?'@'+handle:(displayName||'Usuário'));if(document.body.classList.contains('profile-page-active')){viewedProfile={...(viewedProfile||{}),...(currentProfile||{})};viewedProfileStatus='ready';renderProfilePage();if(handle)replacePublicRoute('/@'+encodeURIComponent(handle));}msg.textContent='Perfil salvo com sucesso.';msg.className='profile-message ok';setTimeout(closeProfile,700);}catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso. Escolha outro.':'Não foi possível salvar: '+error.message;msg.className='profile-message err';}finally{submit.disabled=false;}});
@@ -14695,8 +14695,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('scroll',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)closeProfileActionsMenu(false);},true);if(profilePageLike)profilePageLike.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileLike();});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
       if(event){event.preventDefault();event.stopPropagation();}
 
-      // Fecha as configurações e troca primeiro a rota para a Home. Isso evita
-      // que o clique no logo crie uma entrada extra de /config no histórico.
+                                                                               
+                                                                             
       try{sessionStorage.removeItem(SETTINGS_TAB_SESSION_KEY);}catch(_){ }
       settingsActiveTab='profile';
       closePublicPages(false);
@@ -14707,8 +14707,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         window.dispatchEvent(new PopStateEvent('popstate',{state:{beRoute:'public'}}));
       }
 
-      // A visualização do catálogo é mantida em memória. Ao sair de Conta e
-      // Sessão, força explicitamente a aba Home para não reaparecer em Vídeos.
+                                                                            
+                                                                               
       var homeButton=document.getElementById('logoBtn');
       if(homeButton){
         homeButton.dataset.beHistoryMode='none';
@@ -14873,9 +14873,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   function showSiteSkeleton(){window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=0;var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
   window.addEventListener('be:content-ready',function(){
-    // O catálogo pode terminar de carregar antes da autenticação. Só remove o
-    // bloqueio visual quando uma sessão válida já foi confirmada; visitantes
-    // sem conta permanecem protegidos até a tela de login ser exibida.
+                                                                              
+                                                                             
+                                                                       
     if(authReady&&auth&&(auth.currentUser||(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())))hideSiteSkeleton();
   });
 
@@ -15114,8 +15114,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando..');
       try{
         if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('Digite um e-mail válido.');
-        // Não revela se o e-mail já possui conta. A tela de senha é neutra e
-        // mantém a opção de criar uma conta sem consultar auth.users.
+                                                                             
+                                                                      
         selectedAuthEmail=email;
         setMode('password',email);
       }catch(err){setStatus(friendly(err),'error');}
@@ -15196,8 +15196,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(user&&!(await enforceAccountAccess(user)))return;
       if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();return;}
       if(!user){
-        // Mantém o skeleton acima do catálogo até a ausência de sessão ser
-        // confirmada. Isso impede que a Home apareça por alguns instantes.
+                                                                           
+                                                                           
         var callbackActive=hasAuthCallback(),callbackFailure=authCallbackError();
         var expectedSession=callbackActive||localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'));
         if(expectedSession&&!callbackFailure){
@@ -15264,9 +15264,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     window.addEventListener('hashchange',handlePublicRoute);
     window.addEventListener('popstate',handlePublicRoute);
-    // A checagem de bloqueio não precisa rodar a cada minuto. O perfil local e
-    // os eventos de autenticação continuam cobrindo alterações imediatas; este
-    // ciclo mais espaçado evita consultas repetidas em abas deixadas abertas.
+                                                                               
+                                                                               
+                                                                              
     window.setInterval(function(){
       if(auth.currentUser&&document.visibilityState==='visible'&&navigator.onLine!==false)enforceAccountAccess(auth.currentUser);
     },300000);
@@ -15294,8 +15294,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var cookieAccept=document.getElementById('cookieAccept');
   var legalRoutes=['terms','privacy','cookies','dmca','comunidade'];
 
-  // Mantém a área legal fora da estrutura da Home para que ela nunca seja
-  // renderizada junto do catálogo, independentemente do restante do layout.
+                                                                          
+                                                                            
   if(legalPage&&legalPage.parentNode!==document.body){document.body.appendChild(legalPage);}
 
   function routeName(){
@@ -15483,7 +15483,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 })();
 
 
-/* Menu de ações dos três pontos do perfil é controlado pelo módulo principal de perfil. */
+                                                                                           
 
 ;
 (function(){
@@ -15559,8 +15559,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     });
     positionIndicator(active?supportButton:logoButton);
-    // Sincroniza também o estado central da barra. Sem isso, o indicador
-    // compartilhado podia voltar para a aba anterior depois de resize/fontes.
+                                                                         
+                                                                              
     try{window.dispatchEvent(new CustomEvent('be:set-home-tab',{detail:{tab:active?'support':'home'}}));}catch(_){ }
   }
 
@@ -15596,9 +15596,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }else if(hasLegacySupportUrl()){
       setSupportRoute(true);
     }
-    // Fecha de fato os detalhes do conteúdo antes de abrir o Suporte.
-    // Só remover `detail-page-active` deixava #contentDetailSection visível no DOM
-    // e, ao voltar para a Home, o banner do vídeo anterior aparecia abaixo dela.
+                                                                      
+                                                                                   
+                                                                                 
     window.dispatchEvent(new CustomEvent('be:detail-close'));
     document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','detail-page-active','notification-page-active');
     window.dispatchEvent(new CustomEvent('be:close-notifications'));
@@ -15661,9 +15661,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
   });
 
-  // Mantém a aba Suporte visualmente selecionada enquanto o usuário interage
-  // com a página. Em especial, cliques em áreas vazias não devem escapar para
-  // controladores globais e fazer o indicador branco tentar voltar para a logo.
+                                                                             
+                                                                              
+                                                                                
   page.addEventListener('click',function(event){
     if(!document.body.classList.contains('support-page-active')||page.hidden)return;
     var interactive=event.target&&event.target.closest?event.target.closest('a,button,input,textarea,select,summary,label,[role="button"],[contenteditable="true"]'):null;
@@ -15851,7 +15851,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       .trim()
       .replace(/^<|>$/g,'')
       .replace(/&amp;/gi,'&')
-      // Markdown costuma escapar & em links copiados como \&. Isso quebra a assinatura do Discord.
+                                                                                                   
       .replace(/\\([\\`*_{}\[\]()#+\-.!&=?])/g,'$1');
   }
 
@@ -15878,10 +15878,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function replaceNotificationImageMarkdown(value,onImage){
-    // Exclusivo das notificações. Aceita:
-    // [](https://site/imagem.png), ![](https://site/imagem.png) e ![descrição](...).
-    // Para imagens do Discord também aceita [https://.../imagem.png?...](https://.../imagem.png?...)
-    // e [qualquer texto](https://.../imagem.jpg?...).
+                                          
+                                                                                     
+                                                                                                     
+                                                      
     var pattern=/(!?)\[([^\]\r\n]*)\]\(\s*(?:<([^>\r\n]+)>|([^\s)\r\n]+))\s*(?:["']([^"'\r\n]*)["'])?\s*\)/g;
     return String(value||'').replace(pattern,function(match,bang,label,angleUrl,plainUrl){
       var safeUrl=safeNotificationImageUrl(angleUrl||plainUrl||'');
@@ -16240,8 +16240,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function openPage(id,updateRoute){
     closeMenus();
-    // Esconde o detalhe de verdade antes de abrir a caixa de Notificações.
-    // preserveRoute evita criar uma entrada Home extra no histórico.
+                                                                           
+                                                                     
     window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:true}}));
     document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','support-page-active','detail-page-active','section-catalog-active');
     document.body.classList.add('notification-page-active');
@@ -16269,9 +16269,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       url.hash='';
       history.pushState({beRoute:'home'},'',url.pathname+(url.search||''));
 
-      // O X da página de notificações navega para a Home. Sincroniza também
-      // o estado interno e o indicador compartilhado da navbar, evitando que
-      // "Comunidade" continue marcada depois que o catálogo da Home reaparece.
+                                                                            
+                                                                             
+                                                                               
       document.body.dataset.homeView='home';
       try{window.dispatchEvent(new CustomEvent('be:home-entered'));}catch(_){ }
       try{window.dispatchEvent(new CustomEvent('be:set-home-tab',{detail:{tab:'home'}}));}catch(_){ }
@@ -16404,7 +16404,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   'use strict';
 
   var ENDPOINT = '/api/deployment-version';
-  // Compartilha a checagem entre abas para evitar requests repetidos.
+                                                                      
   var CHECK_INTERVAL = 12 * 60 * 60 * 1000;
   var MIN_CHECK_GAP_MS = 2 * 60 * 60 * 1000;
   var SHARED_CHECK_TTL_MS = 12 * 60 * 60 * 1000;
@@ -16552,8 +16552,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         else persistPublicAppliedUpdate(appliedVersion);
         clearPendingUpdate();
       } else if (appliedVersion) {
-        // Nunca marca uma atualização como concluída se o HTML ainda pertence ao
-        // deploy antigo. Mantém o aviso disponível para uma nova tentativa.
+                                                                                 
+                                                                            
         persistPendingUpdate(appliedVersion);
       }
       url.searchParams.delete('__betv_update');
@@ -16592,7 +16592,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function forcePopupVisible(element) {
     if (!element) return;
     element.hidden = false;
-    // Mantém o aviso acima de qualquer página/rota que esconda outros filhos do body.
+                                                                                      
     element.style.setProperty('display', 'grid', 'important');
     element.style.setProperty('visibility', 'visible', 'important');
   }
@@ -16730,7 +16730,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var normalized = String(name || '').trim().toLowerCase();
     if (!normalized) return true;
 
-    // Estes cookies mantêm sessão, autenticação e preferências essenciais.
+                                                                           
     if (normalized === 'be_site_preferences' || normalized === 'be_cookie_ack' || normalized === PUBLIC_APPLIED_UPDATE_COOKIE) return true;
     if (/^(?:__host-|__secure-)?sb[-_]/.test(normalized)) return true;
     return /(?:auth|session|token|login|supabase)/.test(normalized);
@@ -16794,8 +16794,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function clearTransientStorage() {
-    // Remove somente caches descartáveis. Login, idioma, avatar, favoritos,
-    // preferências e demais configurações pessoais permanecem intactos.
+                                                                            
+                                                                        
     try {
       var removableLocalKeys = [];
       for (var index = 0; index < localStorage.length; index += 1) {
@@ -16920,9 +16920,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (updateStarted) return;
     updateStarted = true;
 
-    // Guarda rota, aba do catálogo, pesquisa e posição antes do reload de
-    // atualização. O módulo de restauração usa estes dados depois que os
-    // novos arquivos terminam de carregar.
+                                                                          
+                                                                         
+                                           
     try {
       if (window.BETVPreserveReloadPosition && typeof window.BETVPreserveReloadPosition.markUpdate === 'function') {
         window.BETVPreserveReloadPosition.markUpdate();
@@ -16942,9 +16942,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var targetVersion = latestVersion || readPendingUpdate() || String(Date.now());
     persistPendingUpdate(targetVersion);
 
-    // O clique já reconhece esta versão para que o mesmo aviso não volte
-    // depois do reload. Enquanto a atualização é preparada, porém, mantemos
-    // o popup visível no estado "Atualizando..." para dar feedback ao usuário.
+                                                                         
+                                                                            
+                                                                               
     if (isAdminContext()) persistAdminAppliedUpdate(targetVersion);
     else persistPublicAppliedUpdate(targetVersion);
     forcePopupVisible(element);
@@ -16969,9 +16969,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.setTimeout(fetchLatestVersion, 1200);
     intervalId = window.setInterval(fetchLatestVersion, CHECK_INTERVAL);
 
-    // Uma conta administrativa recebe o aviso mesmo quando estiver navegando
-    // pela área pública. Assim que a autenticação confirmar o papel de admin,
-    // uma nova checagem é feita sem esperar o próximo intervalo.
+                                                                             
+                                                                              
+                                                                 
     try {
       var backend = window.beBackend;
       if (backend && backend.auth && typeof backend.auth.onChange === 'function') {
@@ -17008,7 +17008,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         releaseChanged = String(window.localStorage.getItem(OBSERVED_RELEASE_KEY) || '') !== releaseStateKey;
         window.localStorage.setItem(OBSERVED_RELEASE_KEY, releaseStateKey);
       } catch (_) {}
-      // Uma mudança manual no Admin força só uma checagem; no uso normal vale o cache de 12 h.
+                                                                                               
       fetchLatestVersion(releaseChanged);
     });
     window.addEventListener('storage', function (event) {
@@ -17038,7 +17038,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }, { once: true });
 })();
 
-;/* Página dedicada: Quem é Billie Eilish. */
+;                                            
 (function(){
   'use strict';
   if(String(location.hash||'').startsWith('#/admin'))return;
@@ -17060,7 +17060,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var wikipediaAttribution=document.getElementById('billieWikipediaAttribution');
   if(!page)return;
 
-  var DEFAULT_PORTRAIT='/assets/images/pages/billie-portrait-default.webp';
+  var DEFAULT_PORTRAIT='/_static/media/pages/billie-portrait-default.webp';
   if(portrait){
     portrait.addEventListener('error',function(){
       var fallback=new URL(DEFAULT_PORTRAIT,location.origin).href;
@@ -17254,11 +17254,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       .trim();
   }
   function removeWikipediaSection(parser,heading){
-    /*
-      A Wikipédia passou a envolver alguns títulos em .mw-heading.
-      A remoção precisa começar pelo contêiner inteiro; caso contrário,
-      a lista de "Ligações externas" permanece solta na página.
-    */
+      
+                                                                  
+                                                                       
+                                                               
+      
     var sectionStart=heading.closest&&heading.closest('.mw-heading')||heading;
     var level=Number(String(heading.tagName||'H2').slice(1))||2;
     var cursor=sectionStart.nextSibling;
@@ -17286,9 +17286,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var infoboxImage=parser.querySelector('table.infobox img, .infobox img');
     var imageUrl=infoboxImage?absoluteWikipediaUrl(infoboxImage.getAttribute('src')||infoboxImage.getAttribute('data-src')||'',baseOrigin):'';
     parser.querySelectorAll('script,style,link,meta,noscript,iframe,object,embed,form,input,button,textarea,select,video,audio,canvas,svg,table.infobox,.infobox,.mw-editsection,.shortdescription,.hatnote,.metadata,.ambox,.navbox,.vertical-navbox,.authority-control,.catlinks,.sistersitebox,.portal,.mw-empty-elt,.noprint,.nomobile,.thumb,figure,.gallery').forEach(function(node){node.remove();});
-    /* Estas remoções são permanentes e são reaplicadas em toda atualização da Wikipédia. */
+                                                                                            
     parser.querySelectorAll('sup,.reference,.mw-ref,.reflist,ol.references,[role="note"],a[href^="#cite_note"]').forEach(function(node){node.remove();});
-    /* As tabelas da filmografia da Wikipédia não fazem parte do layout do BETV. */
+                                                                                   
     parser.querySelectorAll('table').forEach(function(node){node.remove();});
     var blocked=['premios e indicacoes','ver tambem','referencias','ligacoes externas','filmografia','awards and nominations','see also','references','external links','filmography','premios y nominaciones','vease tambien','enlaces externos','filmografia','distinctions','prix et nominations','voir aussi','notes et references','references','liens externes','filmographie','note','altri progetti','collegamenti esterni'];
     if(currentLocaleSlug()==='fr')blocked.push('podcast','podcasts');
@@ -17308,11 +17308,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var label=normalizedSectionLabel(heading.textContent);
       if(blocked.some(function(item){return label===item||label.startsWith(item+' ');}))removeWikipediaSection(parser,heading);
     });
-    /*
-      Remove também uma eventual lista órfã de ligações externas.
-      Isso cobre Commons, Wikinotícias, página oficial, Facebook, X,
-      Instagram e YouTube, sem afetar links citados dentro da biografia.
-    */
+      
+                                                                 
+                                                                    
+                                                                        
+      
     Array.from(parser.querySelectorAll('ul,ol')).forEach(function(list){
       if(!list.isConnected)return;
       var labels=Array.from(list.querySelectorAll(':scope > li')).map(function(item){
@@ -17394,7 +17394,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       manualText.hidden=true;
       renderWikipediaAttribution(payload);
       wikipediaAttribution.hidden=false;
-      /* A atualização do texto nunca substitui a foto padrão definida pelo site. */
+                                                                                    
       document.title='Billie Eilish TV';
     }catch(error){
       if(token!==loadToken)return;
@@ -17484,7 +17484,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 })();
 
 
-/* Página pública Apoie uma ONG. */
+                                   
 ;(function(){
   'use strict';
   if(String(location.hash||'').startsWith('#/admin'))return;
@@ -17908,8 +17908,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
   }
 
-  // Intercepta o botão de doação no nível Window antes dos roteadores globais.
-  // Isso mantém a rota /ong ativa e impede que o clique seja tratado como navegação para a Home.
+                                                                               
+                                                                                                 
   if(!window.beDonationWindowCaptureBound){
     window.beDonationWindowCaptureBound=true;
     window.addEventListener('click',function(event){
@@ -18008,14 +18008,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var displayName=String(item.display_name||item.displayName||item.user_display_name||i18nText('Apoiador')).trim()||i18nText('Apoiador');
     var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
     var banner=imageUrl(item.banner_url||item.bannerUrl||'');
-    var avatarUrl=imageUrl(item.avatar_url||item.avatarUrl||window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');
+    var avatarUrl=imageUrl(item.avatar_url||item.avatarUrl||window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png');
     var initials=supporterInitials(displayName);
     var route='/@'+encodeURIComponent(username);
     return '<a class="donate-supporter-card" href="'+esc(route)+'" data-supporter-profile aria-label="'+esc(i18nText('Abrir perfil de {name}',{name:displayName}))+'">'+
       '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
       '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
       '<span class="donate-supporter-content">'+
-        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'"><img class="donate-supporter-avatar-image" decoding="async" src="'+esc(avatarUrl||window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')+'" data-avatar-fallback="/assets/images/profile/default-avatar.png" alt="'+esc(i18nText('Avatar de {name}',{name:displayName}))+'"></span>'+ 
+        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'"><img class="donate-supporter-avatar-image" decoding="async" src="'+esc(avatarUrl||window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png')+'" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="'+esc(i18nText('Avatar de {name}',{name:displayName}))+'"></span>'+ 
         '<span class="donate-supporter-copy notranslate" translate="no"><strong>'+esc(displayName)+'</strong><small>@'+esc(username)+'</small></span>'+ 
       '</span>'+ 
     '</a>';
@@ -18030,8 +18030,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     supportersList.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){
       image.setAttribute('data-error-bound','true');
       image.addEventListener('error',function(){
-        if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png')){
-          image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');
+        if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png')){
+          image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png');
         }
       });
     });
@@ -18438,7 +18438,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 })();
 
 
-/* Página desktop de fãs e comunidades que ajudaram o site. */
+                                                              
 (function(){
   'use strict';
   if(String(location.hash||'').startsWith('#/admin'))return;
@@ -18476,7 +18476,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var source=document.getElementById('publicUserPhoto');
     if(account){
       var avatar=source&&!source.hidden?String(source.getAttribute('src')||'').trim():'';
-      if(!avatar)avatar=window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png';
+      if(!avatar)avatar=window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png';
       accountButton.classList.remove('is-login');
       accountButton.setAttribute('aria-label',t('Abrir perfil'));
       accountButton.title=t('Perfil');
@@ -18524,14 +18524,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var displayName=String(item.display_name||item.displayName||(partner?t('Comunidade'):t('Apoiador'))).trim()||(partner?t('Comunidade'):t('Apoiador'));
     var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
     var banner=mediaUrl(item.banner_url||item.bannerUrl||'');
-    var avatar=mediaUrl(item.avatar_url||item.avatarUrl||(partner?'':window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png'));
+    var avatar=mediaUrl(item.avatar_url||item.avatarUrl||(partner?'':window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png'));
     var target=String(item.target_url||item.targetUrl||(username?'/@'+username:'')).trim();
     var route=username?'/@'+encodeURIComponent(username):target;
     var href=partner?target:localized(route);
     var label=partner?t('Abrir comunidade {name}',{name:displayName}):t('Abrir perfil de {name}',{name:displayName});
     var avatarAlt=partner?t('Ícone de {name}',{name:displayName}):t('Avatar de {name}',{name:displayName});
     var attributes=partner?' target="_blank" rel="noopener noreferrer" data-fans-community':' data-fans-profile data-profile-route="'+esc(route)+'"';
-    var avatarMarkup=avatar?'<img class="donate-supporter-avatar-image" decoding="async" src="'+esc(avatar)+'"'+(partner?'':' data-avatar-fallback="/assets/images/profile/default-avatar.png"')+' alt="'+esc(avatarAlt)+'">':'<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(initials(displayName))+'</span>';
+    var avatarMarkup=avatar?'<img class="donate-supporter-avatar-image" decoding="async" src="'+esc(avatar)+'"'+(partner?'':' data-avatar-fallback="/_static/media/profile/default-avatar.png"')+' alt="'+esc(avatarAlt)+'">':'<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(initials(displayName))+'</span>';
     var locale=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
     var tag='';
     if(community){
@@ -18550,7 +18550,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   function bindImages(){
     list.querySelectorAll('.donate-supporter-banner-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){image.remove();},{once:true});});
-    list.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){var card=image.closest('.donate-supporter-card');if(card&&(card.classList.contains('is-community')||card.classList.contains('is-creator'))){var avatar=image.closest('.donate-supporter-avatar');if(avatar)avatar.innerHTML='<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(avatar.getAttribute('data-initials')||'C')+'</span>';return;}if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png'))image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');});});
+    list.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){var card=image.closest('.donate-supporter-card');if(card&&(card.classList.contains('is-community')||card.classList.contains('is-creator'))){var avatar=image.closest('.donate-supporter-avatar');if(avatar)avatar.innerHTML='<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(avatar.getAttribute('data-initials')||'C')+'</span>';return;}if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png'))image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png');});});
   }
   function render(items,append){
     var records=(Array.isArray(items)?items:[]).filter(function(item){return typeOf(item)==='community'||typeOf(item)==='creator'||String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim();}).sort(function(a,b){return Number(b.sort_order||b.sortOrder||0)-Number(a.sort_order||a.sortOrder||0)||time(b)-time(a)||key(a).localeCompare(key(b));});
@@ -18619,7 +18619,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(accountButton)accountButton.addEventListener('click',openAccount);
   var sourceAccountPhoto=document.getElementById('publicUserPhoto');
   if(window.MutationObserver&&sourceAccountPhoto)new MutationObserver(syncAccount).observe(sourceAccountPhoto,{attributes:true,attributeFilter:['src','hidden']});
-  if(accountImage)accountImage.addEventListener('error',function(){accountImage.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/assets/images/profile/default-avatar.png');});
+  if(accountImage)accountImage.addEventListener('error',function(){accountImage.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png');});
   if(window.beBackend&&window.beBackend.ready)Promise.resolve(window.beBackend.ready).then(function(){if(window.beBackend.auth&&typeof window.beBackend.auth.onChange==='function')window.beBackend.auth.onChange(syncAccount);syncAccount();}).catch(function(){syncAccount();});
   list.addEventListener('click',function(event){var link=event.target&&event.target.closest?event.target.closest('[data-fans-profile]'):null;if(!link)return;event.preventDefault();navigate(link.getAttribute('data-profile-route')||'/',false);});
   window.addEventListener('be:open-fans-page',open);
@@ -18635,7 +18635,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 })();
 
 
-/* Página pública de Álbuns & Singles */
+                                        
 ;(function(){
   'use strict';
   var page=document.getElementById('albumPage');
@@ -18725,7 +18725,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     type.textContent=albumTypeLabel(album.type);
     title.textContent=albumTitle;
     meta.textContent=[String(album.year||''),trackCountLabel(albumTracks.length)].filter(Boolean).join(' • ');
-    cover.src=albumImage||'/assets/images/profile/default-avatar.png';
+    cover.src=albumImage||'/_static/media/profile/default-avatar.png';
     cover.alt=albumTitle;
     cover.referrerPolicy='no-referrer';
     player.href=playerUrl||'#';
@@ -18792,7 +18792,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 })();
 
 
-/* Compartilhamento do perfil público. */
+                                         
 ;(function(){
   'use strict';
   var button=document.getElementById('profilePageShare');
@@ -18874,7 +18874,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{profile=await backend.profiles.get(user.uid,{force:true});}catch(_){ }
       if(!profile)return false;
 
-      /* Compartilhar outro perfil não concede a tag a quem está visualizando. */
+                                                                                 
       var routeHandle=routeProfileHandle();
       var ownHandle=normalizedHandle(profile.username);
       if(!routeHandle||!ownHandle||routeHandle!==ownHandle)return false;
@@ -18921,7 +18921,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
 
-;/* Convite especial de compartilhamento de perfil — disparado pelo Admin. */
+;                                                                            
 (function(){
   'use strict';
   if(String(location.hash||'').startsWith('#/admin'))return;
@@ -19105,8 +19105,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!campaignId||readSeen(user.uid)===campaignId)return;
       var snapshot=await loadProfileSnapshot(user);
       if(!snapshot){schedule(2500);return;}
-      /* Quem já conquistou Fã da Billie não recebe novamente este convite,
-         mesmo quando o Admin dispara uma campanha nova. */
+                                                                           
+                                                           
       if(ownsBillieFanTag(snapshot.profile)){
         rememberChoice(user.uid,campaignId);
         removePrompt();
@@ -19122,9 +19122,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     Promise.resolve(window.beBackend.ready).then(function(){
       if(window.beBackend.auth&&typeof window.beBackend.auth.onChange==='function')window.beBackend.auth.onChange(function(){schedule(900);});
       schedule(1200);
-      // A campanha continua reagindo aos eventos de notificações/auth acima.
-      // O polling vira apenas uma rede de segurança para abas abertas por muito
-      // tempo, em vez de consultar a coleção a cada 30 segundos.
+                                                                             
+                                                                                
+                                                                 
       window.clearInterval(pollTimer);pollTimer=window.setInterval(function(){if(!document.hidden)check();},300000);
     }).catch(function(){schedule(1500);});
   }
@@ -19134,7 +19134,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 
-;/* Preserva rota/contexto/scroll após recarregar a página ou aplicar atualização. */
+;                                                                                    
 (function () {
   'use strict';
 
@@ -19251,8 +19251,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var view = String(snapshot && snapshot.homeView || '').toLowerCase();
     if (!view || view === 'home') return;
 
-    // A Comunidade é uma superfície SPA e normalmente permanece na URL da Home.
-    // Por isso, a URL sozinha não basta para restaurá-la depois de uma atualização.
+                                                                                
+                                                                                    
     if (view === 'community') {
       if (document.body.classList.contains('community-page-active')) return;
       try {
@@ -19337,9 +19337,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     restoring = true;
     restoreHistoryState(snapshot);
 
-    // Algumas rotas (detalhes, perfil e admin) terminam de renderizar de forma
-    // assíncrona. Repetimos a restauração por poucos segundos e paramos assim
-    // que o usuário interagir, evitando qualquer salto durante a navegação.
+                                                                               
+                                                                              
+                                                                            
     [0, 80, 220, 500, 900, 1500, 2400, 3600].forEach(function (delay, index, list) {
       var id = window.setTimeout(function () {
         restoreOnce(snapshot);
@@ -19373,8 +19373,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     markUpdate: markUpdate
   };
 
-  // pagehide cobre recarga, atualização e fechamento/navegação do documento.
-  // sessionStorage mantém o snapshot apenas na aba atual.
+                                                                             
+                                                          
   window.addEventListener('pagehide', function () { capture('pagehide'); }, { capture:true });
   window.addEventListener('beforeunload', function () { capture('beforeunload'); }, { capture:true });
 
@@ -19386,7 +19386,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 })();
 
 ;
-/* Widget da sessão de TV carregado somente quando necessário. */
+                                                                 
 (function(){
   'use strict';
   var ACTIVE_SESSION_KEY='beTvActiveSessionId';
@@ -19397,7 +19397,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(loading)return loading;
     loading=new Promise(function(resolve,reject){
       var script=document.createElement('script');
-      script.src='/assets/js/tv-session-widget.js?rev=20260821-vercel-opt-v1';
+      script.src='/_static/chunks/session.js?rev=20260823-static-simple-v1';
       script.async=true;
       script.onload=function(){resolve(window.BETVTVSession||null);};
       script.onerror=function(){loading=null;reject(new Error('tv_session_widget_unavailable'));};
@@ -19422,7 +19422,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 })();
 
 ;
-/* bundled: community.js */
+                           
 ;(function(){
   'use strict';
   if(String(location.hash||'').startsWith('#/admin')) return;
@@ -19504,7 +19504,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     page.setAttribute('aria-label','Comunidade dos Avocados');
     page.innerHTML=''
       +'<div class="community-page-inner">'
-      +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/assets/images/community/community-hero-banner.webp" alt="Banner da comunidade dos Avocados" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
+      +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/_static/media/community/community-hero-banner.webp" alt="Banner da comunidade dos Avocados" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<div class="community-content-shell">'
       +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
       +    '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
@@ -19558,9 +19558,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function toggleCatalogVisibility(showCommunity){
     function rememberAndHide(node){
       if(!node)return;
-      // A Comunidade pode reaplicar esta proteção ao focar/digitar na pesquisa.
-      // Guarde o estado original apenas na primeira vez; sobrescrever o snapshot
-      // enquanto o catálogo já está oculto fazia ele continuar escondido ao voltar.
+                                                                                
+                                                                                 
+                                                                                    
       if(!Object.prototype.hasOwnProperty.call(node.dataset||{},'communityPrevHidden')){
         node.dataset.communityPrevHidden=node.hidden?'1':'0';
       }
@@ -19660,8 +19660,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity};
   window.addEventListener('be:open-community',openCommunity);
-  // Fechar o pop-up de notificações não é navegação. Se ele foi aberto sobre a
-  // Comunidade, restaura a superfície da Comunidade sem mudar URL, rolagem ou aba.
+                                                                               
+                                                                                   
   window.addEventListener('be:restore-community-surface',function(){preserveCommunitySurfaceForHeaderUtility();});
   ['be:open-profile-route','be:open-config','be:open-notifications','be:open-support','be:open-donate-page','be:open-fans-page','be:open-billie-page','be:open-album-page','be:open-legal-route'].forEach(function(name){window.addEventListener(name,function(){state.detailReturnToCommunity=false;closeCommunity(false);});});
   window.addEventListener('be:home-entered',function(){state.detailReturnToCommunity=false;closeCommunity(true,'home');});
@@ -19690,11 +19690,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     card.href='/'+encodeURIComponent(data.itemId);
     card.setAttribute('aria-label',data.title);
     card.dataset.itemId=data.itemId;card.dataset.recordId=data.recordId;card.dataset.openDetail='true';card.dataset.title=data.title;card.dataset.description=data.description;card.dataset.year=data.year;card.dataset.duration=data.duration;card.dataset.contentUrl=data.contentUrl;card.dataset.imageUrl=data.imageUrl;card.dataset.bannerUrl=data.bannerUrl;card.dataset.logoUrl=data.logoUrl;card.dataset.showCardLogo=data.showCardLogo?'true':'false';card.dataset.collection=data.collection;card.dataset.sectionId=data.sectionId;card.dataset.sectionName=data.sectionName;card.dataset.category=data.category||'';card.dataset.contentType=data.contentType||'';card.dataset.mediaType=data.mediaType||'';card.dataset.streamingAvailability=Array.isArray(data.streamingAvailability)?data.streamingAvailability.join(','):String(data.streamingAvailability||'');card.dataset.streamingLinks=typeof data.streamingLinks==='string'?data.streamingLinks:JSON.stringify(data.streamingLinks||{});card.dataset.preserveTitle=data.preserveTitle?'true':'false';
-    var image=document.createElement('img');image.className='video-card-thumbnail';image.loading='lazy';image.decoding='async';image.fetchPriority='low';image.alt=data.title;image.src=mediaUrl(data.imageUrl||data.bannerUrl||'/assets/images/pages/billie-home-banner-default.webp');card.appendChild(image);
+    var image=document.createElement('img');image.className='video-card-thumbnail';image.loading='lazy';image.decoding='async';image.fetchPriority='low';image.alt=data.title;image.src=mediaUrl(data.imageUrl||data.bannerUrl||'/_static/media/pages/billie-home-banner-default.webp');card.appendChild(image);
     var watched=Boolean(options.showWatched&&((row&&row.lastWatchedAt)||state.watchedContentIds[String(data.recordId||'')]));
     if(watched){var watchedBadge=document.createElement('span');watchedBadge.className='community-watched-badge';watchedBadge.textContent='WATCHED';watchedBadge.setAttribute('aria-label','Watched');card.appendChild(watchedBadge);}
     if(data.logoUrl&&data.logoUrl!=='#'&&(String(data.collection).toLowerCase()!=='videos'||data.showCardLogo)){var logoSlot=document.createElement('span');logoSlot.className='video-card-logo-slot';logoSlot.setAttribute('aria-hidden','true');var logo=document.createElement('img');logo.className='video-card-logo';logo.decoding='async';logo.alt='';logo.src=mediaUrl(data.logoUrl);logo.addEventListener('error',function(){logoSlot.remove();},{once:true});logoSlot.appendChild(logo);card.appendChild(logoSlot);}
-    if(Number(row&&row.saves)>0){var social=document.createElement('span');social.className='community-favorite-social';social.setAttribute('aria-label',t('{count} curtidas',{count:Number(row.saves)||0}));var faces=document.createElement('span');faces.className='community-favorite-faces';var avatars=Array.isArray(row.fanAvatars)?row.fanAvatars.slice(0,3):[];avatars.forEach(function(person){var face=document.createElement('span');face.className='community-favorite-face'+(isCurrentProfilePerson(person)?' is-current-user':'');var faceImg=document.createElement('img');faceImg.decoding='async';faceImg.alt='';faceImg.src=window.BETVResolveAvatar?window.BETVResolveAvatar(person&&person.avatarUrl):mediaUrl(person&&person.avatarUrl||'/assets/images/profile/default-avatar.png');face.appendChild(faceImg);faces.appendChild(face);});social.appendChild(faces);var extra=Math.max(0,(Number(row.saves)||0)-avatars.length);var count=document.createElement('span');count.className='community-favorite-count';count.textContent=extra>0?'+'+extra:String(Number(row.saves)||0);social.appendChild(count);card.appendChild(social);}
+    if(Number(row&&row.saves)>0){var social=document.createElement('span');social.className='community-favorite-social';social.setAttribute('aria-label',t('{count} curtidas',{count:Number(row.saves)||0}));var faces=document.createElement('span');faces.className='community-favorite-faces';var avatars=Array.isArray(row.fanAvatars)?row.fanAvatars.slice(0,3):[];avatars.forEach(function(person){var face=document.createElement('span');face.className='community-favorite-face'+(isCurrentProfilePerson(person)?' is-current-user':'');var faceImg=document.createElement('img');faceImg.decoding='async';faceImg.alt='';faceImg.src=window.BETVResolveAvatar?window.BETVResolveAvatar(person&&person.avatarUrl):mediaUrl(person&&person.avatarUrl||'/_static/media/profile/default-avatar.png');face.appendChild(faceImg);faces.appendChild(face);});social.appendChild(faces);var extra=Math.max(0,(Number(row.saves)||0)-avatars.length);var count=document.createElement('span');count.className='community-favorite-count';count.textContent=extra>0?'+'+extra:String(Number(row.saves)||0);social.appendChild(count);card.appendChild(social);}
     card.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();state.detailReturnToCommunity=true;closeCommunity(false,'community');if(typeof window.beOpenSavedContent==='function')window.beOpenSavedContent(data);else location.assign('/'+encodeURIComponent(data.itemId));});
     return card;
   }
@@ -19717,7 +19717,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(normalizedUsername)avatar.dataset.ringUsername=normalizedUsername;
     var ring=normalizeProfileAvatarRing(borderColor);
     if(ring){avatar.classList.add('has-custom-ring');avatar.style.setProperty('--community-avatar-ring',ring);}
-    var img=document.createElement('img');img.decoding='async';img.alt='';img.src=window.BETVResolveAvatar?window.BETVResolveAvatar(url):mediaUrl(url||'/assets/images/profile/default-avatar.png');avatar.appendChild(img);return avatar;
+    var img=document.createElement('img');img.decoding='async';img.alt='';img.src=window.BETVResolveAvatar?window.BETVResolveAvatar(url):mediaUrl(url||'/_static/media/profile/default-avatar.png');avatar.appendChild(img);return avatar;
   }
 
   function hydrateRankingAvatarRings(root){
@@ -19892,10 +19892,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;
       if(nav&&!nav.matches('[data-community-tab]')){var target='home';if(nav.dataset&&nav.dataset.homeView)target=nav.dataset.homeView;else if(nav.matches('[data-public-action="support"]'))target='support';closeCommunity(false,target);}
     },true);
-    // A pesquisa é uma utilidade da barra, não uma navegação. Mantém a página
-    // Comunidade ativa ao abrir a lupa e enquanto o usuário digita, tanto no
-    // desktop quanto no mobile. Perfis/resultados continuam podendo abrir suas
-    // rotas normalmente quando o usuário seleciona um item.
+                                                                              
+                                                                             
+                                                                               
+                                                            
     document.addEventListener('input',function(event){
       var searchField=event.target&&event.target.closest?event.target.closest('#homeSearchInput,#mobileSearchInput'):null;
       if(searchField)preserveCommunitySurfaceForHeaderUtility();
