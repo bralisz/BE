@@ -29,10 +29,10 @@
     'Billie Bossa Nova','Getting Older','TV','bitches broken hearts','listen before i go','come out and play','One Less Lonely Girl',
     'Have Yourself A Merry Little Christmas','localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
   ]);
-  var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a']);
-  var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v8-es-native-music-only';
-  var STATIC_REV='20260823-it-locale-v1';
+  var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
+  var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v9-preserve-live-song-titles';
+  var STATIC_REV='20260823-it-music-title-fix-v2';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
@@ -1142,10 +1142,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
   const MUSIC_TITLE_SECTION_IDS_BACKEND = new Set([
-    '18db9515-179c-4bad-9646-1fcda63df14a'
+    '18db9515-179c-4bad-9646-1fcda63df14a',
+    '14386598-4978-403a-8548-db0ee582e291'
   ]);
   const MUSIC_TITLE_SECTION_NAMES_BACKEND = new Set([
-    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux'
+    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv'
   ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
   const ITALIAN_TRANSLATION_FUNCTION_NAME = 'translate-content-record-it';
@@ -4057,10 +4058,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
-    '18db9515-179c-4bad-9646-1fcda63df14a'
+    '18db9515-179c-4bad-9646-1fcda63df14a',
+    '14386598-4978-403a-8548-db0ee582e291'
   ]);
   const MUSIC_TITLE_SECTION_NAMES_FRONTEND = new Set([
-    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux'
+    'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv'
   ]);
   function preservesOriginalMusicTitle(data) {
     const locale = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
