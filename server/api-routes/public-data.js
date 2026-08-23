@@ -35,6 +35,7 @@ function normalizeLocale(value) {
   if (locale === 'en' || locale === 'en-us') return 'en-us';
   if (locale === 'es') return 'es';
   if (locale === 'fr') return 'fr';
+  if (locale === 'it') return 'it';
   return 'pt-br';
 }
 
@@ -153,7 +154,7 @@ function sanitizeTranslations(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   const allowedFields = new Set(['title','name','description','subtitle','body','summary','buttonLabel','buttonText','actionLabel','ctaLabel','label','text','manualBio','kicker','footerText','sectionName','siteName','duration','runtime','videoDuration','sourceUpdatedAt','translatedAt','provider','revision','style']);
   const result = {};
-  for (const locale of ['en-us','es','fr']) {
+  for (const locale of ['en-us','es','fr','it']) {
     const source = value[locale];
     if (!source || typeof source !== 'object' || Array.isArray(source)) continue;
     const translation = {};

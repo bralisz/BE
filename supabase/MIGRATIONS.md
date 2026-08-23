@@ -75,3 +75,7 @@ As migrations marcadas como `noop` são registros históricos intencionais e pre
 
 
 - `20260821080000_public_avatar_rings_comments_rankings.sql` — publica somente a cor do aro do avatar nos comentários e no ranking da comunidade.
+
+- `20260823023049_add_italian_locale_to_public_payloads.sql` — adiciona italiano aos payloads públicos, traduções persistidas e legendas por idioma.
+
+- `20260823023159_queue_italian_automatic_translation.sql` — inclui a função dedicada de italiano na fila automática de traduções.

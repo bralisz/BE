@@ -13,12 +13,13 @@
   <script type="text/javascript">
 (function(){
   var raw='';try{raw=String(navigator.language||navigator.userLanguage||'').toLowerCase();}catch(e){}
-  var lang=raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('en')===0?'en-us':'pt-br';
+  var lang=raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':raw.indexOf('en')===0?'en-us':'pt-br';
   var messages={
     'pt-br':['Conectar Smart TV — Billie Eilish TV','Abrindo modo Smart TV…'],
     'en-us':['Connect Smart TV — Billie Eilish TV','Opening Smart TV mode…'],
     es:['Conectar Smart TV — Billie Eilish TV','Abriendo el modo Smart TV…'],
-    fr:['Connecter la Smart TV — Billie Eilish TV','Ouverture du mode Smart TV…']
+    fr:['Connecter la Smart TV — Billie Eilish TV','Ouverture du mode Smart TV…'],
+    it:['Collega Smart TV — Billie Eilish TV','Apertura della modalità Smart TV…']
   };
   var copy=messages[lang]||messages['pt-br'];document.title=copy[0];document.getElementById('tvFallbackMessage').innerHTML=copy[1];
   location.replace('/api/tv-page?lang='+encodeURIComponent(lang));

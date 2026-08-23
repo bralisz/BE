@@ -69,6 +69,21 @@
       connectingSmartTv: 'Connexion à votre Smart TV…', connecting: 'Connexion…', enableSubtitles: 'Activer les sous-titres sur la TV', disableSubtitles: 'Désactiver les sous-titres sur la TV',
       subtitlesOn: 'Sous-titres activés sur la TV.', subtitlesOff: 'Sous-titres désactivés sur la TV.', subtitlesError: 'Impossible de modifier les sous-titres de la TV.',
       disconnecting: 'Déconnexion…', bootError: 'Impossible de démarrer la connexion à la TV. Actualisez la page.'
+    },
+    it: {
+      lang: 'it-IT', pageTitle: 'Trasmetti sulla TV — Billie Eilish TV', back: 'Indietro', heading: 'Trasmetti sulla TV',
+      description: 'Collega il tuo account a una Smart TV e invia video e film direttamente da Billie Eilish TV.', checkingAccount: 'Verifica del tuo account…',
+      codeShown: 'Codice mostrato sulla TV', connectSmartTv: 'Collega Smart TV',
+      pairHelp: 'Sulla TV, apri <strong>billieilishtv.site/tv</strong>. Puoi anche scansionare il codice QR mostrato sulla TV.',
+      smartTvConnected: 'Smart TV collegata', ready: 'Pronta a ricevere contenuti', readyWithCode: 'Codice {code} • pronta a ricevere contenuti',
+      selectedContent: 'Contenuto selezionato', sendNow: 'Trasmetti ora', transmitted: 'Trasmissione avviata', chooseOther: 'Scegli un altro contenuto', disconnectTv: 'Disconnetti TV',
+      yourAccount: 'Il tuo account', profile: 'Profilo Billie Eilish TV', movie: 'Film', series: 'Serie', video: 'Video',
+      enterCode: 'Inserisci il codice di 8 caratteri mostrato sulla TV.', sending: 'Invio alla TV…', transmitting: 'Trasmissione…',
+      sendError: 'Impossibile inviare il contenuto. Ricollega la TV e riprova.', expired: 'Questo codice è scaduto. Genera un nuovo codice sulla TV.',
+      alreadyUsed: 'Questo codice è già collegato a un altro account.', invalidCode: 'Controlla il codice mostrato sulla TV.', pairError: 'Impossibile collegare la TV. Controlla il codice e riprova.',
+      connectingSmartTv: 'Connessione alla Smart TV…', connecting: 'Connessione…', enableSubtitles: 'Attiva sottotitoli sulla TV', disableSubtitles: 'Disattiva sottotitoli sulla TV',
+      subtitlesOn: 'Sottotitoli attivati sulla TV.', subtitlesOff: 'Sottotitoli disattivati sulla TV.', subtitlesError: 'Impossibile modificare i sottotitoli della TV.',
+      disconnecting: 'Disconnessione…', bootError: 'Impossibile avviare la connessione alla TV. Aggiorna la pagina.'
     }
   };
 
@@ -78,6 +93,7 @@
     if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
     if (raw === 'es' || raw.startsWith('es-')) return 'es';
     if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
+    if (raw === 'it' || raw.startsWith('it-')) return 'it';
     return '';
   }
 
@@ -192,6 +208,7 @@
     if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
     if (raw === 'es' || raw.startsWith('es-')) return 'es';
     if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
+    if (raw === 'it' || raw.startsWith('it-')) return 'it';
     return 'pt-br';
   }
 
@@ -201,13 +218,14 @@
     try {
       const url = new URL(raw, location.origin);
       const path = decodeURIComponent(url.pathname || '').toLowerCase();
-      const match = path.match(/(?:^|\/)(pt-br|pt|es|fr|en-us|en)[-_][^/]+\.(?:srt|vtt)$/i);
+      const match = path.match(/(?:^|\/)(pt-br|pt|es|fr|it|en-us|en)[-_][^/]+\.(?:srt|vtt)$/i);
       if (!match) return '';
       const code = String(match[1] || '').toLowerCase();
       if (code === 'pt' || code === 'pt-br') return 'pt-br';
       if (code === 'en' || code === 'en-us') return 'en-us';
       if (code === 'es') return 'es';
       if (code === 'fr') return 'fr';
+      if (code === 'it') return 'it';
     } catch (_) {}
     return '';
   }

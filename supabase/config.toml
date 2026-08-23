@@ -6,9 +6,13 @@ additional_redirect_urls = [
   "https://billieilishtv.site/pt-br/reset-password",
   "https://billieilishtv.site/en-us/reset-password",
   "https://billieilishtv.site/es/reset-password",
+  "https://billieilishtv.site/fr/reset-password",
+  "https://billieilishtv.site/it/reset-password",
   "http://localhost:3000/pt-br/reset-password",
   "http://localhost:3000/en-us/reset-password",
-  "http://localhost:3000/es/reset-password"
+  "http://localhost:3000/es/reset-password",
+  "http://localhost:3000/fr/reset-password",
+  "http://localhost:3000/it/reset-password"
 ]
 
 [auth.email.template.recovery]

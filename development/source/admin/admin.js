@@ -2269,7 +2269,8 @@ body.admin-preview-open{overflow:hidden}
   const MOVIE_SUBTITLE_LANGUAGES = Object.freeze([
     ['pt', 'Português', 'Pt'],
     ['es', 'Español', 'Es'],
-    ['fr', 'Français', 'Fr']
+    ['fr', 'Français', 'Fr'],
+    ['it', 'Italiano', 'It']
   ]);
 
   function normalizeAdminSubtitleTracks(item = {}) {
@@ -2280,7 +2281,8 @@ body.admin-preview-open{overflow:hidden}
     return {
       pt: String(source.pt || source['pt-br'] || legacy || '').trim(),
       es: String(source.es || '').trim(),
-      fr: String(source.fr || '').trim()
+      fr: String(source.fr || '').trim(),
+      it: String(source.it || '').trim()
     };
   }
 
@@ -3354,7 +3356,7 @@ body.admin-preview-open{overflow:hidden}
           }
           data.subtitleTracks = subtitleTracks;
           // Mantém um fallback em português para versões antigas do catálogo/player.
-          data.subtitleUrl = String(subtitleTracks.pt || subtitleTracks.es || subtitleTracks.fr || '').trim();
+          data.subtitleUrl = String(subtitleTracks.pt || subtitleTracks.es || subtitleTracks.fr || subtitleTracks.it || '').trim();
           // Persiste os streamings marcados e o link direto do filme em cada serviço.
           const selectedStreaming = [];
           const streamingLinks = {};

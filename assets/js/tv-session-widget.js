@@ -36,6 +36,7 @@
     if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
     if (raw === 'es' || raw.startsWith('es-')) return 'es';
     if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
+    if (raw === 'it' || raw.startsWith('it-')) return 'it';
     return 'pt-br';
   }
 
@@ -44,7 +45,8 @@
       'pt-br': { watching: 'Assistindo na TV', empty: 'Escolha algo para assistir na TV', disconnect: 'Desconectar da TV', aria: 'Controle da Smart TV conectada' },
       'en-us': { watching: 'Watching on TV', empty: 'Choose something to watch on TV', disconnect: 'Disconnect from TV', aria: 'Connected Smart TV controls' },
       es: { watching: 'Viendo en la TV', empty: 'Elige algo para ver en la TV', disconnect: 'Desconectar de la TV', aria: 'Controles de la Smart TV conectada' },
-      fr: { watching: 'Lecture sur la TV', empty: 'Choisissez quelque chose à regarder à la TV', disconnect: 'Déconnecter la TV', aria: 'Commandes de la Smart TV connectée' }
+      fr: { watching: 'Lecture sur la TV', empty: 'Choisissez quelque chose à regarder à la TV', disconnect: 'Déconnecter la TV', aria: 'Commandes de la Smart TV connectée' },
+      it: { watching: 'Riproduzione sulla TV', empty: 'Scegli qualcosa da guardare sulla TV', disconnect: 'Disconnetti dalla TV', aria: 'Controlli della Smart TV collegata' }
     };
     return texts[currentLocaleSlug()] || texts['pt-br'];
   }

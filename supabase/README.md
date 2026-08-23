@@ -9,19 +9,16 @@ Esta pasta reúne o schema consolidado e as Edge Functions do Billie Eilish TV.
 - `MIGRATIONS.md`: notas sobre o histórico de migrations;
 - `functions/create-donation-checkout/`: cria sessões de pagamento da Stripe;
 - `functions/stripe-donation-status/`: consulta o estado de uma doação;
-- `functions/translate-content-record/`: traduz conteúdo e textos da interface.
+- `functions/translate-content-record/`: traduz conteúdo e textos da interface em inglês, espanhol e francês;
+- `functions/translate-content-record-it/`: tradutor dedicado ao italiano.
 
 As migrations versionadas ficam na pasta `migrations/` da raiz do projeto.
 
 ## Traduções
 
-`translate-content-record` aceita atualmente:
+`translate-content-record` atende `en-us`, `es` e `fr`. O italiano (`it`) usa a função dedicada `translate-content-record-it`, evitando alterar a versão de produção já estabilizada do tradutor principal.
 
-- `en-us` → inglês;
-- `es` → espanhol;
-- `fr` → francês.
-
-As traduções de conteúdo são salvas no objeto `translations` para evitar retradução em cada acesso. A implementação usa endpoints públicos do Google Tradutor e possui atribuição em `functions/translate-content-record/THIRD_PARTY_NOTICES.md`.
+As traduções de conteúdo são salvas no objeto `translations` para evitar retradução em cada acesso. A implementação usa endpoints públicos do Google Tradutor e possui atribuição nos arquivos `THIRD_PARTY_NOTICES.md` das funções de tradução.
 
 ## Doações
 

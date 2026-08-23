@@ -380,11 +380,12 @@
   const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
   const ORIGINAL_TITLE_COLLECTIONS_BACKEND = new Set(['contents','featured','movies','series','videos','ongs','news']);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
+  const ITALIAN_TRANSLATION_FUNCTION_NAME = 'translate-content-record-it';
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
     const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
-    return ['en-us','es','fr'].includes(slug) ? slug : 'pt-br';
+    return ['en-us','es','fr','it'].includes(slug) ? slug : 'pt-br';
   }
 
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
@@ -454,7 +455,8 @@
         const translatedById = new Map();
         for (let offset = 0; offset < missing.length; offset += 20) {
           const batch = missing.slice(offset, offset + 20);
-          const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
+          const translationFunction = slug === 'it' ? ITALIAN_TRANSLATION_FUNCTION_NAME : TRANSLATION_FUNCTION_NAME;
+          const result = await supabaseClient.functions.invoke(translationFunction, {
             body: { collection: String(collection), ids: batch.map(record => String(record.id)), locales: [slug] }
           });
           if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
@@ -485,6 +487,11 @@
       }).then(result => {
         if (result?.error) console.warn('Não foi possível atualizar as traduções automáticas:', result.error.message || result.error);
       }).catch(error => console.warn('Não foi possível atualizar as traduções automáticas:', error?.message || error));
+      supabaseClient.functions.invoke(ITALIAN_TRANSLATION_FUNCTION_NAME, {
+        body: { collection: String(collection), ids: [String(id)], locales: ['it'], force: true }
+      }).then(result => {
+        if (result?.error) console.warn('Não foi possível atualizar a tradução italiana:', result.error.message || result.error);
+      }).catch(error => console.warn('Não foi possível atualizar a tradução italiana:', error?.message || error));
     }, 0);
   }
 

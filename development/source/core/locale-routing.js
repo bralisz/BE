@@ -6,17 +6,19 @@
     'en-us':{locale:'en-US',slug:'en-us',target:'en'},
     'us':{locale:'en-US',slug:'en-us',target:'en',alias:true},
     'es':{locale:'es-ES',slug:'es',target:'es'},
-    'fr':{locale:'fr-FR',slug:'fr',target:'fr'}
+    'fr':{locale:'fr-FR',slug:'fr',target:'fr'},
+    'it':{locale:'it-IT',slug:'it',target:'it'}
   };
-  var SUPPORTED=['pt-br','en-us','es','fr'];
+  var SUPPORTED=['pt-br','en-us','es','fr','it'];
   var ROUTE_SLUGS={
     'pt-br':{'/comunidade':'/comunidade','/fãs':'/fãs'},
     'en-us':{'/comunidade':'/community','/fãs':'/fans'},
     'es':{'/comunidade':'/comunidad','/fãs':'/fans'},
-    'fr':{'/comunidade':'/communaute','/fãs':'/fans'}
+    'fr':{'/comunidade':'/communaute','/fãs':'/fans'},
+    'it':{'/comunidade':'/comunita','/fãs':'/fans'}
   };
   var ROUTE_ALIASES={
-    '/comunidade':'/comunidade','/community':'/comunidade','/comunidad':'/comunidade','/communaute':'/comunidade',
+    '/comunidade':'/comunidade','/community':'/comunidade','/comunidad':'/comunidade','/communaute':'/comunidade','/comunita':'/comunidade','/comunità':'/comunidade',
     '/fãs':'/fãs','/fas':'/fãs','/fans':'/fãs'
   };
   var RESERVED=/^\/(?:api|assets|oauth\/consent|site\.webmanifest|favicon(?:\.ico)?|404)(?:\/|$)/i;
@@ -82,6 +84,7 @@
       if(language.indexOf('pt')===0)return 'pt-br';
       if(language.indexOf('es')===0)return 'es';
       if(language.indexOf('fr')===0)return 'fr';
+      if(language.indexOf('it')===0)return 'it';
       if(language.indexOf('en')===0)return 'en-us';
     }
     return 'en-us';
@@ -131,7 +134,7 @@
     try{localStorage.setItem(LOCALE_STORAGE_KEY,config.slug);}catch(_){ }
   }
 
-  if(!prefix&&/^\/(?:auth\/callback|oauth\/consent)(?:\/|$)/i.test(logicalAtBoot)&&/^\/(?:pt-br|en-us|es|fr)$/.test(storedPrefix)){
+  if(!prefix&&/^\/(?:auth\/callback|oauth\/consent)(?:\/|$)/i.test(logicalAtBoot)&&/^\/(?:pt-br|en-us|es|fr|it)$/.test(storedPrefix)){
     prefix=storedPrefix;
     var storedSlug=storedPrefix.slice(1);
     locale=(LOCALES[storedSlug]&&LOCALES[storedSlug].locale)||locale;

@@ -4,7 +4,7 @@
   var localeApi=window.BETVLocale||{slug:'pt-br',locale:'pt-BR',target:'pt'};
   var slug=String(localeApi.slug||'pt-br').toLowerCase();
   var locale=String(localeApi.locale||'pt-BR');
-  var target=String(localeApi.target||({'en-us':'en','es':'es','fr':'fr'}[slug]||'pt'));
+  var target=String(localeApi.target||({'en-us':'en','es':'es','fr':'fr','it':'it'}[slug]||'pt'));
   var map=Object.create(null);
   var readyResolve;
   var ready=new Promise(function(resolve){readyResolve=resolve;});
@@ -25,7 +25,7 @@
   ]);
   var ORIGINAL_TITLE_COLLECTIONS=new Set(['contents','featured','movies','series','videos','ongs','news']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v6-original-titles';
-  var STATIC_REV='20260820-avatar-ring-pwa-v1';
+  var STATIC_REV='20260823-it-locale-v1';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
@@ -171,7 +171,7 @@
   }
   function translationEndpoint(){
     var base=String((window.BE_SUPABASE_CONFIG&&window.BE_SUPABASE_CONFIG.url)||(window.BE_SITE_CONFIG&&window.BE_SITE_CONFIG.supabaseUrl)||'https://cxkevnnxibhezvospkce.supabase.co').replace(/\/$/,'');
-    return base+'/functions/v1/translate-content-record';
+    return base+'/functions/v1/'+(slug==='it'?'translate-content-record-it':'translate-content-record');
   }
   function publishableKey(){return String((window.BE_SUPABASE_CONFIG&&window.BE_SUPABASE_CONFIG.publishableKey)||(window.BE_SITE_CONFIG&&window.BE_SITE_CONFIG.supabasePublishableKey)||'');}
   function takeBatch(){

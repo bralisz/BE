@@ -19,6 +19,16 @@
       <p style="margin:0 0 22px;line-height:1.65;color:#c8d5e8">Recibimos una solicitud para restablecer la contraseña de tu cuenta BETV. Usa el botón para elegir una nueva contraseña.</p>
       <p style="margin:0 0 24px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 20px;border-radius:12px;background:#2878ff;color:#fff;text-decoration:none;font-weight:700">Elegir una nueva contraseña</a></p>
       <p style="margin:0;color:#92a3ba;font-size:13px;line-height:1.55">Si no solicitaste este cambio, ignora este correo. El enlace caduca y solo puede usarse para recuperar la contraseña.</p>
+    {{ else if eq .RedirectTo "https://billieilishtv.site/fr/reset-password" }}
+      <h1 style="margin:0 0 14px;font-size:28px">Réinitialise ton mot de passe</h1>
+      <p style="margin:0 0 22px;line-height:1.65;color:#c8d5e8">Nous avons reçu une demande de réinitialisation du mot de passe de ton compte BETV. Utilise le bouton ci-dessous pour choisir un nouveau mot de passe.</p>
+      <p style="margin:0 0 24px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 20px;border-radius:12px;background:#2878ff;color:#fff;text-decoration:none;font-weight:700">Choisir un nouveau mot de passe</a></p>
+      <p style="margin:0;color:#92a3ba;font-size:13px;line-height:1.55">Si tu n’as pas demandé ce changement, ignore cet e-mail. Le lien expire et ne peut être utilisé que pour récupérer ton mot de passe.</p>
+    {{ else if eq .RedirectTo "https://billieilishtv.site/it/reset-password" }}
+      <h1 style="margin:0 0 14px;font-size:28px">Reimposta la password</h1>
+      <p style="margin:0 0 22px;line-height:1.65;color:#c8d5e8">Abbiamo ricevuto una richiesta per reimpostare la password del tuo account BETV. Usa il pulsante qui sotto per scegliere una nuova password.</p>
+      <p style="margin:0 0 24px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 20px;border-radius:12px;background:#2878ff;color:#fff;text-decoration:none;font-weight:700">Scegli una nuova password</a></p>
+      <p style="margin:0;color:#92a3ba;font-size:13px;line-height:1.55">Se non hai richiesto questa modifica, ignora questa email. Il link scade e può essere usato solo per recuperare la password.</p>
     {{ else }}
       <h1 style="margin:0 0 14px;font-size:28px">Redefina sua senha</h1>
       <p style="margin:0 0 22px;line-height:1.65;color:#c8d5e8">Recebemos uma solicitação para redefinir a senha da sua conta BETV. Use o botão abaixo para escolher uma nova senha.</p>

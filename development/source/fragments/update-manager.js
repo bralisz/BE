@@ -26,13 +26,14 @@
     'pt-br': { available:'Atualização disponível', ready:'Uma nova versão do site está pronta.', action:'Atualizar', updating:'Atualizando a nova versão' },
     'en-us': { available:'Update available', ready:'A new version of the site is ready.', action:'Update', updating:'Updating to the new version' },
     'es': { available:'Actualización disponible', ready:'Hay una nueva versión del sitio lista.', action:'Actualizar', updating:'Actualizando a la nueva versión' },
-    'fr': { available:'Mise à jour disponible', ready:'Une nouvelle version du site est prête.', action:'Mettre à jour', updating:'Mise à jour vers la nouvelle version' }
+    'fr': { available:'Mise à jour disponible', ready:'Une nouvelle version du site est prête.', action:'Mettre à jour', updating:'Mise à jour vers la nouvelle version' },
+    'it': { available:'Aggiornamento disponibile', ready:'È pronta una nuova versione del sito.', action:'Aggiorna', updating:'Aggiornamento alla nuova versione' }
   };
 
   function updateLocaleSlug() {
     var configured = String(window.BETVLocale && window.BETVLocale.slug || '').toLowerCase();
     if (UPDATE_COPY[configured]) return configured;
-    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es|fr)(?:\/|$)/);
+    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es|fr|it)(?:\/|$)/);
     return match && UPDATE_COPY[match[1]] ? match[1] : 'pt-br';
   }
 

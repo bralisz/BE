@@ -8,8 +8,10 @@ O `config.toml` e o arquivo `recovery.html` configuram o ambiente local. No proj
    - `https://billieilishtv.site/pt-br/reset-password`
    - `https://billieilishtv.site/en-us/reset-password`
    - `https://billieilishtv.site/es/reset-password`
+   - `https://billieilishtv.site/fr/reset-password`
+   - `https://billieilishtv.site/it/reset-password`
 4. Abra **Authentication → Email Templates → Reset password**.
-5. Use como assunto: `Redefinir senha / Reset password / Restablecer contraseña`.
+5. Use como assunto: `Redefinir senha / Reset password / Restablecer contraseña / Réinitialiser le mot de passe / Reimposta la password`.
 6. Cole o conteúdo de `supabase/templates/recovery.html` no corpo do template e salve.
 
-A aplicação envia a Redirect URL correspondente ao idioma atual. O template verifica `.RedirectTo` e mostra português, inglês ou espanhol.
+A aplicação envia a Redirect URL correspondente ao idioma atual. O template verifica `.RedirectTo` e mostra português, inglês, espanhol, francês ou italiano.

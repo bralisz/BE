@@ -1499,7 +1499,17 @@ begin
     body := jsonb_build_object(
       'collection',v_collection,
       'ids',jsonb_build_array(v_id),
-      'locales',jsonb_build_array('en-us','es')
+      'locales',jsonb_build_array('en-us','es','fr')
+    ),
+    timeout_milliseconds := 30000
+  );
+  perform net.http_post(
+    url := 'https://cxkevnnxibhezvospkce.supabase.co/functions/v1/translate-content-record-it',
+    headers := jsonb_build_object('Content-Type','application/json'),
+    body := jsonb_build_object(
+      'collection',v_collection,
+      'ids',jsonb_build_array(v_id),
+      'locales',jsonb_build_array('it')
     ),
     timeout_milliseconds := 30000
   );

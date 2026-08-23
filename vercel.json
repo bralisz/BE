@@ -229,7 +229,15 @@
       "destination": "/api?route=site-page"
     },
     {
+      "source": "/it/@:username",
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/fr/:videoId(\\d{6,12})",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/it/:videoId(\\d{6,12})",
       "destination": "/api?route=site-page"
     },
     {
@@ -237,11 +245,23 @@
       "destination": "/api?route=site-page"
     },
     {
+      "source": "/it/albuns/:albumId",
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/fr/álbuns/:albumId",
       "destination": "/api?route=site-page"
     },
     {
+      "source": "/it/álbuns/:albumId",
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/fr/albums/:albumId",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/it/albums/:albumId",
       "destination": "/api?route=site-page"
     },
     {
@@ -317,7 +337,15 @@
       "destination": "/index.html"
     },
     {
+      "source": "/it",
+      "destination": "/index.html"
+    },
+    {
       "source": "/fr/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/it/:path*",
       "destination": "/index.html"
     },
     {
@@ -612,7 +640,41 @@
       ]
     },
     {
+      "source": "/it/reset-password/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
       "source": "/fr/reset-password",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/it/reset-password",
       "headers": [
         {
           "key": "Cache-Control",

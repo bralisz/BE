@@ -17,10 +17,11 @@ const LOCALIZED_ROUTE_SLUGS = Object.freeze({
   'pt-br': Object.freeze({ '/comunidade': '/comunidade', '/fãs': '/fãs' }),
   'en-us': Object.freeze({ '/comunidade': '/community', '/fãs': '/fans' }),
   es: Object.freeze({ '/comunidade': '/comunidad', '/fãs': '/fans' }),
-  fr: Object.freeze({ '/comunidade': '/communaute', '/fãs': '/fans' })
+  fr: Object.freeze({ '/comunidade': '/communaute', '/fãs': '/fans' }),
+  it: Object.freeze({ '/comunidade': '/comunita', '/fãs': '/fans' })
 });
 const LOCALIZED_ROUTE_ALIASES = Object.freeze({
-  '/comunidade': '/comunidade', '/community': '/comunidade', '/comunidad': '/comunidade', '/communaute': '/comunidade', '/communauté': '/comunidade',
+  '/comunidade': '/comunidade', '/community': '/comunidade', '/comunidad': '/comunidade', '/communaute': '/comunidade', '/communauté': '/comunidade', '/comunita': '/comunidade', '/comunità': '/comunidade',
   '/fãs': '/fãs', '/fas': '/fãs', '/fans': '/fãs'
 });
 const LOCALE_PREFIXES = Object.freeze({
@@ -28,7 +29,8 @@ const LOCALE_PREFIXES = Object.freeze({
   'en-us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
   'us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
   'es': { locale: 'es', ogLocale: 'es_ES', slug: 'es' },
-  'fr': { locale: 'fr-FR', ogLocale: 'fr_FR', slug: 'fr' }
+  'fr': { locale: 'fr-FR', ogLocale: 'fr_FR', slug: 'fr' },
+  'it': { locale: 'it-IT', ogLocale: 'it_IT', slug: 'it' }
 });
 let cachedTemplate = '';
 let settingsCache = { value: {}, expiresAt: 0, promise: null };
@@ -497,6 +499,29 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fansTitle: `Fans que ayudaron al sitio | ${siteTitle}`,
       fansDescription: 'Conoce a fans y comunidades que ayudan a Billie Eilish TV compartiendo y apoyando el proyecto.',
       fanProject: 'Proyecto no oficial creado por fans para organizar contenido e información sobre Billie Eilish.'
+    },
+    it: {
+      homeTitle: 'Billie Eilish TV',
+      homeDescription: 'Esplora video, concerti, film, serie, album e altri contenuti su Billie Eilish in un progetto creato dai fan.',
+      billieTitle: `Billie Eilish — Biografia e informazioni | ${siteTitle}`,
+      billieDescription: 'Scopri Billie Eilish, il suo percorso, le informazioni e i social raccolti da Billie Eilish TV, un progetto creato dai fan.',
+      albumsTitle: `Album e singoli di Billie Eilish | ${siteTitle}`,
+      albumsDescription: 'Esplora album, singoli e brani di Billie Eilish raccolti da Billie Eilish TV.',
+      ongTitle: `Sostieni le organizzazioni | ${siteTitle}`,
+      ongDescription: 'Scopri le organizzazioni presentate da Billie Eilish TV e i modi per sostenere le iniziative selezionate sul sito.',
+      supportTitle: `Assistenza | ${siteTitle}`,
+      supportDescription: 'Centro assistenza di Billie Eilish TV con risposte alle domande frequenti e opzioni di contatto.',
+      updatesTitle: `Aggiornamenti | ${siteTitle}`,
+      updatesDescription: 'Segui le novità e gli aggiornamenti pubblicati da Billie Eilish TV.',
+      termsTitle: `Termini e condizioni | ${siteTitle}`,
+      privacyTitle: `Informativa sulla privacy | ${siteTitle}`,
+      cookiesTitle: `Informativa sui cookie | ${siteTitle}`,
+      dmcaTitle: `DMCA e diritti d’autore | ${siteTitle}`,
+      communityTitle: `Linee guida della community | ${siteTitle}`,
+      communityDescription: 'Consulta le linee guida della pagina fan di Billie Eilish TV, come possono apparire profili e community, quali informazioni pubbliche possono essere mostrate e come richiedere la rimozione.',
+      fansTitle: `Fan che hanno aiutato il sito | ${siteTitle}`,
+      fansDescription: 'Scopri i fan e le community che aiutano Billie Eilish TV condividendo e sostenendo il progetto.',
+      fanProject: 'Progetto non ufficiale creato dai fan per organizzare contenuti e informazioni su Billie Eilish.'
     }
   };
   const copy = copies[routeInfo.slug] || copies['pt-br'];
@@ -567,7 +592,9 @@ function pageCopy(routeInfo, settings, seoRecord) {
           ? `Explora ${recordTitle} y más contenido de Billie Eilish en Billie Eilish TV.`
           : routeInfo.slug === 'fr'
             ? `Explore ${recordTitle} et d’autres contenus sur Billie Eilish sur Billie Eilish TV.`
-            : `Explore ${recordTitle} e outros conteúdos de Billie Eilish na Billie Eilish TV.`;
+            : routeInfo.slug === 'it'
+              ? `Esplora ${recordTitle} e altri contenuti su Billie Eilish su Billie Eilish TV.`
+              : `Explore ${recordTitle} e outros conteúdos de Billie Eilish na Billie Eilish TV.`;
     }
     pageType = 'ItemPage';
   }
@@ -584,7 +611,7 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
     name: 'Billie Eilish TV',
     alternateName: 'BETV',
     description: copy.fanProject,
-    inLanguage: ['pt-BR', 'en-US', 'es', 'fr-FR']
+    inLanguage: ['pt-BR', 'en-US', 'es', 'fr-FR', 'it-IT']
   });
 
   const page = {
@@ -646,19 +673,22 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     'pt-br': 'Billie Eilish TV — projeto de fãs sobre Billie Eilish',
     'en-us': 'Billie Eilish TV — a fan-made Billie Eilish project',
     es: 'Billie Eilish TV — proyecto de fans sobre Billie Eilish',
-    fr: 'Billie Eilish TV — projet de fans consacré à Billie Eilish'
+    fr: 'Billie Eilish TV — projet de fans consacré à Billie Eilish',
+    it: 'Billie Eilish TV — progetto fan dedicato a Billie Eilish'
   }[routeInfo.slug] || 'Billie Eilish TV';
   const profileDescription = {
     'pt-br': name => `Veja os quatro conteúdos favoritos de ${name} na Billie Eilish TV.`,
     'en-us': name => `See ${name}'s four favorite picks on Billie Eilish TV.`,
     es: name => `Mira los cuatro contenidos favoritos de ${name} en Billie Eilish TV.`,
-    fr: name => `Découvre les quatre contenus préférés de ${name} sur Billie Eilish TV.`
+    fr: name => `Découvre les quatre contenus préférés de ${name} sur Billie Eilish TV.`,
+    it: name => `Scopri i quattro contenuti preferiti di ${name} su Billie Eilish TV.`
   }[routeInfo.slug] || (name => `Perfil de ${name} na Billie Eilish TV.`);
   const profileImageAlt = {
     'pt-br': name => `Perfil de ${name} com seus conteúdos favoritos na Billie Eilish TV`,
     'en-us': name => `${name}'s profile with favorite picks on Billie Eilish TV`,
     es: name => `Perfil de ${name} con sus contenidos favoritos en Billie Eilish TV`,
-    fr: name => `Profil de ${name} avec ses contenus préférés sur Billie Eilish TV`
+    fr: name => `Profil de ${name} avec ses contenus préférés sur Billie Eilish TV`,
+    it: name => `Profilo di ${name} con i suoi contenuti preferiti su Billie Eilish TV`
   }[routeInfo.slug] || (name => `Perfil de ${name}`);
 
   const copy = pageCopy(routeInfo, settings, seoRecord);
@@ -700,6 +730,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     `<link rel="alternate" hreflang="en-US" href="${attr(localizedRouteUrl(origin, 'en-us', logical))}">`,
     `<link rel="alternate" hreflang="es" href="${attr(localizedRouteUrl(origin, 'es', logical))}">`,
     `<link rel="alternate" hreflang="fr" href="${attr(localizedRouteUrl(origin, 'fr', logical))}">`,
+    `<link rel="alternate" hreflang="it" href="${attr(localizedRouteUrl(origin, 'it', logical))}">`,
     `<link rel="alternate" hreflang="x-default" href="${attr(xDefaultRouteUrl(origin, logical))}">`
   ].join('\n');
 

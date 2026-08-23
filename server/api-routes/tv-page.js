@@ -43,6 +43,15 @@ const TV_UI = {
     expires: 'Le code expire au bout de 5 minutes s’il n’est pas utilisé.', connectedTitle: 'Connecté à votre compte', connectedDescription: 'Choisissez maintenant une vidéo ou un film sur votre téléphone, puis appuyez sur l’icône de diffusion.',
     connectedAccount: 'Compte connecté', errorTitle: 'Impossible de se connecter', errorDescription: 'Actualisez la page pour réessayer.', errorStatus: 'Impossible de préparer la connexion.',
     loadingVideo: 'Chargement de la vidéo', connectedToPhone: 'Connecté au téléphone', enableSubtitles: 'Activer les sous-titres', disableSubtitles: 'Désactiver les sous-titres'
+  },
+  it: {
+    lang: 'it-IT', title: 'Collega Smart TV — Billie Eilish TV', exit: 'Esci', connectPhone: 'Collega il telefono',
+    pairDescription: 'Scansiona il codice QR con la fotocamera del telefono. Accedi al tuo account e la TV sarà pronta a ricevere i video del sito.',
+    qrAlt: 'Codice QR per collegare questa TV', yourCode: 'Il tuo codice', tvCode: 'Codice TV', howToConnect: 'Come collegare',
+    step1: 'Scansiona il codice QR.', step2: 'Accedi al tuo account.', step3: 'Apri un video o un film e tocca l’icona di trasmissione.',
+    expires: 'Il codice scade dopo 5 minuti se non viene utilizzato.', connectedTitle: 'Collegato al tuo account', connectedDescription: 'Ora scegli un video o un film sul telefono e tocca l’icona di trasmissione.',
+    connectedAccount: 'Account collegato', errorTitle: 'Impossibile collegarsi', errorDescription: 'Aggiorna la pagina per riprovare.', errorStatus: 'Impossibile preparare la connessione.',
+    loadingVideo: 'Caricamento video', connectedToPhone: 'Collegato al telefono', enableSubtitles: 'Attiva sottotitoli', disableSubtitles: 'Disattiva sottotitoli'
   }
 };
 
@@ -52,6 +61,7 @@ function normalizeUiLocale(value) {
   if (raw === 'en' || raw === 'en-us' || raw.indexOf('en-') === 0) return 'en-us';
   if (raw === 'es' || raw.indexOf('es-') === 0) return 'es';
   if (raw === 'fr' || raw.indexOf('fr-') === 0) return 'fr';
+  if (raw === 'it' || raw.indexOf('it-') === 0) return 'it';
   return '';
 }
 
@@ -260,6 +270,7 @@ function normalizeSubtitleLocale(value) {
   if (raw === 'en' || raw === 'en-us' || raw.indexOf('en-') === 0) return 'en-us';
   if (raw === 'es' || raw.indexOf('es-') === 0) return 'es';
   if (raw === 'fr' || raw.indexOf('fr-') === 0) return 'fr';
+  if (raw === 'it' || raw.indexOf('it-') === 0) return 'it';
   return 'pt-br';
 }
 
@@ -269,13 +280,14 @@ function subtitleUploadedLocale(value) {
   try {
     const url = new URL(raw, 'https://billieilishtv.site');
     const path = decodeURIComponent(url.pathname || '').toLowerCase();
-    const match = path.match(/(?:^|\/)(pt-br|pt|en-us|en|es|fr)[-_][^/]+\.(?:srt|vtt)$/i);
+    const match = path.match(/(?:^|\/)(pt-br|pt|en-us|en|es|fr|it)[-_][^/]+\.(?:srt|vtt)$/i);
     if (!match) return '';
     const code = String(match[1] || '').toLowerCase();
     if (code === 'pt' || code === 'pt-br') return 'pt-br';
     if (code === 'en' || code === 'en-us') return 'en-us';
     if (code === 'es') return 'es';
     if (code === 'fr') return 'fr';
+    if (code === 'it') return 'it';
   } catch (_) {}
   return '';
 }
@@ -897,11 +909,11 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
 (function(){
   var current=${JSON.stringify(String(locale || 'pt-br'))};
   var search=String(location.search||'');
-  if(/(?:^|[?&])lang=(?:pt-br|pt|en-us|en|es|fr)(?:&|$)/i.test(search))return;
+  if(/(?:^|[?&])lang=(?:pt-br|pt|en-us|en|es|fr|it)(?:&|$)/i.test(search))return;
   var raw='';
   try{raw=String(navigator.language||navigator.userLanguage||'').toLowerCase().replace('_','-');}catch(e){}
   var next='';
-  if(raw.indexOf('pt')===0)next='pt-br';else if(raw.indexOf('es')===0)next='es';else if(raw.indexOf('fr')===0)next='fr';else if(raw.indexOf('en')===0)next='en-us';
+  if(raw.indexOf('pt')===0)next='pt-br';else if(raw.indexOf('es')===0)next='es';else if(raw.indexOf('fr')===0)next='fr';else if(raw.indexOf('it')===0)next='it';else if(raw.indexOf('en')===0)next='en-us';
   if(next&&next!==current){
     var path=location.pathname||'/api/tv-page';
     try{location.replace(path+'?lang='+encodeURIComponent(next));}catch(e){location.href=path+'?lang='+encodeURIComponent(next);}

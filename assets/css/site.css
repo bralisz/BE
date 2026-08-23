@@ -18064,7 +18064,8 @@ body.profile-page-active .profile-page-name{
 
 
 @media(max-width:760px){
-  html[lang^="fr"] body.profile-page-active.profile-view-own .profile-page-likes-received{
+  html[lang^="fr"] body.profile-page-active.profile-view-own .profile-page-likes-received,
+  html[lang^="it"] body.profile-page-active.profile-view-own .profile-page-likes-received{
     right:var(--profile-mobile-action-edge,24px)!important;
     width:calc((var(--profile-mobile-action-size,46px) * 2) + var(--profile-mobile-action-gap,10px))!important;
     max-width:none!important;

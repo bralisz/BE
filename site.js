@@ -5,7 +5,7 @@
   var localeApi=window.BETVLocale||{slug:'pt-br',locale:'pt-BR',target:'pt'};
   var slug=String(localeApi.slug||'pt-br').toLowerCase();
   var locale=String(localeApi.locale||'pt-BR');
-  var target=String(localeApi.target||({'en-us':'en','es':'es','fr':'fr'}[slug]||'pt'));
+  var target=String(localeApi.target||({'en-us':'en','es':'es','fr':'fr','it':'it'}[slug]||'pt'));
   var map=Object.create(null);
   var readyResolve;
   var ready=new Promise(function(resolve){readyResolve=resolve;});
@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v8-es-native-music-only';
-  var STATIC_REV='20260821-tv-faq-drive-v1';
+  var STATIC_REV='20260823-it-locale-v1';
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
@@ -153,7 +153,7 @@
     var sectionId=String(record.sectionId||'').trim();
     var sectionName=String(record.sectionName||record.sourceSectionTitle||'').trim().toLowerCase();
     var explicit=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true';
-    var keepTitle=['es','fr'].includes(slug)&&(explicit||['albums','albuns','álbuns'].includes(collection)||(collection==='videos'&&(MUSIC_TITLE_SECTION_IDS.has(sectionId)||MUSIC_TITLE_SECTION_NAMES.has(sectionName))));
+    var keepTitle=['es','fr','it'].includes(slug)&&(explicit||['albums','albuns','álbuns'].includes(collection)||(collection==='videos'&&(MUSIC_TITLE_SECTION_IDS.has(sectionId)||MUSIC_TITLE_SECTION_NAMES.has(sectionName))));
     if(keepTitle){
       if(Object.prototype.hasOwnProperty.call(record,'title')){merged.title=record.title;protectExact(record.title);}
       if(Object.prototype.hasOwnProperty.call(record,'name')){merged.name=record.name;protectExact(record.name);}
@@ -181,7 +181,7 @@
   }
   function translationEndpoint(){
     var base=String((window.BE_SUPABASE_CONFIG&&window.BE_SUPABASE_CONFIG.url)||(window.BE_SITE_CONFIG&&window.BE_SITE_CONFIG.supabaseUrl)||'https://cxkevnnxibhezvospkce.supabase.co').replace(/\/$/,'');
-    return base+'/functions/v1/translate-content-record';
+    return base+'/functions/v1/'+(slug==='it'?'translate-content-record-it':'translate-content-record');
   }
   function publishableKey(){return String((window.BE_SUPABASE_CONFIG&&window.BE_SUPABASE_CONFIG.publishableKey)||(window.BE_SITE_CONFIG&&window.BE_SITE_CONFIG.supabasePublishableKey)||'');}
   function takeBatch(){
@@ -1148,6 +1148,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux'
   ]);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
+  const ITALIAN_TRANSLATION_FUNCTION_NAME = 'translate-content-record-it';
   const SPANISH_TRANSLATION_REV = '20260810-music-album-lock-v4';
   const RECORD_TRANSLATION_FIELDS = ['title','name','description','subtitle','body','summary','buttonLabel','buttonText','actionLabel','ctaLabel','label','text','manualBio','kicker','footerText','sectionName','siteName'];
   const translationWarmupInFlight = new Set();
@@ -1155,7 +1156,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
     const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
-    return ['en-us','es','fr'].includes(slug) ? slug : 'pt-br';
+    return ['en-us','es','fr','it'].includes(slug) ? slug : 'pt-br';
   }
 
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
@@ -1174,7 +1175,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function preservesSourceRecordTitle(collection, record, requestedSlug = activeLocaleSlug()) {
     const slug = String(requestedSlug || 'pt-br').toLowerCase();
-    if (!['es','fr'].includes(slug)) return false;
+    if (!['es','fr','it'].includes(slug)) return false;
     if (record?.preserveTitle === true || String(record?.preserveTitle || '').toLowerCase() === 'true') return true;
     const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
     if (['albums','albuns','álbuns'].includes(normalizedCollection)) return true;
@@ -1262,6 +1263,43 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const slug = activeLocaleSlug();
     const normalizedCollection = String(collection || '').toLowerCase();
 
+    // O italiano é preenchido sob demanda na primeira visita. A função dedicada
+    // salva translations.it no Supabase para que os próximos acessos usem o cache persistido.
+    if (slug === 'it' && supabaseClient?.functions?.invoke && TRANSLATABLE_COLLECTIONS.has(normalizedCollection)) {
+      const missing = values.filter(record => recordNeedsTranslation(record, slug, normalizedCollection));
+      const pending = missing.filter(record => {
+        const key = `${normalizedCollection}:${record.id}:${slug}`;
+        if (translationWarmupInFlight.has(key)) return false;
+        translationWarmupInFlight.add(key);
+        return true;
+      });
+      if (pending.length) {
+        try {
+          for (let offset = 0; offset < pending.length; offset += 20) {
+            const batch = pending.slice(offset, offset + 20);
+            const result = await supabaseClient.functions.invoke(ITALIAN_TRANSLATION_FUNCTION_NAME, {
+              body: { collection: normalizedCollection, ids: batch.map(record => String(record.id)), locales: ['it'] }
+            });
+            if (result?.error || !result?.data || !Array.isArray(result.data.records)) continue;
+            const translatedById = new Map();
+            result.data.records.forEach(item => {
+              if (item && item.id && item.translation && typeof item.translation === 'object') translatedById.set(String(item.id), item.translation);
+            });
+            batch.forEach(record => {
+              const translation = translatedById.get(String(record.id));
+              if (!translation) return;
+              if (!record.translations || typeof record.translations !== 'object') record.translations = {};
+              record.translations.it = translation;
+            });
+          }
+        } catch (error) {
+          (void 0);
+        } finally {
+          pending.forEach(record => translationWarmupInFlight.delete(`${normalizedCollection}:${record.id}:${slug}`));
+        }
+      }
+    }
+
     // O francês das notificações é reparado sob demanda uma única vez quando
     // encontramos um registro antigo, incompleto ou desatualizado. A Edge Function
     // persiste a tradução inteira no Supabase; os próximos acessos usam o cache salvo.
@@ -1312,6 +1350,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.setTimeout(() => {
       supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
         body: { collection: String(collection), ids: [String(id)], locales: ['en-us','es','fr'], force: true }
+      }).then(result => {
+        if (result?.error) (void 0);
+      }).catch(error => (void 0));
+      supabaseClient.functions.invoke(ITALIAN_TRANSLATION_FUNCTION_NAME, {
+        body: { collection: String(collection), ids: [String(id)], locales: ['it'], force: true }
       }).then(result => {
         if (result?.error) (void 0);
       }).catch(error => (void 0));
@@ -2663,7 +2706,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },
     async sendPasswordReset(email) {
       const locale = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
-      const safeLocale = ['pt-br', 'en-us', 'es', 'fr'].includes(locale) ? locale : 'pt-br';
+      const safeLocale = ['pt-br', 'en-us', 'es', 'fr', 'it'].includes(locale) ? locale : 'pt-br';
       const redirectTo = `${location.origin}/${safeLocale}/reset-password`;
       const { error } = await supabaseClient.auth.resetPasswordForEmail(String(email || '').trim().toLowerCase(), { redirectTo });
       if (error) throw mapAuthError(error);
@@ -4021,7 +4064,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   ]);
   function preservesOriginalMusicTitle(data) {
     const locale = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
-    if (!['es','fr'].includes(locale)) return false;
+    if (!['es','fr','it'].includes(locale)) return false;
     const collection = String(data?.collection || 'videos').toLowerCase();
     if (data?.preserveTitle === true || String(data?.preserveTitle || '').toLowerCase() === 'true') return true;
     if (['albums','albuns','álbuns'].includes(collection)) return true;
@@ -6078,14 +6121,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     'pt-br': 'Ative as legendas apenas quando o filme começar.',
     'en-us': 'Turn subtitles on only when the movie starts.',
     es: 'Activa los subtítulos solo cuando empiece la película.',
-    fr: 'Activez les sous-titres seulement quand le film commence.'
+    fr: 'Activez les sous-titres seulement quand le film commence.',
+    it: 'Attiva i sottotitoli solo quando il film inizia.'
   });
 
   const SUBTITLE_SYNC_NOTICE_TEXT = Object.freeze({
     'pt-br': 'As legendas acompanham o filme em tempo real e podem apresentar atraso. Se você avançar o vídeo, elas podem não acompanhar o novo trecho.',
     'en-us': 'Subtitles follow the movie in real time and may be delayed. If you skip ahead, they may not follow the new position.',
     es: 'Los subtítulos siguen la película en tiempo real y pueden presentar retraso. Si adelantas el video, es posible que no acompañen el nuevo punto.',
-    fr: 'Les sous-titres suivent le film en temps réel et peuvent présenter un décalage. Si vous avancez la vidéo, ils peuvent ne pas suivre le nouveau passage.'
+    fr: 'Les sous-titres suivent le film en temps réel et peuvent présenter un décalage. Si vous avancez la vidéo, ils peuvent ne pas suivre le nouveau passage.',
+    it: 'I sottotitoli seguono il film in tempo reale e potrebbero avere un ritardo. Se mandi avanti il video, potrebbero non seguire la nuova posizione.'
   });
 
   function subtitleStartNoticeText() {
@@ -9429,7 +9474,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const castLocaleRaw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase();
     const castLocale = castLocaleRaw === 'en' || castLocaleRaw === 'en-us' || castLocaleRaw.startsWith('en-') ? 'en-us'
       : castLocaleRaw === 'es' || castLocaleRaw.startsWith('es-') ? 'es'
-        : castLocaleRaw === 'fr' || castLocaleRaw.startsWith('fr-') ? 'fr' : 'pt-br';
+        : castLocaleRaw === 'fr' || castLocaleRaw.startsWith('fr-') ? 'fr'
+          : castLocaleRaw === 'it' || castLocaleRaw.startsWith('it-') ? 'it' : 'pt-br';
     const target = `/connect-tv/?from=cast&lang=${encodeURIComponent(castLocale)}`;
     const account = window.beBackend?.auth?.currentUser || null;
     if (!account) {
@@ -14184,7 +14230,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner, o avatar e as cores do seu perfil.</p><div class="settings-panel-card"><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview'+(avatarBorderColor?' has-custom-ring':'')+'"'+(avatarBorderColor?' style="--settings-avatar-ring:'+avatarBorderColor+'"':'')+'>'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div>'+profileColorControls+'</div></section>'
         +    '<section class="settings-section-panel settings-connections-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões e Redes Sociais</h1><p class="settings-panel-lead">Gerencie sua conexão de conta e as redes exibidas no perfil público.</p><div class="settings-panel-card"><div class="settings-social-heading"><h2>Conexões conectadas</h2><p>Gerencie os serviços vinculados à sua conta.</p></div><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div><div class="settings-panel-card settings-social-card"><div class="settings-social-heading"><h2>Redes sociais</h2><p>Adicione as redes que devem aparecer ao lado do seu nome no perfil público.</p></div><form id="settingsSocialForm"><div class="settings-social-fields"><div class="settings-social-field"><label for="settingsSocialX"><span class="settings-social-brand is-x">'+profileSocialIcon('x')+'</span><span>X</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">x.com/</span><input id="settingsSocialX" name="x" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.x||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialInstagram"><span class="settings-social-brand is-instagram">'+profileSocialIcon('instagram')+'</span><span>Instagram</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">instagram.com/</span><input id="settingsSocialInstagram" name="instagram" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.instagram||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialTikTok"><span class="settings-social-brand is-tiktok">'+profileSocialIcon('tiktok')+'</span><span>TikTok</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">tiktok.com/@</span><input id="settingsSocialTikTok" name="tiktok" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.tiktok||'')+'" placeholder="usuario"></div></div></div><div class="settings-status" id="settingsSocialStatus"></div><div class="settings-btn-row settings-social-actions"><button class="settings-button primary" type="submit">Salvar redes sociais</button></div></form></div></section>'
         +    '<section class="settings-section-panel settings-data-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Meus Dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-data-actions settings-data-actions-outside"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><a class="settings-data-privacy-button" href="/privacy">Ver Termos de Privacidade</a></div><div class="settings-status settings-data-status" id="settingsExportStatus"></div></section>'
-        +    '<section class="settings-section-panel settings-language-panel" data-settings-panel="language"'+(settingsActiveTab==='language'?'':' hidden')+'><h1>Idioma</h1><p class="settings-panel-lead">Escolha o idioma usado em todas as áreas públicas do site.</p><div class="settings-panel-card"><div class="settings-language-options" role="radiogroup" aria-label="Idioma do site"><button class="settings-language-option" type="button" data-settings-language="pt-br" role="radio"><strong>Português (Brasil)</strong><span>Português</span></button><button class="settings-language-option" type="button" data-settings-language="en-us" role="radio"><strong>English (United States)</strong><span>Inglês</span></button><button class="settings-language-option" type="button" data-settings-language="es" role="radio"><strong>Español</strong><span>Espanhol</span></button><button class="settings-language-option" type="button" data-settings-language="fr" role="radio"><strong>Français</strong><span>Francês</span></button></div><p class="settings-muted settings-language-note">A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.</p></div></section>'
+        +    '<section class="settings-section-panel settings-language-panel" data-settings-panel="language"'+(settingsActiveTab==='language'?'':' hidden')+'><h1>Idioma</h1><p class="settings-panel-lead">Escolha o idioma usado em todas as áreas públicas do site.</p><div class="settings-panel-card"><div class="settings-language-options" role="radiogroup" aria-label="Idioma do site"><button class="settings-language-option" type="button" data-settings-language="pt-br" role="radio"><strong>Português (Brasil)</strong><span>Português</span></button><button class="settings-language-option" type="button" data-settings-language="en-us" role="radio"><strong>English (United States)</strong><span>Inglês</span></button><button class="settings-language-option" type="button" data-settings-language="es" role="radio"><strong>Español</strong><span>Espanhol</span></button><button class="settings-language-option" type="button" data-settings-language="fr" role="radio"><strong>Français</strong><span>Francês</span></button><button class="settings-language-option" type="button" data-settings-language="it" role="radio"><strong>Italiano</strong><span>Italiano</span></button></div><p class="settings-muted settings-language-note">A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.</p></div></section>'
         +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input class="notranslate" translate="no" name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input class="notranslate" translate="no" name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="'+escapePublic(localizedProfileText('seunome'))+'"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div><div class="settings-session-section"><h1>Sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></div></section>'
         +  '</main>'
         +'</div>';
@@ -16317,13 +16363,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     'pt-br': { available:'Atualização disponível', ready:'Uma nova versão do site está pronta.', action:'Atualizar', updating:'Atualizando a nova versão' },
     'en-us': { available:'Update available', ready:'A new version of the site is ready.', action:'Update', updating:'Updating to the new version' },
     'es': { available:'Actualización disponible', ready:'Hay una nueva versión del sitio lista.', action:'Actualizar', updating:'Actualizando a la nueva versión' },
-    'fr': { available:'Mise à jour disponible', ready:'Une nouvelle version du site est prête.', action:'Mettre à jour', updating:'Mise à jour vers la nouvelle version' }
+    'fr': { available:'Mise à jour disponible', ready:'Une nouvelle version du site est prête.', action:'Mettre à jour', updating:'Mise à jour vers la nouvelle version' },
+    'it': { available:'Aggiornamento disponibile', ready:'È pronta una nuova versione del sito.', action:'Aggiorna', updating:'Aggiornamento alla nuova versione' }
   };
 
   function updateLocaleSlug() {
     var configured = String(window.BETVLocale && window.BETVLocale.slug || '').toLowerCase();
     if (UPDATE_COPY[configured]) return configured;
-    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es|fr)(?:\/|$)/);
+    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es|fr|it)(?:\/|$)/);
     return match && UPDATE_COPY[match[1]] ? match[1] : 'pt-br';
   }
 
@@ -17014,7 +17061,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   function currentLocaleSlug(){
     var value=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
-    return value==='en-us'||value==='es'||value==='fr'?value:'pt-br';
+    return value==='en-us'||value==='es'||value==='fr'||value==='it'?value:'pt-br';
   }
   function wikipediaLocaleCopy(){
     var slug=currentLocaleSlug();
@@ -17201,7 +17248,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var payload=await response.json().catch(function(){return {};});
       if(!response.ok||!payload||!payload.html)throw new Error(payload.error||copy.requestError);
       if(token!==loadToken)return;
-      wikipediaOrigin=String(payload.wikipediaOrigin||({'en-us':'https://en.wikipedia.org','es':'https://es.wikipedia.org','fr':'https://fr.wikipedia.org'}[localeSlug])||'https://pt.wikipedia.org');
+      wikipediaOrigin=String(payload.wikipediaOrigin||({'en-us':'https://en.wikipedia.org','es':'https://es.wikipedia.org','fr':'https://fr.wikipedia.org','it':'https://it.wikipedia.org'}[localeSlug])||'https://pt.wikipedia.org');
       var cleaned=normalizeWikipediaHtml(payload.html,wikipediaOrigin);
       if(!cleaned.html)throw new Error(copy.prepareError);
       wikipediaContent.innerHTML=cleaned.html;
@@ -18350,9 +18397,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var locale=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
     var tag='';
     if(community){
-      tag=locale==='es'?'Comunidad':(locale==='fr'?'Communauté':'Community');
+      tag=locale==='es'?'Comunidad':(locale==='fr'?'Communauté':(locale==='it'?'Comunità':'Community'));
     }else if(creator){
-      tag=locale==='en-us'?'Content Creator':(locale==='es'?'Creador de contenido':(locale==='fr'?'Créateur de contenu':'Criador de conteúdo'));
+      tag=locale==='en-us'?'Content Creator':(locale==='es'?'Creador de contenido':(locale==='fr'?'Créateur de contenu':(locale==='it'?'Content creator':'Criador de conteúdo')));
     }
     return '<a class="donate-supporter-card '+(creator?'is-creator':(community?'is-community':'is-user'))+'" href="'+esc(href)+'"'+attributes+' aria-label="'+esc(label)+'">'+
       '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
@@ -18616,7 +18663,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function currentProfileUrl(){
     try{
       var url=new URL(window.location.href);
-      if(/^\/@[^/?#]+$/i.test(url.pathname)||/^\/(?:pt-br|en-us|es|fr)\/@[^/?#]+$/i.test(url.pathname)){
+      if(/^\/@[^/?#]+$/i.test(url.pathname)||/^\/(?:pt-br|en-us|es|fr|it)\/@[^/?#]+$/i.test(url.pathname)){
         url.search='';
         url.hash='';
       }
@@ -18665,7 +18712,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try{
       var path=decodeURIComponent(String(location.pathname||''));
       var parts=path.split('/').filter(Boolean);
-      if(parts.length&&/^(pt-br|en-us|es|fr)$/i.test(parts[0]))parts.shift();
+      if(parts.length&&/^(pt-br|en-us|es|fr|it)$/i.test(parts[0]))parts.shift();
       return parts.length&&String(parts[0]||'').charAt(0)==='@'?normalizedHandle(parts[0]):'';
     }catch(_){return '';}
   }

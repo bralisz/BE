@@ -26,6 +26,12 @@ const WIKIPEDIA_SITES = Object.freeze({
     language: 'fr',
     origin: 'https://fr.wikipedia.org',
     sourceLabel: 'Wikipédia en français'
+  }),
+  it: Object.freeze({
+    slug: 'it',
+    language: 'it',
+    origin: 'https://it.wikipedia.org',
+    sourceLabel: 'Wikipedia in italiano'
   })
 });
 
@@ -45,6 +51,7 @@ function requestedLocale(req) {
   if (value === 'en' || value === 'en-us' || value === 'us') return WIKIPEDIA_SITES['en-us'];
   if (value === 'es' || value.startsWith('es-')) return WIKIPEDIA_SITES.es;
   if (value === 'fr' || value.startsWith('fr-')) return WIKIPEDIA_SITES.fr;
+  if (value === 'it' || value.startsWith('it-')) return WIKIPEDIA_SITES.it;
   return WIKIPEDIA_SITES['pt-br'];
 }
 
@@ -73,6 +80,7 @@ function localizedError(locale) {
   if (locale.slug === 'en-us') return 'Wikipedia did not return the requested article.';
   if (locale.slug === 'es') return 'Wikipedia no devolvió el artículo solicitado.';
   if (locale.slug === 'fr') return 'Wikipédia n’a pas renvoyé l’article demandé.';
+  if (locale.slug === 'it') return 'Wikipedia non ha restituito l’articolo richiesto.';
   return 'A Wikipédia não retornou o artigo solicitado.';
 }
 
