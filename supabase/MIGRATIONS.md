@@ -79,3 +79,6 @@ As migrations marcadas como `noop` são registros históricos intencionais e pre
 - `20260823023049_add_italian_locale_to_public_payloads.sql` — adiciona italiano aos payloads públicos, traduções persistidas e legendas por idioma.
 
 - `20260823023159_queue_italian_automatic_translation.sql` — inclui a função dedicada de italiano na fila automática de traduções.
+
+- `20260823041025_harden_public_grants_and_email_privacy.sql` — remove enumeração pública de e-mails, retira acesso anônimo de RPCs administrativas e aplica grants mínimos nas tabelas sensíveis revisadas.
+- `20260823041303_sanitize_public_community_payload.sql` — limita o payload público da Comunidade a campos explicitamente permitidos e restringe atividade diária a usuários autenticados.

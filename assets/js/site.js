@@ -31,7 +31,7 @@
   ]);
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v14-it-wiki-live';
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
   var STATIC_REV='20260823-it-wiki-live-v1';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
@@ -2661,9 +2661,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async accountExists(email) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
       if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw backendError('auth/invalid-email', 'Digite um e-mail válido.');
-      const { data, error } = await supabaseClient.rpc('account_exists', { p_email: normalizedEmail });
-      if (error) throw mapAuthError(error);
-      return data === true;
+      // Não consulta mais a existência do e-mail no banco. Isso evita enumeração
+      // de contas por uma API pública; o fluxo de login usa uma tela neutra.
+      return null;
     },
     async usernameAvailable(username) {
       const normalizedHandle = normalizeUsername(username);
@@ -15113,11 +15113,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando..');
       try{
-        var exists=typeof auth.accountExists==='function'?await auth.accountExists(email):null;
+        if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('Digite um e-mail válido.');
+        // Não revela se o e-mail já possui conta. A tela de senha é neutra e
+        // mantém a opção de criar uma conta sem consultar auth.users.
         selectedAuthEmail=email;
-        if(exists===true){setMode('password',email);}
-        else if(exists===false){setMode('signup',email);}
-        else{throw new Error('Não foi possível verificar este e-mail agora. Tente novamente.');}
+        setMode('password',email);
       }catch(err){setStatus(friendly(err),'error');}
       finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
@@ -16413,6 +16413,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
   var PUBLIC_APPLIED_UPDATE_KEY = 'betvPublicAppliedUpdateVersion';
+  var PUBLIC_APPLIED_UPDATE_COOKIE = 'be_site_release_version';
   var currentVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || '').trim();
   var latestVersion = '';
   var popup = null;
@@ -16487,15 +16488,34 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try { window.localStorage.setItem(ADMIN_APPLIED_UPDATE_KEY, version); } catch (_) {}
   }
 
-  function readPublicAppliedUpdate() {
-    try { return String(window.localStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
+  function readCookieValue(name) {
+    try {
+      var prefix = String(name || '') + '=';
+      var parts = String(document.cookie || '').split(';');
+      for (var i = 0; i < parts.length; i += 1) {
+        var part = String(parts[i] || '').trim();
+        if (part.indexOf(prefix) === 0) return decodeURIComponent(part.slice(prefix.length));
+      }
+    } catch (_) {}
     return '';
+  }
+
+  function readPublicAppliedUpdate() {
+    var value = '';
+    try { value = String(window.localStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
+    if (value) return value;
+    return String(readCookieValue(PUBLIC_APPLIED_UPDATE_COOKIE) || '').trim();
   }
 
   function persistPublicAppliedUpdate(version) {
     version = String(version || '').trim();
     if (!version) return;
     try { window.localStorage.setItem(PUBLIC_APPLIED_UPDATE_KEY, version); } catch (_) {}
+    try {
+      var cookie = PUBLIC_APPLIED_UPDATE_COOKIE + '=' + encodeURIComponent(version) + '; Max-Age=31536000; Path=/; SameSite=Lax';
+      if (window.location.protocol === 'https:') cookie += '; Secure';
+      document.cookie = cookie;
+    } catch (_) {}
   }
 
   function readPendingUpdate() {
@@ -16711,7 +16731,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!normalized) return true;
 
     // Estes cookies mantêm sessão, autenticação e preferências essenciais.
-    if (normalized === 'be_site_preferences' || normalized === 'be_cookie_ack') return true;
+    if (normalized === 'be_site_preferences' || normalized === 'be_cookie_ack' || normalized === PUBLIC_APPLIED_UPDATE_COOKIE) return true;
     if (/^(?:__host-|__secure-)?sb[-_]/.test(normalized)) return true;
     return /(?:auth|session|token|login|supabase)/.test(normalized);
   }
@@ -16921,6 +16941,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     var targetVersion = latestVersion || readPendingUpdate() || String(Date.now());
     persistPendingUpdate(targetVersion);
+
+    // O clique já reconhece esta versão. O aviso some imediatamente e a mesma
+    // versão não volta após reload/novo acesso. Uma versão futura possui outro
+    // identificador e exibirá o aviso normalmente.
+    if (isAdminContext()) persistAdminAppliedUpdate(targetVersion);
+    else persistPublicAppliedUpdate(targetVersion);
+    hidePopup();
 
     Promise.resolve()
       .then(clearBrowserCaches)

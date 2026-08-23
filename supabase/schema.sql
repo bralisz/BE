@@ -223,7 +223,7 @@ $$;
 
 alter function public.account_exists(text) owner to postgres;
 revoke all on function public.account_exists(text) from public;
-grant execute on function public.account_exists(text) to anon, authenticated;
+grant execute on function public.account_exists(text) to service_role;
 
 -- Informa somente se um nome de usuário pode ser usado, sem expor perfis.
 create or replace function public.username_available(p_username text)
