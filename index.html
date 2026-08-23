@@ -215,7 +215,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260823-performance-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/site.js?rev=20260823-it-wiki-live-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260823-security-update-v1"></script>
 <!-- Vercel Web Analytics: mantém o console público oculto e restaura apenas a coleta de pageviews/visitors. -->
 <script defer src="/_vercel/insights/script.js"></script>
 <script>
@@ -223,7 +223,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost')return;
   window.addEventListener('load',function(){
-    var build=String(window.__BETV_DEPLOYMENT_VERSION__||'20260823-it-wiki-live-v1');
+    var build=String(window.__BETV_DEPLOYMENT_VERSION__||'20260823-security-update-v1');
     var cleanup=window.__BETV_UPDATE_CACHE_CLEANUP__;
     Promise.resolve(cleanup).catch(function(){}).then(function(){
       return navigator.serviceWorker.register('/sw.js?build='+encodeURIComponent(build),{scope:'/',updateViaCache:'none'});

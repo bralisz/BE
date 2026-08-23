@@ -1,5 +1,5 @@
 /* Service worker do PWA; não mantém versões antigas dos arquivos do site. */
-const SW_VERSION = '20260823-it-wiki-live-v1';
+const SW_VERSION = '20260823-security-update-v1';
 
 async function clearBetvCaches() {
   const keys = await caches.keys();
