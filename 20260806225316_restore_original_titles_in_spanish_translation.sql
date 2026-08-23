@@ -1,3 +1,0 @@
--- Remote history marker for the follow-up title restoration already applied to production.
--- Intentionally contains no SQL: it records an immutable migration that is already
--- present in the linked production database and prevents local/remote history drift.
