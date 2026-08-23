@@ -16942,12 +16942,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var targetVersion = latestVersion || readPendingUpdate() || String(Date.now());
     persistPendingUpdate(targetVersion);
 
-    // O clique já reconhece esta versão. O aviso some imediatamente e a mesma
-    // versão não volta após reload/novo acesso. Uma versão futura possui outro
-    // identificador e exibirá o aviso normalmente.
+    // O clique já reconhece esta versão para que o mesmo aviso não volte
+    // depois do reload. Enquanto a atualização é preparada, porém, mantemos
+    // o popup visível no estado "Atualizando..." para dar feedback ao usuário.
     if (isAdminContext()) persistAdminAppliedUpdate(targetVersion);
     else persistPublicAppliedUpdate(targetVersion);
-    hidePopup();
+    forcePopupVisible(element);
 
     Promise.resolve()
       .then(clearBrowserCaches)
