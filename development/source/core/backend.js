@@ -388,6 +388,12 @@
     return ['en-us','es','fr','it'].includes(slug) ? slug : 'pt-br';
   }
 
+  function italianInitialUpperLabel(value, requestedSlug = activeLocaleSlug()) {
+    const raw = String(value == null ? '' : value);
+    if (String(requestedSlug || '').toLowerCase() !== 'it' || !raw) return raw;
+    return raw.replace(/^(\s*)(\p{L})/u, (_, space, letter) => space + letter.toLocaleUpperCase('it-IT'));
+  }
+
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
     const raw = String(value || '').trim();
     const slug = String(requestedSlug || 'pt-br').toLowerCase();
@@ -419,14 +425,22 @@
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
+    const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
-    if (preservesSourceRecordTitle(collection, record)) {
+    if (preservesSourceRecordTitle(normalizedCollection, record)) {
       if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
       if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
       result.preserveTitle = true;
       protectSourceRecordTitle(record);
+    }
+    if (slug === 'it') {
+      if (normalizedCollection === 'sections') {
+        if (typeof result.title === 'string') result.title = italianInitialUpperLabel(result.title, slug);
+        if (typeof result.name === 'string') result.name = italianInitialUpperLabel(result.name, slug);
+      }
+      if (typeof result.sectionName === 'string') result.sectionName = italianInitialUpperLabel(result.sectionName, slug);
     }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);

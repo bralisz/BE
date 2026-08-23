@@ -31,11 +31,17 @@
   ]);
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v9-preserve-live-song-titles';
-  var STATIC_REV='20260823-it-music-title-fix-v2';
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v11-it-official-title-lock';
+  var STATIC_REV='20260823-it-official-title-lock-v1';
+  var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
+  function italianInitialUpper(value){
+    var raw=String(value==null?'':value);
+    if(slug!=='it'||!raw)return raw;
+    return raw.replace(/^(\s*)(\p{L})/u,function(_,space,letter){return space+letter.toLocaleUpperCase('it-IT');});
+  }
   function preserveWhitespace(raw,translated){
     var leading=(String(raw).match(/^\s*/)||[''])[0];
     var trailing=(String(raw).match(/\s*$/)||[''])[0];
@@ -152,11 +158,20 @@
     var collection=String(record.collection||'').toLowerCase();
     var sectionId=String(record.sectionId||'').trim();
     var sectionName=String(record.sectionName||record.sourceSectionTitle||'').trim().toLowerCase();
+    var recordType=String(record.type||record.itemType||'').trim().toLowerCase();
     var explicit=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true';
-    var keepTitle=['es','fr','it'].includes(slug)&&(explicit||['albums','albuns','álbuns'].includes(collection)||(collection==='videos'&&(MUSIC_TITLE_SECTION_IDS.has(sectionId)||MUSIC_TITLE_SECTION_NAMES.has(sectionName))));
+    var isAlbumRecord=collection==='news'&&['album','álbum','single'].includes(recordType);
+    var keepTitle=['es','fr','it'].includes(slug)&&(explicit||isAlbumRecord||['albums','albuns','álbuns'].includes(collection)||(collection==='videos'&&(MUSIC_TITLE_SECTION_IDS.has(sectionId)||MUSIC_TITLE_SECTION_NAMES.has(sectionName))));
     if(keepTitle){
       if(Object.prototype.hasOwnProperty.call(record,'title')){merged.title=record.title;protectExact(record.title);}
       if(Object.prototype.hasOwnProperty.call(record,'name')){merged.name=record.name;protectExact(record.name);}
+    }
+    if(slug==='it'){
+      if(collection==='sections'){
+        if(typeof merged.title==='string')merged.title=italianInitialUpper(merged.title);
+        if(typeof merged.name==='string')merged.name=italianInitialUpper(merged.name);
+      }
+      if(typeof merged.sectionName==='string')merged.sectionName=italianInitialUpper(merged.sectionName);
     }
     return merged;
   }
@@ -244,7 +259,7 @@
     }
     loadDynamicCache();
     try{
-      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV),{credentials:'same-origin',cache:'force-cache'});
+      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
       if(response.ok){
         var payload=await response.json();
         if(payload&&typeof payload==='object')Object.keys(payload).forEach(function(key){map[key]=payload[key];});
@@ -1160,6 +1175,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return ['en-us','es','fr','it'].includes(slug) ? slug : 'pt-br';
   }
 
+  function italianInitialUpperLabel(value, requestedSlug = activeLocaleSlug()) {
+    const raw = String(value == null ? '' : value);
+    if (String(requestedSlug || '').toLowerCase() !== 'it' || !raw) return raw;
+    return raw.replace(/^(\s*)(\p{L})/u, (_, space, letter) => space + letter.toLocaleUpperCase('it-IT'));
+  }
+
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
     const raw = String(value || '').trim();
     const slug = String(requestedSlug || 'pt-br').toLowerCase();
@@ -1180,6 +1201,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (record?.preserveTitle === true || String(record?.preserveTitle || '').toLowerCase() === 'true') return true;
     const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
     if (['albums','albuns','álbuns'].includes(normalizedCollection)) return true;
+    const recordType = String(record?.type || record?.itemType || '').trim().toLowerCase();
+    if (normalizedCollection === 'news' && ['album','álbum','single'].includes(recordType)) return true;
     if (normalizedCollection !== 'videos') return false;
     const sectionId = String(record?.sectionId || '').trim();
     const sectionName = String(record?.sectionName || record?.sourceSectionTitle || '').trim().toLowerCase();
@@ -1197,14 +1220,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
     if (slug === 'pt-br') return record;
+    const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
     const result = localized && typeof localized === 'object' ? { ...record, ...localized } : { ...record };
-    if (preservesSourceRecordTitle(collection, record)) {
+    if (preservesSourceRecordTitle(normalizedCollection, record)) {
       if (Object.prototype.hasOwnProperty.call(record, 'title')) result.title = record.title;
       if (Object.prototype.hasOwnProperty.call(record, 'name')) result.name = record.name;
       result.preserveTitle = true;
       protectSourceRecordTitle(record);
+    }
+    if (slug === 'it') {
+      if (normalizedCollection === 'sections') {
+        if (typeof result.title === 'string') result.title = italianInitialUpperLabel(result.title, slug);
+        if (typeof result.name === 'string') result.name = italianInitialUpperLabel(result.name, slug);
+      }
+      if (typeof result.sectionName === 'string') result.sectionName = italianInitialUpperLabel(result.sectionName, slug);
     }
     ['duration','runtime','videoDuration'].forEach(field => {
       if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
@@ -1244,7 +1275,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const localized = translations[slug] || (slug === 'en-us' ? translations.en : null);
     if (!localized || typeof localized !== 'object') return true;
     if (!recordTranslationIsComplete(record, localized, collection, slug)) return true;
-    if (slug === 'fr' && String(collection || '').toLowerCase() === 'notifications') {
+    if (['fr','it'].includes(slug) && String(collection || '').toLowerCase() === 'notifications') {
+      // Notificações podem ser editadas depois de publicadas. Se a fonte mudou,
+      // reaquece a tradução persistida para evitar texto antigo em FR/IT.
       if (String(localized.sourceUpdatedAt || '') !== recordSourceSignature(record)) return true;
     }
     if (slug === 'es') {
@@ -1259,47 +1292,58 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return false;
   }
 
+  function warmItalianTranslationsInBackground(collection, records) {
+    const values = Array.isArray(records) ? records : [];
+    const normalizedCollection = String(collection || '').toLowerCase();
+    if (activeLocaleSlug() !== 'it' || !supabaseClient?.functions?.invoke || !TRANSLATABLE_COLLECTIONS.has(normalizedCollection)) return;
+
+    const missing = values.filter(record => recordNeedsTranslation(record, 'it', normalizedCollection));
+    const maxWarmup = normalizedCollection === 'notifications' ? 10 : 20;
+    const pending = missing.filter(record => {
+      const key = `${normalizedCollection}:${record.id}:it`;
+      if (translationWarmupInFlight.has(key)) return false;
+      translationWarmupInFlight.add(key);
+      return true;
+    }).slice(0, maxWarmup);
+
+    // Nunca bloqueia a renderização do catálogo. Se algum registro ainda não tiver
+    // italiano persistido, ele é aquecido em segundo plano e fica pronto para a
+    // próxima leitura/visita. Isso é essencial para visitantes novos sem cache.
+    if (!pending.length) return;
+    Promise.resolve().then(async () => {
+      try {
+        const batchSize = normalizedCollection === 'notifications' ? 5 : 10;
+        for (let offset = 0; offset < pending.length; offset += batchSize) {
+          const batch = pending.slice(offset, offset + batchSize);
+          const result = await supabaseClient.functions.invoke(ITALIAN_TRANSLATION_FUNCTION_NAME, {
+            body: { collection: normalizedCollection, ids: batch.map(record => String(record.id)), locales: ['it'] }
+          });
+          if (result?.error || !result?.data || !Array.isArray(result.data.records)) continue;
+          const translatedById = new Map();
+          result.data.records.forEach(item => {
+            if (item && item.id && item.translation && typeof item.translation === 'object') translatedById.set(String(item.id), item.translation);
+          });
+          batch.forEach(record => {
+            const translation = translatedById.get(String(record.id));
+            if (!translation) return;
+            if (!record.translations || typeof record.translations !== 'object') record.translations = {};
+            record.translations.it = translation;
+          });
+        }
+      } catch (_) {
+        // A tradução em segundo plano nunca deve impedir o conteúdo de aparecer.
+      } finally {
+        pending.forEach(record => translationWarmupInFlight.delete(`${normalizedCollection}:${record.id}:it`));
+      }
+    });
+  }
+
   async function ensureTranslatedRecords(collection, records) {
     const values = Array.isArray(records) ? records : [];
     const slug = activeLocaleSlug();
     const normalizedCollection = String(collection || '').toLowerCase();
 
-    // O italiano é preenchido sob demanda na primeira visita. A função dedicada
-    // salva translations.it no Supabase para que os próximos acessos usem o cache persistido.
-    if (slug === 'it' && supabaseClient?.functions?.invoke && TRANSLATABLE_COLLECTIONS.has(normalizedCollection)) {
-      const missing = values.filter(record => recordNeedsTranslation(record, slug, normalizedCollection));
-      const pending = missing.filter(record => {
-        const key = `${normalizedCollection}:${record.id}:${slug}`;
-        if (translationWarmupInFlight.has(key)) return false;
-        translationWarmupInFlight.add(key);
-        return true;
-      });
-      if (pending.length) {
-        try {
-          for (let offset = 0; offset < pending.length; offset += 20) {
-            const batch = pending.slice(offset, offset + 20);
-            const result = await supabaseClient.functions.invoke(ITALIAN_TRANSLATION_FUNCTION_NAME, {
-              body: { collection: normalizedCollection, ids: batch.map(record => String(record.id)), locales: ['it'] }
-            });
-            if (result?.error || !result?.data || !Array.isArray(result.data.records)) continue;
-            const translatedById = new Map();
-            result.data.records.forEach(item => {
-              if (item && item.id && item.translation && typeof item.translation === 'object') translatedById.set(String(item.id), item.translation);
-            });
-            batch.forEach(record => {
-              const translation = translatedById.get(String(record.id));
-              if (!translation) return;
-              if (!record.translations || typeof record.translations !== 'object') record.translations = {};
-              record.translations.it = translation;
-            });
-          }
-        } catch (error) {
-          (void 0);
-        } finally {
-          pending.forEach(record => translationWarmupInFlight.delete(`${normalizedCollection}:${record.id}:${slug}`));
-        }
-      }
-    }
+    if (slug === 'it') warmItalianTranslationsInBackground(normalizedCollection, values);
 
     // O francês das notificações é reparado sob demanda uma única vez quando
     // encontramos um registro antigo, incompleto ou desatualizado. A Edge Function
@@ -1319,10 +1363,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             const result = await supabaseClient.functions.invoke(TRANSLATION_FUNCTION_NAME, {
               body: { collection: normalizedCollection, ids: batch.map(record => String(record.id)), locales: ['fr'] }
             });
-            if (result?.error || !result?.data || !Array.isArray(result.data.records)) {
-              (void 0);
-              continue;
-            }
+            if (result?.error || !result?.data || !Array.isArray(result.data.records)) continue;
             const translatedById = new Map();
             result.data.records.forEach(item => {
               if (item && item.id && item.translation && typeof item.translation === 'object') translatedById.set(String(item.id), item.translation);
@@ -1334,8 +1375,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               record.translations.fr = translation;
             });
           }
-        } catch (error) {
-          (void 0);
+        } catch (_) {
         } finally {
           pending.forEach(record => translationWarmupInFlight.delete(`${normalizedCollection}:${record.id}:${slug}`));
         }
@@ -16186,7 +16226,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function setNotificationRoute(id,replace){
     var url=new URL(location.href);
-    url.pathname='/atualizacoes'+(id?'/'+encodeURIComponent(id):'');
+    var base='/atualizacoes'+(id?'/'+encodeURIComponent(id):'');
+    url.pathname=window.BETVLocaleURL?window.BETVLocaleURL(base):base;
     url.hash='';
     var target=url.pathname+(url.search||'');
     if(replace)history.replaceState({beRoute:'notifications',id:id||''},'',target);
@@ -16220,7 +16261,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     selectedId='';
     if(updateRoute!==false&&routeInfo().active){
       var url=new URL(location.href);
-      url.pathname='/';
+      url.pathname=window.BETVLocaleURL?window.BETVLocaleURL('/'):'/';
       url.hash='';
       history.pushState({beRoute:'home'},'',url.pathname+(url.search||''));
 
@@ -16478,11 +16519,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var url = new URL(window.location.href);
       if (!url.searchParams.has('__betv_update')) return;
       var appliedVersion = String(url.searchParams.get('__betv_update') || '').trim();
-      if (appliedVersion) {
+      var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
+      var requiresExactBuild = /^v:/.test(appliedVersion);
+      var verified = Boolean(appliedVersion) && (!requiresExactBuild || (loadedVersion && loadedVersion === appliedVersion));
+
+      if (verified) {
         if (isAdminContext()) persistAdminAppliedUpdate(appliedVersion);
         else persistPublicAppliedUpdate(appliedVersion);
+        clearPendingUpdate();
+      } else if (appliedVersion) {
+        // Nunca marca uma atualização como concluída se o HTML ainda pertence ao
+        // deploy antigo. Mantém o aviso disponível para uma nova tentativa.
+        persistPendingUpdate(appliedVersion);
       }
-      clearPendingUpdate();
       url.searchParams.delete('__betv_update');
       url.searchParams.delete('_');
       window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
@@ -16722,22 +16771,30 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function clearTransientStorage() {
     // Remove somente caches descartáveis. Login, idioma, avatar, favoritos,
-    // preferências e demais configurações do usuário permanecem intactos.
+    // preferências e demais configurações pessoais permanecem intactos.
     try {
       var removableLocalKeys = [];
       for (var index = 0; index < localStorage.length; index += 1) {
         var key = String(localStorage.key(index) || '');
-        if (key.indexOf('betvDynamicI18n:') === 0 || key === 'beContentAnalyticsSession') {
-          removableLocalKeys.push(key);
-        }
+        var transient = key.indexOf('betvDynamicI18n:') === 0 ||
+          key.indexOf('betvHomeBootstrap') === 0 ||
+          key.indexOf('betvDeploymentVersionCheck') === 0 ||
+          key.indexOf('betvObservedReleaseState') === 0 ||
+          key === 'betvUpdateAssetCache' ||
+          key === 'betvUpdateVersion' ||
+          key === 'beContentAnalyticsSession';
+        if (transient) removableLocalKeys.push(key);
       }
       removableLocalKeys.forEach(function (key) { localStorage.removeItem(key); });
     } catch (_) {}
 
     try {
-      ['betvUpdateAssetCache', 'betvUpdateVersion'].forEach(function (key) {
-        sessionStorage.removeItem(key);
-      });
+      var removableSessionKeys = [];
+      for (var sessionIndex = 0; sessionIndex < sessionStorage.length; sessionIndex += 1) {
+        var sessionKey = String(sessionStorage.key(sessionIndex) || '');
+        if (sessionKey.indexOf('betvUpdate') === 0 || sessionKey.indexOf('betvHomeBootstrap') === 0) removableSessionKeys.push(sessionKey);
+      }
+      removableSessionKeys.forEach(function (key) { sessionStorage.removeItem(key); });
     } catch (_) {}
   }
 
@@ -16802,7 +16859,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return Array.from(new Set(urls));
   }
 
-  function refreshNetworkResources() {
+  function refreshNetworkResources(targetVersion) {
     var urls = currentResourceUrls();
     if (!urls.length) return Promise.resolve();
 
@@ -16811,15 +16868,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (controller) controller.abort();
     }, 8000);
 
-    var requests = urls.map(function (url) {
+    var requests = urls.map(function (rawUrl) {
+      var requestUrl = rawUrl;
+      try {
+        var parsed = new URL(rawUrl, window.location.href);
+        parsed.searchParams.set('__betv_asset_update', String(targetVersion || Date.now()));
+        parsed.searchParams.set('_', String(Date.now()));
+        requestUrl = parsed.href;
+      } catch (_) {}
       var options = {
         method: 'GET',
-        cache: 'reload',
+        cache: 'no-store',
         credentials: 'same-origin',
-        redirect: 'follow'
+        redirect: 'follow',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
       };
       if (controller) options.signal = controller.signal;
-      return fetch(url, options);
+      return fetch(requestUrl, options);
     });
 
     return Promise.allSettled(requests).finally(function () {
@@ -16850,19 +16915,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(subtitle)subtitle.hidden=true;
     if(button){button.disabled=true;button.hidden=true;}
 
+    var targetVersion = latestVersion || readPendingUpdate() || String(Date.now());
+    persistPendingUpdate(targetVersion);
+
     Promise.resolve()
       .then(clearBrowserCaches)
-      .then(refreshNetworkResources)
+      .then(function () { return refreshNetworkResources(targetVersion); })
       .finally(function () {
         try {
-          var targetVersion = latestVersion || readPendingUpdate() || String(Date.now());
-          if (isAdminContext()) persistAdminAppliedUpdate(targetVersion);
           var url = new URL(window.location.href);
           url.searchParams.set('__betv_update', targetVersion);
           url.searchParams.set('_', String(Date.now()));
           window.location.replace(url.href);
         } catch (_) {
-          clearPendingUpdate();
           window.location.reload();
         }
       });

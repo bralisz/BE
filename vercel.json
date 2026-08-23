@@ -309,6 +309,16 @@
       "destination": "/404.html"
     },
     {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "query",
+          "key": "__betv_update"
+        }
+      ],
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/pt-br",
       "destination": "/index.html"
     },

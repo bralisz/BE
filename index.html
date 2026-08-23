@@ -204,7 +204,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </script>
 <link rel="stylesheet" href="/assets/css/site.css?rev=20260822-ong-payment-panel-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/assets/js/site.js?rev=20260823-it-locale-v1"></script>
+<script defer src="/assets/js/site.js?rev=20260823-update-cache-v2"></script>
 <!-- Vercel Web Analytics: mantém o console público oculto e restaura apenas a coleta de pageviews/visitors. -->
 <script defer src="/_vercel/insights/script.js"></script>
 <script>
@@ -212,7 +212,11 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost')return;
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('/sw.js?rev=20260821-vk-stable-no-timeout-v3',{scope:'/',updateViaCache:'none'}).catch(function(error){
+    var build=String(window.__BETV_DEPLOYMENT_VERSION__||'20260823-update-cache-v2');
+    var cleanup=window.__BETV_UPDATE_CACHE_CLEANUP__;
+    Promise.resolve(cleanup).catch(function(){}).then(function(){
+      return navigator.serviceWorker.register('/sw.js?build='+encodeURIComponent(build),{scope:'/',updateViaCache:'none'});
+    }).catch(function(error){
       (void 0);
     });
   },{once:true});

@@ -71,9 +71,15 @@ function deploymentVersion() {
 }
 
 function injectDeploymentVersion(html) {
-  const serialized = JSON.stringify(deploymentVersion()).replace(/</g, '\\u003c');
-  const script = `<script>window.__BETV_DEPLOYMENT_VERSION__=${serialized};<\/script>`;
-  return html.replace('</head>', `${script}
+  const version = deploymentVersion();
+  const serialized = JSON.stringify(version).replace(/</g, '\u003c');
+  const buildToken = encodeURIComponent(version);
+  const withFreshCriticalAssets = String(html || '').replace(
+    /((?:src|href)=["']\/assets\/(?:js|css)\/[^"']+\?[^"']*)(["'])/gi,
+    `$1&build=${buildToken}$2`
+  );
+  const script = `<script>(function(){window.__BETV_DEPLOYMENT_VERSION__=${serialized};try{var u=new URL(window.location.href);if(!u.searchParams.has('__betv_update'))return;var localKeys=[];for(var i=0;i<localStorage.length;i+=1){var k=String(localStorage.key(i)||'');if(k.indexOf('betvDynamicI18n:')===0||k.indexOf('betvHomeBootstrap')===0||k.indexOf('betvDeploymentVersionCheck')===0||k.indexOf('betvObservedReleaseState')===0||k==='betvUpdateAssetCache'||k==='betvUpdateVersion'||k==='beContentAnalyticsSession')localKeys.push(k);}localKeys.forEach(function(k){try{localStorage.removeItem(k);}catch(_){}});var sessionKeys=[];for(var j=0;j<sessionStorage.length;j+=1){var sk=String(sessionStorage.key(j)||'');if(sk.indexOf('betvHomeBootstrap')===0)sessionKeys.push(sk);}sessionKeys.forEach(function(k){try{sessionStorage.removeItem(k);}catch(_){}});var jobs=[];if('caches'in window)jobs.push(caches.keys().then(function(keys){return Promise.all(keys.map(function(key){return caches.delete(key);}));}));if('serviceWorker'in navigator)jobs.push(navigator.serviceWorker.getRegistrations().then(function(regs){return Promise.all(regs.map(function(reg){return reg.unregister();}));}));window.__BETV_UPDATE_CACHE_CLEANUP__=Promise.allSettled(jobs);}catch(_){window.__BETV_UPDATE_CACHE_CLEANUP__=Promise.resolve();}})();<\/script>`;
+  return withFreshCriticalAssets.replace('</head>', `${script}
 </head>`);
 }
 
@@ -799,11 +805,23 @@ module.exports = async function sitePage(req, res) {
         routeInfo
       )
     );
+    const updateCandidates = [
+      req.query && req.query.__betv_update,
+      req && req.url,
+      req && req.headers && req.headers['x-vercel-original-path'],
+      req && req.headers && req.headers['x-original-url'],
+      req && req.headers && req.headers['x-rewrite-url']
+    ];
+    const updateRequest = updateCandidates.some((candidate, index) => {
+      if (index === 0) return Boolean(String(candidate || '').trim());
+      try { return Boolean(new URL(String(candidate || ''), OFFICIAL_SITE_ORIGIN).searchParams.get('__betv_update')); }
+      catch (_) { return false; }
+    });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader(
       'Cache-Control',
-      recoveryRequest
-        ? 'no-store, max-age=0'
+      (recoveryRequest || updateRequest)
+        ? 'private, no-store, max-age=0, must-revalidate'
         : legalRequest
           ? 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400'
           : profileUsername
@@ -812,6 +830,11 @@ module.exports = async function sitePage(req, res) {
               ? 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600'
               : 'public, max-age=60, s-maxage=300, stale-while-revalidate=1800'
     );
+    if (updateRequest) {
+      res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const requestPath = routeInfo.logicalPath;
     if (isNoindexRoute(routeInfo)) {

@@ -18,17 +18,29 @@
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
   var PROTECTED_EXACT=new Set([
-    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Discord','Google','Instagram','TikTok','Twitter / X','Spotify','YouTube',
+    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Avocado','Eyelash','Blohsh','Discord','Google','Instagram','TikTok','Twitter / X','Spotify','YouTube',
     'Apple TV','Prime Video','Paramount+','Disney+','Stripe','Supabase','CC BY-SA 4.0','LGPD','DMCA','HTTPS','BRL','USD',
-    'Ocean Eyes','WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','Happier Than Ever','HIT ME HARD AND SOFT',
-    'localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
+    'WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','HIT ME HARD AND SOFT','Happier Than Ever','dont smile at me','Guitar Songs',
+    'all the good girls go to hell','bad guy','Bellyache','BIRDS OF A FEATHER','Bored','bury a friend','CHIHIRO','everything i wanted',
+    'Guess','hostage','idontwannabeyouanymore','Lo Vas A Olvidar','Lost Cause','lovely','LUNCH','Male Fantasy','my future','NDA',
+    'Never Felt So Alone','No Time To Die','Ocean Eyes','ocean eyes','Therefore I Am','watch','What Was I Made For?',
+    "when the party's over",'xanny','you should see me in a crown','Your Power','THE GREATEST','SKINNY',"L'AMOUR DE MA VIE",
+    'Billie Bossa Nova','Getting Older','TV','bitches broken hearts','listen before i go','come out and play','One Less Lonely Girl',
+    'Have Yourself A Merry Little Christmas','localStorage','sessionStorage','SameSite=Lax','be_cookie_ack','be_site_preferences'
   ]);
-  var ORIGINAL_TITLE_COLLECTIONS=new Set(['contents','featured','movies','series','videos','ongs','news']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v6-original-titles';
-  var STATIC_REV='20260823-it-locale-v1';
+  var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
+  var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v11-it-official-title-lock';
+  var STATIC_REV='20260823-it-official-title-lock-v1';
+  var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
   function normalize(value){return String(value==null?'':value).replace(/\s+/g,' ').trim();}
+  function italianInitialUpper(value){
+    var raw=String(value==null?'':value);
+    if(slug!=='it'||!raw)return raw;
+    return raw.replace(/^(\s*)(\p{L})/u,function(_,space,letter){return space+letter.toLocaleUpperCase('it-IT');});
+  }
   function preserveWhitespace(raw,translated){
     var leading=(String(raw).match(/^\s*/)||[''])[0];
     var trailing=(String(raw).match(/\s*$/)||[''])[0];
@@ -143,10 +155,22 @@
     if(!localized||typeof localized!=='object')return record;
     var merged=Object.assign({},record,localized);
     var collection=String(record.collection||'').toLowerCase();
-    var keepTitle=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true'||ORIGINAL_TITLE_COLLECTIONS.has(collection);
+    var sectionId=String(record.sectionId||'').trim();
+    var sectionName=String(record.sectionName||record.sourceSectionTitle||'').trim().toLowerCase();
+    var recordType=String(record.type||record.itemType||'').trim().toLowerCase();
+    var explicit=record.preserveTitle===true||String(record.preserveTitle||'').toLowerCase()==='true';
+    var isAlbumRecord=collection==='news'&&['album','álbum','single'].includes(recordType);
+    var keepTitle=['es','fr','it'].includes(slug)&&(explicit||isAlbumRecord||['albums','albuns','álbuns'].includes(collection)||(collection==='videos'&&(MUSIC_TITLE_SECTION_IDS.has(sectionId)||MUSIC_TITLE_SECTION_NAMES.has(sectionName))));
     if(keepTitle){
       if(Object.prototype.hasOwnProperty.call(record,'title')){merged.title=record.title;protectExact(record.title);}
       if(Object.prototype.hasOwnProperty.call(record,'name')){merged.name=record.name;protectExact(record.name);}
+    }
+    if(slug==='it'){
+      if(collection==='sections'){
+        if(typeof merged.title==='string')merged.title=italianInitialUpper(merged.title);
+        if(typeof merged.name==='string')merged.name=italianInitialUpper(merged.name);
+      }
+      if(typeof merged.sectionName==='string')merged.sectionName=italianInitialUpper(merged.sectionName);
     }
     return merged;
   }
@@ -215,7 +239,7 @@
       apply(document.documentElement);
     }catch(error){
       batch.forEach(function(text){translatedThisSession.delete(text);});
-      console.warn('Tradução complementar indisponível:',error&&error.message||error);
+      (void error);
     }finally{
       translationBusy=false;
       if(missingTexts.size)scheduleMissingTranslation(800);
@@ -234,12 +258,12 @@
     }
     loadDynamicCache();
     try{
-      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV),{credentials:'same-origin',cache:'no-cache'});
+      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
       if(response.ok){
         var payload=await response.json();
         if(payload&&typeof payload==='object')Object.keys(payload).forEach(function(key){map[key]=payload[key];});
       }
-    }catch(error){console.warn('Não foi possível carregar o idioma do site:',error&&error.message||error);}
+    }catch(error){(void error);}
     window.BETVI18n=api;
     apply(document.documentElement);
     startObserver();

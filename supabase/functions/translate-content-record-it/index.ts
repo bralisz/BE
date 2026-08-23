@@ -14,6 +14,20 @@ const GOOGLE_JSON = "https://translate.googleapis.com/translate_a/single";
 const GOOGLE_MOBILE = "https://translate.google.com/m";
 const MAX_RECORDS = 50;
 const MAX_CHARS = 30000;
+const TRANSLATION_REVISION = "20260823-official-title-lock-v1";
+const OFFICIAL_TITLES = [
+  "Happier Than Ever: A Love Letter to Los Angeles",
+  "Billie Eilish: The World’s a Little Blurry",
+  "Billie Eilish: The World's a Little Blurry",
+  "The World’s a Little Blurry",
+  "The World's a Little Blurry",
+  "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+  "HIT ME HARD AND SOFT",
+  "Happier Than Ever",
+  "dont smile at me",
+  "don't smile at me",
+  "Guitar Songs"
+].sort((a,b)=>b.length-a.length);
 
 function allowedOrigin(origin:string){
   if(!origin)return true;
@@ -29,21 +43,37 @@ function text(value:unknown,max=8000){return String(value??"").trim().slice(0,ma
 function decode(value:string){return value.replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/&nbsp;/gi," ").replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&amp;/gi,"&");}
 function htmlResult(html:string){for(const re of [/<div[^>]*class=["'][^"']*\bresult-container\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,/<div[^>]*class=["'][^"']*\bt0\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i]){const m=html.match(re);if(m){const out=decode(m[1].replace(/<br\s*\/?\s*>/gi,"\n").replace(/<[^>]+>/g,"")).trim();if(out)return out;}}return "";}
 function sleep(ms:number){return new Promise(r=>setTimeout(r,ms));}
+function escapeRegex(value:string){return value.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+function protectOfficialTitles(input:string){
+  const values:string[]=[];
+  const hold=(value:string)=>`[[[${values.push(value)-1}]]]`;
+  let output=input;
+  for(const term of OFFICIAL_TITLES){
+    const re=new RegExp(escapeRegex(term),"giu");
+    output=output.replace(re,match=>hold(match));
+  }
+  return {
+    value:output,
+    restore:(value:string)=>value.replace(/\[\s*\[\s*\[\s*(\d+)\s*\]\s*\]\s*\]/g,(_m,index)=>values[Number(index)]??_m)
+  };
+}
 function chunks(value:string){const out:string[]=[];let rest=value;while(rest.length>1800){const sample=rest.slice(0,1801);const cut=Math.max(sample.lastIndexOf("\n"),sample.lastIndexOf(". "),sample.lastIndexOf(" "));const size=cut>950?cut+1:1800;out.push(rest.slice(0,size));rest=rest.slice(size);}if(rest)out.push(rest);return out;}
 async function translateChunk(source:string,target:string){
   if(!source.trim())return source;
+  const protectedSource=protectOfficialTitles(source);
+  const translatedSource=protectedSource.value;
   try{
-    const u=new URL(GOOGLE_JSON);u.searchParams.set("client","gtx");u.searchParams.set("sl","auto");u.searchParams.set("tl",target);u.searchParams.set("dt","t");u.searchParams.set("q",source);
+    const u=new URL(GOOGLE_JSON);u.searchParams.set("client","gtx");u.searchParams.set("sl","auto");u.searchParams.set("tl",target);u.searchParams.set("dt","t");u.searchParams.set("q",translatedSource);
     const r=await fetch(u,{signal:AbortSignal.timeout(15000),headers:{"Accept":"application/json","User-Agent":"Mozilla/5.0 BETV-Translator/2.0"}});
-    if(r.ok){const p=await r.json();if(Array.isArray(p)&&Array.isArray(p[0])){const result=p[0].map((part:unknown)=>Array.isArray(part)?String(part[0]||""):"").join("").trim();if(result)return result;}}
+    if(r.ok){const p=await r.json();if(Array.isArray(p)&&Array.isArray(p[0])){const result=p[0].map((part:unknown)=>Array.isArray(part)?String(part[0]||""):"").join("").trim();if(result)return protectedSource.restore(result);}}
   }catch{}
-  const u=new URL(GOOGLE_MOBILE);u.searchParams.set("sl","auto");u.searchParams.set("tl",target);u.searchParams.set("hl",target);u.searchParams.set("q",source);
+  const u=new URL(GOOGLE_MOBILE);u.searchParams.set("sl","auto");u.searchParams.set("tl",target);u.searchParams.set("hl",target);u.searchParams.set("q",translatedSource);
   for(let attempt=1;attempt<=3;attempt++){
     try{
       const r=await fetch(u,{signal:AbortSignal.timeout(15000),headers:{"Accept":"text/html,application/xhtml+xml","User-Agent":"Mozilla/5.0 BETV-Translator/2.0"}});
       if(r.status===429)throw new Error("rate_limited");
       if(!r.ok)throw new Error(`http_${r.status}`);
-      const result=htmlResult(await r.text());if(result)return result;
+      const result=htmlResult(await r.text());if(result)return protectedSource.restore(result);
       throw new Error("translation_not_found");
     }catch(error){if(attempt===3)throw error;await sleep(400*attempt);}
   }
@@ -73,6 +103,14 @@ ${item.source}`).join("\n");
   return result;
 }
 function active(value:unknown){return value!==false&&String(value??"true").toLowerCase()!=="false";}
+function italianInitialUpper(value:unknown){const raw=String(value??"");if(!raw)return raw;return raw.replace(/^(\s*)(\p{L})/u,(_m,space,letter)=>space+String(letter).toLocaleUpperCase("it-IT"));}
+function normalizeItalianPresentation(collection:string,locale:string,translation:Record<string,unknown>){
+  const out={...(translation||{})};
+  if(locale==="it"&&collection==="sections"){
+    for(const field of ["title","name","sectionName"]){if(typeof out[field]==="string"&&text(out[field]))out[field]=italianInitialUpper(out[field]);}
+  }
+  return out;
+}
 function preserveTitle(collection:string,data:Record<string,unknown>,locale:string){
   const sectionId=text(data.sectionId,120),sectionName=text(data.sectionName||data.sourceSectionTitle,160).toLowerCase();
   const exactMusic=collection==="videos"&&(MUSIC_SECTION_IDS.has(sectionId)||MUSIC_SECTION_NAMES.has(sectionName));
@@ -138,15 +176,16 @@ Deno.serve(async(req:Request)=>{
       const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);
       for(const locale of locales){
         const keepTitle=collection==="ongs"||preserveTitle(collection,data,locale);
-        const existing=translations[locale];if(!force&&existing&&existing.sourceUpdatedAt===signature&&translationComplete(data,existing,keepTitle)){const cached={...existing};if(keepTitle){if(typeof data.title==="string"&&text(data.title))cached.title=data.title;if(typeof data.name==="string"&&text(data.name))cached.name=data.name;}translations[locale]=cached;responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
+        const existing=translations[locale];const revisionOk=String(existing?.revision||"")===TRANSLATION_REVISION;if(!force&&existing&&existing.sourceUpdatedAt===signature&&translationComplete(data,existing,keepTitle)&&revisionOk){let cached={...existing};if(keepTitle){if(typeof data.title==="string"&&text(data.title))cached.title=data.title;if(typeof data.name==="string"&&text(data.name))cached.name=data.name;}cached=normalizeItalianPresentation(collection,locale,cached);translations[locale]=cached;responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
         const fields=FIELDS.filter(field=>!(keepTitle&&(field==="title"||field==="name"))).filter(field=>typeof data[field]==="string"&&text(data[field])&&!/^https?:\/\//i.test(text(data[field])));
         total+=fields.reduce((sum,field)=>sum+text(data[field]).length,0);if(total>MAX_CHARS)return reply(req,413,{error:"Conteúdo excede o limite por solicitação."});
         const values=await translateValues(fields.map(field=>text(data[field])),TARGETS[locale]);
-        const translated:Record<string,unknown>={sourceUpdatedAt:signature,translatedAt:new Date().toISOString(),provider:"deep-translator-google-web"};
+        const translated:Record<string,unknown>={sourceUpdatedAt:signature,translatedAt:new Date().toISOString(),provider:"deep-translator-google-web",revision:TRANSLATION_REVISION};
         fields.forEach((field,index)=>translated[field]=values[index]||data[field]);
         if(keepTitle){if(typeof data.title==="string"&&text(data.title))translated.title=data.title;if(typeof data.name==="string"&&text(data.name))translated.name=data.name;}
         DURATION_FIELDS.forEach(field=>{if(typeof data[field]==="string"&&text(data[field]))translated[field]=duration(data[field],locale);});
-        translations[locale]=translated;responseRecords.push({id:row.id,locale,translation:translated,cached:false});
+        const normalizedTranslated=normalizeItalianPresentation(collection,locale,translated);
+        translations[locale]=normalizedTranslated;responseRecords.push({id:row.id,locale,translation:normalizedTranslated,cached:false});
       }
       data.translations=translations;const {error}=await adminClient.from(table).update({data}).eq("id",row.id);if(error)throw new Error(`save_${error.code}`);
     }

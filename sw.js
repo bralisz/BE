@@ -1,5 +1,10 @@
-/* Service worker do PWA; os arquivos continuam vindo da rede. */
-const SW_VERSION = '20260822-ong-pay-ios-v5';
+/* Service worker do PWA; não mantém versões antigas dos arquivos do site. */
+const SW_VERSION = '20260823-update-cache-v2';
+
+async function clearBetvCaches() {
+  const keys = await caches.keys();
+  await Promise.all(keys.map(key => caches.delete(key)));
+}
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -7,12 +12,15 @@ self.addEventListener('install', () => {
 
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.map(key => caches.delete(key)));
+    await clearBetvCaches();
     await self.clients.claim();
   })());
 });
 
 self.addEventListener('message', event => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  const data = event.data;
+  if (data === 'SKIP_WAITING' || (data && data.type === 'SKIP_WAITING')) self.skipWaiting();
+  if (data && data.type === 'BETV_CLEAR_CACHES') {
+    event.waitUntil(clearBetvCaches());
+  }
 });
