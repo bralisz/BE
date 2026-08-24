@@ -22,8 +22,19 @@ const SAFE_MEDIA_SUFFIXES = [
 function config() {
   return {
     url: String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_URL).replace(/\/$/, ''),
-    key: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_KEY
+    key: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_KEY,
+    serviceKey:
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SECRET_KEY ||
+      process.env.SUPABASE_SERVICE_KEY ||
+      process.env.SB_SERVICE_ROLE_KEY ||
+      ''
   };
+}
+
+function adminKey() {
+  const cfg = config();
+  return cfg.serviceKey || cfg.key;
 }
 
 function normalizeUsername(value) {
@@ -111,6 +122,7 @@ function sanitizeProfile(row) {
   const username = normalizeUsername(row.username);
   if (!validUsername(username)) return null;
   return {
+    id: safeText(row.id || row.user_id, 80),
     displayName: safeText(row.display_name || row.displayName || 'Usuário', 80),
     username,
     avatarUrl: safeAsset(row.avatar_url || row.avatarUrl),
@@ -123,56 +135,254 @@ function sanitizeProfile(row) {
     favorites: sanitizeList(row.favorites, 4),
     lovedAlbums: sanitizeList(row.loved_albums || row.lovedAlbums, 3),
     savedContents: sanitizeList(row.saved_contents || row.savedContents, 20),
-    likesReceived: Math.max(0, Math.floor(Number(row.likes_received ?? row.likesReceived ?? 0) || 0))
+    likesReceived: Math.max(0, Math.floor(Number(row.likes_received ?? row.likesReceived ?? 0) || 0)),
+    followersCount: Math.max(0, Math.floor(Number(row.followers_count ?? row.followersCount ?? 0) || 0)),
+    followingCount: Math.max(0, Math.floor(Number(row.following_count ?? row.followingCount ?? 0) || 0))
   };
 }
 
-async function fetchPublicProfile(username) {
-  const { url, key } = config();
-  const response = await fetch(`${url}/rest/v1/rpc/get_public_profile`, {
-    method: 'POST',
+async function restFetch(path, options = {}) {
+  const { url } = config();
+  const key = options.key || adminKey();
+  const response = await fetch(`${url}${path}`, {
+    method: options.method || 'GET',
     headers: {
       apikey: key,
       Authorization: `Bearer ${key}`,
       Accept: 'application/json',
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
     },
-    body: JSON.stringify({ p_username: username }),
+    body: options.body ? JSON.stringify(options.body) : undefined,
     cache: 'no-store'
   });
-  if (!response.ok) throw new Error('public_profile_unavailable');
-  const payload = await response.json();
+  if (!response.ok) {
+    const error = new Error(`supabase_${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+async function restFetchWithCount(path, offset = 0, limit = 1) {
+  const { url } = config();
+  const key = adminKey();
+  const start = Math.max(0, Math.floor(Number(offset) || 0));
+  const size = Math.max(1, Math.min(1000, Math.floor(Number(limit) || 1)));
+  const response = await fetch(`${url}${path}`, {
+    method: 'GET',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Prefer: 'count=exact',
+      Range: `${start}-${start + size - 1}`
+    },
+    cache: 'no-store'
+  });
+  if (!response.ok) {
+    const error = new Error(`supabase_${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  const contentRange = String(response.headers.get('content-range') || '');
+  const match = contentRange.match(/\/(\d+|\*)$/);
+  const total = match && match[1] !== '*' ? Math.max(0, Number(match[1]) || 0) : 0;
+  const rows = await response.json();
+  return { rows: Array.isArray(rows) ? rows : [], total };
+}
+
+async function fetchPublicProfile(username) {
+  const payload = await restFetch('/rest/v1/rpc/get_public_profile', {
+    method: 'POST',
+    key: config().key,
+    body: { p_username: username }
+  });
   const row = Array.isArray(payload) ? payload[0] : payload;
   return sanitizeProfile(row);
 }
 
+async function fetchProfileIdentity(username) {
+  const rows = await restFetch(`/rest/v1/profiles?select=id,username,display_name,avatar_url,community_tag&username=eq.${encodeURIComponent(username)}&limit=1`);
+  return Array.isArray(rows) && rows[0] ? rows[0] : null;
+}
+
+function normalizeFollowingUsernames(value) {
+  const list = Array.isArray(value) ? value : [];
+  const output = [];
+  const seen = new Set();
+  for (const item of list) {
+    const username = normalizeUsername(item);
+    if (!validUsername(username) || seen.has(username)) continue;
+    seen.add(username);
+    output.push(username);
+    if (output.length >= 500) break;
+  }
+  return output;
+}
+
+async function fetchUserPreferenceData(userId) {
+  if (!userId) return {};
+  const rows = await restFetch(`/rest/v1/user_preferences?select=data&user_id=eq.${encodeURIComponent(userId)}&limit=1`);
+  const row = Array.isArray(rows) && rows[0] ? rows[0] : null;
+  return row && row.data && typeof row.data === 'object' ? row.data : {};
+}
+
+async function fetchProfilesByUsernames(usernames) {
+  const normalized = normalizeFollowingUsernames(usernames);
+  if (!normalized.length) return [];
+  const query = normalized.map(name => `"${name}"`).join(',');
+  const rows = await restFetch(`/rest/v1/profiles?select=id,username,display_name,avatar_url,community_tag&username=in.(${encodeURIComponent(query)})`);
+  const mapped = Array.isArray(rows) ? rows.map(row => ({
+    id: safeText(row.id, 80),
+    username: normalizeUsername(row.username),
+    displayName: safeText(row.display_name || row.displayName || 'Usuário', 80),
+    avatarUrl: safeAsset(row.avatar_url || row.avatarUrl),
+    communityTag: safeText(row.community_tag || row.communityTag, 20).toLowerCase()
+  })).filter(row => validUsername(row.username)) : [];
+  const order = new Map(normalized.map((name, index) => [name, index]));
+  mapped.sort((a, b) => (order.get(a.username) ?? 999999) - (order.get(b.username) ?? 999999));
+  return mapped;
+}
+
+async function fetchFollowerPage(username, offset = 0, limit = 15) {
+  const criteria = encodeURIComponent(JSON.stringify({ followingUsers: [username] }));
+  const payload = await restFetchWithCount(`/rest/v1/user_preferences?select=user_id&data=cs.${criteria}`, offset, limit);
+  const ids = payload.rows.map(row => safeText(row && row.user_id, 80)).filter(Boolean);
+  return { ids, total: payload.total };
+}
+
+async function fetchFollowerCount(username) {
+  const criteria = encodeURIComponent(JSON.stringify({ followingUsers: [username] }));
+  const payload = await restFetchWithCount(`/rest/v1/user_preferences?select=user_id&data=cs.${criteria}`, 0, 1);
+  return payload.total;
+}
+
+async function fetchProfilesByIds(ids) {
+  const normalized = Array.isArray(ids) ? ids.map(value => safeText(value, 80)).filter(Boolean) : [];
+  if (!normalized.length) return [];
+  const query = normalized.map(id => `"${id}"`).join(',');
+  const rows = await restFetch(`/rest/v1/profiles?select=id,username,display_name,avatar_url,community_tag&id=in.(${encodeURIComponent(query)})`);
+  const mapped = Array.isArray(rows) ? rows.map(row => ({
+    id: safeText(row.id, 80),
+    username: normalizeUsername(row.username),
+    displayName: safeText(row.display_name || row.displayName || 'Usuário', 80),
+    avatarUrl: safeAsset(row.avatar_url || row.avatarUrl),
+    communityTag: safeText(row.community_tag || row.communityTag, 20).toLowerCase()
+  })).filter(row => validUsername(row.username)) : [];
+  const order = new Map(normalized.map((id, index) => [id, index]));
+  mapped.sort((a, b) => (order.get(a.id) ?? 999999) - (order.get(b.id) ?? 999999));
+  return mapped;
+}
+
+function applySearch(items, search) {
+  const query = safeText(search, 80).toLowerCase();
+  if (!query) return items;
+  return items.filter(item => String(item.username || '').toLowerCase().includes(query) || String(item.displayName || '').toLowerCase().includes(query));
+}
+
+async function fetchFollowStats(username) {
+  const identity = await fetchProfileIdentity(username);
+  if (!identity || !identity.id) return { followersCount: 0, followingCount: 0 };
+  const [data, followersCount] = await Promise.all([
+    fetchUserPreferenceData(identity.id),
+    fetchFollowerCount(username)
+  ]);
+  const followingCount = normalizeFollowingUsernames(data.followingUsers).length;
+  return { followersCount, followingCount };
+}
+
+async function fetchRelationshipList(username, type, offset, limit, search) {
+  const normalizedType = type === 'followers' ? 'followers' : 'following';
+  const safeOffset = Math.max(0, Math.floor(Number(offset) || 0));
+  const safeLimit = Math.min(50, Math.max(1, Math.floor(Number(limit) || 15)));
+  const query = safeText(search, 80).toLowerCase();
+  const identity = await fetchProfileIdentity(username);
+  if (!identity || !identity.id) return { items: [], total: 0, offset: safeOffset, limit: safeLimit, hasMore: false };
+
+  if (normalizedType === 'following') {
+    const data = await fetchUserPreferenceData(identity.id);
+    const usernames = normalizeFollowingUsernames(data.followingUsers);
+    let items = await fetchProfilesByUsernames(usernames);
+    items = applySearch(items, query);
+    const total = items.length;
+    const pageItems = items.slice(safeOffset, safeOffset + safeLimit);
+    return { items: pageItems, total, offset: safeOffset, limit: safeLimit, hasMore: safeOffset + pageItems.length < total };
+  }
+
+  if (!query) {
+    const page = await fetchFollowerPage(username, safeOffset, safeLimit);
+    const items = await fetchProfilesByIds(page.ids);
+    return { items, total: page.total, offset: safeOffset, limit: safeLimit, hasMore: safeOffset + page.ids.length < page.total };
+  }
+
+  const escaped = query.replace(/[,*()]/g, '');
+  const profileRows = await restFetch(`/rest/v1/profiles?select=id,username,display_name,avatar_url,community_tag&or=(username.ilike.*${encodeURIComponent(escaped)}*,display_name.ilike.*${encodeURIComponent(escaped)}*)&limit=200`);
+  const candidates = Array.isArray(profileRows) ? profileRows : [];
+  if (!candidates.length) return { items: [], total: 0, offset: safeOffset, limit: safeLimit, hasMore: false };
+  const ids = candidates.map(row => safeText(row.id, 80)).filter(Boolean);
+  const idQuery = ids.map(id => `"${id}"`).join(',');
+  const criteria = encodeURIComponent(JSON.stringify({ followingUsers: [username] }));
+  const rows = await restFetch(`/rest/v1/user_preferences?select=user_id&user_id=in.(${encodeURIComponent(idQuery)})&data=cs.${criteria}`);
+  const followerIds = new Set((Array.isArray(rows) ? rows : []).map(row => safeText(row.user_id, 80)).filter(Boolean));
+  const matched = candidates.filter(row => followerIds.has(safeText(row.id, 80))).map(row => ({
+    id: safeText(row.id, 80),
+    username: normalizeUsername(row.username),
+    displayName: safeText(row.display_name || row.displayName || 'Usuário', 80),
+    avatarUrl: safeAsset(row.avatar_url || row.avatarUrl),
+    communityTag: safeText(row.community_tag || row.communityTag, 20).toLowerCase()
+  })).filter(row => validUsername(row.username));
+  const total = matched.length;
+  const items = matched.slice(safeOffset, safeOffset + safeLimit);
+  return { items, total, offset: safeOffset, limit: safeLimit, hasMore: safeOffset + items.length < total };
+}
+
 async function publicProfile(req, res) {
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
+  if (!['GET', 'HEAD'].includes(req.method)) {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).end();
   }
 
   const username = normalizeUsername(Array.isArray(req.query?.username) ? req.query.username[0] : req.query?.username);
   if (!validUsername(username)) return res.status(400).end();
+  const view = String(Array.isArray(req.query?.view) ? req.query.view[0] : req.query?.view || '').trim().toLowerCase();
 
   try {
-    const profile = await fetchPublicProfile(username);
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+
+    if (view === 'relationships') {
+      const type = String(Array.isArray(req.query?.type) ? req.query.type[0] : req.query?.type || 'followers').trim().toLowerCase();
+      const offset = Array.isArray(req.query?.offset) ? req.query.offset[0] : req.query?.offset;
+      const limit = Array.isArray(req.query?.limit) ? req.query.limit[0] : req.query?.limit;
+      const search = Array.isArray(req.query?.q) ? req.query.q[0] : req.query?.q || '';
+      const payload = await fetchRelationshipList(username, type, offset, limit, search);
+      res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+      if (req.method === 'HEAD') return res.status(200).end();
+      return res.status(200).send(JSON.stringify(payload));
+    }
+
+    const profile = await fetchPublicProfile(username);
     if (!profile) {
       res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
       return res.status(404).end();
     }
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    const stats = await fetchFollowStats(username).catch(() => ({ followersCount: 0, followingCount: 0 }));
+    const payload = { ...profile, followersCount: stats.followersCount, followingCount: stats.followingCount };
     res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=600');
     if (req.method === 'HEAD') return res.status(200).end();
-    return res.status(200).send(JSON.stringify(profile));
+    return res.status(200).send(JSON.stringify(payload));
   } catch (_) {
     res.setHeader('Cache-Control', 'no-store');
     return res.status(503).end();
   }
-};
+}
 
 module.exports = publicProfile;
 module.exports.fetchPublicProfile = fetchPublicProfile;
+module.exports.fetchFollowStats = fetchFollowStats;
+module.exports.fetchRelationshipList = fetchRelationshipList;
 module.exports.normalizeUsername = normalizeUsername;
 module.exports.validUsername = validUsername;
