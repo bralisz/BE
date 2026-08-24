@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260824-skeleton-subtitles-v2';
+  var STATIC_REV='20260823-account-mfa-v1';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -3535,7 +3535,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         streamingAvailability: source.streamingAvailability || [],
         streamingLinks: source.streamingLinks || {},
         subtitleUrl: source.subtitleUrl || item.subtitleUrl || '',
-        subtitleLocale: source.subtitleLocale || item.subtitleLocale || '',
         sectionId: source.sectionId || '',
         sectionName: source.sectionName || '',
         collection,
@@ -3576,7 +3575,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-content-url="${safeUrl(url)}"
               data-mobile-app-drive-url="${safeUrl(item.mobileAppDriveUrl || '')}"
               data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
-              data-subtitle-locale="${escapeHtml(item.subtitleLocale || (item.subtitleUrl ? activeLocaleSlug() : ''))}"
               data-image-url="${safeAssetUrl(item.imageUrl || '')}"
               data-banner-url="${safeAssetUrl(item.bannerUrl || item.imageUrl || '')}"
               data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
@@ -3782,7 +3780,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-content-url="${safeUrl(contentUrl)}"
               data-mobile-app-drive-url="${safeUrl(item.mobileAppDriveUrl || '')}"
               data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
-              data-subtitle-locale="${escapeHtml(item.subtitleLocale || (item.subtitleUrl ? activeLocaleSlug() : ''))}"
               data-image-url="${safeAssetUrl(thumbnail)}"
               data-banner-url="${safeAssetUrl(background)}"
               data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
@@ -4397,7 +4394,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-content-url="${safeUrl(contentHref)}"
       data-mobile-app-drive-url="${safeUrl(video.mobileAppDriveUrl || '')}"
       data-subtitle-url="${safeUrl(video.subtitleUrl || '')}"
-      data-subtitle-locale="${escapeHtml(video.subtitleLocale || (video.subtitleUrl ? activeLocaleSlug() : ''))}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(banner)}"
       data-logo-url="${safeAssetUrl(logo)}"
@@ -4890,7 +4886,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-content-url="${safeUrl(contentHref)}"
       data-mobile-app-drive-url="${safeUrl(data.mobileAppDriveUrl || '')}"
       data-subtitle-url="${safeUrl(data.subtitleUrl || '')}"
-      data-subtitle-locale="${escapeHtml(data.subtitleLocale || (data.subtitleUrl ? activeLocaleSlug() : ''))}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(['movies', 'series'].includes(String(data.collection || '').toLowerCase()) ? image : (data.bannerUrl || image))}"
       data-logo-url="${safeAssetUrl(data.logoUrl || '')}"
@@ -6177,53 +6172,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  function linkedSubtitleFileUrl(value) {
-    const raw = String(value || '').trim();
-    if (!raw || !subtitleFetchUrl(raw)) return '';
-    try {
-      const url = new URL(raw, location.origin);
-      const pathname = decodeURIComponent(String(url.pathname || '')).toLowerCase();
-      return /\.(?:srt|vtt)$/.test(pathname) ? raw : '';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  function normalizeSubtitleLocale(value) {
-    const raw = String(value || '').trim().toLowerCase().replace('_', '-');
-    if (!raw) return '';
-    if (raw === 'pt' || raw === 'pt-br' || raw.startsWith('pt-')) return 'pt-br';
-    if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
-    if (raw === 'es' || raw.startsWith('es-')) return 'es';
-    if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
-    if (raw === 'it' || raw.startsWith('it-')) return 'it';
-    return '';
-  }
-
-  function subtitleLocaleFromFileUrl(value) {
-    const linked = linkedSubtitleFileUrl(value);
-    if (!linked) return '';
-    try {
-      const url = new URL(linked, location.origin);
-      const file = decodeURIComponent(String(url.pathname || '').split('/').pop() || '').toLowerCase();
-      const match = file.match(/^(pt(?:-br)?|en(?:-us)?|es|fr|it)(?:[-_.])/i);
-      return normalizeSubtitleLocale(match ? match[1] : '');
-    } catch (_) {
-      return '';
-    }
-  }
-
-  function subtitleFileForCurrentLocale(value, localeHint = '') {
-    const linked = linkedSubtitleFileUrl(value);
-    if (!linked) return '';
-    const current = normalizeSubtitleLocale(activeLocaleSlug()) || 'pt-br';
-    const hinted = normalizeSubtitleLocale(localeHint);
-    if (hinted && hinted !== current) return '';
-    const inferred = subtitleLocaleFromFileUrl(linked);
-    if (inferred && inferred !== current) return '';
-    return linked;
-  }
-
   function subtitleTimeSeconds(value) {
     const raw = String(value || '').trim().replace(',', '.');
     if (!raw) return NaN;
@@ -6958,11 +6906,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderSubtitleCue(subtitleOverlay, [], 0, false);
     };
 
-    const configureExternalSubtitles = (value, localeHint = '') => {
+    const configureExternalSubtitles = value => {
       resetExternalSubtitles();
                                                                                   
                                                                                 
-      activeSubtitleUrl = activeProvider === 'vk' ? subtitleFileForCurrentLocale(value, localeHint) : '';
+      activeSubtitleUrl = activeProvider === 'vk' ? String(value || '').trim() : '';
       subtitleButton.hidden = !activeSubtitleUrl;
     };
 
@@ -7049,7 +6997,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       let instagramMobileFrameLoaded = false;
       vkEmbedAttempt = 0;
       vkPlaybackConfirmed = false;
-      configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '', normalizedProvider === 'vk' ? context?.subtitleLocale : '');
+      configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '');
       vkSelectedQuality = 4;
       vkMuted = false;
       vkVolume = 1;
@@ -7102,9 +7050,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       event.stopImmediatePropagation();
 
       const subtitleUrl = linkedContent.subtitleUrl || link.dataset.subtitleUrl || '';
-      const subtitleLocale = linkedContent.subtitleLocale || link.dataset.subtitleLocale || '';
       if (youtubeInfo) openExternalPlayer('youtube', youtubeInfo, { title });
-      else openExternalPlayer('vk', vkInfo, { title, subtitleUrl, subtitleLocale });
+      else openExternalPlayer('vk', vkInfo, { title, subtitleUrl });
     }, true);
 
     qualityButton.addEventListener('click', () => {
@@ -7560,10 +7507,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderSubtitleCue(subtitleOverlay, [], 0, false);
     };
 
-    const configureDriveSubtitles = (value, offsetSeconds = 0, localeHint = '') => {
+    const configureDriveSubtitles = (value, offsetSeconds = 0) => {
       resetDriveSubtitles();
-      hideSubtitleSyncNotice(shell, true);
-      activeSubtitleUrl = subtitleFileForCurrentLocale(value, localeHint);
+      activeSubtitleUrl = String(value || '').trim();
       const parsedOffset = Number(offsetSeconds);
       activeSubtitleOffset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
       subtitleButton.hidden = !activeSubtitleUrl;
@@ -7840,7 +7786,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeFileId = fileId;
       activeResourceKey = resourceKey;
       activeSourceLink = context?.sourceLink instanceof Element ? context.sourceLink : null;
-      configureDriveSubtitles(context?.subtitleUrl, context?.subtitleOffset, context?.subtitleLocale);
+      configureDriveSubtitles(context?.subtitleUrl, context?.subtitleOffset);
       const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
       activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
       previousFocus = document.activeElement;
@@ -7860,6 +7806,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       syncFullscreen();
                                                                             
                                                                               
+      if (activeSubtitleUrl) showSubtitleSyncNotice(shell, { sequence: true });
+
                                                                              
                                                                               
                                                                          
@@ -7919,7 +7867,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         title,
         sourceLink: link,
         subtitleUrl: linkedContent.subtitleUrl || link.dataset.subtitleUrl || '',
-        subtitleLocale: linkedContent.subtitleLocale || link.dataset.subtitleLocale || '',
         subtitleOffset
       });
     }, true);
@@ -7984,7 +7931,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas';
         syncDriveSubtitle();
-        showSubtitleSyncNotice(shell, { sequence: true });
       } catch (_) {
         if (token !== subtitleLoadToken) return;
         clearFrameSubtitleSync();
@@ -9889,8 +9835,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                               
     const requestedMobileDriveUrl = String(data.tvDriveUrl || data.mobileAppDriveUrl || data.appDriveUrl || '').trim();
     const contentUrl = defaultContentUrl;
-    const subtitleLocale = normalizeSubtitleLocale(data.subtitleLocale || activeLocaleSlug()) || activeLocaleSlug();
-    const subtitleUrl = subtitleFileForCurrentLocale(data.subtitleUrl || '', subtitleLocale);
+    const subtitleUrl = data.subtitleUrl || '';
     const thumbnailUrl = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
     const bannerUrl = ['movies', 'series'].includes(collection)
       ? thumbnailUrl
@@ -9961,7 +9906,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     play.dataset.mobileAppDriveUrl = requestedMobileDriveUrl;
     play.dataset.tvDriveUrl = requestedMobileDriveUrl;
     play.dataset.subtitleUrl = subtitleUrl;
-    play.dataset.subtitleLocale = subtitleUrl ? subtitleLocale : '';
     play.dataset.imageUrl = thumbnailUrl;
     play.dataset.bannerUrl = bannerUrl;
     play.dataset.logoUrl = logoUrl;
@@ -9994,7 +9938,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     list.dataset.duration = duration;
     list.dataset.contentUrl = contentUrl;
     list.dataset.subtitleUrl = subtitleUrl;
-    list.dataset.subtitleLocale = subtitleUrl ? subtitleLocale : '';
     list.dataset.imageUrl = thumbnailUrl;
     list.dataset.bannerUrl = bannerUrl;
     list.dataset.logoUrl = logoUrl;
@@ -10481,10 +10424,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const recordId = String(data?.recordId || data?.id || '').trim();
     const collection = String(data?.collection || 'videos').trim().toLowerCase() || 'videos';
     const favoriteId = String(data?.favoriteId || (recordId ? `${collection}:${recordId}` : '')).trim();
-    const subtitleLocale = normalizeSubtitleLocale(data?.subtitleLocale || '');
-    const isLegacySavedSubtitle = Boolean(data?.savedAt && data?.subtitleUrl && !subtitleLocale);
-    const subtitleUrl = isLegacySavedSubtitle ? '' : subtitleFileForCurrentLocale(data?.subtitleUrl || '', subtitleLocale);
-    const effectiveSubtitleLocale = subtitleUrl ? (subtitleLocale || normalizeSubtitleLocale(activeLocaleSlug()) || 'pt-br') : '';
     return {
       itemId,
       recordId,
@@ -10496,8 +10435,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       contentUrl:String(data?.contentUrl || '#'),
       mobileAppDriveUrl:String(data?.mobileAppDriveUrl || data?.appDriveUrl || data?.tvDriveUrl || ''),
       tvDriveUrl:String(data?.tvDriveUrl || data?.mobileAppDriveUrl || data?.appDriveUrl || ''),
-      subtitleUrl,
-      subtitleLocale:effectiveSubtitleLocale,
+      subtitleUrl:String(data?.subtitleUrl || ''),
       imageUrl:String(data?.imageUrl || data?.thumbnailUrl || data?.bannerUrl || ''),
       bannerUrl:String(data?.bannerUrl || data?.imageUrl || data?.thumbnailUrl || ''),
       logoUrl:String(data?.logoUrl || ''),
@@ -10531,7 +10469,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       mobileAppDriveUrl:dataset.mobileAppDriveUrl || element.dataset?.mobileAppDriveUrl || dataset.tvDriveUrl || element.dataset?.tvDriveUrl || '',
       tvDriveUrl:dataset.tvDriveUrl || element.dataset?.tvDriveUrl || dataset.mobileAppDriveUrl || element.dataset?.mobileAppDriveUrl || '',
       subtitleUrl:dataset.subtitleUrl || element.dataset?.subtitleUrl || '',
-      subtitleLocale:dataset.subtitleLocale || element.dataset?.subtitleLocale || activeLocaleSlug(),
       imageUrl:dataset.imageUrl || element.dataset?.imageUrl || '',
       bannerUrl:dataset.bannerUrl || element.dataset?.bannerUrl || '',
       logoUrl:dataset.logoUrl || element.dataset?.logoUrl || '',
@@ -15067,9 +15004,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='',mfaChallengePending=false;
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
-  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false,siteSkeletonReleased=document.documentElement.dataset.siteLoaded==='true';
+  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false;
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
-  function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();window.clearTimeout(siteSkeletonHideTimer);var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;siteSkeletonReleased=true;document.documentElement.dataset.siteLoaded='true';if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
+  function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
   function donateVisualReady(){var donatePage=q('donatePage');return !isDonateRoute()||Boolean(donatePage&&donatePage.dataset&&donatePage.dataset.visualReady==='true');}
   function notificationsVisualReady(){return !isNotificationsRoute()||window.__beNotificationsReady===true;}
   function waitForDonateVisualBeforeReveal(){
@@ -15097,7 +15034,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     releaseSiteSkeleton();
   }
-  function showSiteSkeleton(){if(siteSkeletonReleased||document.documentElement.dataset.siteLoaded==='true')return;window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=0;var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
+  function showSiteSkeleton(){window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=0;var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
   window.addEventListener('be:content-ready',function(){
                                                                               
                                                                              
