@@ -5,6 +5,7 @@
   const SUPABASE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
   const ACTIVE_SESSION_KEY = 'beTvActiveSessionId';
   const ACTIVE_CODE_KEY = 'beTvActivePairCode';
+  const TV_BRAND_QUERY = String(new URLSearchParams(location.search).get('tv') || '').trim().slice(0,80);
   const PENDING_MEDIA_KEY = 'beTvPendingMedia';
   const CURRENT_MEDIA_KEY = 'beTvCurrentMedia';
   const POST_AUTH_KEY = 'bePostAuthReturn';
@@ -494,6 +495,14 @@
     if (!row?.session_id) throw new Error('pairing_failed');
     activeSessionId = String(row.session_id);
     activeCode = normalized;
+    if (TV_BRAND_QUERY && user && user.id) {
+      try {
+        const key = `beTvKnownBrands:${user.id}`;
+        const known = JSON.parse(localStorage.getItem(key) || '{}');
+        known[activeSessionId] = { name: TV_BRAND_QUERY, updatedAt: new Date().toISOString() };
+        localStorage.setItem(key, JSON.stringify(known));
+      } catch (_) {}
+    }
     localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
     localStorage.setItem(ACTIVE_CODE_KEY, activeCode);
     showConnected();
