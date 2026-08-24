@@ -1,5 +1,5 @@
                                                                              
-const SW_VERSION = '20260824-random-featured-card-click-v1';
+const SW_VERSION = '20260823-static-simple-v1';
 
 async function clearBetvCaches() {
   const keys = await caches.keys();
