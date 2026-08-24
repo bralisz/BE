@@ -1,5 +1,6 @@
 import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { createHash } from 'node:crypto';
 const out='_static';
 await rm(out,{recursive:true,force:true});
 const copies=[
@@ -17,3 +18,11 @@ for(const lang of ['en-us','es','fr','it'])await cp(`assets/i18n/${lang}.json`,`
 await mkdir(`${out}/media/icons`,{recursive:true});
 await cp('assets/images',`${out}/media`,{recursive:true});
 await cp('assets/icons',`${out}/media/icons`,{recursive:true});
+
+const commit=String(process.env.VERCEL_GIT_COMMIT_SHA||'').trim();
+const deploymentUrl=String(process.env.VERCEL_URL||'').trim();
+const environment=String(process.env.VERCEL_ENV||process.env.NODE_ENV||'development').trim();
+const version=(!commit&&!deploymentUrl)
+  ? `local:${environment}`
+  : `v:${createHash('sha256').update(`${commit}:${deploymentUrl}`).digest('hex').slice(0,24)}`;
+await writeFile(`${out}/version.json`,JSON.stringify({version,releaseStateAvailable:false,generatedAt:new Date().toISOString()})+'\n','utf8');

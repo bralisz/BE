@@ -2,9 +2,36 @@
 
 const { once } = require('events');
 
-const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 10000;
+const METADATA_CACHE_TTL_MS = 10 * 60 * 1000;
+const SOURCE_PREFERENCE_TTL_MS = 10 * 60 * 1000;
+const DRIVE_FAILURE_COOLDOWN_MS = 30 * 1000;
+const metadataCache = new Map();
+const sourcePreferenceCache = new Map();
+const failureCache = new Map();
 const FILE_ID_PATTERN = /^[a-z0-9_-]{10,}$/i;
 const RESOURCE_KEY_PATTERN = /^[a-z0-9_-]+$/i;
+
+function driveCacheKey(fileId, resourceKey) {
+  return `${String(fileId || '')}:${String(resourceKey || '')}`;
+}
+
+function readTimedCache(cache, key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) { cache.delete(key); return null; }
+  return entry.value;
+}
+
+function writeTimedCache(cache, key, value, ttl) {
+  cache.set(key, { value, expiresAt: Date.now() + ttl });
+  // Evita crescimento sem limite em instâncias muito longevas.
+  if (cache.size > 250) {
+    const first = cache.keys().next();
+    if (!first.done) cache.delete(first.value);
+  }
+  return value;
+}
 
 const MIME_BY_EXTENSION = Object.freeze({
   mp3: 'audio/mpeg',
@@ -254,6 +281,9 @@ async function fetchDriveSource(url, req, probeOnly = false) {
 }
 
 async function fetchPreviewMetadata(fileId, resourceKey) {
+  const key = driveCacheKey(fileId, resourceKey);
+  const cached = readTimedCache(metadataCache, key);
+  if (cached) return cached;
   try {
     const response = await fetchWithTimeout(previewUrl(fileId, resourceKey), {
       method: 'GET',
@@ -268,11 +298,11 @@ async function fetchPreviewMetadata(fileId, resourceKey) {
     const html = await response.text();
     const filename = filenameFromPreviewHtml(html);
     const contentType = mimeFromPreviewHtml(html) || mimeFromFilename(filename) || 'application/octet-stream';
-    return {
+    return writeTimedCache(metadataCache, key, {
       filename,
       contentType,
       kind: mediaKind(contentType, '', filename)
-    };
+    }, METADATA_CACHE_TTL_MS);
   } catch (_) {
     return null;
   }
@@ -334,19 +364,37 @@ module.exports = async function driveMediaProxy(req, res) {
 
   const metadataRequest = wantsMetadata(req);
   const forceLegacyProxy = wantsLegacyProxy(req);
+  const cacheKey = driveCacheKey(fileId, resourceKey);
+
+  // Depois de uma falha conhecida, não repete duas tentativas lentas ao Google
+  // em cada retry automático do player. O navegador pode usar os fallbacks
+  // diretos/preview e tentar novamente após alguns segundos.
+  const failedUntil = readTimedCache(failureCache, cacheKey);
+  if (!metadataRequest && failedUntil) {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Retry-After', '30');
+    res.setHeader('X-BETV-Drive-Fallback', 'cooldown');
+    return res.status(503).end();
+  }
 
   try {
     let upstream = null;
     let contentType = '';
     let filename = '';
 
-    for (const url of sourceUrls(fileId, resourceKey)) {
+    const urls = sourceUrls(fileId, resourceKey);
+    const preferred = readTimedCache(sourcePreferenceCache, cacheKey);
+    const order = preferred === 1 ? [1, 0] : [0, 1];
+    for (const sourceIndex of order) {
+      const url = urls[sourceIndex];
       const candidate = await fetchDriveSource(url, req, metadataRequest || req.method === 'HEAD');
       const candidateType = normalizedContentType(candidate);
       if (!looksLikeDriveError(candidate, candidateType)) {
         upstream = candidate;
         contentType = candidateType;
         filename = filenameFromDisposition(candidate.headers.get('content-disposition'));
+        writeTimedCache(sourcePreferenceCache, cacheKey, sourceIndex, SOURCE_PREFERENCE_TTL_MS);
+        failureCache.delete(cacheKey);
         break;
       }
       try { await candidate.body?.cancel(); } catch (_) { /* sem ação */ }
@@ -368,7 +416,13 @@ module.exports = async function driveMediaProxy(req, res) {
       return sendMetadata(res, { filename, contentType, kind: mediaKind(contentType, '', filename) });
     }
 
-    if (!upstream) return res.status(502).end();
+    if (!upstream) {
+      writeTimedCache(failureCache, cacheKey, true, DRIVE_FAILURE_COOLDOWN_MS);
+      res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+      res.setHeader('Retry-After', '30');
+      res.setHeader('X-BETV-Drive-Fallback', 'origin-unavailable');
+      return res.status(503).end();
+    }
 
     const kind = mediaKind(contentType, upstream.headers.get('content-disposition'), filename);
 
@@ -413,8 +467,11 @@ module.exports = async function driveMediaProxy(req, res) {
     return pipeBody(upstream, req, res);
   } catch (error) {
     if (!res.headersSent) {
+      writeTimedCache(failureCache, cacheKey, true, DRIVE_FAILURE_COOLDOWN_MS);
       res.setHeader('Cache-Control', 'no-store');
-      return res.status(error?.name === 'AbortError' ? 504 : 502).end();
+      res.setHeader('Retry-After', '30');
+      res.setHeader('X-BETV-Drive-Fallback', error?.name === 'AbortError' ? 'timeout' : 'origin-error');
+      return res.status(error?.name === 'AbortError' ? 504 : 503).end();
     }
     if (!res.writableEnded) res.end();
   }

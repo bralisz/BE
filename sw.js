@@ -1,5 +1,5 @@
                                                                              
-const SW_VERSION = '20260823-account-mfa-v1';
+const SW_VERSION = '20260823-usage-tv-v1';
 
 async function clearBetvCaches() {
   const keys = await caches.keys();

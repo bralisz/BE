@@ -13,7 +13,7 @@ const TV_UI = {
     pairDescription: 'Escaneie o QR Code com a câmera do celular. Você entra na sua conta e a TV fica pronta para receber os vídeos do site.',
     qrAlt: 'QR Code para conectar esta TV', yourCode: 'Seu código', tvCode: 'Código da TV', howToConnect: 'Como conectar',
     step1: 'Escaneie o QR Code.', step2: 'Entre na sua conta.', step3: 'Abra um vídeo ou filme e toque no ícone de transmissão.',
-    expires: 'O código expira em 5 minutos se não for usado.', connectedTitle: 'Conectado à sua conta', connectedDescription: 'Agora escolha um vídeo ou filme no celular e toque no ícone de transmissão.',
+    expires: 'O código expira em 10 minutos se não for usado.', connectedTitle: 'Conectado à sua conta', connectedDescription: 'Agora escolha um vídeo ou filme no celular e toque no ícone de transmissão.',
     connectedAccount: 'Conta conectada', errorTitle: 'Não foi possível conectar', errorDescription: 'Atualize a página para tentar novamente.', errorStatus: 'Falha ao preparar a conexão.',
     loadingVideo: 'Carregando vídeo', connectedToPhone: 'Conectado ao celular', enableSubtitles: 'Ativar legendas', disableSubtitles: 'Desativar legendas'
   },
@@ -22,7 +22,7 @@ const TV_UI = {
     pairDescription: 'Scan the QR code with your phone camera. Sign in to your account and the TV will be ready to receive videos from the site.',
     qrAlt: 'QR code to connect this TV', yourCode: 'Your code', tvCode: 'TV code', howToConnect: 'How to connect',
     step1: 'Scan the QR code.', step2: 'Sign in to your account.', step3: 'Open a video or movie and tap the cast icon.',
-    expires: 'The code expires in 5 minutes if it is not used.', connectedTitle: 'Connected to your account', connectedDescription: 'Now choose a video or movie on your phone and tap the cast icon.',
+    expires: 'The code expires in 10 minutes if it is not used.', connectedTitle: 'Connected to your account', connectedDescription: 'Now choose a video or movie on your phone and tap the cast icon.',
     connectedAccount: 'Connected account', errorTitle: 'Could not connect', errorDescription: 'Refresh the page to try again.', errorStatus: 'Could not prepare the connection.',
     loadingVideo: 'Loading video', connectedToPhone: 'Connected to phone', enableSubtitles: 'Turn on subtitles', disableSubtitles: 'Turn off subtitles'
   },
@@ -31,7 +31,7 @@ const TV_UI = {
     pairDescription: 'Escanea el código QR con la cámara del celular. Inicia sesión en tu cuenta y la TV quedará lista para recibir los videos del sitio.',
     qrAlt: 'Código QR para conectar esta TV', yourCode: 'Tu código', tvCode: 'Código de la TV', howToConnect: 'Cómo conectar',
     step1: 'Escanea el código QR.', step2: 'Inicia sesión en tu cuenta.', step3: 'Abre un video o una película y toca el icono de transmisión.',
-    expires: 'El código caduca en 5 minutos si no se utiliza.', connectedTitle: 'Conectado a tu cuenta', connectedDescription: 'Ahora elige un video o una película en el celular y toca el icono de transmisión.',
+    expires: 'El código caduca en 10 minutos si no se utiliza.', connectedTitle: 'Conectado a tu cuenta', connectedDescription: 'Ahora elige un video o una película en el celular y toca el icono de transmisión.',
     connectedAccount: 'Cuenta conectada', errorTitle: 'No se pudo conectar', errorDescription: 'Actualiza la página para intentarlo de nuevo.', errorStatus: 'No se pudo preparar la conexión.',
     loadingVideo: 'Cargando video', connectedToPhone: 'Conectado al celular', enableSubtitles: 'Activar subtítulos', disableSubtitles: 'Desactivar subtítulos'
   },
@@ -40,7 +40,7 @@ const TV_UI = {
     pairDescription: 'Scannez le QR code avec l’appareil photo de votre téléphone. Connectez-vous à votre compte et la TV sera prête à recevoir les vidéos du site.',
     qrAlt: 'QR code pour connecter cette TV', yourCode: 'Votre code', tvCode: 'Code de la TV', howToConnect: 'Comment se connecter',
     step1: 'Scannez le QR code.', step2: 'Connectez-vous à votre compte.', step3: 'Ouvrez une vidéo ou un film et appuyez sur l’icône de diffusion.',
-    expires: 'Le code expire au bout de 5 minutes s’il n’est pas utilisé.', connectedTitle: 'Connecté à votre compte', connectedDescription: 'Choisissez maintenant une vidéo ou un film sur votre téléphone, puis appuyez sur l’icône de diffusion.',
+    expires: 'Le code expire au bout de 10 minutes s’il n’est pas utilisé.', connectedTitle: 'Connecté à votre compte', connectedDescription: 'Choisissez maintenant une vidéo ou un film sur votre téléphone, puis appuyez sur l’icône de diffusion.',
     connectedAccount: 'Compte connecté', errorTitle: 'Impossible de se connecter', errorDescription: 'Actualisez la page pour réessayer.', errorStatus: 'Impossible de préparer la connexion.',
     loadingVideo: 'Chargement de la vidéo', connectedToPhone: 'Connecté au téléphone', enableSubtitles: 'Activer les sous-titres', disableSubtitles: 'Désactiver les sous-titres'
   },
@@ -49,7 +49,7 @@ const TV_UI = {
     pairDescription: 'Scansiona il codice QR con la fotocamera del telefono. Accedi al tuo account e la TV sarà pronta a ricevere i video del sito.',
     qrAlt: 'Codice QR per collegare questa TV', yourCode: 'Il tuo codice', tvCode: 'Codice TV', howToConnect: 'Come collegare',
     step1: 'Scansiona il codice QR.', step2: 'Accedi al tuo account.', step3: 'Apri un video o un film e tocca l’icona di trasmissione.',
-    expires: 'Il codice scade dopo 5 minuti se non viene utilizzato.', connectedTitle: 'Collegato al tuo account', connectedDescription: 'Ora scegli un video o un film sul telefono e tocca l’icona di trasmissione.',
+    expires: 'Il codice scade dopo 10 minuti se non viene utilizzato.', connectedTitle: 'Collegato al tuo account', connectedDescription: 'Ora scegli un video o un film sul telefono e tocca l’icona di trasmissione.',
     connectedAccount: 'Account collegato', errorTitle: 'Impossibile collegarsi', errorDescription: 'Aggiorna la pagina per riprovare.', errorStatus: 'Impossibile preparare la connessione.',
     loadingVideo: 'Caricamento video', connectedToPhone: 'Collegato al telefono', enableSubtitles: 'Attiva sottotitoli', disableSubtitles: 'Disattiva sottotitoli'
   }
@@ -137,8 +137,9 @@ async function supabaseRpc(name, payload) {
   return Array.isArray(data) ? (data[0] || null) : data;
 }
 
-async function createSession() {
-  const deviceToken = crypto.randomBytes(32).toString('hex');
+async function createSession(existingDeviceToken = '') {
+  const candidate = String(existingDeviceToken || '').trim();
+  const deviceToken = DEVICE_TOKEN.test(candidate) ? candidate : crypto.randomBytes(32).toString('hex');
   const row = await supabaseRpc('tv_create_session', { p_device_token: deviceToken });
   if (!row || !row.session_id || !row.pairing_code) throw new Error('tv_session_not_created');
   return {
@@ -350,23 +351,6 @@ function subtitleClientUrl(value) {
     }
     return url.href;
   } catch (_) {
-    return '';
-  }
-}
-
-async function inlinePairingQr(connectUrl) {
-  try {
-    const QRCode = require('qrcode');
-    const png = await QRCode.toBuffer(String(connectUrl || ''), {
-      type: 'png',
-      errorCorrectionLevel: 'M',
-      margin: 2,
-      width: 360,
-      color: { dark: '#000000', light: '#ffffff' }
-    });
-    return `data:image/png;base64,${png.toString('base64')}`;
-  } catch (error) {
-    console.error('TV inline QR generation failed:', error);
     return '';
   }
 }
@@ -823,7 +807,7 @@ function codeMarkup(code) {
   return String(code || '').split('').map(char => `<span>${escapeHtml(char)}</span>`).join('');
 }
 
-function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion = 0, mediaKey = '', subtitleEnabled = false, remoteNonce = '', locale = 'pt-br', copy = uiCopy(locale) }) {
+function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion = 0, mediaKey = '', subtitleEnabled = false, remoteNonce = '', locale = 'pt-br', copy = uiCopy(locale), legacyTv = false }) {
   const initialStatus = JSON.stringify(String(stateStatus || 'waiting'));
   const initialMediaKey = JSON.stringify(String(mediaKey || ''));
   const initialRemoteNonce = JSON.stringify(String(remoteNonce || ''));
@@ -841,7 +825,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   function delayFor(status,failed){
     if(document.visibilityState==='hidden')return status==='paired'?15000:30000;
     if(failed)return 12000;
-    return status==='paired'?4000:12000;
+    return status==='paired'?5000:15000;
   }
   function schedule(ms){
     if(stopped)return;
@@ -878,7 +862,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
               remoteNonce=nextRemoteNonce;
               if(typeof window.BETVTVRemote==='function')window.BETVTVRemote(String(d.remote_command||''),Number(d.remote_value)||0);
             }
-            if(statusChanged||mediaChanged||status==='disconnected'){
+            if(statusChanged||mediaChanged||status==='disconnected'||(status==='missing'&&initialStatus==='waiting')){
               stopped=true;
               finished=true;
               inFlight=false;
@@ -901,7 +885,7 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
     if(document.visibilityState==='visible'&&!stopped){if(timer)clearTimeout(timer);schedule(250);}
   });
   window.addEventListener('beforeunload',function(){stopped=true;if(timer)clearTimeout(timer);},{once:true});
-  schedule(initialStatus==='paired'?4000:10000);
+  schedule(initialStatus==='paired'?5000:12000);
 })();
 </script>`;
   const localeBootstrap = `
@@ -921,6 +905,24 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
 })();
 </script>`;
 
+  const legacyCriticalCss = legacyTv ? `
+<style type="text/css">
+/* Fallback deliberadamente simples para Tizen/WebOS/NetCast antigos. */
+html,body{margin:0;padding:0;min-height:100%;background:#020409;color:#fff;font-family:Arial,Helvetica,sans-serif}
+.legacy-tv .tv-shell,.legacy-tv .tv-content,.legacy-tv .tv-main{display:block;width:100%;min-height:100%}
+.legacy-tv .tv-content{max-width:1180px;margin:0 auto;padding:22px;box-sizing:border-box}
+.legacy-tv .tv-topbar{display:block;min-height:64px;overflow:hidden}
+.legacy-tv .tv-brand{float:left;display:block}.legacy-tv .tv-brand img{display:block;max-width:210px;max-height:56px}
+.legacy-tv .tv-back{float:right;display:inline-block;padding:14px 20px;color:#fff;text-decoration:none;border:1px solid #39414f;border-radius:10px}
+.legacy-tv .tv-main{clear:both;padding-top:28px}.legacy-tv .tv-card{display:block;background:#090d14;border:1px solid #303846;border-radius:18px;padding:30px;box-sizing:border-box}
+.legacy-tv .tv-pair-grid{display:block;overflow:hidden}.legacy-tv .tv-qr{float:left;width:330px;max-width:42%;padding:12px;background:#fff;border-radius:14px;box-sizing:border-box}
+.legacy-tv .tv-qr img{display:block;width:100%;height:auto;min-width:180px;min-height:180px;background:#fff}
+.legacy-tv .tv-code-panel{margin-left:370px;padding-left:24px}.legacy-tv .tv-code-label,.legacy-tv .tv-help{display:block;margin:8px 0 16px;color:#bac4d2}
+.legacy-tv .tv-code{display:block;margin:8px 0 22px;white-space:nowrap}.legacy-tv .tv-code span{display:inline-block;margin:3px;padding:10px 12px;border:1px solid #3c8fe8;border-radius:8px;color:#72b9ff;background:#07172b;font-size:34px;font-weight:bold}
+.legacy-tv .tv-note-step{display:block;margin:10px 0;font-size:20px}.legacy-tv .tv-note-step strong{display:inline-block;margin-right:8px}.legacy-tv .tv-connect-plain{display:block;margin-top:18px;padding:12px;border:1px solid #303846;border-radius:8px;word-break:break-all;color:#d6e8ff}
+@media(max-width:760px){.legacy-tv .tv-qr{float:none;width:280px;max-width:100%;margin:0 auto 22px}.legacy-tv .tv-code-panel{margin-left:0;padding-left:0;text-align:center}}
+</style>` : '';
+
   return `<!doctype html>
 <html lang="${escapeHtml(copy.lang)}">
 <head>
@@ -931,9 +933,9 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
   <meta name="theme-color" content="#020409">
   <title>${escapeHtml(copy.title)}</title>
   <link rel="icon" href="/_static/media/icons/favicon-home-pc.ico">
-  <link rel="stylesheet" href="/_static/styles/tv.css?rev=20260823-static-simple-v1">
+  <link rel="stylesheet" href="/_static/styles/tv.css?rev=20260823-tv-compat-v2">${legacyCriticalCss}
 </head>
-<body class="tv-receiver legacy-tv${playing ? ' is-playing' : ''}">
+<body class="tv-receiver${legacyTv ? ' legacy-tv' : ''}${playing ? ' is-playing' : ''}">
   <main class="tv-shell">
     <div class="tv-content">
       <header class="tv-topbar">
@@ -950,13 +952,13 @@ function baseHtml({ body, stateStatus = 'waiting', playing = false, mediaVersion
 </body>
 </html>`;
 }
-function pairingBody(code, connectUrl, inlineQr, copy) {
+function pairingBody(code, connectUrl, copy) {
   return `
     <div class="tv-card-inner" id="receiverPairing">
       <h1>${escapeHtml(copy.connectPhone)}</h1>
       <p>${escapeHtml(copy.pairDescription)}</p>
       <div class="tv-pair-grid">
-        <div class="tv-qr"><img src="${escapeHtml(inlineQr || `/api/tv-qr?code=${encodeURIComponent(code)}&v=2`)}" data-fallback-src="/api/tv-qr?code=${encodeURIComponent(code)}&v=2" onerror="var f=this.getAttribute('data-fallback-src');if(f&&this.src.indexOf(f)<0){this.src=f;}" alt="${escapeHtml(copy.qrAlt)}"></div>
+        <div class="tv-qr"><img src="/api/tv-qr?code=${encodeURIComponent(code)}&v=3" alt="${escapeHtml(copy.qrAlt)}" width="360" height="360"></div>
         <div class="tv-code-panel">
           <span class="tv-code-label">${escapeHtml(copy.yourCode)}</span>
           <div class="tv-code" aria-label="${escapeHtml(copy.tvCode)}">${codeMarkup(code)}</div>
@@ -966,6 +968,7 @@ function pairingBody(code, connectUrl, inlineQr, copy) {
             <div class="tv-note-step"><strong>3.</strong><span>${escapeHtml(copy.step3)}</span></div>
           </div>
           <span class="tv-help">${escapeHtml(copy.expires)}</span>
+          <span class="tv-connect-plain">billieilishtv.site/connect-tv/?code=${escapeHtml(code)}</span>
         </div>
       </div>
     </div>`;
@@ -1016,6 +1019,7 @@ module.exports = async function handler(req, res) {
 
   const locale = requestUiLocale(req);
   const copy = uiCopy(locale);
+  const legacyTv = isLegacyTvRequest(req);
   const cookies = parseCookies(req);
   let sessionId = String(cookies.be_tv_sid || '');
   let deviceToken = String(cookies.be_tv_token || '');
@@ -1025,7 +1029,7 @@ module.exports = async function handler(req, res) {
     let pairingCode = String(cookies.be_tv_code || '');
 
     if (!state || state.status === 'disconnected') {
-      const created = await createSession();
+      const created = await createSession(deviceToken);
       sessionId = created.sessionId;
       deviceToken = created.deviceToken;
       pairingCode = created.pairingCode;
@@ -1041,7 +1045,7 @@ module.exports = async function handler(req, res) {
       if (!pairingCode) {
         // A sessão já existia, mas o navegador perdeu apenas o cookie do código.
         // Recria para garantir que a TV sempre mostre um código válido.
-        const created = await createSession();
+        const created = await createSession(deviceToken);
         sessionId = created.sessionId;
         deviceToken = created.deviceToken;
         pairingCode = created.pairingCode;
@@ -1053,8 +1057,7 @@ module.exports = async function handler(req, res) {
         ]);
       }
       const connectUrl = `https://billieilishtv.site/connect-tv/?code=${encodeURIComponent(pairingCode)}`;
-      const inlineQr = await inlinePairingQr(connectUrl);
-      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl, inlineQr, copy), locale, copy, stateStatus: 'waiting', mediaVersion: state.media_version, mediaKey: mediaStateKey(state.current_media) });
+      const html = baseHtml({ body: pairingBody(pairingCode, connectUrl, copy), locale, copy, legacyTv, stateStatus: 'waiting', mediaVersion: state.media_version, mediaKey: mediaStateKey(state.current_media) });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
     }
 
@@ -1062,12 +1065,13 @@ module.exports = async function handler(req, res) {
       const media = state.current_media && typeof state.current_media === 'object' ? state.current_media : {};
       const hasMedia = Object.keys(media).length > 0;
       if (hasMedia) {
-        const rendered = renderMedia(media, isLegacyTvRequest(req), copy);
+        const rendered = renderMedia(media, legacyTv, copy);
         if (rendered) {
           const html = baseHtml({
             body: rendered,
             locale,
             copy,
+            legacyTv,
             stateStatus: 'paired',
             playing: true,
             mediaVersion: state.media_version,
@@ -1078,15 +1082,15 @@ module.exports = async function handler(req, res) {
           return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
         }
       }
-      const html = baseHtml({ body: connectedBody(state.owner_display_name, media, copy), locale, copy, stateStatus: 'paired', mediaVersion: state.media_version, mediaKey: mediaStateKey(media) });
+      const html = baseHtml({ body: connectedBody(state.owner_display_name, media, copy), locale, copy, legacyTv, stateStatus: 'paired', mediaVersion: state.media_version, mediaKey: mediaStateKey(media) });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
     }
 
-    const html = baseHtml({ body: errorBody(copy), locale, copy, stateStatus: 'error' });
+    const html = baseHtml({ body: errorBody(copy), locale, copy, legacyTv, stateStatus: 'error' });
     return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
   } catch (error) {
     console.error('TV legacy page failed:', error);
-    const html = baseHtml({ body: errorBody(copy), locale, copy, stateStatus: 'error' });
+    const html = baseHtml({ body: errorBody(copy), locale, copy, legacyTv, stateStatus: 'error' });
     return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
   }
 };

@@ -154,6 +154,12 @@ async function loadSettings() {
   return settingsCache.promise;
 }
 
+
+function isSmartTvRequest(req) {
+  const ua = String((req && req.headers && req.headers['user-agent']) || '').toLowerCase();
+  return /(?:smart-tv|smarttv|hbbtv|netcast|maple|tizen|web0s|webos|viera|aquos|nettv|inettvbrowser|bravia|sony[^;)]*tv|philips[^;)]*tv|android\s+tv|googletv|google\s+tv|roku|aft[mbt]|fire\s*tv|crkey|chromecast|appletv|opera\s+tv)/i.test(ua);
+}
+
 function normalizedRequestPath(req) {
   const candidates = [
     req && req.headers && req.headers['x-vercel-original-path'],
@@ -773,6 +779,14 @@ module.exports = async function sitePage(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     return res.status(405).end();
+  }
+
+  // Somente Smart TVs: evita carregar Home/login e também economiza as leituras
+  // de SEO/Supabase das páginas dinâmicas antes de abrir o receptor.
+  if (isSmartTvRequest(req)) {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Location', '/tv');
+    return res.status(302).end();
   }
 
   try {

@@ -2,7 +2,7 @@
   'use strict';
   if(String(location.hash||'').startsWith('#/admin')) return;
 
-  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null)};
+  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),watchRecordedAt:Object.create(null)};
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
@@ -286,8 +286,9 @@
     return /^#[0-9A-F]{6}$/.test(normalized)?normalized:'';
   }
 
-  function createRankAvatar(url,name,borderColor,username){
+  function createRankAvatar(url,name,borderColor,username,ringResolved){
     var avatar=document.createElement('span');avatar.className='community-rank-avatar';
+    if(ringResolved)avatar.dataset.ringResolved='true';
     var normalizedUsername=String(username||'').replace(/^@/,'').trim();
     if(normalizedUsername)avatar.dataset.ringUsername=normalizedUsername;
     var ring=normalizeProfileAvatarRing(borderColor);
@@ -297,7 +298,7 @@
 
   function hydrateRankingAvatarRings(root){
     if(!root||typeof window.BETVGetPublicAvatarRing!=='function')return;
-    Array.prototype.forEach.call(root.querySelectorAll('.community-rank-avatar:not(.has-custom-ring)[data-ring-username]'),function(avatar){
+    Array.prototype.forEach.call(root.querySelectorAll('.community-rank-avatar:not(.has-custom-ring):not([data-ring-resolved="true"])[data-ring-username]'),function(avatar){
       var username=String(avatar.dataset.ringUsername||'').trim();if(!username)return;
       Promise.resolve(window.BETVGetPublicAvatarRing(username)).then(function(color){
         var ring=normalizeProfileAvatarRing(color);if(!ring||!avatar.isConnected)return;
@@ -342,7 +343,7 @@
     rows.forEach(function(item){
       var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+rankToneClass(item)+(isCurrentProfilePerson(item)?' is-current-user':'');
       var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position||'—');button.appendChild(pos);
-      button.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username));
+      button.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username,Object.prototype.hasOwnProperty.call(item,'avatarBorderColor')||Object.prototype.hasOwnProperty.call(item,'avatar_border_color')));
       var copy=document.createElement('span');copy.className='community-rank-copy';var nameLine=document.createElement('span');nameLine.className='community-rank-name-line';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');nameLine.appendChild(strong);var tagMarkup=communityTagMarkup(item&&item.communityTag);if(tagMarkup){var tagWrap=document.createElement('span');tagWrap.className='community-rank-tag';tagWrap.innerHTML=tagMarkup;nameLine.appendChild(tagWrap);}copy.appendChild(nameLine);var handle=document.createElement('span');handle.className='community-rank-handle';handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.appendChild(handle);button.appendChild(copy);
       var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});button.appendChild(value);
       button.addEventListener('click',function(){closeCommunity(false);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});
@@ -359,7 +360,7 @@
     own.hidden=false;own.className='community-ranking-own';
     var row=document.createElement('div');row.className='community-ranking-own-row';
     var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position);row.appendChild(pos);
-    row.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username));
+    row.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username,Object.prototype.hasOwnProperty.call(item,'avatarBorderColor')||Object.prototype.hasOwnProperty.call(item,'avatar_border_color')));
     var copy=document.createElement('span');copy.className='community-rank-copy';var nameLine=document.createElement('span');nameLine.className='community-rank-name-line';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');nameLine.appendChild(strong);var ownTagMarkup=communityTagMarkup(item&&item.communityTag);if(ownTagMarkup){var ownTag=document.createElement('span');ownTag.className='community-rank-tag';ownTag.innerHTML=ownTagMarkup;nameLine.appendChild(ownTag);}copy.appendChild(nameLine);row.appendChild(copy);
     var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});row.appendChild(value);
     own.appendChild(row);
@@ -406,7 +407,8 @@
   async function recordWatchFromPlay(play){
     var user=currentUser();if(!user||!play)return false;
     var recordId=String(play.dataset.recordId||'');if(!validUuid(recordId))return false;
-    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;state.lastPayload=null;return result&&result.data!==false;}catch(error){(void 0);return false;}
+    var last=Number(state.watchRecordedAt&&state.watchRecordedAt[recordId]||0);if(last&&Date.now()-last<120000)return true;
+    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;if(!state.watchRecordedAt)state.watchRecordedAt=Object.create(null);state.watchRecordedAt[recordId]=Date.now();state.lastPayload=null;return result&&result.data!==false;}catch(error){(void 0);return false;}
   }
 
   function recordRecentFromPlay(play){

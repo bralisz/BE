@@ -19329,3 +19329,66 @@ html.performance-lite .login-bg-slide:not(.active){
 html.performance-lite .f-slide:not(.active) img{
   content-visibility:auto;
 }
+
+
+/* Core Web Vitals: estabilidade visual e resposta mais rápida no mobile. */
+.f-logo.has-image{
+  width:min(480px,42vw)!important;
+  height:clamp(72px,8vw,120px)!important;
+  min-height:clamp(72px,8vw,120px)!important;
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:flex-start!important;
+  overflow:hidden!important;
+}
+.f-logo.has-image img{
+  width:auto!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+  object-position:left bottom!important;
+}
+.f-media img{aspect-ratio:16/9}
+
+@media(max-width:760px){
+  body:not(.login-mode):not(.admin-mode) .f-logo.has-image{
+    width:min(84vw,410px)!important;
+    max-width:84vw!important;
+    height:96px!important;
+    min-height:96px!important;
+  }
+  html.mobile-optimized .mobile-menu-toggle,
+  html.mobile-optimized .mobile-search-button,
+  html.mobile-optimized .mobile-profile-button,
+  html.mobile-optimized .mobile-notification-button,
+  html.mobile-optimized .mobile-search-control,
+  html.mobile-optimized .user-dropdown,
+  html.mobile-optimized .notification-dropdown,
+  html.mobile-optimized .mobile-notification-popover,
+  html.mobile-optimized .mobile-drawer-backdrop{
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  html.mobile-optimized .f-media img,
+  html.mobile-optimized .f-media .ph{
+    transform:none!important;
+    transition:opacity .18s ease!important;
+  }
+  html.mobile-optimized .mobile-search-control,
+  html.mobile-optimized .mobile-search-control input,
+  html.mobile-optimized .mobile-search-button span,
+  html.mobile-optimized .mobile-drawer,
+  html.mobile-optimized .mobile-drawer-backdrop{
+    transition-duration:.18s!important;
+  }
+  html.mobile-optimized button,
+  html.mobile-optimized a,
+  html.mobile-optimized [role="button"]{touch-action:manipulation}
+}
+@media(max-width:560px){
+  body:not(.login-mode):not(.admin-mode) .f-logo.has-image{
+    height:88px!important;
+    min-height:88px!important;
+  }
+}
