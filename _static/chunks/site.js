@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260824-subtitle-cc-locale-v1';
+  var STATIC_REV='20260824-detail-recommendations-v3';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -199,9 +199,7 @@
     pendingRoots.push(root);
     if(queued)return;
     queued=true;
-    var afterPaint=function(){window.setTimeout(flushQueue,0);};
-    if(window.requestAnimationFrame)window.requestAnimationFrame(afterPaint);
-    else window.setTimeout(flushQueue,16);
+    (window.requestAnimationFrame||window.setTimeout)(flushQueue,16);
   }
   function startObserver(){
     if(slug==='pt-br'||observer||!document.documentElement||isAdmin())return;
@@ -1160,14 +1158,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function mapAuthError(error) {
     const message = String(error && error.message || '');
     const code = String(error && (error.code || error.status) || '');
-    if (
-      code === 'over_email_send_rate_limit' ||
-      /email rate limit|rate limit.*email|too many requests/i.test(message) ||
-      /452\s+4\.2\.2|inbox is out of storage space|overquotatemp|recipient.*out of storage|mailbox.*full/i.test(message)
-    ) {
+    if (code === 'over_email_send_rate_limit' || /email rate limit|rate limit.*email|too many requests/i.test(message)) {
       return backendError(
         'auth/email-rate-limit',
-        'Estamos com muitos pedidos de recuperação de senha no momento. Tente novamente mais tarde.',
+        'O limite temporário de e-mails do Supabase foi atingido. Aguarde e tente novamente mais tarde ou continue com o Discord.',
         error
       );
     }
@@ -1463,48 +1457,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                              
                                                      
   const FEATURED_FRESH_TTL_MS = 30 * 1000;
-  const HOME_HERO_PRELOAD_CACHE_PREFIX = 'betvLastHeroPreload:';
-
-  function resolveHomeBootstrapHero(bundle) {
-    try {
-      const rows = Array.isArray(bundle && bundle.featured) ? bundle.featured : [];
-      const feature = rows.find(item => item && item.active !== false && (item.contentId || item.videoId || item.sourceId));
-      if (!feature) return '';
-      const requested = String(feature.contentCollection || feature.sourceCollection || 'videos').toLowerCase();
-      const collection = ['videos', 'movies', 'series'].includes(requested) ? requested : 'videos';
-      const sourceId = String(feature.contentId || feature.videoId || feature.sourceId || '');
-      const sources = Array.isArray(bundle && bundle[collection]) ? bundle[collection] : [];
-      const source = sources.find(item => String(item && item.id || '') === sourceId);
-      if (!source || source.active === false) return '';
-      const thumbnail = source.thumbnailUrl || source.imageUrl || source.bannerUrl || feature.imageUrl || feature.bannerUrl || '';
-      const raw = ['movies', 'series'].includes(collection)
-        ? thumbnail
-        : (source.bannerUrl || source.imageUrl || source.thumbnailUrl || feature.bannerUrl || feature.imageUrl || '');
-      const resolved = window.beMediaUrl ? window.beMediaUrl(raw) : String(raw || '');
-      return resolved && resolved !== '#' ? resolved : '';
-    } catch (_) { return ''; }
-  }
-
-  function primeHomeHeroImage(bundle, locale) {
-    const url = resolveHomeBootstrapHero(bundle);
-    if (!url) return '';
-    try {
-      const existing = document.querySelector('link[data-betv-hero-preload]');
-      if (!existing || existing.href !== new URL(url, location.href).href) {
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'image';
-        link.href = url;
-        link.setAttribute('data-betv-hero-preload', 'runtime');
-        try { link.fetchPriority = 'high'; } catch (_) {}
-        document.head.appendChild(link);
-      }
-    } catch (_) {}
-    try {
-      localStorage.setItem(HOME_HERO_PRELOAD_CACHE_PREFIX + String(locale || activeLocaleSlug()), JSON.stringify({ url, savedAt: Date.now() }));
-    } catch (_) {}
-    return url;
-  }
 
   function homeBootstrapStorageKey(locale) {
     return HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX + String(locale || 'pt-br');
@@ -1559,7 +1511,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function hydrateHomeBootstrapBundle(bundle, locale, ttl = HOME_BOOTSTRAP_MEMORY_TTL_MS, bundleAgeMs = 0) {
-    primeHomeHeroImage(bundle, locale);
     const nowMs = Date.now();
     const expiresAt = nowMs + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
     const featuredFresh = Math.max(0, Number(bundleAgeMs) || 0) < FEATURED_FRESH_TTL_MS;
@@ -2311,20 +2262,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return { ...value };
   }
 
-  function stablePreferencePayload(value) {
-    const normalized = normalizePreferencePayload(value);
-    const comparable = { ...normalized };
-    // updatedAt é apenas um marcador local de sincronização; não deve transformar
-    // uma preferência idêntica em um novo write no Supabase.
-    delete comparable.updatedAt;
-    return comparable;
-  }
-
-  function samePreferencePayload(a, b) {
-    try { return JSON.stringify(stablePreferencePayload(a)) === JSON.stringify(stablePreferencePayload(b)); }
-    catch (_) { return false; }
-  }
-
   function preferenceFromRow(row) {
     if (!row) return null;
     return {
@@ -2513,7 +2450,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const normalized = normalizePreferencePayload(payload);
       if (MODE === 'supabase') {
         const cached = readCachedPreference(userId, Number.POSITIVE_INFINITY);
-        if (cached && samePreferencePayload(cached.data, normalized)) {
+        if (cached && JSON.stringify(cached.data) === JSON.stringify(normalized)) {
           return clone(cached);
         }
         try {
@@ -3266,6 +3203,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const randomFeaturedPools = { videos: [], films: [], movies: [], series: [] };
   const lastRandomFeaturedIds = { videos: [], films: [], movies: [], series: [] };
 
+  function activeLocaleSlug() {
+    const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+    return ['en-us', 'es', 'fr', 'it'].includes(slug) ? slug : 'pt-br';
+  }
+
 
   function localizedUiText(source, variables = {}) {
     if (window.BETVI18n && typeof window.BETVI18n.t === 'function') return window.BETVI18n.t(source, variables);
@@ -3415,14 +3357,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     setupDetailControls();
     try {
       if (!window.beBackend) return;
-      const backendReadyPromise = Promise.resolve(window.beBackend.ready).catch(error => { (void 0); return null; });
-      const homePreloadPromise = window.beBackend.data && typeof window.beBackend.data.preloadHome === 'function'
-        ? Promise.resolve(window.beBackend.data.preloadHome()).catch(error => { (void 0); return null; })
-        : Promise.resolve(null);
-
-      // Conteúdo público e sessão carregam em paralelo. Isso permite que o banner LCP
-      // comece a baixar enquanto o Supabase restaura a sessão do usuário.
-      await homePreloadPromise;
+      await window.beBackend.ready;
+      if (window.beBackend.data && typeof window.beBackend.data.preloadHome === 'function') {
+        await window.beBackend.data.preloadHome().catch(error => {
+          (void 0);
+        });
+      }
       const contentTasks = await Promise.allSettled([
         applySiteSettings(),
         renderFeatured(),
@@ -3431,7 +3371,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       contentTasks.forEach(result => {
         if (result.status === 'rejected') (void 0);
       });
-      await backendReadyPromise;
       setupHomeNavigation();
       setupDetailControls();
       await openContentDetailFromRoute();
@@ -3442,14 +3381,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.dispatchEvent(new Event('be:content-ready'));
     }
   }
-  // Este arquivo é carregado com defer: o HTML já terminou de ser analisado mesmo
-  // enquanto readyState ainda aparece como "loading". Começar agora evita esperar
-  // Analytics/Speed Insights terminarem antes de iniciar a Home.
-  if (document.readyState === 'loading' && document.currentScript && document.currentScript.defer) {
-    Promise.resolve().then(startDynamicContent);
-  } else if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startDynamicContent, { once: true });
-  } else startDynamicContent();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startDynamicContent, { once: true });
+  else startDynamicContent();
 
                                                                               
                                                                             
@@ -3607,6 +3540,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         streamingAvailability: source.streamingAvailability || [],
         streamingLinks: source.streamingLinks || {},
         subtitleUrl: source.subtitleUrl || item.subtitleUrl || '',
+        subtitleLocale: source.subtitleLocale || item.subtitleLocale || '',
         sectionId: source.sectionId || '',
         sectionName: source.sectionName || '',
         collection,
@@ -3633,7 +3567,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ].join('');
       return `<div class="f-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
         <div class="f-info">
-          <div class="f-logo${item.logoUrl ? ' has-image' : ''}${preserveTitle ? ' notranslate' : ''}"${preserveTitle ? ' translate="no"' : ''}>${item.logoUrl ? (index === 0 ? `<img loading="eager" decoding="async" fetchpriority="high" width="480" height="120" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : `<img decoding="async" data-featured-src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">`) : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
+          <div class="f-logo${preserveTitle ? ' notranslate' : ''}"${preserveTitle ? ' translate="no"' : ''}>${item.logoUrl ? (index === 0 ? `<img loading="eager" decoding="async" fetchpriority="high" src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">` : `<img decoding="async" data-featured-src="${safeAssetUrl(item.logoUrl)}" alt="${escapeHtml(title)}">`) : (['movies', 'series'].includes(item.collection) ? `<span class="sr-only">${escapeHtml(title)}</span>` : escapeHtml(title))}</div>
           <div class="f-meta">${meta}</div>
           <div class="f-desc be-markdown">${markdownToHtml(item.description || '')}</div>
           <div class="f-actions">
@@ -3647,6 +3581,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-content-url="${safeUrl(url)}"
               data-mobile-app-drive-url="${safeUrl(item.mobileAppDriveUrl || '')}"
               data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
+              data-subtitle-locale="${escapeHtml(item.subtitleLocale || (item.subtitleUrl ? activeLocaleSlug() : ''))}"
               data-image-url="${safeAssetUrl(item.imageUrl || '')}"
               data-banner-url="${safeAssetUrl(item.bannerUrl || item.imageUrl || '')}"
               data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
@@ -3663,7 +3598,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             </button>
           </div>
         </div>
-        <div class="f-media">${image ? (index === 0 ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" width="1600" height="900" loading="eager" decoding="async" fetchpriority="high">` : `<img data-featured-src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" decoding="async">`) : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
+        <div class="f-media">${image ? (index === 0 ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">` : `<img data-featured-src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" decoding="async">`) : '<div class="ph ph-wide" style="height:100%"></div>'}</div>
       </div>`;
     }).join('') + `<div class="f-dots" id="featuredDots">${featured.map((_, index) => `<button class="f-dot ${index === 0 ? 'active' : ''}" data-goto="${index}" aria-label="Ir para o destaque ${index + 1}"></button>`).join('')}</div>`;
 
@@ -3852,6 +3787,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-content-url="${safeUrl(contentUrl)}"
               data-mobile-app-drive-url="${safeUrl(item.mobileAppDriveUrl || '')}"
               data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
+              data-subtitle-locale="${escapeHtml(item.subtitleLocale || (item.subtitleUrl ? activeLocaleSlug() : ''))}"
               data-image-url="${safeAssetUrl(thumbnail)}"
               data-banner-url="${safeAssetUrl(background)}"
               data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
@@ -4466,6 +4402,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-content-url="${safeUrl(contentHref)}"
       data-mobile-app-drive-url="${safeUrl(video.mobileAppDriveUrl || '')}"
       data-subtitle-url="${safeUrl(video.subtitleUrl || '')}"
+      data-subtitle-locale="${escapeHtml(video.subtitleLocale || (video.subtitleUrl ? activeLocaleSlug() : ''))}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(banner)}"
       data-logo-url="${safeAssetUrl(logo)}"
@@ -4958,6 +4895,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-content-url="${safeUrl(contentHref)}"
       data-mobile-app-drive-url="${safeUrl(data.mobileAppDriveUrl || '')}"
       data-subtitle-url="${safeUrl(data.subtitleUrl || '')}"
+      data-subtitle-locale="${escapeHtml(data.subtitleLocale || (data.subtitleUrl ? activeLocaleSlug() : ''))}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(['movies', 'series'].includes(String(data.collection || '').toLowerCase()) ? image : (data.bannerUrl || image))}"
       data-logo-url="${safeAssetUrl(data.logoUrl || '')}"
@@ -7025,11 +6963,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderSubtitleCue(subtitleOverlay, [], 0, false);
     };
 
-    const configureExternalSubtitles = value => {
+    const configureExternalSubtitles = (value, localeHint = '') => {
       resetExternalSubtitles();
                                                                                   
                                                                                 
-      activeSubtitleUrl = activeProvider === 'vk' ? subtitleFileForCurrentLocale(value) : '';
+      activeSubtitleUrl = activeProvider === 'vk' ? subtitleFileForCurrentLocale(value, localeHint) : '';
       subtitleButton.hidden = !activeSubtitleUrl;
     };
 
@@ -7116,7 +7054,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       let instagramMobileFrameLoaded = false;
       vkEmbedAttempt = 0;
       vkPlaybackConfirmed = false;
-      configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '');
+      configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '', normalizedProvider === 'vk' ? context?.subtitleLocale : '');
       vkSelectedQuality = 4;
       vkMuted = false;
       vkVolume = 1;
@@ -7169,8 +7107,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       event.stopImmediatePropagation();
 
       const subtitleUrl = linkedContent.subtitleUrl || link.dataset.subtitleUrl || '';
+      const subtitleLocale = linkedContent.subtitleLocale || link.dataset.subtitleLocale || '';
       if (youtubeInfo) openExternalPlayer('youtube', youtubeInfo, { title });
-      else openExternalPlayer('vk', vkInfo, { title, subtitleUrl });
+      else openExternalPlayer('vk', vkInfo, { title, subtitleUrl, subtitleLocale });
     }, true);
 
     qualityButton.addEventListener('click', () => {
@@ -7626,9 +7565,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderSubtitleCue(subtitleOverlay, [], 0, false);
     };
 
-    const configureDriveSubtitles = (value, offsetSeconds = 0) => {
+    const configureDriveSubtitles = (value, offsetSeconds = 0, localeHint = '') => {
       resetDriveSubtitles();
-      activeSubtitleUrl = subtitleFileForCurrentLocale(value);
+      hideSubtitleSyncNotice(shell, true);
+      activeSubtitleUrl = subtitleFileForCurrentLocale(value, localeHint);
       const parsedOffset = Number(offsetSeconds);
       activeSubtitleOffset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
       subtitleButton.hidden = !activeSubtitleUrl;
@@ -7905,7 +7845,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeFileId = fileId;
       activeResourceKey = resourceKey;
       activeSourceLink = context?.sourceLink instanceof Element ? context.sourceLink : null;
-      configureDriveSubtitles(context?.subtitleUrl, context?.subtitleOffset);
+      configureDriveSubtitles(context?.subtitleUrl, context?.subtitleOffset, context?.subtitleLocale);
       const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
       activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
       previousFocus = document.activeElement;
@@ -7925,8 +7865,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       syncFullscreen();
                                                                             
                                                                               
-      if (activeSubtitleUrl) showSubtitleSyncNotice(shell, { sequence: true });
-
                                                                              
                                                                               
                                                                          
@@ -7986,6 +7924,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         title,
         sourceLink: link,
         subtitleUrl: linkedContent.subtitleUrl || link.dataset.subtitleUrl || '',
+        subtitleLocale: linkedContent.subtitleLocale || link.dataset.subtitleLocale || '',
         subtitleOffset
       });
     }, true);
@@ -8050,6 +7989,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas';
         syncDriveSubtitle();
+        showSubtitleSyncNotice(shell, { sequence: true });
       } catch (_) {
         if (token !== subtitleLoadToken) return;
         clearFrameSubtitleSync();
@@ -10147,59 +10087,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  const contentInteractionQueue = new Map();
-  let contentInteractionFlushTimer = 0;
-  let contentInteractionFlushPromise = null;
-
-  function flushContentInteractionQueue() {
-    if (contentInteractionFlushTimer) { clearTimeout(contentInteractionFlushTimer); contentInteractionFlushTimer = 0; }
-    if (contentInteractionFlushPromise || !contentInteractionQueue.size) return contentInteractionFlushPromise || Promise.resolve();
-    const events = Array.from(contentInteractionQueue.values()).slice(0, 25);
-    events.forEach(item => contentInteractionQueue.delete(`${item.contentId}:${item.eventType}`));
-    contentInteractionFlushPromise = Promise.resolve(window.beBackend?.ready)
-      .then(async () => {
-        const client = window.beBackend?.client;
-        if (!client || typeof client.rpc !== 'function') return;
-        const sessionId = contentAnalyticsSessionId();
-        const batch = await client.rpc('track_content_interactions_batch', {
-          p_events: events.map(item => ({ contentId: item.contentId, eventType: item.eventType })),
-          p_session_id: sessionId
-        });
-        // Compatibilidade durante deploy: se a migration ainda não chegou, cai
-        // para o RPC antigo sem perder as métricas.
-        if (batch && batch.error) {
-          await Promise.all(events.map(item => client.rpc('track_content_interaction', {
-            p_content_id: item.contentId,
-            p_event_type: item.eventType,
-            p_session_id: sessionId,
-            p_active: null
-          }).catch(() => null)));
-        }
-      })
-      .catch(() => null)
-      .finally(() => {
-        contentInteractionFlushPromise = null;
-        if (contentInteractionQueue.size) contentInteractionFlushTimer = setTimeout(flushContentInteractionQueue, 3500);
-      });
-    return contentInteractionFlushPromise;
-  }
-
   function trackContentInteraction(data, eventType, active = null) {
     const normalized = normalizeSavedContent(data || {});
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized.recordId)) return;
     const type = String(eventType || '').trim().toLowerCase();
     if (!['click', 'view', 'save'].includes(type)) return;
 
-    if (type !== 'save') {
-      // click/view já são deduplicados por usuário+sessoão+conteúdo no banco.
-      // Agrupar aqui transforma várias chamadas de uma tela em um único RPC.
-      contentInteractionQueue.set(`${normalized.recordId}:${type}`, { contentId: normalized.recordId, eventType: type });
-      if (!contentInteractionFlushTimer) contentInteractionFlushTimer = setTimeout(flushContentInteractionQueue, 3500);
-      if (contentInteractionQueue.size >= 20) flushContentInteractionQueue();
-      return;
-    }
-
-    // Save altera estado do usuário, por isso permanece imediato.
     Promise.resolve(window.beBackend?.ready)
       .then(() => {
         const client = window.beBackend?.client;
@@ -10208,14 +10101,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           p_content_id: normalized.recordId,
           p_event_type: type,
           p_session_id: contentAnalyticsSessionId(),
-          p_active: Boolean(active)
+          p_active: type === 'save' ? Boolean(active) : null
         });
       })
       .catch(() => null);
   }
-
-  window.addEventListener('pagehide', function(){ flushContentInteractionQueue(); });
-  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') flushContentInteractionQueue(); });
 
   function detailFavoriteSet() {
     const key = 'beDetailFavorites';
@@ -12312,26 +12202,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
   }
   async function profileHandle(account){
-    var value='';
+    var label=document.getElementById('ddUsername');
+    var value=label?String(label.textContent||'').replace(/^@/,'').trim():'';
+    if(value&&value!=='Visitante'&&value!=='Usuário')return value;
     try{
       if(window.beBackend&&beBackend.profiles&&account){
-        var ownProfile=account.profile&&typeof account.profile==='object'?account.profile:null;
-        value=String(ownProfile&&ownProfile.username||'').replace(/^@/,'').trim();
-        if(!value&&account.uid&&typeof beBackend.profiles.get==='function'){
-          ownProfile=await beBackend.profiles.get(account.uid,{force:true});
-          value=String(ownProfile&&ownProfile.username||'').replace(/^@/,'').trim();
-        }
-        if(!value&&typeof beBackend.profiles.ensure==='function'){
-          ownProfile=await beBackend.profiles.ensure(account);
-          value=String(ownProfile&&ownProfile.username||'').replace(/^@/,'').trim();
-        }
+        var profile=await beBackend.profiles.ensure(account);
+        value=String(profile&&profile.username||'').trim();
       }
     }catch(_){ }
-    if(!value){
-      var label=document.getElementById('ddUsername');
-      value=label?String(label.textContent||'').replace(/^@/,'').trim():'';
-      if(value==='Visitante'||value==='Usuário')value='';
-    }
     return value||'perfil';
   }
   function activateSettings(){
@@ -12347,7 +12226,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var handle=await profileHandle(account);
     var path='/@'+encodeURIComponent(handle);
     history.pushState({beRoute:'profile'},'',path+(location.search||''));
-    window.dispatchEvent(new CustomEvent('be:open-profile-route',{detail:{username:handle,own:true,userId:String(account&&account.uid||'')}}));
+    window.dispatchEvent(new CustomEvent('be:open-profile-route'));
     window.setTimeout(function(){
       if(!document.body.classList.contains('profile-page-active'))location.assign(window.BETVLocaleURL?window.BETVLocaleURL(path):path);
     },180);
@@ -13585,45 +13464,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(document.body.classList.contains('settings-page-active')||isConfigRoute()){renderSettingsPage();keepSettingsOpen();}
       try{window.dispatchEvent(new CustomEvent('be:profile-device-synced',{detail:{userId:userId,profile:currentProfile}}));}catch(_){ }
     }
-    var crossDeviceRefreshTimer=0;
-    var crossDeviceRefreshAt=0;
-    var crossDeviceRefreshInFlight=false;
-    var crossDeviceRefreshBound=false;
-    async function refreshCrossDeviceData(userId,force){
-      if(!userId||crossDeviceRefreshInFlight||!auth.currentUser||auth.currentUser.uid!==userId)return;
-      var nowMs=Date.now();
-      if(!force&&nowMs-crossDeviceRefreshAt<60000)return;
-      crossDeviceRefreshAt=nowMs;crossDeviceRefreshInFlight=true;
-      try{
-        var results=await Promise.all([
-          beBackend.preferences.get(userId,{force:true}),
-          beBackend.profiles&&typeof beBackend.profiles.get==='function'?beBackend.profiles.get(userId,{force:true}):Promise.resolve(null)
-        ]);
-        if(!auth.currentUser||auth.currentUser.uid!==userId)return;
-        var preference=results[0],profile=results[1];
-        if(preference&&preference.data)applyCrossDeviceData(preference.data,userId,'remote');
-        if(profile)applyRemoteProfile(profile,userId);
-        setSettingsSyncStatus('active','Atualizado em todos os dispositivos.');
-      }catch(_){ }finally{crossDeviceRefreshInFlight=false;}
-    }
-    function bindCrossDeviceRefresh(){
-      if(crossDeviceRefreshBound)return;crossDeviceRefreshBound=true;
-      var queue=function(force){
-        if(!auth.currentUser||!auth.currentUser.uid)return;
-        clearTimeout(crossDeviceRefreshTimer);
-        crossDeviceRefreshTimer=setTimeout(function(){refreshCrossDeviceData(auth.currentUser&&auth.currentUser.uid,!!force);},250);
-      };
-      window.addEventListener('focus',function(){queue(false);});
-      window.addEventListener('online',function(){queue(true);});
-      window.addEventListener('pageshow',function(){queue(true);});
-      window.addEventListener('be:open-config',function(){queue(true);});
-      document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')queue(false);});
-    }
     async function startCrossDeviceSync(user){
       if(!user||!user.uid||!beBackend.preferences)return;
       if(preferenceSyncUserId===user.uid&&(preferenceSyncStarting||preferenceDeviceSyncStop))return;
       stopCrossDeviceSync();
-      bindCrossDeviceRefresh();
       var userId=user.uid;preferenceSyncUserId=userId;preferenceSyncStarting=true;
       setSettingsSyncStatus('syncing','Carregando as configurações da sua conta…');
       try{
@@ -13645,19 +13489,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           }
         }
         applyCrossDeviceData(merged,userId,remote?'remote':'local');
-        // save() ignora updatedAt ao comparar e só escreve quando algum dado real mudou.
-        await beBackend.preferences.save(userId,{...merged,updatedAt:beBackend.now()});
+        var saved=await beBackend.preferences.save(userId,{...merged,updatedAt:beBackend.now()});
         if(!auth.currentUser||auth.currentUser.uid!==userId)return;
-        // Supabase Realtime sincroniza alterações do mesmo usuário entre PC e mobile
-        // diretamente pelo canal privado; o refresh por foco/pageshow fica como fallback.
         preferenceDeviceSyncStop=beBackend.preferences.subscribe(userId,function(record){
           if(!record||!auth.currentUser||auth.currentUser.uid!==userId)return;
           applyCrossDeviceData(record.data,userId,'remote');
           setSettingsSyncStatus('active','Atualizado em todos os dispositivos.');
         });
-        if(beBackend.profiles&&typeof beBackend.profiles.subscribe==='function'){
-          profileDeviceSyncStop=beBackend.profiles.subscribe(userId,function(profile){applyRemoteProfile(profile,userId);});
-        }
+        if(beBackend.profiles&&typeof beBackend.profiles.subscribe==='function')profileDeviceSyncStop=beBackend.profiles.subscribe(userId,function(profile){applyRemoteProfile(profile,userId);});
         setSettingsSyncStatus('active','Sincronizado entre celular e computador.');
       }catch(error){
         (void 0);
@@ -14926,7 +14765,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       document.body.classList.remove('detail-page-active');
       window.dispatchEvent(new CustomEvent('be:close-album-page'));
     }
-    async function openPublicProfile(updateRoute,requestedUsername,options){
+    async function openPublicProfile(updateRoute,requestedUsername){
       window.dispatchEvent(new CustomEvent('be:close-public-search'));
       window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
       closeDetailBeforeDedicatedPage();
@@ -14935,18 +14774,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       toggleDropdown(false);settingsPage.hidden=true;profilePage.hidden=false;
       document.body.classList.remove('settings-page-active','login-mode');document.body.classList.add('profile-page-active');
       updateProfileActionVisibility();
-      var ownRequested=Boolean(options&&options.own&&auth.currentUser&&(!options.userId||String(options.userId)===String(auth.currentUser.uid||'')));
-      var ownHandle=beBackend.normalizeUsername((currentProfile&&currentProfile.username)||(auth.currentUser&&auth.currentUser.profile&&auth.currentUser.profile.username)||'');
-      var handle=beBackend.normalizeUsername(requestedUsername||profileRouteUsername()||ownHandle||'');
-      if(ownRequested&&ownHandle)handle=ownHandle;
+      var handle=beBackend.normalizeUsername(requestedUsername||profileRouteUsername()||(currentProfile&&currentProfile.username)||'');
       if(!handle){
         if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}
-        handle=ownHandle||'perfil';
+        handle=beBackend.normalizeUsername((currentProfile&&currentProfile.username)||'perfil');
       }
       var route='/@'+encodeURIComponent(handle||'perfil');
       if(updateRoute!==false)pushPublicRoute(route);else if(isProfileRoute()&&(cleanPathname()!==route||location.hash))replacePublicRoute(route);
       var requestId=++viewedProfileRequest;
-      if(auth.currentUser&&(ownRequested||(ownHandle&&handle===ownHandle))){
+      var ownHandle=beBackend.normalizeUsername((currentProfile&&currentProfile.username)||'');
+      if(auth.currentUser&&ownHandle&&handle===ownHandle){
         viewedProfile={...(currentProfile||{}),socialLinks:readProfileSocialLinks(auth.currentUser.uid),profileColor:normalizeProfileColorValue((currentProfile&&currentProfile.profileColor)||readProfileColorValue(auth.currentUser.uid,'profile')),avatarBorderColor:normalizeProfileColorValue((currentProfile&&currentProfile.avatarBorderColor)||readProfileColorValue(auth.currentUser.uid,'avatar-border')),favorites:readProfileFavorites(),lovedAlbums:readProfileLovedAlbums(),savedContents:(typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[])};
         viewedProfileStatus='ready';
         renderProfilePage();
@@ -15058,7 +14895,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     }
 
-    function openProfile(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}openPublicProfile(true,(currentProfile&&currentProfile.username)||(auth.currentUser.profile&&auth.currentUser.profile.username)||'',{own:true,userId:auth.currentUser.uid});}
+    function openProfile(){if(!auth.currentUser){window.BETVPublicRoutes.go('/login');return;}openPublicProfile(true,(currentProfile&&currentProfile.username)||'');}
     if(profilePageName){
       profilePageName.addEventListener('input',function(){
         if(!profileInlineEditing||!profileInlineNameWasEditing)return;
@@ -15112,7 +14949,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         document.body.dataset.homeView='home';
       }
       window.scrollTo({top:0,left:0,behavior:'auto'});
-    });document.querySelectorAll('button[data-home-view],a[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(event){var detail=event&&event.detail||{};openPublicProfile(false,detail.username||'',detail.own?{own:true,userId:detail.userId||''}:null).catch(function(error){(void 0);});});window.addEventListener('popstate',function(){
+    });document.querySelectorAll('button[data-home-view],a[data-home-view],#logoBtn').forEach(function(button){button.addEventListener('click',function(){closePublicPages(true);});});window.addEventListener('be:open-config',function(){openSettingsPage(false);});window.addEventListener('be:open-profile-route',function(){openPublicProfile(false).catch(function(error){(void 0);});});window.addEventListener('popstate',function(){
       if(!avatarPicker.hidden)closeAvatarPicker(false);
       if(!bannerPicker.hidden)closeBannerPicker(false);
       if(isConfigRoute()){if(auth.currentUser)openSettingsPage(false);else window.BETVPublicRoutes.go('/login');}
@@ -15235,9 +15072,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='',mfaChallengePending=false;
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
-  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false;
+  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false,siteSkeletonReleased=document.documentElement.dataset.siteLoaded==='true';
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
-  function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
+  function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();window.clearTimeout(siteSkeletonHideTimer);var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;siteSkeletonReleased=true;document.documentElement.dataset.siteLoaded='true';if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
   function donateVisualReady(){var donatePage=q('donatePage');return !isDonateRoute()||Boolean(donatePage&&donatePage.dataset&&donatePage.dataset.visualReady==='true');}
   function notificationsVisualReady(){return !isNotificationsRoute()||window.__beNotificationsReady===true;}
   function waitForDonateVisualBeforeReveal(){
@@ -15265,7 +15102,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     releaseSiteSkeleton();
   }
-  function showSiteSkeleton(){window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=0;var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
+  function showSiteSkeleton(){if(siteSkeletonReleased||document.documentElement.dataset.siteLoaded==='true')return;window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=0;var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
   window.addEventListener('be:content-ready',function(){
                                                                               
                                                                              
@@ -15311,7 +15148,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       'auth/mfa-unavailable':'A verificação em duas etapas está indisponível no momento.',
       'auth/mfa-needs-verification':'Confirme o código do autenticador antes de continuar.',
       'auth/user-banned':'',
-      'auth/email-rate-limit':'Estamos com muitos pedidos de recuperação de senha no momento. Tente novamente mais tarde.',
+      'auth/email-rate-limit':'O limite temporário de e-mails do Supabase foi atingido. Aguarde e tente novamente mais tarde ou continue com o Discord.',
       'auth/provider-not-enabled':'O login com Discord ainda não foi ativado no Supabase.',
       'backend/not-configured':'Este recurso será ativado quando o Supabase estiver conectado.',
       'username-in-use':'Este nome de usuário já está em uso. Escolha outro.',
@@ -16839,7 +16676,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 (function () {
   'use strict';
 
-  var ENDPOINT = '/_static/version.json';
+  var ENDPOINT = '/api/deployment-version';
                                                                       
   var CHECK_INTERVAL = 12 * 60 * 60 * 1000;
   var MIN_CHECK_GAP_MS = 2 * 60 * 60 * 1000;
@@ -19863,7 +19700,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   'use strict';
   if(String(location.hash||'').startsWith('#/admin')) return;
 
-  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),watchRecordedAt:Object.create(null)};
+  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null)};
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
@@ -20147,9 +19984,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return /^#[0-9A-F]{6}$/.test(normalized)?normalized:'';
   }
 
-  function createRankAvatar(url,name,borderColor,username,ringResolved){
+  function createRankAvatar(url,name,borderColor,username){
     var avatar=document.createElement('span');avatar.className='community-rank-avatar';
-    if(ringResolved)avatar.dataset.ringResolved='true';
     var normalizedUsername=String(username||'').replace(/^@/,'').trim();
     if(normalizedUsername)avatar.dataset.ringUsername=normalizedUsername;
     var ring=normalizeProfileAvatarRing(borderColor);
@@ -20159,7 +19995,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function hydrateRankingAvatarRings(root){
     if(!root||typeof window.BETVGetPublicAvatarRing!=='function')return;
-    Array.prototype.forEach.call(root.querySelectorAll('.community-rank-avatar:not(.has-custom-ring):not([data-ring-resolved="true"])[data-ring-username]'),function(avatar){
+    Array.prototype.forEach.call(root.querySelectorAll('.community-rank-avatar:not(.has-custom-ring)[data-ring-username]'),function(avatar){
       var username=String(avatar.dataset.ringUsername||'').trim();if(!username)return;
       Promise.resolve(window.BETVGetPublicAvatarRing(username)).then(function(color){
         var ring=normalizeProfileAvatarRing(color);if(!ring||!avatar.isConnected)return;
@@ -20204,7 +20040,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     rows.forEach(function(item){
       var button=document.createElement('button');button.type='button';button.className='community-ranking-row'+rankToneClass(item)+(isCurrentProfilePerson(item)?' is-current-user':'');
       var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position||'—');button.appendChild(pos);
-      button.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username,Object.prototype.hasOwnProperty.call(item,'avatarBorderColor')||Object.prototype.hasOwnProperty.call(item,'avatar_border_color')));
+      button.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username));
       var copy=document.createElement('span');copy.className='community-rank-copy';var nameLine=document.createElement('span');nameLine.className='community-rank-name-line';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');nameLine.appendChild(strong);var tagMarkup=communityTagMarkup(item&&item.communityTag);if(tagMarkup){var tagWrap=document.createElement('span');tagWrap.className='community-rank-tag';tagWrap.innerHTML=tagMarkup;nameLine.appendChild(tagWrap);}copy.appendChild(nameLine);var handle=document.createElement('span');handle.className='community-rank-handle';handle.textContent='@'+String(item.username||'usuario').replace(/^@/,'');copy.appendChild(handle);button.appendChild(copy);
       var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});button.appendChild(value);
       button.addEventListener('click',function(){closeCommunity(false);var route='/@'+encodeURIComponent(String(item.username||'').replace(/^@/,''));if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);else location.assign(route);});
@@ -20221,7 +20057,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     own.hidden=false;own.className='community-ranking-own';
     var row=document.createElement('div');row.className='community-ranking-own-row';
     var pos=document.createElement('span');pos.className='community-rank-number';pos.textContent='#'+String(item.position);row.appendChild(pos);
-    row.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username,Object.prototype.hasOwnProperty.call(item,'avatarBorderColor')||Object.prototype.hasOwnProperty.call(item,'avatar_border_color')));
+    row.appendChild(createRankAvatar(item.avatarUrl,item.displayName,item.avatarBorderColor||item.avatar_border_color,item.username));
     var copy=document.createElement('span');copy.className='community-rank-copy';var nameLine=document.createElement('span');nameLine.className='community-rank-name-line';var strong=document.createElement('strong');strong.textContent=String(item.displayName||item.username||'Usuário');nameLine.appendChild(strong);var ownTagMarkup=communityTagMarkup(item&&item.communityTag);if(ownTagMarkup){var ownTag=document.createElement('span');ownTag.className='community-rank-tag';ownTag.innerHTML=ownTagMarkup;nameLine.appendChild(ownTag);}copy.appendChild(nameLine);row.appendChild(copy);
     var value=document.createElement('span');value.className='community-rank-value';value.textContent=Number(item.likes)===1?t('1 curtida'):t('{count} curtidas',{count:Number(item.likes)||0});row.appendChild(value);
     own.appendChild(row);
@@ -20268,8 +20104,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function recordWatchFromPlay(play){
     var user=currentUser();if(!user||!play)return false;
     var recordId=String(play.dataset.recordId||'');if(!validUuid(recordId))return false;
-    var last=Number(state.watchRecordedAt&&state.watchRecordedAt[recordId]||0);if(last&&Date.now()-last<120000)return true;
-    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;if(!state.watchRecordedAt)state.watchRecordedAt=Object.create(null);state.watchRecordedAt[recordId]=Date.now();state.lastPayload=null;return result&&result.data!==false;}catch(error){(void 0);return false;}
+    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;state.lastPayload=null;return result&&result.data!==false;}catch(error){(void 0);return false;}
   }
 
   function recordRecentFromPlay(play){
