@@ -38,6 +38,7 @@
   "Carregando fãs…": "Caricamento dei fan…",
   "Carregando mais fãs…": "Caricamento di altri fan…",
   "Carregando…": "Caricamento…",
+  "Celular": "Telefono",
   "Chave manual": "Chiave manuale",
   "Comentar": "Commenta",
   "Comentários": "Commenti",
@@ -65,6 +66,7 @@
   "Curtidas": "Mi piace",
   "Código de 6 dígitos": "Codice a 6 cifre",
   "Código do autenticador": "Codice dell’autenticatore",
+  "Código incorreto, tente novamente.": "Codice errato, riprova.",
   "Denunciar": "Segnala",
   "Desativar": "Disattiva",
   "Desconectando…": "Disconnessione…",
@@ -142,6 +144,7 @@
   "Salvar": "Salva",
   "Salvar alterações": "Salva modifiche",
   "Senha": "Password",
+  "Senha incorreta, tente novamente.": "Password errata, riprova.",
   "Sessão": "Sessione",
   "Site oficial": "Sito ufficiale",
   "Smart TV": "Smart TV",
@@ -166,6 +169,5 @@
   "Vídeos": "Video",
   "Wikipédia em português": "Wikipedia in italiano",
   "agora": "ora",
-  "Álbuns": "Album",
-  "Celular": "Telefono"
+  "Álbuns": "Album"
 }

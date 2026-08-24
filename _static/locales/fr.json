@@ -162,6 +162,7 @@
   "Carregando o site": "Chargement du site",
   "Carregando álbuns…": "Chargement des albums…",
   "Carregando…": "Chargement…",
+  "Celular": "Téléphone",
   "Central de notificações do BETV": "Centre de notifications BETV",
   "Central de suporte do BETV": "Centre d’assistance BETV",
   "Chave manual": "Clé manuelle",
@@ -256,6 +257,7 @@
   "Curtir perfil": "Aimer le profil",
   "Código de 6 dígitos": "Code à 6 chiffres",
   "Código do autenticador": "Code d’authentification",
+  "Código incorreto, tente novamente.": "Code incorrect, réessayez.",
   "DMCA / Copyright": "DMCA / Copyright",
   "DMCA / Direitos Autorais": "DMCA / Droits d’auteur",
   "DMCA / Direitos autorais": "DMCA / Droits d’auteur",
@@ -699,6 +701,7 @@
   "Senha": "Mot de passe",
   "Senha alterada com sucesso. Entre novamente com a nova senha.": "Mot de passe modifié. Reconnecte-toi avec ton nouveau mot de passe.",
   "Senha da sua conta BETV": "Mot de passe de ton compte BETV",
+  "Senha incorreta, tente novamente.": "Mot de passe incorrect, réessayez.",
   "Ser destacado na página Comunidade não representa parceria oficial, patrocínio, endosso, vínculo empregatício ou qualquer outra afiliação entre o Billie Eilish TV e a pessoa, conta, servidor ou comunidade apresentada.": "Une mise en avant sur la page Communauté ne constitue ni un partenariat officiel, ni un financement, ni un soutien, ni une relation de travail, ni aucune autre affiliation entre Billie Eilish TV et la personne, le compte, le serveur ou la communauté présentée.",
   "Serviços conectados": "Services connectés",
   "Serviços externos usados para autenticação, hospedagem ou reprodução incorporada podem definir seus próprios cookies. O tratamento realizado por esses serviços segue as políticas de cada fornecedor.": "Les services externes utilisés pour l’authentification, l’hébergement ou la lecture intégrée peuvent définir leurs propres cookies. Le traitement effectué par ces services suit la politique de chaque fournisseur.",
@@ -843,6 +846,5 @@
   "Última atualização: 3 de agosto de 2026.": "Dernière mise à jour : 3 août 2026.",
   "Última atualização: 7 de agosto de 2026.": "Dernière mise à jour : 7 août 2026.",
   "Última atualização: 8 de agosto de 2026.": "Dernière mise à jour : 8 août 2026.",
-  "“Billie Eilish”, nomes de obras, marcas, logotipos, fotografias, vídeos e demais materiais de terceiros pertencem aos seus respectivos titulares. A presença desses elementos no catálogo não transfere ao BETV qualquer direito de propriedade sobre eles.": "« Billie Eilish », les titres d’œuvres, marques, logos, photographies, vidéos et autres éléments appartenant à des tiers restent la propriété de leurs détenteurs respectifs. Leur présence dans le catalogue ne transfère aucun droit de propriété à BETV.",
-  "Celular": "Téléphone"
+  "“Billie Eilish”, nomes de obras, marcas, logotipos, fotografias, vídeos e demais materiais de terceiros pertencem aos seus respectivos titulares. A presença desses elementos no catálogo não transfere ao BETV qualquer direito de propriedade sobre eles.": "« Billie Eilish », les titres d’œuvres, marques, logos, photographies, vidéos et autres éléments appartenant à des tiers restent la propriété de leurs détenteurs respectifs. Leur présence dans le catalogue ne transfère aucun droit de propriété à BETV."
 }

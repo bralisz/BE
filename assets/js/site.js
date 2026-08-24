@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260824-device-mobile-multisession-v2';
+  var STATIC_REV='20260824-auth-error-messages-v3';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -15645,16 +15645,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function friendly(error){
     var code=(error&&error.code)||'';
     var map={
-      'auth/invalid-credential':'E-mail ou senha incorretos.',
+      'auth/invalid-credential':authText('Senha incorreta, tente novamente.'),
       'auth/user-not-found':'Conta não encontrada.',
-      'auth/wrong-password':'E-mail ou senha incorretos.',
+      'auth/wrong-password':authText('Senha incorreta, tente novamente.'),
       'auth/email-already-in-use':'Este e-mail já possui uma conta.',
       'auth/weak-password':'Use uma senha com pelo menos 6 caracteres.',
       'auth/invalid-email':'Digite um e-mail válido.',
       'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
       'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
       'auth/session-missing':'Não foi possível concluir a sessão de login. Tente entrar novamente.',
-      'auth/mfa-invalid-code':'Código do autenticador inválido ou expirado.',
+      'auth/mfa-invalid-code':authText('Código incorreto, tente novamente.'),
       'auth/mfa-factor-missing':'Nenhum autenticador ativo foi encontrado para esta conta.',
       'auth/mfa-unavailable':'A verificação em duas etapas está indisponível no momento.',
       'auth/mfa-needs-verification':'Confirme o código do autenticador antes de continuar.',

@@ -162,6 +162,7 @@
   "Carregando o site": "Loading the site",
   "Carregando álbuns…": "Loading albums…",
   "Carregando…": "Loading…",
+  "Celular": "Phone",
   "Central de notificações do BETV": "BETV notification center",
   "Central de suporte do BETV": "BETV support center",
   "Chave manual": "Manual key",
@@ -256,6 +257,7 @@
   "Curtir perfil": "Like profile",
   "Código de 6 dígitos": "6-digit code",
   "Código do autenticador": "Authenticator code",
+  "Código incorreto, tente novamente.": "Incorrect code, try again.",
   "DMCA / Copyright": "DMCA / Copyright",
   "DMCA / Direitos Autorais": "DMCA / Copyright",
   "DMCA / Direitos autorais": "DMCA / Copyright",
@@ -699,6 +701,7 @@
   "Senha": "Password",
   "Senha alterada com sucesso. Entre novamente com a nova senha.": "Password changed successfully. Sign in again with your new password.",
   "Senha da sua conta BETV": "Your BETV account password",
+  "Senha incorreta, tente novamente.": "Incorrect password, try again.",
   "Ser destacado na página Comunidade não representa parceria oficial, patrocínio, endosso, vínculo empregatício ou qualquer outra afiliação entre o Billie Eilish TV e a pessoa, conta, servidor ou comunidade apresentada.": "Being featured on the Community page does not represent an official partnership, sponsorship, endorsement, employment relationship, or any other affiliation between Billie Eilish TV and the person, account, server, or community shown.",
   "Serviços conectados": "Connected services",
   "Serviços externos usados para autenticação, hospedagem ou reprodução incorporada podem definir seus próprios cookies. O tratamento realizado por esses serviços segue as políticas de cada fornecedor.": "External services used for authentication, hosting, or embedded playback may set their own cookies. Processing by those services follows each provider’s policies.",
@@ -843,6 +846,5 @@
   "Última atualização: 3 de agosto de 2026.": "Last updated: August 3, 2026.",
   "Última atualização: 7 de agosto de 2026.": "Last updated: August 7, 2026.",
   "Última atualização: 8 de agosto de 2026.": "Last updated: August 8, 2026.",
-  "“Billie Eilish”, nomes de obras, marcas, logotipos, fotografias, vídeos e demais materiais de terceiros pertencem aos seus respectivos titulares. A presença desses elementos no catálogo não transfere ao BETV qualquer direito de propriedade sobre eles.": "“Billie Eilish,” names of works, trademarks, logos, photographs, videos, and other third-party materials belong to their respective owners. Their presence in the catalog does not transfer any ownership rights to BETV.",
-  "Celular": "Phone"
+  "“Billie Eilish”, nomes de obras, marcas, logotipos, fotografias, vídeos e demais materiais de terceiros pertencem aos seus respectivos titulares. A presença desses elementos no catálogo não transfere ao BETV qualquer direito de propriedade sobre eles.": "“Billie Eilish,” names of works, trademarks, logos, photographs, videos, and other third-party materials belong to their respective owners. Their presence in the catalog does not transfer any ownership rights to BETV."
 }
