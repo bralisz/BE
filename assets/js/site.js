@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260824-ui-auth-devices-perf-v1';
+  var STATIC_REV='20260824-device-mobile-multisession-v2';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -2889,6 +2889,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       } catch (profileError) {
         (void 0);
       }
+      try { sessionStorage.setItem('beFreshAccountLogin', '1'); } catch (_) {}
       notify();
       return { user: currentUser, session: result?.session || null };
     },
@@ -2919,7 +2920,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },
     async signOut() {
       try{if(window.BETVAccountDevices&&typeof window.BETVAccountDevices.disconnectCurrent==='function')await window.BETVAccountDevices.disconnectCurrent();}catch(_){ }
-      const { error } = await supabaseClient.auth.signOut();
+      const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
       if (error) throw mapAuthError(error);
       currentUser = null;
       profileCache.clear();
@@ -3027,6 +3028,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const { data, error } = await mfa.challengeAndVerify({ factorId: targetFactorId, code: cleanCode });
       if (error) throw mapAuthError(error);
       try { currentUser = await resolveSupabaseUser(data) || currentUser; } catch (_) {}
+      try { sessionStorage.setItem('beFreshAccountLogin', '1'); } catch (_) {}
       return { user: currentUser, data };
     },
     async disableMfa(factorId) {
@@ -13577,18 +13579,88 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var mobile=Boolean(navigator.userAgentData&&navigator.userAgentData.mobile)||/Android|iPhone|iPad|iPod|Mobile/i.test(ua);
       return mobile?'mobile':'pc';
     }
-    function accountDeviceName(){
+    function genericMobileModel(value){
+      var name=String(value||'').trim();
+      return !name||name.length<2||/^(?:k|android|mobile|phone|smartphone|unknown|generic|linux|wv)$/i.test(name);
+    }
+    function mobileDeviceBrandName(model,ua){
+      var raw=String(model||'').replace(/\s+/g,' ').trim(),source=(raw+' '+String(ua||'')).trim();
+      if(genericMobileModel(raw))raw='';
+      if(/iPhone/i.test(source))return 'iPhone';
+      if(/iPad/i.test(source))return 'iPad';
+      var rules=[
+        [/Samsung|\bSM-[A-Z0-9-]+\b|\bGT-[A-Z0-9-]+\b|\bSCH-[A-Z0-9-]+\b|\bSGH-[A-Z0-9-]+\b/i,'Samsung'],
+        [/\bPixel(?:\s|$)/i,'Google'],
+        [/Motorola|\bmoto(?:\s|$)|\bXT\d{3,5}\b/i,'Motorola'],
+        [/Xiaomi|Redmi|POCO/i,'Xiaomi'],
+        [/OnePlus/i,'OnePlus'],
+        [/OPPO/i,'OPPO'],
+        [/\bRMX\d+\b|realme/i,'realme'],
+        [/HUAWEI/i,'Huawei'],
+        [/HONOR/i,'Honor'],
+        [/\bVIVO\b|iQOO/i,'vivo'],
+        [/ASUS|ROG Phone/i,'ASUS'],
+        [/Sony|Xperia/i,'Sony'],
+        [/Nokia|HMD Global/i,'Nokia'],
+        [/\bLG[- ]|LG Electronics/i,'LG'],
+        [/\bTCL\b/i,'TCL'],
+        [/\bZTE\b|nubia/i,'ZTE'],
+        [/TECNO/i,'TECNO'],
+        [/Infinix/i,'Infinix'],
+        [/Nothing Phone|\bA0\d{2}\b/i,'Nothing'],
+        [/Lenovo/i,'Lenovo'],
+        [/Meizu/i,'Meizu']
+      ];
+      for(var i=0;i<rules.length;i+=1){
+        if(!rules[i][0].test(source))continue;
+        var brand=rules[i][1];
+        if(!raw||genericMobileModel(raw))return brand;
+        if(raw.toLowerCase().indexOf(brand.toLowerCase())===0)return raw.slice(0,80);
+        if(brand==='Google'&&/^Pixel/i.test(raw))return ('Google '+raw).slice(0,80);
+        if(brand==='Xiaomi'&&/^(?:Redmi|POCO|Xiaomi)/i.test(raw))return raw.slice(0,80);
+        if(brand==='Motorola'&&/^moto/i.test(raw))return ('Motorola '+raw).slice(0,80);
+        return (brand+' '+raw).slice(0,80);
+      }
+      return 'Celular';
+    }
+    function accountDeviceName(modelOverride){
       var ua=String(navigator.userAgent||''),platform=String((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'');
       if(/iPhone/i.test(ua))return 'iPhone';
       if(/iPad/i.test(ua)||/Mac/i.test(platform)&&navigator.maxTouchPoints>1)return 'iPad';
-      if(/Android/i.test(ua)){
-        var model=ua.match(/Android[^;]*;\s*([^;)]+?)(?:\s+Build\/|;|\))/i);
-        return model&&String(model[1]||'').trim()?String(model[1]).trim():'Android';
+      if(accountDeviceType()==='mobile'){
+        var stored='';try{stored=String(localStorage.getItem('beAccountDeviceResolvedName')||'').trim();}catch(_){ }
+        if(stored&&!genericMobileModel(stored))return stored;
+        var model=String(modelOverride||'').trim();
+        if(!model&&/Android/i.test(ua)){
+          var match=ua.match(/Android[^;]*;\s*([^;)]+?)(?:\s+Build\/|;|\))/i);
+          model=match&&String(match[1]||'').trim()||'';
+        }
+        return mobileDeviceBrandName(model,ua);
       }
       if(/Windows/i.test(ua)||/Win/i.test(platform))return 'Windows PC';
       if(/Mac/i.test(ua)||/Mac/i.test(platform))return 'Mac';
       if(/Linux/i.test(ua)||/Linux/i.test(platform))return 'Linux PC';
-      return accountDeviceType()==='mobile'?'Dispositivo móvel':'Computador';
+      return 'Computador';
+    }
+    async function refreshAccountDeviceIdentity(userId){
+      if(accountDeviceType()!=='mobile')return accountDeviceName();
+      var resolved=accountDeviceName();
+      try{
+        var uaData=navigator.userAgentData;
+        if(uaData&&typeof uaData.getHighEntropyValues==='function'){
+          var details=await uaData.getHighEntropyValues(['model']);
+          var model=String(details&&details.model||'').trim();
+          if(model&&!genericMobileModel(model))resolved=mobileDeviceBrandName(model,navigator.userAgent||'');
+        }
+      }catch(_){ }
+      if(!resolved||genericMobileModel(resolved))resolved='Celular';
+      try{localStorage.setItem('beAccountDeviceResolvedName',resolved);}catch(_){ }
+      if(userId){
+        var devices=readAccountDevices(userId),id=accountDeviceId(),changed=false;
+        devices=devices.map(function(item){if(item.id!==id)return item;if(item.name!==resolved){changed=true;return {...item,name:resolved};}return item;});
+        if(changed){writeAccountDevices(userId,devices);if(typeof window.beScheduleUserDataSync==='function')window.beScheduleUserDataSync('device-identity');}
+      }
+      return resolved;
     }
     function normalizeAccountDevices(values){
       var byId={};
@@ -13596,6 +13668,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(!item||typeof item!=='object')return;
         var id=String(item.id||'').trim();if(!id)return;
         var normalized={id:id,type:String(item.type||'pc')==='mobile'?'mobile':'pc',name:String(item.name||'').trim().slice(0,80),active:item.active!==false,lastSeen:String(item.lastSeen||''),disconnectedAt:String(item.disconnectedAt||'')};
+        if(normalized.type==='mobile'&&(genericMobileModel(normalized.name)||/^(?:dispositivo móvel|mobile device|dispositivo mobile|appareil mobile)$/i.test(normalized.name)))normalized.name='Celular';
         var current=byId[id];
         var nextTime=Math.max(Date.parse(normalized.lastSeen||'')||0,Date.parse(normalized.disconnectedAt||'')||0);
         var currentTime=current?Math.max(Date.parse(current.lastSeen||'')||0,Date.parse(current.disconnectedAt||'')||0):0;
@@ -13809,6 +13882,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(preferenceSyncUserId===user.uid&&(preferenceSyncStarting||preferenceDeviceSyncStop))return;
       stopCrossDeviceSync();
       var userId=user.uid;preferenceSyncUserId=userId;preferenceSyncStarting=true;
+      refreshAccountDeviceIdentity(userId).catch(function(){});
       setSettingsSyncStatus('syncing','Carregando as configurações da sua conta…');
       try{
         var cachedSeed=readStorageJson(syncedUserCacheKey(userId),null);
@@ -13830,7 +13904,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
         var remoteDeviceData=remote?normalizeCrossDeviceData(remote.data):normalizeCrossDeviceData({});
         var remoteOwnDevice=remoteDeviceData.accountDevices.find(function(item){return item.id===accountDeviceId();});
-        if(remote&&remoteOwnDevice&&remoteOwnDevice.active===false){applyCrossDeviceData(remote.data,userId,'remote');return;}
+        var freshAccountLogin=false;try{freshAccountLogin=sessionStorage.getItem('beFreshAccountLogin')==='1';if(freshAccountLogin)sessionStorage.removeItem('beFreshAccountLogin');}catch(_){ }
+        if(remote&&remoteOwnDevice&&remoteOwnDevice.active===false&&!freshAccountLogin){applyCrossDeviceData(remote.data,userId,'remote');return;}
         merged.accountDevices=ensureCurrentAccountDevice(userId,mergeAccountDevices(merged.accountDevices,remoteDeviceData.accountDevices));
         merged.tvDeviceBrands=mergeTvDeviceBrands(merged.tvDeviceBrands,remoteDeviceData.tvDeviceBrands);
         applyCrossDeviceData(merged,userId,remote?'remote':'local');
@@ -14790,6 +14865,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async function renderSettingsDevices(){
       var list=document.getElementById('settingsDevicesList');if(!list)return;
       var user=auth.currentUser;if(!user||!user.uid){list.innerHTML='<div class="settings-devices-empty">'+escapePublic(localizedProfileText('Entre para ver seus dispositivos.'))+'</div>';return;}
+      try{await refreshAccountDeviceIdentity(user.uid);}catch(_){ }
       var localDevices=ensureCurrentAccountDevice(user.uid,readAccountDevices(user.uid)).filter(function(item){return item.active!==false;});
       var brands=readTvDeviceBrands(user.uid);
       list.innerHTML='<div class="settings-devices-loading">'+escapePublic(localizedProfileText('Carregando dispositivos…'))+'</div>';
@@ -14810,7 +14886,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var name=String(known.name||media.deviceBrand||media.tvBrand||media.deviceName||localizedProfileText('Smart TV')).trim();
         entries.push({kind:'tv',id:String(row.session_id||''),type:'tv',name:name,date:row.last_seen_at||row.updated_at||new Date().toISOString(),current:false});
       });
-      localDevices.forEach(function(item){entries.push({kind:'account',id:item.id,type:item.type,name:item.name||localizedProfileText(item.type==='mobile'?'Dispositivo móvel':'Computador'),date:item.lastSeen||new Date().toISOString(),current:item.id===accountDeviceId()});});
+      localDevices.forEach(function(item){var deviceName=String(item.name||'').trim();if(item.type==='mobile'&&(!deviceName||deviceName==='Celular'||genericMobileModel(deviceName)))deviceName=localizedProfileText('Celular');else if(!deviceName)deviceName=localizedProfileText('Computador');entries.push({kind:'account',id:item.id,type:item.type,name:deviceName,date:item.lastSeen||new Date().toISOString(),current:item.id===accountDeviceId()});});
       entries.sort(function(a,b){return (Date.parse(b.date)||0)-(Date.parse(a.date)||0);});
       if(!entries.length){list.innerHTML='<div class="settings-devices-empty">'+escapePublic(localizedProfileText('Nenhum dispositivo ativo encontrado.'))+'</div>';return;}
       list.innerHTML=entries.map(function(item){
@@ -15829,16 +15905,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       form.elements.namedItem('code').value=code;
       if(code.length!==6){setStatus('Digite o código de 6 dígitos do aplicativo autenticador.','error');return;}
       if(authFlowBusy)return;
-      authFlowBusy=true;if(b){b.disabled=true;authButtonBusy(b,true,'Verificando código…','Verificar código');}setStatus('');
+      authFlowBusy=true;if(b){b.disabled=true;b.setAttribute('aria-busy','true');b.textContent=authText('Verificar código');}setStatus('');
       try{
         if(typeof auth.verifyMfaCode!=='function')throw new Error('A verificação em duas etapas não está disponível.');
         await auth.verifyMfaCode({code:code});
         mfaChallengePending=false;
         form.reset();
-        setStatus('Código confirmado.','ok');
+        setStatus('');
         await finishPublicLogin(auth.currentUser);
       }catch(err){showMfaLogin(selectedAuthEmail||(auth.currentUser&&auth.currentUser.email)||'',friendly(err),'error');}
-      finally{authFlowBusy=false;if(b){b.disabled=false;authButtonBusy(b,false,'Verificando código…','Verificar código');}}
+      finally{authFlowBusy=false;if(b){b.disabled=false;b.removeAttribute('aria-busy');b.textContent=authText('Verificar código');}}
     });
     q('mfaUseOtherAccount').onclick=async function(){
       if(authFlowBusy)return;authFlowBusy=true;
