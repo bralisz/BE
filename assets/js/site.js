@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260823-account-mfa-v1';
+  var STATIC_REV='20260824-ui-auth-devices-perf-v1';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -316,6 +316,36 @@
       if(missingTexts.size)scheduleMissingTranslation(800);
     }
   }
+  async function translateTexts(values){
+    var originals=(Array.isArray(values)?values:[]).map(function(value){return String(value||'').trim();});
+    if(slug==='pt-br'||isAdmin()||!originals.length)return originals;
+    var unique=[];
+    originals.forEach(function(value){if(value&&unique.indexOf(value)<0)unique.push(value);});
+    var missing=unique.filter(function(value){return !map[value]||map[value]===value;});
+    for(var offset=0;offset<missing.length;offset+=60){
+      var batch=missing.slice(offset,offset+60);
+      if(!batch.length)continue;
+      try{
+        var key=publishableKey();
+        var headers={'Content-Type':'application/json'};
+        if(key)headers.apikey=key;
+        var response=await fetch(translationEndpoint(),{
+          method:'POST',mode:'cors',credentials:'omit',headers:headers,
+          body:JSON.stringify({mode:'texts',locale:slug,style:'informal-native',texts:batch})
+        });
+        var payload=await response.json().catch(function(){return null;});
+        if(!response.ok||!payload||!Array.isArray(payload.translations))continue;
+        payload.translations.forEach(function(item,index){
+          var source=batch[index],translated=String(item||'').trim();
+          if(!source||!translated)return;
+          translated=normalizeImportedTranslation(source,translated);
+          map[source]=translated;map[translated]=translated;translatedThisSession.add(source);translatedThisSession.add(translated);
+        });
+      }catch(_){ }
+    }
+    saveDynamicCache();
+    return originals.map(function(value){return map[value]||value;});
+  }
   function scheduleMissingTranslation(delay){
     if(slug==='pt-br'||isAdmin())return;
     clearTimeout(translateTimer);
@@ -393,6 +423,7 @@
     t:t,
     apply:apply,
     translateExact:translateExact,
+    translateTexts:translateTexts,
     protectExact:protectExact,
     mergeTranslations:mergeTranslations,
     localizeRecord:recordTranslation,
@@ -466,7 +497,7 @@
 
   var root=document.documentElement;
   var releaseVersion=0;
-  var CONFIG_SKELETON_MIN_MS=2000;
+  var CONFIG_SKELETON_MIN_MS=320;
   var configBootStartedAt=Number(window.__beConfigBootStartedAt||Date.now());
 
   function configRouteActive(){
@@ -552,7 +583,7 @@
         }
         image.addEventListener('load',finish,{once:true});
         image.addEventListener('error',finish,{once:true});
-        window.setTimeout(finish,1500);
+        window.setTimeout(finish,700);
       });
     }));
   }
@@ -561,7 +592,7 @@
     if(!document.fonts||!document.fonts.ready)return Promise.resolve();
     return Promise.race([
       Promise.resolve(document.fonts.ready).catch(function(){}),
-      new Promise(function(resolve){window.setTimeout(resolve,900);})
+      new Promise(function(resolve){window.setTimeout(resolve,450);})
     ]);
   }
 
@@ -580,7 +611,7 @@
       forceAtomicConfigLayout();
       return Promise.all([waitForConfigImages(container),waitForConfigFonts()]);
     });
-    var timeout=new Promise(function(resolve){window.setTimeout(resolve,4000);});
+    var timeout=new Promise(function(resolve){window.setTimeout(resolve,1800);});
     var elapsed=Math.max(0,Date.now()-configBootStartedAt);
     var minimumDelay=new Promise(function(resolve){window.setTimeout(resolve,Math.max(0,CONFIG_SKELETON_MIN_MS-elapsed));});
 
@@ -844,13 +875,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const PROFILE_CACHE_TTL_MS = 300000;
   const PUBLIC_PROFILE_CACHE_TTL_MS = 120000;
   const PUBLIC_PROFILE_SESSION_TTL_MS = 120000;
-  const PREFERENCE_CACHE_TTL_MS = 300000;
+  const PREFERENCE_CACHE_TTL_MS = 30 * 60 * 1000;
   const profileCache = new Map();
   const profileEnsurePromises = new Map();
   const publicProfileCache = new Map();
   const publicProfilePromises = new Map();
   const preferenceCache = new Map();
   const userSyncChannels = new Map();
+  const privilegeCache = new Map();
+  const privilegeInFlight = new Map();
+  const PRIVILEGE_CACHE_TTL_MS = 5 * 60 * 1000;
   let realtimeAuthPromise = null;
 
   function hasSupabaseConfig() {
@@ -1003,40 +1037,58 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
   }
 
-  async function hydratePrivileges(user) {
+  async function hydratePrivileges(user, options = {}) {
     if (!user || MODE !== 'supabase' || !supabaseClient) return user;
+    const userId = String(user.uid || user.id || '');
+    if (!userId) return user;
 
-                                                                               
-                                                                               
-                                                    
-    let adminCheckFailed = false;
-    try {
-      const { data: allowed, error } = await supabaseClient.rpc('is_admin');
-      if (!error) return { ...user, role: allowed === true ? 'admin' : 'member' };
-      adminCheckFailed = true;
-    } catch (_) {
-      adminCheckFailed = true;
+    // app_metadata vem do token assinado pelo Supabase; quando já carrega a
+    // permissão de admin não há motivo para fazer outra RPC.
+    if (user.role === 'admin') {
+      privilegeCache.set(userId, { role: 'admin', cachedAt: Date.now() });
+      return user;
     }
 
-                                                                          
-                                                                     
-    if (adminCheckFailed) {
+    if (!options.force) {
+      const cached = privilegeCache.get(userId);
+      if (cached && Date.now() - cached.cachedAt < PRIVILEGE_CACHE_TTL_MS) {
+        return { ...user, role: cached.role };
+      }
+      const pending = privilegeInFlight.get(userId);
+      if (pending) return pending.then(role => ({ ...user, role }));
+    }
+
+    const check = (async () => {
+      let adminCheckFailed = false;
       try {
-        const { data: profile, error } = await supabaseClient
-          .from('profiles')
-          .select('role')
-          .eq('id', user.uid)
-          .maybeSingle();
-        if (!error) return { ...user, role: profile?.role === 'admin' ? 'admin' : 'member' };
-      } catch (_) {}
+        const { data: allowed, error } = await supabaseClient.rpc('is_admin');
+        if (!error) return allowed === true ? 'admin' : 'member';
+        adminCheckFailed = true;
+      } catch (_) {
+        adminCheckFailed = true;
+      }
+
+      if (adminCheckFailed) {
+        try {
+          const { data: profile, error } = await supabaseClient
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .maybeSingle();
+          if (!error) return profile?.role === 'admin' ? 'admin' : 'member';
+        } catch (_) {}
+      }
+      return 'member';
+    })();
+
+    privilegeInFlight.set(userId, check);
+    try {
+      const role = await check;
+      privilegeCache.set(userId, { role, cachedAt: Date.now() });
+      return { ...user, role };
+    } finally {
+      privilegeInFlight.delete(userId);
     }
-
-                                                                          
-                                                                     
-    if (user.role === 'admin') return user;
-
-    (void 0);
-    return { ...user, role: 'member' };
   }
 
   async function resolveSupabaseUser(authResult) {
@@ -1051,19 +1103,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const retryDelays = [0, 80, 180, 360, 700];
     for (const retryDelay of retryDelays) {
       if (retryDelay) await wait(retryDelay);
-
+      // getSession usa a sessão local e não precisa validar /user na rede a
+      // cada tentativa. A validação remota fica como único fallback final.
       const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
       if (sessionError) (void 0);
       const sessionUser = sessionData?.session?.user || null;
       if (sessionUser) return hydratePrivileges(normalizeUser(sessionUser));
-
-      const { data: userData, error: userError } = await supabaseClient.auth.getUser();
-      if (userError && userError.name !== 'AuthSessionMissingError') {
-        (void 0);
-      }
-      if (userData?.user) return hydratePrivileges(normalizeUser(userData.user));
     }
 
+    try {
+      const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+      if (userError && userError.name !== 'AuthSessionMissingError') (void 0);
+      if (userData?.user) return hydratePrivileges(normalizeUser(userData.user));
+    } catch (_) {}
     return null;
   }
 
@@ -1368,10 +1420,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function queueRecordTranslation(collection, id) {
-                                                                              
-                                                                                  
-    return Boolean(collection && id);
+    var normalizedCollection=String(collection||'').trim().toLowerCase();
+    var recordId=String(id||'').trim();
+    if(!TRANSLATABLE_COLLECTIONS.has(normalizedCollection)||!recordId)return false;
+    // O trigger do banco continua sendo o caminho principal. Para notificações,
+    // faça uma checagem curta depois da publicação e reenvie somente o italiano
+    // se a tradução não tiver sido persistida. Isso evita notificações novas em PT.
+    if(normalizedCollection==='notifications'&&supabaseClient){
+      window.setTimeout(async function(){
+        try{
+          var result=await supabaseClient.from('content_items').select('data').eq('collection','notifications').eq('id',recordId).maybeSingle();
+          var data=result&&result.data&&result.data.data&&typeof result.data.data==='object'?result.data.data:{};
+          var it=data.translations&&data.translations.it&&typeof data.translations.it==='object'?data.translations.it:null;
+          var title=String(data.title||'').trim(),description=String(data.description||'').trim();
+          if(it&&(!title||String(it.title||'').trim())&&(!description||String(it.description||'').trim()))return;
+          if(supabaseClient.functions&&typeof supabaseClient.functions.invoke==='function'){
+            await supabaseClient.functions.invoke(ITALIAN_TRANSLATION_FUNCTION_NAME,{body:{collection:'notifications',ids:[recordId],locales:['it']}});
+          }
+        }catch(_){ }
+      },2600);
+    }
+    return true;
   }
+
 
   function sortAndFilter(items, options = {}) {
     let result = items.slice();
@@ -1448,15 +1519,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const publicDataMemoryCache = new Map();
   const HOME_BOOTSTRAP_COLLECTIONS = new Set(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
   const homeBootstrapMemoryCache = new Map();
-  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV5:';
-  const HOME_BOOTSTRAP_BROWSER_TTL_MS = 30 * 60 * 1000;
-  const HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS = 12 * 60 * 60 * 1000;
-  const HOME_BOOTSTRAP_MEMORY_TTL_MS = 10 * 60 * 1000;
+  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV6:';
+  // O bundle pesado fica salvo localmente, mas a cada ~25 minutos validamos
+  // apenas duas versões minúsculas. O JSON completo só volta a ser baixado se
+  // o catálogo realmente mudou.
+  const HOME_BOOTSTRAP_BROWSER_TTL_MS = 25 * 60 * 1000;
+  const HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  const HOME_BOOTSTRAP_MEMORY_TTL_MS = 30 * 60 * 1000;
   const homeBootstrapRefreshInFlight = new Map();
-                                                                          
-                                                                             
-                                                     
-  const FEATURED_FRESH_TTL_MS = 30 * 1000;
+  const homeBootstrapValidationInFlight = new Map();
+  const FEATURED_FRESH_TTL_MS = 10 * 60 * 1000;
+
+  function normalizeHomeVersionState(value) {
+    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    const clean = input => String(input || '').trim().replace(/[^a-zA-Z0-9._:-]/g, '').slice(0, 160);
+    return {
+      catalogVersion: clean(source.catalogVersion),
+      settingsVersion: clean(source.settingsVersion)
+    };
+  }
 
   function homeBootstrapStorageKey(locale) {
     return HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX + String(locale || 'pt-br');
@@ -1467,24 +1548,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const key = homeBootstrapStorageKey(locale);
       const parsed = JSON.parse(localStorage.getItem(key) || 'null');
       if (!parsed || !parsed.savedAt || !parsed.bundle || typeof parsed.bundle !== 'object') return null;
-      const age = Date.now() - Number(parsed.savedAt);
+      const nowMs = Date.now();
+      const age = nowMs - Number(parsed.savedAt);
       if (age >= HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS) {
         localStorage.removeItem(key);
         return null;
       }
-      parsed.__stale = age >= HOME_BOOTSTRAP_BROWSER_TTL_MS;
+      const validatedAt = Number(parsed.validatedAt || parsed.savedAt || 0);
+      const validationAge = validatedAt > 0 ? nowMs - validatedAt : age;
+      parsed.versions = normalizeHomeVersionState(parsed.versions || parsed.bundle.__versions);
+      parsed.__stale = validationAge >= HOME_BOOTSTRAP_BROWSER_TTL_MS;
       parsed.__age = Math.max(0, age);
+      parsed.__validationAge = Math.max(0, validationAge);
       return parsed;
     } catch (_) { return null; }
   }
 
-  function writeHomeBootstrapBrowserCache(locale, bundle) {
+  function writeHomeBootstrapBrowserCache(locale, bundle, versions = null) {
     if (!bundle || typeof bundle !== 'object') return;
     const key = homeBootstrapStorageKey(locale);
-    const now = Date.now();
-    const value = JSON.stringify({ savedAt: now, featuredSavedAt: now, bundle });
+    const nowMs = Date.now();
+    const normalizedVersions = normalizeHomeVersionState(versions || bundle.__versions);
+    bundle.__versions = normalizedVersions;
+    const value = JSON.stringify({
+      savedAt: nowMs,
+      validatedAt: nowMs,
+      featuredSavedAt: nowMs,
+      versions: normalizedVersions,
+      bundle
+    });
     try {
-                                                                               
+      // Mantém somente o idioma ativo para não ocupar vários MB em localStorage.
       for (let index = localStorage.length - 1; index >= 0; index -= 1) {
         const storedKey = String(localStorage.key(index) || '');
         if (storedKey.startsWith(HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX) && storedKey !== key) localStorage.removeItem(storedKey);
@@ -1493,6 +1587,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     } catch (_) {
       try { localStorage.removeItem(key); } catch (_) {}
     }
+  }
+
+  function markHomeBootstrapValidated(locale, cachedEntry, bundle, versions) {
+    if (!bundle || typeof bundle !== 'object') return;
+    const key = homeBootstrapStorageKey(locale);
+    const normalizedVersions = normalizeHomeVersionState(versions || bundle.__versions);
+    bundle.__versions = normalizedVersions;
+    try {
+      const current = JSON.parse(localStorage.getItem(key) || 'null') || {};
+      localStorage.setItem(key, JSON.stringify({
+        savedAt: Number(current.savedAt || cachedEntry?.savedAt || Date.now()),
+        validatedAt: Date.now(),
+        featuredSavedAt: Number(current.featuredSavedAt || cachedEntry?.featuredSavedAt || Date.now()),
+        versions: normalizedVersions,
+        bundle
+      }));
+    } catch (_) {}
   }
 
   function clearHomeBootstrapBrowserCache(locale) {
@@ -1515,10 +1626,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const expiresAt = nowMs + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
     const featuredFresh = Math.max(0, Number(bundleAgeMs) || 0) < FEATURED_FRESH_TTL_MS;
     for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
-                                                                                
-                                                                               
-                                                                               
-                                                    
       if (name === 'featured' && !featuredFresh) continue;
       const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
       publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt });
@@ -1532,26 +1639,108 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  function refreshPublicHomeDataInBackground(locale) {
+  async function fetchHomeVersions(locale) {
+    const params = new URLSearchParams({ name: 'home-version', locale: String(locale || activeLocaleSlug()) });
+    const response = await fetch(`/api/public-data?${params.toString()}`, {
+      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+    return normalizeHomeVersionState(await response.json());
+  }
+
+  async function fetchVersionedSiteSettings(locale, settingsVersion) {
+    const params = new URLSearchParams({ name: 'settings', id: 'site', locale: String(locale || activeLocaleSlug()) });
+    const revision = String(settingsVersion || '').trim();
+    if (revision) params.set('v', revision);
+    const response = await fetch(`/api/public-data?${params.toString()}`, {
+      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) return null;
+    const settings = await response.json();
+    return settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : null;
+  }
+
+  function refreshPublicHomeDataInBackground(locale, versionHint = null) {
     const normalizedLocale = String(locale || activeLocaleSlug());
     const existing = homeBootstrapRefreshInFlight.get(normalizedLocale);
     if (existing) return existing;
-    const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale });
-    const promise = fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
-    }).then(response => {
+    const promise = (async () => {
+      let versions = normalizeHomeVersionState(versionHint);
+      if (!versions.catalogVersion) {
+        try { versions = await fetchHomeVersions(normalizedLocale); } catch (_) {}
+      }
+
+      const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale });
+      if (versions.catalogVersion) params.set('v', versions.catalogVersion);
+      const response = await fetch(`/api/public-data?${params.toString()}`, {
+        method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+      });
       if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-      return response.json();
-    }).then(bundle => {
+      const bundle = await response.json();
+      const bundleVersions = normalizeHomeVersionState(bundle && bundle.__versions);
+      if (!versions.catalogVersion) versions.catalogVersion = bundleVersions.catalogVersion;
+      if (!versions.settingsVersion) versions.settingsVersion = bundleVersions.settingsVersion;
+
+      // Configurações mudam com mais frequência que o catálogo (ex.: release).
+      // Se apenas elas mudaram, baixa poucos KB em vez de reconstruir 170+ KB.
+      if (versions.settingsVersion && bundleVersions.settingsVersion !== versions.settingsVersion) {
+        try {
+          const site = await fetchVersionedSiteSettings(normalizedLocale, versions.settingsVersion);
+          if (site) {
+            bundle.settings = { ...(bundle.settings || {}), site };
+            bundleVersions.settingsVersion = versions.settingsVersion;
+          }
+        } catch (_) {}
+      }
+      bundle.__versions = {
+        catalogVersion: versions.catalogVersion || bundleVersions.catalogVersion,
+        settingsVersion: versions.settingsVersion || bundleVersions.settingsVersion
+      };
+
       const generatedAt = Number(bundle && bundle.__generatedAt || 0);
       const bundleAge = generatedAt > 0 ? Math.max(0, Date.now() - generatedAt) : 0;
       hydrateHomeBootstrapBundle(bundle, normalizedLocale, HOME_BOOTSTRAP_MEMORY_TTL_MS, bundleAge);
-      writeHomeBootstrapBrowserCache(normalizedLocale, bundle);
+      writeHomeBootstrapBrowserCache(normalizedLocale, bundle, bundle.__versions);
       const resolved = Promise.resolve(bundle);
       homeBootstrapMemoryCache.set(normalizedLocale, { promise: resolved, expiresAt: Date.now() + HOME_BOOTSTRAP_MEMORY_TTL_MS });
       return bundle;
-    }).finally(() => homeBootstrapRefreshInFlight.delete(normalizedLocale));
+    })().finally(() => homeBootstrapRefreshInFlight.delete(normalizedLocale));
     homeBootstrapRefreshInFlight.set(normalizedLocale, promise);
+    return promise;
+  }
+
+  function validatePublicHomeDataInBackground(locale, cachedEntry) {
+    const normalizedLocale = String(locale || activeLocaleSlug());
+    const existing = homeBootstrapValidationInFlight.get(normalizedLocale);
+    if (existing) return existing;
+    const promise = (async () => {
+      const versions = await fetchHomeVersions(normalizedLocale);
+      const cachedVersions = normalizeHomeVersionState(cachedEntry?.versions || cachedEntry?.bundle?.__versions);
+      if (!cachedVersions.catalogVersion || !versions.catalogVersion || cachedVersions.catalogVersion !== versions.catalogVersion) {
+        const bundle = await refreshPublicHomeDataInBackground(normalizedLocale, versions);
+        return { bundle, changed: true, fullRefresh: true };
+      }
+
+      const bundle = cachedEntry.bundle;
+      let changed = false;
+      if (versions.settingsVersion && cachedVersions.settingsVersion !== versions.settingsVersion) {
+        const site = await fetchVersionedSiteSettings(normalizedLocale, versions.settingsVersion).catch(() => null);
+        if (site) {
+          bundle.settings = { ...(bundle.settings || {}), site };
+          changed = true;
+        }
+      }
+      bundle.__versions = versions;
+      markHomeBootstrapValidated(normalizedLocale, cachedEntry, bundle, versions);
+
+      const featuredSavedAt = Number(cachedEntry.featuredSavedAt || cachedEntry.savedAt || Date.now());
+      const featuredAge = Math.max(0, Date.now() - featuredSavedAt);
+      hydrateHomeBootstrapBundle(bundle, normalizedLocale, HOME_BOOTSTRAP_MEMORY_TTL_MS, featuredAge);
+      const resolved = Promise.resolve(bundle);
+      homeBootstrapMemoryCache.set(normalizedLocale, { promise: resolved, expiresAt: Date.now() + HOME_BOOTSTRAP_MEMORY_TTL_MS });
+      return { bundle, changed, fullRefresh: false };
+    })().finally(() => homeBootstrapValidationInFlight.delete(normalizedLocale));
+    homeBootstrapValidationInFlight.set(normalizedLocale, promise);
     return promise;
   }
 
@@ -1564,15 +1753,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const browserCached = readHomeBootstrapBrowserCache(locale);
     if (browserCached) {
       const savedAge = Math.max(0, Number(browserCached.__age ?? (nowMs - Number(browserCached.savedAt || nowMs))));
-      const generatedAt = Number(browserCached.bundle && browserCached.bundle.__generatedAt || 0);
-      const generatedAge = generatedAt > 0 ? Math.max(0, nowMs - generatedAt) : 0;
-      const featuredSavedAt = Number(browserCached.featuredSavedAt || 0);
-      const featuredAge = featuredSavedAt > 0
-        ? Math.max(0, nowMs - featuredSavedAt)
-        : Math.max(savedAge, generatedAge);
+      const featuredSavedAt = Number(browserCached.featuredSavedAt || browserCached.savedAt || nowMs);
+      const featuredAge = Math.max(0, nowMs - featuredSavedAt);
       const remaining = browserCached.__stale
         ? 30000
-        : Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - savedAge);
+        : Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - Number(browserCached.__validationAge || 0));
       hydrateHomeBootstrapBundle(browserCached.bundle, locale, Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining), featuredAge);
       const browserPromise = Promise.resolve(browserCached.bundle);
       homeBootstrapMemoryCache.set(locale, {
@@ -1581,8 +1766,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
       if (browserCached.__stale) {
         const schedule = window.requestIdleCallback || (callback => window.setTimeout(callback, 350));
-        schedule(() => refreshPublicHomeDataInBackground(locale).then(() => {
-          if (window.__beContentReady && !document.hidden && !document.body.classList.contains('detail-page-active')) {
+        schedule(() => validatePublicHomeDataInBackground(locale, browserCached).then(result => {
+          if (result?.changed && window.__beContentReady && !document.hidden && !document.body.classList.contains('detail-page-active')) {
             renderFeatured().catch(() => {});
             renderVideoCatalog().catch(() => {});
           }
@@ -1611,14 +1796,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (normalizedId) params.set('id', normalizedId);
                                   
     const ttl = normalizedName === 'settings' && normalizedId === 'site'
-      ? 60000
+      ? 10 * 60 * 1000
       : normalizedName === 'notifications'
-        ? 60000
+        ? 5 * 60 * 1000
         : normalizedName === 'movies'
-          ? 300000
+          ? 30 * 60 * 1000
           : normalizedName === 'featured'
             ? FEATURED_FRESH_TTL_MS
-            : 600000;
+            : 30 * 60 * 1000;
     const promise = fetch(`/api/public-data?${params.toString()}`, {
       method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
@@ -2413,6 +2598,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `beSyncedUserData:${String(userId || 'guest')}`;
   }
 
+  function comparablePreferencePayload(value) {
+    const normalized = normalizePreferencePayload(value);
+    delete normalized.updatedAt;
+    return normalized;
+  }
+
   const preferences = {
     async get(userId, options = {}) {
       if (!userId) return null;
@@ -2450,7 +2641,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const normalized = normalizePreferencePayload(payload);
       if (MODE === 'supabase') {
         const cached = readCachedPreference(userId, Number.POSITIVE_INFINITY);
-        if (cached && JSON.stringify(cached.data) === JSON.stringify(normalized)) {
+        if (cached && JSON.stringify(comparablePreferencePayload(cached.data)) === JSON.stringify(comparablePreferencePayload(normalized))) {
           return clone(cached);
         }
         try {
@@ -2727,6 +2918,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return { user: signedUpUser, session: result.session, needsEmailConfirmation: Boolean(result.user && !result.session) };
     },
     async signOut() {
+      try{if(window.BETVAccountDevices&&typeof window.BETVAccountDevices.disconnectCurrent==='function')await window.BETVAccountDevices.disconnectCurrent();}catch(_){ }
       const { error } = await supabaseClient.auth.signOut();
       if (error) throw mapAuthError(error);
       currentUser = null;
@@ -3096,6 +3288,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         window.setTimeout(async () => {
           if (event === 'SIGNED_OUT') {
             currentUser = null;
+            privilegeCache.clear();
+            privilegeInFlight.clear();
             notify();
             return;
           }
@@ -3202,6 +3396,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   const randomFeaturedPools = { videos: [], films: [], movies: [], series: [] };
   const lastRandomFeaturedIds = { videos: [], films: [], movies: [], series: [] };
+
+  function activeLocaleSlug() {
+    const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+    return ['en-us', 'es', 'fr', 'it'].includes(slug) ? slug : 'pt-br';
+  }
 
 
   function localizedUiText(source, variables = {}) {
@@ -3384,26 +3583,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                            
   let featuredPageHiddenAt = 0;
   let featuredResumeRefreshRunning = false;
-  const FEATURED_RESUME_REFRESH_MS = 30 * 1000;
+  const FEATURED_RESUME_REFRESH_MS = 15 * 60 * 1000;
 
   async function refreshFeaturedAfterResume(force = false) {
     if (featuredResumeRefreshRunning || document.visibilityState === 'hidden') return;
     const now = Date.now();
-    if (!force && featuredPageHiddenAt && now - featuredPageHiddenAt < FEATURED_RESUME_REFRESH_MS) return;
+    const elapsed = featuredPageHiddenAt ? now - featuredPageHiddenAt : 0;
+    if (!force && (!featuredPageHiddenAt || elapsed < FEATURED_RESUME_REFRESH_MS)) return;
     featuredResumeRefreshRunning = true;
     try {
       const locale = activeLocaleSlug();
+      // Atualiza apenas a coleção pequena de destaques. Não apaga o bootstrap
+      // inteiro nem força download do catálogo depois de uma simples troca de aba.
       publicDataMemoryCache.delete(`featured::${locale}`);
-      updateHomeBootstrapFeaturedBrowserCache(locale, []);
-      const key = homeBootstrapStorageKey(locale);
-      try {
-        const parsed = JSON.parse(localStorage.getItem(key) || 'null');
-        if (parsed && typeof parsed === 'object') {
-          parsed.featuredSavedAt = 0;
-          if (parsed.bundle && typeof parsed.bundle === 'object') parsed.bundle.featured = [];
-          localStorage.setItem(key, JSON.stringify(parsed));
-        }
-      } catch (_) {}
+      const rows = await readPublicData('featured');
+      if (Array.isArray(rows)) updateHomeBootstrapFeaturedBrowserCache(locale, rows);
       if (window.__beContentReady) await renderVideoCatalog();
     } catch (error) {
       (void 0);
@@ -3535,6 +3729,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         streamingAvailability: source.streamingAvailability || [],
         streamingLinks: source.streamingLinks || {},
         subtitleUrl: source.subtitleUrl || item.subtitleUrl || '',
+        subtitleLocale: source.subtitleLocale || item.subtitleLocale || '',
         sectionId: source.sectionId || '',
         sectionName: source.sectionName || '',
         collection,
@@ -3575,6 +3770,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-content-url="${safeUrl(url)}"
               data-mobile-app-drive-url="${safeUrl(item.mobileAppDriveUrl || '')}"
               data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
+              data-subtitle-locale="${escapeHtml(item.subtitleLocale || (item.subtitleUrl ? activeLocaleSlug() : ''))}"
               data-image-url="${safeAssetUrl(item.imageUrl || '')}"
               data-banner-url="${safeAssetUrl(item.bannerUrl || item.imageUrl || '')}"
               data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
@@ -3780,6 +3976,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-content-url="${safeUrl(contentUrl)}"
               data-mobile-app-drive-url="${safeUrl(item.mobileAppDriveUrl || '')}"
               data-subtitle-url="${safeUrl(item.subtitleUrl || '')}"
+              data-subtitle-locale="${escapeHtml(item.subtitleLocale || (item.subtitleUrl ? activeLocaleSlug() : ''))}"
               data-image-url="${safeAssetUrl(thumbnail)}"
               data-banner-url="${safeAssetUrl(background)}"
               data-logo-url="${safeAssetUrl(item.logoUrl || '')}"
@@ -4394,6 +4591,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-content-url="${safeUrl(contentHref)}"
       data-mobile-app-drive-url="${safeUrl(video.mobileAppDriveUrl || '')}"
       data-subtitle-url="${safeUrl(video.subtitleUrl || '')}"
+      data-subtitle-locale="${escapeHtml(video.subtitleLocale || (video.subtitleUrl ? activeLocaleSlug() : ''))}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(banner)}"
       data-logo-url="${safeAssetUrl(logo)}"
@@ -4886,6 +5084,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-content-url="${safeUrl(contentHref)}"
       data-mobile-app-drive-url="${safeUrl(data.mobileAppDriveUrl || '')}"
       data-subtitle-url="${safeUrl(data.subtitleUrl || '')}"
+      data-subtitle-locale="${escapeHtml(data.subtitleLocale || (data.subtitleUrl ? activeLocaleSlug() : ''))}"
       data-image-url="${safeAssetUrl(image)}"
       data-banner-url="${safeAssetUrl(['movies', 'series'].includes(String(data.collection || '').toLowerCase()) ? image : (data.bannerUrl || image))}"
       data-logo-url="${safeAssetUrl(data.logoUrl || '')}"
@@ -5000,7 +5199,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function hydrateDetailCommentAvatarRings(list) {
     if (!list) return;
-    const avatars = Array.from(list.querySelectorAll('.detail-comment-avatar:not(.has-custom-ring)[data-comment-username]'));
+    const avatars = Array.from(list.querySelectorAll('.detail-comment-avatar:not(.has-custom-ring):not([data-comment-ring-resolved="1"])[data-comment-username]'));
     avatars.forEach(avatar => {
       const username = String(avatar.dataset.commentUsername || '').trim();
       if (!username) return;
@@ -5060,6 +5259,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const profileHref = username ? `/@${encodeURIComponent(username)}` : '#';
     const avatar = String(row?.avatar_url || row?.avatarUrl || '').trim();
     const avatarBorderColor = detailCommentAvatarBorderColor(row?.avatar_border_color || row?.avatarBorderColor);
+    // A RPC v2 já resolveu a borda, inclusive quando o resultado é vazio.
+    // Isso impede um get_public_profile adicional por comentário sem cor customizada.
+    const avatarRingResolved = Boolean(row && (
+      Object.prototype.hasOwnProperty.call(row, 'avatar_border_color') ||
+      Object.prototype.hasOwnProperty.call(row, 'avatarBorderColor')
+    ));
     const communityTag = String(row?.community_tag || row?.communityTag || '').trim();
     const likesCount = Math.max(0, Number(row?.likes_count ?? row?.likesCount ?? 0) || 0);
     const likedByMe = row?.liked_by_me === true || row?.likedByMe === true;
@@ -5069,7 +5274,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ? `<button type="button" class="detail-comment-action danger" data-comment-delete="${escapeHtml(commentId)}" aria-label="${escapeHtml(localizedUiText('Apagar comentário'))}" title="${escapeHtml(localizedUiText('Apagar comentário'))}">${detailCommentActionIcon('delete')}</button>`
       : `<button type="button" class="detail-comment-action" data-comment-report="${escapeHtml(commentId)}" data-comment-user="${escapeHtml(username)}" aria-label="${escapeHtml(localizedUiText('Denunciar comentário'))}" title="${escapeHtml(localizedUiText('Denunciar comentário'))}">${detailCommentActionIcon('report')}</button>`;
     return `<article class="detail-comment-item${isOwner ? ' is-current-user' : ''}" data-comment-id="${escapeHtml(commentId)}" data-comment-author-id="${escapeHtml(authorUserId)}">
-      <a class="detail-comment-avatar${avatarBorderColor ? ' has-custom-ring' : ''}" data-comment-username="${escapeHtml(username)}"${avatarBorderColor ? ` style="--detail-comment-avatar-ring:${avatarBorderColor}"` : ''} href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
+      <a class="detail-comment-avatar${avatarBorderColor ? ' has-custom-ring' : ''}" data-comment-username="${escapeHtml(username)}"${avatarRingResolved ? ' data-comment-ring-resolved="1"' : ''}${avatarBorderColor ? ` style="--detail-comment-avatar-ring:${avatarBorderColor}"` : ''} href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
         ${detailCommentAvatarMarkup(avatar, '', index < 8)}
       </a>
       <div class="detail-comment-body">
@@ -5351,13 +5556,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
         return;
       }
-      const { data, error } = await backend.client.rpc('get_video_comments', {
+      let result = await backend.client.rpc('get_video_comments_v2', {
         p_video_key: videoKey,
         p_limit: 60
       });
-      if (error) throw error;
+      // Rollout seguro: clientes novos continuam funcionando mesmo antes de a
+      // migration v2 existir em outro ambiente/preview.
+      if (result?.error) {
+        result = await backend.client.rpc('get_video_comments', {
+          p_video_key: videoKey,
+          p_limit: 60
+        });
+      }
+      if (result?.error) throw result.error;
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
-      const rows = Array.isArray(data) ? data : [];
+      const rows = Array.isArray(result?.data) ? result.data : [];
       list.innerHTML = rows.map((row, index) => detailCommentMarkup(row, index)).join('');
       hydrateDetailCommentAvatarRings(list);
       setupDetailCommentItemActions();
@@ -5415,6 +5628,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     if (startToken !== detailCommentsRealtimeStartToken || requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
     if (!backend?.client || backend.mode !== 'supabase' || typeof backend.client.channel !== 'function') return;
+    if (!backend?.auth?.currentUser) return;
 
     try {
       if (typeof ensureRealtimeAuth === 'function') await ensureRealtimeAuth();
@@ -5508,11 +5722,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (document.documentElement.dataset.detailCommentsResumeSync !== 'true') {
       document.documentElement.dataset.detailCommentsResumeSync = 'true';
       const refreshActiveComments = () => {
-        if (document.visibilityState && document.visibilityState !== 'visible') return;
         const key = activeDetailCommentsKey;
         const token = detailCommentsRequestToken;
         if (!key) return;
-        scheduleDetailCommentsRealtimeRefresh(key, token, 0);
+        if (document.visibilityState && document.visibilityState !== 'visible') {
+          // Não mantém websocket de comentário consumindo Realtime em abas que
+          // ficaram em segundo plano.
+          stopDetailCommentsRealtime();
+          return;
+        }
+        scheduleDetailCommentsRealtimeRefresh(key, token, 250);
         if (!detailCommentsRealtimeChannel || detailCommentsRealtimeKey !== key) {
           startDetailCommentsRealtime(key, token);
         }
@@ -6170,6 +6389,53 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     } catch (_) {
       return '';
     }
+  }
+
+  function linkedSubtitleFileUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw || !subtitleFetchUrl(raw)) return '';
+    try {
+      const url = new URL(raw, location.origin);
+      const pathname = decodeURIComponent(String(url.pathname || '')).toLowerCase();
+      return /\.(?:srt|vtt)$/.test(pathname) ? raw : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function normalizeSubtitleLocale(value) {
+    const raw = String(value || '').trim().toLowerCase().replace('_', '-');
+    if (!raw) return '';
+    if (raw === 'pt' || raw === 'pt-br' || raw.startsWith('pt-')) return 'pt-br';
+    if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';
+    if (raw === 'es' || raw.startsWith('es-')) return 'es';
+    if (raw === 'fr' || raw.startsWith('fr-')) return 'fr';
+    if (raw === 'it' || raw.startsWith('it-')) return 'it';
+    return '';
+  }
+
+  function subtitleLocaleFromFileUrl(value) {
+    const linked = linkedSubtitleFileUrl(value);
+    if (!linked) return '';
+    try {
+      const url = new URL(linked, location.origin);
+      const file = decodeURIComponent(String(url.pathname || '').split('/').pop() || '').toLowerCase();
+      const match = file.match(/^(pt(?:-br)?|en(?:-us)?|es|fr|it)(?:[-_.])/i);
+      return normalizeSubtitleLocale(match ? match[1] : '');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function subtitleFileForCurrentLocale(value, localeHint = '') {
+    const linked = linkedSubtitleFileUrl(value);
+    if (!linked) return '';
+    const current = normalizeSubtitleLocale(activeLocaleSlug()) || 'pt-br';
+    const hinted = normalizeSubtitleLocale(localeHint);
+    if (hinted && hinted !== current) return '';
+    const inferred = subtitleLocaleFromFileUrl(linked);
+    if (inferred && inferred !== current) return '';
+    return linked;
   }
 
   function subtitleTimeSeconds(value) {
@@ -6906,11 +7172,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderSubtitleCue(subtitleOverlay, [], 0, false);
     };
 
-    const configureExternalSubtitles = value => {
+    const configureExternalSubtitles = (value, localeHint = '') => {
       resetExternalSubtitles();
                                                                                   
                                                                                 
-      activeSubtitleUrl = activeProvider === 'vk' ? String(value || '').trim() : '';
+      activeSubtitleUrl = activeProvider === 'vk' ? subtitleFileForCurrentLocale(value, localeHint) : '';
       subtitleButton.hidden = !activeSubtitleUrl;
     };
 
@@ -6997,7 +7263,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       let instagramMobileFrameLoaded = false;
       vkEmbedAttempt = 0;
       vkPlaybackConfirmed = false;
-      configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '');
+      configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '', normalizedProvider === 'vk' ? context?.subtitleLocale : '');
       vkSelectedQuality = 4;
       vkMuted = false;
       vkVolume = 1;
@@ -7050,8 +7316,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       event.stopImmediatePropagation();
 
       const subtitleUrl = linkedContent.subtitleUrl || link.dataset.subtitleUrl || '';
+      const subtitleLocale = linkedContent.subtitleLocale || link.dataset.subtitleLocale || '';
       if (youtubeInfo) openExternalPlayer('youtube', youtubeInfo, { title });
-      else openExternalPlayer('vk', vkInfo, { title, subtitleUrl });
+      else openExternalPlayer('vk', vkInfo, { title, subtitleUrl, subtitleLocale });
     }, true);
 
     qualityButton.addEventListener('click', () => {
@@ -7507,9 +7774,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderSubtitleCue(subtitleOverlay, [], 0, false);
     };
 
-    const configureDriveSubtitles = (value, offsetSeconds = 0) => {
+    const configureDriveSubtitles = (value, offsetSeconds = 0, localeHint = '') => {
       resetDriveSubtitles();
-      activeSubtitleUrl = String(value || '').trim();
+      hideSubtitleSyncNotice(shell, true);
+      activeSubtitleUrl = subtitleFileForCurrentLocale(value, localeHint);
       const parsedOffset = Number(offsetSeconds);
       activeSubtitleOffset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
       subtitleButton.hidden = !activeSubtitleUrl;
@@ -7786,7 +8054,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeFileId = fileId;
       activeResourceKey = resourceKey;
       activeSourceLink = context?.sourceLink instanceof Element ? context.sourceLink : null;
-      configureDriveSubtitles(context?.subtitleUrl, context?.subtitleOffset);
+      configureDriveSubtitles(context?.subtitleUrl, context?.subtitleOffset, context?.subtitleLocale);
       const resourceQuery = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
       activeExternalUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view${resourceQuery}`;
       previousFocus = document.activeElement;
@@ -7806,8 +8074,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       syncFullscreen();
                                                                             
                                                                               
-      if (activeSubtitleUrl) showSubtitleSyncNotice(shell, { sequence: true });
-
                                                                              
                                                                               
                                                                          
@@ -7867,6 +8133,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         title,
         sourceLink: link,
         subtitleUrl: linkedContent.subtitleUrl || link.dataset.subtitleUrl || '',
+        subtitleLocale: linkedContent.subtitleLocale || link.dataset.subtitleLocale || '',
         subtitleOffset
       });
     }, true);
@@ -7931,6 +8198,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         subtitleButton.setAttribute('aria-label', 'Ocultar legendas');
         subtitleButton.title = frameMode ? 'Legendas ativadas (sincronia aproximada)' : 'Legendas ativadas';
         syncDriveSubtitle();
+        showSubtitleSyncNotice(shell, { sequence: true });
       } catch (_) {
         if (token !== subtitleLoadToken) return;
         clearFrameSubtitleSync();
@@ -9835,7 +10103,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                               
     const requestedMobileDriveUrl = String(data.tvDriveUrl || data.mobileAppDriveUrl || data.appDriveUrl || '').trim();
     const contentUrl = defaultContentUrl;
-    const subtitleUrl = data.subtitleUrl || '';
+    const subtitleLocale = normalizeSubtitleLocale(data.subtitleLocale || activeLocaleSlug()) || activeLocaleSlug();
+    const subtitleUrl = subtitleFileForCurrentLocale(data.subtitleUrl || '', subtitleLocale);
     const thumbnailUrl = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
     const bannerUrl = ['movies', 'series'].includes(collection)
       ? thumbnailUrl
@@ -9906,6 +10175,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     play.dataset.mobileAppDriveUrl = requestedMobileDriveUrl;
     play.dataset.tvDriveUrl = requestedMobileDriveUrl;
     play.dataset.subtitleUrl = subtitleUrl;
+    play.dataset.subtitleLocale = subtitleUrl ? subtitleLocale : '';
     play.dataset.imageUrl = thumbnailUrl;
     play.dataset.bannerUrl = bannerUrl;
     play.dataset.logoUrl = logoUrl;
@@ -9938,6 +10208,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     list.dataset.duration = duration;
     list.dataset.contentUrl = contentUrl;
     list.dataset.subtitleUrl = subtitleUrl;
+    list.dataset.subtitleLocale = subtitleUrl ? subtitleLocale : '';
     list.dataset.imageUrl = thumbnailUrl;
     list.dataset.bannerUrl = bannerUrl;
     list.dataset.logoUrl = logoUrl;
@@ -10025,25 +10296,73 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  const contentAnalyticsQueue = new Map();
+  let contentAnalyticsFlushTimer = 0;
+  let contentAnalyticsFlushRunning = false;
+  const CONTENT_ANALYTICS_BATCH_DELAY_MS = 1800;
+
+  function scheduleContentAnalyticsFlush(delay = CONTENT_ANALYTICS_BATCH_DELAY_MS) {
+    if (contentAnalyticsFlushTimer) clearTimeout(contentAnalyticsFlushTimer);
+    contentAnalyticsFlushTimer = setTimeout(() => {
+      contentAnalyticsFlushTimer = 0;
+      flushContentAnalyticsQueue();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  async function flushContentAnalyticsQueue() {
+    if (contentAnalyticsFlushRunning || !contentAnalyticsQueue.size) return;
+    const events = Array.from(contentAnalyticsQueue.values()).slice(0, 25);
+    events.forEach(event => contentAnalyticsQueue.delete(`${event.contentId}:${event.eventType}`));
+    contentAnalyticsFlushRunning = true;
+    try {
+      if (window.beBackend?.ready) await window.beBackend.ready;
+      const client = window.beBackend?.client;
+      if (!client || typeof client.rpc !== 'function') return;
+      const sessionId = contentAnalyticsSessionId();
+      const batched = await client.rpc('track_content_interactions_batch', {
+        p_events: events,
+        p_session_id: sessionId
+      });
+      if (batched?.error) {
+        // Compatibilidade com ambientes que ainda não receberam a migration.
+        await Promise.allSettled(events.map(event => client.rpc('track_content_interaction', {
+          p_content_id: event.contentId,
+          p_event_type: event.eventType,
+          p_session_id: sessionId,
+          p_active: event.eventType === 'save' ? event.active : null
+        })));
+      }
+    } catch (_) {
+      // Analytics não pode interromper navegação/reprodução.
+    } finally {
+      contentAnalyticsFlushRunning = false;
+      if (contentAnalyticsQueue.size) scheduleContentAnalyticsFlush(500);
+    }
+  }
+
   function trackContentInteraction(data, eventType, active = null) {
     const normalized = normalizeSavedContent(data || {});
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized.recordId)) return;
     const type = String(eventType || '').trim().toLowerCase();
     if (!['click', 'view', 'save'].includes(type)) return;
 
-    Promise.resolve(window.beBackend?.ready)
-      .then(() => {
-        const client = window.beBackend?.client;
-        if (!client || typeof client.rpc !== 'function') return null;
-        return client.rpc('track_content_interaction', {
-          p_content_id: normalized.recordId,
-          p_event_type: type,
-          p_session_id: contentAnalyticsSessionId(),
-          p_active: type === 'save' ? Boolean(active) : null
-        });
-      })
-      .catch(() => null);
+    const key = `${normalized.recordId}:${type}`;
+    // Click/view repetidos dentro do mesmo pequeno lote são redundantes; a RPC
+    // já deduplica por dia. Save mantém somente o estado final.
+    if (type !== 'save' && contentAnalyticsQueue.has(key)) return;
+    contentAnalyticsQueue.set(key, {
+      contentId: normalized.recordId,
+      eventType: type,
+      active: type === 'save' ? Boolean(active) : null
+    });
+    if (contentAnalyticsQueue.size >= 12) scheduleContentAnalyticsFlush(0);
+    else scheduleContentAnalyticsFlush();
   }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') scheduleContentAnalyticsFlush(0);
+  });
+  window.addEventListener('pagehide', () => scheduleContentAnalyticsFlush(0));
 
   function detailFavoriteSet() {
     const key = 'beDetailFavorites';
@@ -10424,6 +10743,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const recordId = String(data?.recordId || data?.id || '').trim();
     const collection = String(data?.collection || 'videos').trim().toLowerCase() || 'videos';
     const favoriteId = String(data?.favoriteId || (recordId ? `${collection}:${recordId}` : '')).trim();
+    const subtitleLocale = normalizeSubtitleLocale(data?.subtitleLocale || '');
+    const isLegacySavedSubtitle = Boolean(data?.savedAt && data?.subtitleUrl && !subtitleLocale);
+    const subtitleUrl = isLegacySavedSubtitle ? '' : subtitleFileForCurrentLocale(data?.subtitleUrl || '', subtitleLocale);
+    const effectiveSubtitleLocale = subtitleUrl ? (subtitleLocale || normalizeSubtitleLocale(activeLocaleSlug()) || 'pt-br') : '';
     return {
       itemId,
       recordId,
@@ -10435,7 +10758,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       contentUrl:String(data?.contentUrl || '#'),
       mobileAppDriveUrl:String(data?.mobileAppDriveUrl || data?.appDriveUrl || data?.tvDriveUrl || ''),
       tvDriveUrl:String(data?.tvDriveUrl || data?.mobileAppDriveUrl || data?.appDriveUrl || ''),
-      subtitleUrl:String(data?.subtitleUrl || ''),
+      subtitleUrl,
+      subtitleLocale:effectiveSubtitleLocale,
       imageUrl:String(data?.imageUrl || data?.thumbnailUrl || data?.bannerUrl || ''),
       bannerUrl:String(data?.bannerUrl || data?.imageUrl || data?.thumbnailUrl || ''),
       logoUrl:String(data?.logoUrl || ''),
@@ -10469,6 +10793,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       mobileAppDriveUrl:dataset.mobileAppDriveUrl || element.dataset?.mobileAppDriveUrl || dataset.tvDriveUrl || element.dataset?.tvDriveUrl || '',
       tvDriveUrl:dataset.tvDriveUrl || element.dataset?.tvDriveUrl || dataset.mobileAppDriveUrl || element.dataset?.mobileAppDriveUrl || '',
       subtitleUrl:dataset.subtitleUrl || element.dataset?.subtitleUrl || '',
+      subtitleLocale:dataset.subtitleLocale || element.dataset?.subtitleLocale || activeLocaleSlug(),
       imageUrl:dataset.imageUrl || element.dataset?.imageUrl || '',
       bannerUrl:dataset.bannerUrl || element.dataset?.bannerUrl || '',
       logoUrl:dataset.logoUrl || element.dataset?.logoUrl || '',
@@ -12292,8 +12617,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var authAction=document.getElementById('publicAuthAction');
     function syncAuthActionLabel(){
       if(!authAction)return;
-      var guestActive=!auth.currentUser&&Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
-      authAction.textContent=(auth.currentUser||guestActive)?'Sair':'Entrar';
+      var loggedIn=Boolean(auth.currentUser);
+      setInterfaceText(authAction,loggedIn?'Sair':'Criar conta');
+      authAction.classList.toggle('danger',loggedIn);
+      authAction.classList.toggle('guest-create-account',!loggedIn);
+      if(userDropdown){
+        userDropdown.classList.toggle('is-logged-out',!loggedIn);
+        userDropdown.setAttribute('data-account-state',loggedIn?'authenticated':'guest');
+      }
     }
     var avatarPicker=document.getElementById('avatarPicker');
     var avatarPickerBody=document.getElementById('avatarPickerBody');
@@ -12450,7 +12781,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var settingsActiveTab=(function(){
       var remembered='';
       try{remembered=String(history.state&&history.state.settingsTab||sessionStorage.getItem(SETTINGS_TAB_SESSION_KEY)||'');}catch(_){ }
-      return ['profile','connections','socials','data','language','session','account'].indexOf(remembered)>=0?remembered:'profile';
+      return ['profile','connections','socials','devices','data','language','session','account'].indexOf(remembered)>=0?remembered:'profile';
     })();
     var settingsSaveConfirm=document.getElementById('settingsSaveConfirm');
     var settingsSaveCancel=document.getElementById('settingsSaveCancel');
@@ -13233,6 +13564,67 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     }
     function uniqueSyncStrings(values,limit){var result=[];(Array.isArray(values)?values:[]).forEach(function(value){var normalized=String(value||'').trim();if(normalized&&result.indexOf(normalized)<0)result.push(normalized);});return typeof limit==='number'?result.slice(0,limit):result;}
+    function accountDeviceId(){
+      var key='beAccountDeviceId',value='';
+      try{value=String(localStorage.getItem(key)||'');}catch(_){ }
+      if(value)return value;
+      try{value=window.crypto&&typeof window.crypto.randomUUID==='function'?window.crypto.randomUUID():('device-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12));}catch(_){value='device-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);}
+      try{localStorage.setItem(key,value);}catch(_){ }
+      return value;
+    }
+    function accountDeviceType(){
+      var ua=String(navigator.userAgent||'');
+      var mobile=Boolean(navigator.userAgentData&&navigator.userAgentData.mobile)||/Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+      return mobile?'mobile':'pc';
+    }
+    function accountDeviceName(){
+      var ua=String(navigator.userAgent||''),platform=String((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'');
+      if(/iPhone/i.test(ua))return 'iPhone';
+      if(/iPad/i.test(ua)||/Mac/i.test(platform)&&navigator.maxTouchPoints>1)return 'iPad';
+      if(/Android/i.test(ua)){
+        var model=ua.match(/Android[^;]*;\s*([^;)]+?)(?:\s+Build\/|;|\))/i);
+        return model&&String(model[1]||'').trim()?String(model[1]).trim():'Android';
+      }
+      if(/Windows/i.test(ua)||/Win/i.test(platform))return 'Windows PC';
+      if(/Mac/i.test(ua)||/Mac/i.test(platform))return 'Mac';
+      if(/Linux/i.test(ua)||/Linux/i.test(platform))return 'Linux PC';
+      return accountDeviceType()==='mobile'?'Dispositivo móvel':'Computador';
+    }
+    function normalizeAccountDevices(values){
+      var byId={};
+      (Array.isArray(values)?values:[]).forEach(function(item){
+        if(!item||typeof item!=='object')return;
+        var id=String(item.id||'').trim();if(!id)return;
+        var normalized={id:id,type:String(item.type||'pc')==='mobile'?'mobile':'pc',name:String(item.name||'').trim().slice(0,80),active:item.active!==false,lastSeen:String(item.lastSeen||''),disconnectedAt:String(item.disconnectedAt||'')};
+        var current=byId[id];
+        var nextTime=Math.max(Date.parse(normalized.lastSeen||'')||0,Date.parse(normalized.disconnectedAt||'')||0);
+        var currentTime=current?Math.max(Date.parse(current.lastSeen||'')||0,Date.parse(current.disconnectedAt||'')||0):0;
+        if(!current||nextTime>=currentTime)byId[id]=normalized;
+      });
+      return Object.keys(byId).map(function(id){return byId[id];}).filter(function(item){
+        var stamp=Math.max(Date.parse(item.lastSeen||'')||0,Date.parse(item.disconnectedAt||'')||0);
+        return !stamp||Date.now()-stamp<90*24*60*60*1000;
+      }).slice(0,18);
+    }
+    function mergeAccountDevices(a,b){return normalizeAccountDevices((Array.isArray(a)?a:[]).concat(Array.isArray(b)?b:[]));}
+    function accountDevicesStorageKey(userId){return 'beAccountDevices:'+String(userId||'guest');}
+    function readAccountDevices(userId){return normalizeAccountDevices(readStorageJson(accountDevicesStorageKey(userId),[]));}
+    function writeAccountDevices(userId,devices){var normalized=normalizeAccountDevices(devices);try{localStorage.setItem(accountDevicesStorageKey(userId),JSON.stringify(normalized));}catch(_){ }return normalized;}
+    function currentAccountDeviceRecord(active){return {id:accountDeviceId(),type:accountDeviceType(),name:accountDeviceName(),active:active!==false,lastSeen:beBackend.now(),disconnectedAt:active===false?beBackend.now():''};}
+    function ensureCurrentAccountDevice(userId,devices){
+      var id=accountDeviceId(),values=normalizeAccountDevices(devices).filter(function(item){return item.id!==id;});
+      values.unshift(currentAccountDeviceRecord(true));
+      return writeAccountDevices(userId,values);
+    }
+    function normalizeTvDeviceBrands(value){
+      var source=value&&typeof value==='object'&&!Array.isArray(value)?value:{},out={};
+      Object.keys(source).slice(0,16).forEach(function(id){var entry=source[id];if(!entry)return;var name=typeof entry==='string'?entry:String(entry.name||'');var updatedAt=typeof entry==='object'?String(entry.updatedAt||''):'';if(name.trim())out[String(id)]={name:name.trim().slice(0,80),updatedAt:updatedAt};});
+      return out;
+    }
+    function mergeTvDeviceBrands(a,b){var out=normalizeTvDeviceBrands(a),next=normalizeTvDeviceBrands(b);Object.keys(next).forEach(function(id){var oldTime=Date.parse(out[id]&&out[id].updatedAt||'')||0,newTime=Date.parse(next[id].updatedAt||'')||0;if(!out[id]||newTime>=oldTime)out[id]=next[id];});return out;}
+    function tvDeviceBrandsStorageKey(userId){return 'beTvKnownBrands:'+String(userId||'guest');}
+    function readTvDeviceBrands(userId){return normalizeTvDeviceBrands(readStorageJson(tvDeviceBrandsStorageKey(userId),{}));}
+    function writeTvDeviceBrands(userId,value){var normalized=normalizeTvDeviceBrands(value);try{localStorage.setItem(tvDeviceBrandsStorageKey(userId),JSON.stringify(normalized));}catch(_){ }return normalized;}
     function syncRecordIdentity(item){return String((item&&item.favoriteId)||(item&&item.itemId)||((item&&item.collection&&item.recordId)?item.collection+':'+item.recordId:'')||(item&&item.title)||'').trim();}
     function uniqueSyncRecords(values,limit){var result=[];(Array.isArray(values)?values:[]).forEach(function(item){if(!item||typeof item!=='object')return;var identity=syncRecordIdentity(item);if(!identity||result.some(function(current){return syncRecordIdentity(current)===identity;}))return;result.push({...item});});return typeof limit==='number'?result.slice(0,limit):result;}
     function normalizeCrossDeviceData(value){
@@ -13249,6 +13641,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileAvatarBorderColor:normalizeProfileColorValue(source.profileAvatarBorderColor),
         profileShareCampaignSeen:String(source.profileShareCampaignSeen||'').slice(0,120),
         communityRankingsPublic:Object.prototype.hasOwnProperty.call(source,'communityRankingsPublic')?(source.communityRankingsPublic!==false&&String(source.communityRankingsPublic).toLowerCase()!=='false'):null,
+        accountDevices:normalizeAccountDevices(source.accountDevices),
+        tvDeviceBrands:normalizeTvDeviceBrands(source.tvDeviceBrands),
         updatedAt:String(source.updatedAt||'')
       };
     }
@@ -13264,6 +13658,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileAvatarBorderColor:readProfileColorValue(userId,'avatar-border'),
         profileShareCampaignSeen:(function(){try{return String(localStorage.getItem('beProfileShareCampaignSeen:'+String(userId||'guest'))||'');}catch(_){return '';}})(),
         communityRankingsPublic:(function(){try{return localStorage.getItem('beCommunityRankingsPublic:'+String(userId||'guest'))!=='false';}catch(_){return true;}})(),
+        accountDevices:ensureCurrentAccountDevice(userId,readAccountDevices(userId)),
+        tvDeviceBrands:readTvDeviceBrands(userId),
         updatedAt:beBackend.now()
       });
     }
@@ -13283,6 +13679,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileAvatarBorderColor:remoteHasAvatarBorder?remote.profileAvatarBorderColor:local.profileAvatarBorderColor,
         profileShareCampaignSeen:remote.profileShareCampaignSeen||local.profileShareCampaignSeen,
         communityRankingsPublic:remote.communityRankingsPublic===null?local.communityRankingsPublic:remote.communityRankingsPublic!==false,
+        accountDevices:mergeAccountDevices(remote.accountDevices,local.accountDevices),
+        tvDeviceBrands:mergeTvDeviceBrands(remote.tvDeviceBrands,local.tvDeviceBrands),
         updatedAt:beBackend.now()
       });
     }
@@ -13327,6 +13725,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.setItem('beProfileTopFavorites:'+userId,JSON.stringify(data.profileTopFavorites));
         localStorage.setItem('beProfileLovedAlbums:'+userId,JSON.stringify(data.profileLovedAlbums));
         localStorage.setItem(profileSocialStorageKey(userId),JSON.stringify(data.profileSocialLinks));
+        writeAccountDevices(userId,data.accountDevices);
+        writeTvDeviceBrands(userId,data.tvDeviceBrands);
         if(data.profileColor)localStorage.setItem(profileColorStorageKey(userId,'profile'),data.profileColor);else localStorage.removeItem(profileColorStorageKey(userId,'profile'));
         if(data.profileAvatarBorderColor)localStorage.setItem(profileColorStorageKey(userId,'avatar-border'),data.profileAvatarBorderColor);else localStorage.removeItem(profileColorStorageKey(userId,'avatar-border'));
         if(data.profileShareCampaignSeen)localStorage.setItem('beProfileShareCampaignSeen:'+String(userId),data.profileShareCampaignSeen);else localStorage.removeItem('beProfileShareCampaignSeen:'+String(userId));
@@ -13335,6 +13735,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.setItem('beSyncedDataOwner',String(userId));
       }catch(error){(void 0);}
       applyingRemotePreferences=false;
+      var ownDevice=data.accountDevices.find(function(item){return item.id===accountDeviceId();});
+      if(source==='remote'&&ownDevice&&ownDevice.active===false&&auth.currentUser&&auth.currentUser.uid===userId){
+        window.setTimeout(function(){
+          if(!auth.currentUser||auth.currentUser.uid!==userId)return;
+          try{localStorage.setItem('beRemoteDeviceDisconnect','1');}catch(_){ }
+          Promise.resolve(auth.signOut()).catch(function(){}).finally(function(){try{localStorage.removeItem('beRemoteDeviceDisconnect');}catch(_){ }showLogin();setMode('email');});
+        },80);
+      }
       profileFavoritesItems=data.profileTopFavorites.slice(0,4);
       profileLovedAlbumsItems=data.profileLovedAlbums.slice(0,4);
       if(auth.currentUser&&auth.currentUser.uid===userId){
@@ -13369,7 +13777,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function scheduleCrossDeviceSync(reason){
       if(applyingRemotePreferences||!auth.currentUser||!auth.currentUser.uid)return;
       clearTimeout(preferenceSyncTimer);
-      preferenceSyncTimer=setTimeout(function(){persistCrossDeviceData(reason||'configuração');},350);
+      preferenceSyncTimer=setTimeout(function(){persistCrossDeviceData(reason||'configuração');},900);
     }
     window.beScheduleUserDataSync=scheduleCrossDeviceSync;
     function stopCrossDeviceSync(){
@@ -13420,6 +13828,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             merged=remoteData;
           }
         }
+        var remoteDeviceData=remote?normalizeCrossDeviceData(remote.data):normalizeCrossDeviceData({});
+        var remoteOwnDevice=remoteDeviceData.accountDevices.find(function(item){return item.id===accountDeviceId();});
+        if(remote&&remoteOwnDevice&&remoteOwnDevice.active===false){applyCrossDeviceData(remote.data,userId,'remote');return;}
+        merged.accountDevices=ensureCurrentAccountDevice(userId,mergeAccountDevices(merged.accountDevices,remoteDeviceData.accountDevices));
+        merged.tvDeviceBrands=mergeTvDeviceBrands(merged.tvDeviceBrands,remoteDeviceData.tvDeviceBrands);
         applyCrossDeviceData(merged,userId,remote?'remote':'local');
         var saved=await beBackend.preferences.save(userId,{...merged,updatedAt:beBackend.now()});
         if(!auth.currentUser||auth.currentUser.uid!==userId)return;
@@ -14351,6 +14764,90 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       bindProfileSavedGrid();
     }
 
+    function settingsDeviceIcon(type){
+      if(type==='tv')return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg>';
+      if(type==='mobile')return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.3"></rect><path d="M10.5 5h3M11 18.5h2"></path></svg>';
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg>';
+    }
+    function settingsDeviceDate(value){
+      var date=new Date(value||Date.now());if(Number.isNaN(date.getTime()))date=new Date();
+      var locale=String(window.BETVI18n&&window.BETVI18n.locale||'pt-BR');
+      try{return new Intl.DateTimeFormat(locale,{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(date);}catch(_){return date.toLocaleString();}
+    }
+    async function disconnectSyncedAccountDevice(userId,deviceId){
+      if(!userId||!deviceId||!beBackend.preferences)return;
+      var remote=await beBackend.preferences.get(userId,{force:true});
+      var data=normalizeCrossDeviceData(remote&&remote.data||captureCrossDeviceData(userId));
+      var found=false,stamp=beBackend.now();
+      data.accountDevices=normalizeAccountDevices(data.accountDevices.map(function(item){
+        if(item.id!==deviceId)return item;found=true;return {...item,active:false,disconnectedAt:stamp,lastSeen:item.lastSeen||stamp};
+      }));
+      if(!found)data.accountDevices.push({id:deviceId,type:'pc',name:'Dispositivo',active:false,lastSeen:stamp,disconnectedAt:stamp});
+      data.updatedAt=stamp;
+      await beBackend.preferences.save(userId,data);
+      applyCrossDeviceData(data,userId,'device-disconnect');
+    }
+    async function renderSettingsDevices(){
+      var list=document.getElementById('settingsDevicesList');if(!list)return;
+      var user=auth.currentUser;if(!user||!user.uid){list.innerHTML='<div class="settings-devices-empty">'+escapePublic(localizedProfileText('Entre para ver seus dispositivos.'))+'</div>';return;}
+      var localDevices=ensureCurrentAccountDevice(user.uid,readAccountDevices(user.uid)).filter(function(item){return item.active!==false;});
+      var brands=readTvDeviceBrands(user.uid);
+      list.innerHTML='<div class="settings-devices-loading">'+escapePublic(localizedProfileText('Carregando dispositivos…'))+'</div>';
+      var tvRows=[];
+      try{
+        var client=beBackend.client;
+        if(client&&typeof client.rpc==='function'){
+          var response=await client.rpc('tv_my_sessions');
+          if(!response.error)tvRows=Array.isArray(response.data)?response.data:[];
+        }
+      }catch(_){ }
+      var nowMs=Date.now();
+      tvRows=tvRows.filter(function(row){var seen=Date.parse(row&&row.last_seen_at||'')||0;return row&&String(row.status||'')==='paired'&&(!seen||nowMs-seen<3*60*1000);});
+      var entries=[];
+      tvRows.forEach(function(row){
+        var media=row.current_media&&typeof row.current_media==='object'?row.current_media:{};
+        var known=brands[String(row.session_id||'')]||{};
+        var name=String(known.name||media.deviceBrand||media.tvBrand||media.deviceName||localizedProfileText('Smart TV')).trim();
+        entries.push({kind:'tv',id:String(row.session_id||''),type:'tv',name:name,date:row.last_seen_at||row.updated_at||new Date().toISOString(),current:false});
+      });
+      localDevices.forEach(function(item){entries.push({kind:'account',id:item.id,type:item.type,name:item.name||localizedProfileText(item.type==='mobile'?'Dispositivo móvel':'Computador'),date:item.lastSeen||new Date().toISOString(),current:item.id===accountDeviceId()});});
+      entries.sort(function(a,b){return (Date.parse(b.date)||0)-(Date.parse(a.date)||0);});
+      if(!entries.length){list.innerHTML='<div class="settings-devices-empty">'+escapePublic(localizedProfileText('Nenhum dispositivo ativo encontrado.'))+'</div>';return;}
+      list.innerHTML=entries.map(function(item){
+        return '<div class="settings-device-item" data-device-kind="'+escapePublic(item.kind)+'" data-device-id="'+escapePublic(item.id)+'">'
+          +'<span class="settings-device-icon is-'+escapePublic(item.type)+'">'+settingsDeviceIcon(item.type)+'</span>'
+          +'<span class="settings-device-copy"><strong>'+escapePublic(item.name)+(item.current?'<em>'+escapePublic(localizedProfileText('Este dispositivo'))+'</em>':'')+'</strong><small>'+escapePublic(settingsDeviceDate(item.date))+'</small></span>'
+          +'<button class="settings-device-disconnect" type="button">'+escapePublic(localizedProfileText('Desconectar'))+'</button>'
+          +'</div>';
+      }).join('');
+      list.querySelectorAll('.settings-device-disconnect').forEach(function(button){button.onclick=async function(){
+        var row=button.closest('.settings-device-item');if(!row||button.disabled)return;
+        button.disabled=true;button.textContent=localizedProfileText('Desconectando…');
+        try{
+          if(row.dataset.deviceKind==='tv'){
+            var client=beBackend.client;if(!client||typeof client.rpc!=='function')throw new Error('tv_unavailable');
+            var result=await client.rpc('tv_disconnect_session',{p_session_id:row.dataset.deviceId});if(result&&result.error)throw result.error;
+          }else{
+            var disconnectingCurrent=row.dataset.deviceId===accountDeviceId();
+            await disconnectSyncedAccountDevice(user.uid,row.dataset.deviceId);
+            if(disconnectingCurrent){
+              try{localStorage.setItem('beRemoteDeviceDisconnect','1');}catch(_){ }
+              try{await auth.signOut();}finally{try{localStorage.removeItem('beRemoteDeviceDisconnect');}catch(_){ }}
+              showLogin();setMode('email');return;
+            }
+          }
+          await renderSettingsDevices();
+        }catch(_){button.disabled=false;button.textContent=localizedProfileText('Desconectar');}
+      };});
+      if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(list);
+    }
+    var accountDeviceActivitySyncAt=0;
+    window.BETVAccountDevices={
+      refresh:function(){if(auth.currentUser&&auth.currentUser.uid){ensureCurrentAccountDevice(auth.currentUser.uid,readAccountDevices(auth.currentUser.uid));scheduleCrossDeviceSync('device-activity');accountDeviceActivitySyncAt=Date.now();}},
+      disconnectCurrent:async function(){var user=auth.currentUser;if(!user||!user.uid)return;try{if(localStorage.getItem('beRemoteDeviceDisconnect')==='1')return;}catch(_){ }var current=readAccountDevices(user.uid).find(function(item){return item.id===accountDeviceId();});if(current&&current.active===false)return;await disconnectSyncedAccountDevice(user.uid,accountDeviceId());}
+    };
+    window.addEventListener('focus',function(){if(auth.currentUser&&Date.now()-accountDeviceActivitySyncAt>6*60*60*1000)window.BETVAccountDevices.refresh();},{passive:true});
+
     function renderSettingsPage(){
       var user=auth.currentUser;
       if(!user){
@@ -14369,7 +14866,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var profileColor=normalizeProfileColorValue((currentProfile&&currentProfile.profileColor)||readProfileColorValue(user.uid,'profile'));
       var avatarBorderColor=normalizeProfileColorValue((currentProfile&&currentProfile.avatarBorderColor)||readProfileColorValue(user.uid,'avatar-border'));
       var profileColorControls=profileColorSettingsMarkup(profileColor,avatarBorderColor);
-      var settingsTabs=['profile','connections','data','language','session'];
+      var settingsTabs=['profile','connections','devices','language','session','data'];
       if(settingsActiveTab==='socials')settingsActiveTab='connections';
       if(settingsActiveTab==='account')settingsActiveTab='session';
       if(settingsTabs.indexOf(settingsActiveTab)<0)settingsActiveTab='profile';
@@ -14378,13 +14875,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         +  '<nav class="settings-page-nav" aria-label="Seções das configurações">'
         +    '<button type="button" data-settings-tab="profile"'+(settingsActiveTab==='profile'?' class="active" aria-current="page"':'')+'>Perfil</button>'
         +    '<button type="button" data-settings-tab="connections"'+(settingsActiveTab==='connections'?' class="active" aria-current="page"':'')+'>Conexões e Redes Sociais</button>'
-        +    '<button type="button" data-settings-tab="data"'+(settingsActiveTab==='data'?' class="active" aria-current="page"':'')+'>Meus Dados</button>'
+        +    '<button type="button" data-settings-tab="devices"'+(settingsActiveTab==='devices'?' class="active" aria-current="page"':'')+'>Dispositivos</button>'
         +    '<button type="button" data-settings-tab="language"'+(settingsActiveTab==='language'?' class="active" aria-current="page"':'')+'>Idioma</button>'
         +    '<button type="button" data-settings-tab="session"'+(settingsActiveTab==='session'?' class="active" aria-current="page"':'')+'>Conta e Sessão</button>'
+        +    '<button type="button" data-settings-tab="data"'+(settingsActiveTab==='data'?' class="active" aria-current="page"':'')+'>Meus Dados</button>'
         +  '</nav>'
         +  '<main class="settings-page-content">'
         +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner, o avatar e as cores do seu perfil.</p><div class="settings-panel-card"><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview'+(avatarBorderColor?' has-custom-ring':'')+'"'+(avatarBorderColor?' style="--settings-avatar-ring:'+avatarBorderColor+'"':'')+'>'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div>'+profileColorControls+'</div></section>'
         +    '<section class="settings-section-panel settings-connections-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões e Redes Sociais</h1><p class="settings-panel-lead">Gerencie sua conexão de conta e as redes exibidas no perfil público.</p><div class="settings-panel-card"><div class="settings-social-heading"><h2>Conexões conectadas</h2><p>Gerencie os serviços vinculados à sua conta.</p></div><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div><div class="settings-panel-card settings-social-card"><div class="settings-social-heading"><h2>Redes sociais</h2><p>Adicione as redes que devem aparecer ao lado do seu nome no perfil público.</p></div><form id="settingsSocialForm"><div class="settings-social-fields"><div class="settings-social-field"><label for="settingsSocialX"><span class="settings-social-brand is-x">'+profileSocialIcon('x')+'</span><span>X</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">x.com/</span><input id="settingsSocialX" name="x" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.x||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialInstagram"><span class="settings-social-brand is-instagram">'+profileSocialIcon('instagram')+'</span><span>Instagram</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">instagram.com/</span><input id="settingsSocialInstagram" name="instagram" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.instagram||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialTikTok"><span class="settings-social-brand is-tiktok">'+profileSocialIcon('tiktok')+'</span><span>TikTok</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">tiktok.com/@</span><input id="settingsSocialTikTok" name="tiktok" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.tiktok||'')+'" placeholder="usuario"></div></div></div><div class="settings-status" id="settingsSocialStatus"></div><div class="settings-btn-row settings-social-actions"><button class="settings-button primary" type="submit">Salvar redes sociais</button></div></form></div></section>'
+        +    '<section class="settings-section-panel settings-devices-panel" data-settings-panel="devices"'+(settingsActiveTab==='devices'?'':' hidden')+'><h1>Dispositivos</h1><p class="settings-panel-lead">Apenas dispositivos ativos vinculados à sua conta aparecem aqui.</p><div class="settings-devices-list" id="settingsDevicesList"><div class="settings-devices-loading">Carregando dispositivos…</div></div></section>'
         +    '<section class="settings-section-panel settings-data-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Meus Dados</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-data-actions settings-data-actions-outside"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><a class="settings-data-privacy-button" href="/privacy">Ver Termos de Privacidade</a></div><div class="settings-status settings-data-status" id="settingsExportStatus"></div></section>'
         +    '<section class="settings-section-panel settings-language-panel" data-settings-panel="language"'+(settingsActiveTab==='language'?'':' hidden')+'><h1>Idioma</h1><p class="settings-panel-lead">Escolha o idioma usado em todas as áreas públicas do site.</p><div class="settings-panel-card"><div class="settings-language-options" role="radiogroup" aria-label="Idioma do site"><button class="settings-language-option" type="button" data-settings-language="pt-br" role="radio"><strong>Português (Brasil)</strong><span>Português</span></button><button class="settings-language-option" type="button" data-settings-language="en-us" role="radio"><strong>English (United States)</strong><span>Inglês</span></button><button class="settings-language-option" type="button" data-settings-language="es" role="radio"><strong>Español</strong><span>Espanhol</span></button><button class="settings-language-option" type="button" data-settings-language="fr" role="radio"><strong>Français</strong><span>Francês</span></button><button class="settings-language-option" type="button" data-settings-language="it" role="radio"><strong>Italiano</strong><span>Italiano</span></button></div><p class="settings-muted settings-language-note">A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.</p></div></section>'
         +    '<section class="settings-section-panel settings-session-panel" data-settings-panel="session"'+(settingsActiveTab==='session'?'':' hidden')+'><h1>Conta</h1><p class="settings-panel-lead">Altere o nome exibido e o @ do seu perfil.</p><div class="settings-panel-card"><form id="settingsAccountForm"><div class="settings-form-grid"><div class="settings-field"><label>Nome</label><input class="notranslate" translate="no" name="displayName" maxlength="50" required value="'+escapePublic(currentProfile.displayName||user.displayName||'')+'"></div><div class="settings-field"><label>@</label><input class="notranslate" translate="no" name="username" maxlength="20" pattern="[a-z0-9._]{3,20}" required value="'+escapePublic(currentProfile.username||'')+'" placeholder="'+escapePublic(localizedProfileText('seunome'))+'"></div></div><div class="settings-status" id="settingsAccountStatus"></div><div class="settings-btn-row"><button class="settings-button primary" type="submit">Salvar alterações</button></div></form></div><div class="settings-panel-card settings-security-card"><div class="settings-security-row"><div class="settings-security-copy"><strong>Verificação em duas etapas</strong><span class="settings-muted" id="settingsMfaDescription">Adicione uma camada extra de segurança usando um aplicativo autenticador.</span></div><div class="settings-security-actions"><button class="settings-button primary" id="settingsMfaToggle" type="button" disabled>Verificando…</button><button class="settings-security-forgot" id="settingsForgotPassword" type="button">Esqueci a senha</button></div></div><div class="settings-mfa-setup" id="settingsMfaSetup" hidden><div class="settings-mfa-qr"><img id="settingsMfaQr" alt="QR Code para configurar o aplicativo autenticador" hidden><span id="settingsMfaQrFallback">QR Code</span></div><div class="settings-mfa-setup-copy"><strong>Configure seu autenticador</strong><p>Escaneie o QR Code no Google Authenticator, Microsoft Authenticator, Authy ou outro app compatível.</p><div class="settings-mfa-secret-row"><span>Chave manual</span><code class="notranslate" translate="no" id="settingsMfaSecret"></code></div><form id="settingsMfaVerifyForm"><div class="settings-field"><label for="settingsMfaCode">Código de 6 dígitos</label><input id="settingsMfaCode" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000"></div><div class="settings-btn-row settings-mfa-verify-actions"><button class="settings-button primary" type="submit">Confirmar e ativar</button><button class="settings-button" id="settingsMfaCancel" type="button">Cancelar</button></div></form></div></div><div class="settings-status" id="settingsMfaStatus"></div></div><div class="settings-session-section"><h1>Sessão</h1><p class="settings-panel-lead">Saia desta conta ou exclua permanentemente seu acesso e perfil.</p><div class="settings-btn-row settings-session-actions"><button class="settings-danger" id="settingsDeleteAccount" type="button">Excluir conta</button><button class="settings-button" id="settingsLogoutAccount" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Sair da conta</span></button></div><div class="settings-status settings-session-status" id="settingsDeleteStatus"></div></div></section>'
@@ -14405,6 +14904,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           panel.hidden=!active;
           panel.setAttribute('aria-hidden',active?'false':'true');
         });
+        if(tab==='devices')window.setTimeout(renderSettingsDevices,0);
         if(moveToTop&&settingsPage){settingsPage.scrollTop=0;}
       }
       settingsPageBody.querySelectorAll('[data-settings-tab]').forEach(function(button){
@@ -14903,6 +15403,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()){window.BETVGuestAccess.setActive(false);localStorage.removeItem('beAuthExpected');localStorage.removeItem('beSessionUid');}syncAuthActionLabel();window.BETVPublicRoutes.go('/login');document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='donate'){toggleDropdown(false);if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/ong');return;}if(action==='support'){toggleDropdown(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/suporte');else window.dispatchEvent(new CustomEvent('be:open-support'));return;}if(action==='settings'){openSettingsPage(true);return;}
     });});
     window.addEventListener('be:guest-access',syncAuthActionLabel);
+    window.addEventListener('be:i18n-ready',syncAuthActionLabel);
     window.addEventListener('storage',function(event){
       if(event&&event.key==='beGuestAccess')syncAuthActionLabel();
       if(auth.currentUser&&event&&event.key===profileColorStorageKey(auth.currentUser.uid,'avatar-border'))applyOwnAvatarBorder(currentProfile,auth.currentUser.uid);
@@ -15004,9 +15505,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='',mfaChallengePending=false;
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
-  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false;
+  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false,siteSkeletonReleased=document.documentElement.dataset.siteLoaded==='true';
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
-  function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
+  function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();window.clearTimeout(siteSkeletonHideTimer);var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;siteSkeletonReleased=true;document.documentElement.dataset.siteLoaded='true';if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
   function donateVisualReady(){var donatePage=q('donatePage');return !isDonateRoute()||Boolean(donatePage&&donatePage.dataset&&donatePage.dataset.visualReady==='true');}
   function notificationsVisualReady(){return !isNotificationsRoute()||window.__beNotificationsReady===true;}
   function waitForDonateVisualBeforeReveal(){
@@ -15034,7 +15535,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     releaseSiteSkeleton();
   }
-  function showSiteSkeleton(){window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=0;var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
+  function showSiteSkeleton(){if(siteSkeletonReleased||document.documentElement.dataset.siteLoaded==='true')return;window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=0;var loading=q('authLoading');if(loading)loading.hidden=false;setSiteLoading(true);}
   window.addEventListener('be:content-ready',function(){
                                                                               
                                                                              
@@ -15063,6 +15564,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isBannedError(error){var value=String((error&&error.code)||'')+' '+String((error&&error.message)||'');return /user[_ -]?banned|account[_ -]?banned|banid|banned/i.test(value);}
   window.addEventListener('be:user-banned',function(event){showBannedToast(event&&event.detail||{});});
   function setStatus(message,type){var el=q('authStatus');if(!el)return;el.textContent=message||'';el.className='auth-status '+(type||'');}
+  function authText(source,variables){if(window.BETVI18n&&typeof window.BETVI18n.t==='function')return window.BETVI18n.t(source,variables||{});return String(source||'');}
+  function authButtonBusy(button,busy,busyLabel,idleLabel){if(!button)return;if(busy){button.setAttribute('aria-busy','true');button.textContent=authText(busyLabel);}else{button.removeAttribute('aria-busy');button.textContent=authText(idleLabel);}}
   function friendly(error){
     var code=(error&&error.code)||'';
     var map={
@@ -15130,7 +15633,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     showLogin();
     setMode('mfa',email||selectedAuthEmail||(auth&&auth.currentUser&&auth.currentUser.email)||'');
     if(message)setStatus(message,type||'');
-    else setStatus('Digite o código do seu aplicativo autenticador para concluir o login.');
+    else setStatus('');
     hideSiteSkeleton();
   }
   function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:Boolean(preserveRoute)}}));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
@@ -15140,6 +15643,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var steps={email:q('emailStep'),password:q('passwordStep'),mfa:q('mfaStep'),signup:q('signupStep'),recovery:q('passwordRecoveryStep')};
     Object.keys(steps).forEach(function(key){if(steps[key])steps[key].hidden=key!==mode;});
     q('authGate').dataset.authStep=mode;
+    document.body.classList.toggle('auth-mfa-mode',mode==='mfa');
     if(selectedAuthEmail){
       q('loginEmail').value=selectedAuthEmail;
       q('signupEmail').value=selectedAuthEmail;
@@ -15325,7 +15829,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       form.elements.namedItem('code').value=code;
       if(code.length!==6){setStatus('Digite o código de 6 dígitos do aplicativo autenticador.','error');return;}
       if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('Verificando código…');
+      authFlowBusy=true;if(b){b.disabled=true;authButtonBusy(b,true,'Verificando código…','Verificar código');}setStatus('');
       try{
         if(typeof auth.verifyMfaCode!=='function')throw new Error('A verificação em duas etapas não está disponível.');
         await auth.verifyMfaCode({code:code});
@@ -15334,7 +15838,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         setStatus('Código confirmado.','ok');
         await finishPublicLogin(auth.currentUser);
       }catch(err){showMfaLogin(selectedAuthEmail||(auth.currentUser&&auth.currentUser.email)||'',friendly(err),'error');}
-      finally{authFlowBusy=false;if(b)b.disabled=false;}
+      finally{authFlowBusy=false;if(b){b.disabled=false;authButtonBusy(b,false,'Verificando código…','Verificar código');}}
     });
     q('mfaUseOtherAccount').onclick=async function(){
       if(authFlowBusy)return;authFlowBusy=true;
@@ -15372,8 +15876,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=(selectedAuthEmail||form.elements.namedItem('email').value).trim().toLowerCase(),password=form.elements.namedItem('password').value;
       if(!validAuthPassword(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
       if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando…');
-      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setMode('password',email);if(isBannedError(err)){setStatus('');showBannedToast({email:email});}else setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b)b.disabled=false;}
+      authFlowBusy=true;if(b){b.disabled=true;authButtonBusy(b,true,'Entrando…','Entrar');}setStatus('');
+      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setMode('password',email);if(isBannedError(err)){setStatus('');showBannedToast({email:email});}else setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b){b.disabled=false;authButtonBusy(b,false,'Entrando…','Entrar');}}
     });
 
     q('signupForm').addEventListener('submit',async function(e){
@@ -15975,6 +16479,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var notifications=[];
   var loaded=false;
   var loadingPromise=null;
+  var notificationsLoadedAt=0;
+  var NOTIFICATIONS_CLIENT_TTL_MS=5*60*1000;
   var selectedId='';
   var STORAGE_KEY='beNotificationsLastSeen';
   var READ_STATE_KEY='beNotificationsReadStateV2';
@@ -16405,22 +16911,51 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return active;
   }
 
+  async function ensureItalianNotificationTranslations(items){
+    var values=Array.isArray(items)?items:[];
+    var slug=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
+    if(slug!=='it'||!values.length)return values;
+    var missing=values.filter(function(item){var it=item&&item.translations&&item.translations.it;return item&&item.id&&(!it||!String(it.title||'').trim()||!String(it.description||'').trim());}).slice(0,12);
+    if(!missing.length)return values;
+    var translations={};
+    try{
+      var client=window.beBackend&&window.beBackend.client;
+      if(client&&client.functions&&typeof client.functions.invoke==='function'){
+        var response=await client.functions.invoke('translate-content-record-it',{body:{collection:'notifications',ids:missing.map(function(item){return String(item.id);}),locales:['it']}});
+        var records=response&&response.data&&Array.isArray(response.data.records)?response.data.records:[];
+        records.forEach(function(row){if(row&&row.id&&row.translation)translations[String(row.id)]=row.translation;});
+      }
+    }catch(_){ }
+    var stillMissing=missing.filter(function(item){return !translations[String(item.id)];});
+    if(stillMissing.length&&window.BETVI18n&&typeof window.BETVI18n.translateTexts==='function'){
+      var sources=[];stillMissing.forEach(function(item){sources.push(String(item.title||''));sources.push(String(item.description||''));});
+      try{
+        var translated=await window.BETVI18n.translateTexts(sources),cursor=0;
+        stillMissing.forEach(function(item){translations[String(item.id)]={title:translated[cursor++]||item.title,description:translated[cursor++]||item.description};});
+      }catch(_){ }
+    }
+    return values.map(function(item){var translated=translations[String(item&&item.id||'')];return translated?Object.assign({},item,translated):item;});
+  }
+
   async function loadNotifications(force){
-    if(loadingPromise&&!force)return loadingPromise;
-    if(loaded&&!force)return notifications;
+    if(loadingPromise)return loadingPromise;
+    if(loaded&&(!force||Date.now()-notificationsLoadedAt<NOTIFICATIONS_CLIENT_TTL_MS))return notifications;
     loadingPromise=(async function(){
       try{
         if(!window.beBackend)throw new Error('Backend indisponível.');
         await window.beBackend.ready;
         var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
+        items=await ensureItalianNotificationTranslations(items);
         notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&String(item.type||'')!=='profile-share-campaign'&&String(item.title||'').trim();}).sort(compareNewest);
         loaded=true;
+        notificationsLoadedAt=Date.now();
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);
       }catch(error){
         (void 0);
         notifications=[];
         loaded=true;
+        notificationsLoadedAt=Date.now();
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage('');
       }finally{
@@ -16573,8 +17108,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   });
   window.addEventListener('be:close-notifications',function(){closePage(false);});
   window.addEventListener('be:i18n-ready',function(){if(loaded){renderPreviews();if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);}});
-  window.addEventListener('be:content-ready',function(){loadNotifications(true);});
-  window.addEventListener('be:auth-changed',function(){syncPageAvatar();loadNotifications(true);});
+  window.addEventListener('be:content-ready',function(){
+    var run=function(){loadNotifications(false);};
+    if(document.body.classList.contains('notification-page-active')){run();return;}
+    if(window.requestIdleCallback)window.requestIdleCallback(run,{timeout:1800});else window.setTimeout(run,900);
+  });
+  window.addEventListener('be:auth-changed',function(){syncPageAvatar();loadNotifications(false);});
   window.addEventListener('be:profile-avatar-changed',syncPageAvatar);
   window.addEventListener('be:content-ready',syncPageAvatar);
   window.addEventListener('hashchange',function(){
@@ -16610,9 +17149,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   var ENDPOINT = '/api/deployment-version';
                                                                       
-  var CHECK_INTERVAL = 12 * 60 * 60 * 1000;
-  var MIN_CHECK_GAP_MS = 2 * 60 * 60 * 1000;
-  var SHARED_CHECK_TTL_MS = 12 * 60 * 60 * 1000;
+  var CHECK_INTERVAL = 24 * 60 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 6 * 60 * 60 * 1000;
+  var SHARED_CHECK_TTL_MS = 24 * 60 * 60 * 1000;
   var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV3';
   var OBSERVED_RELEASE_KEY = 'betvObservedReleaseStateV1';
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
@@ -17033,21 +17572,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     clearNonEssentialCookies();
     clearTransientStorage();
 
-    try {
-      if ('caches' in window) {
-        jobs.push(
-          window.caches.keys().then(function (keys) {
-            return Promise.all(keys.map(function (key) { return window.caches.delete(key); }));
-          })
-        );
-      }
-    } catch (_) {}
-
+    // Os assets têm URL revisionada e o novo Service Worker nunca intercepta
+    // HTML/API. Apagar todo CacheStorage e desregistrar o SW em cada release
+    // fazia o usuário baixar novamente imagens/chunks que não mudaram.
     try {
       if ('serviceWorker' in navigator) {
         jobs.push(
           navigator.serviceWorker.getRegistrations().then(function (registrations) {
-            return Promise.all(registrations.map(function (registration) { return registration.unregister(); }));
+            return Promise.all(registrations.map(function (registration) {
+              try { return registration.update(); } catch (_) { return Promise.resolve(); }
+            }));
           })
         );
       }
@@ -20048,12 +20582,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(document.getElementById('mobileAccountPopover')){mobileMenu=document.getElementById('mobileAccountPopover');return;}
     var trigger=document.getElementById('mobileProfileButton');if(trigger){trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-expanded','false');}
     mobileMenu=document.createElement('div');mobileMenu.className='mobile-account-popover';mobileMenu.id='mobileAccountPopover';mobileMenu.setAttribute('role','menu');mobileMenu.setAttribute('aria-label','Conta');
-    var runningAsMobileApp=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installItem=runningAsMobileApp?'':'<button type="button" role="menuitem" data-mobile-account="install">Instalar app</button>';mobileMenu.innerHTML='<button type="button" role="menuitem" data-mobile-account="profile">Perfil</button><button type="button" role="menuitem" data-mobile-account="community">Comunidade</button><button type="button" role="menuitem" data-mobile-account="settings">Configurações</button>'+installItem+'<div class="mobile-account-divider" aria-hidden="true"></div><button class="danger" type="button" role="menuitem" data-mobile-account="logout">Sair</button>';
+    var runningAsMobileApp=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installItem=runningAsMobileApp?'':'<button type="button" role="menuitem" data-mobile-account="install">Instalar app</button>';mobileMenu.innerHTML='<button class="mobile-create-account" type="button" role="menuitem" data-mobile-account="create-account" hidden>Criar conta</button><button type="button" role="menuitem" data-mobile-account="profile">Perfil</button><button type="button" role="menuitem" data-mobile-account="community">Comunidade</button><button type="button" role="menuitem" data-mobile-account="settings">Configurações</button>'+installItem+'<div class="mobile-account-divider" aria-hidden="true"></div><button class="danger" type="button" role="menuitem" data-mobile-account="logout">Sair</button>';
     document.body.appendChild(mobileMenu);applyI18n(mobileMenu);if(typeof window.BETVSyncInstallUi==='function')window.BETVSyncInstallUi();
-    mobileMenu.addEventListener('click',function(event){var button=event.target.closest('[data-mobile-account]');if(!button)return;var action=button.dataset.mobileAccount;closeMobileAccountMenu();if(action==='community'){openCommunity();return;}if(action==='profile'){var p=document.querySelector('#userDropdown [data-public-action="profile"]');if(p)p.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='settings'){var s=document.querySelector('#userDropdown [data-public-action="settings"]');if(s)s.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='install'){if(typeof window.BETVRequestAppInstall==='function')window.BETVRequestAppInstall();return;}if(action==='logout'){var a=document.getElementById('publicAuthAction');if(a)a.click();}});
+    mobileMenu.addEventListener('click',function(event){var button=event.target.closest('[data-mobile-account]');if(!button)return;var action=button.dataset.mobileAccount;closeMobileAccountMenu();if(action==='create-account'){var accountAction=document.getElementById('publicAuthAction');if(accountAction)accountAction.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='community'){openCommunity();return;}if(action==='profile'){var p=document.querySelector('#userDropdown [data-public-action="profile"]');if(p)p.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='settings'){var s=document.querySelector('#userDropdown [data-public-action="settings"]');if(s)s.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='install'){if(typeof window.BETVRequestAppInstall==='function')window.BETVRequestAppInstall();return;}if(action==='logout'){var a=document.getElementById('publicAuthAction');if(a)a.click();}});
   }
   function positionMobileAccountMenu(){if(!mobileMenu)return;var trigger=document.getElementById('mobileProfileButton');if(!trigger)return;var rect=trigger.getBoundingClientRect();var width=Math.min(260,Math.max(180,window.innerWidth-24));var height=Math.max(1,mobileMenu.offsetHeight||210);var left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));var top=Math.max(8,Math.min(rect.bottom+8,window.innerHeight-height-8));mobileMenu.style.left=left+'px';mobileMenu.style.top=top+'px';}
-  function openMobileAccountMenu(){if(!window.matchMedia('(max-width:760px)').matches)return;createMobileAccountMenu();var user=currentUser();var logout=mobileMenu.querySelector('[data-mobile-account="logout"]');if(logout)logout.hidden=!user;var install=mobileMenu.querySelector('[data-mobile-account="install"]');if(install){var running=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installed=typeof window.BETVIsAppInstalled==='function'&&window.BETVIsAppInstalled();install.hidden=running;install.textContent=installed&&!running?'Abrir app':'Instalar app';install.classList.toggle('is-installed',installed&&!running);}positionMobileAccountMenu();document.body.classList.add('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','true');}
+  function openMobileAccountMenu(){if(!window.matchMedia('(max-width:760px)').matches)return;createMobileAccountMenu();var user=currentUser();var loggedIn=Boolean(user);mobileMenu.classList.toggle('is-logged-out',!loggedIn);var createAccount=mobileMenu.querySelector('[data-mobile-account="create-account"]');if(createAccount)createAccount.hidden=loggedIn;['profile','community','settings'].forEach(function(action){var item=mobileMenu.querySelector('[data-mobile-account="'+action+'"]');if(item)item.hidden=!loggedIn;});var divider=mobileMenu.querySelector('.mobile-account-divider');if(divider)divider.hidden=!loggedIn;var logout=mobileMenu.querySelector('[data-mobile-account="logout"]');if(logout)logout.hidden=!loggedIn;var install=mobileMenu.querySelector('[data-mobile-account="install"]');if(install){var running=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installed=typeof window.BETVIsAppInstalled==='function'&&window.BETVIsAppInstalled();install.hidden=!loggedIn||running;install.textContent=installed&&!running?'Abrir app':'Instalar app';install.classList.toggle('is-installed',installed&&!running);}if(typeof window.BETVI18n==='object'&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(mobileMenu);positionMobileAccountMenu();document.body.classList.add('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','true');}
   function closeMobileAccountMenu(){document.body.classList.remove('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','false');}
   function toggleMobileAccountMenu(){if(document.body.classList.contains('mobile-account-menu-open'))closeMobileAccountMenu();else openMobileAccountMenu();}
 

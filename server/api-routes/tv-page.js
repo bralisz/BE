@@ -65,6 +65,21 @@ function normalizeUiLocale(value) {
   return '';
 }
 
+function detectTvBrand(req) {
+  const ua = String((req && req.headers && req.headers['user-agent']) || '');
+  if (/Tizen|SamsungBrowser/i.test(ua)) return 'Samsung TV';
+  if (/Web0S|webOS|LG Browser|NetCast/i.test(ua)) return 'LG TV';
+  if (/BRAVIA|SonyTV|Sony TV/i.test(ua)) return 'Sony TV';
+  if (/Hisense|VIDAA/i.test(ua)) return 'Hisense TV';
+  if (/PhilipsTV|Philips TV/i.test(ua)) return 'Philips TV';
+  if (/Roku/i.test(ua)) return 'Roku TV';
+  if (/AFT|Fire TV/i.test(ua)) return 'Fire TV';
+  if (/AppleTV/i.test(ua)) return 'Apple TV';
+  if (/Chromecast|GoogleTV|Google TV/i.test(ua)) return 'Google TV';
+  if (/Android TV|SMART-TV|SmartTV/i.test(ua)) return 'Android TV';
+  return 'Smart TV';
+}
+
 function requestUiLocale(req) {
   const queryLocale = normalizeUiLocale(req && req.query && req.query.lang);
   if (queryLocale) return queryLocale;
@@ -1052,7 +1067,8 @@ module.exports = async function handler(req, res) {
           cookie('be_tv_code', pairingCode, 60 * 10)
         ]);
       }
-      const connectUrl = `https://billieilishtv.site/connect-tv/?code=${encodeURIComponent(pairingCode)}`;
+      const tvBrand = detectTvBrand(req);
+      const connectUrl = `https://billieilishtv.site/connect-tv/?code=${encodeURIComponent(pairingCode)}&tv=${encodeURIComponent(tvBrand)}`;
       const inlineQr = await inlinePairingQr(connectUrl);
       const html = baseHtml({ body: pairingBody(pairingCode, connectUrl, inlineQr, copy), locale, copy, stateStatus: 'waiting', mediaVersion: state.media_version, mediaKey: mediaStateKey(state.current_media) });
       return req.method === 'HEAD' ? res.status(200).end() : res.status(200).send(html);
