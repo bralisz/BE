@@ -3637,6 +3637,8 @@
   pointer-events:auto!important;
 }
 .auth-loading[hidden]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html[data-site-loaded="true"] #authLoading{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+html[data-site-loaded="true"] #authLoading .skeleton-shimmer::after{display:none!important;animation:none!important}
 .site-loading-skeleton{
   position:absolute!important;
   inset:0!important;
