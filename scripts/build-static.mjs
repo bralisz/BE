@@ -2,7 +2,9 @@ import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 const out='_static';
+const publicOut='public';
 await rm(out,{recursive:true,force:true});
+await rm(publicOut,{recursive:true,force:true});
 const copies=[
   ['assets/js/locale-routing.js',`${out}/chunks/locale.js`],
   ['assets/js/site.js',`${out}/chunks/site.js`],
@@ -26,3 +28,20 @@ const version=(!commit&&!deploymentUrl)
   ? `local:${environment}`
   : `v:${createHash('sha256').update(`${commit}:${deploymentUrl}`).digest('hex').slice(0,24)}`;
 await writeFile(`${out}/version.json`,JSON.stringify({version,releaseStateAvailable:false,generatedAt:new Date().toISOString()})+'\n','utf8');
+
+const publicFiles=[
+  'index.html',
+  '404.html',
+  'site.webmanifest',
+  'sw.js',
+  'google95f17905463fea6a.html',
+  'connect-tv/index.html',
+  'oauth/consent/index.html',
+  'tv/index.html',
+];
+for(const src of publicFiles){
+  const dest=`${publicOut}/${src}`;
+  await mkdir(dirname(dest),{recursive:true});
+  await cp(src,dest);
+}
+await cp(out,`${publicOut}/${out}`,{recursive:true});
