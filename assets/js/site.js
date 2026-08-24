@@ -4595,14 +4595,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function setupContentDetailInteractions(host) {
-    if (!host) return;
-    host.querySelectorAll('[data-open-detail="true"]').forEach(card => {
-      if (card.dataset.detailBound === 'true') return;
-      card.dataset.detailBound = 'true';
-      card.addEventListener('click', event => {
-        event.preventDefault();
-        openContentDetail(cardDataWithSection(card), { updateRoute: true });
+    // Usa delegação global para que cards adicionados/recriados dinamicamente
+    // continuem abrindo o detalhe sem depender de um listener individual.
+    if (host && host.querySelectorAll) {
+      host.querySelectorAll('[data-open-detail="true"]').forEach(card => {
+        card.dataset.detailBound = 'delegated';
       });
+    }
+    if (document.documentElement.dataset.detailDelegateBound === 'true') return;
+    document.documentElement.dataset.detailDelegateBound = 'true';
+    document.addEventListener('click', event => {
+      if (event.defaultPrevented) return;
+      if (event.button !== undefined && event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const card = event.target && event.target.closest
+        ? event.target.closest('[data-open-detail="true"]')
+        : null;
+      if (!card || !document.documentElement.contains(card)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      openContentDetail(cardDataWithSection(card), { updateRoute: true });
     });
   }
 
@@ -11179,6 +11191,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && Boolean(query));
       }
     };
+
+    // Se o usuário troca para Filmes/Vídeos enquanto o catálogo ainda está
+    // carregando, reaplica a aba assim que os cards chegam. Isso também
+    // restaura os 3 destaques aleatórios no topo da aba.
+    if (topbar.dataset.catalogReadyFilterBound !== 'true') {
+      topbar.dataset.catalogReadyFilterBound = 'true';
+      window.addEventListener('be:catalog-ready', () => {
+        applyCatalogFilter(false);
+        setupContentDetailInteractions(document);
+      });
+    }
 
     const leaveAlbumsForCatalog = nextView => {
       const path = (() => {
