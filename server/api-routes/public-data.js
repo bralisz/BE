@@ -10,7 +10,7 @@ const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
   'mediaType', 'mobileAppDriveUrl', 'tvDriveUrl', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'showCardLogo', 'slug',
-  'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'subtitleLocale', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
+  'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
 ]);
 const MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl']);
@@ -37,45 +37,6 @@ function normalizeLocale(value) {
   if (locale === 'fr') return 'fr';
   if (locale === 'it') return 'it';
   return 'pt-br';
-}
-
-function subtitleLocaleFromUrl(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  try {
-    const url = new URL(raw, 'https://billieilishtv.site');
-    const file = decodeURIComponent(String(url.pathname || '').split('/').pop() || '').toLowerCase();
-    const match = file.match(/^(pt(?:-br)?|en(?:-us)?|es|fr|it)(?:[-_.])/i);
-    return match ? normalizeLocale(match[1]) : '';
-  } catch (_) {
-    return '';
-  }
-}
-
-function enforceSubtitleLocale(source, requestedLocale, localizedPayload) {
-  if (!source || typeof source !== 'object') return source;
-  const subtitleUrl = String(source.subtitleUrl || '').trim();
-  if (!subtitleUrl) {
-    delete source.subtitleUrl;
-    delete source.subtitleLocale;
-    return source;
-  }
-  const requested = normalizeLocale(requestedLocale);
-  if (!localizedPayload && requested !== 'pt-br') {
-    delete source.subtitleUrl;
-    delete source.subtitleLocale;
-    return source;
-  }
-  const explicit = source.subtitleLocale ? normalizeLocale(source.subtitleLocale) : '';
-  const inferred = subtitleLocaleFromUrl(subtitleUrl);
-  const actual = explicit || inferred;
-  if (actual && actual !== requested) {
-    delete source.subtitleUrl;
-    delete source.subtitleLocale;
-    return source;
-  }
-  source.subtitleLocale = requested;
-  return source;
 }
 
 function upstreamTtl(name, id) {
@@ -206,7 +167,7 @@ function sanitizeTranslations(value) {
   return result;
 }
 
-function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPayload = false) {
+function sanitizeItem(collection, row) {
   const wrapped = row && typeof row === 'object'
     ? (row.get_public_content_items || row.item || row)
     : null;
@@ -226,12 +187,6 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
   for (const field of ['contentUrl', 'videoUrl', 'link', 'subtitleUrl', 'mobileAppDriveUrl', 'tvDriveUrl']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeLink(source[field], true);
   }
-  if (Object.prototype.hasOwnProperty.call(source, 'subtitleLocale')) {
-    const rawSubtitleLocale = String(source.subtitleLocale || '').trim();
-    if (rawSubtitleLocale) source.subtitleLocale = normalizeLocale(rawSubtitleLocale);
-    else delete source.subtitleLocale;
-  }
-  enforceSubtitleLocale(source, requestedLocale, localizedPayload);
   for (const field of ['title', 'type', 'category', 'description', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? 4000 : 500);
   }
@@ -398,15 +353,15 @@ async function fetchRowsUncached(name, id, locale) {
       p_locale: locale
     });
     const rows = Array.isArray(payload) ? payload : [];
-    sanitizedRows = rows.map(row => sanitizeItem(name, row, locale, true)).filter(Boolean);
+    sanitizedRows = rows.map(row => sanitizeItem(name, row)).filter(Boolean);
   } catch (_) {
     try {
       const payload = await callRpc('get_public_content_items', { p_collection: name, p_id: id || null });
       const rows = Array.isArray(payload) ? payload : [];
-      sanitizedRows = rows.map(row => sanitizeItem(name, row, locale, false)).filter(Boolean);
+      sanitizedRows = rows.map(row => sanitizeItem(name, row)).filter(Boolean);
     } catch (_) {
       const rows = await fetchLegacyRows(name, id);
-      sanitizedRows = rows.map(row => sanitizeItem(name, row, locale, false)).filter(Boolean);
+      sanitizedRows = rows.map(row => sanitizeItem(name, row)).filter(Boolean);
     }
   }
   // O segundo link do Dashboard é exclusivo da TV. A chave legada
@@ -430,7 +385,7 @@ async function fetchHomeBootstrap(locale) {
       const bundle = {};
       for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
         const rows = Array.isArray(value[name]) ? value[name] : [];
-        bundle[name] = rows.map(row => sanitizeItem(name, row, locale, true)).filter(Boolean);
+        bundle[name] = rows.map(row => sanitizeItem(name, row)).filter(Boolean);
       }
       // Alguns filmes antigos usam apenas o segundo link do Dashboard para TV.
       // Mantém essa compatibilidade com só mais uma leitura privada, ainda muito
