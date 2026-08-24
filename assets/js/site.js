@@ -844,13 +844,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const PROFILE_CACHE_TTL_MS = 300000;
   const PUBLIC_PROFILE_CACHE_TTL_MS = 120000;
   const PUBLIC_PROFILE_SESSION_TTL_MS = 120000;
-  const PREFERENCE_CACHE_TTL_MS = 300000;
+  const PREFERENCE_CACHE_TTL_MS = 30 * 60 * 1000;
   const profileCache = new Map();
   const profileEnsurePromises = new Map();
   const publicProfileCache = new Map();
   const publicProfilePromises = new Map();
   const preferenceCache = new Map();
   const userSyncChannels = new Map();
+  const privilegeCache = new Map();
+  const privilegeInFlight = new Map();
+  const PRIVILEGE_CACHE_TTL_MS = 5 * 60 * 1000;
   let realtimeAuthPromise = null;
 
   function hasSupabaseConfig() {
@@ -1003,40 +1006,58 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
   }
 
-  async function hydratePrivileges(user) {
+  async function hydratePrivileges(user, options = {}) {
     if (!user || MODE !== 'supabase' || !supabaseClient) return user;
+    const userId = String(user.uid || user.id || '');
+    if (!userId) return user;
 
-                                                                               
-                                                                               
-                                                    
-    let adminCheckFailed = false;
-    try {
-      const { data: allowed, error } = await supabaseClient.rpc('is_admin');
-      if (!error) return { ...user, role: allowed === true ? 'admin' : 'member' };
-      adminCheckFailed = true;
-    } catch (_) {
-      adminCheckFailed = true;
+    // app_metadata vem do token assinado pelo Supabase; quando já carrega a
+    // permissão de admin não há motivo para fazer outra RPC.
+    if (user.role === 'admin') {
+      privilegeCache.set(userId, { role: 'admin', cachedAt: Date.now() });
+      return user;
     }
 
-                                                                          
-                                                                     
-    if (adminCheckFailed) {
+    if (!options.force) {
+      const cached = privilegeCache.get(userId);
+      if (cached && Date.now() - cached.cachedAt < PRIVILEGE_CACHE_TTL_MS) {
+        return { ...user, role: cached.role };
+      }
+      const pending = privilegeInFlight.get(userId);
+      if (pending) return pending.then(role => ({ ...user, role }));
+    }
+
+    const check = (async () => {
+      let adminCheckFailed = false;
       try {
-        const { data: profile, error } = await supabaseClient
-          .from('profiles')
-          .select('role')
-          .eq('id', user.uid)
-          .maybeSingle();
-        if (!error) return { ...user, role: profile?.role === 'admin' ? 'admin' : 'member' };
-      } catch (_) {}
+        const { data: allowed, error } = await supabaseClient.rpc('is_admin');
+        if (!error) return allowed === true ? 'admin' : 'member';
+        adminCheckFailed = true;
+      } catch (_) {
+        adminCheckFailed = true;
+      }
+
+      if (adminCheckFailed) {
+        try {
+          const { data: profile, error } = await supabaseClient
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .maybeSingle();
+          if (!error) return profile?.role === 'admin' ? 'admin' : 'member';
+        } catch (_) {}
+      }
+      return 'member';
+    })();
+
+    privilegeInFlight.set(userId, check);
+    try {
+      const role = await check;
+      privilegeCache.set(userId, { role, cachedAt: Date.now() });
+      return { ...user, role };
+    } finally {
+      privilegeInFlight.delete(userId);
     }
-
-                                                                          
-                                                                     
-    if (user.role === 'admin') return user;
-
-    (void 0);
-    return { ...user, role: 'member' };
   }
 
   async function resolveSupabaseUser(authResult) {
@@ -1051,19 +1072,19 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const retryDelays = [0, 80, 180, 360, 700];
     for (const retryDelay of retryDelays) {
       if (retryDelay) await wait(retryDelay);
-
+      // getSession usa a sessão local e não precisa validar /user na rede a
+      // cada tentativa. A validação remota fica como único fallback final.
       const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
       if (sessionError) (void 0);
       const sessionUser = sessionData?.session?.user || null;
       if (sessionUser) return hydratePrivileges(normalizeUser(sessionUser));
-
-      const { data: userData, error: userError } = await supabaseClient.auth.getUser();
-      if (userError && userError.name !== 'AuthSessionMissingError') {
-        (void 0);
-      }
-      if (userData?.user) return hydratePrivileges(normalizeUser(userData.user));
     }
 
+    try {
+      const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+      if (userError && userError.name !== 'AuthSessionMissingError') (void 0);
+      if (userData?.user) return hydratePrivileges(normalizeUser(userData.user));
+    } catch (_) {}
     return null;
   }
 
@@ -1448,15 +1469,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const publicDataMemoryCache = new Map();
   const HOME_BOOTSTRAP_COLLECTIONS = new Set(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
   const homeBootstrapMemoryCache = new Map();
-  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV5:';
-  const HOME_BOOTSTRAP_BROWSER_TTL_MS = 30 * 60 * 1000;
-  const HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS = 12 * 60 * 60 * 1000;
-  const HOME_BOOTSTRAP_MEMORY_TTL_MS = 10 * 60 * 1000;
+  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV6:';
+  // O bundle pesado fica salvo localmente, mas a cada ~25 minutos validamos
+  // apenas duas versões minúsculas. O JSON completo só volta a ser baixado se
+  // o catálogo realmente mudou.
+  const HOME_BOOTSTRAP_BROWSER_TTL_MS = 25 * 60 * 1000;
+  const HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+  const HOME_BOOTSTRAP_MEMORY_TTL_MS = 30 * 60 * 1000;
   const homeBootstrapRefreshInFlight = new Map();
-                                                                          
-                                                                             
-                                                     
-  const FEATURED_FRESH_TTL_MS = 30 * 1000;
+  const homeBootstrapValidationInFlight = new Map();
+  const FEATURED_FRESH_TTL_MS = 10 * 60 * 1000;
+
+  function normalizeHomeVersionState(value) {
+    const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+    const clean = input => String(input || '').trim().replace(/[^a-zA-Z0-9._:-]/g, '').slice(0, 160);
+    return {
+      catalogVersion: clean(source.catalogVersion),
+      settingsVersion: clean(source.settingsVersion)
+    };
+  }
 
   function homeBootstrapStorageKey(locale) {
     return HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX + String(locale || 'pt-br');
@@ -1467,24 +1498,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const key = homeBootstrapStorageKey(locale);
       const parsed = JSON.parse(localStorage.getItem(key) || 'null');
       if (!parsed || !parsed.savedAt || !parsed.bundle || typeof parsed.bundle !== 'object') return null;
-      const age = Date.now() - Number(parsed.savedAt);
+      const nowMs = Date.now();
+      const age = nowMs - Number(parsed.savedAt);
       if (age >= HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS) {
         localStorage.removeItem(key);
         return null;
       }
-      parsed.__stale = age >= HOME_BOOTSTRAP_BROWSER_TTL_MS;
+      const validatedAt = Number(parsed.validatedAt || parsed.savedAt || 0);
+      const validationAge = validatedAt > 0 ? nowMs - validatedAt : age;
+      parsed.versions = normalizeHomeVersionState(parsed.versions || parsed.bundle.__versions);
+      parsed.__stale = validationAge >= HOME_BOOTSTRAP_BROWSER_TTL_MS;
       parsed.__age = Math.max(0, age);
+      parsed.__validationAge = Math.max(0, validationAge);
       return parsed;
     } catch (_) { return null; }
   }
 
-  function writeHomeBootstrapBrowserCache(locale, bundle) {
+  function writeHomeBootstrapBrowserCache(locale, bundle, versions = null) {
     if (!bundle || typeof bundle !== 'object') return;
     const key = homeBootstrapStorageKey(locale);
-    const now = Date.now();
-    const value = JSON.stringify({ savedAt: now, featuredSavedAt: now, bundle });
+    const nowMs = Date.now();
+    const normalizedVersions = normalizeHomeVersionState(versions || bundle.__versions);
+    bundle.__versions = normalizedVersions;
+    const value = JSON.stringify({
+      savedAt: nowMs,
+      validatedAt: nowMs,
+      featuredSavedAt: nowMs,
+      versions: normalizedVersions,
+      bundle
+    });
     try {
-                                                                               
+      // Mantém somente o idioma ativo para não ocupar vários MB em localStorage.
       for (let index = localStorage.length - 1; index >= 0; index -= 1) {
         const storedKey = String(localStorage.key(index) || '');
         if (storedKey.startsWith(HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX) && storedKey !== key) localStorage.removeItem(storedKey);
@@ -1493,6 +1537,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     } catch (_) {
       try { localStorage.removeItem(key); } catch (_) {}
     }
+  }
+
+  function markHomeBootstrapValidated(locale, cachedEntry, bundle, versions) {
+    if (!bundle || typeof bundle !== 'object') return;
+    const key = homeBootstrapStorageKey(locale);
+    const normalizedVersions = normalizeHomeVersionState(versions || bundle.__versions);
+    bundle.__versions = normalizedVersions;
+    try {
+      const current = JSON.parse(localStorage.getItem(key) || 'null') || {};
+      localStorage.setItem(key, JSON.stringify({
+        savedAt: Number(current.savedAt || cachedEntry?.savedAt || Date.now()),
+        validatedAt: Date.now(),
+        featuredSavedAt: Number(current.featuredSavedAt || cachedEntry?.featuredSavedAt || Date.now()),
+        versions: normalizedVersions,
+        bundle
+      }));
+    } catch (_) {}
   }
 
   function clearHomeBootstrapBrowserCache(locale) {
@@ -1515,10 +1576,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const expiresAt = nowMs + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
     const featuredFresh = Math.max(0, Number(bundleAgeMs) || 0) < FEATURED_FRESH_TTL_MS;
     for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
-                                                                                
-                                                                               
-                                                                               
-                                                    
       if (name === 'featured' && !featuredFresh) continue;
       const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
       publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt });
@@ -1532,26 +1589,108 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
-  function refreshPublicHomeDataInBackground(locale) {
+  async function fetchHomeVersions(locale) {
+    const params = new URLSearchParams({ name: 'home-version', locale: String(locale || activeLocaleSlug()) });
+    const response = await fetch(`/api/public-data?${params.toString()}`, {
+      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+    return normalizeHomeVersionState(await response.json());
+  }
+
+  async function fetchVersionedSiteSettings(locale, settingsVersion) {
+    const params = new URLSearchParams({ name: 'settings', id: 'site', locale: String(locale || activeLocaleSlug()) });
+    const revision = String(settingsVersion || '').trim();
+    if (revision) params.set('v', revision);
+    const response = await fetch(`/api/public-data?${params.toString()}`, {
+      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) return null;
+    const settings = await response.json();
+    return settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : null;
+  }
+
+  function refreshPublicHomeDataInBackground(locale, versionHint = null) {
     const normalizedLocale = String(locale || activeLocaleSlug());
     const existing = homeBootstrapRefreshInFlight.get(normalizedLocale);
     if (existing) return existing;
-    const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale });
-    const promise = fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
-    }).then(response => {
+    const promise = (async () => {
+      let versions = normalizeHomeVersionState(versionHint);
+      if (!versions.catalogVersion) {
+        try { versions = await fetchHomeVersions(normalizedLocale); } catch (_) {}
+      }
+
+      const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale });
+      if (versions.catalogVersion) params.set('v', versions.catalogVersion);
+      const response = await fetch(`/api/public-data?${params.toString()}`, {
+        method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+      });
       if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-      return response.json();
-    }).then(bundle => {
+      const bundle = await response.json();
+      const bundleVersions = normalizeHomeVersionState(bundle && bundle.__versions);
+      if (!versions.catalogVersion) versions.catalogVersion = bundleVersions.catalogVersion;
+      if (!versions.settingsVersion) versions.settingsVersion = bundleVersions.settingsVersion;
+
+      // Configurações mudam com mais frequência que o catálogo (ex.: release).
+      // Se apenas elas mudaram, baixa poucos KB em vez de reconstruir 170+ KB.
+      if (versions.settingsVersion && bundleVersions.settingsVersion !== versions.settingsVersion) {
+        try {
+          const site = await fetchVersionedSiteSettings(normalizedLocale, versions.settingsVersion);
+          if (site) {
+            bundle.settings = { ...(bundle.settings || {}), site };
+            bundleVersions.settingsVersion = versions.settingsVersion;
+          }
+        } catch (_) {}
+      }
+      bundle.__versions = {
+        catalogVersion: versions.catalogVersion || bundleVersions.catalogVersion,
+        settingsVersion: versions.settingsVersion || bundleVersions.settingsVersion
+      };
+
       const generatedAt = Number(bundle && bundle.__generatedAt || 0);
       const bundleAge = generatedAt > 0 ? Math.max(0, Date.now() - generatedAt) : 0;
       hydrateHomeBootstrapBundle(bundle, normalizedLocale, HOME_BOOTSTRAP_MEMORY_TTL_MS, bundleAge);
-      writeHomeBootstrapBrowserCache(normalizedLocale, bundle);
+      writeHomeBootstrapBrowserCache(normalizedLocale, bundle, bundle.__versions);
       const resolved = Promise.resolve(bundle);
       homeBootstrapMemoryCache.set(normalizedLocale, { promise: resolved, expiresAt: Date.now() + HOME_BOOTSTRAP_MEMORY_TTL_MS });
       return bundle;
-    }).finally(() => homeBootstrapRefreshInFlight.delete(normalizedLocale));
+    })().finally(() => homeBootstrapRefreshInFlight.delete(normalizedLocale));
     homeBootstrapRefreshInFlight.set(normalizedLocale, promise);
+    return promise;
+  }
+
+  function validatePublicHomeDataInBackground(locale, cachedEntry) {
+    const normalizedLocale = String(locale || activeLocaleSlug());
+    const existing = homeBootstrapValidationInFlight.get(normalizedLocale);
+    if (existing) return existing;
+    const promise = (async () => {
+      const versions = await fetchHomeVersions(normalizedLocale);
+      const cachedVersions = normalizeHomeVersionState(cachedEntry?.versions || cachedEntry?.bundle?.__versions);
+      if (!cachedVersions.catalogVersion || !versions.catalogVersion || cachedVersions.catalogVersion !== versions.catalogVersion) {
+        const bundle = await refreshPublicHomeDataInBackground(normalizedLocale, versions);
+        return { bundle, changed: true, fullRefresh: true };
+      }
+
+      const bundle = cachedEntry.bundle;
+      let changed = false;
+      if (versions.settingsVersion && cachedVersions.settingsVersion !== versions.settingsVersion) {
+        const site = await fetchVersionedSiteSettings(normalizedLocale, versions.settingsVersion).catch(() => null);
+        if (site) {
+          bundle.settings = { ...(bundle.settings || {}), site };
+          changed = true;
+        }
+      }
+      bundle.__versions = versions;
+      markHomeBootstrapValidated(normalizedLocale, cachedEntry, bundle, versions);
+
+      const featuredSavedAt = Number(cachedEntry.featuredSavedAt || cachedEntry.savedAt || Date.now());
+      const featuredAge = Math.max(0, Date.now() - featuredSavedAt);
+      hydrateHomeBootstrapBundle(bundle, normalizedLocale, HOME_BOOTSTRAP_MEMORY_TTL_MS, featuredAge);
+      const resolved = Promise.resolve(bundle);
+      homeBootstrapMemoryCache.set(normalizedLocale, { promise: resolved, expiresAt: Date.now() + HOME_BOOTSTRAP_MEMORY_TTL_MS });
+      return { bundle, changed, fullRefresh: false };
+    })().finally(() => homeBootstrapValidationInFlight.delete(normalizedLocale));
+    homeBootstrapValidationInFlight.set(normalizedLocale, promise);
     return promise;
   }
 
@@ -1564,15 +1703,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const browserCached = readHomeBootstrapBrowserCache(locale);
     if (browserCached) {
       const savedAge = Math.max(0, Number(browserCached.__age ?? (nowMs - Number(browserCached.savedAt || nowMs))));
-      const generatedAt = Number(browserCached.bundle && browserCached.bundle.__generatedAt || 0);
-      const generatedAge = generatedAt > 0 ? Math.max(0, nowMs - generatedAt) : 0;
-      const featuredSavedAt = Number(browserCached.featuredSavedAt || 0);
-      const featuredAge = featuredSavedAt > 0
-        ? Math.max(0, nowMs - featuredSavedAt)
-        : Math.max(savedAge, generatedAge);
+      const featuredSavedAt = Number(browserCached.featuredSavedAt || browserCached.savedAt || nowMs);
+      const featuredAge = Math.max(0, nowMs - featuredSavedAt);
       const remaining = browserCached.__stale
         ? 30000
-        : Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - savedAge);
+        : Math.max(30000, HOME_BOOTSTRAP_BROWSER_TTL_MS - Number(browserCached.__validationAge || 0));
       hydrateHomeBootstrapBundle(browserCached.bundle, locale, Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining), featuredAge);
       const browserPromise = Promise.resolve(browserCached.bundle);
       homeBootstrapMemoryCache.set(locale, {
@@ -1581,8 +1716,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
       if (browserCached.__stale) {
         const schedule = window.requestIdleCallback || (callback => window.setTimeout(callback, 350));
-        schedule(() => refreshPublicHomeDataInBackground(locale).then(() => {
-          if (window.__beContentReady && !document.hidden && !document.body.classList.contains('detail-page-active')) {
+        schedule(() => validatePublicHomeDataInBackground(locale, browserCached).then(result => {
+          if (result?.changed && window.__beContentReady && !document.hidden && !document.body.classList.contains('detail-page-active')) {
             renderFeatured().catch(() => {});
             renderVideoCatalog().catch(() => {});
           }
@@ -1611,14 +1746,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (normalizedId) params.set('id', normalizedId);
                                   
     const ttl = normalizedName === 'settings' && normalizedId === 'site'
-      ? 60000
+      ? 10 * 60 * 1000
       : normalizedName === 'notifications'
-        ? 60000
+        ? 5 * 60 * 1000
         : normalizedName === 'movies'
-          ? 300000
+          ? 30 * 60 * 1000
           : normalizedName === 'featured'
             ? FEATURED_FRESH_TTL_MS
-            : 600000;
+            : 30 * 60 * 1000;
     const promise = fetch(`/api/public-data?${params.toString()}`, {
       method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
@@ -2413,6 +2548,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return `beSyncedUserData:${String(userId || 'guest')}`;
   }
 
+  function comparablePreferencePayload(value) {
+    const normalized = normalizePreferencePayload(value);
+    delete normalized.updatedAt;
+    return normalized;
+  }
+
   const preferences = {
     async get(userId, options = {}) {
       if (!userId) return null;
@@ -2450,7 +2591,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const normalized = normalizePreferencePayload(payload);
       if (MODE === 'supabase') {
         const cached = readCachedPreference(userId, Number.POSITIVE_INFINITY);
-        if (cached && JSON.stringify(cached.data) === JSON.stringify(normalized)) {
+        if (cached && JSON.stringify(comparablePreferencePayload(cached.data)) === JSON.stringify(comparablePreferencePayload(normalized))) {
           return clone(cached);
         }
         try {
@@ -3096,6 +3237,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         window.setTimeout(async () => {
           if (event === 'SIGNED_OUT') {
             currentUser = null;
+            privilegeCache.clear();
+            privilegeInFlight.clear();
             notify();
             return;
           }
@@ -3389,26 +3532,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                            
   let featuredPageHiddenAt = 0;
   let featuredResumeRefreshRunning = false;
-  const FEATURED_RESUME_REFRESH_MS = 30 * 1000;
+  const FEATURED_RESUME_REFRESH_MS = 15 * 60 * 1000;
 
   async function refreshFeaturedAfterResume(force = false) {
     if (featuredResumeRefreshRunning || document.visibilityState === 'hidden') return;
     const now = Date.now();
-    if (!force && featuredPageHiddenAt && now - featuredPageHiddenAt < FEATURED_RESUME_REFRESH_MS) return;
+    const elapsed = featuredPageHiddenAt ? now - featuredPageHiddenAt : 0;
+    if (!force && (!featuredPageHiddenAt || elapsed < FEATURED_RESUME_REFRESH_MS)) return;
     featuredResumeRefreshRunning = true;
     try {
       const locale = activeLocaleSlug();
+      // Atualiza apenas a coleção pequena de destaques. Não apaga o bootstrap
+      // inteiro nem força download do catálogo depois de uma simples troca de aba.
       publicDataMemoryCache.delete(`featured::${locale}`);
-      updateHomeBootstrapFeaturedBrowserCache(locale, []);
-      const key = homeBootstrapStorageKey(locale);
-      try {
-        const parsed = JSON.parse(localStorage.getItem(key) || 'null');
-        if (parsed && typeof parsed === 'object') {
-          parsed.featuredSavedAt = 0;
-          if (parsed.bundle && typeof parsed.bundle === 'object') parsed.bundle.featured = [];
-          localStorage.setItem(key, JSON.stringify(parsed));
-        }
-      } catch (_) {}
+      const rows = await readPublicData('featured');
+      if (Array.isArray(rows)) updateHomeBootstrapFeaturedBrowserCache(locale, rows);
       if (window.__beContentReady) await renderVideoCatalog();
     } catch (error) {
       (void 0);
@@ -5010,7 +5148,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function hydrateDetailCommentAvatarRings(list) {
     if (!list) return;
-    const avatars = Array.from(list.querySelectorAll('.detail-comment-avatar:not(.has-custom-ring)[data-comment-username]'));
+    const avatars = Array.from(list.querySelectorAll('.detail-comment-avatar:not(.has-custom-ring):not([data-comment-ring-resolved="1"])[data-comment-username]'));
     avatars.forEach(avatar => {
       const username = String(avatar.dataset.commentUsername || '').trim();
       if (!username) return;
@@ -5070,6 +5208,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const profileHref = username ? `/@${encodeURIComponent(username)}` : '#';
     const avatar = String(row?.avatar_url || row?.avatarUrl || '').trim();
     const avatarBorderColor = detailCommentAvatarBorderColor(row?.avatar_border_color || row?.avatarBorderColor);
+    // A RPC v2 já resolveu a borda, inclusive quando o resultado é vazio.
+    // Isso impede um get_public_profile adicional por comentário sem cor customizada.
+    const avatarRingResolved = Boolean(row && (
+      Object.prototype.hasOwnProperty.call(row, 'avatar_border_color') ||
+      Object.prototype.hasOwnProperty.call(row, 'avatarBorderColor')
+    ));
     const communityTag = String(row?.community_tag || row?.communityTag || '').trim();
     const likesCount = Math.max(0, Number(row?.likes_count ?? row?.likesCount ?? 0) || 0);
     const likedByMe = row?.liked_by_me === true || row?.likedByMe === true;
@@ -5079,7 +5223,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ? `<button type="button" class="detail-comment-action danger" data-comment-delete="${escapeHtml(commentId)}" aria-label="${escapeHtml(localizedUiText('Apagar comentário'))}" title="${escapeHtml(localizedUiText('Apagar comentário'))}">${detailCommentActionIcon('delete')}</button>`
       : `<button type="button" class="detail-comment-action" data-comment-report="${escapeHtml(commentId)}" data-comment-user="${escapeHtml(username)}" aria-label="${escapeHtml(localizedUiText('Denunciar comentário'))}" title="${escapeHtml(localizedUiText('Denunciar comentário'))}">${detailCommentActionIcon('report')}</button>`;
     return `<article class="detail-comment-item${isOwner ? ' is-current-user' : ''}" data-comment-id="${escapeHtml(commentId)}" data-comment-author-id="${escapeHtml(authorUserId)}">
-      <a class="detail-comment-avatar${avatarBorderColor ? ' has-custom-ring' : ''}" data-comment-username="${escapeHtml(username)}"${avatarBorderColor ? ` style="--detail-comment-avatar-ring:${avatarBorderColor}"` : ''} href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
+      <a class="detail-comment-avatar${avatarBorderColor ? ' has-custom-ring' : ''}" data-comment-username="${escapeHtml(username)}"${avatarRingResolved ? ' data-comment-ring-resolved="1"' : ''}${avatarBorderColor ? ` style="--detail-comment-avatar-ring:${avatarBorderColor}"` : ''} href="${escapeHtml(profileHref)}" aria-label="${escapeHtml(localizedUiText('Abrir perfil de {name}', { name: `@${username || 'usuario'}` }))}">
         ${detailCommentAvatarMarkup(avatar, '', index < 8)}
       </a>
       <div class="detail-comment-body">
@@ -5361,13 +5505,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
         return;
       }
-      const { data, error } = await backend.client.rpc('get_video_comments', {
+      let result = await backend.client.rpc('get_video_comments_v2', {
         p_video_key: videoKey,
         p_limit: 60
       });
-      if (error) throw error;
+      // Rollout seguro: clientes novos continuam funcionando mesmo antes de a
+      // migration v2 existir em outro ambiente/preview.
+      if (result?.error) {
+        result = await backend.client.rpc('get_video_comments', {
+          p_video_key: videoKey,
+          p_limit: 60
+        });
+      }
+      if (result?.error) throw result.error;
       if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
-      const rows = Array.isArray(data) ? data : [];
+      const rows = Array.isArray(result?.data) ? result.data : [];
       list.innerHTML = rows.map((row, index) => detailCommentMarkup(row, index)).join('');
       hydrateDetailCommentAvatarRings(list);
       setupDetailCommentItemActions();
@@ -5425,6 +5577,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     if (startToken !== detailCommentsRealtimeStartToken || requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
     if (!backend?.client || backend.mode !== 'supabase' || typeof backend.client.channel !== 'function') return;
+    if (!backend?.auth?.currentUser) return;
 
     try {
       if (typeof ensureRealtimeAuth === 'function') await ensureRealtimeAuth();
@@ -5518,11 +5671,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (document.documentElement.dataset.detailCommentsResumeSync !== 'true') {
       document.documentElement.dataset.detailCommentsResumeSync = 'true';
       const refreshActiveComments = () => {
-        if (document.visibilityState && document.visibilityState !== 'visible') return;
         const key = activeDetailCommentsKey;
         const token = detailCommentsRequestToken;
         if (!key) return;
-        scheduleDetailCommentsRealtimeRefresh(key, token, 0);
+        if (document.visibilityState && document.visibilityState !== 'visible') {
+          // Não mantém websocket de comentário consumindo Realtime em abas que
+          // ficaram em segundo plano.
+          stopDetailCommentsRealtime();
+          return;
+        }
+        scheduleDetailCommentsRealtimeRefresh(key, token, 250);
         if (!detailCommentsRealtimeChannel || detailCommentsRealtimeKey !== key) {
           startDetailCommentsRealtime(key, token);
         }
@@ -10087,25 +10245,73 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  const contentAnalyticsQueue = new Map();
+  let contentAnalyticsFlushTimer = 0;
+  let contentAnalyticsFlushRunning = false;
+  const CONTENT_ANALYTICS_BATCH_DELAY_MS = 1800;
+
+  function scheduleContentAnalyticsFlush(delay = CONTENT_ANALYTICS_BATCH_DELAY_MS) {
+    if (contentAnalyticsFlushTimer) clearTimeout(contentAnalyticsFlushTimer);
+    contentAnalyticsFlushTimer = setTimeout(() => {
+      contentAnalyticsFlushTimer = 0;
+      flushContentAnalyticsQueue();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  async function flushContentAnalyticsQueue() {
+    if (contentAnalyticsFlushRunning || !contentAnalyticsQueue.size) return;
+    const events = Array.from(contentAnalyticsQueue.values()).slice(0, 25);
+    events.forEach(event => contentAnalyticsQueue.delete(`${event.contentId}:${event.eventType}`));
+    contentAnalyticsFlushRunning = true;
+    try {
+      if (window.beBackend?.ready) await window.beBackend.ready;
+      const client = window.beBackend?.client;
+      if (!client || typeof client.rpc !== 'function') return;
+      const sessionId = contentAnalyticsSessionId();
+      const batched = await client.rpc('track_content_interactions_batch', {
+        p_events: events,
+        p_session_id: sessionId
+      });
+      if (batched?.error) {
+        // Compatibilidade com ambientes que ainda não receberam a migration.
+        await Promise.allSettled(events.map(event => client.rpc('track_content_interaction', {
+          p_content_id: event.contentId,
+          p_event_type: event.eventType,
+          p_session_id: sessionId,
+          p_active: event.eventType === 'save' ? event.active : null
+        })));
+      }
+    } catch (_) {
+      // Analytics não pode interromper navegação/reprodução.
+    } finally {
+      contentAnalyticsFlushRunning = false;
+      if (contentAnalyticsQueue.size) scheduleContentAnalyticsFlush(500);
+    }
+  }
+
   function trackContentInteraction(data, eventType, active = null) {
     const normalized = normalizeSavedContent(data || {});
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized.recordId)) return;
     const type = String(eventType || '').trim().toLowerCase();
     if (!['click', 'view', 'save'].includes(type)) return;
 
-    Promise.resolve(window.beBackend?.ready)
-      .then(() => {
-        const client = window.beBackend?.client;
-        if (!client || typeof client.rpc !== 'function') return null;
-        return client.rpc('track_content_interaction', {
-          p_content_id: normalized.recordId,
-          p_event_type: type,
-          p_session_id: contentAnalyticsSessionId(),
-          p_active: type === 'save' ? Boolean(active) : null
-        });
-      })
-      .catch(() => null);
+    const key = `${normalized.recordId}:${type}`;
+    // Click/view repetidos dentro do mesmo pequeno lote são redundantes; a RPC
+    // já deduplica por dia. Save mantém somente o estado final.
+    if (type !== 'save' && contentAnalyticsQueue.has(key)) return;
+    contentAnalyticsQueue.set(key, {
+      contentId: normalized.recordId,
+      eventType: type,
+      active: type === 'save' ? Boolean(active) : null
+    });
+    if (contentAnalyticsQueue.size >= 12) scheduleContentAnalyticsFlush(0);
+    else scheduleContentAnalyticsFlush();
   }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') scheduleContentAnalyticsFlush(0);
+  });
+  window.addEventListener('pagehide', () => scheduleContentAnalyticsFlush(0));
 
   function detailFavoriteSet() {
     const key = 'beDetailFavorites';
@@ -13443,7 +13649,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function scheduleCrossDeviceSync(reason){
       if(applyingRemotePreferences||!auth.currentUser||!auth.currentUser.uid)return;
       clearTimeout(preferenceSyncTimer);
-      preferenceSyncTimer=setTimeout(function(){persistCrossDeviceData(reason||'configuração');},350);
+      preferenceSyncTimer=setTimeout(function(){persistCrossDeviceData(reason||'configuração');},900);
     }
     window.beScheduleUserDataSync=scheduleCrossDeviceSync;
     function stopCrossDeviceSync(){
@@ -16050,6 +16256,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var notifications=[];
   var loaded=false;
   var loadingPromise=null;
+  var notificationsLoadedAt=0;
+  var NOTIFICATIONS_CLIENT_TTL_MS=5*60*1000;
   var selectedId='';
   var STORAGE_KEY='beNotificationsLastSeen';
   var READ_STATE_KEY='beNotificationsReadStateV2';
@@ -16481,8 +16689,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function loadNotifications(force){
-    if(loadingPromise&&!force)return loadingPromise;
-    if(loaded&&!force)return notifications;
+    if(loadingPromise)return loadingPromise;
+    if(loaded&&(!force||Date.now()-notificationsLoadedAt<NOTIFICATIONS_CLIENT_TTL_MS))return notifications;
     loadingPromise=(async function(){
       try{
         if(!window.beBackend)throw new Error('Backend indisponível.');
@@ -16490,12 +16698,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
         notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&String(item.type||'')!=='profile-share-campaign'&&String(item.title||'').trim();}).sort(compareNewest);
         loaded=true;
+        notificationsLoadedAt=Date.now();
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);
       }catch(error){
         (void 0);
         notifications=[];
         loaded=true;
+        notificationsLoadedAt=Date.now();
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage('');
       }finally{
@@ -16648,8 +16858,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   });
   window.addEventListener('be:close-notifications',function(){closePage(false);});
   window.addEventListener('be:i18n-ready',function(){if(loaded){renderPreviews();if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);}});
-  window.addEventListener('be:content-ready',function(){loadNotifications(true);});
-  window.addEventListener('be:auth-changed',function(){syncPageAvatar();loadNotifications(true);});
+  window.addEventListener('be:content-ready',function(){loadNotifications(false);});
+  window.addEventListener('be:auth-changed',function(){syncPageAvatar();loadNotifications(false);});
   window.addEventListener('be:profile-avatar-changed',syncPageAvatar);
   window.addEventListener('be:content-ready',syncPageAvatar);
   window.addEventListener('hashchange',function(){
@@ -16685,9 +16895,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   var ENDPOINT = '/api/deployment-version';
                                                                       
-  var CHECK_INTERVAL = 12 * 60 * 60 * 1000;
-  var MIN_CHECK_GAP_MS = 2 * 60 * 60 * 1000;
-  var SHARED_CHECK_TTL_MS = 12 * 60 * 60 * 1000;
+  var CHECK_INTERVAL = 24 * 60 * 60 * 1000;
+  var MIN_CHECK_GAP_MS = 6 * 60 * 60 * 1000;
+  var SHARED_CHECK_TTL_MS = 24 * 60 * 60 * 1000;
   var SHARED_CHECK_KEY = 'betvDeploymentVersionCheckV3';
   var OBSERVED_RELEASE_KEY = 'betvObservedReleaseStateV1';
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
@@ -17108,21 +17318,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     clearNonEssentialCookies();
     clearTransientStorage();
 
-    try {
-      if ('caches' in window) {
-        jobs.push(
-          window.caches.keys().then(function (keys) {
-            return Promise.all(keys.map(function (key) { return window.caches.delete(key); }));
-          })
-        );
-      }
-    } catch (_) {}
-
+    // Os assets têm URL revisionada e o novo Service Worker nunca intercepta
+    // HTML/API. Apagar todo CacheStorage e desregistrar o SW em cada release
+    // fazia o usuário baixar novamente imagens/chunks que não mudaram.
     try {
       if ('serviceWorker' in navigator) {
         jobs.push(
           navigator.serviceWorker.getRegistrations().then(function (registrations) {
-            return Promise.all(registrations.map(function (registration) { return registration.unregister(); }));
+            return Promise.all(registrations.map(function (registration) {
+              try { return registration.update(); } catch (_) { return Promise.resolve(); }
+            }));
           })
         );
       }

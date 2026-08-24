@@ -1,6 +1,6 @@
 'use strict';
 
-const REQUEST_TIMEOUT_MS = 9000;
+const REQUEST_TIMEOUT_MS = 7000;
 
 function firstQueryValue(value) {
   return Array.isArray(value) ? value[0] : value;

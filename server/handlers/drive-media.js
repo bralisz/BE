@@ -2,7 +2,7 @@
 
 const { once } = require('events');
 
-const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 7000;
 const FILE_ID_PATTERN = /^[a-z0-9_-]{10,}$/i;
 const RESOURCE_KEY_PATTERN = /^[a-z0-9_-]+$/i;
 

@@ -2,7 +2,7 @@
 
 const MAX_BYTES = 12 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
-const REQUEST_TIMEOUT_MS = 12000;
+const REQUEST_TIMEOUT_MS = 8000;
 const DEFAULT_SUPABASE_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const ALLOWED_COLLECTIONS = new Set(['contents', 'featured', 'gallery', 'movies', 'news', 'notifications', 'ongs', 'sections', 'series', 'videos']);

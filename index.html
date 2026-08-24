@@ -215,7 +215,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 </script>
 <link rel="stylesheet" href="/_static/styles/site.css?rev=20260824-guest-create-account-v1">
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/_static/chunks/site.js?rev=20260824-guest-create-account-v1"></script>
+<script defer src="/_static/chunks/site.js?rev=20260824-quota-30d-v1"></script>
 
 <script defer src="/_vercel/insights/script.js"></script>
 <script>window.si=window.si||function(){(window.siq=window.siq||[]).push(arguments);};</script>
@@ -225,7 +225,7 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   if(!('serviceWorker' in navigator))return;
   if(location.protocol!=='https:'&&location.hostname!=='localhost')return;
   window.addEventListener('load',function(){
-    var build=String(window.__BETV_DEPLOYMENT_VERSION__||'20260823-account-mfa-v1');
+    var build=String(window.__BETV_DEPLOYMENT_VERSION__||'20260824-quota-30d-v1');
     var cleanup=window.__BETV_UPDATE_CACHE_CLEANUP__;
     Promise.resolve(cleanup).catch(function(){}).then(function(){
       return navigator.serviceWorker.register('/sw.js?build='+encodeURIComponent(build),{scope:'/',updateViaCache:'none'});

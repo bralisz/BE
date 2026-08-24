@@ -420,9 +420,46 @@ async function fetchRows(name, id, locale) {
   return cachedUpstream(key, upstreamTtl(name, id), () => fetchRowsUncached(name, id, locale));
 }
 
-async function fetchHomeBootstrap(locale) {
-  // Caminho otimizado: uma única chamada PostgREST/RPC por rebuild do cache da
-  // Vercel. A função SQL agrega as coleções no Supabase, reduzindo round-trips.
+function normalizeHomeVersions(value) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const clean = input => String(input || '').trim().replace(/[^a-zA-Z0-9._:-]/g, '').slice(0, 160);
+  return {
+    catalogVersion: clean(source.catalogVersion),
+    settingsVersion: clean(source.settingsVersion)
+  };
+}
+
+async function fetchHomeVersions() {
+  return cachedUpstream('home-versions-v1', 2 * 60 * 1000, async () => {
+    const raw = await callRpc('get_public_home_versions_v1', {});
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    return normalizeHomeVersions(value);
+  });
+}
+
+async function fetchHomeBootstrapUncached(locale) {
+  // V2 inclui versões pequenas do catálogo/configuração no mesmo RPC. Elas
+  // permitem ao navegador validar o cache sem baixar novamente o catálogo todo.
+  try {
+    const raw = await callRpc('get_public_home_bootstrap_v2', { p_locale: locale });
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const bundle = {};
+      for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
+        const rows = Array.isArray(value[name]) ? value[name] : [];
+        bundle[name] = rows.map(row => sanitizeItem(name, row, locale, true)).filter(Boolean);
+      }
+      bundle.movies = await mergeMovieDashboardDrive(bundle.movies || []);
+      const rawSite = value.settings && typeof value.settings === 'object' ? value.settings.site : null;
+      bundle.settings = { site: sanitizeSettings('site', rawSite) };
+      bundle.__versions = normalizeHomeVersions(value.__versions);
+      bundle.__generatedAt = Date.now();
+      return bundle;
+    }
+  } catch (_) {
+    // Compatibilidade durante rollout: tenta a função anterior.
+  }
+
   try {
     const raw = await callRpc('get_public_home_bootstrap_v1', { p_locale: locale });
     const value = Array.isArray(raw) ? raw[0] : raw;
@@ -432,12 +469,10 @@ async function fetchHomeBootstrap(locale) {
         const rows = Array.isArray(value[name]) ? value[name] : [];
         bundle[name] = rows.map(row => sanitizeItem(name, row, locale, true)).filter(Boolean);
       }
-      // Alguns filmes antigos usam apenas o segundo link do Dashboard para TV.
-      // Mantém essa compatibilidade com só mais uma leitura privada, ainda muito
-      // abaixo das várias chamadas do bootstrap anterior.
       bundle.movies = await mergeMovieDashboardDrive(bundle.movies || []);
       const rawSite = value.settings && typeof value.settings === 'object' ? value.settings.site : null;
       bundle.settings = { site: sanitizeSettings('site', rawSite) };
+      try { bundle.__versions = await fetchHomeVersions(); } catch (_) { bundle.__versions = {}; }
       bundle.__generatedAt = Date.now();
       return bundle;
     }
@@ -447,68 +482,82 @@ async function fetchHomeBootstrap(locale) {
 
   const entries = await Promise.all(HOME_BOOTSTRAP_COLLECTIONS.map(async name => [name, await fetchRows(name, '', locale)]));
   const settingsRows = await fetchRows('settings', 'site', locale);
+  let versions = {};
+  try { versions = await fetchHomeVersions(); } catch (_) {}
   return {
     ...Object.fromEntries(entries),
     settings: { site: settingsRows[0] || null },
+    __versions: versions,
     __generatedAt: Date.now()
   };
 }
 
-function setPublicCacheHeaders(res, name, id, hasData) {
+async function fetchHomeBootstrap(locale, revision = '') {
+  const safeRevision = String(revision || '').trim().replace(/[^a-zA-Z0-9._:-]/g, '').slice(0, 160);
+  const key = `home-bootstrap:${locale}:${safeRevision || 'unversioned'}`;
+  // A URL versionada muda quando o catálogo muda. Assim uma instância quente
+  // pode reaproveitar o JSON sem risco de esconder conteúdo novo.
+  const ttl = safeRevision ? 30 * 60 * 1000 : 5 * 60 * 1000;
+  return cachedUpstream(key, ttl, () => fetchHomeBootstrapUncached(locale));
+}
+
+function setPublicCacheHeaders(res, name, id, hasData, options = {}) {
   if (!hasData) {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
     return;
   }
 
-  let browserSeconds = 300;
-  let edgeSeconds = 900;
-  let staleSeconds = 7200;
+  const versioned = Boolean(options.versioned);
+  let browserSeconds = 600;
+  let edgeSeconds = 1800;
+  let staleSeconds = 10800;
 
-  if (name === 'home-bootstrap') {
-    // O navegador já mantém o bundle da Home por 30 minutos. Mantemos a borda
-    // pelo mesmo período para que visitantes novos compartilhem a mesma resposta
-    // sem aumentar o prazo máximo aceitável para um vídeo novo aparecer.
-    browserSeconds = 120;
-    edgeSeconds = 1800;
-    staleSeconds = 21600;
+  if (name === 'home-version') {
+    // Resposta minúscula: é o "ETag lógico" do catálogo. Cinco minutos na
+    // borda + validação do browser a cada ~25 min mantém conteúdo novo dentro
+    // da janela de ~30 min sem baixar centenas de itens de novo.
+    browserSeconds = 60;
+    edgeSeconds = 300;
+    staleSeconds = 900;
+  } else if (name === 'home-bootstrap') {
+    if (versioned) {
+      // A revisão está na própria URL (?v=...). Quando o catálogo muda, muda a
+      // URL; portanto esta resposta pesada pode ficar muito mais tempo na CDN.
+      browserSeconds = 1800;
+      edgeSeconds = 7 * 24 * 60 * 60;
+      staleSeconds = 30 * 24 * 60 * 60;
+    } else {
+      // Compatibilidade com clientes antigos que ainda usam URL sem revisão.
+      browserSeconds = 120;
+      edgeSeconds = 1800;
+      staleSeconds = 21600;
+    }
   } else if (name === 'settings' && id === 'site') {
-    browserSeconds = 300;
-    edgeSeconds = 600;
-    staleSeconds = 3600;
+    browserSeconds = versioned ? 1800 : 600;
+    edgeSeconds = versioned ? 86400 : 900;
+    staleSeconds = versioned ? 604800 : 7200;
   } else if (name === 'notifications') {
-    // O navegador sempre revalida o sino; a resposta continua barata porque a
-    // Vercel mantém a cópia compartilhada na borda. Assim um PT-BR que já havia
-    // aberto o site não fica preso por minutos numa lista antiga do browser.
-    browserSeconds = 0;
+    browserSeconds = 120;
     edgeSeconds = 300;
     staleSeconds = 1800;
   } else if (name === 'featured') {
-    browserSeconds = 60;
-    edgeSeconds = 60;
-    staleSeconds = 60;
-  } else if (name === 'movies') {
     browserSeconds = 300;
-    edgeSeconds = 1800;
-    staleSeconds = 10800;
+    edgeSeconds = 300;
+    staleSeconds = 1800;
+  } else if (name === 'movies') {
+    browserSeconds = 600;
+    edgeSeconds = 3600;
+    staleSeconds = 21600;
   }
 
-  // O cache de Destaques recebe uma tag própria. O Admin invalida somente essa
-  // tag ao salvar/excluir um destaque, sem derrubar o cache do catálogo inteiro.
   if (name === 'featured' || name === 'home-bootstrap') {
     res.setHeader('Vercel-Cache-Tag', FEATURED_CACHE_TAG);
   } else if (name === 'notifications') {
     res.setHeader('Vercel-Cache-Tag', NOTIFICATIONS_CACHE_TAG);
   }
 
-  // O navegador evita repetir a mesma leitura durante navegação/reloads curtos.
-  // A Vercel mantém uma cópia compartilhada por mais tempo para que milhares de
-  // visitantes não transformem o mesmo conteúdo público em milhares de Functions.
-  if (name === 'notifications') {
-    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
-  } else {
-    res.setHeader('Cache-Control', `public, max-age=${browserSeconds}, stale-while-revalidate=${Math.min(staleSeconds, 3600)}`);
-  }
+  res.setHeader('Cache-Control', `public, max-age=${browserSeconds}, stale-while-revalidate=${Math.min(staleSeconds, 3600)}`);
   res.setHeader('Vercel-CDN-Cache-Control', `public, max-age=${edgeSeconds}, stale-while-revalidate=${staleSeconds}, stale-if-error=86400`);
 }
 
@@ -522,13 +571,18 @@ module.exports = async function publicData(req, res) {
     const id = String(Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id || '').trim();
     const locale = normalizeLocale(Array.isArray(req.query?.locale) ? req.query.locale[0] : req.query?.locale);
     const freshMovie = name === 'movies' && Boolean(id) && String(Array.isArray(req.query?.fresh) ? req.query.fresh[0] : req.query?.fresh || '') === '1';
+    const revision = String(Array.isArray(req.query?.v) ? req.query.v[0] : req.query?.v || '').trim().replace(/[^a-zA-Z0-9._:-]/g, '').slice(0, 160);
     if (!name || name.length > 40 || id.length > 100) return res.status(400).end();
 
     let payload;
     let hasData = false;
-    if (name === 'home-bootstrap') {
+    if (name === 'home-version') {
       if (id) return res.status(400).end();
-      payload = await fetchHomeBootstrap(locale);
+      payload = await fetchHomeVersions();
+      hasData = Boolean(payload?.catalogVersion);
+    } else if (name === 'home-bootstrap') {
+      if (id) return res.status(400).end();
+      payload = await fetchHomeBootstrap(locale, revision);
       hasData = HOME_BOOTSTRAP_COLLECTIONS.some(collection => Array.isArray(payload?.[collection]) && payload[collection].length > 0);
     } else {
       const rows = freshMovie
@@ -545,7 +599,7 @@ module.exports = async function publicData(req, res) {
       res.setHeader('Cache-Control', 'private, no-store, max-age=0');
       res.setHeader('Vercel-CDN-Cache-Control', 'private, no-store, max-age=0');
     } else {
-      setPublicCacheHeaders(res, name, id, hasData);
+      setPublicCacheHeaders(res, name, id, hasData, { versioned: Boolean(revision) });
     }
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
