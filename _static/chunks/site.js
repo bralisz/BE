@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260824-follow-system-v1';
+  var STATIC_REV='20260824-follow-actions-v3';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -5147,7 +5147,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function videoCommentKey(data) {
     const collection = String(data?.collection || 'videos').trim().toLowerCase();
-    if (!['videos', 'movies'].includes(collection)) return '';
+    if (!['videos', 'movies', 'series'].includes(collection)) return '';
     const stableId = String(data?.recordId || data?.id || data?.itemId || '').trim();
     return stableId ? `${collection}:${stableId}` : '';
   }
@@ -5241,6 +5241,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (tag === 'eyelash') return { label: 'Eyelash', className: 'is-eyelash' };
     if (tag === 'blohsh') return { label: 'Blohsh', className: 'is-blohsh' };
     if (tag === 'billie_fan') return { label: localizedUiText('Fã da Billie'), className: 'is-billie-fan' };
+    if (tag === 'boaf') return { label: 'BOAF', className: 'is-boaf' };
     return null;
   }
 
@@ -12696,7 +12697,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var profileInlineOriginalBannerUrl='';
     var profileInlineOriginalBannerId='';
     var profileFollowState={username:'',following:false,loading:false};
-    var profileRelationshipsState={open:false,type:'followers',username:'',items:[],offset:0,total:0,loading:false,hasMore:false,query:'',allowSearch:false};
+    var profileRelationshipsState={open:false,type:'followers',username:'',items:[],page:1,pageSize:20,total:0,totalPages:0,loading:false,query:'',allowSearch:false};
     var profileFavoritesSection=document.getElementById('profileFavoritesSection');
     var profileFavoritesContent=document.getElementById('profileFavoritesContent');
     var profileFavoritesEdit=document.getElementById('profileFavoritesEdit');
@@ -12809,43 +12810,76 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     function relationshipItemMarkup(item){
       var avatar=item&&item.avatarUrl?'<img src="'+escapePublic(item.avatarUrl)+'" alt="'+escapePublic(item.displayName||item.username||'Usuário')+'">':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 19a6 6 0 0 0-12 0"></path><circle cx="9" cy="8" r="4"></circle></svg>';
-      var badge=(item&&item.communityTag)?'<span class="profile-relationships-badge">'+escapePublic(item.communityTag)+'</span>':'';
+      var tagMeta=profileCommunityTagMeta(item&&item.communityTag);
+      var badge=tagMeta?'<span class="profile-award-tag '+tagMeta.className+' notranslate" translate="no">'+escapePublic(tagMeta.label)+'</span>':'';
       return '<button class="profile-relationships-item" type="button" data-relationship-username="'+escapePublic(item.username||'')+'"><span class="profile-relationships-person"><span class="profile-relationships-avatar">'+avatar+'</span><span class="profile-relationships-copy"><strong>'+escapePublic(item.displayName||'Usuário')+'</strong><span>@'+escapePublic(item.username||'perfil')+'</span></span></span>'+badge+'</button>';
+    }
+    function profileRelationshipPageTokens(current,total){
+      if(total<=1)return total===1?[1]:[];
+      if(total<=5){var all=[];for(var i=1;i<=total;i++)all.push(i);return all;}
+      if(current<=3)return [1,2,3,'ellipsis',total];
+      if(current>=total-2)return [1,'ellipsis',total-2,total-1,total];
+      return [1,'ellipsis',current-1,current,current+1,'ellipsis',total];
+    }
+    function profileRelationshipPaginationMarkup(){
+      var totalPages=Math.max(0,Number(profileRelationshipsState.totalPages||0)||0);
+      var current=Math.max(1,Number(profileRelationshipsState.page||1)||1);
+      if(totalPages<=1)return '';
+      var tokens=profileRelationshipPageTokens(current,totalPages);
+      var html='<nav class="profile-relationships-pagination" aria-label="Paginação"><button class="profile-relationships-page-arrow" type="button" data-relationship-page="'+Math.max(1,current-1)+'" aria-label="Página anterior"'+(current<=1?' disabled':'')+'>&lt;</button>';
+      tokens.forEach(function(token){
+        if(token==='ellipsis'){html+='<span class="profile-relationships-page-ellipsis" aria-hidden="true">…</span>';return;}
+        var active=Number(token)===current;
+        html+='<button class="profile-relationships-page'+(active?' is-active':'')+'" type="button" data-relationship-page="'+token+'" aria-label="Página '+token+'"'+(active?' aria-current="page"':'')+'>'+token+'</button>';
+      });
+      html+='<button class="profile-relationships-page-arrow" type="button" data-relationship-page="'+Math.min(totalPages,current+1)+'" aria-label="Próxima página"'+(current>=totalPages?' disabled':'')+'>&gt;</button></nav>';
+      return html;
     }
     function renderProfileRelationships(){
       if(!profileRelationshipsList)return;
       var html='';
       if(!profileRelationshipsState.items.length&&!profileRelationshipsState.loading){html='<div class="profile-relationships-empty">'+escapePublic(localizedProfileText('Nenhum usuário encontrado.'))+'</div>';}else{html=profileRelationshipsState.items.map(relationshipItemMarkup).join('');}
-      if(profileRelationshipsState.loading){html+='<div class="profile-relationships-loading">'+escapePublic(localizedProfileText('Carregando…'))+'</div>';}else if(profileRelationshipsState.hasMore){html+='<div class="profile-relationships-loadmore"><button type="button" id="profileRelationshipsLoadMore">'+escapePublic(localizedProfileText('Carregar mais'))+'</button></div>';}
+      if(profileRelationshipsState.loading)html+='<div class="profile-relationships-loading">'+escapePublic(localizedProfileText('Carregando…'))+'</div>';
+      else html+=profileRelationshipPaginationMarkup();
       profileRelationshipsList.innerHTML=html;
       if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(profileRelationshipsList);
-      var more=document.getElementById('profileRelationshipsLoadMore');if(more)more.onclick=function(){loadMoreProfileRelationships(10);};
+      profileRelationshipsList.querySelectorAll('[data-relationship-page]').forEach(function(button){button.onclick=function(){if(button.disabled)return;var nextPage=Math.max(1,Number(button.getAttribute('data-relationship-page')||1)||1);loadProfileRelationshipsPage(nextPage);};});
       profileRelationshipsList.querySelectorAll('[data-relationship-username]').forEach(function(button){button.onclick=function(){var username=button.getAttribute('data-relationship-username');closeProfileRelationships();openPublicProfile(true,username);};});
     }
-    async function loadMoreProfileRelationships(batchSize,reset){
+    async function loadProfileRelationshipsPage(page,reset){
       if(profileRelationshipsState.loading||!profileRelationshipsState.username)return;
-      if(reset){profileRelationshipsState.items=[];profileRelationshipsState.offset=0;profileRelationshipsState.total=0;profileRelationshipsState.hasMore=false;renderProfileRelationships();}
+      var pageSize=20;
+      var targetPage=Math.max(1,Math.floor(Number(page)||1));
+      if(reset){profileRelationshipsState.items=[];profileRelationshipsState.page=1;profileRelationshipsState.total=0;profileRelationshipsState.totalPages=0;targetPage=1;renderProfileRelationships();}
       profileRelationshipsState.loading=true;renderProfileRelationships();
       try{
-        var url='/api/public-profile?view=relationships&username='+encodeURIComponent(profileRelationshipsState.username)+'&type='+encodeURIComponent(profileRelationshipsState.type)+'&offset='+encodeURIComponent(profileRelationshipsState.offset)+'&limit='+encodeURIComponent(batchSize||10)+'&q='+encodeURIComponent(profileRelationshipsState.query||'');
+        var offset=(targetPage-1)*pageSize;
+        var url='/api/public-profile?view=relationships&username='+encodeURIComponent(profileRelationshipsState.username)+'&type='+encodeURIComponent(profileRelationshipsState.type)+'&offset='+encodeURIComponent(offset)+'&limit='+pageSize+'&q='+encodeURIComponent(profileRelationshipsState.query||'');
         var response=await fetch(url,{headers:{Accept:'application/json'},cache:'no-store'});
         if(!response.ok)throw new Error('relationships_unavailable');
         var payload=await response.json();
         var items=Array.isArray(payload&&payload.items)?payload.items:[];
-        profileRelationshipsState.items=profileRelationshipsState.items.concat(items);
-        profileRelationshipsState.offset=profileRelationshipsState.items.length;
-        profileRelationshipsState.total=Math.max(profileRelationshipsState.offset,Number(payload&&payload.total||0)||0);
-        profileRelationshipsState.hasMore=Boolean(payload&&payload.hasMore);
+        var total=Math.max(0,Number(payload&&payload.total||0)||0);
+        var totalPages=Math.ceil(total/pageSize);
+        if(totalPages>0&&targetPage>totalPages){profileRelationshipsState.loading=false;return loadProfileRelationshipsPage(totalPages,false);}
+        profileRelationshipsState.items=items;
+        profileRelationshipsState.page=totalPages>0?targetPage:1;
+        profileRelationshipsState.pageSize=pageSize;
+        profileRelationshipsState.total=total;
+        profileRelationshipsState.totalPages=totalPages;
       }catch(_){
-        profileRelationshipsState.hasMore=false;
+        profileRelationshipsState.items=[];
+        profileRelationshipsState.total=0;
+        profileRelationshipsState.totalPages=0;
       }finally{
         profileRelationshipsState.loading=false;renderProfileRelationships();
+        if(profileRelationshipsList)profileRelationshipsList.scrollTop=0;
       }
     }
     var profileRelationshipsSearchTimer=0;
     function openProfileRelationships(type){
       var handle=currentViewedProfileHandle();if(!handle||!profileRelationshipsModal)return;
-      profileRelationshipsState={open:true,type:type==='following'?'following':'followers',username:handle,items:[],offset:0,total:0,loading:false,hasMore:false,query:'',allowSearch:isOwnProfileView()};
+      profileRelationshipsState={open:true,type:type==='following'?'following':'followers',username:handle,items:[],page:1,pageSize:20,total:0,totalPages:0,loading:false,query:'',allowSearch:isOwnProfileView()};
       profileRelationshipsModal.hidden=false;
       document.body.classList.add('profile-relationships-open');
       if(profileRelationshipsTitle)profileRelationshipsTitle.textContent=localizedProfileText(profileRelationshipsState.type==='following'?'Seguindo':'Seguidores');
@@ -12853,14 +12887,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(profileRelationshipsSearchWrap)profileRelationshipsSearchWrap.hidden=!profileRelationshipsState.allowSearch;
       if(profileRelationshipsSearch){profileRelationshipsSearch.value='';profileRelationshipsSearch.placeholder=localizedProfileText('Pesquisar usuários');}
       renderProfileRelationships();
-      loadMoreProfileRelationships(15,true);
+      loadProfileRelationshipsPage(1,true);
       if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(profileRelationshipsModal);
     }
     function closeProfileRelationships(){
       if(!profileRelationshipsModal)return;
       profileRelationshipsModal.hidden=true;
       document.body.classList.remove('profile-relationships-open');
-      profileRelationshipsState={open:false,type:'followers',username:'',items:[],offset:0,total:0,loading:false,hasMore:false,query:'',allowSearch:false};
+      profileRelationshipsState={open:false,type:'followers',username:'',items:[],page:1,pageSize:20,total:0,totalPages:0,loading:false,query:'',allowSearch:false};
       if(profileRelationshipsList)profileRelationshipsList.innerHTML='';
     }
     function syncProfileLanguage(){
@@ -14957,7 +14991,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     function normalizeProfileCommunityTag(value){
       var normalized=String(value||'').trim().toLowerCase();
-      return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'?normalized:'';
+      return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'||normalized==='boaf'?normalized:'';
     }
     function profileCommunityTagMeta(value){
       var tag=normalizeProfileCommunityTag(value);
@@ -14965,6 +14999,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(tag==='eyelash')return {label:'Eyelash',className:'is-eyelash'};
       if(tag==='blohsh')return {label:'Blohsh',className:'is-blohsh'};
       if(tag==='billie_fan')return {label:localizedProfileText('Fã da Billie'),className:'is-billie-fan'};
+      if(tag==='boaf')return {label:'BOAF',className:'is-boaf'};
       return null;
     }
     function renderProfileAwardTags(profile){
@@ -15611,10 +15646,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(inColor)closeInlineColorPanel();
       if(inTag)closeInlineTagPanel();
     });
-    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});if(profilePageMore)profilePageMore.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileActionsMenu();});if(profilePageEdit)profilePageEdit.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openProfileEditor();});if(profilePageSettings)profilePageSettings.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openSettingsPage(true);});document.addEventListener('click',function(event){if(!profilePageActionsMenu||profilePageActionsMenu.hidden)return;if(event.target===profilePageMore||profilePageMore.contains(event.target)||profilePageActionsMenu.contains(event.target))return;closeProfileActionsMenu(false);});document.addEventListener('keydown',function(event){if(event.key!=='Escape')return;if(profileRelationshipsState.open){event.preventDefault();closeProfileRelationships();return;}if(profilePageActionsMenu&&!profilePageActionsMenu.hidden){event.preventDefault();closeProfileActionsMenu(true);}});window.addEventListener('resize',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)positionProfileActionsMenu();});
+    avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});if(profilePageMore)profilePageMore.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileActionsMenu();});if(profilePageEdit)profilePageEdit.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openProfileEditor();});if(profilePageSettings)profilePageSettings.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openSettingsPage(true);});document.addEventListener('click',function(event){if(!profilePageActionsMenu||profilePageActionsMenu.hidden)return;if(event.target===profilePageMore||profilePageMore.contains(event.target)||profilePageActionsMenu.contains(event.target))return;closeProfileActionsMenu(false);});document.addEventListener('keydown',function(event){if(event.key!=='Escape')return;var boafPanel=document.getElementById('boafStreamPanel');if(boafPanel&&!boafPanel.hidden){event.preventDefault();boafPanel.hidden=true;document.body.classList.remove('boaf-stream-panel-open');return;}if(profileRelationshipsState.open){event.preventDefault();closeProfileRelationships();return;}if(profilePageActionsMenu&&!profilePageActionsMenu.hidden){event.preventDefault();closeProfileActionsMenu(true);}});window.addEventListener('resize',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)positionProfileActionsMenu();});
     window.addEventListener('pageshow',function(){if(document.body.classList.contains('profile-page-active'))updateProfileActionVisibility();});
     document.addEventListener('visibilitychange',function(){if(!document.hidden&&document.body.classList.contains('profile-page-active'))updateProfileActionVisibility();});
-    window.addEventListener('scroll',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)closeProfileActionsMenu(false);},true);if(profilePageFollow)profilePageFollow.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileFollow();});if(profilePageLike)profilePageLike.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileLike();});if(profilePageFollowersButton)profilePageFollowersButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowersButton.disabled)openProfileRelationships('followers');});if(profilePageFollowingButton)profilePageFollowingButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowingButton.disabled)openProfileRelationships('following');});if(profileRelationshipsClose)profileRelationshipsClose.addEventListener('click',function(){closeProfileRelationships();});if(profileRelationshipsModal)profileRelationshipsModal.addEventListener('click',function(event){if(event.target===profileRelationshipsModal)closeProfileRelationships();});if(profileRelationshipsList)profileRelationshipsList.addEventListener('scroll',function(){if(!profileRelationshipsState.open||profileRelationshipsState.loading||!profileRelationshipsState.hasMore)return;var threshold=160;if(profileRelationshipsList.scrollTop+profileRelationshipsList.clientHeight>=profileRelationshipsList.scrollHeight-threshold)loadMoreProfileRelationships(10);});if(profileRelationshipsSearch)profileRelationshipsSearch.addEventListener('input',function(){if(!profileRelationshipsState.allowSearch)return;clearTimeout(profileRelationshipsSearchTimer);profileRelationshipsState.query=String(profileRelationshipsSearch.value||'').trim();profileRelationshipsSearchTimer=setTimeout(function(){loadMoreProfileRelationships(15,true);},180);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
+    window.addEventListener('scroll',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)closeProfileActionsMenu(false);},true);if(profilePageFollow)profilePageFollow.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileFollow();});if(profilePageLike)profilePageLike.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileLike();});if(profilePageFollowersButton)profilePageFollowersButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowersButton.disabled)openProfileRelationships('followers');});if(profilePageFollowingButton)profilePageFollowingButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowingButton.disabled)openProfileRelationships('following');});if(profileRelationshipsClose)profileRelationshipsClose.addEventListener('click',function(){closeProfileRelationships();});if(profileRelationshipsModal)profileRelationshipsModal.addEventListener('click',function(event){if(event.target===profileRelationshipsModal)closeProfileRelationships();});if(profileRelationshipsSearch)profileRelationshipsSearch.addEventListener('input',function(){if(!profileRelationshipsState.allowSearch)return;clearTimeout(profileRelationshipsSearchTimer);profileRelationshipsState.query=String(profileRelationshipsSearch.value||'').trim();profileRelationshipsSearchTimer=setTimeout(function(){loadProfileRelationshipsPage(1,true);},180);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
       if(event){event.preventDefault();event.stopPropagation();}
 
                                                                                
@@ -20455,7 +20490,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function normalizeCommunityTag(value){
     var normalized=String(value||'').trim().toLowerCase();
-    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'?normalized:'';
+    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'||normalized==='boaf'?normalized:'';
   }
   function communityTagMeta(value){
     var tag=normalizeCommunityTag(value);
@@ -20463,12 +20498,251 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(tag==='eyelash')return {key:'eyelash',label:'Eyelash',className:'is-eyelash'};
     if(tag==='blohsh')return {key:'blohsh',label:'Blohsh',className:'is-blohsh'};
     if(tag==='billie_fan')return {key:'billie_fan',label:t('Fã da Billie'),className:'is-billie-fan'};
+    if(tag==='boaf')return {key:'boaf',label:'BOAF',className:'is-boaf'};
     return null;
   }
   function communityTagMarkup(value){
     var meta=communityTagMeta(value);
     if(!meta)return '';
     return '<span class="community-award-tag '+meta.className+' notranslate" data-i18n-ignore translate="no">'+meta.label+'</span>';
+  }
+
+
+  var BOAF_STREAM_URL='https://open.spotify.com/playlist/7GsA1b3dcISozmOc9G0tcT?si=d0qmzIyJSxiFLUx0flAsng';
+  var BOAF_STREAM_IMAGE='/assets/images/community/boaf-stream-4bi.webp';
+  var BOAF_STREAM_MESSAGE='BIRDS OF A FEATHER, de Billie Eilish, está prestes a fazer história ABSOLUTA como a música solo mais rápida da história do Spotify atingir a marca de 4 BILHÕES de Streams e a PRIMEIRA canção de uma artista feminina a conseguir o feito.';
+  var BOAF_STREAM_NOTICE_KEY='betvBoafStreamNotice:4bi:v2';
+  var boafNoticeOpenedForUser='';
+  var boafNoticeTimer=0;
+  var boafOwnedTagCache=Object.create(null);
+
+  function profileOwnsBoafTag(profile){
+    if(!profile||typeof profile!=='object')return false;
+    var active=String(profile.communityTag||profile.community_tag||'').trim().toLowerCase();
+    if(active==='boaf')return true;
+    var owned=profile.communityTags||profile.community_tags;
+    return Array.isArray(owned)&&owned.some(function(tag){return String(tag||'').trim().toLowerCase()==='boaf';});
+  }
+  async function boafUserOwnsReward(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    if(boafOwnedTagCache[uid]===true)return true;
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var profiles=window.beBackend&&window.beBackend.profiles;
+      if(!profiles||typeof profiles.get!=='function')return false;
+      var profile=await profiles.get(uid);
+      var owned=profileOwnsBoafTag(profile);
+      boafOwnedTagCache[uid]=owned;
+      return owned;
+    }catch(_){return false;}
+  }
+
+  function boafNoticeUser(){
+    var user=currentUser();
+    return user&&user.uid?user:null;
+  }
+  function boafNoticeStorageKey(userId){
+    return BOAF_STREAM_NOTICE_KEY+':'+String(userId||'').trim();
+  }
+  function boafNoticeDismissed(userId){
+    var uid=String(userId||(boafNoticeUser()&&boafNoticeUser().uid)||'').trim();
+    if(!uid)return true;
+    try{return localStorage.getItem(boafNoticeStorageKey(uid))==='seen';}catch(_){return false;}
+  }
+  function dismissBoafNotice(){
+    var user=boafNoticeUser();
+    if(!user||!user.uid)return;
+    try{localStorage.setItem(boafNoticeStorageKey(user.uid),'seen');}catch(_){ }
+    try{window.dispatchEvent(new CustomEvent('be:boaf-stream-notice-dismissed',{detail:{userId:String(user.uid)}}));}catch(_){ }
+  }
+  function isBoafLoginSurface(){
+    var path=String(location.pathname||'').replace(/\/+$/,'').toLowerCase();
+    var hash=String(location.hash||'').toLowerCase();
+    return document.body.classList.contains('login-mode')||path==='/login'||/\/(?:pt-br|en-us|es|fr|it)\/login$/.test(path)||hash==='#login'||hash==='#/login';
+  }
+  function canShowBoafNotice(){
+    var user=boafNoticeUser();
+    if(!user||!user.uid)return false;
+    if(isBoafLoginSurface())return false;
+    if(window.BETVGuestAccess&&typeof window.BETVGuestAccess.isActive==='function'&&window.BETVGuestAccess.isActive())return false;
+    if(boafOwnedTagCache[String(user.uid)]===true)return false;
+    return !boafNoticeDismissed(user.uid);
+  }
+  function hideBoafStreamPanelWithoutDismiss(){
+    var modal=document.getElementById('boafStreamPanel');
+    if(modal)modal.hidden=true;
+    document.body.classList.remove('boaf-stream-panel-open');
+  }
+
+  function boafPendingClaimKey(userId){
+    return 'betvBoafPendingClaim:4bi:'+String(userId||'').trim();
+  }
+  function setBoafPendingClaim(userId,pending){
+    var uid=String(userId||'').trim();
+    if(!uid)return;
+    try{
+      if(pending)localStorage.setItem(boafPendingClaimKey(uid),'1');
+      else localStorage.removeItem(boafPendingClaimKey(uid));
+    }catch(_){ }
+  }
+  function hasBoafPendingClaim(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    try{return localStorage.getItem(boafPendingClaimKey(uid))==='1';}catch(_){return false;}
+  }
+  async function waitForBoafAuthenticatedUser(timeoutMs){
+    var deadline=Date.now()+Math.max(800,Number(timeoutMs)||4500);
+    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);}catch(_){ }
+    while(Date.now()<deadline){
+      var user=currentUser();
+      if(user&&user.uid)return user;
+      await new Promise(function(resolve){window.setTimeout(resolve,90);});
+    }
+    return currentUser();
+  }
+  async function claimBoafStreamTag(statusNode,options){
+    options=options||{};
+    var user=await waitForBoafAuthenticatedUser(options.waitMs||4500);
+    if(!user||!user.uid){
+      if(statusNode){statusNode.textContent=t('Entre na sua conta para receber a tag BOAF.');statusNode.classList.add('is-visible','is-warning');}
+      return false;
+    }
+    var uid=String(user.uid);
+    setBoafPendingClaim(uid,true);
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')throw new Error('boaf_rpc_unavailable');
+
+      /* A conta pode ter acabado de entrar e o perfil ainda estar sendo criado. */
+      try{
+        if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.ensure==='function'){
+          await window.beBackend.profiles.ensure(user);
+        }
+      }catch(_){ }
+
+      var lastError=null;
+      for(var attempt=0;attempt<3;attempt+=1){
+        var result=await client.rpc('claim_boaf_stream_tag');
+        if(!result||!result.error){lastError=null;break;}
+        lastError=result.error;
+        if(attempt<2){
+          try{
+            if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.ensure==='function')await window.beBackend.profiles.ensure(user);
+          }catch(_){ }
+          await new Promise(function(resolve){window.setTimeout(resolve,180+(attempt*180));});
+        }
+      }
+      if(lastError)throw lastError;
+      setBoafPendingClaim(uid,false);
+      boafOwnedTagCache[uid]=true;
+      dismissBoafNotice();
+      try{
+        if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.get==='function'){
+          var refreshed=await window.beBackend.profiles.get(uid,{force:true});
+          if(refreshed&&typeof refreshed==='object')window.dispatchEvent(new CustomEvent('be:profile-refreshed',{detail:{profile:refreshed}}));
+        }
+      }catch(_){ }
+      try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:uid,tag:'boaf'}}));}catch(_){ }
+      if(statusNode){statusNode.textContent=t('Tag BOAF adicionada ao seu perfil.');statusNode.classList.remove('is-warning');statusNode.classList.add('is-visible','is-success');}
+      return true;
+    }catch(_){
+      /* Mantém a concessão pendente para repetir quando a sessão/perfil terminar de inicializar. */
+      setBoafPendingClaim(uid,true);
+      return false;
+    }
+  }
+
+  async function retryPendingBoafClaim(){
+    var user=await waitForBoafAuthenticatedUser(1800);
+    if(!user||!user.uid||!hasBoafPendingClaim(user.uid))return false;
+    return claimBoafStreamTag(null,{waitMs:1800});
+  }
+
+  function bindBoafListenLinks(root){
+    (root||document).querySelectorAll('[data-boaf-listen]').forEach(function(link){
+      if(link.dataset.boafBound==='true')return;
+      link.dataset.boafBound='true';
+      link.addEventListener('click',async function(event){
+        event.preventDefault();
+        var destination=String(link.href||BOAF_STREAM_URL);
+        var popup=null;
+        try{
+          popup=window.open('about:blank','_blank');
+          if(popup)popup.opener=null;
+        }catch(_){popup=null;}
+        var scope=link.closest('.community-boaf-card,.boaf-stream-panel');
+        var status=scope&&scope.querySelector?scope.querySelector('.boaf-stream-status'):null;
+        link.setAttribute('aria-busy','true');
+        await claimBoafStreamTag(status,{waitMs:5000});
+        dismissBoafNotice();
+        if(scope&&scope.classList.contains('boaf-stream-panel'))closeBoafStreamPanel();
+        link.removeAttribute('aria-busy');
+        try{
+          if(popup&&!popup.closed)popup.location.replace(destination);
+          else window.open(destination,'_blank','noopener,noreferrer');
+        }catch(_){location.href=destination;}
+      });
+    });
+  }
+
+  function closeBoafStreamPanel(){
+    var modal=document.getElementById('boafStreamPanel');
+    if(!modal)return;
+    modal.hidden=true;
+    document.body.classList.remove('boaf-stream-panel-open');
+    dismissBoafNotice();
+  }
+
+  function openBoafStreamPanel(options){
+    options=options&&typeof options==='object'?options:{};
+    if(options.auto===true&&!canShowBoafNotice())return;
+    if(!boafNoticeUser()||isBoafLoginSurface())return;
+    var modal=document.getElementById('boafStreamPanel');
+    if(!modal){
+      modal=document.createElement('div');
+      modal.id='boafStreamPanel';
+      modal.className='boaf-stream-panel-backdrop';
+      modal.hidden=true;
+      modal.innerHTML='<section class="boaf-stream-panel" role="dialog" aria-modal="true" aria-labelledby="boafStreamPanelTitle">'
+        +'<button class="boaf-stream-panel-close" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>'
+        +'<div class="boaf-stream-panel-media"><img src="'+BOAF_STREAM_IMAGE+'" alt="BIRDS OF A FEATHER" decoding="async"></div>'
+        +'<div class="boaf-stream-panel-copy"><h2 id="boafStreamPanelTitle">Stream Bird of a Feather</h2><p>'+BOAF_STREAM_MESSAGE+'</p>'
+        +'<div class="boaf-stream-reward"><strong>Quem ouvir ganha a tag <span class="profile-award-tag is-boaf notranslate boaf-stream-inline-tag" translate="no">BOAF</span>.</strong></div>'
+        +'<a class="boaf-stream-listen" data-boaf-listen href="'+BOAF_STREAM_URL+'" target="_blank" rel="noopener noreferrer">Ouvir</a><p class="boaf-stream-status" aria-live="polite"></p></div></section>';
+      document.body.appendChild(modal);
+      var close=modal.querySelector('.boaf-stream-panel-close');if(close)close.addEventListener('click',closeBoafStreamPanel);
+      modal.addEventListener('click',function(event){if(event.target===modal)closeBoafStreamPanel();});
+      bindBoafListenLinks(modal);
+    }
+    modal.hidden=false;
+    document.body.classList.add('boaf-stream-panel-open');
+    applyI18n(modal);
+  }
+
+  function scheduleBoafStreamNotice(delay){
+    var user=boafNoticeUser();
+    if(!user||!user.uid){hideBoafStreamPanelWithoutDismiss();return;}
+    var uid=String(user.uid);
+    if(boafNoticeOpenedForUser===uid||boafNoticeDismissed(uid))return;
+    if(boafNoticeTimer)window.clearTimeout(boafNoticeTimer);
+    boafNoticeTimer=window.setTimeout(async function(){
+      boafNoticeTimer=0;
+      var active=boafNoticeUser();
+      if(!active||String(active.uid)!==uid){hideBoafStreamPanelWithoutDismiss();return;}
+      if(await boafUserOwnsReward(uid)){
+        dismissBoafNotice();
+        hideBoafStreamPanelWithoutDismiss();
+        return;
+      }
+      if(!canShowBoafNotice()){
+        if(isBoafLoginSurface())scheduleBoafStreamNotice(700);
+        return;
+      }
+      boafNoticeOpenedForUser=uid;
+      openBoafStreamPanel({auto:true});
+    },Math.max(250,Number(delay)||900));
   }
 
   async function loadCommunityOngBanner(){
@@ -20505,6 +20779,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/_static/media/community/community-hero-banner.webp" alt="Banner da comunidade dos Avocados" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<div class="community-content-shell">'
       +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
+      +    '<section class="community-section community-boaf-section" id="communityBoafSection"><div class="community-section-head"><h2>STREAM BIRDS OF A FEATHER #4BI</h2></div><article class="community-boaf-card" id="communityBoafCard"><div class="community-boaf-promo"><h3>Ganhe a tag</h3><span class="community-award-tag is-boaf notranslate community-boaf-tag" data-i18n-ignore translate="no">BOAF</span><div class="community-boaf-media"><img src="/assets/images/community/boaf-stream-4bi.webp" alt="BIRDS OF A FEATHER" decoding="async"></div><a class="community-boaf-listen" data-boaf-listen href="https://open.spotify.com/playlist/7GsA1b3dcISozmOc9G0tcT?si=d0qmzIyJSxiFLUx0flAsng" target="_blank" rel="noopener noreferrer">Ouvir</a><p class="boaf-stream-status" aria-live="polite"></p></div></article></section>'
       +    '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2>Perfis em destaque</h2><p class="community-section-subtitle">Compartilhe seu perfil para receber curtidas e aparecer no ranking.</p></div><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado notranslate" data-i18n-ignore translate="no">Avocado</span></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash notranslate" data-i18n-ignore translate="no">Eyelash</span></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh notranslate" data-i18n-ignore translate="no">Blohsh</span></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
@@ -20513,6 +20788,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       +  '</div>'
       +'</div>';
     main.appendChild(page);
+    bindBoafListenLinks(page);
     page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
     var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
     var rulesDetails=page.querySelector('.community-rules-details');
@@ -20865,7 +21141,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function bind(){
-    createPage();createMobileAccountMenu();
+    createPage();createMobileAccountMenu();scheduleBoafStreamNotice(1000);window.setTimeout(retryPendingBoafClaim,900);
     var tab=document.querySelector('[data-community-tab]');if(tab)tab.addEventListener('click',function(event){event.preventDefault();openCommunity();});
     var play=document.getElementById('contentDetailPlay');
     if(play&&play.dataset.communityRecentBound!=='true'){
@@ -20913,9 +21189,168 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('be:open-config',function(){setTimeout(injectPrivacySettings,0);});
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
     window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});
-    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(){setTimeout(injectPrivacySettings,50);if(document.body.classList.contains('community-page-active'))refreshCommunity();});
+    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(user){setTimeout(injectPrivacySettings,50);if(document.body.classList.contains('community-page-active'))refreshCommunity();var active=user&&user.uid?user:currentUser();if(!active||!active.uid){boafNoticeOpenedForUser='';if(boafNoticeTimer){window.clearTimeout(boafNoticeTimer);boafNoticeTimer=0;}hideBoafStreamPanelWithoutDismiss();return;}window.setTimeout(function(){scheduleBoafStreamNotice(350);retryPendingBoafClaim();},450);});
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();
 
+
+/* BETV profile actions v13: enforce the final responsive action layout at runtime.
+   This intentionally uses inline !important styles so legacy profile CSS cannot
+   reposition individual buttons after the profile is rendered. */
+(function(){
+  'use strict';
+  var scheduled=false;
+  var mq=window.matchMedia?window.matchMedia('(max-width:760px)'):null;
+
+  function el(id){return document.getElementById(id);}
+  function important(node,name,value){if(node)node.style.setProperty(name,value,'important');}
+  function visible(node,show){if(node)important(node,'display',show?'grid':'none');}
+  function order(node,value){if(node)important(node,'order',String(value));}
+
+  function resetButton(node,size){
+    if(!node)return;
+    important(node,'position','relative');
+    important(node,'inset','auto');
+    important(node,'top','auto');
+    important(node,'right','auto');
+    important(node,'bottom','auto');
+    important(node,'left','auto');
+    important(node,'margin','0');
+    important(node,'padding','0');
+    important(node,'transform','none');
+    important(node,'align-self','center');
+    important(node,'flex','0 0 '+size+'px');
+    important(node,'width',size+'px');
+    important(node,'height',size+'px');
+    important(node,'min-width',size+'px');
+    important(node,'min-height',size+'px');
+    important(node,'max-width',size+'px');
+    important(node,'max-height',size+'px');
+    important(node,'border-radius','50%');
+    important(node,'display','grid');
+    important(node,'place-items','center');
+  }
+
+  function apply(){
+    scheduled=false;
+    var body=document.body;
+    if(!body||!body.classList.contains('profile-page-active'))return;
+
+    var row=el('profilePageActionsRow');
+    var follow=el('profilePageFollow');
+    var like=el('profilePageLike');
+    var share=el('profilePageShare');
+    var home=el('profilePageHome');
+    var more=el('profilePageMore');
+    var likes=el('profilePageLikesReceived');
+    if(!row||!home||!share)return;
+
+    var own=body.classList.contains('profile-view-own');
+    var guest=body.classList.contains('profile-viewer-guest');
+    var mobile=mq?mq.matches:window.innerWidth<=760;
+    var buttons=[follow,like,share,home,more].filter(Boolean);
+
+    important(row,'position','absolute');
+    important(row,'display','flex');
+    important(row,'flex-direction','row');
+    important(row,'flex-wrap','nowrap');
+    important(row,'align-items','center');
+    important(row,'margin','0');
+    important(row,'padding','0');
+    important(row,'transform','none');
+    important(row,'z-index','10022');
+
+    buttons.forEach(function(button){resetButton(button,mobile?44:48);});
+
+    if(!mobile){
+      important(row,'top','auto');
+      important(row,'right','clamp(24px,3vw,46px)');
+      important(row,'bottom','28px');
+      important(row,'left','auto');
+      important(row,'width','auto');
+      important(row,'height','48px');
+      important(row,'justify-content','flex-end');
+      important(row,'gap','10px');
+
+      if(own){
+        visible(follow,false);visible(like,false);
+        visible(share,true);visible(home,true);visible(more,true);
+        order(share,1);order(home,2);order(more,3);
+      }else if(guest){
+        visible(follow,false);visible(like,false);visible(more,false);
+        visible(share,true);visible(home,true);
+        order(share,1);order(home,2);
+      }else{
+        visible(follow,true);visible(like,true);visible(share,true);visible(home,true);visible(more,false);
+        order(follow,1);order(like,2);order(share,3);order(home,4);
+      }
+
+      if(likes){
+        var count=own?3:(guest?2:4);
+        important(likes,'position','absolute');
+        important(likes,'top','auto');
+        important(likes,'right','clamp(24px,3vw,46px)');
+        important(likes,'bottom','86px');
+        important(likes,'left','auto');
+        important(likes,'width',((count*48)+((count-1)*10))+'px');
+        important(likes,'margin','0');
+        important(likes,'text-align','center');
+        important(likes,'white-space','nowrap');
+      }
+      return;
+    }
+
+    important(row,'top','calc(14px + env(safe-area-inset-top))');
+    important(row,'right','14px');
+    important(row,'bottom','auto');
+    important(row,'left','14px');
+    important(row,'width','auto');
+    important(row,'height','44px');
+    important(row,'justify-content','flex-end');
+    important(row,'gap','8px');
+
+    /* Home is always isolated on the upper-left on mobile. */
+    visible(home,true);
+    important(home,'position','absolute');
+    important(home,'top','0');
+    important(home,'left','0');
+    important(home,'right','auto');
+    important(home,'bottom','auto');
+
+    if(own){
+      visible(follow,false);visible(like,false);
+      visible(share,true);visible(more,true);
+      order(share,1);order(more,2);
+    }else if(guest){
+      visible(follow,false);visible(like,false);visible(more,false);
+      visible(share,true);order(share,1);
+    }else{
+      visible(follow,true);visible(like,true);visible(share,true);visible(more,false);
+      order(follow,1);order(like,2);order(share,3);
+    }
+  }
+
+  function schedule(){
+    if(scheduled)return;
+    scheduled=true;
+    requestAnimationFrame(apply);
+  }
+
+  function start(){
+    schedule();
+    window.addEventListener('resize',schedule,{passive:true});
+    window.addEventListener('orientationchange',schedule,{passive:true});
+    if(mq&&typeof mq.addEventListener==='function')mq.addEventListener('change',schedule);
+    if(document.body&&window.MutationObserver){
+      new MutationObserver(schedule).observe(document.body,{attributes:true,attributeFilter:['class']});
+    }
+    var row=el('profilePageActionsRow');
+    if(row&&window.MutationObserver){
+      new MutationObserver(schedule).observe(row,{attributes:true,childList:true,subtree:true});
+    }
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
