@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-discord-mobile-home-v37';
+  var STATIC_REV='20260825-discord-working-flow-v38';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -1247,18 +1247,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const immediateUser = authResult?.user || authResult?.session?.user || null;
     if (immediateUser) return hydratePrivileges(normalizeUser(immediateUser));
 
-                                                                            
-                                                                             
-                                                                            
-    const session = await ensureSupabaseSession();
-    const sessionUser = session && session.user || null;
-    if (sessionUser) return hydratePrivileges(normalizeUser(sessionUser));
+    const retryDelays = [0, 80, 180, 360, 700];
+    for (const retryDelay of retryDelays) {
+      if (retryDelay) await wait(retryDelay);
 
-    try {
+      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+      if (sessionError) (void 0);
+      const sessionUser = sessionData?.session?.user || null;
+      if (sessionUser) return hydratePrivileges(normalizeUser(sessionUser));
+
       const { data: userData, error: userError } = await supabaseClient.auth.getUser();
-      if (userError && userError.name !== 'AuthSessionMissingError') (void 0);
+      if (userError && userError.name !== 'AuthSessionMissingError') {
+        (void 0);
+      }
       if (userData?.user) return hydratePrivileges(normalizeUser(userData.user));
-    } catch (_) {}
+    }
+
     return null;
   }
 
@@ -3300,34 +3304,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async signInWithDiscord() {
       sessionStorage.setItem('beOAuthDestination', 'home');
       localStorage.setItem('beAuthExpected', '1');
-      localStorage.setItem('beDiscordOAuthPending', '1');
       try {
         sessionStorage.removeItem('beMfaChallengePending');
         sessionStorage.removeItem('beMfaChallengeEmail');
         localStorage.removeItem('beMfaChallengeResume');
-        localStorage.removeItem('beMfaSupabaseSessionResume:v1');
+        sessionStorage.removeItem('beMfaSupabaseSessionResume:v1');
       } catch (_) {}
-
-      const redirectTo = oauthRedirectUrl('home');
-      const config = window.BE_SUPABASE_CONFIG;
-      let discordClient = supabaseClient;
-      try {
-        if (window.supabase && typeof window.supabase.createClient === 'function' && config && config.url && config.publishableKey) {
-          discordClient = window.supabase.createClient(config.url, config.publishableKey, {
-            auth: {
-              persistSession: false,
-              autoRefreshToken: false,
-              detectSessionInUrl: false,
-              flowType: 'implicit',
-              storageKey: 'be-discord-oauth-transient'
-            }
-          });
-        }
-      } catch (_) {
-        discordClient = supabaseClient;
-      }
-
-      const { data: result, error } = await discordClient.auth.signInWithOAuth({
+      const redirectTo = oauthRedirectUrl('discord');
+      const { data: result, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'discord',
         options: { redirectTo }
       });
@@ -3523,8 +3507,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           autoRefreshToken: true,
           detectSessionInUrl: true,
           flowType: 'pkce',
-          storage: window.localStorage,
-          experimental: { appendPkceFlowIdToRedirects: true }
+          storage: window.localStorage
         }
       });
 
@@ -3590,18 +3573,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }, 0);
       });
 
-      if (callbackActive && !callbackFailure) {
-        const implicitCandidate = implicitOAuthSessionCandidate();
-        if (implicitCandidate) await setSupabaseSessionCandidate(implicitCandidate);
-      }
-
-      let { data: sessionData, error } = await supabaseClient.auth.getSession();
+      const { data: sessionData, error } = await supabaseClient.auth.getSession();
       if (error) (void 0);
-      if ((!sessionData || !sessionData.session) && callbackActive && !callbackFailure) {
-        const exchangedSession = await exchangeOAuthCallbackSession();
-        if (exchangedSession) sessionData = { session: exchangedSession };
-      }
-      if (sessionData && sessionData.session && sessionData.session.access_token) lastKnownSupabaseSession = sessionData.session;
       currentUser = await hydratePrivileges(normalizeUser(sessionData?.session?.user || null));
 
                                                                              
@@ -16418,14 +16391,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return false;
   }
 
-  function pendingDiscordOAuth(){
-    try{return localStorage.getItem('beDiscordOAuthPending')==='1'||sessionStorage.getItem('beOAuthDestination')==='home';}catch(_){return false;}
-  }
-  function completeDiscordOAuth(){
-    try{localStorage.removeItem('beDiscordOAuthPending');sessionStorage.removeItem('beOAuthDestination');}catch(_){}
-    clearMfaChallenge();
-  }
-
   async function finishPublicLogin(user,options){
     options=options||{};
     user=await recoverAuthenticatedUser(user);
@@ -16438,18 +16403,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.removeItem(pendingEmailKey);
       }
     }catch(_){ }
-    if(options.skipMfa!==true&&options.mfaVerified!==true&&typeof auth.requiresMfa==='function'){
+    var discordCallback=String(initialCallbackDestination||'').toLowerCase()==='discord';
+    if(!discordCallback&&options.mfaVerified!==true&&typeof auth.requiresMfa==='function'){
       try{
         if(await auth.requiresMfa()){
           showMfaLogin(user.email||selectedAuthEmail);
           return null;
         }
       }catch(error){
-        if(error&&error.code==='auth/session-missing'){
-          var sessionRetry=Number(options.sessionRetry||0);
-          if(sessionRetry<3){await new Promise(function(resolve){setTimeout(resolve,250*(sessionRetry+1));});return finishPublicLogin(user,Object.assign({},options,{sessionRetry:sessionRetry+1}));}
-          if(hasRememberedMfaChallenge()){showMfaLogin(user.email||selectedAuthEmail,friendly(error));return null;}
-        }
         showLogin();
         setMode('email',user.email||selectedAuthEmail);
         setStatus(friendly(error),'error');
@@ -16629,7 +16590,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();return;}
       if(!user){
         var callbackActive=hasAuthCallback(),callbackFailure=authCallbackError();
-        if(hasRememberedMfaChallenge()&&!callbackFailure&&!pendingDiscordOAuth()){
+        if(hasRememberedMfaChallenge()&&!callbackFailure&&String(initialCallbackDestination||'').toLowerCase()!=='discord'){
           try{
             var pendingMfaUser=await recoverAuthenticatedUser(null);
             if(pendingMfaUser){showMfaLogin(pendingMfaUser.email||selectedAuthEmail);return;}
@@ -16640,12 +16601,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(expectedSession&&!callbackFailure){
           try{
             var recoveredUser=await recoverAuthenticatedUser(null);
-            if(recoveredUser){
-              var recoveredFromDiscord=pendingDiscordOAuth();
-              await finishPublicLogin(recoveredUser,{skipMfa:recoveredFromDiscord});
-              if(recoveredFromDiscord)completeDiscordOAuth();
-              return;
-            }
+            if(recoveredUser){await finishPublicLogin(recoveredUser);return;}
           }catch(recoveryError){(void 0);}
         }
         localStorage.removeItem('beSessionUid');
@@ -16681,9 +16637,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       try{
         showSiteSkeleton();
-        var discordOAuth=pendingDiscordOAuth();
-        await finishPublicLogin(user,{skipMfa:discordOAuth});
-        if(discordOAuth)completeDiscordOAuth();
+        await finishPublicLogin(user);
         if(window.__beContentReady)hideSiteSkeleton();
       }catch(error){hideSiteSkeleton();showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
@@ -16692,7 +16646,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(location.hash.startsWith('#/admin'))return;
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
-      if(hasRememberedMfaChallenge()&&!pendingDiscordOAuth()){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
+      if(hasRememberedMfaChallenge()&&String(initialCallbackDestination||'').toLowerCase()!=='discord'){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
       var guestActive=Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
       if(isPasswordRecoveryRoute()){if(auth.currentUser)showPasswordRecovery();else showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');return;}
       if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
@@ -16710,13 +16664,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('hashchange',handlePublicRoute);
     window.addEventListener('popstate',handlePublicRoute);
     window.addEventListener('pageshow',function(){
-      if(!hasRememberedMfaChallenge()||pendingDiscordOAuth()||!authReady||!auth)return;
+      if(!hasRememberedMfaChallenge()||String(initialCallbackDestination||'').toLowerCase()==='discord'||!authReady||!auth)return;
       window.setTimeout(async function(){
         try{var resumedUser=await recoverAuthenticatedUser(auth.currentUser||null);if(resumedUser)showMfaLogin(resumedUser.email||selectedAuthEmail);}catch(_){}
       },80);
     });
     document.addEventListener('visibilitychange',function(){
-      if(document.visibilityState!=='visible'||!hasRememberedMfaChallenge()||pendingDiscordOAuth()||!authReady||!auth)return;
+      if(document.visibilityState!=='visible'||!hasRememberedMfaChallenge()||String(initialCallbackDestination||'').toLowerCase()==='discord'||!authReady||!auth)return;
       window.setTimeout(async function(){try{var resumedUser=await recoverAuthenticatedUser(auth.currentUser||null);if(resumedUser)showMfaLogin(resumedUser.email||selectedAuthEmail);}catch(_){}},120);
     },{passive:true});
                                                                                
