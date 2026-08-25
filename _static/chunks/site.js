@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-boaf-i18n-v24';
+  var STATIC_REV='20260825-vercel-quota-it-v25';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -363,7 +363,7 @@
   function loadItalianSharedBundle(){
     if(slug!=='it'||italianHomeRoute())return Promise.resolve(null);
     if(window.__BETV_ITALIAN_SHARED_I18N_PROMISE__)return window.__BETV_ITALIAN_SHARED_I18N_PROMISE__;
-    var promise=fetch('/api/public-data?name=settings&id=site&locale=it',{credentials:'same-origin',cache:'default',headers:{Accept:'application/json'}})
+    var promise=fetch('/api/public-data?name=settings&id=site&locale=it',{credentials:'omit',cache:'default',headers:{Accept:'application/json'}})
       .then(function(response){return response.ok?response.json():null;})
       .then(function(settings){
         var bundle=settings&&settings.italianUiTranslations;
@@ -1520,10 +1520,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const HOME_BOOTSTRAP_COLLECTIONS = new Set(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
   const homeBootstrapMemoryCache = new Map();
   const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV6:';
-  // O bundle pesado fica salvo localmente, mas a cada ~25 minutos validamos
+  // O bundle pesado fica salvo localmente, mas a cada ~30 minutos validamos
   // apenas duas versões minúsculas. O JSON completo só volta a ser baixado se
   // o catálogo realmente mudou.
-  const HOME_BOOTSTRAP_BROWSER_TTL_MS = 25 * 60 * 1000;
+  const HOME_BOOTSTRAP_BROWSER_TTL_MS = 30 * 60 * 1000;
   const HOME_BOOTSTRAP_BROWSER_HARD_TTL_MS = 7 * 24 * 60 * 60 * 1000;
   const HOME_BOOTSTRAP_MEMORY_TTL_MS = 30 * 60 * 1000;
   const homeBootstrapRefreshInFlight = new Map();
@@ -1642,7 +1642,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function fetchHomeVersions(locale) {
     const params = new URLSearchParams({ name: 'home-version', locale: String(locale || activeLocaleSlug()) });
     const response = await fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
     });
     if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
     return normalizeHomeVersionState(await response.json());
@@ -1653,7 +1653,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const revision = String(settingsVersion || '').trim();
     if (revision) params.set('v', revision);
     const response = await fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
     });
     if (!response.ok) return null;
     const settings = await response.json();
@@ -1673,7 +1673,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale });
       if (versions.catalogVersion) params.set('v', versions.catalogVersion);
       const response = await fetch(`/api/public-data?${params.toString()}`, {
-        method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+        method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
       });
       if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
       const bundle = await response.json();
@@ -1805,7 +1805,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             ? FEATURED_FRESH_TTL_MS
             : 30 * 60 * 1000;
     const promise = fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'same-origin', cache: 'default', headers: { Accept: 'application/json' }
+      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
     }).then(response => {
       if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
       return response.json();
@@ -17751,7 +17751,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return fetch(requestUrl, {
       method: 'GET',
       cache: force ? 'no-store' : 'default',
-      credentials: 'same-origin',
+      credentials: 'omit',
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {
       if (!response.ok) throw new Error('version-check-failed');
