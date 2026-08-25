@@ -102,6 +102,8 @@
     var value = '';
     try { value = String(window.localStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
     if (value) return value;
+    try { value = String(window.sessionStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
+    if (value) return value;
     return String(readCookieValue(PUBLIC_APPLIED_UPDATE_COOKIE) || '').trim();
   }
 
@@ -109,6 +111,7 @@
     version = String(version || '').trim();
     if (!version) return;
     try { window.localStorage.setItem(PUBLIC_APPLIED_UPDATE_KEY, version); } catch (_) {}
+    try { window.sessionStorage.setItem(PUBLIC_APPLIED_UPDATE_KEY, version); } catch (_) {}
     try {
       var cookie = PUBLIC_APPLIED_UPDATE_COOKIE + '=' + encodeURIComponent(version) + '; Max-Age=31536000; Path=/; SameSite=Lax';
       if (window.location.protocol === 'https:') cookie += '; Secure';
@@ -139,22 +142,46 @@
   function cleanUpdateParameter() {
     try {
       var url = new URL(window.location.href);
-      if (!url.searchParams.has('__betv_update')) return;
-      var appliedVersion = String(url.searchParams.get('__betv_update') || '').trim();
-      var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
-      var requiresExactBuild = /^v:/.test(appliedVersion);
-      var verified = Boolean(appliedVersion) && (!requiresExactBuild || (loadedVersion && loadedVersion === appliedVersion));
+      var hasLegacyUpdate = url.searchParams.has('__betv_update');
+      var hasRefreshMarker = url.searchParams.has('__betv_refresh');
+      if (!hasLegacyUpdate && !hasRefreshMarker) return;
 
-      if (verified) {
-        if (isAdminContext()) persistAdminAppliedUpdate(appliedVersion);
-        else persistPublicAppliedUpdate(appliedVersion);
-        clearPendingUpdate();
-      } else if (appliedVersion) {
-        // Nunca marca uma atualização como concluída se o HTML ainda pertence ao
-        // deploy antigo. Mantém o aviso disponível para uma nova tentativa.
-        persistPendingUpdate(appliedVersion);
+      // Compatibilidade com links de atualização da v44 e anteriores. A nova
+      // rotina confirma o fingerprint diretamente no endpoint antes do reload,
+      // mas um navegador que ainda estiver em uma versão antiga pode chegar aqui.
+      if (hasLegacyUpdate) {
+        var appliedVersion = String(url.searchParams.get('__betv_update') || '').trim();
+        var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
+        var requiresExactBuild = /^v:/.test(appliedVersion);
+        var verified = Boolean(appliedVersion) && (!requiresExactBuild || (loadedVersion && loadedVersion === appliedVersion));
+
+        if (verified) {
+          if (isAdminContext()) persistAdminAppliedUpdate(appliedVersion);
+          else persistPublicAppliedUpdate(appliedVersion);
+          clearPendingUpdate();
+        } else if (appliedVersion) {
+          persistPendingUpdate(appliedVersion);
+
+          // Quem clicou em Atualizar ainda usando a v44 chega ao novo deploy
+          // com __betv_update na URL. Em páginas estáticas não existe fingerprint
+          // injetado no HTML, então confirma diretamente no endpoint no-store.
+          // Isso faz a PRIMEIRA tentativa antiga se completar automaticamente
+          // assim que o navegador consegue carregar este bundle novo.
+          if (requiresExactBuild && !loadedVersion) {
+            verifyTargetDeployment(appliedVersion).then(function (endpointVerified) {
+              if (!endpointVerified) return;
+              if (isAdminContext()) persistAdminAppliedUpdate(appliedVersion);
+              else persistPublicAppliedUpdate(appliedVersion);
+              clearPendingUpdate();
+              hidePopup();
+              if (!isAdminContext() && releaseStateLoaded) applyPublicReleaseStateFromSettings();
+            });
+          }
+        }
       }
+
       url.searchParams.delete('__betv_update');
+      url.searchParams.delete('__betv_refresh');
       url.searchParams.delete('_');
       window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
     } catch (_) {}
@@ -502,6 +529,7 @@
     try {
       var documentUrl = new URL(window.location.href);
       documentUrl.searchParams.delete('__betv_update');
+      documentUrl.searchParams.delete('__betv_refresh');
       documentUrl.searchParams.delete('_');
       urls.push(documentUrl.href);
     } catch (_) {}
@@ -579,6 +607,32 @@
     });
   }
 
+  function verifyTargetDeployment(targetVersion) {
+    targetVersion = String(targetVersion || '').trim();
+    if (!targetVersion || !/^v:/.test(targetVersion)) return Promise.resolve(false);
+
+    var requestUrl = ENDPOINT + '?versionOnly=1&fresh=' + encodeURIComponent(String(Date.now()));
+    return fetch(requestUrl, {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'omit',
+      redirect: 'follow',
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache, no-store, max-age=0',
+        'Pragma': 'no-cache'
+      }
+    }).then(function (response) {
+      if (!response.ok) throw new Error('deployment-verification-failed');
+      return response.json();
+    }).then(function (data) {
+      var deployedVersion = String(data && data.version || '').trim();
+      return Boolean(deployedVersion && deployedVersion === targetVersion);
+    }).catch(function () {
+      return false;
+    });
+  }
+
   function applyUpdate() {
     if (updateStarted) return;
     updateStarted = true;
@@ -602,16 +656,40 @@
     if(subtitle)subtitle.hidden=true;
     if(button){button.disabled=true;button.hidden=true;}
 
-    var targetVersion = latestVersion || readPendingUpdate() || String(Date.now());
+    var targetVersion = latestVersion || readPendingUpdate() || '';
+    if (!targetVersion) {
+      updateStarted = false;
+      hidePopup();
+      return;
+    }
     persistPendingUpdate(targetVersion);
+    forcePopupVisible(element);
 
+    // Mobile Safari/PWAs podem continuar recebendo o index.html estático mesmo
+    // com __betv_update na URL. Por isso a confirmação não depende mais do HTML:
+    // o endpoint versionOnly é no-store e informa o fingerprint real do deploy.
+    // Só depois dessa confirmação a versão é gravada como aplicada.
     Promise.resolve()
-      .then(clearBrowserCaches)
+      .then(function () { return verifyTargetDeployment(targetVersion); })
+      .then(function (verified) {
+        if (verified) {
+          if (isAdminContext()) persistAdminAppliedUpdate(targetVersion);
+          else persistPublicAppliedUpdate(targetVersion);
+          clearPendingUpdate();
+          hidePopup();
+        } else {
+          persistPendingUpdate(targetVersion);
+        }
+        return clearBrowserCaches();
+      })
       .then(function () { return refreshNetworkResources(targetVersion); })
       .finally(function () {
         try {
           var url = new URL(window.location.href);
-          url.searchParams.set('__betv_update', targetVersion);
+          // URL exclusiva para forçar uma navegação de rede no mobile sem depender
+          // do rewrite __betv_update da Vercel para validar a instalação.
+          url.searchParams.delete('__betv_update');
+          url.searchParams.set('__betv_refresh', targetVersion);
           url.searchParams.set('_', String(Date.now()));
           window.location.replace(url.href);
         } catch (_) {
