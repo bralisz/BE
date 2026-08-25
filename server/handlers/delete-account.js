@@ -79,12 +79,42 @@ async function deleteWithServiceRole(url, serviceRoleKey, userId) {
 
 
 async function accountStatusHandler(req, res) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
-    return res.status(405).json({ error: 'Método não permitido.' });
+  const { url, publishableKey, serviceRoleKey } = getConfig();
+
+  if (req.method === 'POST') {
+    if (!validRequestOrigin(req)) return res.status(403).json({ ok: false, error: 'Origem da solicitação não permitida.' });
+
+    let body = req.body || {};
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (_) { body = {}; }
+    }
+    const email = String(body?.email || '').trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      return res.status(400).json({ ok: false, error: 'E-mail inválido.' });
+    }
+    if (!serviceRoleKey) {
+      return res.status(503).json({ ok: false, checkAvailable: false });
+    }
+
+    try {
+      const profileResponse = await fetch(
+        `${url}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
+        {
+          headers: serviceHeaders(serviceRoleKey, { Accept: 'application/json' })
+        }
+      );
+      const profiles = await readJson(profileResponse);
+      if (!profileResponse.ok) return res.status(503).json({ ok: false, checkAvailable: false });
+      return res.status(200).json({ ok: true, exists: Array.isArray(profiles) && profiles.length > 0, checkAvailable: true });
+    } catch (_) {
+      return res.status(503).json({ ok: false, checkAvailable: false });
+    }
   }
 
-  const { url, publishableKey, serviceRoleKey } = getConfig();
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET, POST');
+    return res.status(405).json({ error: 'Método não permitido.' });
+  }
   const authorization = String(req.headers.authorization || '');
   const accessToken = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
 

@@ -2854,9 +2854,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async accountExists(email) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
       if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw backendError('auth/invalid-email', 'Digite um e-mail válido.');
-                                                                                 
-                                                                             
-      return null;
+      try {
+        const response = await fetch('/api/account-status', {
+          method: 'POST',
+          credentials: 'same-origin',
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ email: normalizedEmail })
+        });
+        if (!response.ok) return null;
+        const payload = await response.json().catch(() => ({}));
+        return typeof payload?.exists === 'boolean' ? payload.exists : null;
+      } catch (_) {
+        return null;
+      }
     },
     async usernameAvailable(username) {
       const normalizedHandle = normalizeUsername(username);
@@ -16197,13 +16211,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       e.preventDefault();
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=form.elements.namedItem('email').value.trim().toLowerCase();
       if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('Entrando..');
+      authFlowBusy=true;if(b)b.disabled=true;setStatus('');
       try{
         if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('Digite um e-mail válido.');
-                                                                             
-                                                                      
+        var accountExists=typeof auth.accountExists==='function'?await auth.accountExists(email):null;
         selectedAuthEmail=email;
-        setMode('password',email);
+        setMode(accountExists===false?'signup':'password',email);
       }catch(err){setStatus(friendly(err),'error');}
       finally{authFlowBusy=false;if(b)b.disabled=false;}
     });
