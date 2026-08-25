@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-mfa-resume-real-email-v37';
+  var STATIC_REV='20260825-discord-mfa-session-resume-v39';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -1113,31 +1113,116 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return null;
   }
 
+  const MFA_SUPABASE_SESSION_RESUME_KEY = 'beMfaSupabaseSessionResume:v1';
+  const MFA_SUPABASE_SESSION_RESUME_TTL_MS = 15 * 60 * 1000;
+  let lastKnownSupabaseSession = null;
+
+  function rememberMfaSupabaseSession(session) {
+    const accessToken = String(session && session.access_token || '').trim();
+    const refreshToken = String(session && session.refresh_token || '').trim();
+    if (!accessToken || !refreshToken) return;
+    lastKnownSupabaseSession = session;
+    try {
+      sessionStorage.setItem(MFA_SUPABASE_SESSION_RESUME_KEY, JSON.stringify({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        saved_at: Date.now()
+      }));
+    } catch (_) {}
+  }
+
+  function clearMfaSupabaseSession() {
+    lastKnownSupabaseSession = null;
+    try { sessionStorage.removeItem(MFA_SUPABASE_SESSION_RESUME_KEY); } catch (_) {}
+  }
+
+  function storedMfaSupabaseSessionCandidate() {
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem(MFA_SUPABASE_SESSION_RESUME_KEY) || 'null');
+      if (!parsed || Date.now() - Number(parsed.saved_at || 0) > MFA_SUPABASE_SESSION_RESUME_TTL_MS) {
+        sessionStorage.removeItem(MFA_SUPABASE_SESSION_RESUME_KEY);
+        return null;
+      }
+      const accessToken = String(parsed.access_token || '').trim();
+      const refreshToken = String(parsed.refresh_token || '').trim();
+      return accessToken && refreshToken ? { access_token: accessToken, refresh_token: refreshToken } : null;
+    } catch (_) { return null; }
+  }
+
+  async function setSupabaseSessionCandidate(candidate) {
+    if (!candidate || !supabaseClient || !supabaseClient.auth || typeof supabaseClient.auth.setSession !== 'function') return null;
+    try {
+      const { data, error } = await supabaseClient.auth.setSession({
+        access_token: String(candidate.access_token || ''),
+        refresh_token: String(candidate.refresh_token || '')
+      });
+      if (!error && data && data.session && data.session.access_token) {
+        lastKnownSupabaseSession = data.session;
+        return data.session;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  async function exchangeOAuthCallbackSession() {
+    if (!supabaseClient || !supabaseClient.auth || typeof supabaseClient.auth.exchangeCodeForSession !== 'function') return null;
+    let code = '', flowId = '';
+    try {
+      const query = new URLSearchParams(location.search || '');
+      code = String(query.get('code') || '').trim();
+      flowId = String(query.get('sb_flow_id') || '').trim();
+    } catch (_) {}
+    if (!code) return null;
+    try {
+      const result = await supabaseClient.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined);
+      if (!result.error && result.data && result.data.session && result.data.session.access_token) {
+        lastKnownSupabaseSession = result.data.session;
+        return result.data.session;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   async function ensureSupabaseSession() {
     if (MODE !== 'supabase' || !supabaseClient || !supabaseClient.auth) return null;
-    const delays = [0, 100, 250, 500, 900];
+    const delays = [0, 120, 300, 650, 1100];
     for (const delay of delays) {
       if (delay) await wait(delay);
       try {
         const { data } = await supabaseClient.auth.getSession();
-        if (data && data.session && data.session.access_token) return data.session;
+        if (data && data.session && data.session.access_token) {
+          lastKnownSupabaseSession = data.session;
+          return data.session;
+        }
       } catch (_) {}
     }
+
+    const callbackSession = await exchangeOAuthCallbackSession();
+    if (callbackSession) return callbackSession;
 
     try {
       if (typeof supabaseClient.auth.refreshSession === 'function') {
         const { data, error } = await supabaseClient.auth.refreshSession();
-        if (!error && data && data.session && data.session.access_token) return data.session;
+        if (!error && data && data.session && data.session.access_token) {
+          lastKnownSupabaseSession = data.session;
+          return data.session;
+        }
       }
     } catch (_) {}
 
     const stored = storedSupabaseSessionCandidate();
-    if (stored && typeof supabaseClient.auth.setSession === 'function') {
-      try {
-        const { data, error } = await supabaseClient.auth.setSession(stored);
-        if (!error && data && data.session && data.session.access_token) return data.session;
-      } catch (_) {}
+    const restoredStored = await setSupabaseSessionCandidate(stored);
+    if (restoredStored) return restoredStored;
+
+    if (lastKnownSupabaseSession && lastKnownSupabaseSession.access_token && lastKnownSupabaseSession.refresh_token) {
+      const restoredMemory = await setSupabaseSessionCandidate(lastKnownSupabaseSession);
+      if (restoredMemory) return restoredMemory;
     }
+
+    const mfaStored = storedMfaSupabaseSessionCandidate();
+    const restoredMfa = await setSupabaseSessionCandidate(mfaStored);
+    if (restoredMfa) return restoredMfa;
+
     return null;
   }
 
@@ -2799,6 +2884,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       clearLocalSession();
       localStorage.removeItem('beAuthExpected');
       localStorage.removeItem('beSessionUid');
+      clearMfaSupabaseSession();
       notify();
     },
     async getAuthenticatedUser() {
@@ -3038,7 +3124,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return { supported: false, enabled: false, factor: null, currentLevel: null, nextLevel: null };
       }
       const session = await ensureSupabaseSession();
-      if (!session) throw backendError('auth/session-missing', 'Sua sessão de login ainda está sendo restaurada. Volte para esta tela e tente o código novamente.');
+      if (!session) throw backendError('auth/session-missing', 'Não foi possível restaurar a sessão do Discord. Use outra conta e tente o login novamente.');
+      rememberMfaSupabaseSession(session);
       const factorsResult = await mfa.listFactors();
       if (factorsResult.error) throw mapAuthError(factorsResult.error);
       const aalResult = await mfa.getAuthenticatorAssuranceLevel();
@@ -3057,8 +3144,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },
     async requiresMfa() {
       const status = await this.getMfaStatus();
-      if (!status.supported || !status.enabled) return false;
-      if (status.currentLevel === 'aal2') return false;
+      if (!status.supported || !status.enabled) { clearMfaSupabaseSession(); return false; }
+      if (status.currentLevel === 'aal2') { clearMfaSupabaseSession(); return false; }
       return status.nextLevel === 'aal2';
     },
     async beginMfaEnrollment() {
@@ -3106,6 +3193,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
       const initialStatus = await this.getMfaStatus();
       if (!initialStatus.enabled) {
+        clearMfaSupabaseSession();
         try {
           const sessionResult = await supabaseClient.auth.getSession();
           currentUser = await hydratePrivileges(normalizeUser(sessionResult && sessionResult.data && sessionResult.data.session && sessionResult.data.session.user || null)) || currentUser;
@@ -3149,6 +3237,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         try { currentUser = await resolveSupabaseUser(data) || currentUser; } catch (_) {}
       }
 
+      clearMfaSupabaseSession();
       try { sessionStorage.setItem('beFreshAccountLogin', '1'); } catch (_) {}
       if (currentUser) notify();
       return { user: currentUser, data, mfaVerified: true, mfaRequired: true };
@@ -3393,7 +3482,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           autoRefreshToken: true,
           detectSessionInUrl: true,
           flowType: 'pkce',
-          storage: window.localStorage
+          storage: window.localStorage,
+          experimental: { appendPkceFlowIdToRedirects: true }
         }
       });
 
@@ -3401,6 +3491,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                                  
                                                                      
       supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (session && session.access_token) lastKnownSupabaseSession = session;
+        if (event === 'SIGNED_OUT') clearMfaSupabaseSession();
         if (event === 'PASSWORD_RECOVERY') {
           try { sessionStorage.setItem('bePasswordRecoveryActive', '1'); } catch (_) {}
           window.dispatchEvent(new CustomEvent('be:password-recovery', { detail: { active: true } }));
@@ -3457,8 +3549,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }, 0);
       });
 
-      const { data: sessionData, error } = await supabaseClient.auth.getSession();
+      let { data: sessionData, error } = await supabaseClient.auth.getSession();
       if (error) (void 0);
+      if ((!sessionData || !sessionData.session) && callbackActive && !callbackFailure) {
+        const exchangedSession = await exchangeOAuthCallbackSession();
+        if (exchangedSession) sessionData = { session: exchangedSession };
+      }
+      if (sessionData && sessionData.session && sessionData.session.access_token) lastKnownSupabaseSession = sessionData.session;
       currentUser = await hydratePrivileges(normalizeUser(sessionData?.session?.user || null));
 
                                                                              
