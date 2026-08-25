@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-discord-mfa-session-resume-v39';
+  var STATIC_REV='20260825-discord-no-mfa-v36';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -3285,6 +3285,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     async signInWithDiscord() {
       sessionStorage.setItem('beOAuthDestination', 'home');
       localStorage.setItem('beAuthExpected', '1');
+      localStorage.setItem('beDiscordOAuthPending', '1');
+      try {
+        sessionStorage.removeItem('beMfaChallengePending');
+        sessionStorage.removeItem('beMfaChallengeEmail');
+        localStorage.removeItem('beMfaChallengeResume');
+        localStorage.removeItem('beMfaSupabaseSessionResume:v1');
+      } catch (_) {}
       const redirectTo = oauthRedirectUrl('discord');
       const { data: result, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'discord',
@@ -16372,6 +16379,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return false;
   }
 
+  function pendingDiscordOAuth(){
+    try{return localStorage.getItem('beDiscordOAuthPending')==='1'||sessionStorage.getItem('beOAuthDestination')==='home';}catch(_){return false;}
+  }
+  function completeDiscordOAuth(){
+    try{localStorage.removeItem('beDiscordOAuthPending');sessionStorage.removeItem('beOAuthDestination');}catch(_){}
+    clearMfaChallenge();
+  }
+
   async function finishPublicLogin(user,options){
     options=options||{};
     user=await recoverAuthenticatedUser(user);
@@ -16384,7 +16399,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.removeItem(pendingEmailKey);
       }
     }catch(_){ }
-    if(options.mfaVerified!==true&&typeof auth.requiresMfa==='function'){
+    if(options.skipMfa!==true&&options.mfaVerified!==true&&typeof auth.requiresMfa==='function'){
       try{
         if(await auth.requiresMfa()){
           showMfaLogin(user.email||selectedAuthEmail);
@@ -16575,7 +16590,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();return;}
       if(!user){
         var callbackActive=hasAuthCallback(),callbackFailure=authCallbackError();
-        if(hasRememberedMfaChallenge()&&!callbackFailure){
+        if(hasRememberedMfaChallenge()&&!callbackFailure&&!pendingDiscordOAuth()){
           try{
             var pendingMfaUser=await recoverAuthenticatedUser(null);
             if(pendingMfaUser){showMfaLogin(pendingMfaUser.email||selectedAuthEmail);return;}
@@ -16586,7 +16601,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(expectedSession&&!callbackFailure){
           try{
             var recoveredUser=await recoverAuthenticatedUser(null);
-            if(recoveredUser){await finishPublicLogin(recoveredUser);return;}
+            if(recoveredUser){
+              var recoveredFromDiscord=pendingDiscordOAuth();
+              await finishPublicLogin(recoveredUser,{skipMfa:recoveredFromDiscord});
+              if(recoveredFromDiscord)completeDiscordOAuth();
+              return;
+            }
           }catch(recoveryError){(void 0);}
         }
         localStorage.removeItem('beSessionUid');
@@ -16622,7 +16642,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       try{
         showSiteSkeleton();
-        await finishPublicLogin(user);
+        var discordOAuth=pendingDiscordOAuth();
+        await finishPublicLogin(user,{skipMfa:discordOAuth});
+        if(discordOAuth)completeDiscordOAuth();
         if(window.__beContentReady)hideSiteSkeleton();
       }catch(error){hideSiteSkeleton();showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
@@ -16631,7 +16653,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(location.hash.startsWith('#/admin'))return;
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
-      if(hasRememberedMfaChallenge()){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
+      if(hasRememberedMfaChallenge()&&!pendingDiscordOAuth()){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
       var guestActive=Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
       if(isPasswordRecoveryRoute()){if(auth.currentUser)showPasswordRecovery();else showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');return;}
       if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
