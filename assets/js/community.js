@@ -32,7 +32,7 @@
 
   function normalizeCommunityTag(value){
     var normalized=String(value||'').trim().toLowerCase();
-    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'?normalized:'';
+    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'||normalized==='boaf'?normalized:'';
   }
   function communityTagMeta(value){
     var tag=normalizeCommunityTag(value);
@@ -40,12 +40,107 @@
     if(tag==='eyelash')return {key:'eyelash',label:'Eyelash',className:'is-eyelash'};
     if(tag==='blohsh')return {key:'blohsh',label:'Blohsh',className:'is-blohsh'};
     if(tag==='billie_fan')return {key:'billie_fan',label:t('Fã da Billie'),className:'is-billie-fan'};
+    if(tag==='boaf')return {key:'boaf',label:'BOAF',className:'is-boaf'};
     return null;
   }
   function communityTagMarkup(value){
     var meta=communityTagMeta(value);
     if(!meta)return '';
     return '<span class="community-award-tag '+meta.className+' notranslate" data-i18n-ignore translate="no">'+meta.label+'</span>';
+  }
+
+
+  var BOAF_STREAM_URL='https://open.spotify.com/playlist/7GsA1b3dcISozmOc9G0tcT?si=d0qmzIyJSxiFLUx0flAsng';
+  var BOAF_STREAM_IMAGE='/assets/images/community/boaf-stream-4bi.webp';
+  var BOAF_STREAM_MESSAGE='BIRDS OF A FEATHER, de Billie Eilish, está prestes a fazer história ABSOLUTA como a música solo mais rápida da história do Spotify atingir a marca de 4 BILHÕES de Streams e a PRIMEIRA canção de uma artista feminina a conseguir o feito.';
+  var BOAF_STREAM_NOTICE_KEY='betvBoafStreamNotice:4bi:v1';
+  var boafNoticeOpenedThisSession=false;
+
+  function boafNoticeDismissed(){
+    try{return localStorage.getItem(BOAF_STREAM_NOTICE_KEY)==='listened';}catch(_){return false;}
+  }
+  function dismissBoafNotice(){
+    try{localStorage.setItem(BOAF_STREAM_NOTICE_KEY,'listened');}catch(_){ }
+    try{window.dispatchEvent(new CustomEvent('be:boaf-stream-notice-dismissed'));}catch(_){ }
+  }
+
+  async function claimBoafStreamTag(statusNode){
+    var user=currentUser();
+    if(!user||!user.uid){
+      if(statusNode){statusNode.textContent=t('Entre na sua conta para receber a tag BOAF.');statusNode.classList.add('is-visible','is-warning');}
+      return false;
+    }
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')return false;
+      var result=await client.rpc('claim_boaf_stream_tag');
+      if(result&&result.error)throw result.error;
+      try{
+        if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.get==='function'){
+          var refreshed=await window.beBackend.profiles.get(user.uid,{force:true});
+          if(refreshed&&typeof refreshed==='object')window.dispatchEvent(new CustomEvent('be:profile-refreshed',{detail:{profile:refreshed}}));
+        }
+      }catch(_){ }
+      try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(user.uid||''),tag:'boaf'}}));}catch(_){ }
+      if(statusNode){statusNode.textContent=t('Tag BOAF adicionada ao seu perfil.');statusNode.classList.remove('is-warning');statusNode.classList.add('is-visible','is-success');}
+      return true;
+    }catch(_){return false;}
+  }
+
+  function bindBoafListenLinks(root){
+    (root||document).querySelectorAll('[data-boaf-listen]').forEach(function(link){
+      if(link.dataset.boafBound==='true')return;
+      link.dataset.boafBound='true';
+      link.addEventListener('click',function(){
+        dismissBoafNotice();
+        var scope=link.closest('.community-boaf-card,.boaf-stream-panel');
+        var status=scope&&scope.querySelector?scope.querySelector('.boaf-stream-status'):null;
+        claimBoafStreamTag(status);
+        if(scope&&scope.classList.contains('boaf-stream-panel'))closeBoafStreamPanel();
+      });
+    });
+  }
+
+  function closeBoafStreamPanel(){
+    var modal=document.getElementById('boafStreamPanel');
+    if(!modal)return;
+    modal.hidden=true;
+    document.body.classList.remove('boaf-stream-panel-open');
+  }
+
+  function openBoafStreamPanel(options){
+    options=options&&typeof options==='object'?options:{};
+    if(options.auto===true&&boafNoticeDismissed())return;
+    var modal=document.getElementById('boafStreamPanel');
+    if(!modal){
+      modal=document.createElement('div');
+      modal.id='boafStreamPanel';
+      modal.className='boaf-stream-panel-backdrop';
+      modal.hidden=true;
+      modal.innerHTML='<section class="boaf-stream-panel" role="dialog" aria-modal="true" aria-labelledby="boafStreamPanelTitle">'
+        +'<button class="boaf-stream-panel-close" type="button" aria-label="'+t('Fechar')+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>'
+        +'<div class="boaf-stream-panel-media"><img src="'+BOAF_STREAM_IMAGE+'" alt="BIRDS OF A FEATHER" decoding="async"></div>'
+        +'<div class="boaf-stream-panel-copy"><span class="boaf-stream-kicker">STREAM #4BI</span><h2 id="boafStreamPanelTitle">Stream Bird of a Feather</h2><p>'+t(BOAF_STREAM_MESSAGE)+'</p>'
+        +'<div class="boaf-stream-reward"><strong>'+t('Quem ouvir ganha a tag {tag}.',{tag:'<span class="profile-award-tag is-boaf notranslate boaf-stream-inline-tag" data-i18n-ignore translate="no">BOAF</span>'})+'</strong></div>'
+        +'<a class="boaf-stream-listen" data-boaf-listen href="'+BOAF_STREAM_URL+'" target="_blank" rel="noopener noreferrer">'+t('Ouvir')+'</a><p class="boaf-stream-status" aria-live="polite"></p></div></section>';
+      document.body.appendChild(modal);
+      var close=modal.querySelector('.boaf-stream-panel-close');if(close)close.addEventListener('click',closeBoafStreamPanel);
+      modal.addEventListener('click',function(event){if(event.target===modal)closeBoafStreamPanel();});
+      bindBoafListenLinks(modal);
+    }
+    modal.hidden=false;
+    document.body.classList.add('boaf-stream-panel-open');
+    applyI18n(modal);
+  }
+
+  function scheduleBoafStreamNotice(){
+    if(boafNoticeOpenedThisSession||boafNoticeDismissed())return;
+    boafNoticeOpenedThisSession=true;
+    window.setTimeout(function(){
+      if(boafNoticeDismissed())return;
+      openBoafStreamPanel({auto:true});
+    },1200);
   }
 
   async function loadCommunityOngBanner(){
@@ -82,6 +177,7 @@
       +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/assets/images/community/community-hero-banner.webp" alt="Banner da comunidade dos Avocados" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<div class="community-content-shell">'
       +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
+      +    '<section class="community-section community-boaf-section" id="communityBoafSection"><div class="community-section-head"><h2>STREAM BIRDS OF A FEATHER #4BI</h2></div><article class="community-boaf-card" id="communityBoafCard"><div class="community-boaf-message"><p>'+t(BOAF_STREAM_MESSAGE)+'</p></div><div class="community-boaf-promo"><h3>'+t('Ganhe a tag')+'</h3><span class="community-award-tag is-boaf notranslate community-boaf-tag" data-i18n-ignore translate="no">BOAF</span><div class="community-boaf-media"><img src="/assets/images/community/boaf-stream-4bi.webp" alt="BIRDS OF A FEATHER" decoding="async"></div><a class="community-boaf-listen" data-boaf-listen href="https://open.spotify.com/playlist/7GsA1b3dcISozmOc9G0tcT?si=d0qmzIyJSxiFLUx0flAsng" target="_blank" rel="noopener noreferrer">'+t('Ouvir')+'</a><p class="boaf-stream-status" aria-live="polite"></p></div></article></section>'
       +    '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2>Perfis em destaque</h2><p class="community-section-subtitle">Compartilhe seu perfil para receber curtidas e aparecer no ranking.</p></div><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado notranslate" data-i18n-ignore translate="no">Avocado</span></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash notranslate" data-i18n-ignore translate="no">Eyelash</span></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh notranslate" data-i18n-ignore translate="no">Blohsh</span></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
@@ -90,6 +186,7 @@
       +  '</div>'
       +'</div>';
     main.appendChild(page);
+    bindBoafListenLinks(page);
     page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
     var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
     var rulesDetails=page.querySelector('.community-rules-details');
@@ -442,7 +539,7 @@
   }
 
   function bind(){
-    createPage();createMobileAccountMenu();
+    createPage();createMobileAccountMenu();scheduleBoafStreamNotice();
     var tab=document.querySelector('[data-community-tab]');if(tab)tab.addEventListener('click',function(event){event.preventDefault();openCommunity();});
     var play=document.getElementById('contentDetailPlay');
     if(play&&play.dataset.communityRecentBound!=='true'){
