@@ -18712,25 +18712,43 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var controller = typeof AbortController === 'function' ? new AbortController() : null;
     var timeoutId = window.setTimeout(function () {
       if (controller) controller.abort();
-    }, 8000);
+    }, 10000);
 
     var requests = urls.map(function (rawUrl) {
-      var requestUrl = rawUrl;
+      var cacheBustedUrl = rawUrl;
       try {
         var parsed = new URL(rawUrl, window.location.href);
         parsed.searchParams.set('__betv_asset_update', String(targetVersion || Date.now()));
         parsed.searchParams.set('_', String(Date.now()));
-        requestUrl = parsed.href;
+        cacheBustedUrl = parsed.href;
       } catch (_) {}
-      var options = {
+
+      var bypassOptions = {
         method: 'GET',
         cache: 'no-store',
         credentials: 'same-origin',
         redirect: 'follow',
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+        headers: { 'Cache-Control': 'no-cache, no-store, max-age=0', 'Pragma': 'no-cache' }
       };
-      if (controller) options.signal = controller.signal;
-      return fetch(requestUrl, options);
+      var reloadOptions = {
+        method: 'GET',
+        cache: 'reload',
+        credentials: 'same-origin',
+        redirect: 'follow',
+        headers: { 'Cache-Control': 'no-cache, max-age=0', 'Pragma': 'no-cache' }
+      };
+      if (controller) {
+        bypassOptions.signal = controller.signal;
+        reloadOptions.signal = controller.signal;
+      }
+
+      // 1) busca uma URL única para atravessar caches intermediários/CDN;
+      // 2) recarrega a URL original com cache:'reload' para substituir a entrada
+      //    do cache HTTP usada pelo navegador após o reload. É o equivalente
+      //    mais próximo de Ctrl+F5 que uma página consegue iniciar sozinha.
+      return fetch(cacheBustedUrl, bypassOptions)
+        .catch(function () { return null; })
+        .then(function () { return fetch(rawUrl, reloadOptions); });
     });
 
     return Promise.allSettled(requests).finally(function () {
