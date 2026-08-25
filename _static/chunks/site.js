@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-discord-mfa-v26';
+  var STATIC_REV='20260825-discord-mfa-complete-v35';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -2989,7 +2989,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },
     async requiresMfa() {
       const status = await this.getMfaStatus();
-      return Boolean(status.supported && status.enabled && status.nextLevel === 'aal2' && status.currentLevel !== 'aal2');
+      if (!status.supported || !status.enabled) return false;
+      if (status.currentLevel === 'aal2') return false;
+      return status.nextLevel === 'aal2';
     },
     async beginMfaEnrollment() {
       const mfa = supabaseClient && supabaseClient.auth && supabaseClient.auth.mfa;
@@ -3033,17 +3035,55 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const cleanCode = String(code || '').replace(/\D/g, '').slice(0, 6);
       if (!mfa || typeof mfa.challengeAndVerify !== 'function') throw backendError('auth/mfa-unavailable', 'A verificação em duas etapas não está disponível nesta conta.');
       if (cleanCode.length !== 6) throw backendError('auth/mfa-invalid-code', 'Digite o código de 6 dígitos do aplicativo autenticador.');
-      let targetFactorId = String(factorId || '');
-      if (!targetFactorId) {
-        const status = await this.getMfaStatus();
-        targetFactorId = String(status.factor && status.factor.id || '');
+
+      const initialStatus = await this.getMfaStatus();
+      if (!initialStatus.enabled) {
+        try {
+          const sessionResult = await supabaseClient.auth.getSession();
+          currentUser = await hydratePrivileges(normalizeUser(sessionResult && sessionResult.data && sessionResult.data.session && sessionResult.data.session.user || null)) || currentUser;
+        } catch (_) {}
+        if (currentUser) notify();
+        return { user: currentUser, data: null, mfaVerified: false, mfaRequired: false };
       }
+
+      let targetFactorId = String(factorId || initialStatus.factor && initialStatus.factor.id || '');
       if (!targetFactorId) throw backendError('auth/mfa-factor-missing', 'Nenhum autenticador ativo foi encontrado para esta conta.');
+
       const { data, error } = await mfa.challengeAndVerify({ factorId: targetFactorId, code: cleanCode });
       if (error) throw mapAuthError(error);
-      try { currentUser = await resolveSupabaseUser(data) || currentUser; } catch (_) {}
+
+      let verifiedStatus = null;
+      try { verifiedStatus = await this.getMfaStatus(); } catch (_) {}
+
+      if (!verifiedStatus || verifiedStatus.currentLevel !== 'aal2') {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 80));
+          verifiedStatus = await this.getMfaStatus();
+        } catch (_) {}
+      }
+
+      if (!verifiedStatus || verifiedStatus.currentLevel !== 'aal2') {
+        try {
+          if (typeof supabaseClient.auth.refreshSession === 'function') await supabaseClient.auth.refreshSession();
+          verifiedStatus = await this.getMfaStatus();
+        } catch (_) {}
+      }
+
+      if (!verifiedStatus || verifiedStatus.currentLevel !== 'aal2') {
+        throw backendError('auth/mfa-needs-verification', 'O código foi aceito, mas a sessão segura não foi concluída. Tente novamente.');
+      }
+
+      try {
+        const sessionResult = await supabaseClient.auth.getSession();
+        const sessionUser = sessionResult && sessionResult.data && sessionResult.data.session && sessionResult.data.session.user || null;
+        currentUser = await hydratePrivileges(normalizeUser(sessionUser)) || await resolveSupabaseUser(data) || currentUser;
+      } catch (_) {
+        try { currentUser = await resolveSupabaseUser(data) || currentUser; } catch (_) {}
+      }
+
       try { sessionStorage.setItem('beFreshAccountLogin', '1'); } catch (_) {}
-      return { user: currentUser, data };
+      if (currentUser) notify();
+      return { user: currentUser, data, mfaVerified: true, mfaRequired: true };
     },
     async disableMfa(factorId) {
       const mfa = supabaseClient && supabaseClient.auth && supabaseClient.auth.mfa;
@@ -16149,7 +16189,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return false;
   }
 
-  async function finishPublicLogin(user){
+  async function finishPublicLogin(user,options){
+    options=options||{};
     user=await recoverAuthenticatedUser(user);
     if(!user){var sessionError=new Error('Não foi possível concluir a sessão de login. Tente entrar novamente.');sessionError.code='auth/session-missing';throw sessionError;}
     try{
@@ -16160,9 +16201,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.removeItem(pendingEmailKey);
       }
     }catch(_){ }
-    if(typeof auth.requiresMfa==='function'){
-      try{if(await auth.requiresMfa()){showMfaLogin(user.email||selectedAuthEmail);return null;}}
-      catch(error){showMfaLogin(user.email||selectedAuthEmail,friendly(error),'error');return null;}
+    if(options.mfaVerified!==true&&typeof auth.requiresMfa==='function'){
+      try{
+        if(await auth.requiresMfa()){
+          showMfaLogin(user.email||selectedAuthEmail);
+          return null;
+        }
+      }catch(error){
+        showLogin();
+        setMode('email',user.email||selectedAuthEmail);
+        setStatus(friendly(error),'error');
+        return null;
+      }
     }
     clearMfaChallenge();
     if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);
@@ -16254,10 +16304,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       authFlowBusy=true;if(b){b.disabled=true;b.setAttribute('aria-busy','true');b.textContent=authText('Verificar código');}setStatus('');
       try{
         if(typeof auth.verifyMfaCode!=='function')throw new Error('A verificação em duas etapas não está disponível.');
-        await auth.verifyMfaCode({code:code});
+        var mfaResult=await auth.verifyMfaCode({code:code});
         form.reset();
         setStatus('');
-        await finishPublicLogin(auth.currentUser);
+        clearMfaChallenge();
+        await finishPublicLogin(mfaResult&&mfaResult.user?mfaResult.user:auth.currentUser,{mfaVerified:Boolean(mfaResult&&mfaResult.mfaVerified)});
       }catch(err){showMfaLogin(selectedAuthEmail||(auth.currentUser&&auth.currentUser.email)||'',friendly(err),'error');}
       finally{authFlowBusy=false;if(b){b.disabled=false;b.removeAttribute('aria-busy');b.textContent=authText('Verificar código');}}
     });
