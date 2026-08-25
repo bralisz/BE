@@ -21045,3 +21045,29 @@ html[lang^="fr"] .login-trust-copy-fr{display:block}
 @media(max-width:699px){
   .login-trust-copy>span{white-space:normal}
 }
+/* Login disclaimer: keep the note centered under the login card on desktop. */
+.auth-column > .login-trust-note{
+  width:100%!important;
+  max-width:560px!important;
+  margin:18px auto 0!important;
+  padding:0!important;
+  box-sizing:border-box!important;
+  align-self:center!important;
+  text-align:center!important;
+}
+.auth-column > .login-trust-note .login-trust-disclaimer,
+.auth-column > .login-trust-note .login-trust-copy,
+.auth-column > .login-trust-note .login-trust-copy>span{
+  width:100%!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+@media(min-width:700px){
+  .auth-column > .login-trust-note{
+    width:100%!important;
+    max-width:560px!important;
+  }
+}
+
