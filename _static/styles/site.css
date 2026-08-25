@@ -20455,3 +20455,135 @@ body.profile-page-active .profile-page-actions-row > [hidden]{display:none!impor
     contain-intrinsic-size:480px;
   }
 }
+
+.community-boaf-section{
+  width:100%;
+  margin:0 auto clamp(38px,4vw,56px);
+  padding:0 20px;
+  box-sizing:border-box;
+}
+.community-boaf-section .community-section-head{
+  justify-content:center;
+  margin:0 0 16px;
+  text-align:center;
+}
+.community-boaf-section .community-section-head h2{
+  color:#fff;
+  font-size:18px;
+  line-height:1.18;
+  font-weight:850;
+  letter-spacing:-.025em;
+  text-align:center;
+}
+.community-boaf-card{
+  width:min(100%,360px);
+  margin:0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.community-boaf-promo{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.community-boaf-promo h3{
+  margin:0 0 5px;
+  color:#fff;
+  font:850 clamp(30px,3vw,36px)/1 var(--font-display);
+  letter-spacing:-.045em;
+  text-align:center;
+}
+.community-boaf-tag{
+  min-width:58px;
+  min-height:20px;
+  margin:0 0 10px;
+  padding:0 9px;
+  border-radius:6px;
+  color:#fff!important;
+  background:#168cff!important;
+  border-color:#168cff!important;
+  font-size:10px;
+  font-weight:850;
+}
+.community-award-tag.is-boaf,
+.profile-award-tag.is-boaf,
+.detail-comment-award-tag.is-boaf{
+  color:#fff!important;
+  background:#168cff!important;
+  border-color:#168cff!important;
+}
+.community-boaf-media{
+  width:188px;
+  height:212px;
+  max-width:100%;
+  overflow:hidden;
+  flex:0 0 auto;
+  border-radius:20px;
+  background:#080c12;
+}
+.community-boaf-media img{
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:none;
+  object-fit:cover;
+  object-position:center;
+  border:0;
+}
+.community-boaf-listen{
+  width:176px;
+  min-height:47px;
+  margin:13px auto 0;
+  padding:0 18px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  border:0;
+  border-radius:14px;
+  background:#16cf63;
+  color:#050807!important;
+  -webkit-text-fill-color:#050807!important;
+  font-size:14px;
+  font-weight:850;
+  line-height:1;
+  text-decoration:none;
+  box-shadow:none;
+  transition:transform .16s ease,filter .16s ease;
+}
+.community-boaf-listen:hover{filter:brightness(1.04)}
+.community-boaf-listen:active{transform:scale(.98)}
+.community-boaf-card .boaf-stream-status{
+  min-height:0;
+  margin:8px 0 0;
+  color:rgba(255,255,255,.64);
+  font-size:12px;
+  line-height:1.35;
+  text-align:center;
+}
+.community-boaf-card .boaf-stream-status:empty{display:none}
+.community-boaf-card .boaf-stream-status.is-success{color:#6ee7a0}
+.community-boaf-card .boaf-stream-status.is-warning{color:#ffd16a}
+
+@media(max-width:760px){
+  .community-boaf-section{margin-bottom:36px;padding:0 16px}
+  .community-boaf-section .community-section-head{margin:0 0 17px}
+  .community-boaf-section .community-section-head h2{font-size:17px;white-space:nowrap}
+  .community-boaf-card{width:min(100%,340px)}
+  .community-boaf-promo h3{font-size:33px}
+  .community-boaf-media{width:188px;height:212px;border-radius:20px}
+  .community-boaf-listen{width:176px;min-height:47px;margin-top:13px}
+}
+
+@media(max-width:390px){
+  .community-boaf-section .community-section-head h2{font-size:15px}
+  .community-boaf-promo h3{font-size:30px}
+}
