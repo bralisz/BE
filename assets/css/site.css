@@ -20587,3 +20587,226 @@ body.profile-page-active .profile-page-actions-row > [hidden]{display:none!impor
   .community-boaf-section .community-section-head h2{font-size:15px}
   .community-boaf-promo h3{font-size:30px}
 }
+
+body.boaf-stream-panel-open{overflow:hidden!important}
+.boaf-stream-panel-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:20240;
+  display:grid;
+  place-items:center;
+  box-sizing:border-box;
+  padding:24px;
+  background:rgba(0,0,0,.58);
+  -webkit-backdrop-filter:blur(18px) saturate(115%);
+  backdrop-filter:blur(18px) saturate(115%);
+}
+.boaf-stream-panel-backdrop[hidden]{display:none!important}
+.boaf-stream-panel{
+  position:relative;
+  width:min(720px,100%);
+  max-height:calc(100dvh - 48px);
+  overflow:auto;
+  display:grid;
+  grid-template-columns:190px minmax(0,1fr);
+  align-items:center;
+  gap:20px;
+  box-sizing:border-box;
+  padding:18px;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:30px;
+  background:rgba(28,28,30,.96);
+  box-shadow:0 28px 80px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.05);
+  -webkit-backdrop-filter:blur(28px) saturate(125%);
+  backdrop-filter:blur(28px) saturate(125%);
+}
+.boaf-stream-panel-close{
+  position:absolute;
+  top:12px;
+  right:12px;
+  z-index:3;
+  width:36px;
+  height:36px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:50%;
+  background:rgba(58,58,60,.88);
+  color:#fff;
+  cursor:pointer;
+}
+.boaf-stream-panel-close svg{display:block;width:17px;height:17px}
+.boaf-stream-panel-media{
+  width:190px;
+  height:218px;
+  max-width:100%;
+  overflow:hidden;
+  border-radius:22px;
+  background:#080c12;
+}
+.boaf-stream-panel-media img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  margin:0!important;
+  object-fit:cover!important;
+  object-position:center!important;
+  transform:none!important;
+}
+.boaf-stream-panel-copy{min-width:0;padding:8px 38px 8px 0}
+.boaf-stream-panel-copy h2{
+  margin:0 0 10px;
+  color:#fff;
+  font:850 28px/1.04 var(--font-display);
+  letter-spacing:-.035em;
+}
+.boaf-stream-panel-copy>p:not(.boaf-stream-status){
+  margin:0;
+  color:rgba(255,255,255,.7);
+  font-size:13px;
+  line-height:1.5;
+}
+.boaf-stream-reward{margin-top:14px;color:#fff;font-size:13px;line-height:1.4}
+.boaf-stream-inline-tag{display:inline-flex;vertical-align:middle;margin-left:4px}
+.boaf-stream-listen{
+  width:100%;
+  min-height:46px;
+  margin-top:16px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  border:0;
+  border-radius:14px;
+  background:#16cf63;
+  color:#050807!important;
+  -webkit-text-fill-color:#050807!important;
+  font-size:14px;
+  font-weight:850;
+  text-decoration:none;
+}
+.boaf-stream-panel .boaf-stream-status{
+  min-height:0;
+  margin:8px 0 0;
+  color:rgba(255,255,255,.64);
+  font-size:11px;
+  line-height:1.35;
+}
+.boaf-stream-panel .boaf-stream-status:empty{display:none}
+.boaf-stream-panel .boaf-stream-status.is-success{color:#6ee7a0}
+.boaf-stream-panel .boaf-stream-status.is-warning{color:#ffd16a}
+
+@media(max-width:760px){
+  .boaf-stream-panel-backdrop{
+    place-items:end center;
+    padding:10px 10px max(10px,env(safe-area-inset-bottom));
+    background:rgba(0,0,0,.5);
+  }
+  .boaf-stream-panel{
+    width:100%;
+    max-height:min(76dvh,620px);
+    grid-template-columns:104px minmax(0,1fr);
+    align-items:start;
+    gap:14px;
+    padding:14px 14px 16px;
+    border-radius:26px;
+  }
+  .boaf-stream-panel-close{
+    top:10px;
+    right:10px;
+    width:32px;
+    height:32px;
+  }
+  .boaf-stream-panel-close svg{width:15px;height:15px}
+  .boaf-stream-panel-media{
+    width:104px!important;
+    height:119px!important;
+    min-width:104px!important;
+    max-width:104px!important;
+    min-height:119px!important;
+    max-height:119px!important;
+    border-radius:18px!important;
+  }
+  .boaf-stream-panel-media img{
+    width:104px!important;
+    height:119px!important;
+    min-width:104px!important;
+    max-width:104px!important;
+    min-height:119px!important;
+    max-height:119px!important;
+    object-fit:cover!important;
+  }
+  .boaf-stream-panel-copy{padding:3px 28px 0 0}
+  .boaf-stream-panel-copy h2{margin:0 0 7px;font-size:21px;line-height:1.04}
+  .boaf-stream-panel-copy>p:not(.boaf-stream-status){font-size:11.5px;line-height:1.4}
+  .boaf-stream-reward{margin-top:9px;font-size:11.5px}
+  .boaf-stream-listen{min-height:43px;margin-top:11px;border-radius:13px;font-size:13px}
+  .boaf-stream-panel .boaf-stream-status{font-size:10.5px}
+
+  body.community-page-active .community-boaf-card{
+    width:min(100%,340px)!important;
+    max-width:340px!important;
+    overflow:visible!important;
+  }
+  body.community-page-active .community-boaf-promo{
+    width:100%!important;
+    max-width:340px!important;
+    overflow:visible!important;
+  }
+  body.community-page-active .community-boaf-media{
+    width:188px!important;
+    height:212px!important;
+    min-width:188px!important;
+    max-width:188px!important;
+    min-height:212px!important;
+    max-height:212px!important;
+    flex:0 0 188px!important;
+    overflow:hidden!important;
+    border-radius:20px!important;
+  }
+  body.community-page-active .community-boaf-media img{
+    display:block!important;
+    width:188px!important;
+    height:212px!important;
+    min-width:188px!important;
+    max-width:188px!important;
+    min-height:212px!important;
+    max-height:212px!important;
+    margin:0!important;
+    object-fit:cover!important;
+    object-position:center!important;
+    transform:none!important;
+  }
+}
+
+@media(max-width:390px){
+  .boaf-stream-panel{
+    grid-template-columns:92px minmax(0,1fr);
+    gap:12px;
+    padding:12px 12px 14px;
+    border-radius:24px;
+  }
+  .boaf-stream-panel-media{
+    width:92px!important;
+    height:105px!important;
+    min-width:92px!important;
+    max-width:92px!important;
+    min-height:105px!important;
+    max-height:105px!important;
+  }
+  .boaf-stream-panel-media img{
+    width:92px!important;
+    height:105px!important;
+    min-width:92px!important;
+    max-width:92px!important;
+    min-height:105px!important;
+    max-height:105px!important;
+  }
+  .boaf-stream-panel-copy h2{font-size:19px}
+  .boaf-stream-panel-copy>p:not(.boaf-stream-status){font-size:11px}
+}
