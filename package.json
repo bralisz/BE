@@ -11,5 +11,8 @@
   },
   "scripts": {
     "build:static": "node scripts/build-static.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }
