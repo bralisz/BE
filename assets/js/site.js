@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-vercel-quota-it-v25';
+  var STATIC_REV='20260825-discord-mfa-v26';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -15888,6 +15888,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(location.hash.startsWith('#/admin')||initialCallbackDestination==='admin') return;
 
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='',mfaChallengePending=false;
+  try{mfaChallengePending=sessionStorage.getItem('beMfaChallengePending')==='1';selectedAuthEmail=String(sessionStorage.getItem('beMfaChallengeEmail')||'').trim().toLowerCase();}catch(_){}
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
   var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false,siteSkeletonReleased=document.documentElement.dataset.siteLoaded==='true';
@@ -16013,10 +16014,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(message)setStatus(message,type||'');
     hideSiteSkeleton();
   }
-  function showMfaLogin(email,message,type){
+  function rememberMfaChallenge(email){
     mfaChallengePending=true;
+    var normalized=String(email||selectedAuthEmail||(auth&&auth.currentUser&&auth.currentUser.email)||'').trim().toLowerCase();
+    if(normalized)selectedAuthEmail=normalized;
+    try{sessionStorage.setItem('beMfaChallengePending','1');if(normalized)sessionStorage.setItem('beMfaChallengeEmail',normalized);}catch(_){}
+    return normalized;
+  }
+  function clearMfaChallenge(){
+    mfaChallengePending=false;
+    try{sessionStorage.removeItem('beMfaChallengePending');sessionStorage.removeItem('beMfaChallengeEmail');}catch(_){}
+  }
+  function hasRememberedMfaChallenge(){
+    if(mfaChallengePending)return true;
+    try{return sessionStorage.getItem('beMfaChallengePending')==='1';}catch(_){return false;}
+  }
+  function showMfaLogin(email,message,type){
+    var challengeEmail=rememberMfaChallenge(email);
     showLogin();
-    setMode('mfa',email||selectedAuthEmail||(auth&&auth.currentUser&&auth.currentUser.email)||'');
+    setMode('mfa',challengeEmail);
     if(message)setStatus(message,type||'');
     else setStatus('');
     hideSiteSkeleton();
@@ -16126,7 +16142,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{if(await auth.requiresMfa()){showMfaLogin(user.email||selectedAuthEmail);return null;}}
       catch(error){showMfaLogin(user.email||selectedAuthEmail,friendly(error),'error');return null;}
     }
-    mfaChallengePending=false;
+    clearMfaChallenge();
     if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);
     localStorage.setItem('beAuthExpected','1');
     localStorage.setItem('beSessionUid',user.uid);
@@ -16218,7 +16234,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{
         if(typeof auth.verifyMfaCode!=='function')throw new Error('A verificação em duas etapas não está disponível.');
         await auth.verifyMfaCode({code:code});
-        mfaChallengePending=false;
         form.reset();
         setStatus('');
         await finishPublicLogin(auth.currentUser);
@@ -16228,7 +16243,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     q('mfaUseOtherAccount').onclick=async function(){
       if(authFlowBusy)return;authFlowBusy=true;
       try{if(auth.currentUser)await auth.signOut();}catch(_){ }
-      finally{authFlowBusy=false;mfaChallengePending=false;selectedAuthEmail='';q('authEmail').value='';q('loginEmail').value='';q('signupEmail').value='';q('mfaCode').value='';showLogin();setMode('email');}
+      finally{authFlowBusy=false;clearMfaChallenge();selectedAuthEmail='';q('authEmail').value='';q('loginEmail').value='';q('signupEmail').value='';q('mfaCode').value='';showLogin();setMode('email');}
     };
 
     q('recoveryBackToLogin').onclick=async function(){
@@ -16289,9 +16304,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(user&&!(await enforceAccountAccess(user)))return;
       if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();return;}
       if(!user){
-                                                                           
-                                                                           
         var callbackActive=hasAuthCallback(),callbackFailure=authCallbackError();
+        if(hasRememberedMfaChallenge()&&!callbackFailure){
+          try{
+            var pendingMfaUser=await recoverAuthenticatedUser(null);
+            if(pendingMfaUser){showMfaLogin(pendingMfaUser.email||selectedAuthEmail);return;}
+          }catch(mfaRecoveryError){(void 0);}
+          clearMfaChallenge();
+        }
         var expectedSession=callbackActive||localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'));
         if(expectedSession&&!callbackFailure){
           try{
@@ -16341,7 +16361,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(location.hash.startsWith('#/admin'))return;
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
-      if(mfaChallengePending){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
+      if(hasRememberedMfaChallenge()){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
       var guestActive=Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
       if(isPasswordRecoveryRoute()){if(auth.currentUser)showPasswordRecovery();else showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');return;}
       if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
