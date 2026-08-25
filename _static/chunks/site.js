@@ -20208,7 +20208,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     avatar=avatar||String(profile&&profile.avatarUrl||user.photoURL||'').trim();
     var name=String(profile&&profile.displayName||user.displayName||profile&&profile.username||'Usuário').trim()||'Usuário';
     var needsFavorites=favorites.length<4;
-    var requiresNewAccountFavorites=newAccountFlowPending(uid)&&needsFavorites;
     var wrap=document.createElement('div');
     wrap.id='profileShareCampaignPrompt';
     wrap.className='profile-share-campaign-backdrop';
@@ -20228,7 +20227,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       '</div>'+
       '<div class="profile-share-campaign-actions">'+
         (needsFavorites?'<button type="button" class="profile-share-campaign-button secondary" data-profile-campaign-add>'+esc(t('Adicione 4 vídeos favoritos'))+'</button>':'')+
-        (!requiresNewAccountFavorites?'<button type="button" class="profile-share-campaign-button primary" data-profile-campaign-share>'+esc(t('Compartilhar'))+'</button>':'')+
+        '<button type="button" class="profile-share-campaign-button primary" data-profile-campaign-share>'+esc(t('Compartilhar'))+'</button>'+
       '</div>'+
     '</section>';
     document.body.appendChild(wrap);
@@ -20237,7 +20236,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     activeUserId=uid;
     var add=wrap.querySelector('[data-profile-campaign-add]');
     var share=wrap.querySelector('[data-profile-campaign-share]');
-    if(add)add.addEventListener('click',function(){if(!newAccountFlowPending(uid))rememberChoice(uid,campaignId);removePrompt();openFavorites();});
+    if(add)add.addEventListener('click',function(){rememberChoice(uid,campaignId);removePrompt();openFavorites();});
     if(share)share.addEventListener('click',async function(){
       if(share.disabled)return;
       share.disabled=true;
@@ -20749,7 +20748,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   function boafNewAccountFlowReady(userId){
     if(!boafNewAccountFlowPending(userId))return true;
-    return boafNewAccountFavoritesReady(userId)&&boafNewAccountShareReady(userId)&&!boafNoticeBlockedBySetup();
+    return boafNewAccountShareReady(userId)&&!boafNoticeBlockedBySetup();
   }
   function completeBoafNewAccountFlow(userId){
     try{localStorage.removeItem(boafNewAccountFlowKey(userId));}catch(_){ }
