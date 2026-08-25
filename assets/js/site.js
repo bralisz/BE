@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-discord-working-flow-v38';
+  var STATIC_REV='20260825-discord-app-resume-v42';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -3305,6 +3305,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       sessionStorage.setItem('beOAuthDestination', 'home');
       localStorage.setItem('beAuthExpected', '1');
       try {
+        localStorage.setItem('beDiscordLoginPending', JSON.stringify({ startedAt: Date.now() }));
         sessionStorage.removeItem('beMfaChallengePending');
         sessionStorage.removeItem('beMfaChallengeEmail');
         localStorage.removeItem('beMfaChallengeResume');
@@ -3315,7 +3316,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         provider: 'discord',
         options: { redirectTo }
       });
-      if (error) throw mapAuthError(error);
+      if (error) {
+        try { localStorage.removeItem('beDiscordLoginPending'); } catch (_) {}
+        throw mapAuthError(error);
+      }
       return result;
     },
     async connectDiscord() {
@@ -16366,6 +16370,36 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     idle(function(){var next=randomIndex(bgIndex);ensureLoaded(slides[next]);});
   }
 
+  function discordLoginPending(){
+    try{
+      var raw=localStorage.getItem('beDiscordLoginPending');
+      if(!raw)return String(initialCallbackDestination||'').toLowerCase()==='discord';
+      var saved=JSON.parse(raw||'null');
+      var startedAt=Number(saved&&saved.startedAt||0);
+      if(startedAt&&Date.now()-startedAt>10*60*1000){localStorage.removeItem('beDiscordLoginPending');return false;}
+      return true;
+    }catch(_){return String(initialCallbackDestination||'').toLowerCase()==='discord';}
+  }
+  function clearDiscordLoginPending(){try{localStorage.removeItem('beDiscordLoginPending');}catch(_){}}
+  function expectedPersistedSession(){
+    try{return discordLoginPending()||localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'));}catch(_){return discordLoginPending();}
+  }
+  var discordAppResumeBusy=false;
+  async function resumePersistedLoginInApp(){
+    if(discordAppResumeBusy||!authReady||!auth||auth.currentUser||!expectedPersistedSession())return false;
+    if(document.visibilityState&&document.visibilityState!=='visible')return false;
+    discordAppResumeBusy=true;
+    try{
+      var user=await recoverAuthenticatedUser(null);
+      if(!user)return false;
+      showSiteSkeleton();
+      await finishPublicLogin(user,{skipMfa:true});
+      if(window.__beContentReady)hideSiteSkeleton();
+      return true;
+    }catch(_){return false;}
+    finally{discordAppResumeBusy=false;}
+  }
+
   async function recoverAuthenticatedUser(user){
     if(user)return user;
     if(!auth||typeof auth.getAuthenticatedUser!=='function')return null;
@@ -16403,7 +16437,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.removeItem(pendingEmailKey);
       }
     }catch(_){ }
-    var discordCallback=String(initialCallbackDestination||'').toLowerCase()==='discord';
+    var discordCallback=discordLoginPending()||options.skipMfa===true||String(initialCallbackDestination||'').toLowerCase()==='discord';
     if(!discordCallback&&options.mfaVerified!==true&&typeof auth.requiresMfa==='function'){
       try{
         if(await auth.requiresMfa()){
@@ -16418,6 +16452,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     }
     clearMfaChallenge();
+    if(discordCallback)clearDiscordLoginPending();
     if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);
     localStorage.setItem('beAuthExpected','1');
     localStorage.setItem('beSessionUid',user.uid);
@@ -16590,7 +16625,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();return;}
       if(!user){
         var callbackActive=hasAuthCallback(),callbackFailure=authCallbackError();
-        if(hasRememberedMfaChallenge()&&!callbackFailure&&String(initialCallbackDestination||'').toLowerCase()!=='discord'){
+        if(hasRememberedMfaChallenge()&&!callbackFailure&&!discordLoginPending()){
           try{
             var pendingMfaUser=await recoverAuthenticatedUser(null);
             if(pendingMfaUser){showMfaLogin(pendingMfaUser.email||selectedAuthEmail);return;}
@@ -16637,7 +16672,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       try{
         showSiteSkeleton();
-        await finishPublicLogin(user);
+        await finishPublicLogin(user,{skipMfa:discordLoginPending()});
         if(window.__beContentReady)hideSiteSkeleton();
       }catch(error){hideSiteSkeleton();showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
     });
@@ -16646,7 +16681,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(location.hash.startsWith('#/admin'))return;
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
-      if(hasRememberedMfaChallenge()&&String(initialCallbackDestination||'').toLowerCase()!=='discord'){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
+      if(hasRememberedMfaChallenge()&&!discordLoginPending()){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
       var guestActive=Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
       if(isPasswordRecoveryRoute()){if(auth.currentUser)showPasswordRecovery();else showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');return;}
       if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
@@ -16663,14 +16698,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     window.addEventListener('hashchange',handlePublicRoute);
     window.addEventListener('popstate',handlePublicRoute);
+    window.addEventListener('focus',function(){window.setTimeout(resumePersistedLoginInApp,80);},{passive:true});
+    window.addEventListener('storage',function(event){
+      if(!event)return;
+      if(event.key==='beSessionUid'||event.key==='beAuthExpected'||event.key==='beDiscordLoginPending'||/^sb-.*-auth-token$/i.test(String(event.key||''))){
+        window.setTimeout(resumePersistedLoginInApp,80);
+      }
+    });
     window.addEventListener('pageshow',function(){
-      if(!hasRememberedMfaChallenge()||String(initialCallbackDestination||'').toLowerCase()==='discord'||!authReady||!auth)return;
+      window.setTimeout(resumePersistedLoginInApp,60);
+      if(!hasRememberedMfaChallenge()||discordLoginPending()||!authReady||!auth)return;
       window.setTimeout(async function(){
         try{var resumedUser=await recoverAuthenticatedUser(auth.currentUser||null);if(resumedUser)showMfaLogin(resumedUser.email||selectedAuthEmail);}catch(_){}
       },80);
     });
     document.addEventListener('visibilitychange',function(){
-      if(document.visibilityState!=='visible'||!hasRememberedMfaChallenge()||String(initialCallbackDestination||'').toLowerCase()==='discord'||!authReady||!auth)return;
+      if(document.visibilityState==='visible')window.setTimeout(resumePersistedLoginInApp,80);
+      if(document.visibilityState!=='visible'||!hasRememberedMfaChallenge()||discordLoginPending()||!authReady||!auth)return;
       window.setTimeout(async function(){try{var resumedUser=await recoverAuthenticatedUser(auth.currentUser||null);if(resumedUser)showMfaLogin(resumedUser.email||selectedAuthEmail);}catch(_){}},120);
     },{passive:true});
                                                                                
