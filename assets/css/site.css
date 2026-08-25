@@ -21009,3 +21009,39 @@ body.boaf-stream-panel-open{overflow:hidden!important}
   .login-trust-note>span:first-child{width:100%!important;max-width:100%!important;text-wrap:balance!important}
 }
 
+/* Login disclaimer: fixed two-line layout on desktop for every public locale. */
+.login-trust-disclaimer{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0 auto!important;
+  text-align:center!important;
+}
+.login-trust-copy{
+  display:none;
+  width:100%;
+  text-align:center;
+}
+.login-trust-copy>span{
+  display:block;
+  width:100%;
+  white-space:nowrap;
+  text-align:center;
+}
+html[lang^="pt"] .login-trust-copy-pt,
+html:not([lang]) .login-trust-copy-pt{display:block}
+html[lang^="en"] .login-trust-copy-en{display:block}
+html[lang^="es"] .login-trust-copy-es{display:block}
+html[lang^="it"] .login-trust-copy-it{display:block}
+html[lang^="fr"] .login-trust-copy-fr{display:block}
+@media(min-width:700px){
+  .login-trust-note{
+    width:min(760px,calc(100vw - 48px))!important;
+    max-width:min(760px,calc(100vw - 48px))!important;
+    text-align:center!important;
+  }
+  .login-trust-disclaimer{font-size:11px!important;line-height:1.45!important}
+}
+@media(max-width:699px){
+  .login-trust-copy>span{white-space:normal}
+}
