@@ -20857,3 +20857,124 @@ body.boaf-stream-panel-open{overflow:hidden!important}
   .boaf-stream-reward{font-size:11px}
   .boaf-stream-listen{min-height:43px;margin-top:12px;font-size:13px}
 }
+@media(max-width:760px){
+  .boaf-stream-panel-backdrop{
+    place-items:center!important;
+    padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom))!important;
+    background:rgba(0,0,0,.56)!important;
+    -webkit-backdrop-filter:blur(22px) saturate(118%)!important;
+    backdrop-filter:blur(22px) saturate(118%)!important;
+  }
+  .boaf-stream-panel{
+    width:min(100%,430px)!important;
+    max-height:calc(100dvh - 28px)!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:0!important;
+    padding:14px!important;
+    border-radius:28px!important;
+    overflow:auto!important;
+    background:rgba(28,28,30,.97)!important;
+    border:1px solid rgba(255,255,255,.13)!important;
+    box-shadow:0 28px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05)!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .boaf-stream-panel-close{
+    top:24px!important;
+    right:24px!important;
+    width:38px!important;
+    height:38px!important;
+    z-index:5!important;
+    background:rgba(58,58,60,.9)!important;
+    border-color:rgba(255,255,255,.12)!important;
+    box-shadow:0 6px 18px rgba(0,0,0,.24)!important;
+  }
+  .boaf-stream-panel-close svg{width:17px!important;height:17px!important}
+  .boaf-stream-panel-media{
+    order:1!important;
+    width:100%!important;
+    height:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    min-height:0!important;
+    max-height:none!important;
+    aspect-ratio:16/9!important;
+    overflow:hidden!important;
+    border-radius:21px!important;
+    background:#080c12!important;
+  }
+  .boaf-stream-panel-media img{
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+    margin:0!important;
+    object-fit:cover!important;
+    object-position:center!important;
+    transform:none!important;
+  }
+  .boaf-stream-panel-copy{
+    order:2!important;
+    display:flex!important;
+    flex-direction:column!important;
+    min-width:0!important;
+    width:100%!important;
+    padding:18px 4px 2px!important;
+    box-sizing:border-box!important;
+  }
+  .boaf-stream-panel-copy h2{
+    margin:0 0 10px!important;
+    padding:0!important;
+    font-size:26px!important;
+    line-height:1.02!important;
+    letter-spacing:-.035em!important;
+  }
+  .boaf-stream-panel-copy>p:not(.boaf-stream-status){
+    margin:0!important;
+    font-size:12.5px!important;
+    line-height:1.48!important;
+  }
+  .boaf-stream-reward{
+    margin-top:13px!important;
+    font-size:12px!important;
+    line-height:1.45!important;
+  }
+  .boaf-stream-inline-tag{margin-left:5px!important}
+  .boaf-stream-listen{
+    width:100%!important;
+    min-height:49px!important;
+    margin-top:15px!important;
+    border-radius:15px!important;
+    font-size:14px!important;
+  }
+  .boaf-stream-panel .boaf-stream-status{
+    margin-top:8px!important;
+    font-size:11px!important;
+  }
+}
+@media(max-width:390px){
+  .boaf-stream-panel-backdrop{
+    padding:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom))!important;
+  }
+  .boaf-stream-panel{
+    width:100%!important;
+    padding:12px!important;
+    border-radius:25px!important;
+  }
+  .boaf-stream-panel-close{
+    top:20px!important;
+    right:20px!important;
+    width:36px!important;
+    height:36px!important;
+  }
+  .boaf-stream-panel-media{border-radius:19px!important}
+  .boaf-stream-panel-copy{padding:16px 3px 2px!important}
+  .boaf-stream-panel-copy h2{font-size:23px!important}
+  .boaf-stream-panel-copy>p:not(.boaf-stream-status){font-size:11.75px!important;line-height:1.46!important}
+  .boaf-stream-reward{font-size:11.5px!important}
+  .boaf-stream-listen{min-height:47px!important;margin-top:14px!important;font-size:13.5px!important}
+}
