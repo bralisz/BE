@@ -3399,6 +3399,28 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const randomFeaturedPools = { videos: [], films: [], movies: [], series: [] };
   const lastRandomFeaturedIds = { videos: [], films: [], movies: [], series: [] };
 
+  function runAfterInteractionPaint(callback) {
+    if (typeof callback !== 'function') return;
+    if (document.visibilityState !== 'visible' || typeof window.requestAnimationFrame !== 'function') {
+      window.setTimeout(callback, 0);
+      return;
+    }
+    window.requestAnimationFrame(() => window.setTimeout(callback, 0));
+  }
+
+  function runWhenMainThreadIsIdle(callback, timeout = 900) {
+    if (typeof callback !== 'function') return;
+    runAfterInteractionPaint(() => {
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => callback(), { timeout });
+      } else {
+        window.setTimeout(callback, 40);
+      }
+    });
+  }
+  window.BETVRunAfterInteractionPaint = window.BETVRunAfterInteractionPaint || runAfterInteractionPaint;
+  window.BETVRunWhenMainThreadIdle = window.BETVRunWhenMainThreadIdle || runWhenMainThreadIsIdle;
+
   function activeLocaleSlug() {
     const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
     return ['en-us', 'es', 'fr', 'it'].includes(slug) ? slug : 'pt-br';
@@ -4736,6 +4758,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   let activeSectionView = null;
   let activeSectionReturnState = null;
+  let sectionViewRenderToken = 0;
   const sectionViewItemsMemory = new Map();
 
   function isMobileCatalogViewport() {
@@ -4790,6 +4813,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function closeSectionView(scrollHome = false) {
+    sectionViewRenderToken += 1;
     const host = document.getElementById('dynamicSections');
     if (!host || !host.classList.contains('section-view-mode')) return;
     const active = activeSectionView || host.querySelector('.section-view-active');
@@ -4845,22 +4869,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const rail = section.querySelector('.video-rail');
     const allItems = section.querySelector('.section-view-all-items');
     const memoryItems = sectionViewItemsMemory.get(String(section.dataset.sectionId || ''));
-    if (rail && Array.isArray(memoryItems)) {
-      rail._beHomeMarkup = rail.innerHTML;
-      const filtered = requestedCollection
-        ? memoryItems.filter(item => normalizeText(item.collection || 'videos') === requestedCollection)
-        : memoryItems;
-      const emptyLabel = requestedCollection === 'movies' ? 'Nenhum filme publicado nesta seção.' : requestedCollection === 'series' ? 'Nenhuma série publicada nesta seção.' : 'Nenhum vídeo publicado nesta seção.';
-      rail.innerHTML = filtered.length
-        ? filtered.map(item => videoCard(item)).join('')
-        : '<p class="video-rail-empty">'+emptyLabel+'</p>';
-      setupContentDetailInteractions(rail);
-    } else if (rail && allItems) {
-                                                                           
-      rail._beHomeMarkup = rail.innerHTML;
-      rail.innerHTML = allItems.innerHTML;
-      setupContentDetailInteractions(rail);
-    }
+    const renderToken = ++sectionViewRenderToken;
+
+    runAfterInteractionPaint(() => {
+      if (renderToken !== sectionViewRenderToken || activeSectionView !== section) return;
+      if (rail && Array.isArray(memoryItems)) {
+        rail._beHomeMarkup = rail.innerHTML;
+        const filtered = requestedCollection
+          ? memoryItems.filter(item => normalizeText(item.collection || 'videos') === requestedCollection)
+          : memoryItems;
+        const emptyLabel = requestedCollection === 'movies' ? 'Nenhum filme publicado nesta seção.' : requestedCollection === 'series' ? 'Nenhuma série publicada nesta seção.' : 'Nenhum vídeo publicado nesta seção.';
+        rail.innerHTML = filtered.length
+          ? filtered.map(item => videoCard(item)).join('')
+          : '<p class="video-rail-empty">'+emptyLabel+'</p>';
+        setupContentDetailInteractions(rail);
+      } else if (rail && allItems) {
+        rail._beHomeMarkup = rail.innerHTML;
+        rail.innerHTML = allItems.innerHTML;
+        setupContentDetailInteractions(rail);
+      }
+    });
 
     const title = section.querySelector('.video-rail-title span')?.textContent?.trim() || 'Seção';
     section.setAttribute('aria-label', title);
@@ -5105,24 +5133,49 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     </a>`;
   }
 
+  let detailRecommendationCatalogCache = null;
+  let detailRecommendationCatalogBuildQueued = false;
+
+  function buildDetailRecommendationCatalogCache() {
+    const catalog = document.getElementById('dynamicSections');
+    if (!catalog) return [];
+    const seen = new Set();
+    const items = [];
+    catalog.querySelectorAll('.video-card').forEach(card => {
+      const item = cardDataWithSection(card);
+      const id = String(item.itemId || item.title || '');
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      items.push(item);
+    });
+    detailRecommendationCatalogCache = items;
+    detailRecommendationCatalogBuildQueued = false;
+    return items;
+  }
+
+  function queueDetailRecommendationCatalogBuild() {
+    detailRecommendationCatalogCache = null;
+    if (detailRecommendationCatalogBuildQueued) return;
+    detailRecommendationCatalogBuildQueued = true;
+    runWhenMainThreadIsIdle(() => {
+      if (!document.getElementById('dynamicSections')) {
+        detailRecommendationCatalogBuildQueued = false;
+        return;
+      }
+      buildDetailRecommendationCatalogCache();
+    }, 1400);
+  }
+
+  window.addEventListener('be:catalog-ready', queueDetailRecommendationCatalogBuild);
+
   function renderDetailRecommendations(current) {
     const panel = document.getElementById('detailRecommendations');
     const moreRail = document.getElementById('detailMoreRail');
-    const catalog = document.getElementById('dynamicSections');
-    if (!panel || !moreRail || !catalog) return;
+    if (!panel || !moreRail) return;
 
     const currentId = String(current.itemId || current.title || '');
-    const uniqueById = items => items.filter((item, index, array) => {
-      const id = String(item.itemId || item.title || '');
-      return array.findIndex(other => String(other.itemId || other.title || '') === id) === index;
-    });
-
-                                                                                 
-                                                                                  
-                                                                      
-    const all = uniqueById(Array.from(catalog.querySelectorAll('.video-card'))
-      .map(cardDataWithSection)
-      .filter(item => String(item.itemId || item.title || '') !== currentId));
+    const all = (detailRecommendationCatalogCache || buildDetailRecommendationCatalogCache())
+      .filter(item => String(item.itemId || item.title || '') !== currentId);
     const recommendations = shuffleItems(all).slice(0, 9);
 
     moreRail.innerHTML = recommendations.length
@@ -10225,14 +10278,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       list.addEventListener('click', () => toggleDetailFavorite(list));
     }
 
-    renderDetailRecommendations(data);
-    openVideoComments({ ...data, recordId, itemId, collection: collection || 'videos' });
     if (featuredSection) featuredSection.hidden = true;
     if (randomFeaturedSection) randomFeaturedSection.hidden = true;
     document.body.classList.add('detail-page-active');
     section.hidden = false;
     section.scrollIntoView({ behavior: options.instant ? 'auto' : 'smooth', block: 'start' });
-    trackContentInteraction({ ...data, recordId, collection: collection || 'videos' }, 'view');
+
+    const enrichmentRouteId = itemId;
+    runAfterInteractionPaint(() => {
+      if (!document.body.classList.contains('detail-page-active')) return;
+      if (String(document.getElementById('contentDetailPlay')?.dataset.itemId || '') !== enrichmentRouteId) return;
+      renderDetailRecommendations(data);
+      openVideoComments({ ...data, recordId, itemId, collection: collection || 'videos' });
+      runWhenMainThreadIsIdle(() => {
+        if (!document.body.classList.contains('detail-page-active')) return;
+        trackContentInteraction({ ...data, recordId, collection: collection || 'videos' }, 'view');
+      }, 1200);
+    });
   }
 
   function closeContentDetail(scrollHome = false, updateRoute = true) {
@@ -11330,6 +11392,28 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     };
 
+    let catalogFilterTimer = 0;
+    let catalogFilterSequence = 0;
+    const scheduleCatalogFilter = (refreshFeatured = false, delay = 0) => {
+      const sequence = ++catalogFilterSequence;
+      if (catalogFilterTimer) {
+        window.clearTimeout(catalogFilterTimer);
+        catalogFilterTimer = 0;
+      }
+      const run = () => {
+        if (sequence !== catalogFilterSequence) return;
+        applyCatalogFilter(refreshFeatured);
+      };
+      if (delay > 0) {
+        catalogFilterTimer = window.setTimeout(() => {
+          catalogFilterTimer = 0;
+          run();
+        }, delay);
+        return;
+      }
+      runAfterInteractionPaint(run);
+    };
+
     const leaveAlbumsForCatalog = nextView => {
       const path = (() => {
         try {
@@ -11375,7 +11459,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         currentView = nextView;
         document.body.dataset.homeView = currentView;
         setActiveTab(button);
-        applyCatalogFilter(true);
+        scheduleCatalogFilter(true);
                                                                                   
         window.requestAnimationFrame(() => {
           window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
@@ -11405,7 +11489,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setActiveTab(logo);
       input.value = '';
       setSearchOpen(false);
-      applyCatalogFilter();
+      scheduleCatalogFilter();
     });
 
     toggle.addEventListener('click', () => setSearchOpen(!topbar.classList.contains('search-open')));
@@ -11413,7 +11497,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const rawQuery = String(input.value || '');
       if (isUserSearchQuery(rawQuery)) scheduleUserSearch(rawQuery);
       else closeUserSearchResults();
-      applyCatalogFilter();
+      scheduleCatalogFilter(false, 85);
     });
     input.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
@@ -11428,7 +11512,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (event.key === 'Escape' && topbar.classList.contains('search-open')) setSearchOpen(false);
       if (event.key === 'Escape' && !topbar.classList.contains('search-open')) closeContentDetail();
     });
-    window.addEventListener('be:catalog-ready', applyCatalogFilter);
+    window.addEventListener('be:catalog-ready', () => scheduleCatalogFilter(false, 30));
     window.addEventListener('popstate', event => {
       if (!isMobileCatalogViewport()) return;
       if (document.body.classList.contains('section-catalog-active') || document.body.classList.contains('detail-page-active')) return;
@@ -15508,12 +15592,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var requestId=++viewedProfileRequest;
       var ownHandle=beBackend.normalizeUsername((currentProfile&&currentProfile.username)||'');
       if(auth.currentUser&&ownHandle&&handle===ownHandle){
-        viewedProfile={...(currentProfile||{}),socialLinks:readProfileSocialLinks(auth.currentUser.uid),profileColor:normalizeProfileColorValue((currentProfile&&currentProfile.profileColor)||readProfileColorValue(auth.currentUser.uid,'profile')),avatarBorderColor:normalizeProfileColorValue((currentProfile&&currentProfile.avatarBorderColor)||readProfileColorValue(auth.currentUser.uid,'avatar-border')),favorites:readProfileFavorites(),lovedAlbums:readProfileLovedAlbums(),savedContents:(typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[])};
-        viewedProfileStatus='ready';
-        renderProfilePage();
-        refreshProfileLikeState();
-        refreshProfileFollowState(true);
-        window.scrollTo({top:0,behavior:'auto'});
+        viewedProfile=null;viewedProfileStatus='loading';renderProfilePage();window.scrollTo({top:0,behavior:'auto'});
+        var renderOwnProfile=function(){
+          if(requestId!==viewedProfileRequest||!document.body.classList.contains('profile-page-active'))return;
+          viewedProfile={...(currentProfile||{}),socialLinks:readProfileSocialLinks(auth.currentUser.uid),profileColor:normalizeProfileColorValue((currentProfile&&currentProfile.profileColor)||readProfileColorValue(auth.currentUser.uid,'profile')),avatarBorderColor:normalizeProfileColorValue((currentProfile&&currentProfile.avatarBorderColor)||readProfileColorValue(auth.currentUser.uid,'avatar-border')),favorites:readProfileFavorites(),lovedAlbums:readProfileLovedAlbums(),savedContents:(typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[])};
+          viewedProfileStatus='ready';renderProfilePage();refreshProfileLikeState();refreshProfileFollowState(true);
+        };
+        if(typeof window.BETVRunAfterInteractionPaint==='function')window.BETVRunAfterInteractionPaint(renderOwnProfile);else window.setTimeout(renderOwnProfile,0);
         return;
       }
       viewedProfile=null;viewedProfileStatus='loading';renderProfilePage();window.scrollTo({top:0,behavior:'auto'});
@@ -15537,16 +15622,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeNotificationMenus();
       toggleDropdown(false);
       profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');
-      settingsPage.hidden=true;settingsPage.setAttribute('hidden','');settingsPage.setAttribute('aria-hidden','true');settingsPage.dataset.renderReady='false';
+      settingsPage.dataset.renderReady='false';
       document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active');
       document.body.classList.add('settings-page-active');
-      try{renderSettingsPage();}catch(error){(void 0);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
-      settingsPage.dataset.renderReady='true';
       settingsPage.hidden=false;settingsPage.removeAttribute('hidden');settingsPage.setAttribute('aria-hidden','false');
-      if(window.BETVReleaseConfigPaint){
-        settingsPage.setAttribute('aria-busy','true');
-        Promise.resolve(window.BETVReleaseConfigPaint({container:settingsPage})).finally(function(){settingsPage.removeAttribute('aria-busy');});
-      }
+      if(!settingsPageBody.childElementCount)settingsPageBody.innerHTML='<div class="settings-page-opening" aria-hidden="true"></div>';
+      var finishSettingsRender=function(){
+        if(!document.body.classList.contains('settings-page-active'))return;
+        try{renderSettingsPage();}catch(error){(void 0);settingsPageBody.innerHTML='<div class="settings-card"><h2>Configurações</h2><p>Não foi possível carregar esta área. Atualize a página e tente novamente.</p></div>';}
+        settingsPage.dataset.renderReady='true';
+        if(window.BETVReleaseConfigPaint){
+          settingsPage.setAttribute('aria-busy','true');
+          Promise.resolve(window.BETVReleaseConfigPaint({container:settingsPage})).finally(function(){settingsPage.removeAttribute('aria-busy');});
+        }
+      };
+      var configBoot=document.documentElement.classList.contains('config-route-boot');
+      if(!configBoot&&typeof window.BETVRunAfterInteractionPaint==='function')window.BETVRunAfterInteractionPaint(finishSettingsRender);else finishSettingsRender();
       if(updateRoute!==false&&!isConfigRoute())pushPublicRoute('/config');
       window.scrollTo({top:0,behavior:'auto'});
     }

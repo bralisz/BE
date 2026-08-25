@@ -20447,3 +20447,11 @@ body.profile-page-active .profile-page-actions-row > [hidden]{display:none!impor
   body.profile-page-active .profile-page-actions-row > .profile-page-follow:not(.is-following){color:#1688ff!important}
   body.profile-page-active .profile-page-actions-row > .profile-page-follow.is-following{color:#fff!important}
 }
+
+.settings-page-opening{min-height:min(72vh,760px)}
+@supports (content-visibility:auto){
+  .detail-comments-group{
+    content-visibility:auto;
+    contain-intrinsic-size:480px;
+  }
+}
