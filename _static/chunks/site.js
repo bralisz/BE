@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-discord-mfa-password-only-v42';
+  var STATIC_REV='20260825-discord-session-guard-v43';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -1117,7 +1117,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const MFA_SUPABASE_SESSION_RESUME_TTL_MS = 15 * 60 * 1000;
   const DISCORD_PERSISTED_SESSION_KEY = 'beDiscordPersistedSession:v1';
   const DISCORD_PERSISTED_SESSION_TTL_MS = 45 * 24 * 60 * 60 * 1000;
+  const EXPLICIT_SIGNOUT_GUARD_KEY = 'beExplicitSignOut:v1';
   let lastKnownSupabaseSession = null;
+  let discordUnexpectedSignOutRecovery = null;
+
+  function markExplicitSignOut() {
+    try { sessionStorage.setItem(EXPLICIT_SIGNOUT_GUARD_KEY, String(Date.now())); } catch (_) {}
+  }
+
+  function clearExplicitSignOutGuard() {
+    try { sessionStorage.removeItem(EXPLICIT_SIGNOUT_GUARD_KEY); } catch (_) {}
+  }
+
+  function explicitSignOutRequested() {
+    try {
+      const startedAt = Number(sessionStorage.getItem(EXPLICIT_SIGNOUT_GUARD_KEY) || 0);
+      if (!startedAt) return false;
+      if (Date.now() - startedAt > 30000) {
+        clearExplicitSignOutGuard();
+        return false;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   function sessionUsesDiscord(session) {
     try {
@@ -1174,6 +1198,53 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     } catch (_) {
       clearDiscordPersistedSession();
       return null;
+    }
+  }
+
+  function discordSessionRecoveryExpected(previousUser = currentUser) {
+    try {
+      if (localStorage.getItem('beDiscordLoginPending')) return true;
+      if (storedDiscordPersistedSessionCandidate()) return true;
+      const stable = JSON.parse(localStorage.getItem('beDiscordSessionStable') || 'null');
+      if (stable && Number(stable.confirmedAt || 0) && Date.now() - Number(stable.confirmedAt || 0) < 15 * 60 * 1000) return true;
+    } catch (_) {}
+    try {
+      const raw = previousUser && (previousUser.raw || previousUser);
+      return Boolean(raw && sessionUsesDiscord({ user: raw }));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function recoverUnexpectedDiscordSignOut(previousUser) {
+    if (discordUnexpectedSignOutRecovery) return discordUnexpectedSignOutRecovery;
+    discordUnexpectedSignOutRecovery = (async () => {
+      const delays = [0, 180, 500, 1100, 2200];
+      for (const delay of delays) {
+        if (delay) await wait(delay);
+
+        try {
+          const { data } = await supabaseClient.auth.getSession();
+          if (data && data.session && data.session.user) {
+            lastKnownSupabaseSession = data.session;
+            rememberDiscordPersistedSession(data.session);
+            return data.session;
+          }
+        } catch (_) {}
+
+        const candidate = storedDiscordPersistedSessionCandidate();
+        if (candidate) {
+          const restored = await setSupabaseSessionCandidate(candidate);
+          if (restored && restored.user) return restored;
+        }
+      }
+      return null;
+    })();
+
+    try {
+      return await discordUnexpectedSignOutRecovery;
+    } finally {
+      discordUnexpectedSignOutRecovery = null;
     }
   }
 
@@ -3173,8 +3244,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },
     async signOut() {
       try{if(window.BETVAccountDevices&&typeof window.BETVAccountDevices.disconnectCurrent==='function')await window.BETVAccountDevices.disconnectCurrent();}catch(_){ }
+      markExplicitSignOut();
       const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
-      if (error) throw mapAuthError(error);
+      if (error) { clearExplicitSignOutGuard(); throw mapAuthError(error); }
       currentUser = null;
       profileCache.clear();
       preferenceCache.clear();
@@ -3185,6 +3257,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       localStorage.removeItem('beAuthExpected');
       localStorage.removeItem('beSessionUid');
       try { localStorage.removeItem('beDiscordSessionStable'); } catch (_) {}
+      clearDiscordPersistedSession();
+      clearMfaSupabaseSession();
+      clearExplicitSignOutGuard();
       notify();
     },
     async getAuthenticatedUser() {
@@ -3549,7 +3624,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
                                                                                 
                                                                         
+      clearDiscordPersistedSession();
+      markExplicitSignOut();
       try { await supabaseClient.auth.signOut({ scope: 'local' }); } catch (_) {}
+      clearExplicitSignOutGuard();
       try {
         const storageKeys = [];
         for (let index = 0; index < localStorage.length; index += 1) {
@@ -3612,11 +3690,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                                  
                                                                      
       supabaseClient.auth.onAuthStateChange((event, session) => {
+        const explicitSignOutEvent = event === 'SIGNED_OUT' && explicitSignOutRequested();
         if (session && session.access_token) {
           lastKnownSupabaseSession = session;
           rememberDiscordPersistedSession(session);
         }
-        if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT' && explicitSignOutEvent) {
           clearMfaSupabaseSession();
           clearDiscordPersistedSession();
         }
@@ -3630,6 +3709,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
         window.setTimeout(async () => {
           if (event === 'SIGNED_OUT') {
+            const previousUser = currentUser;
+            if (!explicitSignOutEvent && discordSessionRecoveryExpected(previousUser)) {
+              try {
+                const recoveredSession = await recoverUnexpectedDiscordSignOut(previousUser);
+                const recoveredUser = normalizeUser(recoveredSession && recoveredSession.user || null);
+                if (recoveredUser) {
+                  currentUser = await hydratePrivileges(recoveredUser);
+                  rememberDiscordPersistedSession(recoveredSession);
+                  notify();
+                  return;
+                }
+              } catch (_) {}
+            }
+            clearMfaSupabaseSession();
+            clearDiscordPersistedSession();
             currentUser = null;
             privilegeCache.clear();
             privilegeInFlight.clear();

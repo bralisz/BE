@@ -9,6 +9,24 @@
   const listeners = new Set();
   let currentUser = null;
   let supabaseClient = null;
+  const EXPLICIT_SIGNOUT_GUARD_KEY = 'beExplicitSignOut:v1';
+
+  function markExplicitSignOut() {
+    try { sessionStorage.setItem(EXPLICIT_SIGNOUT_GUARD_KEY, String(Date.now())); } catch (_) {}
+  }
+
+  function clearExplicitSignOutGuard() {
+    try { sessionStorage.removeItem(EXPLICIT_SIGNOUT_GUARD_KEY); } catch (_) {}
+  }
+
+  function explicitSignOutRequested() {
+    try {
+      const startedAt = Number(sessionStorage.getItem(EXPLICIT_SIGNOUT_GUARD_KEY) || 0);
+      if (!startedAt) return false;
+      if (Date.now() - startedAt > 30000) { clearExplicitSignOutGuard(); return false; }
+      return true;
+    } catch (_) { return false; }
+  }
   const PROFILE_CACHE_TTL_MS = 15000;
   const PREFERENCE_CACHE_TTL_MS = 10000;
   const profileCache = new Map();
@@ -75,7 +93,7 @@
   }
 
   function oauthRedirectUrl(destination = 'home') {
-    const url = new URL(location.pathname || '/', location.origin);
+    const url = new URL('/auth/callback', location.origin);
     url.searchParams.set('auth_callback', String(destination || 'home'));
     return url.href;
   }
@@ -163,6 +181,28 @@
       role: trustedAdminClaim || raw.role === 'admin' ? 'admin' : 'member',
       raw
     };
+  }
+
+  function userUsesDiscord(user) {
+    try {
+      const raw = user && (user.raw || user) || {};
+      const app = raw.app_metadata || {};
+      if (String(app.provider || '').toLowerCase() === 'discord') return true;
+      const providers = Array.isArray(app.providers) ? app.providers : [];
+      if (providers.some(provider => String(provider || '').toLowerCase() === 'discord')) return true;
+      const identities = Array.isArray(raw.identities) ? raw.identities : [];
+      return identities.some(identity => String(identity && identity.provider || '').toLowerCase() === 'discord');
+    } catch (_) { return false; }
+  }
+
+  function discordRecoveryExpected(user = currentUser) {
+    try {
+      if (localStorage.getItem('beDiscordLoginPending')) return true;
+      if (localStorage.getItem('beDiscordPersistedSession:v1')) return true;
+      const stable = JSON.parse(localStorage.getItem('beDiscordSessionStable') || 'null');
+      if (stable && Number(stable.confirmedAt || 0) && Date.now() - Number(stable.confirmedAt || 0) < 15 * 60 * 1000) return true;
+    } catch (_) {}
+    return userUsesDiscord(user);
   }
 
   async function hydratePrivileges(user) {
@@ -1501,8 +1541,9 @@
       return { user: signedUpUser, session: result.session, needsEmailConfirmation: Boolean(result.user && !result.session) };
     },
     async signOut() {
-      const { error } = await supabaseClient.auth.signOut();
-      if (error) throw mapAuthError(error);
+      markExplicitSignOut();
+      const { error } = await supabaseClient.auth.signOut({ scope: 'local' });
+      if (error) { clearExplicitSignOutGuard(); throw mapAuthError(error); }
       currentUser = null;
       profileCache.clear();
       preferenceCache.clear();
@@ -1512,6 +1553,9 @@
       userSyncChannels.clear();
       localStorage.removeItem('beAuthExpected');
       localStorage.removeItem('beSessionUid');
+      localStorage.removeItem('beDiscordSessionStable');
+      localStorage.removeItem('beDiscordPersistedSession:v1');
+      clearExplicitSignOutGuard();
       notify();
     },
     async getAuthenticatedUser() {
@@ -1714,13 +1758,24 @@
       // emitido durante o retorno do Discord/Google. Eventos vazios nunca apagam
       // uma sessão já confirmada; apenas SIGNED_OUT encerra a conta.
       supabaseClient.auth.onAuthStateChange((event, session) => {
+        const explicitSignOutEvent = event === 'SIGNED_OUT' && explicitSignOutRequested();
         const eventUser = normalizeUser(session?.user || null);
         if (session?.access_token && supabaseClient?.realtime?.setAuth) {
           Promise.resolve(supabaseClient.realtime.setAuth(session.access_token)).catch(() => {});
         }
         window.setTimeout(async () => {
           if (event === 'SIGNED_OUT') {
+            const previousUser = currentUser;
+            if (!explicitSignOutEvent && discordRecoveryExpected(previousUser)) {
+              try {
+                const recoveredUser = await resolveSupabaseUser(null);
+                if (recoveredUser) { currentUser = recoveredUser; notify(); return; }
+              } catch (_) {}
+            }
             currentUser = null;
+            if (explicitSignOutEvent) {
+              try { localStorage.removeItem('beDiscordPersistedSession:v1'); } catch (_) {}
+            }
             notify();
             return;
           }
