@@ -19527,3 +19527,923 @@ body.profile-page-active .profile-page-info{transform:translateY(-10px)}
   .profile-relationships-search{margin:0 18px 12px}
   .profile-relationships-list{padding:0 10px 12px}
 }
+
+/* Profile desktop identity alignment: name / tags+socials / follow stats */
+@media (min-width:761px){
+  body.profile-page-active .profile-page-info{
+    align-items:center!important;
+  }
+  body.profile-page-active .profile-page-copy{
+    align-self:center!important;
+    align-content:center!important;
+    padding-bottom:0!important;
+    row-gap:7px!important;
+  }
+  body.profile-page-active .profile-page-name-row{
+    order:1!important;
+    flex:0 0 100%!important;
+    width:100%!important;
+  }
+  body.profile-page-active .profile-page-award-tags{
+    order:2!important;
+  }
+  body.profile-page-active .profile-page-socials{
+    order:2!important;
+  }
+  body.profile-page-active .profile-page-follow-stats{
+    order:3!important;
+    flex:0 0 100%!important;
+    width:100%!important;
+    margin:0!important;
+    min-height:22px!important;
+  }
+  body.profile-page-active .profile-page-handle,
+  body.profile-page-active .profile-page-meta{
+    order:4!important;
+    flex:0 0 100%!important;
+    width:100%!important;
+  }
+}
+
+
+/* Follow actions v2: keep follow visually identical in size/row and enforce action order. */
+body.profile-page-active .profile-page-follow{
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  isolation:isolate!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  background:rgba(21,22,24,.82)!important;
+  box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.055)!important;
+  -webkit-backdrop-filter:blur(14px) saturate(120%)!important;
+  backdrop-filter:blur(14px) saturate(120%)!important;
+}
+body.profile-page-active .profile-page-follow:not(.is-following){color:#1688ff!important}
+body.profile-page-active .profile-page-follow.is-following{color:#fff!important;background:rgba(21,22,24,.82)!important}
+body.profile-page-active .profile-page-follow:hover{
+  background:rgba(42,43,46,.92)!important;
+  border-color:rgba(255,255,255,.26)!important;
+  transform:scale(1.045)!important;
+}
+body.profile-page-active .profile-page-follow:active{transform:scale(.94)!important}
+body.profile-page-active .profile-page-follow svg{display:block!important;margin:auto!important}
+
+@media (min-width:761px){
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-follow,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-like,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-share,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-home,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-more{
+    top:auto!important;
+    bottom:22px!important;
+    width:var(--profile-desktop-action-size-final,48px)!important;
+    height:var(--profile-desktop-action-size-final,48px)!important;
+    min-width:var(--profile-desktop-action-size-final,48px)!important;
+    min-height:var(--profile-desktop-action-size-final,48px)!important;
+  }
+  /* left -> right: follow, heart, share, home, more */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-more{
+    right:var(--profile-desktop-action-edge-final,clamp(24px,3vw,46px))!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-home{
+    right:calc(var(--profile-desktop-action-edge-final,clamp(24px,3vw,46px)) + (var(--profile-desktop-action-size-final,48px) + var(--profile-desktop-action-gap-final,10px)) * 1)!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-share{
+    right:calc(var(--profile-desktop-action-edge-final,clamp(24px,3vw,46px)) + (var(--profile-desktop-action-size-final,48px) + var(--profile-desktop-action-gap-final,10px)) * 2)!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-like{
+    right:calc(var(--profile-desktop-action-edge-final,clamp(24px,3vw,46px)) + (var(--profile-desktop-action-size-final,48px) + var(--profile-desktop-action-gap-final,10px)) * 3)!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-follow{
+    right:calc(var(--profile-desktop-action-edge-final,clamp(24px,3vw,46px)) + (var(--profile-desktop-action-size-final,48px) + var(--profile-desktop-action-gap-final,10px)) * 4)!important;
+  }
+  body.profile-page-active .profile-page-follow svg{width:21px!important;height:21px!important}
+}
+
+@media (max-width:760px){
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-follow,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-like,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-share,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-home,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-more{
+    top:var(--profile-mobile-action-top,calc(12px + env(safe-area-inset-top)))!important;
+    width:var(--profile-mobile-action-size,42px)!important;
+    height:var(--profile-mobile-action-size,42px)!important;
+    min-width:var(--profile-mobile-action-size,42px)!important;
+    min-height:var(--profile-mobile-action-size,42px)!important;
+  }
+  /* On mobile the follow icon sits immediately to the left of the heart. */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-more{
+    right:var(--profile-mobile-action-edge,12px)!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-home{
+    right:calc(var(--profile-mobile-action-edge,12px) + (var(--profile-mobile-action-size,42px) + var(--profile-mobile-action-gap,8px)) * 1)!important;
+    left:auto!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-share{
+    right:calc(var(--profile-mobile-action-edge,12px) + (var(--profile-mobile-action-size,42px) + var(--profile-mobile-action-gap,8px)) * 2)!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-like{
+    right:calc(var(--profile-mobile-action-edge,12px) + (var(--profile-mobile-action-size,42px) + var(--profile-mobile-action-gap,8px)) * 3)!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-follow{
+    right:calc(var(--profile-mobile-action-edge,12px) + (var(--profile-mobile-action-size,42px) + var(--profile-mobile-action-gap,8px)) * 4)!important;
+  }
+  body.profile-page-active .profile-page-follow svg{width:20px!important;height:20px!important}
+}
+
+/* Profile actions v3: one aligned row, fixed order and hidden behind relationship panel. */
+body.profile-page-active .profile-page-actions-row{
+  position:absolute!important;
+  z-index:6!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  right:clamp(24px,3vw,46px)!important;
+  bottom:22px!important;
+  width:auto!important;
+  height:auto!important;
+}
+body.profile-page-active .profile-page-actions-row > .profile-page-follow,
+body.profile-page-active .profile-page-actions-row > .profile-page-like,
+body.profile-page-active .profile-page-actions-row > .profile-page-share,
+body.profile-page-active .profile-page-actions-row > .profile-page-home,
+body.profile-page-active .profile-page-actions-row > .profile-page-more{
+  position:relative!important;
+  inset:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  left:auto!important;
+  flex:0 0 48px!important;
+  width:48px!important;
+  height:48px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  margin:0!important;
+  transform:none!important;
+  border-radius:50%!important;
+  vertical-align:middle!important;
+}
+body.profile-page-active .profile-page-actions-row > .profile-page-follow{
+  background:rgba(21,22,24,.82)!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.055)!important;
+}
+body.profile-page-active .profile-page-actions-row > .profile-page-follow:hover{transform:scale(1.045)!important}
+body.profile-page-active .profile-page-actions-row > .profile-page-follow:active{transform:scale(.94)!important}
+body.profile-page-active .profile-page-actions-row > .profile-page-follow[hidden]{display:none!important}
+body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-follow,
+body.profile-page-active.profile-viewer-guest .profile-page-actions-row > .profile-page-follow{display:none!important}
+/* While Followers/Following is open, no profile action may float above the sheet/backdrop. */
+body.profile-relationships-open .profile-page-actions-row,
+body.profile-relationships-open .profile-page-likes-received,
+body.profile-relationships-open .profile-page-actions-menu{
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.profile-relationships-header > div > p{display:none!important}
+.profile-relationships-header{align-items:center!important}
+
+@media (max-width:760px){
+  body.profile-page-active .profile-page-actions-row{
+    top:var(--profile-mobile-action-top,calc(12px + env(safe-area-inset-top)))!important;
+    right:var(--profile-mobile-action-edge,12px)!important;
+    bottom:auto!important;
+    gap:8px!important;
+  }
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more{
+    flex-basis:42px!important;
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+  }
+}
+
+/* Profile actions v4 — mobile: Home on the left, contextual actions on the right. */
+@media (max-width:760px){
+  body.profile-page-active .profile-page-actions-row{
+    left:var(--profile-mobile-action-edge,12px)!important;
+    right:var(--profile-mobile-action-edge,12px)!important;
+    width:auto!important;
+    justify-content:flex-end!important;
+    gap:8px!important;
+  }
+
+  /* Home is always isolated on the left side on mobile. */
+  body.profile-page-active .profile-page-actions-row > .profile-page-home{
+    position:absolute!important;
+    left:0!important;
+    right:auto!important;
+    top:0!important;
+    bottom:auto!important;
+    margin:0!important;
+  }
+
+  /* Visiting another profile: Follow → Like → Share on the right. */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow{
+    display:grid!important;
+    order:1!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-like{
+    display:grid!important;
+    order:2!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-share{
+    display:grid!important;
+    order:3!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-more{
+    display:none!important;
+  }
+
+  /* Own profile: Share → More on the right. */
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-like{
+    display:none!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-share{
+    display:grid!important;
+    order:1!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-more{
+    display:grid!important;
+    order:2!important;
+  }
+
+  /* Guest visiting a profile: Home left, Share right. */
+  body.profile-page-active.profile-viewer-guest .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active.profile-viewer-guest .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active.profile-viewer-guest .profile-page-actions-row > .profile-page-more{
+    display:none!important;
+  }
+  body.profile-page-active.profile-viewer-guest .profile-page-actions-row > .profile-page-share{
+    display:grid!important;
+    order:1!important;
+  }
+}
+
+/* Profile actions v5 — final desktop order + logged-in mobile account menu fix. */
+.mobile-account-popover [hidden]{display:none!important}
+
+@media (min-width:761px){
+  body.profile-page-active .profile-page-actions-row{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:10px!important;
+  }
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow{order:1!important}
+  body.profile-page-active .profile-page-actions-row > .profile-page-like{order:2!important}
+  body.profile-page-active .profile-page-actions-row > .profile-page-share{order:3!important}
+  body.profile-page-active .profile-page-actions-row > .profile-page-home{order:4!important}
+  body.profile-page-active .profile-page-actions-row > .profile-page-more{order:5!important}
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more{
+    position:relative!important;
+    inset:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    margin:0!important;
+    transform:none!important;
+    flex:0 0 48px!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+  }
+}
+
+
+/* Profile actions v6 — final desktop order/alignment exactly as requested. */
+@media (min-width:761px){
+  body.profile-page-active .profile-page-actions-row{
+    position:absolute!important;
+    right:clamp(24px,3vw,46px)!important;
+    bottom:22px!important;
+    left:auto!important;
+    width:auto!important;
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:10px!important;
+  }
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more{
+    position:relative!important;
+    inset:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    margin:0!important;
+    transform:none!important;
+    order:initial!important;
+    display:grid!important;
+    place-items:center!important;
+    flex:0 0 48px!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow{order:1!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-like{order:2!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-share{order:3!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-home{order:4!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-more{order:5!important}
+}
+
+
+/* Profile actions v7 — move desktop action row lower on the banner. */
+@media (min-width:761px){
+  body.profile-page-active .profile-page-actions-row{
+    bottom:8px!important;
+  }
+}
+
+
+/* Profile actions v8 — hard-lock desktop row alignment + likes counter above the row. */
+@media (min-width:761px){
+  body.profile-page-active .profile-page-actions-row{
+    position:absolute!important;
+    right:clamp(24px,3vw,46px)!important;
+    bottom:8px!important;
+    left:auto!important;
+    top:auto!important;
+    width:auto!important;
+    height:48px!important;
+    display:flex!important;
+    flex-flow:row nowrap!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:10px!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more{
+    position:static!important;
+    inset:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    align-self:center!important;
+    flex:0 0 48px!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    max-width:48px!important;
+    max-height:48px!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+    translate:none!important;
+    display:grid!important;
+    place-items:center!important;
+    box-sizing:border-box!important;
+  }
+
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow{order:1!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-like{order:2!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-share{order:3!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-home{order:4!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-more{order:5!important}
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more svg{
+    display:block!important;
+    margin:0!important;
+  }
+
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-likes-received{
+    right:clamp(24px,3vw,46px)!important;
+    bottom:66px!important;
+    width:280px!important;
+    max-width:280px!important;
+    text-align:center!important;
+    line-height:1.2!important;
+  }
+}
+
+
+/* Profile mobile v9 — visiting another user: Follow → Like → Share → Home only. */
+@media (max-width:760px){
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow{
+    display:grid!important;
+    order:1!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-like{
+    display:grid!important;
+    order:2!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-share{
+    display:grid!important;
+    order:3!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-home{
+    display:grid!important;
+    order:4!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-more{
+    display:none!important;
+  }
+
+  /* Raise the identity block slightly so followers/following sit higher on the banner. */
+  body.profile-page-active .profile-page-info{
+    transform:translateY(-16px)!important;
+  }
+  body.profile-page-active .profile-page-follow-stats{
+    margin-top:2px!important;
+    margin-bottom:0!important;
+  }
+}
+
+
+/* Profile actions v10 — desktop group locked as one single control row.
+   Follow/unfollow is part of the same group and never positioned separately. */
+@media (min-width:761px){
+  body.profile-page-active .profile-page-actions-row{
+    --betv-profile-action-size:48px;
+    --betv-profile-action-gap:10px;
+    position:absolute!important;
+    top:auto!important;
+    right:clamp(24px,3vw,46px)!important;
+    bottom:22px!important;
+    left:auto!important;
+    width:auto!important;
+    height:var(--betv-profile-action-size)!important;
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:var(--betv-profile-action-gap)!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more{
+    position:relative!important;
+    inset:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    align-self:center!important;
+    justify-self:auto!important;
+    flex:0 0 var(--betv-profile-action-size)!important;
+    width:var(--betv-profile-action-size)!important;
+    height:var(--betv-profile-action-size)!important;
+    min-width:var(--betv-profile-action-size)!important;
+    min-height:var(--betv-profile-action-size)!important;
+    max-width:var(--betv-profile-action-size)!important;
+    max-height:var(--betv-profile-action-size)!important;
+    margin:0!important;
+    padding:0!important;
+    box-sizing:border-box!important;
+    border-radius:50%!important;
+    border:1px solid rgba(255,255,255,.14)!important;
+    background:rgba(21,22,24,.82)!important;
+    box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.055)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(120%)!important;
+    backdrop-filter:blur(14px) saturate(120%)!important;
+    display:grid!important;
+    place-items:center!important;
+    overflow:hidden!important;
+    translate:none!important;
+    transform:none!important;
+    vertical-align:middle!important;
+    transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s ease,border-color .2s ease,box-shadow .2s ease!important;
+  }
+
+  /* Fixed left-to-right order: Follow → Heart → Share → Home → More. */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow{order:1!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-like{order:2!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-share{order:3!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-home{order:4!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-more{order:5!important}
+
+  /* Follow keeps only its state color; the button shell/effect is identical to the group. */
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow:not(.is-following){
+    color:#1688ff!important;
+  }
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow.is-following{
+    color:#fff!important;
+    background:rgba(21,22,24,.82)!important;
+    border-color:rgba(255,255,255,.14)!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow:hover,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like:hover,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share:hover,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home:hover,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more:hover{
+    background:rgba(42,43,46,.92)!important;
+    border-color:rgba(255,255,255,.26)!important;
+    transform:scale(1.045)!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow:active,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like:active,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share:active,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home:active,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more:active{
+    transform:scale(.94)!important;
+    transition-duration:.09s!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more svg{
+    display:block!important;
+    width:21px!important;
+    height:21px!important;
+    margin:0!important;
+    align-self:center!important;
+    justify-self:center!important;
+    transform:none!important;
+    transition:transform .2s cubic-bezier(.2,.8,.2,1)!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow:hover svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like:hover svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share:hover svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home:hover svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more:hover svg{
+    transform:scale(1.06)!important;
+  }
+
+  /* Likes counter centered above the entire 5-button group. */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-likes-received{
+    position:absolute!important;
+    top:auto!important;
+    right:clamp(24px,3vw,46px)!important;
+    bottom:78px!important;
+    left:auto!important;
+    width:calc((var(--betv-profile-action-size) * 5) + (var(--betv-profile-action-gap) * 4))!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0!important;
+    text-align:center!important;
+    line-height:1.2!important;
+    white-space:nowrap!important;
+    pointer-events:none!important;
+  }
+}
+
+
+/* Profile actions v11 — final responsive visibility/order rules. */
+@media (min-width:761px){
+  /* Other users: Follow → Like → Share → Home. No more button. */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow{
+    display:grid!important;order:1!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-like{
+    display:grid!important;order:2!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-share{
+    display:grid!important;order:3!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-home{
+    display:grid!important;order:4!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-more{
+    display:none!important;
+  }
+
+  /* Own profile: Share → Home → More. */
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-like{
+    display:none!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-share{
+    display:grid!important;order:1!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-home{
+    display:grid!important;order:2!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-more{
+    display:grid!important;order:3!important;
+  }
+
+  /* Center likes label above the visible action group. */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-likes-received{
+    width:calc((var(--betv-profile-action-size,48px) * 4) + (var(--betv-profile-action-gap,10px) * 3))!important;
+  }
+}
+
+@media (max-width:760px){
+  body.profile-page-active .profile-page-actions-row{
+    position:absolute!important;
+    top:calc(14px + env(safe-area-inset-top))!important;
+    left:14px!important;
+    right:14px!important;
+    bottom:auto!important;
+    width:auto!important;
+    height:44px!important;
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:8px!important;
+    margin:0!important;
+    padding:0!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more{
+    position:relative!important;
+    inset:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    flex:0 0 44px!important;
+    width:44px!important;
+    height:44px!important;
+    min-width:44px!important;
+    min-height:44px!important;
+    max-width:44px!important;
+    max-height:44px!important;
+    margin:0!important;
+    transform:none!important;
+  }
+
+  /* Home is always isolated at top-left. */
+  body.profile-page-active .profile-page-actions-row > .profile-page-home{
+    position:absolute!important;
+    left:0!important;
+    top:0!important;
+    right:auto!important;
+    bottom:auto!important;
+    display:grid!important;
+  }
+
+  /* Other users: Follow → Like → Share on the right. */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow{
+    display:grid!important;order:1!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-like{
+    display:grid!important;order:2!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-share{
+    display:grid!important;order:3!important;
+  }
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-more{
+    display:none!important;
+  }
+
+  /* Own profile: Share → More on the right. */
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-like{
+    display:none!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-share{
+    display:grid!important;order:1!important;
+  }
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-more{
+    display:grid!important;order:2!important;
+  }
+
+  /* Guest: only Home + Share. */
+  body.profile-page-active.profile-viewer-guest .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active.profile-viewer-guest .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active.profile-viewer-guest .profile-page-actions-row > .profile-page-more{
+    display:none!important;
+  }
+  body.profile-page-active.profile-viewer-guest .profile-page-actions-row > .profile-page-share{
+    display:grid!important;order:1!important;
+  }
+}
+
+/* Profile actions — final locked responsive layout (2026-08-25)
+   Desktop other: Follow > Like > Share > Home
+   Desktop own: Share > Home > More
+   Mobile: Home fixed left; contextual actions fixed right. */
+
+/* hidden always wins over the shared action shell */
+body.profile-page-active .profile-page-actions-row > [hidden]{display:none!important}
+
+@media (min-width:761px){
+  body.profile-page-active .profile-page-actions-row{
+    --betv-profile-action-size:48px;
+    --betv-profile-action-gap:10px;
+    position:absolute!important;
+    top:auto!important;
+    right:clamp(24px,3vw,46px)!important;
+    bottom:28px!important;
+    left:auto!important;
+    width:auto!important;
+    height:var(--betv-profile-action-size)!important;
+    display:flex!important;
+    flex-flow:row nowrap!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:var(--betv-profile-action-gap)!important;
+    margin:0!important;
+    padding:0!important;
+    transform:none!important;
+    z-index:10022!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more{
+    position:relative!important;
+    inset:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    order:initial!important;
+    align-self:center!important;
+    flex:0 0 var(--betv-profile-action-size)!important;
+    width:var(--betv-profile-action-size)!important;
+    height:var(--betv-profile-action-size)!important;
+    min-width:var(--betv-profile-action-size)!important;
+    min-height:var(--betv-profile-action-size)!important;
+    max-width:var(--betv-profile-action-size)!important;
+    max-height:var(--betv-profile-action-size)!important;
+    margin:0!important;
+    padding:0!important;
+    display:grid!important;
+    place-items:center!important;
+    box-sizing:border-box!important;
+    border-radius:50%!important;
+    border:1px solid rgba(255,255,255,.14)!important;
+    background:rgba(21,22,24,.82)!important;
+    color:#fff;
+    box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.055)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(120%)!important;
+    backdrop-filter:blur(14px) saturate(120%)!important;
+    transform:none!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more svg{
+    display:block!important;
+    width:21px!important;
+    height:21px!important;
+    margin:0!important;
+    transform:none!important;
+  }
+
+  /* Follow has the same shell/effect as the group; only the glyph indicates state. */
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow:not(.is-following){color:#1688ff!important}
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow.is-following{color:#fff!important}
+
+  /* DOM order is already Follow, Like, Share, Home, More. These rules lock visibility. */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-home{display:grid!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-more{display:none!important}
+
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-like{display:none!important}
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-home,
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-more{display:grid!important}
+
+  /* Likes label sits above the action group, like the reference layout. */
+  body.profile-page-active .profile-page-likes-received{
+    top:auto!important;
+    right:clamp(24px,3vw,46px)!important;
+    bottom:86px!important;
+    left:auto!important;
+    margin:0!important;
+    text-align:right!important;
+    white-space:nowrap!important;
+  }
+}
+
+@media (max-width:760px){
+  body.profile-page-active .profile-page-actions-row{
+    --betv-profile-mobile-action-size:44px;
+    --betv-profile-mobile-action-gap:8px;
+    position:absolute!important;
+    top:calc(14px + env(safe-area-inset-top))!important;
+    left:14px!important;
+    right:14px!important;
+    bottom:auto!important;
+    width:auto!important;
+    height:var(--betv-profile-mobile-action-size)!important;
+    display:flex!important;
+    flex-flow:row nowrap!important;
+    align-items:center!important;
+    justify-content:flex-end!important;
+    gap:var(--betv-profile-mobile-action-gap)!important;
+    margin:0!important;
+    padding:0!important;
+    z-index:10022!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more{
+    position:relative!important;
+    inset:auto!important;
+    top:auto!important;
+    right:auto!important;
+    bottom:auto!important;
+    left:auto!important;
+    order:initial!important;
+    flex:0 0 var(--betv-profile-mobile-action-size)!important;
+    width:var(--betv-profile-mobile-action-size)!important;
+    height:var(--betv-profile-mobile-action-size)!important;
+    min-width:var(--betv-profile-mobile-action-size)!important;
+    min-height:var(--betv-profile-mobile-action-size)!important;
+    max-width:var(--betv-profile-mobile-action-size)!important;
+    max-height:var(--betv-profile-mobile-action-size)!important;
+    margin:0!important;
+    padding:0!important;
+    display:grid!important;
+    place-items:center!important;
+    box-sizing:border-box!important;
+    border-radius:50%!important;
+    border:1px solid rgba(255,255,255,.14)!important;
+    background:rgba(21,22,24,.82)!important;
+    box-shadow:0 10px 24px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.055)!important;
+    transform:none!important;
+  }
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-like svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-share svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-home svg,
+  body.profile-page-active .profile-page-actions-row > .profile-page-more svg{
+    width:20px!important;
+    height:20px!important;
+    margin:0!important;
+    transform:none!important;
+  }
+
+  /* Home is always fixed on the upper-left. */
+  body.profile-page-active .profile-page-actions-row > .profile-page-home{
+    position:absolute!important;
+    top:0!important;
+    left:0!important;
+    right:auto!important;
+    bottom:auto!important;
+    display:grid!important;
+  }
+
+  /* Other profile: Follow > Like > Share on upper-right. */
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-like,
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-share{display:grid!important}
+  body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-more{display:none!important}
+
+  /* Own profile: Share > More on upper-right. */
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-follow,
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-like{display:none!important}
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-share,
+  body.profile-page-active.profile-view-own .profile-page-actions-row > .profile-page-more{display:grid!important}
+
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow:not(.is-following){color:#1688ff!important}
+  body.profile-page-active .profile-page-actions-row > .profile-page-follow.is-following{color:#fff!important}
+}
