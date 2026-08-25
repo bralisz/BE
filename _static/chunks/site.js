@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-discord-all-clients-stable-home-v40';
+  var STATIC_REV='20260825-discord-persist-session-v41';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -1115,7 +1115,67 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   const MFA_SUPABASE_SESSION_RESUME_KEY = 'beMfaSupabaseSessionResume:v1';
   const MFA_SUPABASE_SESSION_RESUME_TTL_MS = 15 * 60 * 1000;
+  const DISCORD_PERSISTED_SESSION_KEY = 'beDiscordPersistedSession:v1';
+  const DISCORD_PERSISTED_SESSION_TTL_MS = 45 * 24 * 60 * 60 * 1000;
   let lastKnownSupabaseSession = null;
+
+  function sessionUsesDiscord(session) {
+    try {
+      const user = session && session.user || null;
+      if (!user) return false;
+      const app = user.app_metadata || {};
+      if (String(app.provider || '').toLowerCase() === 'discord') return true;
+      const providers = Array.isArray(app.providers) ? app.providers : [];
+      if (providers.some(provider => String(provider || '').toLowerCase() === 'discord')) return true;
+      const identities = Array.isArray(user.identities) ? user.identities : [];
+      return identities.some(identity => String(identity && identity.provider || '').toLowerCase() === 'discord');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function rememberDiscordPersistedSession(session) {
+    try {
+      if (!sessionUsesDiscord(session)) return;
+      const accessToken = String(session && session.access_token || '').trim();
+      const refreshToken = String(session && session.refresh_token || '').trim();
+      const userId = String(session && session.user && session.user.id || '').trim();
+      if (!accessToken || !refreshToken || !userId) return;
+      localStorage.setItem(DISCORD_PERSISTED_SESSION_KEY, JSON.stringify({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        user_id: userId,
+        saved_at: Date.now()
+      }));
+    } catch (_) {}
+  }
+
+  function clearDiscordPersistedSession() {
+    try { localStorage.removeItem(DISCORD_PERSISTED_SESSION_KEY); } catch (_) {}
+  }
+
+  function storedDiscordPersistedSessionCandidate() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(DISCORD_PERSISTED_SESSION_KEY) || 'null');
+      if (!parsed) return null;
+      const savedAt = Number(parsed.saved_at || 0);
+      if (!savedAt || Date.now() - savedAt > DISCORD_PERSISTED_SESSION_TTL_MS) {
+        clearDiscordPersistedSession();
+        return null;
+      }
+      const accessToken = String(parsed.access_token || '').trim();
+      const refreshToken = String(parsed.refresh_token || '').trim();
+      const userId = String(parsed.user_id || '').trim();
+      if (!accessToken || !refreshToken || !userId) {
+        clearDiscordPersistedSession();
+        return null;
+      }
+      return { access_token: accessToken, refresh_token: refreshToken, user_id: userId };
+    } catch (_) {
+      clearDiscordPersistedSession();
+      return null;
+    }
+  }
 
   function rememberMfaSupabaseSession(session) {
     const accessToken = String(session && session.access_token || '').trim();
@@ -1169,6 +1229,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
       if (!error && data && data.session && data.session.access_token) {
         lastKnownSupabaseSession = data.session;
+        rememberDiscordPersistedSession(data.session);
         return data.session;
       }
     } catch (_) {}
@@ -1215,11 +1276,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const callbackSession = await exchangeOAuthCallbackSession();
     if (callbackSession) return callbackSession;
 
+    const discordStored = storedDiscordPersistedSessionCandidate();
+    const restoredDiscord = await setSupabaseSessionCandidate(discordStored);
+    if (restoredDiscord) return restoredDiscord;
+
     try {
       if (typeof supabaseClient.auth.refreshSession === 'function') {
         const { data, error } = await supabaseClient.auth.refreshSession();
         if (!error && data && data.session && data.session.access_token) {
           lastKnownSupabaseSession = data.session;
+          rememberDiscordPersistedSession(data.session);
           return data.session;
         }
       }
@@ -2904,6 +2970,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       localStorage.removeItem('beAuthExpected');
       localStorage.removeItem('beSessionUid');
       try { localStorage.removeItem('beDiscordSessionStable'); } catch (_) {}
+      clearDiscordPersistedSession();
       clearMfaSupabaseSession();
       notify();
     },
@@ -3128,6 +3195,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (sessionUser) {
           currentUser = await hydratePrivileges(normalizeUser(sessionUser));
           if (currentUser) {
+            try { rememberDiscordPersistedSession(session); } catch (_) {}
             notify();
             return { ...currentUser };
           }
@@ -3532,8 +3600,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                                  
                                                                      
       supabaseClient.auth.onAuthStateChange((event, session) => {
-        if (session && session.access_token) lastKnownSupabaseSession = session;
-        if (event === 'SIGNED_OUT') clearMfaSupabaseSession();
+        if (session && session.access_token) {
+          lastKnownSupabaseSession = session;
+          rememberDiscordPersistedSession(session);
+        }
+        if (event === 'SIGNED_OUT') {
+          clearMfaSupabaseSession();
+          clearDiscordPersistedSession();
+        }
         if (event === 'PASSWORD_RECOVERY') {
           try { sessionStorage.setItem('bePasswordRecoveryActive', '1'); } catch (_) {}
           window.dispatchEvent(new CustomEvent('be:password-recovery', { detail: { active: true } }));
@@ -3594,7 +3668,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (error) (void 0);
       currentUser = await hydratePrivileges(normalizeUser(sessionData?.session?.user || null));
 
-      if (!currentUser && callbackActive && !callbackFailure) {
+      const expectedStoredSession = (() => {
+        try {
+          return localStorage.getItem('beAuthExpected') === '1' ||
+            Boolean(localStorage.getItem('beSessionUid')) ||
+            Boolean(storedDiscordPersistedSessionCandidate());
+        } catch (_) {
+          return Boolean(storedDiscordPersistedSessionCandidate());
+        }
+      })();
+
+      if (!currentUser && !callbackFailure && (callbackActive || expectedStoredSession)) {
         try {
           const restoredSession = await ensureSupabaseSession();
           if (restoredSession && restoredSession.user) {
@@ -3604,8 +3688,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         } catch (_) {}
       }
 
-      if (!currentUser && callbackActive && !callbackFailure) {
+      if (!currentUser && !callbackFailure && (callbackActive || expectedStoredSession)) {
         currentUser = await resolveSupabaseUser(sessionData);
+      }
+
+      if (currentUser) {
+        try {
+          const persisted = await supabaseClient.auth.getSession();
+          if (persisted && persisted.data && persisted.data.session) rememberDiscordPersistedSession(persisted.data.session);
+        } catch (_) {}
       }
 
                                                                                  
@@ -16432,8 +16523,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return true;
     }catch(_){return false;}
   }
+  function hasDiscordPersistedSession(){
+    try{return Boolean(localStorage.getItem('beDiscordPersistedSession:v1'));}catch(_){return false;}
+  }
   function expectedPersistedSession(){
-    try{return discordLoginPending()||localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'));}catch(_){return discordLoginPending();}
+    try{return discordLoginPending()||hasDiscordPersistedSession()||localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'));}catch(_){return discordLoginPending()||hasDiscordPersistedSession();}
   }
   var discordBrowserResumeBusy=false;
   async function resumePersistedDiscordLogin(){
@@ -16703,6 +16797,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             return;
           }
         }
+        if(hasDiscordPersistedSession()){
+          showSiteSkeleton();
+          window.setTimeout(resumePersistedDiscordLogin,180);
+          window.setTimeout(resumePersistedDiscordLogin,700);
+          window.setTimeout(resumePersistedDiscordLogin,1800);
+          window.setTimeout(resumePersistedDiscordLogin,4000);
+          return;
+        }
         localStorage.removeItem('beSessionUid');
         localStorage.removeItem('beAuthExpected');
         clearStableDiscordSession();
@@ -16747,9 +16849,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(location.hash.startsWith('#/admin'))return;
       if(isLegalRoute()){showLegalRoute();return;}
       if(!authReady)return;
-      if(!auth.currentUser&&recentStableDiscordSession()){
+      if(!auth.currentUser&&(recentStableDiscordSession()||hasDiscordPersistedSession())){
         showSiteSkeleton();
         window.setTimeout(resumePersistedDiscordLogin,80);
+        window.setTimeout(resumePersistedDiscordLogin,600);
         return;
       }
       if(hasRememberedMfaChallenge()&&!discordLoginPending()){showMfaLogin(auth&&auth.currentUser&&auth.currentUser.email||selectedAuthEmail);return;}
@@ -16773,7 +16876,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('online',function(){window.setTimeout(resumePersistedDiscordLogin,80);},{passive:true});
     window.addEventListener('storage',function(event){
       if(!event)return;
-      if(event.key==='beSessionUid'||event.key==='beAuthExpected'||event.key==='beDiscordLoginPending'||event.key==='beDiscordSessionStable'||/^sb-.*-auth-token$/i.test(String(event.key||''))){
+      if(event.key==='beSessionUid'||event.key==='beAuthExpected'||event.key==='beDiscordLoginPending'||event.key==='beDiscordSessionStable'||event.key==='beDiscordPersistedSession:v1'||/^sb-.*-auth-token$/i.test(String(event.key||''))){
         window.setTimeout(resumePersistedDiscordLogin,80);
       }
     });
