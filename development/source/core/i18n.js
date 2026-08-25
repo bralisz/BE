@@ -70,6 +70,12 @@
     missingTexts.delete(key);
     translatedThisSession.delete(key);
   }
+  function unsafeImportedTranslation(value){
+    var raw=String(value||'');
+    if(!raw)return false;
+    if(raw.length>2400)return true;
+    return /<!doctype|<html|<head|<body|<style|<script|#af-error-page|googlelogo|google\.com\/images\/branding|document\.getElementById|Error\s*500\s*\(Server Error\)|body\s*\{[^}]{0,300}(?:display|overflow|background)/i.test(raw);
+  }
   function repairPlaceholders(source,translated){
     var src=String(source||''),out=String(translated||'');
     var sourceTokens=src.match(/\{[a-zA-Z0-9_]+\}/g)||[];
@@ -80,6 +86,7 @@
     return out;
   }
   function normalizeImportedTranslation(source,translated){
+    if(unsafeImportedTranslation(translated))return String(source||'');
     var out=repairPlaceholders(source,translated);
     if(slug==='it'){
       if(String(source||'').indexOf('Discord')>=0)out=out.replace(/Discordia/g,'Discord');
@@ -108,7 +115,7 @@
     var count=0;
     Object.keys(values).forEach(function(source){
       var translated=values[source];
-      if(typeof translated!=='string'||!translated.trim())return;
+      if(typeof translated!=='string'||!translated.trim()||unsafeImportedTranslation(translated))return;
       var key=normalize(source);
       if(!key)return;
       var stable=normalizeImportedTranslation(key,translated.trim());
@@ -129,7 +136,7 @@
         var stableBundle={};
         Object.keys(values).forEach(function(source){
           var translated=values[source];
-          if(typeof translated==='string'&&translated.trim())stableBundle[source]=normalizeImportedTranslation(source,translated.trim());
+          if(typeof translated==='string'&&translated.trim()&&!unsafeImportedTranslation(translated))stableBundle[source]=normalizeImportedTranslation(source,translated.trim());
         });
         localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},previous&&typeof previous==='object'?previous:{},stableBundle)));
       }catch(_){ }
@@ -254,7 +261,15 @@
   function loadDynamicCache(){
     try{
       var cached=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
-      if(cached&&typeof cached==='object')Object.keys(cached).forEach(function(key){if(typeof cached[key]==='string')map[key]=cached[key];});
+      var cleaned={};
+      if(cached&&typeof cached==='object')Object.keys(cached).forEach(function(key){
+        var value=cached[key];
+        if(typeof value!=='string'||unsafeImportedTranslation(value))return;
+        var stable=typeof normalizeImportedTranslation==='function'?normalizeImportedTranslation(key,value):value;
+        if(unsafeImportedTranslation(stable))return;
+        map[key]=stable;cleaned[key]=stable;
+      });
+      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(cleaned));
     }catch(_){ }
   }
   function saveDynamicCache(){
@@ -262,7 +277,9 @@
       var dynamic={};
       translatedThisSession.forEach(function(key){if(map[key])dynamic[key]=map[key];});
       var previous=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
-      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},previous&&typeof previous==='object'?previous:{},dynamic)));
+      var safePrevious={};
+      if(previous&&typeof previous==='object')Object.keys(previous).forEach(function(key){if(typeof previous[key]==='string'&&!unsafeImportedTranslation(previous[key]))safePrevious[key]=previous[key];});
+      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},safePrevious,dynamic)));
     }catch(_){ }
   }
   function translationEndpoint(){

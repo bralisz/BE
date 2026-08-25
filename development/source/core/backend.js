@@ -334,9 +334,22 @@
     return btoa(unescape(encodeURIComponent(value)));
   }
 
+  function unsafeExternalErrorMessage(value) {
+    const raw = String(value || '');
+    if (!raw) return false;
+    if (raw.length > 1200) return true;
+    return /<!doctype|<html|<head|<body|<style|<script|#af-error-page|googlelogo|google\.com\/images\/branding|document\.getElementById|Error\s*500\s*\(Server Error\)|body\s*\{[^}]{0,300}(?:display|overflow|background)/i.test(raw);
+  }
+
   function mapAuthError(error) {
     const message = String(error && error.message || '');
     const code = String(error && (error.code || error.status) || '');
+    if (unsafeExternalErrorMessage(message) || /^(?:5\d\d|500)$/.test(code) || /server error|internal server error/i.test(message)) {
+      return backendError('auth/service-unavailable', 'O serviço de segurança está temporariamente indisponível. Tente novamente em instantes.', error);
+    }
+    if (/failed to fetch|networkerror|network request failed|load failed/i.test(message)) {
+      return backendError('auth/network-error', 'Não foi possível conectar ao serviço de segurança. Verifique sua conexão e tente novamente.', error);
+    }
     if (code === 'over_email_send_rate_limit' || /email rate limit|rate limit.*email|too many requests/i.test(message)) {
       return backendError(
         'auth/email-rate-limit',

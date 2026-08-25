@@ -64,6 +64,12 @@
     missingTexts.delete(key);
     translatedThisSession.delete(key);
   }
+  function unsafeImportedTranslation(value){
+    var raw=String(value||'');
+    if(!raw)return false;
+    if(raw.length>2400)return true;
+    return /<!doctype|<html|<head|<body|<style|<script|#af-error-page|googlelogo|google\.com\/images\/branding|document\.getElementById|Error\s*500\s*\(Server Error\)|body\s*\{[^}]{0,300}(?:display|overflow|background)/i.test(raw);
+  }
   function eligibleText(value){
     var key=normalize(value);
     if(!key||key.length<2||key.length>1800||!/\p{L}/u.test(key))return false;
@@ -170,7 +176,15 @@
   function loadDynamicCache(){
     try{
       var cached=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
-      if(cached&&typeof cached==='object')Object.keys(cached).forEach(function(key){if(typeof cached[key]==='string')map[key]=cached[key];});
+      var cleaned={};
+      if(cached&&typeof cached==='object')Object.keys(cached).forEach(function(key){
+        var value=cached[key];
+        if(typeof value!=='string'||unsafeImportedTranslation(value))return;
+        var stable=typeof normalizeImportedTranslation==='function'?normalizeImportedTranslation(key,value):value;
+        if(unsafeImportedTranslation(stable))return;
+        map[key]=stable;cleaned[key]=stable;
+      });
+      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(cleaned));
     }catch(_){ }
   }
   function saveDynamicCache(){
@@ -178,7 +192,9 @@
       var dynamic={};
       translatedThisSession.forEach(function(key){if(map[key])dynamic[key]=map[key];});
       var previous=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
-      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},previous&&typeof previous==='object'?previous:{},dynamic)));
+      var safePrevious={};
+      if(previous&&typeof previous==='object')Object.keys(previous).forEach(function(key){if(typeof previous[key]==='string'&&!unsafeImportedTranslation(previous[key]))safePrevious[key]=previous[key];});
+      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},safePrevious,dynamic)));
     }catch(_){ }
   }
   function translationEndpoint(){
