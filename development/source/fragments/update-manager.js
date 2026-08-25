@@ -270,7 +270,41 @@
     if (!currentVersion) currentVersion = version;
   }
 
+  function applyPublicReleaseStateFromSettings() {
+    if (isAdminContext() || !releaseStateLoaded) return false;
+
+    var releasedVersion = String(publicReleasedVersion || '').trim();
+    if (!publicReleaseEnabled || !releasedVersion) {
+      clearPendingUpdate();
+      hidePopup();
+      return true;
+    }
+
+    var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
+    var appliedVersion = readPublicAppliedUpdate();
+
+    if (loadedVersion && loadedVersion === releasedVersion) {
+      persistPublicAppliedUpdate(releasedVersion);
+      clearPendingUpdate();
+      hidePopup();
+      currentVersion = loadedVersion;
+      return true;
+    }
+
+    if (appliedVersion === releasedVersion) {
+      clearPendingUpdate();
+      hidePopup();
+      return true;
+    }
+
+    showPopup(releasedVersion, true);
+    return true;
+  }
+
   function fetchLatestVersion(force) {
+    // Visitantes públicos recebem o estado de release nas configurações cacheadas.
+    // O endpoint de fingerprint fica reservado ao admin para economizar Functions.
+    if (!isAdminContext()) return Promise.resolve();
     var nowMs = Date.now();
     if (checking || updateStarted || document.visibilityState === 'prerender') return Promise.resolve();
     if (!force && document.visibilityState === 'hidden') return Promise.resolve();
@@ -291,7 +325,7 @@
     return fetch(requestUrl, {
       method: 'GET',
       cache: force ? 'no-store' : 'default',
-      credentials: 'same-origin',
+      credentials: 'omit',
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {
       if (!response.ok) throw new Error('version-check-failed');
@@ -537,8 +571,8 @@
 
   function scheduleChecks() {
     observePopupMount();
-    window.setTimeout(fetchLatestVersion, 1200);
-    intervalId = window.setInterval(fetchLatestVersion, CHECK_INTERVAL);
+    window.setTimeout(function () { if (isAdminContext()) fetchLatestVersion(); }, 1200);
+    intervalId = window.setInterval(function () { if (isAdminContext()) fetchLatestVersion(); }, CHECK_INTERVAL);
 
     // Uma conta administrativa recebe o aviso mesmo quando estiver navegando
     // pela área pública. Assim que a autenticação confirmar o papel de admin,
@@ -579,11 +613,14 @@
         releaseChanged = String(window.localStorage.getItem(OBSERVED_RELEASE_KEY) || '') !== releaseStateKey;
         window.localStorage.setItem(OBSERVED_RELEASE_KEY, releaseStateKey);
       } catch (_) {}
-      // Uma mudança manual no Admin força só uma checagem; no uso normal vale o cache de 12 h.
+      if (!isAdminContext()) {
+        applyPublicReleaseStateFromSettings();
+        return;
+      }
       fetchLatestVersion(releaseChanged);
     });
     window.addEventListener('storage', function (event) {
-      if (!event || event.key !== SHARED_CHECK_KEY || !event.newValue) return;
+      if (!isAdminContext() || !event || event.key !== SHARED_CHECK_KEY || !event.newValue) return;
       var shared = readSharedVersionCheck();
       if (shared) applyVersionPayload(shared.data);
     });

@@ -1297,14 +1297,14 @@
       const normalized = normalizePreferencePayload(payload);
       if (MODE === 'supabase') {
         try {
-          const { data: rows, error } = await supabaseClient
+          const updatedAt = now();
+          const { error } = await supabaseClient
             .from('user_preferences')
-            .upsert({ user_id: userId, data: normalized, updated_at: now() }, { onConflict: 'user_id' })
-            .select('user_id,data,created_at,updated_at');
+            .upsert({ user_id: userId, data: normalized, updated_at: updatedAt }, { onConflict: 'user_id' });
           if (error) throw error;
-          const preference = preferenceFromRow(rows && rows[0]);
-          if (preference) cachePreference(preference);
-          return preference ? clone(preference) : null;
+          const preference = { userId, data: normalized, createdAt: cached?.createdAt || '', updatedAt };
+          cachePreference(preference);
+          return clone(preference);
         } catch (error) {
           throw mapAuthError(error);
         }

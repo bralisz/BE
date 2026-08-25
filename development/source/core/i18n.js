@@ -15,6 +15,9 @@
   var translationBusy=false;
   var missingTexts=new Set();
   var translatedThisSession=new Set();
+  // As traduções de interface devem vir dos bundles estáticos/compartilhados.
+  // O fallback automático por visitante consumia Edge Functions para textos já renderizados.
+  var AUTO_DYNAMIC_TRANSLATION_ENABLED=false;
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
   var PROTECTED_EXACT=new Set([
@@ -142,7 +145,7 @@
     return true;
   }
   function rememberMissing(value){
-    if(slug==='pt-br'||isAdmin())return;
+    if(!AUTO_DYNAMIC_TRANSLATION_ENABLED||slug==='pt-br'||isAdmin())return;
     var key=normalize(value);
     if(!eligibleText(key)||Object.prototype.hasOwnProperty.call(map,key)||translatedThisSession.has(key))return;
     missingTexts.add(key);
@@ -316,7 +319,7 @@
     }
   }
   function scheduleMissingTranslation(delay){
-    if(slug==='pt-br'||isAdmin())return;
+    if(!AUTO_DYNAMIC_TRANSLATION_ENABLED||slug==='pt-br'||isAdmin())return;
     clearTimeout(translateTimer);
     var requested=Number(delay||350);
     if(slug==='it'&&!window.__BETV_ITALIAN_SHARED_I18N_READY__)requested=Math.max(requested,1800);

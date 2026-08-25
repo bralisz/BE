@@ -173,10 +173,10 @@ Deno.serve(async(req:Request)=>{
   let total=0;const responseRecords:Record<string,unknown>[]=[];
   try{
     for(const row of rows as any[]){
-      const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);
+      const data={...(row.data||{})};const translations={...(data.translations||{})};const signature=sourceSignature(data);let rowChanged=false;
       for(const locale of locales){
         const keepTitle=collection==="ongs"||preserveTitle(collection,data,locale);
-        const existing=translations[locale];const revisionOk=String(existing?.revision||"")===TRANSLATION_REVISION;if(!force&&existing&&existing.sourceUpdatedAt===signature&&translationComplete(data,existing,keepTitle)&&revisionOk){let cached={...existing};if(keepTitle){if(typeof data.title==="string"&&text(data.title))cached.title=data.title;if(typeof data.name==="string"&&text(data.name))cached.name=data.name;}cached=normalizeItalianPresentation(collection,locale,cached);translations[locale]=cached;responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
+        const existing=translations[locale];const revisionOk=String(existing?.revision||"")===TRANSLATION_REVISION;if(!force&&existing&&existing.sourceUpdatedAt===signature&&translationComplete(data,existing,keepTitle)&&revisionOk){let cached={...existing};if(keepTitle){if(typeof data.title==="string"&&text(data.title))cached.title=data.title;if(typeof data.name==="string"&&text(data.name))cached.name=data.name;}cached=normalizeItalianPresentation(collection,locale,cached);if(JSON.stringify(cached)!==JSON.stringify(existing))rowChanged=true;translations[locale]=cached;responseRecords.push({id:row.id,locale,translation:cached,cached:true});continue;}
         const fields=FIELDS.filter(field=>!(keepTitle&&(field==="title"||field==="name"))).filter(field=>typeof data[field]==="string"&&text(data[field])&&!/^https?:\/\//i.test(text(data[field])));
         total+=fields.reduce((sum,field)=>sum+text(data[field]).length,0);if(total>MAX_CHARS)return reply(req,413,{error:"Conteúdo excede o limite por solicitação."});
         const values=await translateValues(fields.map(field=>text(data[field])),TARGETS[locale]);
@@ -185,9 +185,9 @@ Deno.serve(async(req:Request)=>{
         if(keepTitle){if(typeof data.title==="string"&&text(data.title))translated.title=data.title;if(typeof data.name==="string"&&text(data.name))translated.name=data.name;}
         DURATION_FIELDS.forEach(field=>{if(typeof data[field]==="string"&&text(data[field]))translated[field]=duration(data[field],locale);});
         const normalizedTranslated=normalizeItalianPresentation(collection,locale,translated);
-        translations[locale]=normalizedTranslated;responseRecords.push({id:row.id,locale,translation:normalizedTranslated,cached:false});
+        translations[locale]=normalizedTranslated;rowChanged=true;responseRecords.push({id:row.id,locale,translation:normalizedTranslated,cached:false});
       }
-      data.translations=translations;const {error}=await adminClient.from(table).update({data}).eq("id",row.id);if(error)throw new Error(`save_${error.code}`);
+      if(rowChanged){data.translations=translations;const {error}=await adminClient.from(table).update({data}).eq("id",row.id);if(error)throw new Error(`save_${error.code}`);}
     }
     return reply(req,200,{records:responseRecords,translatedRecords:rows.length,locales,provider:"deep-translator-google-web"});
   }catch(error){console.error("Translation failed",text((error as Error)?.message,160));return reply(req,503,{error:"A tradução automática está temporariamente indisponível."});}

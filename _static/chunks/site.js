@@ -16,6 +16,9 @@
   var translationBusy=false;
   var missingTexts=new Set();
   var translatedThisSession=new Set();
+  // As traduções de interface devem vir dos bundles estáticos/compartilhados.
+  // O fallback automático por visitante consumia Edge Functions para textos já renderizados.
+  var AUTO_DYNAMIC_TRANSLATION_ENABLED=false;
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
   var PROTECTED_EXACT=new Set([
@@ -143,7 +146,7 @@
     return true;
   }
   function rememberMissing(value){
-    if(slug==='pt-br'||isAdmin())return;
+    if(!AUTO_DYNAMIC_TRANSLATION_ENABLED||slug==='pt-br'||isAdmin())return;
     var key=normalize(value);
     if(!eligibleText(key)||Object.prototype.hasOwnProperty.call(map,key)||translatedThisSession.has(key))return;
     missingTexts.add(key);
@@ -347,7 +350,7 @@
     return originals.map(function(value){return map[value]||value;});
   }
   function scheduleMissingTranslation(delay){
-    if(slug==='pt-br'||isAdmin())return;
+    if(!AUTO_DYNAMIC_TRANSLATION_ENABLED||slug==='pt-br'||isAdmin())return;
     clearTimeout(translateTimer);
     var requested=Number(delay||350);
     if(slug==='it'&&!window.__BETV_ITALIAN_SHARED_I18N_READY__)requested=Math.max(requested,1800);
@@ -2932,14 +2935,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return clone(cached);
         }
         try {
-          const { data: rows, error } = await supabaseClient
+          const updatedAt = now();
+          const { error } = await supabaseClient
             .from('user_preferences')
-            .upsert({ user_id: userId, data: normalized, updated_at: now() }, { onConflict: 'user_id' })
-            .select('user_id,data,created_at,updated_at');
+            .upsert({ user_id: userId, data: normalized, updated_at: updatedAt }, { onConflict: 'user_id' });
           if (error) throw error;
-          const preference = preferenceFromRow(rows && rows[0]);
-          if (preference) cachePreference(preference);
-          return preference ? clone(preference) : null;
+          // O Supabase não precisa devolver o JSON recém-gravado. Manter a cópia
+          // local evita egress desnecessário em cada sincronização de preferências.
+          const preference = {
+            userId,
+            data: normalized,
+            createdAt: cached?.createdAt || '',
+            updatedAt
+          };
+          cachePreference(preference);
+          return clone(preference);
         } catch (error) {
           throw mapAuthError(error);
         }
@@ -14484,7 +14494,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileShareCampaignSeen:(function(){try{return String(localStorage.getItem('beProfileShareCampaignSeen:'+String(userId||'guest'))||'');}catch(_){return '';}})(),
         communityRankingsPublic:(function(){try{return localStorage.getItem('beCommunityRankingsPublic:'+String(userId||'guest'))!=='false';}catch(_){return true;}})(),
         followingUsers:readStorageJson('beFollowingUsers:'+String(userId||'guest'),[]),
-        accountDevices:ensureCurrentAccountDevice(userId,readAccountDevices(userId)),
+        accountDevices:readAccountDevices(userId),
         tvDeviceBrands:readTvDeviceBrands(userId),
         updatedAt:beBackend.now()
       });
@@ -14662,6 +14672,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var freshAccountLogin=false;try{freshAccountLogin=sessionStorage.getItem('beFreshAccountLogin')==='1';if(freshAccountLogin)sessionStorage.removeItem('beFreshAccountLogin');}catch(_){ }
         if(remote&&remoteOwnDevice&&remoteOwnDevice.active===false&&!freshAccountLogin){applyCrossDeviceData(remote.data,userId,'remote');return;}
         merged.accountDevices=ensureCurrentAccountDevice(userId,mergeAccountDevices(merged.accountDevices,remoteDeviceData.accountDevices));
+        // O login/início da sincronização já registra atividade deste aparelho.
+        // Evita que o primeiro focus logo depois gere uma segunda gravação idêntica.
+        accountDeviceActivitySyncAt=Date.now();
         merged.tvDeviceBrands=mergeTvDeviceBrands(merged.tvDeviceBrands,remoteDeviceData.tvDeviceBrands);
         applyCrossDeviceData(merged,userId,remote?'remote':'local');
         var saved=await beBackend.preferences.save(userId,{...merged,updatedAt:beBackend.now()});
@@ -18469,7 +18482,44 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!currentVersion) currentVersion = version;
   }
 
+  function applyPublicReleaseStateFromSettings() {
+    if (isAdminContext() || !releaseStateLoaded) return false;
+
+    var releasedVersion = String(publicReleasedVersion || '').trim();
+    if (!publicReleaseEnabled || !releasedVersion) {
+      clearPendingUpdate();
+      hidePopup();
+      return true;
+    }
+
+    var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
+    var appliedVersion = readPublicAppliedUpdate();
+
+    // Se o HTML atual já é exatamente a versão liberada, registra a versão sem
+    // pedir /api/deployment-version. Isso também evita popup falso no primeiro acesso.
+    if (loadedVersion && loadedVersion === releasedVersion) {
+      persistPublicAppliedUpdate(releasedVersion);
+      clearPendingUpdate();
+      hidePopup();
+      currentVersion = loadedVersion;
+      return true;
+    }
+
+    if (appliedVersion === releasedVersion) {
+      clearPendingUpdate();
+      hidePopup();
+      return true;
+    }
+
+    showPopup(releasedVersion, true);
+    return true;
+  }
+
   function fetchLatestVersion(force) {
+    // Visitantes públicos já recebem updateReleaseEnabled/releasedDeploymentVersion
+    // junto das configurações cacheadas da Home. Reservar este endpoint aos admins
+    // remove uma Function da Vercel e uma leitura do Supabase por verificação pública.
+    if (!isAdminContext()) return Promise.resolve();
     var nowMs = Date.now();
     if (checking || updateStarted || document.visibilityState === 'prerender') return Promise.resolve();
     if (!force && document.visibilityState === 'hidden') return Promise.resolve();
@@ -18738,8 +18788,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function scheduleChecks() {
     observePopupMount();
-    window.setTimeout(fetchLatestVersion, 1200);
-    intervalId = window.setInterval(fetchLatestVersion, CHECK_INTERVAL);
+    // O endpoint de fingerprint do deploy é necessário apenas no painel/admin.
+    window.setTimeout(function () { if (isAdminContext()) fetchLatestVersion(); }, 1200);
+    intervalId = window.setInterval(function () { if (isAdminContext()) fetchLatestVersion(); }, CHECK_INTERVAL);
 
                                                                              
                                                                               
@@ -18780,11 +18831,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         releaseChanged = String(window.localStorage.getItem(OBSERVED_RELEASE_KEY) || '') !== releaseStateKey;
         window.localStorage.setItem(OBSERVED_RELEASE_KEY, releaseStateKey);
       } catch (_) {}
-                                                                                               
+      if (!isAdminContext()) {
+        applyPublicReleaseStateFromSettings();
+        return;
+      }
       fetchLatestVersion(releaseChanged);
     });
     window.addEventListener('storage', function (event) {
-      if (!event || event.key !== SHARED_CHECK_KEY || !event.newValue) return;
+      if (!isAdminContext() || !event || event.key !== SHARED_CHECK_KEY || !event.newValue) return;
       var shared = readSharedVersionCheck();
       if (shared) applyVersionPayload(shared.data);
     });
