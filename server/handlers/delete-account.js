@@ -1,5 +1,7 @@
 'use strict';
 
+const dns = require('node:dns').promises;
+
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 
 function getConfig() {
@@ -47,6 +49,148 @@ function validRequestOrigin(req) {
   try { return new URL(origin).host === host; } catch (_) { return false; }
 }
 
+
+const EMAIL_DOMAIN_CACHE = globalThis.__betvEmailDomainCache || new Map();
+globalThis.__betvEmailDomainCache = EMAIL_DOMAIN_CACHE;
+const EMAIL_DOMAIN_CACHE_MS = 6 * 60 * 60 * 1000;
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  '10minutemail.com','10minutemail.net','20minutemail.com','33mail.com','anonaddy.com','dispostable.com',
+  'emailondeck.com','fakeinbox.com','fakemail.net','getnada.com','guerrillamail.com','guerrillamail.net',
+  'maildrop.cc','mailinator.com','mailnesia.com','mintemail.com','moakt.com','mytemp.email','sharklasers.com',
+  'temp-mail.org','tempail.com','tempmail.com','tempmail.net','tempmailo.com','throwawaymail.com','trashmail.com',
+  'yopmail.com','yopmail.fr','yopmail.net'
+]);
+
+function normalizeEmailAddress(value) {
+  const email = String(value || '').trim().toLowerCase();
+  if (email.length < 6 || email.length > 254 || /\s/.test(email)) return null;
+  const at = email.lastIndexOf('@');
+  if (at <= 0 || at !== email.indexOf('@')) return null;
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  if (!local || local.length > 64 || !domain || domain.length > 253) return null;
+  if (local.startsWith('.') || local.endsWith('.') || local.includes('..')) return null;
+  if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/i.test(local)) return null;
+  const labels = domain.split('.');
+  if (labels.length < 2 || labels.some(label => !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label))) return null;
+  const tld = labels[labels.length - 1];
+  if (!/^[a-z]{2,63}$/i.test(tld)) return null;
+  return { email, local, domain };
+}
+
+function isDisposableEmailDomain(domain) {
+  const normalized = String(domain || '').toLowerCase();
+  if (DISPOSABLE_EMAIL_DOMAINS.has(normalized)) return true;
+  return Array.from(DISPOSABLE_EMAIL_DOMAINS).some(blocked => normalized.endsWith(`.${blocked}`));
+}
+
+function dnsFailureKind(error) {
+  const code = String(error && error.code || '').toUpperCase();
+  if (code === 'ENOTFOUND' || code === 'ENODATA' || code === 'ENONAME') return 'not-found';
+  if (code === 'ETIMEOUT' || code === 'ESERVFAIL' || code === 'EREFUSED' || code === 'ECONNREFUSED') return 'temporary';
+  return 'unknown';
+}
+
+async function dnsOverHttps(domain, type) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 2200);
+  try {
+    const response = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${encodeURIComponent(type)}`, {
+      headers: { Accept: 'application/dns-json' },
+      signal: controller.signal
+    });
+    if (!response.ok) return null;
+    return await response.json().catch(() => null);
+  } catch (_) {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function validateEmailDomainWithDoh(domain) {
+  const mx = await dnsOverHttps(domain, 'MX');
+  if (!mx) return { valid: null, deliverable: null, disposable: false, checkAvailable: false, reason: 'dns-temporary' };
+  if (Number(mx.Status) === 3) return { valid: false, deliverable: false, disposable: false, checkAvailable: true, reason: 'nxdomain' };
+  if (Number(mx.Status) !== 0) return { valid: null, deliverable: null, disposable: false, checkAvailable: false, reason: 'dns-temporary' };
+
+  const mxAnswers = Array.isArray(mx.Answer) ? mx.Answer.filter(item => Number(item && item.type) === 15) : [];
+  if (mxAnswers.length) {
+    const exchanges = mxAnswers.map(item => String(item && item.data || '').trim().replace(/^\d+\s+/, '').replace(/\.$/, ''));
+    if (exchanges.some(exchange => exchange && exchange !== '.')) return { valid: true, deliverable: true, disposable: false, checkAvailable: true, reason: 'mx-doh' };
+    if (exchanges.some(exchange => exchange === '.' || exchange === '')) return { valid: false, deliverable: false, disposable: false, checkAvailable: true, reason: 'null-mx' };
+  }
+
+  const [a, aaaa] = await Promise.all([dnsOverHttps(domain, 'A'), dnsOverHttps(domain, 'AAAA')]);
+  const hasAddress = [a, aaaa].some(result => result && Number(result.Status) === 0 && Array.isArray(result.Answer) && result.Answer.length > 0);
+  if (hasAddress) return { valid: true, deliverable: true, disposable: false, checkAvailable: true, reason: 'address-doh' };
+  const nxdomain = [a, aaaa].some(result => result && Number(result.Status) === 3);
+  if (nxdomain) return { valid: false, deliverable: false, disposable: false, checkAvailable: true, reason: 'nxdomain' };
+  return { valid: false, deliverable: false, disposable: false, checkAvailable: true, reason: 'no-mail-dns' };
+}
+
+async function validateEmailDomain(domain) {
+  const normalized = String(domain || '').trim().toLowerCase();
+  const cached = EMAIL_DOMAIN_CACHE.get(normalized);
+  if (cached && Date.now() - cached.checkedAt < EMAIL_DOMAIN_CACHE_MS) return cached.value;
+
+  if (!normalized || isDisposableEmailDomain(normalized)) {
+    const value = { valid: false, deliverable: false, disposable: Boolean(normalized), checkAvailable: true, reason: 'disposable-or-invalid' };
+    EMAIL_DOMAIN_CACHE.set(normalized, { checkedAt: Date.now(), value });
+    return value;
+  }
+
+  let mx = [];
+  try {
+    mx = await dns.resolveMx(normalized);
+    const usableMx = Array.isArray(mx) && mx.some(record => String(record && record.exchange || '').trim() && record.exchange !== '.');
+    if (usableMx) {
+      const value = { valid: true, deliverable: true, disposable: false, checkAvailable: true, reason: 'mx' };
+      EMAIL_DOMAIN_CACHE.set(normalized, { checkedAt: Date.now(), value });
+      return value;
+    }
+    if (Array.isArray(mx) && mx.some(record => String(record && record.exchange || '').trim() === '.')) {
+      const value = { valid: false, deliverable: false, disposable: false, checkAvailable: true, reason: 'null-mx' };
+      EMAIL_DOMAIN_CACHE.set(normalized, { checkedAt: Date.now(), value });
+      return value;
+    }
+  } catch (error) {
+    const kind = dnsFailureKind(error);
+    if (kind === 'temporary') return validateEmailDomainWithDoh(normalized);
+    if (kind !== 'not-found') return validateEmailDomainWithDoh(normalized);
+  }
+
+  // RFC 5321 permite entrega implícita no host quando não existe MX explícito.
+  // Por isso, só rejeitamos definitivamente se MX e A/AAAA não existirem.
+  try {
+    const addresses = await dns.resolve4(normalized);
+    if (Array.isArray(addresses) && addresses.length) {
+      const value = { valid: true, deliverable: true, disposable: false, checkAvailable: true, reason: 'a-record' };
+      EMAIL_DOMAIN_CACHE.set(normalized, { checkedAt: Date.now(), value });
+      return value;
+    }
+  } catch (error) {
+    const kind = dnsFailureKind(error);
+    if (kind === 'temporary') return validateEmailDomainWithDoh(normalized);
+  }
+
+  try {
+    const addresses = await dns.resolve6(normalized);
+    if (Array.isArray(addresses) && addresses.length) {
+      const value = { valid: true, deliverable: true, disposable: false, checkAvailable: true, reason: 'aaaa-record' };
+      EMAIL_DOMAIN_CACHE.set(normalized, { checkedAt: Date.now(), value });
+      return value;
+    }
+  } catch (error) {
+    const kind = dnsFailureKind(error);
+    if (kind === 'temporary') return validateEmailDomainWithDoh(normalized);
+  }
+
+  const value = { valid: false, deliverable: false, disposable: false, checkAvailable: true, reason: 'no-mail-dns' };
+  EMAIL_DOMAIN_CACHE.set(normalized, { checkedAt: Date.now(), value });
+  return value;
+}
+
 async function getAuthenticatedUser(url, publishableKey, accessToken) {
   const response = await fetch(`${url}/auth/v1/user`, {
     headers: {
@@ -88,27 +232,42 @@ async function accountStatusHandler(req, res) {
     if (typeof body === 'string') {
       try { body = JSON.parse(body); } catch (_) { body = {}; }
     }
-    const email = String(body?.email || '').trim().toLowerCase();
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      return res.status(400).json({ ok: false, error: 'E-mail inválido.' });
-    }
-    if (!serviceRoleKey) {
-      return res.status(503).json({ ok: false, checkAvailable: false });
+    const parsedEmail = normalizeEmailAddress(body?.email);
+    if (!parsedEmail) {
+      return res.status(400).json({ ok: false, error: 'E-mail inválido.', domainValid: false, domainCheckAvailable: true });
     }
 
-    try {
-      const profileResponse = await fetch(
-        `${url}/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
-        {
-          headers: serviceHeaders(serviceRoleKey, { Accept: 'application/json' })
+    const domainCheck = await validateEmailDomain(parsedEmail.domain);
+    let exists = null;
+    let accountCheckAvailable = false;
+
+    if (serviceRoleKey) {
+      try {
+        const profileResponse = await fetch(
+          `${url}/rest/v1/profiles?email=eq.${encodeURIComponent(parsedEmail.email)}&select=id&limit=1`,
+          { headers: serviceHeaders(serviceRoleKey, { Accept: 'application/json' }) }
+        );
+        const profiles = await readJson(profileResponse);
+        if (profileResponse.ok) {
+          exists = Array.isArray(profiles) && profiles.length > 0;
+          accountCheckAvailable = true;
         }
-      );
-      const profiles = await readJson(profileResponse);
-      if (!profileResponse.ok) return res.status(503).json({ ok: false, checkAvailable: false });
-      return res.status(200).json({ ok: true, exists: Array.isArray(profiles) && profiles.length > 0, checkAvailable: true });
-    } catch (_) {
-      return res.status(503).json({ ok: false, checkAvailable: false });
+      } catch (_) {}
     }
+
+    // Uma conta já existente continua podendo entrar mesmo que o DNS do domínio
+    // esteja temporariamente indisponível ou tenha mudado depois do cadastro.
+    return res.status(200).json({
+      ok: true,
+      exists,
+      checkAvailable: accountCheckAvailable,
+      domain: parsedEmail.domain,
+      domainValid: domainCheck.valid,
+      domainDeliverable: domainCheck.deliverable,
+      domainDisposable: domainCheck.disposable,
+      domainCheckAvailable: domainCheck.checkAvailable,
+      domainReason: domainCheck.reason
+    });
   }
 
   if (req.method !== 'GET') {

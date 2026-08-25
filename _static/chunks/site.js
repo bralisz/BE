@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-discord-mfa-complete-v35';
+  var STATIC_REV='20260825-mfa-resume-real-email-v37';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -884,6 +884,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const userSyncChannels = new Map();
   const privilegeCache = new Map();
   const privilegeInFlight = new Map();
+  const emailValidationCache = new Map();
+  const EMAIL_VALIDATION_CACHE_TTL_MS = 10 * 60 * 1000;
   const PRIVILEGE_CACHE_TTL_MS = 5 * 60 * 1000;
   let realtimeAuthPromise = null;
 
@@ -1091,6 +1093,54 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  function storedSupabaseSessionCandidate() {
+    try {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key || !/^sb-.*-auth-token$/i.test(key)) continue;
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        let parsed = null;
+        try { parsed = JSON.parse(raw); } catch (_) { continue; }
+        const candidates = [parsed, parsed && parsed.currentSession, parsed && parsed.session, Array.isArray(parsed) ? parsed[0] : null];
+        for (const candidate of candidates) {
+          const accessToken = String(candidate && candidate.access_token || '').trim();
+          const refreshToken = String(candidate && candidate.refresh_token || '').trim();
+          if (accessToken && refreshToken) return { access_token: accessToken, refresh_token: refreshToken };
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  async function ensureSupabaseSession() {
+    if (MODE !== 'supabase' || !supabaseClient || !supabaseClient.auth) return null;
+    const delays = [0, 100, 250, 500, 900];
+    for (const delay of delays) {
+      if (delay) await wait(delay);
+      try {
+        const { data } = await supabaseClient.auth.getSession();
+        if (data && data.session && data.session.access_token) return data.session;
+      } catch (_) {}
+    }
+
+    try {
+      if (typeof supabaseClient.auth.refreshSession === 'function') {
+        const { data, error } = await supabaseClient.auth.refreshSession();
+        if (!error && data && data.session && data.session.access_token) return data.session;
+      }
+    } catch (_) {}
+
+    const stored = storedSupabaseSessionCandidate();
+    if (stored && typeof supabaseClient.auth.setSession === 'function') {
+      try {
+        const { data, error } = await supabaseClient.auth.setSession(stored);
+        if (!error && data && data.session && data.session.access_token) return data.session;
+      } catch (_) {}
+    }
+    return null;
+  }
+
   async function resolveSupabaseUser(authResult) {
     if (MODE !== 'supabase' || !supabaseClient) return currentUser;
 
@@ -1100,16 +1150,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                             
                                                                              
                                                                             
-    const retryDelays = [0, 80, 180, 360, 700];
-    for (const retryDelay of retryDelays) {
-      if (retryDelay) await wait(retryDelay);
-      // getSession usa a sessão local e não precisa validar /user na rede a
-      // cada tentativa. A validação remota fica como único fallback final.
-      const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-      if (sessionError) (void 0);
-      const sessionUser = sessionData?.session?.user || null;
-      if (sessionUser) return hydratePrivileges(normalizeUser(sessionUser));
-    }
+    const session = await ensureSupabaseSession();
+    const sessionUser = session && session.user || null;
+    if (sessionUser) return hydratePrivileges(normalizeUser(sessionUser));
 
     try {
       const { data: userData, error: userError } = await supabaseClient.auth.getUser();
@@ -1216,6 +1259,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         'O limite temporário de e-mails do Supabase foi atingido. Aguarde e tente novamente mais tarde ou continue com o Discord.',
         error
       );
+    }
+    if (/auth session missing|authsessionmissingerror|session missing/i.test(`${code} ${message}`)) {
+      return backendError('auth/session-missing', 'Sua sessão de login ainda está sendo restaurada. Volte para esta tela e tente o código novamente.', error);
     }
     if (/provider is not enabled|unsupported provider/i.test(message)) {
       return backendError('auth/provider-not-enabled', 'O login com Discord ainda não foi ativado no Supabase.', error);
@@ -2851,26 +2897,46 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       queueMicrotask(() => callback(currentUser ? { ...currentUser } : null));
       return () => listeners.delete(callback);
     },
-    async accountExists(email) {
+    async validateEmailAddress(email) {
       const normalizedEmail = String(email || '').trim().toLowerCase();
       if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) throw backendError('auth/invalid-email', 'Digite um e-mail válido.');
+      const domain = normalizedEmail.split('@').pop();
+      const cached = emailValidationCache.get(normalizedEmail);
+      if (cached && Date.now() - cached.checkedAt < EMAIL_VALIDATION_CACHE_TTL_MS) return { ...cached.value };
       try {
         const response = await fetch('/api/account-status', {
           method: 'POST',
           credentials: 'same-origin',
           cache: 'no-store',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify({ email: normalizedEmail })
         });
-        if (!response.ok) return null;
         const payload = await response.json().catch(() => ({}));
-        return typeof payload?.exists === 'boolean' ? payload.exists : null;
-      } catch (_) {
-        return null;
+        if (!response.ok) {
+          if (response.status === 400) throw backendError('auth/invalid-email', payload && payload.error || 'Digite um e-mail válido.');
+          return { email: normalizedEmail, domain, exists: null, domainValid: null, checkAvailable: false, domainCheckAvailable: false };
+        }
+        const value = {
+          email: normalizedEmail,
+          domain: String(payload && payload.domain || domain),
+          exists: typeof payload?.exists === 'boolean' ? payload.exists : null,
+          accountCheckAvailable: Boolean(payload && payload.checkAvailable),
+          domainValid: typeof payload?.domainValid === 'boolean' ? payload.domainValid : null,
+          domainDeliverable: typeof payload?.domainDeliverable === 'boolean' ? payload.domainDeliverable : null,
+          domainDisposable: Boolean(payload && payload.domainDisposable),
+          domainCheckAvailable: Boolean(payload && payload.domainCheckAvailable),
+          reason: String(payload && payload.domainReason || '')
+        };
+        emailValidationCache.set(normalizedEmail, { checkedAt: Date.now(), value });
+        return { ...value };
+      } catch (error) {
+        if (error && error.code === 'auth/invalid-email') throw error;
+        return { email: normalizedEmail, domain, exists: null, domainValid: null, accountCheckAvailable: false, domainCheckAvailable: false };
       }
+    },
+    async accountExists(email) {
+      const result = await this.validateEmailAddress(email);
+      return typeof result.exists === 'boolean' ? result.exists : null;
     },
     async usernameAvailable(username) {
       const normalizedHandle = normalizeUsername(username);
@@ -2971,6 +3037,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (!mfa || typeof mfa.listFactors !== 'function' || typeof mfa.getAuthenticatorAssuranceLevel !== 'function') {
         return { supported: false, enabled: false, factor: null, currentLevel: null, nextLevel: null };
       }
+      const session = await ensureSupabaseSession();
+      if (!session) throw backendError('auth/session-missing', 'Sua sessão de login ainda está sendo restaurada. Volte para esta tela e tente o código novamente.');
       const factorsResult = await mfa.listFactors();
       if (factorsResult.error) throw mapAuthError(factorsResult.error);
       const aalResult = await mfa.getAuthenticatorAssuranceLevel();
@@ -15942,7 +16010,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   if(location.hash.startsWith('#/admin')||initialCallbackDestination==='admin') return;
 
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='',mfaChallengePending=false;
-  try{mfaChallengePending=sessionStorage.getItem('beMfaChallengePending')==='1';selectedAuthEmail=String(sessionStorage.getItem('beMfaChallengeEmail')||'').trim().toLowerCase();}catch(_){}
+  var MFA_RESUME_TTL_MS=15*60*1000;
+  try{
+    mfaChallengePending=sessionStorage.getItem('beMfaChallengePending')==='1';
+    selectedAuthEmail=String(sessionStorage.getItem('beMfaChallengeEmail')||'').trim().toLowerCase();
+    if(!mfaChallengePending){
+      var savedMfa=JSON.parse(localStorage.getItem('beMfaChallengeResume')||'null');
+      if(savedMfa&&savedMfa.pending===true&&Date.now()-Number(savedMfa.savedAt||0)<MFA_RESUME_TTL_MS){mfaChallengePending=true;selectedAuthEmail=String(savedMfa.email||'').trim().toLowerCase();}
+      else localStorage.removeItem('beMfaChallengeResume');
+    }
+  }catch(_){}
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
   var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false,siteSkeletonReleased=document.documentElement.dataset.siteLoaded==='true';
@@ -16015,9 +16092,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       'auth/email-already-in-use':'Este e-mail já possui uma conta.',
       'auth/weak-password':'Use uma senha com pelo menos 6 caracteres.',
       'auth/invalid-email':'Digite um e-mail válido.',
+      'auth/invalid-email-domain':'Use um e-mail com domínio real e capaz de receber mensagens.',
       'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
       'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
-      'auth/session-missing':'Não foi possível concluir a sessão de login. Tente entrar novamente.',
+      'auth/session-missing':'Sua sessão do Discord ainda está sendo restaurada. Volte para esta tela e tente o código novamente.',
       'auth/mfa-invalid-code':'Código do autenticador inválido ou expirado.',
       'auth/mfa-factor-missing':'Nenhum autenticador ativo foi encontrado para esta conta.',
       'auth/mfa-unavailable':'A verificação em duas etapas está indisponível no momento.',
@@ -16073,15 +16151,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var normalized=String(email||selectedAuthEmail||(auth&&auth.currentUser&&auth.currentUser.email)||'').trim().toLowerCase();
     if(normalized)selectedAuthEmail=normalized;
     try{sessionStorage.setItem('beMfaChallengePending','1');if(normalized)sessionStorage.setItem('beMfaChallengeEmail',normalized);}catch(_){}
+    try{localStorage.setItem('beMfaChallengeResume',JSON.stringify({pending:true,email:normalized,savedAt:Date.now()}));}catch(_){}
     return normalized;
   }
   function clearMfaChallenge(){
     mfaChallengePending=false;
     try{sessionStorage.removeItem('beMfaChallengePending');sessionStorage.removeItem('beMfaChallengeEmail');}catch(_){}
+    try{localStorage.removeItem('beMfaChallengeResume');}catch(_){}
   }
   function hasRememberedMfaChallenge(){
     if(mfaChallengePending)return true;
-    try{return sessionStorage.getItem('beMfaChallengePending')==='1';}catch(_){return false;}
+    try{if(sessionStorage.getItem('beMfaChallengePending')==='1')return true;}catch(_){}
+    try{
+      var saved=JSON.parse(localStorage.getItem('beMfaChallengeResume')||'null');
+      if(saved&&saved.pending===true&&Date.now()-Number(saved.savedAt||0)<MFA_RESUME_TTL_MS){mfaChallengePending=true;if(!selectedAuthEmail)selectedAuthEmail=String(saved.email||'').trim().toLowerCase();return true;}
+      localStorage.removeItem('beMfaChallengeResume');
+    }catch(_){}
+    return false;
   }
   function showMfaLogin(email,message,type){
     var challengeEmail=rememberMfaChallenge(email);
@@ -16208,6 +16294,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return null;
         }
       }catch(error){
+        if(error&&error.code==='auth/session-missing'){
+          var sessionRetry=Number(options.sessionRetry||0);
+          if(sessionRetry<3){await new Promise(function(resolve){setTimeout(resolve,250*(sessionRetry+1));});return finishPublicLogin(user,Object.assign({},options,{sessionRetry:sessionRetry+1}));}
+          if(hasRememberedMfaChallenge()){showMfaLogin(user.email||selectedAuthEmail,friendly(error));return null;}
+        }
         showLogin();
         setMode('email',user.email||selectedAuthEmail);
         setStatus(friendly(error),'error');
@@ -16272,7 +16363,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       authFlowBusy=true;if(b)b.disabled=true;setStatus('');
       try{
         if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('Digite um e-mail válido.');
-        var accountExists=typeof auth.accountExists==='function'?await auth.accountExists(email):null;
+        var emailCheck=typeof auth.validateEmailAddress==='function'?await auth.validateEmailAddress(email):null;
+        var accountExists=emailCheck&&typeof emailCheck.exists==='boolean'?emailCheck.exists:(typeof auth.accountExists==='function'?await auth.accountExists(email):null);
+        if(accountExists!==true&&emailCheck&&emailCheck.domainValid===false){var invalidDomain=new Error('Use um e-mail com domínio real e capaz de receber mensagens.');invalidDomain.code='auth/invalid-email-domain';throw invalidDomain;}
         selectedAuthEmail=email;
         setMode(accountExists===false?'signup':'password',email);
       }catch(err){setStatus(friendly(err),'error');}
@@ -16360,6 +16453,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(authFlowBusy)return;
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
       try{
+        if(typeof auth.validateEmailAddress==='function'){
+          var signupEmailCheck=await auth.validateEmailAddress(email);
+          if(signupEmailCheck&&signupEmailCheck.exists!==true&&signupEmailCheck.domainValid===false){var invalidSignupDomain=new Error('Use um e-mail com domínio real e capaz de receber mensagens.');invalidSignupDomain.code='auth/invalid-email-domain';throw invalidSignupDomain;}
+        }
         var result=await auth.signUp({email:email,password:password,name:name,username:'',remember:true});
         try{
           localStorage.setItem('betvNewAccountFlowPendingEmail:'+email,'1');
@@ -16454,6 +16551,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     window.addEventListener('hashchange',handlePublicRoute);
     window.addEventListener('popstate',handlePublicRoute);
+    window.addEventListener('pageshow',function(){
+      if(!hasRememberedMfaChallenge()||!authReady||!auth)return;
+      window.setTimeout(async function(){
+        try{var resumedUser=await recoverAuthenticatedUser(auth.currentUser||null);if(resumedUser)showMfaLogin(resumedUser.email||selectedAuthEmail);}catch(_){}
+      },80);
+    });
+    document.addEventListener('visibilitychange',function(){
+      if(document.visibilityState!=='visible'||!hasRememberedMfaChallenge()||!authReady||!auth)return;
+      window.setTimeout(async function(){try{var resumedUser=await recoverAuthenticatedUser(auth.currentUser||null);if(resumedUser)showMfaLogin(resumedUser.email||selectedAuthEmail);}catch(_){}},120);
+    },{passive:true});
                                                                                
                                                                                
                                                                               
