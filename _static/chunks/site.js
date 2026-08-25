@@ -18524,9 +18524,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
     var appliedVersion = readPublicAppliedUpdate();
+    var pendingVersion = readPendingUpdate();
+
+    // Navegadores novos não devem receber um aviso de atualização para uma versão
+    // que já é a versão pública de entrada. Uma atualização pendente nunca entra
+    // neste atalho e continua exigindo verificação do deploy após o clique.
+    if (!loadedVersion && !appliedVersion && !pendingVersion) {
+      persistPublicAppliedUpdate(releasedVersion);
+      clearPendingUpdate();
+      hidePopup();
+      return true;
+    }
 
     // Se o HTML atual já é exatamente a versão liberada, registra a versão sem
-    // pedir /api/deployment-version. Isso também evita popup falso no primeiro acesso.
+    // pedir /api/deployment-version.
     if (loadedVersion && loadedVersion === releasedVersion) {
       persistPublicAppliedUpdate(releasedVersion);
       clearPendingUpdate();
@@ -18685,16 +18696,26 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     clearNonEssentialCookies();
     clearTransientStorage();
 
-    // Os assets têm URL revisionada e o novo Service Worker nunca intercepta
-    // HTML/API. Apagar todo CacheStorage e desregistrar o SW em cada release
-    // fazia o usuário baixar novamente imagens/chunks que não mudaram.
+    // O botão de atualização é um hard refresh controlado: remove somente caches
+    // de código/estilo do BETV (mantendo o cache de mídia) e desregistra o Service
+    // Worker antes de carregar o novo HTML. Assim nenhum chunk antigo permanece ativo.
+    try {
+      if ('caches' in window) {
+        jobs.push(
+          window.caches.keys().then(function (keys) {
+            return Promise.all(keys
+              .filter(function (key) { return String(key || '').indexOf('betv-static-') === 0; })
+              .map(function (key) { return window.caches.delete(key); }));
+          })
+        );
+      }
+    } catch (_) {}
+
     try {
       if ('serviceWorker' in navigator) {
         jobs.push(
           navigator.serviceWorker.getRegistrations().then(function (registrations) {
-            return Promise.all(registrations.map(function (registration) {
-              try { return registration.update(); } catch (_) { return Promise.resolve(); }
-            }));
+            return Promise.all(registrations.map(function (registration) { return registration.unregister(); }));
           })
         );
       }
@@ -18812,11 +18833,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var targetVersion = latestVersion || readPendingUpdate() || String(Date.now());
     persistPendingUpdate(targetVersion);
 
-                                                                         
-                                                                            
-                                                                               
-    if (isAdminContext()) persistAdminAppliedUpdate(targetVersion);
-    else persistPublicAppliedUpdate(targetVersion);
+    // Não marca a versão como instalada antes do reload. A confirmação só ocorre
+    // em cleanUpdateParameter(), quando o HTML novo comprova o mesmo fingerprint.
     forcePopupVisible(element);
 
     Promise.resolve()

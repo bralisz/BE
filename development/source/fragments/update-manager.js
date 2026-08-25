@@ -11,6 +11,7 @@
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
   var PUBLIC_APPLIED_UPDATE_KEY = 'betvPublicAppliedUpdateVersion';
+  var PUBLIC_APPLIED_UPDATE_COOKIE = 'be_site_release_version';
   var currentVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || '').trim();
   var latestVersion = '';
   var popup = null;
@@ -85,15 +86,34 @@
     try { window.localStorage.setItem(ADMIN_APPLIED_UPDATE_KEY, version); } catch (_) {}
   }
 
-  function readPublicAppliedUpdate() {
-    try { return String(window.localStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
+  function readCookieValue(name) {
+    try {
+      var prefix = String(name || '') + '=';
+      var parts = String(document.cookie || '').split(';');
+      for (var i = 0; i < parts.length; i += 1) {
+        var part = String(parts[i] || '').trim();
+        if (part.indexOf(prefix) === 0) return decodeURIComponent(part.slice(prefix.length));
+      }
+    } catch (_) {}
     return '';
+  }
+
+  function readPublicAppliedUpdate() {
+    var value = '';
+    try { value = String(window.localStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
+    if (value) return value;
+    return String(readCookieValue(PUBLIC_APPLIED_UPDATE_COOKIE) || '').trim();
   }
 
   function persistPublicAppliedUpdate(version) {
     version = String(version || '').trim();
     if (!version) return;
     try { window.localStorage.setItem(PUBLIC_APPLIED_UPDATE_KEY, version); } catch (_) {}
+    try {
+      var cookie = PUBLIC_APPLIED_UPDATE_COOKIE + '=' + encodeURIComponent(version) + '; Max-Age=31536000; Path=/; SameSite=Lax';
+      if (window.location.protocol === 'https:') cookie += '; Secure';
+      document.cookie = cookie;
+    } catch (_) {}
   }
 
   function readPendingUpdate() {
@@ -282,6 +302,17 @@
 
     var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
     var appliedVersion = readPublicAppliedUpdate();
+    var pendingVersion = readPendingUpdate();
+
+    // Um navegador realmente novo não possui versão aplicada nem atualização pendente.
+    // Nesse caso, a versão pública já liberada vira a base inicial e o usuário não
+    // recebe um aviso de atualização falso no primeiro acesso.
+    if (!loadedVersion && !appliedVersion && !pendingVersion) {
+      persistPublicAppliedUpdate(releasedVersion);
+      clearPendingUpdate();
+      hidePopup();
+      return true;
+    }
 
     if (loadedVersion && loadedVersion === releasedVersion) {
       persistPublicAppliedUpdate(releasedVersion);
@@ -343,7 +374,7 @@
     if (!normalized) return true;
 
     // Estes cookies mantêm sessão, autenticação e preferências essenciais.
-    if (normalized === 'be_site_preferences' || normalized === 'be_cookie_ack') return true;
+    if (normalized === 'be_site_preferences' || normalized === 'be_cookie_ack' || normalized === PUBLIC_APPLIED_UPDATE_COOKIE) return true;
     if (/^(?:__host-|__secure-)?sb[-_]/.test(normalized)) return true;
     return /(?:auth|session|token|login|supabase)/.test(normalized);
   }
@@ -444,7 +475,9 @@
       if ('caches' in window) {
         jobs.push(
           window.caches.keys().then(function (keys) {
-            return Promise.all(keys.map(function (key) { return window.caches.delete(key); }));
+            return Promise.all(keys
+              .filter(function (key) { return String(key || '').indexOf('betv-static-') === 0; })
+              .map(function (key) { return window.caches.delete(key); }));
           })
         );
       }
