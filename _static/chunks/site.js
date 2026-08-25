@@ -15703,8 +15703,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{
         currentProfile=await beBackend.profiles.update(user.uid,{username:handle,displayName:currentProfile.displayName||user.displayName||'',profileComplete:true,updatedAt:beBackend.now()});
         setLiteralText(username,'@'+handle);
-        onboardingMessage.textContent='Perfil configurado com sucesso.';onboardingMessage.className='onboarding-message ok';
-        setTimeout(function(){closeOnboarding(true);},420);
+        onboardingMessage.textContent='';onboardingMessage.className='onboarding-message';
+        closeOnboarding(true);
       }catch(error){
         onboardingMessage.textContent=error&&error.code==='username-in-use'?'Esse @ já está em uso. Tente outro.':'Não foi possível salvar seu @. '+(error&&error.message?error.message:'Tente novamente.');
         onboardingMessage.className='onboarding-message err';
@@ -16152,6 +16152,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function finishPublicLogin(user){
     user=await recoverAuthenticatedUser(user);
     if(!user){var sessionError=new Error('Não foi possível concluir a sessão de login. Tente entrar novamente.');sessionError.code='auth/session-missing';throw sessionError;}
+    try{
+      var normalizedLoginEmail=String(user.email||'').trim().toLowerCase();
+      var pendingEmailKey='betvNewAccountFlowPendingEmail:'+normalizedLoginEmail;
+      if(normalizedLoginEmail&&localStorage.getItem(pendingEmailKey)==='1'){
+        localStorage.setItem('betvNewAccountFlowPending:'+String(user.uid||''),'1');
+        localStorage.removeItem(pendingEmailKey);
+      }
+    }catch(_){ }
     if(typeof auth.requiresMfa==='function'){
       try{if(await auth.requiresMfa()){showMfaLogin(user.email||selectedAuthEmail);return null;}}
       catch(error){showMfaLogin(user.email||selectedAuthEmail,friendly(error),'error');return null;}
@@ -16302,8 +16310,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       authFlowBusy=true;if(b)b.disabled=true;setStatus('Criando sua conta…');
       try{
         var result=await auth.signUp({email:email,password:password,name:name,username:'',remember:true});
-        if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Conta criada. Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.','ok');return;}
-        currentProfile=await beBackend.profiles.ensure(result.user);if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('Conta criada com sucesso.','ok');await finishPublicLogin(result.user);
+        try{
+          localStorage.setItem('betvNewAccountFlowPendingEmail:'+email,'1');
+          if(result&&result.user&&result.user.uid)localStorage.setItem('betvNewAccountFlowPending:'+String(result.user.uid),'1');
+        }catch(_){ }
+        if(result.needsEmailConfirmation){showLogin();setMode('password',email);setStatus('Abra o link enviado ao seu e-mail para confirmar o endereço e depois faça login.');return;}
+        currentProfile=await beBackend.profiles.ensure(result.user);if(window.BETVGuestAccess)window.BETVGuestAccess.setActive(false);localStorage.setItem('beAuthExpected','1');localStorage.setItem('beSessionUid',result.user.uid);setStatus('');await finishPublicLogin(result.user);
       }catch(err){
         showLogin();
         if(err&&err.code==='auth/email-already-in-use')setMode('password',email);else setMode('signup',email);
@@ -20097,6 +20109,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function storageKey(userId){return 'beProfileShareCampaignSeen:'+String(userId||'guest');}
   function readSeen(userId){try{return String(localStorage.getItem(storageKey(userId))||'');}catch(_){return '';}}
   function writeSeen(userId,campaignId){try{localStorage.setItem(storageKey(userId),String(campaignId||''));}catch(_){ }}
+  function newAccountFlowPending(userId){try{return localStorage.getItem('betvNewAccountFlowPending:'+String(userId||''))==='1';}catch(_){return false;}}
   function readFavorites(userId){
     try{var value=JSON.parse(localStorage.getItem('beProfileTopFavorites:'+String(userId||'guest'))||'[]');return Array.isArray(value)?value.slice(0,4):[];}catch(_){return [];}
   }
@@ -20114,7 +20127,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   function shouldWaitForOtherUi(){
     var body=document.body;
-    return !body||body.classList.contains('login-mode')||body.classList.contains('profile-onboarding-active')||body.classList.contains('admin-mode')||document.documentElement.classList.contains('site-loading-active');
+    return !body||body.classList.contains('login-mode')||body.classList.contains('profile-onboarding-active')||body.classList.contains('profile-favorites-picker-active')||body.classList.contains('admin-mode')||document.documentElement.classList.contains('site-loading-active');
   }
   function removePrompt(){
     var node=document.getElementById('profileShareCampaignPrompt');
@@ -20125,6 +20138,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function rememberChoice(userId,campaignId){
     writeSeen(userId,campaignId);
     if(window.beScheduleUserDataSync)window.beScheduleUserDataSync('profile-share-campaign');
+    try{window.dispatchEvent(new CustomEvent('be:profile-share-campaign-complete',{detail:{userId:String(userId||''),campaignId:String(campaignId||'')}}));}catch(_){ }
   }
   async function claimTag(userId){
     try{
@@ -20194,6 +20208,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     avatar=avatar||String(profile&&profile.avatarUrl||user.photoURL||'').trim();
     var name=String(profile&&profile.displayName||user.displayName||profile&&profile.username||'Usuário').trim()||'Usuário';
     var needsFavorites=favorites.length<4;
+    var requiresNewAccountFavorites=newAccountFlowPending(uid)&&needsFavorites;
     var wrap=document.createElement('div');
     wrap.id='profileShareCampaignPrompt';
     wrap.className='profile-share-campaign-backdrop';
@@ -20213,7 +20228,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       '</div>'+
       '<div class="profile-share-campaign-actions">'+
         (needsFavorites?'<button type="button" class="profile-share-campaign-button secondary" data-profile-campaign-add>'+esc(t('Adicione 4 vídeos favoritos'))+'</button>':'')+
-        '<button type="button" class="profile-share-campaign-button primary" data-profile-campaign-share>'+esc(t('Compartilhar'))+'</button>'+
+        (!requiresNewAccountFavorites?'<button type="button" class="profile-share-campaign-button primary" data-profile-campaign-share>'+esc(t('Compartilhar'))+'</button>':'')+
       '</div>'+
     '</section>';
     document.body.appendChild(wrap);
@@ -20222,7 +20237,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     activeUserId=uid;
     var add=wrap.querySelector('[data-profile-campaign-add]');
     var share=wrap.querySelector('[data-profile-campaign-share]');
-    if(add)add.addEventListener('click',function(){rememberChoice(uid,campaignId);removePrompt();openFavorites();});
+    if(add)add.addEventListener('click',function(){if(!newAccountFlowPending(uid))rememberChoice(uid,campaignId);removePrompt();openFavorites();});
     if(share)share.addEventListener('click',async function(){
       if(share.disabled)return;
       share.disabled=true;
@@ -20245,7 +20260,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   async function latestCampaign(){
     var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
-    return (Array.isArray(items)?items:[]).find(function(item){return item&&item.active!==false&&String(item.type||'')==='profile-share-campaign';})||null;
+    var campaign=(Array.isArray(items)?items:[]).find(function(item){return item&&item.active!==false&&String(item.type||'')==='profile-share-campaign';})||null;
+    if(campaign)return campaign;
+    var user=window.beBackend&&window.beBackend.auth&&window.beBackend.auth.currentUser;
+    if(user&&user.uid&&newAccountFlowPending(user.uid))return {id:'new-account-profile-share-v1',type:'profile-share-campaign',active:true};
+    return null;
   }
   async function check(){
     if(checking||String(location.hash||'').startsWith('#/admin'))return;
@@ -20287,6 +20306,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   window.addEventListener('be:notifications-ready',function(){schedule(250);});
   window.addEventListener('be:user-data-synced',function(){if(activeCampaign&&activeUserId)schedule(150);});
+  window.addEventListener('be:profile-favorites-changed',function(){schedule(180);});
   document.addEventListener('visibilitychange',function(){if(!document.hidden)schedule(250);});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
@@ -20693,6 +20713,47 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(boafOwnedTagCache[String(user.uid)]===true)return false;
     return !boafNoticeDismissed(user.uid);
   }
+  function boafNewAccountFlowKey(userId){
+    return 'betvNewAccountFlowPending:'+String(userId||'').trim();
+  }
+  function boafNewAccountFlowPending(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    try{return localStorage.getItem(boafNewAccountFlowKey(uid))==='1';}catch(_){return false;}
+  }
+  function boafNewAccountFavoritesReady(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    try{
+      var favorites=JSON.parse(localStorage.getItem('beProfileTopFavorites:'+uid)||'[]');
+      return Array.isArray(favorites)&&favorites.length>=4;
+    }catch(_){return false;}
+  }
+  function boafNewAccountShareReady(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    try{
+      if(String(localStorage.getItem('beProfileShareCampaignSeen:'+uid)||'').trim())return true;
+      return String(localStorage.getItem('beCommunityTag:'+uid)||'').trim().toLowerCase()==='billie_fan';
+    }catch(_){return false;}
+  }
+  function boafNoticeBlockedBySetup(){
+    var body=document.body;
+    if(!body)return true;
+    if(body.classList.contains('profile-onboarding-active')||body.classList.contains('profile-share-campaign-open')||body.classList.contains('profile-favorites-picker-active'))return true;
+    var sharePrompt=document.getElementById('profileShareCampaignPrompt');
+    if(sharePrompt&&sharePrompt.offsetParent!==null)return true;
+    var favoritesPicker=document.getElementById('profileFavoritesPicker');
+    if(favoritesPicker&&!favoritesPicker.hidden)return true;
+    return false;
+  }
+  function boafNewAccountFlowReady(userId){
+    if(!boafNewAccountFlowPending(userId))return true;
+    return boafNewAccountFavoritesReady(userId)&&boafNewAccountShareReady(userId)&&!boafNoticeBlockedBySetup();
+  }
+  function completeBoafNewAccountFlow(userId){
+    try{localStorage.removeItem(boafNewAccountFlowKey(userId));}catch(_){ }
+  }
   function hideBoafStreamPanelWithoutDismiss(){
     var modal=document.getElementById('boafStreamPanel');
     if(modal)modal.hidden=true;
@@ -20860,10 +20921,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         hideBoafStreamPanelWithoutDismiss();
         return;
       }
+      if(boafNoticeBlockedBySetup()||!boafNewAccountFlowReady(uid)){
+        scheduleBoafStreamNotice(700);
+        return;
+      }
       if(!canShowBoafNotice()){
         if(isBoafLoginSurface())scheduleBoafStreamNotice(700);
         return;
       }
+      if(boafNewAccountFlowPending(uid))completeBoafNewAccountFlow(uid);
       boafNoticeOpenedForUser=uid;
       openBoafStreamPanel({auto:true});
     },Math.max(250,Number(delay)||900));
@@ -21314,6 +21380,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
     window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});
     window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(user){setTimeout(injectPrivacySettings,50);if(document.body.classList.contains('community-page-active'))refreshCommunity();var active=user&&user.uid?user:currentUser();if(!active||!active.uid){boafNoticeOpenedForUser='';if(boafNoticeTimer){window.clearTimeout(boafNoticeTimer);boafNoticeTimer=0;}hideBoafStreamPanelWithoutDismiss();return;}window.setTimeout(function(){scheduleBoafStreamNotice(350);retryPendingBoafClaim();},450);});
+    window.addEventListener('be:profile-share-campaign-complete',function(){scheduleBoafStreamNotice(300);});
+    window.addEventListener('be:profile-favorites-changed',function(){scheduleBoafStreamNotice(300);});
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
