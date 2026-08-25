@@ -4298,7 +4298,7 @@ body.notification-page-active > #notificationPage{
 .notification-page-link small{color:#636366;font-size:10px}
 .notification-page-link.active small{color:#5eacff}
 .notification-page-content{padding:70px clamp(32px,7vw,92px) 110px}
-.notification-article{max-width:710px}
+.notification-article{max-width:1120px}
 .notification-article-kicker{
   color:#2997ff;
   font-size:12px;
@@ -4315,6 +4315,7 @@ body.notification-page-active > #notificationPage{
 }
 .notification-article-date{display:block;margin:0 0 38px;color:#2997ff;font-size:13px;font-weight:600}
 .notification-article-body{
+  max-width:710px;
   color:#c7c7cc;
   font-size:17px;
   line-height:1.75;
