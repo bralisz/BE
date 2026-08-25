@@ -32,7 +32,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
-  var STATIC_REV='20260825-discord-persist-session-v41';
+  var STATIC_REV='20260825-discord-mfa-password-only-v42';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -3224,7 +3224,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return { supported: false, enabled: false, factor: null, currentLevel: null, nextLevel: null };
       }
       const session = await ensureSupabaseSession();
-      if (!session) throw backendError('auth/session-missing', 'Não foi possível restaurar a sessão do Discord. Use outra conta e tente o login novamente.');
+      if (!session) throw backendError('auth/session-missing', 'Não foi possível restaurar a sessão de login. Entre novamente com e-mail e senha.');
       rememberMfaSupabaseSession(session);
       const factorsResult = await mfa.listFactors();
       if (factorsResult.error) throw mapAuthError(factorsResult.error);
@@ -3386,9 +3386,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       sessionStorage.setItem('beOAuthDestination', 'home');
       localStorage.setItem('beAuthExpected', '1');
       try {
-        localStorage.setItem('beDiscordLoginPending', JSON.stringify({ startedAt: Date.now() }));
+        localStorage.setItem('beDiscordLoginPending', JSON.stringify({ startedAt: Date.now(), kind: 'login' }));
         sessionStorage.removeItem('beMfaChallengePending');
         sessionStorage.removeItem('beMfaChallengeEmail');
+        sessionStorage.removeItem('beMfaChallengeSource');
         localStorage.removeItem('beMfaChallengeResume');
         sessionStorage.removeItem('beMfaSupabaseSessionResume:v1');
       } catch (_) {}
@@ -3408,12 +3409,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (typeof supabaseClient.auth.linkIdentity !== 'function') throw backendError('auth/link-not-supported', 'A conexão de identidades não está disponível nesta versão do Supabase.');
       sessionStorage.setItem('beOAuthDestination', 'home');
       localStorage.setItem('beAuthExpected', '1');
+      try {
+        localStorage.setItem('beDiscordLoginPending', JSON.stringify({ startedAt: Date.now(), kind: 'link' }));
+        sessionStorage.removeItem('beMfaChallengePending');
+        sessionStorage.removeItem('beMfaChallengeEmail');
+        sessionStorage.removeItem('beMfaChallengeSource');
+        localStorage.removeItem('beMfaChallengeResume');
+        sessionStorage.removeItem('beMfaSupabaseSessionResume:v1');
+      } catch (_) {}
       const redirectTo = oauthRedirectUrl('discord-link');
       const { data: result, error } = await supabaseClient.auth.linkIdentity({
         provider: 'discord',
         options: { redirectTo }
       });
-      if (error) throw mapAuthError(error);
+      if (error) {
+        try { localStorage.removeItem('beDiscordLoginPending'); } catch (_) {}
+        throw mapAuthError(error);
+      }
       return result;
     },
     async accountStatus() {
@@ -15730,7 +15742,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           settingsMfaToggle.dataset.factorId=status.factor&&status.factor.id?String(status.factor.id):'';
           settingsMfaToggle.textContent=status.enabled?'Desativar':'Ativar';
           settingsMfaToggle.classList.toggle('primary',!status.enabled);
-          if(settingsMfaDescription)settingsMfaDescription.textContent=status.enabled?'Ativada. Um código do autenticador será solicitado ao entrar na sua conta.':'Adicione uma camada extra de segurança usando um aplicativo autenticador.';
+          if(settingsMfaDescription)settingsMfaDescription.textContent=status.enabled?'Ativada. O código do autenticador será solicitado apenas ao entrar com e-mail e senha.':'Adicione uma camada extra de segurança usando um aplicativo autenticador.';
           settingsMfaToggle.disabled=false;
         }catch(error){settingsMfaToggle.textContent='Tentar novamente';settingsMfaToggle.disabled=false;setSettingsMfaStatus(error&&error.message?error.message:'Não foi possível verificar a segurança da conta.','err');}
       }
@@ -16243,13 +16255,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   var bgIndex=0,bgTimer=null,authReady=false,authFlowBusy=false,currentProfile=null,auth=null,selectedAuthEmail='',mfaChallengePending=false;
   var MFA_RESUME_TTL_MS=15*60*1000;
+  var MFA_PASSWORD_SOURCE='password';
   try{
-    mfaChallengePending=sessionStorage.getItem('beMfaChallengePending')==='1';
-    selectedAuthEmail=String(sessionStorage.getItem('beMfaChallengeEmail')||'').trim().toLowerCase();
+    var rememberedMfaSource=String(sessionStorage.getItem('beMfaChallengeSource')||'');
+    mfaChallengePending=rememberedMfaSource===MFA_PASSWORD_SOURCE&&sessionStorage.getItem('beMfaChallengePending')==='1';
+    selectedAuthEmail=mfaChallengePending?String(sessionStorage.getItem('beMfaChallengeEmail')||'').trim().toLowerCase():'';
     if(!mfaChallengePending){
       var savedMfa=JSON.parse(localStorage.getItem('beMfaChallengeResume')||'null');
-      if(savedMfa&&savedMfa.pending===true&&Date.now()-Number(savedMfa.savedAt||0)<MFA_RESUME_TTL_MS){mfaChallengePending=true;selectedAuthEmail=String(savedMfa.email||'').trim().toLowerCase();}
-      else localStorage.removeItem('beMfaChallengeResume');
+      if(savedMfa&&savedMfa.pending===true&&savedMfa.source===MFA_PASSWORD_SOURCE&&Date.now()-Number(savedMfa.savedAt||0)<MFA_RESUME_TTL_MS){mfaChallengePending=true;selectedAuthEmail=String(savedMfa.email||'').trim().toLowerCase();}
+      else{localStorage.removeItem('beMfaChallengeResume');sessionStorage.removeItem('beMfaChallengePending');sessionStorage.removeItem('beMfaChallengeEmail');sessionStorage.removeItem('beMfaChallengeSource');}
     }
   }catch(_){}
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
@@ -16327,7 +16341,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       'auth/invalid-email-domain':'Use um e-mail com domínio real e capaz de receber mensagens.',
       'auth/too-many-requests':'Muitas tentativas. Aguarde um pouco e tente novamente.',
       'auth/network-request-failed':'Não foi possível conectar. Verifique sua internet e tente novamente.',
-      'auth/session-missing':'Sua sessão do Discord ainda está sendo restaurada. Volte para esta tela e tente o código novamente.',
+      'auth/session-missing':'Não foi possível restaurar a sessão de login. Entre novamente com e-mail e senha.',
       'auth/mfa-invalid-code':'Código do autenticador inválido ou expirado.',
       'auth/mfa-factor-missing':'Nenhum autenticador ativo foi encontrado para esta conta.',
       'auth/mfa-unavailable':'A verificação em duas etapas está indisponível no momento.',
@@ -16382,23 +16396,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     mfaChallengePending=true;
     var normalized=String(email||selectedAuthEmail||(auth&&auth.currentUser&&auth.currentUser.email)||'').trim().toLowerCase();
     if(normalized)selectedAuthEmail=normalized;
-    try{sessionStorage.setItem('beMfaChallengePending','1');if(normalized)sessionStorage.setItem('beMfaChallengeEmail',normalized);}catch(_){}
-    try{localStorage.setItem('beMfaChallengeResume',JSON.stringify({pending:true,email:normalized,savedAt:Date.now()}));}catch(_){}
+    try{sessionStorage.setItem('beMfaChallengePending','1');sessionStorage.setItem('beMfaChallengeSource',MFA_PASSWORD_SOURCE);if(normalized)sessionStorage.setItem('beMfaChallengeEmail',normalized);}catch(_){}
+    try{localStorage.setItem('beMfaChallengeResume',JSON.stringify({pending:true,source:MFA_PASSWORD_SOURCE,email:normalized,savedAt:Date.now()}));}catch(_){}
     return normalized;
   }
   function clearMfaChallenge(){
     mfaChallengePending=false;
-    try{sessionStorage.removeItem('beMfaChallengePending');sessionStorage.removeItem('beMfaChallengeEmail');}catch(_){}
+    try{sessionStorage.removeItem('beMfaChallengePending');sessionStorage.removeItem('beMfaChallengeEmail');sessionStorage.removeItem('beMfaChallengeSource');}catch(_){}
     try{localStorage.removeItem('beMfaChallengeResume');}catch(_){}
   }
   function hasRememberedMfaChallenge(){
     if(mfaChallengePending)return true;
-    try{if(sessionStorage.getItem('beMfaChallengePending')==='1')return true;}catch(_){}
+    try{
+      if(sessionStorage.getItem('beMfaChallengeSource')===MFA_PASSWORD_SOURCE&&sessionStorage.getItem('beMfaChallengePending')==='1'){mfaChallengePending=true;selectedAuthEmail=String(sessionStorage.getItem('beMfaChallengeEmail')||selectedAuthEmail||'').trim().toLowerCase();return true;}
+    }catch(_){}
     try{
       var saved=JSON.parse(localStorage.getItem('beMfaChallengeResume')||'null');
-      if(saved&&saved.pending===true&&Date.now()-Number(saved.savedAt||0)<MFA_RESUME_TTL_MS){mfaChallengePending=true;if(!selectedAuthEmail)selectedAuthEmail=String(saved.email||'').trim().toLowerCase();return true;}
-      localStorage.removeItem('beMfaChallengeResume');
-    }catch(_){}
+      if(saved&&saved.pending===true&&saved.source===MFA_PASSWORD_SOURCE&&Date.now()-Number(saved.savedAt||0)<MFA_RESUME_TTL_MS){mfaChallengePending=true;if(!selectedAuthEmail)selectedAuthEmail=String(saved.email||'').trim().toLowerCase();return true;}
+      clearMfaChallenge();
+    }catch(_){clearMfaChallenge();}
     return false;
   }
   function showMfaLogin(email,message,type){
@@ -16493,6 +16509,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }catch(_){return String(initialCallbackDestination||'').toLowerCase()==='discord';}
   }
   function clearDiscordLoginPending(){try{localStorage.removeItem('beDiscordLoginPending');}catch(_){}}
+  function discordOAuthFlowActive(){return discordLoginPending()||/^discord(?:-link)?$/i.test(String(initialCallbackDestination||''));}
   function isDiscordAccount(user){
     try{
       var raw=user&&user.raw?user.raw:user||{};
@@ -16538,7 +16555,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var user=await recoverAuthenticatedUser(null);
       if(!user)return false;
       showSiteSkeleton();
-      await finishPublicLogin(user,{skipMfa:true});
+      await finishPublicLogin(user,{discordFlow:true});
       if(isDiscordAccount(user))rememberStableDiscordSession(user);
       if(window.__beContentReady)hideSiteSkeleton();
       return true;
@@ -16585,20 +16602,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         localStorage.removeItem(pendingEmailKey);
       }
     }catch(_){ }
-    var discordCallback=discordLoginPending()||options.skipMfa===true||String(initialCallbackDestination||'').toLowerCase()==='discord';
-    if(!discordCallback&&options.mfaVerified!==true&&typeof auth.requiresMfa==='function'){
-      try{
-        if(await auth.requiresMfa()){
-          showMfaLogin(user.email||selectedAuthEmail);
-          return null;
-        }
-      }catch(error){
-        showLogin();
-        setMode('email',user.email||selectedAuthEmail);
-        setStatus(friendly(error),'error');
-        return null;
-      }
-    }
+    var discordCallback=options.discordFlow===true||discordOAuthFlowActive();
     clearMfaChallenge();
     if(discordCallback)clearDiscordLoginPending();
     if(discordCallback||isDiscordAccount(user))rememberStableDiscordSession(user);
@@ -16738,7 +16742,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!validAuthPassword(password)){setStatus('Use pelo menos 6 caracteres e inclua um número ou caractere especial.','error');form.elements.namedItem('password').focus();return;}
       if(authFlowBusy)return;
       authFlowBusy=true;if(b){b.disabled=true;authButtonBusy(b,true,'Entrando…','Entrar');}setStatus('');
-      try{var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});await finishPublicLogin(result&&result.user?result.user:auth.currentUser);}catch(err){showLogin();setMode('password',email);if(isBannedError(err)){setStatus('');showBannedToast({email:email});}else setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b){b.disabled=false;authButtonBusy(b,false,'Entrando…','Entrar');}}
+      try{
+        clearMfaChallenge();
+        var result=await auth.signInWithEmail({email:email,password:password,remember:q('rememberLogin').checked});
+        var loginUser=result&&result.user?result.user:auth.currentUser;
+        if(typeof auth.requiresMfa==='function'&&await auth.requiresMfa()){showMfaLogin(loginUser&&loginUser.email||email);return;}
+        await finishPublicLogin(loginUser);
+      }catch(err){showLogin();setMode('password',email);if(isBannedError(err)){setStatus('');showBannedToast({email:email});}else setStatus(err&&err.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(err),'error');}finally{authFlowBusy=false;if(b){b.disabled=false;authButtonBusy(b,false,'Entrando…','Entrar');}}
     });
 
     q('signupForm').addEventListener('submit',async function(e){
@@ -16782,10 +16792,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           clearMfaChallenge();
         }
         var expectedSession=callbackActive||localStorage.getItem('beAuthExpected')==='1'||Boolean(localStorage.getItem('beSessionUid'))||discordLoginPending();
-        if(expectedSession&&!callbackFailure){
+        if(expectedSession&&(!callbackFailure||discordOAuthFlowActive())){
           try{
             var recoveredUser=await recoverAuthenticatedUser(null);
-            if(recoveredUser){await finishPublicLogin(recoveredUser,{skipMfa:discordLoginPending()});return;}
+            if(recoveredUser){await finishPublicLogin(recoveredUser,{discordFlow:discordOAuthFlowActive()});return;}
           }catch(recoveryError){(void 0);}
           if(discordLoginPending()||recentStableDiscordSession()){
             showSiteSkeleton();
@@ -16839,10 +16849,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
       try{
         showSiteSkeleton();
-        await finishPublicLogin(user,{skipMfa:discordLoginPending()});
+        if(hasRememberedMfaChallenge()&&!discordLoginPending()){showMfaLogin(user.email||selectedAuthEmail);return;}
+        await finishPublicLogin(user,{discordFlow:discordOAuthFlowActive()});
         if(isDiscordAccount(user))rememberStableDiscordSession(user);
         if(window.__beContentReady)hideSiteSkeleton();
-      }catch(error){hideSiteSkeleton();showLogin();setStatus(error&&error.code==='admin-only'?'A conta administrativa deve acessar #/admin.':friendly(error),'error');}
+      }catch(error){
+        hideSiteSkeleton();
+        if(error&&error.code==='admin-only'){showLogin();setStatus('A conta administrativa deve acessar #/admin.','error');return;}
+        clearMfaChallenge();
+        if(discordOAuthFlowActive()||isDiscordAccount(user)){clearDiscordLoginPending();rememberStableDiscordSession(user);}
+        if(isConfigRoute())enterConfig();else enterHome();
+      }
     });
 
     function handlePublicRoute(){

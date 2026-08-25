@@ -1194,12 +1194,23 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
     async signInWithDiscord() {
       sessionStorage.setItem('beOAuthDestination', 'home');
       localStorage.setItem('beAuthExpected', '1');
+      try {
+        localStorage.setItem('beDiscordLoginPending', JSON.stringify({ startedAt: Date.now(), kind: 'login' }));
+        sessionStorage.removeItem('beMfaChallengePending');
+        sessionStorage.removeItem('beMfaChallengeEmail');
+        sessionStorage.removeItem('beMfaChallengeSource');
+        localStorage.removeItem('beMfaChallengeResume');
+        sessionStorage.removeItem('beMfaSupabaseSessionResume:v1');
+      } catch (_) {}
       const redirectTo = oauthRedirectUrl('discord');
       const { data: result, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'discord',
         options: { redirectTo }
       });
-      if (error) throw mapAuthError(error);
+      if (error) {
+        try { localStorage.removeItem('beDiscordLoginPending'); } catch (_) {}
+        throw mapAuthError(error);
+      }
       return result;
     },
     async connectDiscord() {
@@ -1207,12 +1218,23 @@ window.BE_SUPABASE_CONFIG = Object.freeze({
       if (typeof supabaseClient.auth.linkIdentity !== 'function') throw backendError('auth/link-not-supported', 'A conexão de identidades não está disponível nesta versão do Supabase.');
       sessionStorage.setItem('beOAuthDestination', 'home');
       localStorage.setItem('beAuthExpected', '1');
+      try {
+        localStorage.setItem('beDiscordLoginPending', JSON.stringify({ startedAt: Date.now(), kind: 'link' }));
+        sessionStorage.removeItem('beMfaChallengePending');
+        sessionStorage.removeItem('beMfaChallengeEmail');
+        sessionStorage.removeItem('beMfaChallengeSource');
+        localStorage.removeItem('beMfaChallengeResume');
+        sessionStorage.removeItem('beMfaSupabaseSessionResume:v1');
+      } catch (_) {}
       const redirectTo = oauthRedirectUrl('discord-link');
       const { data: result, error } = await supabaseClient.auth.linkIdentity({
         provider: 'discord',
         options: { redirectTo }
       });
-      if (error) throw mapAuthError(error);
+      if (error) {
+        try { localStorage.removeItem('beDiscordLoginPending'); } catch (_) {}
+        throw mapAuthError(error);
+      }
       return result;
     },
     async accountStatus() {
