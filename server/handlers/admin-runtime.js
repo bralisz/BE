@@ -14,6 +14,8 @@ function __bootAdminCommunityTags(){
   ];
   var tagMapLoaded=false;
   var tagMap={};
+  var ownedTagMap={};
+  var ownedTagsLoading=false;
   var enhanceQueued=false;
 
   function injectStyles(){
@@ -31,7 +33,8 @@ function __bootAdminCommunityTags(){
       'body.admin-mode .user-tag-assign.is-open .user-tag-panel{display:grid;gap:8px}'+
       'body.admin-mode .user-tag-choice,body.admin-mode .user-tag-clear{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid rgba(255,255,255,.065);border-radius:11px;background:rgba(255,255,255,.022);color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:.16s ease}'+
       'body.admin-mode .user-tag-choice:hover,body.admin-mode .user-tag-clear:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.11)}'+
-      'body.admin-mode .user-tag-choice.is-active{border-color:rgba(74,222,128,.46);background:rgba(42,174,110,.18);box-shadow:inset 0 0 0 1px rgba(74,222,128,.08)}'+
+      'body.admin-mode .user-tag-choice.is-owned{border-color:rgba(34,197,94,.62);background:linear-gradient(180deg,rgba(22,101,52,.34),rgba(20,83,45,.28));box-shadow:inset 0 0 0 1px rgba(74,222,128,.10)}'+
+      'body.admin-mode .user-tag-choice.is-owned:hover{border-color:rgba(74,222,128,.78);background:linear-gradient(180deg,rgba(22,101,52,.42),rgba(20,83,45,.36))}'+
       'body.admin-mode .user-tag-choice-label{display:flex;align-items:center;gap:8px;min-width:0;color:rgba(255,255,255,.92)}'+
       'body.admin-mode .user-tag-choice-label small{display:block;color:rgba(255,255,255,.42);font-size:10px;font-weight:700;letter-spacing:.01em;text-transform:uppercase}'+
       'body.admin-mode .user-tag-clear{justify-content:center;color:rgba(255,255,255,.74);font-weight:800}'+
@@ -89,6 +92,62 @@ function __bootAdminCommunityTags(){
   function currentMeta(userId){
     var value=String(tagMap[String(userId)||'']||'').toLowerCase();
     return TAGS.find(function(item){return item.key===value;})||null;
+  }
+
+  function normalizeOwnedTags(value){
+    var list=Array.isArray(value)?value:[];
+    return list.map(function(tag){return String(tag||'').trim().toLowerCase();}).filter(function(tag,index,all){
+      return !!tag && TAGS.some(function(item){return item.key===tag;}) && all.indexOf(tag)===index;
+    });
+  }
+
+  function ownedTags(userId){
+    return normalizeOwnedTags(ownedTagMap[String(userId)||'']||[]);
+  }
+
+  function ownsTag(userId,tagKey){
+    return ownedTags(userId).indexOf(String(tagKey||'').toLowerCase())>=0;
+  }
+
+  async function loadOwnedTagsForVisibleRows(){
+    if(ownedTagsLoading)return;
+    var client=getClient();
+    if(!client||typeof client.from!=='function')return;
+    var ids=[];
+    document.querySelectorAll('.users-table tbody tr').forEach(function(row){
+      var anchor=row.querySelector('[data-user-export], [data-user-fan], [data-user-ban], [data-user-delete]');
+      if(!anchor)return;
+      var userId=anchor.dataset.userExport || anchor.dataset.userFan || anchor.dataset.userBan || anchor.dataset.userDelete || '';
+      if(userId && ids.indexOf(userId)<0)ids.push(userId);
+    });
+    if(!ids.length)return;
+    ownedTagsLoading=true;
+    try{
+      var response=await client.from('profiles').select('id,community_tag,community_tags').in('id',ids);
+      if(response&&response.error)throw response.error;
+      (response&&Array.isArray(response.data)?response.data:[]).forEach(function(profile){
+        var uid=String(profile.id||'');
+        if(!uid)return;
+        var active=String(profile.community_tag||'').trim().toLowerCase();
+        if(active)tagMap[uid]=active;
+        var list=normalizeOwnedTags(profile.community_tags);
+        if(active && list.indexOf(active)<0)list.push(active);
+        ownedTagMap[uid]=list;
+        var row=document.querySelector('.users-table tbody tr [data-user-export="'+uid+'"], .users-table tbody tr [data-user-fan="'+uid+'"], .users-table tbody tr [data-user-ban="'+uid+'"], .users-table tbody tr [data-user-delete="'+uid+'"]');
+        row=row&&row.closest('tr');
+        if(row){
+          row.dataset.communityTag=active;
+          row.dataset.communityTags=list.join(',');
+          var wrap=row.querySelector('.user-tag-assign');
+          if(wrap)syncControlState(wrap,uid);
+          renderSummary(row,uid);
+        }
+      });
+    }catch(_){
+      // Se a consulta falhar, o painel continua funcional usando a tag ativa já carregada.
+    }finally{
+      ownedTagsLoading=false;
+    }
   }
 
   function currentSummaryElement(row){
@@ -149,9 +208,9 @@ function __bootAdminCommunityTags(){
     if(clearButton)clearButton.hidden=!meta;
     wrap.dataset.currentTag=meta?meta.key:'';
     wrap.querySelectorAll('.user-tag-choice').forEach(function(button){
-      var active=!!meta && button.dataset.tagValue===meta.key;
-      button.classList.toggle('is-active',active);
-      button.setAttribute('aria-pressed',active?'true':'false');
+      var owned=ownsTag(userId,button.dataset.tagValue);
+      button.classList.toggle('is-owned',owned);
+      button.setAttribute('aria-pressed',owned?'true':'false');
     });
   }
 
@@ -165,7 +224,13 @@ function __bootAdminCommunityTags(){
       var response=await client.rpc('admin_set_community_tag',{p_user_id:userId,p_tag:tagKey});
       if(response && response.error)throw response.error;
       tagMap[String(userId)]=tagKey;
-      if(row)row.dataset.communityTag=tagKey||'';
+      var owned=ownedTags(userId);
+      if(tagKey && owned.indexOf(tagKey)<0)owned.push(tagKey);
+      ownedTagMap[String(userId)]=owned;
+      if(row){
+        row.dataset.communityTag=tagKey||'';
+        row.dataset.communityTags=owned.join(',');
+      }
       tagMapLoaded=true;
       renderSummary(row,userId);
       syncControlState(wrap,userId);
@@ -231,6 +296,10 @@ function __bootAdminCommunityTags(){
       var userId=anchor.dataset.userExport || anchor.dataset.userFan || anchor.dataset.userBan || anchor.dataset.userDelete || '';
       if(!userId)return;
       tagMap[String(userId)]=String(row.dataset.communityTag||tagMap[String(userId)]||'').trim().toLowerCase();
+      var seededOwned=String(row.dataset.communityTags||'').split(',').map(function(tag){return tag.trim().toLowerCase();}).filter(Boolean);
+      var activeSeed=tagMap[String(userId)];
+      if(activeSeed && seededOwned.indexOf(activeSeed)<0)seededOwned.push(activeSeed);
+      if(seededOwned.length)ownedTagMap[String(userId)]=normalizeOwnedTags(seededOwned);
       renderSummary(row,userId);
       var existingControl=row.querySelector('.user-tag-assign');
       if(existingControl){
@@ -260,7 +329,7 @@ function __bootAdminCommunityTags(){
 
   function boot(){
     injectStyles();
-    loadTagMap().finally(scheduleEnhance);
+    loadTagMap().finally(function(){scheduleEnhance();setTimeout(loadOwnedTagsForVisibleRows,120);});
     var observer=new MutationObserver(function(records){
       var relevant=records.some(function(record){
         return Array.prototype.some.call(record.addedNodes||[],function(node){
@@ -269,7 +338,7 @@ function __bootAdminCommunityTags(){
           return Boolean((node.matches&&node.matches('.users-table,.users-table tbody,.users-table tr'))||(node.querySelector&&node.querySelector('.users-table,.users-table tbody,.users-table tr')));
         });
       });
-      if(relevant)scheduleEnhance();
+      if(relevant){scheduleEnhance();setTimeout(loadOwnedTagsForVisibleRows,140);}
     });
     observer.observe(document.body,{childList:true,subtree:true});
     document.addEventListener('click', function(event){
