@@ -31,14 +31,18 @@ function __bootAdminCommunityTags(){
       'body.admin-mode .user-tag-assign.is-open .user-tag-panel{display:grid;gap:8px}'+
       'body.admin-mode .user-tag-choice,body.admin-mode .user-tag-clear{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid rgba(255,255,255,.065);border-radius:11px;background:rgba(255,255,255,.022);color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:.16s ease}'+
       'body.admin-mode .user-tag-choice:hover,body.admin-mode .user-tag-clear:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.11)}'+
-      'body.admin-mode .user-tag-choice.is-active{border-color:rgba(93,174,255,.28);background:rgba(55,130,205,.09);box-shadow:inset 0 0 0 1px rgba(93,174,255,.05)}'+
+      'body.admin-mode .user-tag-choice.is-active{border-color:rgba(74,222,128,.46);background:rgba(42,174,110,.18);box-shadow:inset 0 0 0 1px rgba(74,222,128,.08)}'+
       'body.admin-mode .user-tag-choice-label{display:flex;align-items:center;gap:8px;min-width:0;color:rgba(255,255,255,.92)}'+
       'body.admin-mode .user-tag-choice-label small{display:block;color:rgba(255,255,255,.42);font-size:10px;font-weight:700;letter-spacing:.01em;text-transform:uppercase}'+
       'body.admin-mode .user-tag-clear{justify-content:center;color:rgba(255,255,255,.74);font-weight:800}'+
       'body.admin-mode .user-tag-clear[hidden]{display:none!important}'+
       'body.admin-mode .user-tag-chip{display:inline-flex;align-items:center;justify-content:center;min-height:19px;padding:0 7px;border:1px solid transparent;border-radius:6px;font-size:9.5px;font-weight:850;line-height:1;letter-spacing:-.01em;white-space:nowrap;box-shadow:none}'+
       'body.admin-mode .user-tag-chip::before{display:none}'+
-      'body.admin-mode .user-tag-chip.is-avocado,body.admin-mode .user-tag-chip.is-eyelash,body.admin-mode .user-tag-chip.is-blohsh,body.admin-mode .user-tag-chip.is-billie-fan,body.admin-mode .user-tag-chip.is-boaf{color:#b9f8d8;background:rgba(42,174,110,.20);border-color:rgba(74,222,128,.34)}'+
+      'body.admin-mode .user-tag-chip.is-avocado{color:#75c4ff;background:#10283d;border-color:rgba(93,174,255,.18)}'+
+      'body.admin-mode .user-tag-chip.is-eyelash{color:#f3cf63;background:#332b12;border-color:rgba(243,207,99,.17)}'+
+      'body.admin-mode .user-tag-chip.is-blohsh{color:#74d995;background:#153121;border-color:rgba(116,217,149,.16)}'+
+      'body.admin-mode .user-tag-chip.is-billie-fan{color:#dceaff;background:#17365f;border-color:#234f86}'+
+      'body.admin-mode .user-tag-chip.is-boaf{color:#fff;background:#168cff;border-color:#168cff}'+
       'body.admin-mode .user-cell-copy{display:flex;flex-direction:column;gap:4px}'+
       'body.admin-mode .user-tag-current{display:flex;align-items:center;gap:6px;margin-top:2px}'+
       'body.admin-mode .user-tag-current[hidden]{display:none!important}'+
