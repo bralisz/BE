@@ -221,24 +221,32 @@ function __bootAdminCommunityTags(){
     wrap.dataset.saving='1';
     wrap.querySelectorAll('.user-tag-choice, .user-tag-toggle').forEach(function(button){button.disabled=true;});
     try{
+      var wasOwned=tagKey?ownsTag(userId,tagKey):false;
       var response=await client.rpc('admin_set_community_tag',{p_user_id:userId,p_tag:tagKey});
       if(response && response.error)throw response.error;
-      tagMap[String(userId)]=tagKey;
+      var activeTag=String(response&&response.data!=null?response.data:'').trim().toLowerCase();
+      tagMap[String(userId)]=activeTag;
       var owned=ownedTags(userId);
-      if(tagKey && owned.indexOf(tagKey)<0)owned.push(tagKey);
-      ownedTagMap[String(userId)]=owned;
+      if(tagKey){
+        if(wasOwned){
+          owned=owned.filter(function(tag){return tag!==tagKey;});
+        }else if(owned.indexOf(tagKey)<0){
+          owned.push(tagKey);
+        }
+      }
+      ownedTagMap[String(userId)]=normalizeOwnedTags(owned);
       if(row){
-        row.dataset.communityTag=tagKey||'';
-        row.dataset.communityTags=owned.join(',');
+        row.dataset.communityTag=activeTag;
+        row.dataset.communityTags=ownedTagMap[String(userId)].join(',');
       }
       tagMapLoaded=true;
       renderSummary(row,userId);
       syncControlState(wrap,userId);
-      wrap.dataset.currentTag=tagKey||'';
+      wrap.dataset.currentTag=activeTag;
       wrap.classList.remove('is-open');
       var toggle=wrap.querySelector('.user-tag-toggle');
       if(toggle)toggle.setAttribute('aria-expanded','false');
-      toast(tagKey?'Tag atualizada com sucesso.':'Tag removida com sucesso.');
+      toast(tagKey?(wasOwned?'Tag removida do usuário.':'Tag liberada para o usuário.'):'Tag ativa removida.');
     }catch(error){
       toast((error && error.message) || 'Não foi possível atualizar a tag.', true);
     }finally{
