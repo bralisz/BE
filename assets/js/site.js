@@ -4348,6 +4348,41 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (slides.length > 1) timer = setInterval(() => go(index + 1), 10000);
     };
     dots.forEach(dot => dot.addEventListener('click', () => { go(Number(dot.dataset.goto || 0)); start(); }));
+
+    // Mobile: permite trocar o destaque principal arrastando horizontalmente.
+    // Mantém o gesto vertical livre para o scroll normal da página.
+    let featuredTouchStartX = 0;
+    let featuredTouchStartY = 0;
+    let featuredTouchTracking = false;
+    host.style.touchAction = 'pan-y';
+    host.addEventListener('touchstart', event => {
+      if (slides.length < 2 || !event.touches || event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      featuredTouchStartX = touch.clientX;
+      featuredTouchStartY = touch.clientY;
+      featuredTouchTracking = true;
+      stop();
+    }, { passive: true });
+    host.addEventListener('touchend', event => {
+      if (!featuredTouchTracking) return;
+      featuredTouchTracking = false;
+      const touch = event.changedTouches && event.changedTouches[0];
+      if (!touch) { start(); return; }
+      const deltaX = touch.clientX - featuredTouchStartX;
+      const deltaY = touch.clientY - featuredTouchStartY;
+      const isHorizontalSwipe = Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2;
+      if (isHorizontalSwipe) {
+        // Dedo para a esquerda = anterior; para a direita = próximo.
+        go(index + (deltaX < 0 ? -1 : 1));
+        if (event.cancelable) event.preventDefault();
+      }
+      start();
+    }, { passive: false });
+    host.addEventListener('touchcancel', () => {
+      featuredTouchTracking = false;
+      start();
+    }, { passive: true });
+
     host.addEventListener('mouseenter', stop);
     host.addEventListener('mouseleave', start);
     start();
