@@ -9,7 +9,8 @@ function __bootAdminCommunityTags(){
     {key:'avocado',label:'Avocado',className:'is-avocado'},
     {key:'eyelash',label:'Eyelash',className:'is-eyelash'},
     {key:'blohsh',label:'Blohsh',className:'is-blohsh'},
-    {key:'billie_fan',label:'Fã da Billie',className:'is-billie-fan'}
+    {key:'billie_fan',label:'Fã da Billie',className:'is-billie-fan'},
+    {key:'boaf',label:'BOAF',className:'is-boaf'}
   ];
   var tagMapLoaded=false;
   var tagMap={};
@@ -37,10 +38,7 @@ function __bootAdminCommunityTags(){
       'body.admin-mode .user-tag-clear[hidden]{display:none!important}'+
       'body.admin-mode .user-tag-chip{display:inline-flex;align-items:center;justify-content:center;min-height:19px;padding:0 7px;border:1px solid transparent;border-radius:6px;font-size:9.5px;font-weight:850;line-height:1;letter-spacing:-.01em;white-space:nowrap;box-shadow:none}'+
       'body.admin-mode .user-tag-chip::before{display:none}'+
-      'body.admin-mode .user-tag-chip.is-avocado{color:#75c4ff;background:#10283d;border-color:rgba(93,174,255,.18)}'+
-      'body.admin-mode .user-tag-chip.is-eyelash{color:#f3cf63;background:#332b12;border-color:rgba(243,207,99,.17)}'+
-      'body.admin-mode .user-tag-chip.is-blohsh{color:#74d995;background:#153121;border-color:rgba(116,217,149,.16)}'+
-      'body.admin-mode .user-tag-chip.is-billie-fan{color:#dceaff;background:#17365f;border-color:#234f86}'+
+      'body.admin-mode .user-tag-chip.is-avocado,body.admin-mode .user-tag-chip.is-eyelash,body.admin-mode .user-tag-chip.is-blohsh,body.admin-mode .user-tag-chip.is-billie-fan,body.admin-mode .user-tag-chip.is-boaf{color:#b9f8d8;background:rgba(42,174,110,.20);border-color:rgba(74,222,128,.34)}'+
       'body.admin-mode .user-cell-copy{display:flex;flex-direction:column;gap:4px}'+
       'body.admin-mode .user-tag-current{display:flex;align-items:center;gap:6px;margin-top:2px}'+
       'body.admin-mode .user-tag-current[hidden]{display:none!important}'+
