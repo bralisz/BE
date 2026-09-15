@@ -3,7 +3,9 @@
 
   var buttonId='profilePageFollow';
   var handleId='profilePageHandle';
-  var state={username:'',following:false,loading:false,request:0};
+  var state={username:'',targetId:'',following:false,loading:false,request:0};
+  var realtimeChannel=null;
+  var realtimeKey='';
 
   function client(){return window.beBackend&&window.beBackend.client;}
   function currentUser(){return window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;}
@@ -30,7 +32,7 @@
     if(!el)return;
     var username=handle();
     var user=currentUser();
-    var available=Boolean(user&&user.uid&&username);
+    var available=Boolean(user&&user.uid&&username&&state.username===username);
     el.hidden=!available;
     el.setAttribute('aria-hidden',available?'false':'true');
     if(!available)return;
@@ -49,12 +51,37 @@
     if(followersEl)followersEl.textContent=String(followers);
     if(followingEl)followingEl.textContent=String(following);
   }
+  function stopRealtime(){
+    if(realtimeChannel&&client()&&typeof client().removeChannel==='function'){
+      try{client().removeChannel(realtimeChannel);}catch(_){ }
+    }
+    realtimeChannel=null;
+    realtimeKey='';
+  }
+  function startRealtime(targetId,username){
+    var api=client();
+    if(!api||typeof api.channel!=='function'||!targetId)return;
+    var user=currentUser();
+    var key=String(user&&user.uid||'')+'|'+String(targetId)+'|'+String(username||'');
+    if(key===realtimeKey)return;
+    stopRealtime();
+    realtimeKey=key;
+    realtimeChannel=api.channel('profile-follow-live-'+String(targetId));
+    realtimeChannel.on('postgres_changes',{event:'*',schema:'public',table:'profile_follows'},function(payload){
+      var next=payload&&payload.new||{};
+      var old=payload&&payload.old||{};
+      var changedTarget=String(next.following_id||old.following_id||'')===String(targetId);
+      var changedViewer=String(next.follower_id||old.follower_id||'')===String(user&&user.uid||'');
+      if(changedTarget||changedViewer)refresh();
+    });
+    realtimeChannel.subscribe();
+  }
   async function refresh(){
     var user=currentUser();
     var username=handle();
     var request=++state.request;
-    if(!user||!user.uid||!username){state={username:username,following:false,loading:false,request:request};render();return;}
-    state={username:username,following:false,loading:true,request:request};
+    if(!user||!user.uid||!username){stopRealtime();state={username:username,targetId:'',following:false,loading:false,request:request};render();return;}
+    state={username:username,targetId:'',following:false,loading:true,request:request};
     render();
     try{
       await Promise.resolve(window.beBackend&&window.beBackend.ready);
@@ -64,12 +91,14 @@
       if(result&&result.error)throw result.error;
       var row=Array.isArray(result.data)?result.data[0]:result.data;
       if(request!==state.request||username!==handle())return;
-      state={username:username,following:Boolean(row&&row.following),loading:false,request:request};
+      state={username:username,targetId:String(row&&row.target_id||''),following:Boolean(row&&row.following),loading:false,request:request};
       updateCounts(row);
       render();
-    }catch(_){
+      startRealtime(state.targetId,username);
+    }catch(error){
       if(request!==state.request)return;
-      state={username:username,following:false,loading:false,request:request};
+      stopRealtime();
+      state={username:username,targetId:'',following:false,loading:false,request:request};
       render();
     }
   }
@@ -78,7 +107,8 @@
     var username=handle();
     if(!user||!user.uid||!username||state.loading)return;
     var request=++state.request;
-    state={username:username,following:state.username===username&&state.following===true,loading:true,request:request};
+    var previous=state.following===true&&state.username===username;
+    state={username:username,targetId:state.targetId,following:previous,loading:true,request:request};
     render();
     try{
       await Promise.resolve(window.beBackend&&window.beBackend.ready);
@@ -88,12 +118,13 @@
       if(result&&result.error)throw result.error;
       var row=Array.isArray(result.data)?result.data[0]:result.data;
       if(request!==state.request||username!==handle())return;
-      state={username:username,following:Boolean(row&&row.following),loading:false,request:request};
+      state={username:username,targetId:state.targetId,following:Boolean(row&&row.following),loading:false,request:request};
       updateCounts(row);
       render();
-    }catch(_){
+      startRealtime(state.targetId,username);
+    }catch(error){
       if(request!==state.request)return;
-      state={username:username,following:state.following===true,loading:false,request:request};
+      state={username:username,targetId:state.targetId,following:previous,loading:false,request:request};
       render();
     }
   }
@@ -119,6 +150,7 @@
     if(window.beBackend&&window.beBackend.auth&&typeof window.beBackend.auth.onChange==='function'){
       window.beBackend.auth.onChange(function(){refresh();});
     }
+    window.addEventListener('popstate',function(){setTimeout(refresh,0);});
     refresh();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
