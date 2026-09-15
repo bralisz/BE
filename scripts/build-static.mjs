@@ -39,6 +39,21 @@ for (const [src, dest] of copies) {
   await buildTextAsset(src, dest);
 }
 
+// O botão Follow é um ponto crítico do perfil e precisa usar as RPCs do
+// Supabase, sem depender do estado antigo/localStorage do bundle legado.
+const followSource = await readFile('assets/js/profile-follow-rpc.js', 'utf8');
+const followResult = await transform(followSource, {
+  loader: 'js',
+  charset: 'utf8',
+  legalComments: 'none',
+  minifyWhitespace: true,
+  minifySyntax: true,
+  minifyIdentifiers: false,
+  target: 'es2020',
+});
+const siteBundle = await readFile(`${out}/chunks/site.js`, 'utf8');
+await writeFile(`${out}/chunks/site.js`, `${siteBundle}\n${followResult.code}\n`, 'utf8');
+
 await mkdir(`${out}/locales`, { recursive: true });
 for (const lang of ['en-us', 'es', 'fr', 'it']) {
   const source = JSON.parse(await readFile(`assets/i18n/${lang}.json`, 'utf8'));
