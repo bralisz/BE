@@ -514,12 +514,12 @@ function setPublicCacheHeaders(res, name, id, hasData, options = {}) {
   let staleSeconds = 10800;
 
   if (name === 'home-version') {
-    // O navegador valida o catálogo a cada ~30 min. Manter a borda por 25 min
-    // evita executar uma Function a cada visitante, mas expira antes da próxima
-    // validação para continuar entregando conteúdo novo dentro dessa janela.
+    // Resposta minúscula: é o "ETag lógico" do catálogo. Cinco minutos na
+    // borda + validação do browser a cada ~25 min mantém conteúdo novo dentro
+    // da janela de ~30 min sem baixar centenas de itens de novo.
     browserSeconds = 60;
-    edgeSeconds = 1500;
-    staleSeconds = 60;
+    edgeSeconds = 300;
+    staleSeconds = 900;
   } else if (name === 'home-bootstrap') {
     if (versioned) {
       // A revisão está na própria URL (?v=...). Quando o catálogo muda, muda a
