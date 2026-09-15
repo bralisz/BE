@@ -13382,27 +13382,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return response.json();
     }
     async function refreshProfileFollowState(force){
-      var user=auth.currentUser;var handle=currentViewedProfileHandle();
-      if(!handle)return;
-      if(user&&user.uid){
-        profileFollowState={username:handle,following:isFollowingViewedProfile(),loading:false};
-        renderProfileFollowUi();
-      }else{
-        profileFollowState={username:handle,following:false,loading:false};
-        renderProfileFollowUi();
-      }
-      var needCounts=force||!(viewedProfile&&typeof viewedProfile.followersCount==='number'&&typeof viewedProfile.followingCount==='number');
-      if(!needCounts)return;
-      try{
-        var payload=await fetchPublicProfileFollowData(handle);
-        if(currentViewedProfileHandle()!==handle)return;
-        if(viewedProfile&&beBackend.normalizeUsername(viewedProfile.username)===handle){
-          viewedProfile={...viewedProfile,followersCount:Math.max(0,Number(payload&&payload.followersCount||0)||0),followingCount:Math.max(0,Number(payload&&payload.followingCount||0)||0)};
-          updateProfileFollowStatButtons(viewedProfile);
-        }
-      }catch(_){ }
+  var user=auth.currentUser;var handle=currentViewedProfileHandle();
+  if(!handle)return;
+  if(user&&user.uid){
+    profileFollowState={username:handle,following:isFollowingViewedProfile(),loading:false};
+    renderProfileFollowUi();
+  }else{
+    profileFollowState={username:handle,following:false,loading:false};
+    renderProfileFollowUi();
+  }
+  try{
+    var payload=await fetchPublicProfileFollowData(handle);
+    if(currentViewedProfileHandle()!==handle)return;
+    if(viewedProfile&&beBackend.normalizeUsername(viewedProfile.username)===handle){
+      viewedProfile={...viewedProfile,followersCount:Math.max(0,Number(payload&&payload.followersCount||0)||0),followingCount:Math.max(0,Number(payload&&payload.followingCount||0)||0)};
+      updateProfileFollowStatButtons(viewedProfile);
     }
-    async function toggleProfileFollow(){
+  }catch(_){ }
+}
+async function toggleProfileFollow(){
       var user=auth.currentUser;var handle=currentViewedProfileHandle();
       if(!user||!user.uid||!handle||isOwnProfileView()||profileFollowState.loading)return;
       var current=readFollowingUsers(user.uid);var already=current.indexOf(handle)>=0;var next=already?current.filter(function(item){return item!==handle;}):current.concat(handle);
