@@ -862,20 +862,5 @@
   "Última atualização: 7 de agosto de 2026.": "Dernière mise à jour : 7 août 2026.",
   "Última atualização: 8 de agosto de 2026.": "Dernière mise à jour : 8 août 2026.",
   "“Billie Eilish”, nomes de obras, marcas, logotipos, fotografias, vídeos e demais materiais de terceiros pertencem aos seus respectivos titulares. A presença desses elementos no catálogo não transfere ao BETV qualquer direito de propriedade sobre eles.": "« Billie Eilish », les titres d’œuvres, marques, logos, photographies, vidéos et autres éléments appartenant à des tiers restent la propriété de leurs détenteurs respectifs. Leur présence dans le catalogue ne transfère aucun droit de propriété à BETV.",
-  "Quem ouvir ganha a tag {tag}.": "Toute personne qui l’écoute reçoit le tag {tag}.",
-  "Ativada. O código do autenticador será solicitado apenas ao entrar com e-mail e senha.": "Activée. Le code de l’application d’authentification ne sera demandé que lors d’une connexion avec e-mail et mot de passe.",
-  "A verificação em duas etapas requer a autenticação online do site.": "La vérification en deux étapes nécessite l’authentification en ligne du site.",
-  "A verificação em duas etapas não está disponível nesta conta.": "La vérification en deux étapes n’est pas disponible pour ce compte.",
-  "Preparando autenticação…": "Préparation de l’authentification…",
-  "Desativando…": "Désactivation…",
-  "Aguardando confirmação": "En attente de confirmation",
-  "Escaneie o QR Code e confirme com o código gerado pelo aplicativo.": "Scannez le QR code et confirmez avec le code généré par l’application d’authentification.",
-  "Enviando link para redefinir sua senha…": "Envoi du lien de réinitialisation du mot de passe…",
-  "Confirmando código…": "Confirmation du code…",
-  "Inicie a ativação novamente.": "Recommencez l’activation.",
-  "A verificação em duas etapas já está ativada.": "La vérification en deux étapes est déjà activée.",
-  "Não foi possível criar o autenticador.": "Impossible de créer l’authentificateur.",
-  "Não foi possível verificar a segurança da conta.": "Impossible de vérifier la sécurité du compte.",
-  "O serviço de segurança está temporariamente indisponível. Tente novamente em instantes.": "Le service de sécurité est temporairement indisponible. Réessayez dans quelques instants.",
-  "Não foi possível conectar ao serviço de segurança. Verifique sua conexão e tente novamente.": "Impossible de se connecter au service de sécurité. Vérifiez votre connexion et réessayez."
+  "Quem ouvir ganha a tag {tag}.": "Toute personne qui l’écoute reçoit le tag {tag}."
 }
