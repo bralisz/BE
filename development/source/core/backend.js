@@ -1311,11 +1311,34 @@
       if (MODE === 'supabase') {
         try {
           const updatedAt = now();
+          const cached = readCachedPreference(userId);
+          const dataToSave = { ...normalized };
+
+          // Nunca apague relacionamentos antigos só porque uma chamada de
+          // sincronização não trouxe a propriedade followingUsers. O follow
+          // é armazenado dentro de user_preferences e precisa sobreviver a
+          // salvamentos de outras preferências/dispositivos.
+          if (!Object.prototype.hasOwnProperty.call(normalized, 'followingUsers')) {
+            const cachedFollowing = cached?.data?.followingUsers;
+            if (Array.isArray(cachedFollowing)) {
+              dataToSave.followingUsers = [...cachedFollowing];
+            } else {
+              const { data: existingRow, error: existingError } = await supabaseClient
+                .from('user_preferences')
+                .select('data')
+                .eq('user_id', userId)
+                .maybeSingle();
+              if (existingError) throw existingError;
+              const existingFollowing = existingRow?.data?.followingUsers;
+              if (Array.isArray(existingFollowing)) dataToSave.followingUsers = [...existingFollowing];
+            }
+          }
+
           const { error } = await supabaseClient
             .from('user_preferences')
-            .upsert({ user_id: userId, data: normalized, updated_at: updatedAt }, { onConflict: 'user_id' });
+            .upsert({ user_id: userId, data: dataToSave, updated_at: updatedAt }, { onConflict: 'user_id' });
           if (error) throw error;
-          const preference = { userId, data: normalized, createdAt: cached?.createdAt || '', updatedAt };
+          const preference = { userId, data: dataToSave, createdAt: cached?.createdAt || '', updatedAt };
           cachePreference(preference);
           return clone(preference);
         } catch (error) {
