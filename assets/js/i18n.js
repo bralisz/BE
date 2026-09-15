@@ -15,9 +15,6 @@
   var translationBusy=false;
   var missingTexts=new Set();
   var translatedThisSession=new Set();
-  // As traduções de interface devem vir dos bundles estáticos/compartilhados.
-  // O fallback automático por visitante consumia Edge Functions para textos já renderizados.
-  var AUTO_DYNAMIC_TRANSLATION_ENABLED=false;
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
   var PROTECTED_EXACT=new Set([
@@ -64,12 +61,6 @@
     missingTexts.delete(key);
     translatedThisSession.delete(key);
   }
-  function unsafeImportedTranslation(value){
-    var raw=String(value||'');
-    if(!raw)return false;
-    if(raw.length>2400)return true;
-    return /<!doctype|<html|<head|<body|<style|<script|#af-error-page|googlelogo|google\.com\/images\/branding|document\.getElementById|Error\s*500\s*\(Server Error\)|body\s*\{[^}]{0,300}(?:display|overflow|background)/i.test(raw);
-  }
   function eligibleText(value){
     var key=normalize(value);
     if(!key||key.length<2||key.length>1800||!/\p{L}/u.test(key))return false;
@@ -77,7 +68,7 @@
     return true;
   }
   function rememberMissing(value){
-    if(!AUTO_DYNAMIC_TRANSLATION_ENABLED||slug==='pt-br'||isAdmin())return;
+    if(slug==='pt-br'||isAdmin())return;
     var key=normalize(value);
     if(!eligibleText(key)||Object.prototype.hasOwnProperty.call(map,key)||translatedThisSession.has(key))return;
     missingTexts.add(key);
@@ -176,15 +167,7 @@
   function loadDynamicCache(){
     try{
       var cached=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
-      var cleaned={};
-      if(cached&&typeof cached==='object')Object.keys(cached).forEach(function(key){
-        var value=cached[key];
-        if(typeof value!=='string'||unsafeImportedTranslation(value))return;
-        var stable=typeof normalizeImportedTranslation==='function'?normalizeImportedTranslation(key,value):value;
-        if(unsafeImportedTranslation(stable))return;
-        map[key]=stable;cleaned[key]=stable;
-      });
-      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(cleaned));
+      if(cached&&typeof cached==='object')Object.keys(cached).forEach(function(key){if(typeof cached[key]==='string')map[key]=cached[key];});
     }catch(_){ }
   }
   function saveDynamicCache(){
@@ -192,9 +175,7 @@
       var dynamic={};
       translatedThisSession.forEach(function(key){if(map[key])dynamic[key]=map[key];});
       var previous=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
-      var safePrevious={};
-      if(previous&&typeof previous==='object')Object.keys(previous).forEach(function(key){if(typeof previous[key]==='string'&&!unsafeImportedTranslation(previous[key]))safePrevious[key]=previous[key];});
-      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},safePrevious,dynamic)));
+      localStorage.setItem(DYNAMIC_CACHE_KEY,JSON.stringify(Object.assign({},previous&&typeof previous==='object'?previous:{},dynamic)));
     }catch(_){ }
   }
   function translationEndpoint(){
@@ -250,7 +231,7 @@
     }
   }
   function scheduleMissingTranslation(delay){
-    if(!AUTO_DYNAMIC_TRANSLATION_ENABLED||slug==='pt-br'||isAdmin())return;
+    if(slug==='pt-br'||isAdmin())return;
     clearTimeout(translateTimer);
     translateTimer=setTimeout(translateMissingNow,Number(delay||350));
   }

@@ -11,7 +11,6 @@
   var PENDING_UPDATE_KEY = 'betvPendingUpdateVersion';
   var ADMIN_APPLIED_UPDATE_KEY = 'betvAdminAppliedUpdateVersion';
   var PUBLIC_APPLIED_UPDATE_KEY = 'betvPublicAppliedUpdateVersion';
-  var PUBLIC_APPLIED_UPDATE_COOKIE = 'be_site_release_version';
   var currentVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || '').trim();
   var latestVersion = '';
   var popup = null;
@@ -86,37 +85,15 @@
     try { window.localStorage.setItem(ADMIN_APPLIED_UPDATE_KEY, version); } catch (_) {}
   }
 
-  function readCookieValue(name) {
-    try {
-      var prefix = String(name || '') + '=';
-      var parts = String(document.cookie || '').split(';');
-      for (var i = 0; i < parts.length; i += 1) {
-        var part = String(parts[i] || '').trim();
-        if (part.indexOf(prefix) === 0) return decodeURIComponent(part.slice(prefix.length));
-      }
-    } catch (_) {}
-    return '';
-  }
-
   function readPublicAppliedUpdate() {
-    var value = '';
-    try { value = String(window.localStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
-    if (value) return value;
-    try { value = String(window.sessionStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
-    if (value) return value;
-    return String(readCookieValue(PUBLIC_APPLIED_UPDATE_COOKIE) || '').trim();
+    try { return String(window.localStorage.getItem(PUBLIC_APPLIED_UPDATE_KEY) || '').trim(); } catch (_) {}
+    return '';
   }
 
   function persistPublicAppliedUpdate(version) {
     version = String(version || '').trim();
     if (!version) return;
     try { window.localStorage.setItem(PUBLIC_APPLIED_UPDATE_KEY, version); } catch (_) {}
-    try { window.sessionStorage.setItem(PUBLIC_APPLIED_UPDATE_KEY, version); } catch (_) {}
-    try {
-      var cookie = PUBLIC_APPLIED_UPDATE_COOKIE + '=' + encodeURIComponent(version) + '; Max-Age=31536000; Path=/; SameSite=Lax';
-      if (window.location.protocol === 'https:') cookie += '; Secure';
-      document.cookie = cookie;
-    } catch (_) {}
   }
 
   function readPendingUpdate() {
@@ -142,46 +119,22 @@
   function cleanUpdateParameter() {
     try {
       var url = new URL(window.location.href);
-      var hasLegacyUpdate = url.searchParams.has('__betv_update');
-      var hasRefreshMarker = url.searchParams.has('__betv_refresh');
-      if (!hasLegacyUpdate && !hasRefreshMarker) return;
+      if (!url.searchParams.has('__betv_update')) return;
+      var appliedVersion = String(url.searchParams.get('__betv_update') || '').trim();
+      var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
+      var requiresExactBuild = /^v:/.test(appliedVersion);
+      var verified = Boolean(appliedVersion) && (!requiresExactBuild || (loadedVersion && loadedVersion === appliedVersion));
 
-      // Compatibilidade com links de atualização da v44 e anteriores. A nova
-      // rotina confirma o fingerprint diretamente no endpoint antes do reload,
-      // mas um navegador que ainda estiver em uma versão antiga pode chegar aqui.
-      if (hasLegacyUpdate) {
-        var appliedVersion = String(url.searchParams.get('__betv_update') || '').trim();
-        var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
-        var requiresExactBuild = /^v:/.test(appliedVersion);
-        var verified = Boolean(appliedVersion) && (!requiresExactBuild || (loadedVersion && loadedVersion === appliedVersion));
-
-        if (verified) {
-          if (isAdminContext()) persistAdminAppliedUpdate(appliedVersion);
-          else persistPublicAppliedUpdate(appliedVersion);
-          clearPendingUpdate();
-        } else if (appliedVersion) {
-          persistPendingUpdate(appliedVersion);
-
-          // Quem clicou em Atualizar ainda usando a v44 chega ao novo deploy
-          // com __betv_update na URL. Em páginas estáticas não existe fingerprint
-          // injetado no HTML, então confirma diretamente no endpoint no-store.
-          // Isso faz a PRIMEIRA tentativa antiga se completar automaticamente
-          // assim que o navegador consegue carregar este bundle novo.
-          if (requiresExactBuild && !loadedVersion) {
-            verifyTargetDeployment(appliedVersion).then(function (endpointVerified) {
-              if (!endpointVerified) return;
-              if (isAdminContext()) persistAdminAppliedUpdate(appliedVersion);
-              else persistPublicAppliedUpdate(appliedVersion);
-              clearPendingUpdate();
-              hidePopup();
-              if (!isAdminContext() && releaseStateLoaded) applyPublicReleaseStateFromSettings();
-            });
-          }
-        }
+      if (verified) {
+        if (isAdminContext()) persistAdminAppliedUpdate(appliedVersion);
+        else persistPublicAppliedUpdate(appliedVersion);
+        clearPendingUpdate();
+      } else if (appliedVersion) {
+        // Nunca marca uma atualização como concluída se o HTML ainda pertence ao
+        // deploy antigo. Mantém o aviso disponível para uma nova tentativa.
+        persistPendingUpdate(appliedVersion);
       }
-
       url.searchParams.delete('__betv_update');
-      url.searchParams.delete('__betv_refresh');
       url.searchParams.delete('_');
       window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
     } catch (_) {}
@@ -317,52 +270,7 @@
     if (!currentVersion) currentVersion = version;
   }
 
-  function applyPublicReleaseStateFromSettings() {
-    if (isAdminContext() || !releaseStateLoaded) return false;
-
-    var releasedVersion = String(publicReleasedVersion || '').trim();
-    if (!publicReleaseEnabled || !releasedVersion) {
-      clearPendingUpdate();
-      hidePopup();
-      return true;
-    }
-
-    var loadedVersion = String(window.__BETV_DEPLOYMENT_VERSION__ || currentVersion || '').trim();
-    var appliedVersion = readPublicAppliedUpdate();
-    var pendingVersion = readPendingUpdate();
-
-    // Um navegador realmente novo não possui versão aplicada nem atualização pendente.
-    // Nesse caso, a versão pública já liberada vira a base inicial e o usuário não
-    // recebe um aviso de atualização falso no primeiro acesso.
-    if (!loadedVersion && !appliedVersion && !pendingVersion) {
-      persistPublicAppliedUpdate(releasedVersion);
-      clearPendingUpdate();
-      hidePopup();
-      return true;
-    }
-
-    if (loadedVersion && loadedVersion === releasedVersion) {
-      persistPublicAppliedUpdate(releasedVersion);
-      clearPendingUpdate();
-      hidePopup();
-      currentVersion = loadedVersion;
-      return true;
-    }
-
-    if (appliedVersion === releasedVersion) {
-      clearPendingUpdate();
-      hidePopup();
-      return true;
-    }
-
-    showPopup(releasedVersion, true);
-    return true;
-  }
-
   function fetchLatestVersion(force) {
-    // Visitantes públicos recebem o estado de release nas configurações cacheadas.
-    // O endpoint de fingerprint fica reservado ao admin para economizar Functions.
-    if (!isAdminContext()) return Promise.resolve();
     var nowMs = Date.now();
     if (checking || updateStarted || document.visibilityState === 'prerender') return Promise.resolve();
     if (!force && document.visibilityState === 'hidden') return Promise.resolve();
@@ -383,7 +291,7 @@
     return fetch(requestUrl, {
       method: 'GET',
       cache: force ? 'no-store' : 'default',
-      credentials: 'omit',
+      credentials: 'same-origin',
       headers: { 'Accept': 'application/json' }
     }).then(function (response) {
       if (!response.ok) throw new Error('version-check-failed');
@@ -401,7 +309,7 @@
     if (!normalized) return true;
 
     // Estes cookies mantêm sessão, autenticação e preferências essenciais.
-    if (normalized === 'be_site_preferences' || normalized === 'be_cookie_ack' || normalized === PUBLIC_APPLIED_UPDATE_COOKIE) return true;
+    if (normalized === 'be_site_preferences' || normalized === 'be_cookie_ack') return true;
     if (/^(?:__host-|__secure-)?sb[-_]/.test(normalized)) return true;
     return /(?:auth|session|token|login|supabase)/.test(normalized);
   }
@@ -502,9 +410,7 @@
       if ('caches' in window) {
         jobs.push(
           window.caches.keys().then(function (keys) {
-            return Promise.all(keys
-              .filter(function (key) { return String(key || '').indexOf('betv-static-') === 0; })
-              .map(function (key) { return window.caches.delete(key); }));
+            return Promise.all(keys.map(function (key) { return window.caches.delete(key); }));
           })
         );
       }
@@ -529,7 +435,6 @@
     try {
       var documentUrl = new URL(window.location.href);
       documentUrl.searchParams.delete('__betv_update');
-      documentUrl.searchParams.delete('__betv_refresh');
       documentUrl.searchParams.delete('_');
       urls.push(documentUrl.href);
     } catch (_) {}
@@ -563,73 +468,29 @@
     var controller = typeof AbortController === 'function' ? new AbortController() : null;
     var timeoutId = window.setTimeout(function () {
       if (controller) controller.abort();
-    }, 10000);
+    }, 8000);
 
     var requests = urls.map(function (rawUrl) {
-      var cacheBustedUrl = rawUrl;
+      var requestUrl = rawUrl;
       try {
         var parsed = new URL(rawUrl, window.location.href);
         parsed.searchParams.set('__betv_asset_update', String(targetVersion || Date.now()));
         parsed.searchParams.set('_', String(Date.now()));
-        cacheBustedUrl = parsed.href;
+        requestUrl = parsed.href;
       } catch (_) {}
-
-      var bypassOptions = {
+      var options = {
         method: 'GET',
         cache: 'no-store',
         credentials: 'same-origin',
         redirect: 'follow',
-        headers: { 'Cache-Control': 'no-cache, no-store, max-age=0', 'Pragma': 'no-cache' }
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
       };
-      var reloadOptions = {
-        method: 'GET',
-        cache: 'reload',
-        credentials: 'same-origin',
-        redirect: 'follow',
-        headers: { 'Cache-Control': 'no-cache, max-age=0', 'Pragma': 'no-cache' }
-      };
-      if (controller) {
-        bypassOptions.signal = controller.signal;
-        reloadOptions.signal = controller.signal;
-      }
-
-      // 1) busca uma URL única para atravessar caches intermediários/CDN;
-      // 2) recarrega a URL original com cache:'reload' para substituir a entrada
-      //    do cache HTTP usada pelo navegador após o reload. É o equivalente
-      //    mais próximo de Ctrl+F5 que uma página consegue iniciar sozinha.
-      return fetch(cacheBustedUrl, bypassOptions)
-        .catch(function () { return null; })
-        .then(function () { return fetch(rawUrl, reloadOptions); });
+      if (controller) options.signal = controller.signal;
+      return fetch(requestUrl, options);
     });
 
     return Promise.allSettled(requests).finally(function () {
       window.clearTimeout(timeoutId);
-    });
-  }
-
-  function verifyTargetDeployment(targetVersion) {
-    targetVersion = String(targetVersion || '').trim();
-    if (!targetVersion || !/^v:/.test(targetVersion)) return Promise.resolve(false);
-
-    var requestUrl = ENDPOINT + '?versionOnly=1&fresh=' + encodeURIComponent(String(Date.now()));
-    return fetch(requestUrl, {
-      method: 'GET',
-      cache: 'no-store',
-      credentials: 'omit',
-      redirect: 'follow',
-      headers: {
-        'Accept': 'application/json',
-        'Cache-Control': 'no-cache, no-store, max-age=0',
-        'Pragma': 'no-cache'
-      }
-    }).then(function (response) {
-      if (!response.ok) throw new Error('deployment-verification-failed');
-      return response.json();
-    }).then(function (data) {
-      var deployedVersion = String(data && data.version || '').trim();
-      return Boolean(deployedVersion && deployedVersion === targetVersion);
-    }).catch(function () {
-      return false;
     });
   }
 
@@ -656,40 +517,16 @@
     if(subtitle)subtitle.hidden=true;
     if(button){button.disabled=true;button.hidden=true;}
 
-    var targetVersion = latestVersion || readPendingUpdate() || '';
-    if (!targetVersion) {
-      updateStarted = false;
-      hidePopup();
-      return;
-    }
+    var targetVersion = latestVersion || readPendingUpdate() || String(Date.now());
     persistPendingUpdate(targetVersion);
-    forcePopupVisible(element);
 
-    // Mobile Safari/PWAs podem continuar recebendo o index.html estático mesmo
-    // com __betv_update na URL. Por isso a confirmação não depende mais do HTML:
-    // o endpoint versionOnly é no-store e informa o fingerprint real do deploy.
-    // Só depois dessa confirmação a versão é gravada como aplicada.
     Promise.resolve()
-      .then(function () { return verifyTargetDeployment(targetVersion); })
-      .then(function (verified) {
-        if (verified) {
-          if (isAdminContext()) persistAdminAppliedUpdate(targetVersion);
-          else persistPublicAppliedUpdate(targetVersion);
-          clearPendingUpdate();
-          hidePopup();
-        } else {
-          persistPendingUpdate(targetVersion);
-        }
-        return clearBrowserCaches();
-      })
+      .then(clearBrowserCaches)
       .then(function () { return refreshNetworkResources(targetVersion); })
       .finally(function () {
         try {
           var url = new URL(window.location.href);
-          // URL exclusiva para forçar uma navegação de rede no mobile sem depender
-          // do rewrite __betv_update da Vercel para validar a instalação.
-          url.searchParams.delete('__betv_update');
-          url.searchParams.set('__betv_refresh', targetVersion);
+          url.searchParams.set('__betv_update', targetVersion);
           url.searchParams.set('_', String(Date.now()));
           window.location.replace(url.href);
         } catch (_) {
@@ -700,8 +537,8 @@
 
   function scheduleChecks() {
     observePopupMount();
-    window.setTimeout(function () { if (isAdminContext()) fetchLatestVersion(); }, 1200);
-    intervalId = window.setInterval(function () { if (isAdminContext()) fetchLatestVersion(); }, CHECK_INTERVAL);
+    window.setTimeout(fetchLatestVersion, 1200);
+    intervalId = window.setInterval(fetchLatestVersion, CHECK_INTERVAL);
 
     // Uma conta administrativa recebe o aviso mesmo quando estiver navegando
     // pela área pública. Assim que a autenticação confirmar o papel de admin,
@@ -742,14 +579,11 @@
         releaseChanged = String(window.localStorage.getItem(OBSERVED_RELEASE_KEY) || '') !== releaseStateKey;
         window.localStorage.setItem(OBSERVED_RELEASE_KEY, releaseStateKey);
       } catch (_) {}
-      if (!isAdminContext()) {
-        applyPublicReleaseStateFromSettings();
-        return;
-      }
+      // Uma mudança manual no Admin força só uma checagem; no uso normal vale o cache de 12 h.
       fetchLatestVersion(releaseChanged);
     });
     window.addEventListener('storage', function (event) {
-      if (!isAdminContext() || !event || event.key !== SHARED_CHECK_KEY || !event.newValue) return;
+      if (!event || event.key !== SHARED_CHECK_KEY || !event.newValue) return;
       var shared = readSharedVersionCheck();
       if (shared) applyVersionPayload(shared.data);
     });

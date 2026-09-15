@@ -334,22 +334,9 @@
     return btoa(unescape(encodeURIComponent(value)));
   }
 
-  function unsafeExternalErrorMessage(value) {
-    const raw = String(value || '');
-    if (!raw) return false;
-    if (raw.length > 1200) return true;
-    return /<!doctype|<html|<head|<body|<style|<script|#af-error-page|googlelogo|google\.com\/images\/branding|document\.getElementById|Error\s*500\s*\(Server Error\)|body\s*\{[^}]{0,300}(?:display|overflow|background)/i.test(raw);
-  }
-
   function mapAuthError(error) {
     const message = String(error && error.message || '');
     const code = String(error && (error.code || error.status) || '');
-    if (unsafeExternalErrorMessage(message) || /^(?:5\d\d|500)$/.test(code) || /server error|internal server error/i.test(message)) {
-      return backendError('auth/service-unavailable', 'O serviço de segurança está temporariamente indisponível. Tente novamente em instantes.', error);
-    }
-    if (/failed to fetch|networkerror|network request failed|load failed/i.test(message)) {
-      return backendError('auth/network-error', 'Não foi possível conectar ao serviço de segurança. Verifique sua conexão e tente novamente.', error);
-    }
     if (code === 'over_email_send_rate_limit' || /email rate limit|rate limit.*email|too many requests/i.test(message)) {
       return backendError(
         'auth/email-rate-limit',
@@ -1310,37 +1297,14 @@
       const normalized = normalizePreferencePayload(payload);
       if (MODE === 'supabase') {
         try {
-          const updatedAt = now();
-          const cached = readCachedPreference(userId);
-          const dataToSave = { ...normalized };
-
-          // Nunca apague relacionamentos antigos só porque uma chamada de
-          // sincronização não trouxe a propriedade followingUsers. O follow
-          // é armazenado dentro de user_preferences e precisa sobreviver a
-          // salvamentos de outras preferências/dispositivos.
-          if (!Object.prototype.hasOwnProperty.call(normalized, 'followingUsers')) {
-            const cachedFollowing = cached?.data?.followingUsers;
-            if (Array.isArray(cachedFollowing)) {
-              dataToSave.followingUsers = [...cachedFollowing];
-            } else {
-              const { data: existingRow, error: existingError } = await supabaseClient
-                .from('user_preferences')
-                .select('data')
-                .eq('user_id', userId)
-                .maybeSingle();
-              if (existingError) throw existingError;
-              const existingFollowing = existingRow?.data?.followingUsers;
-              if (Array.isArray(existingFollowing)) dataToSave.followingUsers = [...existingFollowing];
-            }
-          }
-
-          const { error } = await supabaseClient
+          const { data: rows, error } = await supabaseClient
             .from('user_preferences')
-            .upsert({ user_id: userId, data: dataToSave, updated_at: updatedAt }, { onConflict: 'user_id' });
+            .upsert({ user_id: userId, data: normalized, updated_at: now() }, { onConflict: 'user_id' })
+            .select('user_id,data,created_at,updated_at');
           if (error) throw error;
-          const preference = { userId, data: dataToSave, createdAt: cached?.createdAt || '', updatedAt };
-          cachePreference(preference);
-          return clone(preference);
+          const preference = preferenceFromRow(rows && rows[0]);
+          if (preference) cachePreference(preference);
+          return preference ? clone(preference) : null;
         } catch (error) {
           throw mapAuthError(error);
         }
