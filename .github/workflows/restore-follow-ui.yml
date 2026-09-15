@@ -1,5 +1,6 @@
 name: Restore follower UI
 on:
+  workflow_dispatch:
   push:
     branches: [main]
 jobs:
@@ -10,46 +11,14 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Restore follower/following frontend logic
-        shell: python
-        run: |
-          from pathlib import Path
-          import re
-          p = Path('assets/js/site.js')
-          s = p.read_text(encoding='utf-8')
-          start = s.find('async function refreshProfileFollowState(force){')
-          end = s.find('async function toggleProfileFollow(){', start)
-          if start < 0 or end < 0:
-              raise SystemExit('follow state functions not found')
-          fn = '''async function refreshProfileFollowState(force){
-            var user=auth.currentUser;var handle=currentViewedProfileHandle();
-            if(!handle)return;
-            if(user&&user.uid){
-              profileFollowState={username:handle,following:isFollowingViewedProfile(),loading:false};
-              renderProfileFollowUi();
-            }else{
-              profileFollowState={username:handle,following:false,loading:false};
-              renderProfileFollowUi();
-            }
-            try{
-              var payload=await fetchPublicProfileFollowData(handle);
-              if(currentViewedProfileHandle()!==handle)return;
-              if(viewedProfile&&beBackend.normalizeUsername(viewedProfile.username)===handle){
-                viewedProfile={...viewedProfile,followersCount:Math.max(0,Number(payload&&payload.followersCount||0)||0),followingCount:Math.max(0,Number(payload&&payload.followingCount||0)||0)};
-                updateProfileFollowStatButtons(viewedProfile);
-              }
-            }catch(_){ }
-          }
-          '''
-          s = s[:start] + fn + s[end:]
-          marker = 'communityRankingsPublic:remote.communityRankingsPublic===null?local.communityRankingsPublic:remote.communityRankingsPublic!==false,'
-          if 'followingUsers:(remote.followingUsers||[]).concat(local.followingUsers||[])' not in s:
-              s = s.replace(marker, marker + '\n        followingUsers:(remote.followingUsers||[]).concat(local.followingUsers||[]),', 1)
-          p.write_text(s, encoding='utf-8')
-      - name: Commit patched frontend
+        with:
+          fetch-depth: 0
+      - name: Restore known-good frontend
+        run: git checkout de43c848368a226dd6670f68d93338d8d66350e0 -- assets/js/site.js
+      - name: Commit restored frontend
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add assets/js/site.js
-          git diff --cached --quiet || git commit -m 'fix: restore public follower counts in profile'
+          git diff --cached --quiet || git commit -m 'fix: restore public follow frontend'
           git push
