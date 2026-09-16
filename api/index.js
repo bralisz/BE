@@ -29,6 +29,12 @@ module.exports = async function apiRouter(req, res) {
   }
 
   try {
+    if (route === 'public-profile') {
+      const view = String(Array.isArray(req.query?.view) ? req.query.view[0] : req.query?.view || '').trim().toLowerCase();
+      if (view === 'relationships') {
+        return await require('../server/api-routes/profile-relationships')(req, res);
+      }
+    }
     return await load()(req, res);
   } catch (error) {
     console.error(`API route failed (${route}):`, error);
