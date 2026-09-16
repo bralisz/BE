@@ -39,8 +39,8 @@ module.exports = async function profileRelationships(req, res) {
     const target = Array.isArray(profiles) ? profiles[0] : null;
     if (!target) return res.status(404).json({ items: [], total: 0, offset, limit, hasMore: false });
 
-    const relationColumn = type === 'following' ? 'follower_id' : 'following_id';
-    const matchColumn = type === 'following' ? 'following_id' : 'following_id';
+    const relationColumn = type === 'following' ? 'following_id' : 'follower_id';
+    const matchColumn = type === 'following' ? 'follower_id' : 'following_id';
     const matchValue = clean(target.id);
     const relationRows = await rest(`/rest/v1/profile_follows?select=follower_id,following_id&${matchColumn}=eq.${encodeURIComponent(matchValue)}&limit=1000`);
     const ids = (Array.isArray(relationRows) ? relationRows : []).map(row => clean(row[relationColumn])).filter(Boolean);
