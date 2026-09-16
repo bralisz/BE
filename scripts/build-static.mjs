@@ -28,3 +28,9 @@ for (const lang of ['en-us', 'es', 'fr', 'it']) await cp('assets/i18n/' + lang +
 await mkdir(out + '/media/icons', { recursive: true });
 await cp('assets/images', out + '/media', { recursive: true });
 await cp('assets/icons', out + '/media/icons', { recursive: true });
+
+// Vercel is configured to expect a public output directory. Keep the existing
+// /_static URL structure by publishing _static unchanged under public/.
+await rm('public', { recursive: true, force: true });
+await mkdir('public', { recursive: true });
+await cp(out, 'public/_static', { recursive: true });
