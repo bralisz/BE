@@ -26,8 +26,42 @@
     var el=document.getElementById(handleId);
     return normalize(el&&el.textContent||'');
   }
+  function locale(){
+    try{
+      var lang=String(document.documentElement&&document.documentElement.lang||'').toLowerCase();
+      if(lang.indexOf('it')===0)return 'it';
+      if(lang.indexOf('fr')===0)return 'fr';
+      if(lang.indexOf('es')===0)return 'es';
+      if(lang.indexOf('en')===0)return 'en';
+    }catch(_){ }
+    try{
+      if(typeof window.BETVLocale==='function'){
+        var l=String(window.BETVLocale()||'').toLowerCase();
+        if(l.indexOf('it')===0)return 'it';
+        if(l.indexOf('fr')===0)return 'fr';
+        if(l.indexOf('es')===0)return 'es';
+        if(l.indexOf('en')===0)return 'en';
+      }
+    }catch(_){ }
+    return 'pt';
+  }
+  function updateLabels(){
+    var labels={
+      pt:{followers:'Seguidores',following:'Seguindo'},
+      en:{followers:'Followers',following:'Following'},
+      es:{followers:'Seguidores',following:'Siguiendo'},
+      fr:{followers:'Abonnés',following:'Abonnements'},
+      it:{followers:'Follower',following:'Seguiti'}
+    };
+    var l=labels[locale()]||labels.pt;
+    var followersEl=document.getElementById('profilePageFollowersLabel');
+    var followingEl=document.getElementById('profilePageFollowingLabel');
+    if(followersEl)followersEl.textContent=l.followers;
+    if(followingEl)followingEl.textContent=l.following;
+  }
   function button(){return document.getElementById(buttonId);}
   function render(){
+    updateLabels();
     var el=button();
     if(!el)return;
     var username=handle();
@@ -77,6 +111,7 @@
     realtimeChannel.subscribe();
   }
   async function refresh(){
+    updateLabels();
     var user=currentUser();
     var username=handle();
     var request=++state.request;
@@ -130,6 +165,7 @@
   }
   function boot(){
     var el=button();
+    updateLabels();
     if(!el)return;
     document.addEventListener('click',function(event){
       var target=event.target&&event.target.closest?event.target.closest('#'+buttonId):null;
@@ -143,6 +179,7 @@
     if(observed){
       var observer=new MutationObserver(function(){
         var next=handle();
+        updateLabels();
         if(next!==state.username)refresh();
       });
       observer.observe(observed,{subtree:true,childList:true,characterData:true});
