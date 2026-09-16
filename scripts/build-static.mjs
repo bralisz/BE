@@ -13,7 +13,10 @@ const copies = [
 ];
 for (const pair of copies) { await mkdir(dirname(pair[1]), { recursive: true }); await cp(pair[0], pair[1]); }
 const sitePath = out + '/chunks/site.js';
-const site = await readFile(sitePath, 'utf8');
+let site = await readFile(sitePath, 'utf8');
+site = site.replace(/function followingStorageKey\(userId\)\{return 'beFollowingUsers:'[^}]+\}\s*function readFollowingUsers\(userId\)\{[^}]+\}\s*function writeFollowingUsers\(userId,value\)\{[^}]+\}/, "function followingStorageKey(){return ''} function readFollowingUsers(){return []} function writeFollowingUsers(userId,value){return normalizeFollowingUsernames(value)}");
+site = site.replace(/function isFollowingViewedProfile\(\)\{[^}]+\}/, "function isFollowingViewedProfile(){return false}");
+site = site.replace(/async function toggleProfileFollow\(\)\{[\s\S]*?\n    function relationshipItemMarkup/, "async function toggleProfileFollow(){return;}\n    function relationshipItemMarkup");
 const canonical = await readFile('assets/js/profile-relationships-canonical.js', 'utf8');
 const followRpc = await readFile('assets/js/profile-follow-rpc.js', 'utf8');
 await writeFile(sitePath, site + '\n' + canonical + '\n' + followRpc, 'utf8');
