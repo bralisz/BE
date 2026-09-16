@@ -6,6 +6,7 @@ const loaders = Object.freeze({
   media: () => require('../server/api-routes/media'),
   meta: () => require('../server/api-routes/meta'),
   'profile-follow': () => require('../server/api-routes/profile-follow'),
+  'profile-relationships': () => require('../server/api-routes/profile-relationships'),
   'profile-share-image': () => require('../server/api-routes/profile-share-image'),
   'public-data': () => require('../server/api-routes/public-data'),
   'public-profile': () => require('../server/api-routes/public-profile'),
@@ -27,10 +28,6 @@ module.exports = async function apiRouter(req, res) {
     return res.status(404).json({ error: 'endpoint_not_found' });
   }
   try {
-    if (route === 'public-profile') {
-      const view = String(Array.isArray(req.query?.view) ? req.query.view[0] : req.query?.view || '').trim().toLowerCase();
-      if (view === 'relationships') return await require('../server/api-routes/profile-relationships')(req, res);
-    }
     return await load()(req, res);
   } catch (error) {
     console.error(`API route failed (${route}):`, error);
