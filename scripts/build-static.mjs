@@ -14,7 +14,7 @@ const copies = [
 for (const pair of copies) { await mkdir(dirname(pair[1]), { recursive: true }); await cp(pair[0], pair[1]); }
 const sitePath = out + '/chunks/site.js';
 let site = await readFile(sitePath, 'utf8');
-site = site.replace(/function followingStorageKey\(userId\)\{return 'beFollowingUsers:'[^}]+\}\s*function readFollowingUsers\(userId\)\{[^}]+\}\s*function writeFollowingUsers\(userId,value\)\{[^}]+\}/, "function followingStorageKey(){return ''} function readFollowingUsers(){return []} function writeFollowingUsers(userId,value){return normalizeFollowingUsernames(value)}");
+site = site.replace(/function followingStorageKey\(userId\)\{[\s\S]*?\n    function currentViewedProfileHandle/, "function followingStorageKey(){return ''} function readFollowingUsers(){return []} function writeFollowingUsers(userId,value){return normalizeFollowingUsernames(value)} function currentViewedProfileHandle");
 site = site.replace(/function isFollowingViewedProfile\(\)\{[^}]+\}/, "function isFollowingViewedProfile(){return false}");
 site = site.replace(/async function toggleProfileFollow\(\)\{[\s\S]*?\n    function relationshipItemMarkup/, "async function toggleProfileFollow(){return;}\n    function relationshipItemMarkup");
 site = site.replace(/\n\s*localStorage\.(?:getItem|setItem|removeItem)\('beFollowingUsers:[^\n]*\n/g, '\n');
