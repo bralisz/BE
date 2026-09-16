@@ -1,11 +1,11 @@
 'use strict';
 
-// Rotas públicas centralizadas em uma única Function.
 const loaders = Object.freeze({
   account: () => require('../server/api-routes/account'),
   admin: () => require('../server/api-routes/admin'),
   media: () => require('../server/api-routes/media'),
   meta: () => require('../server/api-routes/meta'),
+  'profile-follow': () => require('../server/api-routes/profile-follow'),
   'profile-share-image': () => require('../server/api-routes/profile-share-image'),
   'public-data': () => require('../server/api-routes/public-data'),
   'public-profile': () => require('../server/api-routes/public-profile'),
@@ -21,19 +21,15 @@ module.exports = async function apiRouter(req, res) {
   const raw = Array.isArray(req.query?.route) ? req.query.route[0] : req.query?.route;
   const route = String(raw || '').trim().toLowerCase();
   const load = loaders[route];
-
   if (!load) {
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
     return res.status(404).json({ error: 'endpoint_not_found' });
   }
-
   try {
     if (route === 'public-profile') {
       const view = String(Array.isArray(req.query?.view) ? req.query.view[0] : req.query?.view || '').trim().toLowerCase();
-      if (view === 'relationships') {
-        return await require('../server/api-routes/profile-relationships')(req, res);
-      }
+      if (view === 'relationships') return await require('../server/api-routes/profile-relationships')(req, res);
     }
     return await load()(req, res);
   } catch (error) {
