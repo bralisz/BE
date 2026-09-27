@@ -290,6 +290,8 @@
         profilePageBadge.textContent='Visitante';
         profilePageMetaLabel.textContent='Conta desconectada';
         profilePageMemberSince.textContent='';
+        var guestLikes=document.getElementById('profilePageLikesReceived');
+        if(guestLikes){guestLikes.hidden=true;guestLikes.textContent='';}
         profilePageAvatar.innerHTML=profileFallbackAvatar();
         profilePageBanner.hidden=true;profilePageBannerImg.removeAttribute('src');profilePageBannerFallback.hidden=false;
         return;
