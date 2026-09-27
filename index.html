@@ -271,6 +271,21 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   },{once:true});
 })();
 </script>
+<link rel="preload" href="/assets/images/community/boaf-stream-4bi.webp" as="image" fetchpriority="high">
+<script>
+(function(){
+  function fixBoafImage(event){
+    var img=event&&event.target;
+    if(!img||img.tagName!=='IMG')return;
+    var src=String(img.getAttribute('src')||'');
+    if(src.indexOf('boaf-stream-4bi.webp')===-1)return;
+    if(img.dataset.boafFallback==='1')return;
+    img.dataset.boafFallback='1';
+    img.src='/assets/images/community/boaf-stream-4bi.webp';
+  }
+  window.addEventListener('error',fixBoafImage,true);
+})();
+</script>
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
