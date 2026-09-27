@@ -3414,8 +3414,6 @@
     filter:none!important;
   }
 
-
-/* Carregamento inicial. */
 .auth-loading{
   position:fixed!important;
   inset:0!important;
@@ -3523,7 +3521,6 @@
   .site-skeleton-card{flex:0 0 min(78vw,340px)!important;aspect-ratio:16/9!important;border-radius:16px!important}
 }
 
-/* O botão de três pontos sempre fica acima do banner e recebe clique. */
 .profile-page-more{
   z-index:30!important;
   pointer-events:auto!important;
@@ -3531,7 +3528,6 @@
   cursor:pointer!important;
 }
 
-/* Central de suporte: layout preto, tipografia iOS e FAQs sem cartões. */
 body.support-page-active{
   background:#000!important;
   color:#f5f5f7;
@@ -3793,7 +3789,6 @@ body.support-page-active .home-nav-link[data-public-action="support"]{display:in
   .support-contact-button{transition:none!important}
 }
 
-/* Notificações. */
 html.site-loading-active,
 body.site-loading-active{
   width:100%;
@@ -4122,7 +4117,6 @@ body.notification-page-active > #notificationPage{
 .notification-page-empty strong{color:#d1d1d6}
 .notification-page-empty span{font-size:13px;line-height:1.45}
 
-/* Suporte: hero mais limpo, setas inspiradas no iOS e e-mail oculto. */
 .support-hero{margin-bottom:34px}
 .support-kicker,
 .support-hero>p:last-child,
@@ -4272,7 +4266,6 @@ body.notification-page-active > #notificationPage{
   .notification-preview-item,
   .notification-page-link{transition:none!important}
 }
-
 
 .profile-page-meta{display:none!important}
 .notification-unread-dot{
@@ -4425,8 +4418,6 @@ body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned
   .notification-mark-all{padding:0 9px;font-size:11px}
 }
 
-
-/* Suporte. */
 .home-notification-menu{
   top:27px;
 }
@@ -4485,8 +4476,6 @@ body.support-page-active > .support-page-shell{
   }
 }
 
-
-/* Navegação dedicada do suporte. */
 body.support-page-active .home-nav-link[data-home-view]{
   display:none!important;
 }
@@ -4572,8 +4561,6 @@ body.profile-page-active .profile-page-more{
   }
 }
 
-
-/* Login administrativo alinhado ao visual do acesso principal. */
 html.admin-mode,
 body.admin-mode{
   min-height:100%;
@@ -4698,8 +4685,6 @@ body.admin-mode{
   .protected-admin-google-button{min-height:66px}
 }
 
-
-/* Ajustes do painel e das notificações. */
 .home-notification-menu{
   z-index:10025!important;
   pointer-events:auto!important;
@@ -4715,16 +4700,12 @@ body.admin-mode{
 .notification-article-date{display:block!important;color:#2997ff!important}
 .notification-article h1{margin-bottom:10px}
 
-
-/* Menus de conta e notificações mutuamente exclusivos. */
 body.settings-page-active .home-notification-menu,
 body.settings-page-active .mobile-notification-button,
 body.settings-page-active #mobileNotificationPopover{
   display:none!important;
 }
 
-
-/* Pesquisa do suporte: borda única e botão de limpeza controlado pelo site. */
 .support-search{
   box-sizing:border-box;
   border:1px solid rgba(255,255,255,.18)!important;
@@ -4757,8 +4738,6 @@ body.settings-page-active #mobileNotificationPopover{
   .support-search{border-radius:19px!important}
 }
 
-
-/* Menu do perfil com a mesma borda e acabamento do painel de notificações. */
 .user-dropdown{
   border:1px solid rgba(255,255,255,.13)!important;
   border-radius:27px!important;
@@ -4768,7 +4747,6 @@ body.settings-page-active #mobileNotificationPopover{
   backdrop-filter:blur(34px) saturate(130%)!important;
 }
 
-/* Botão de suporte exibido somente após o rodapé no mobile. */
 .mobile-footer-support-cta{display:none}
 @media(max-width:760px){
   body:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.settings-page-active):not(.detail-page-active):not(.support-page-active):not(.legal-page-active):not(.notification-page-active) .mobile-footer-support-cta{
@@ -4792,7 +4770,6 @@ body.settings-page-active #mobileNotificationPopover{
   .mobile-footer-support-cta:active{transform:scale(.985);background:#0077ed}
 }
 
-/* Otimizações gerais para celulares e aparelhos com pouca memória/CPU. */
 @media(max-width:760px){
   html.mobile-optimized{scroll-behavior:auto}
   html.mobile-optimized body{overscroll-behavior-y:none}
@@ -4842,8 +4819,6 @@ body.settings-page-active #mobileNotificationPopover{
   html.mobile-lite .video-card:hover img{transform:none!important;filter:none!important}
 }
 
-
-/* Ajustes de navegação por seção e seletores de perfil */
 .video-rail-title svg{
   color:#f5f5f7!important;
   filter:none!important;
@@ -5003,7 +4978,6 @@ body.section-catalog-active main>section:not(#contentDetailSection){display:none
   .section-view-active .video-rail{grid-template-columns:1fr!important}
 }
 
-/* Perfis e catálogo. */
 body.profile-page-active .home-notification-menu,
 body.profile-page-active .profile-page-more{
   right:24px!important;
@@ -5167,7 +5141,6 @@ body.section-catalog-active .topbar-wrap{
   }
 }
 
-/* Layout geral das abas e páginas de seção. */
 :root{
   --be-page-background:#070809;
   --be-content-gutter:clamp(42px,5vw,92px);
@@ -5184,7 +5157,6 @@ body:not(.login-mode):not(.admin-mode):not(.support-page-active):not(.notificati
   display:none!important;
 }
 
-/* Mantém títulos e cards afastados das bordas em Home, Filmes e Vídeos. */
 #dynamicSections.video-catalog{
   background:var(--be-page-background)!important;
 }
@@ -5202,7 +5174,6 @@ body:not(.login-mode):not(.admin-mode):not(.support-page-active):not(.notificati
   margin-right:var(--be-content-gutter)!important;
 }
 
-/* Página com todos os vídeos vinculados a uma seção. */
 body.section-catalog-active{
   background:var(--be-page-background)!important;
 }
@@ -5223,7 +5194,6 @@ body.section-catalog-active .topbar-wrap{
   padding:0!important;
 }
 
-/* O rodapé também faz parte das abas e das páginas completas de seção. */
 body.section-catalog-active>footer{
   display:block!important;
 }
@@ -5260,7 +5230,6 @@ body.section-catalog-active>footer>.footer-card{
   background:var(--be-page-background)!important;
 }
 
-/* Catálogo. */
 html{
   scroll-padding-top:112px;
 }
@@ -5350,9 +5319,6 @@ body[data-home-view="series"] #dynamicSections:not(.section-view-mode){
   }
 }
 
-
-
-/* Abas Filmes e Vídeos com o mesmo acabamento visual da Home. */
 body[data-home-view="films"] .topbar-wrap,
 body[data-home-view="movies"] .topbar-wrap,
 body[data-home-view="series"] .topbar-wrap,
@@ -5362,7 +5328,6 @@ body.section-catalog-active .topbar-wrap{
   box-shadow:none!important;
 }
 
-/* O destaque aleatório volta a aparecer nas abas, sem bloco sombreado extra. */
 body[data-home-view="films"] #randomFeaturedSection,
 body[data-home-view="movies"] #randomFeaturedSection,
 body[data-home-view="series"] #randomFeaturedSection,
@@ -5383,7 +5348,6 @@ body[data-home-view="videos"] #randomFeaturedSection .featured{
   box-shadow:none!important;
 }
 
-/* Borda arredondada no encontro do destaque com o catálogo, igual à Home. */
 body[data-home-view="films"] #dynamicSections.video-catalog:not(.section-view-mode),
 body[data-home-view="movies"] #dynamicSections.video-catalog:not(.section-view-mode),
 body[data-home-view="series"] #dynamicSections.video-catalog:not(.section-view-mode),
@@ -5401,7 +5365,6 @@ body[data-home-view="videos"] #dynamicSections.video-catalog:not(.section-view-m
   backdrop-filter:none!important;
 }
 
-/* Ao abrir uma seção completa, mantém o fundo liso e sem sombreado. */
 body.section-catalog-active,
 body.section-catalog-active main,
 body.section-catalog-active #dynamicSections.section-view-mode,
@@ -5429,8 +5392,6 @@ body.section-catalog-active #dynamicSections.section-view-mode{
   }
 }
 
-
-/* Catálogo. */
 body[data-home-view="films"] #randomFeaturedSection,
 body[data-home-view="movies"] #randomFeaturedSection,
 body[data-home-view="series"] #randomFeaturedSection,
@@ -5476,7 +5437,6 @@ body.section-catalog-active .section-view-active .video-rail{
   }
 }
 
-/* Catálogo. */
 body.section-catalog-active > main{
   display:none!important;
   min-height:0!important;
@@ -5514,8 +5474,6 @@ body.section-catalog-active #dynamicSections.section-view-mode > .section-view-a
   }
 }
 
-
-/* Notificações e busca. */
 .notification-dropdown-header,
 .mobile-notification-head{
   display:grid!important;
@@ -5555,7 +5513,6 @@ body.section-catalog-active #dynamicSections.section-view-mode > .section-view-a
   flex:0 0 auto!important;
 }
 
-/* Uma página dedicada nunca deixa a grade de uma seção aberta por cima. */
 body.profile-page-active #dynamicSections,
 body.settings-page-active #dynamicSections,
 body.notification-page-active #dynamicSections,
@@ -5565,7 +5522,6 @@ body.legal-page-active #dynamicSections{
 }
 
 @media(max-width:760px){
-  /* Na página de Notificações, o mobile mostra somente título e fechar. */
   .notification-page-header{
     grid-template-columns:1fr auto 1fr!important;
   }
@@ -5594,8 +5550,6 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-
-/* Página de Notificações: no desktop mantém apenas o avatar à esquerda. */
 @media(min-width:761px){
   .notification-page-home{
     display:none!important;
@@ -5605,7 +5559,6 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-/* Correção da animação dos cards: evita corte ao passar o mouse. */
 #dynamicSections:not(.section-view-mode) .video-rail{
   padding-top:12px!important;
   padding-bottom:22px!important;
@@ -5625,7 +5578,6 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-/* Botão "Ler todos": o mobile replica exatamente o tamanho usado no PC. */
 #notificationMarkAll,
 #mobileNotificationMarkAll{
   box-sizing:border-box!important;
@@ -5641,8 +5593,6 @@ body.legal-page-active #dynamicSections{
   flex:0 0 auto!important;
 }
 
-
-/* Navegação das páginas completas de seção no mobile. */
 .section-view-mobile-home{
   display:none;
 }
@@ -5688,8 +5638,6 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-
-/* Logos configuradas no dashboard sobre os banners dos cards. */
 .video-card > .video-card-thumbnail{
   position:relative;
   z-index:0;
@@ -5728,7 +5676,6 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-/* Recomendações. */
 .detail-recommendations{
   padding-top:48px!important;
   padding-bottom:82px!important;
@@ -5742,7 +5689,6 @@ body.legal-page-active #dynamicSections{
   padding-inline:2px;
 }
 
-/* Mantém logos grandes inteiras dentro do banner, inclusive no hover. */
 .video-card > .video-card-logo{
   width:min(46%,240px)!important;
   height:58%!important;
@@ -5776,8 +5722,6 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-
-/* Logos dos cards. */
 .video-card > .video-card-logo-slot{
   position:absolute!important;
   top:50%!important;
@@ -5847,7 +5791,6 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-/* Sessão persistente + espaçamento consistente da área Conta. */
 .settings-side-stack>.settings-account-card>p{
   margin:0 0 24px!important;
   line-height:1.45;
@@ -5878,14 +5821,10 @@ body.legal-page-active #dynamicSections{
   .settings-side-stack .settings-account-card .settings-btn-row{margin-top:20px}
 }
 
-
-/* Configurações: seletor de idioma público. */
 .settings-language-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .settings-language-option{min-height:92px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;padding:18px;border:1px solid rgba(255,255,255,.13);border-radius:16px;color:#fff;background:rgba(255,255,255,.035);text-align:left;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease,box-shadow .18s ease}
 .settings-language-option strong{font-size:15px;line-height:1.25}.settings-language-option span{color:var(--ice-faint);font-size:12px}.settings-language-option:hover{transform:translateY(-1px);border-color:rgba(92,158,255,.48);background:rgba(65,130,235,.09)}.settings-language-option.active{border-color:#5a9cff;background:rgba(45,127,249,.15);box-shadow:0 0 0 3px rgba(45,127,249,.12)}.settings-language-option:focus-visible{outline:3px solid rgba(74,155,255,.32);outline-offset:3px}.settings-language-note{display:block;margin-top:16px!important;line-height:1.55}@media(max-width:760px){.settings-language-options{grid-template-columns:1fr}.settings-language-option{min-height:76px}}
 
-
-/* Correção do botão Home nas páginas de Termos/Privacidade quando há sessão ativa. */
 .legal-home-button .legal-home-icon{
   width:25px!important;
   height:25px!important;
@@ -5905,8 +5844,6 @@ body.legal-page-active #dynamicSections{
   .legal-home-button .legal-home-icon{width:23px!important;height:23px!important}
 }
 
-
-/* Login mobile: logo com o mesmo tamanho do desktop e alinhada ao botão Discord. */
 @media (max-width:760px){
   body.login-mode .login-topbar{
     min-height:76px!important;
@@ -5929,8 +5866,6 @@ body.legal-page-active #dynamicSections{
   }
 }
 
-
-/* Logos. */
 body.login-mode .login-topbar{
   align-items:center!important;
 }
@@ -5976,8 +5911,6 @@ body.login-mode .login-brand img{
     height:44px!important;
   }
 }
-
-
 
 .user-dropdown{
   width:220px;
@@ -6106,8 +6039,6 @@ body.login-mode .login-brand img{
   }
 }
 
-/* Logo opcional de Vídeos/Festivals & Shows: somente nos detalhes.
-   Filmes e Séries continuam usando as regras originais de .detail-logo img. */
 .detail-logo-media--video{
   display:flex;
   align-items:flex-end;
@@ -6142,13 +6073,11 @@ body.login-mode .login-brand img{
   }
 }
 
-/* /fãs — descrição em uma linha no desktop e atalho para as regras da comunidade. */
 .fans-page-intro .fans-page-description{max-width:none;margin:22px auto 0;color:rgba(255,255,255,.62);font-size:clamp(15px,1.4vw,18px);line-height:1.6}
 .fans-page-community-help{display:inline-block;margin-top:10px;color:#3d9cff;font-size:14px;font-weight:700;line-height:1.45;text-decoration:none;transition:color .18s ease,opacity .18s ease}
 .fans-page-community-help:hover,.fans-page-community-help:focus-visible{color:#72b7ff;text-decoration:underline;text-underline-offset:3px}
 @media(min-width:901px){.fans-page-intro{max-width:980px}.fans-page-intro .fans-page-description{white-space:nowrap}}
 @media(max-width:900px){.fans-page-intro .fans-page-description{margin-top:18px;font-size:15px;line-height:1.55}.fans-page-community-help{max-width:330px;margin-top:10px;font-size:13px}}
-
 
 /* Ajuste final do perfil mobile: ações um pouco mais baixas e likes logo abaixo delas. */
 @media(max-width:760px){
