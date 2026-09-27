@@ -7162,6 +7162,25 @@ body.support-page-active .home-nav-link[data-public-action="support"].active{
   }
 }
 
+.community-award-tag.is-boaf,
+.profile-award-tag.is-boaf,
+.detail-comment-award-tag.is-boaf{
+  color:#fff!important;
+  background:#168cff!important;
+  border-color:#168cff!important;
+}
+.community-boaf-tag{
+  min-width:58px;
+  min-height:20px;
+  margin:0 0 10px;
+  padding:0 9px;
+  border-radius:6px;
+  color:#fff!important;
+  background:#168cff!important;
+  border-color:#168cff!important;
+  font-size:10px;
+  font-weight:850;
+}
 .login-trust-note{
   width:min(520px,100%);
   margin:18px auto 0;
