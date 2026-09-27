@@ -92,6 +92,13 @@
     return date.toLocaleDateString(notificationDateLocale(),{day:'2-digit',month:'short',year:'numeric'}).replace('.','');
   }
 
+  function isBoafPromotionNotification(item){
+    var title=String(item&&item.title||'').trim();
+    var description=String(item&&item.description||'').trim();
+    if(/stream\s+bird\s+of\s+a\s+feather/i.test(title))return true;
+    return /birds?\s+of\s+a\s+feather/i.test(description)&&/4\s*(?:billion|bilh(?:õ|o|ó|ö|ô)es|mil\s*millones|milliards)/i.test(description);
+  }
+
   function compareNewest(a,b){
     var ad=dateValue(a),bd=dateValue(b);
     return (bd?bd.getTime():0)-(ad?ad.getTime():0);
@@ -394,7 +401,7 @@
         if(!window.beBackend)throw new Error('Backend indisponível.');
         await window.beBackend.ready;
         var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
-        notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&String(item.type||'')!=='profile-share-campaign'&&String(item.title||'').trim();}).sort(compareNewest);
+        notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&!isBoafPromotionNotification(item)&&String(item.type||'')!=='profile-share-campaign'&&String(item.title||'').trim();}).sort(compareNewest);
         loaded=true;
         renderPreviews();
         if(document.body.classList.contains('notification-page-active'))renderPage(selectedId||routeInfo().id);
@@ -432,6 +439,7 @@
     if(updateRoute!==false)setNotificationRoute(selectedId,false);else if(routeInfo().legacy)setNotificationRoute(selectedId,true);
     window.dispatchEvent(new CustomEvent('be:close-support'));
     await loadNotifications(false);
+    if(selectedId&&!notifications.some(function(item){return String(item.id)===String(selectedId);})){closePage(true);return;}
     renderPage(selectedId);
     markAllRead();
     window.scrollTo(0,0);
