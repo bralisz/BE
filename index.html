@@ -220,18 +220,16 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 <script>
 (function(){
   window.si=window.si||function(){(window.siq=window.siq||[]).push(arguments);};
-  function loadVercelScripts(){
-    if(window.__betvVercelScriptsLoaded)return;
-    window.__betvVercelScriptsLoaded=true;
-    ['/_vercel/insights/script.js','/_vercel/speed-insights/script.js'].forEach(function(src){
-      var script=document.createElement('script');
-      script.defer=true;
-      script.src=src;
-      document.head.appendChild(script);
-    });
+  function loadVercelAnalytics(){
+    if(window.__betvVercelAnalyticsLoaded)return;
+    window.__betvVercelAnalyticsLoaded=true;
+    var script=document.createElement('script');
+    script.defer=true;
+    script.src='/_vercel/insights/script.js';
+    document.head.appendChild(script);
   }
-  if(document.readyState==='complete')loadVercelScripts();
-  else window.addEventListener('load',loadVercelScripts,{once:true});
+  if(document.readyState==='complete')loadVercelAnalytics();
+  else window.addEventListener('load',loadVercelAnalytics,{once:true});
 })();
 </script>
 <script>
