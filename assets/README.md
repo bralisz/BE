@@ -1,30 +1,28 @@
 # Assets de produção
 
-A pasta `assets/` contém arquivos carregados diretamente pelo site público.
+A pasta `assets/` reúne os arquivos que o site público usa diretamente.
 
 ## JavaScript
 
-- `js/site.js`: bundle principal do site, conta, catálogo, perfil, player e navegação;
-- `js/community.js`: página Comunidade, rankings e interações sociais;
-- `js/i18n.js`: tradução da interface;
-- `js/locale-routing.js`: rotas por idioma;
-- `js/lazy-loading.js`: carregamento otimizado de mídia;
-- `js/tv-controller.js`: controle e envio de conteúdo para a TV;
-- `js/tv-session-widget.js`: estado da sessão da Smart TV no desktop.
+- `js/site.js`: bundle principal do site, catálogo, conta, perfil, player e navegação;
+- `js/community.js`: Comunidade e recursos sociais;
+- `js/i18n.js`: tradução da interface e conteúdo dinâmico;
+- `js/locale-routing.js`: rotas e seleção de idioma;
+- `js/lazy-loading.js`: carregamento sob demanda;
+- `js/tv-controller.js`: controle da reprodução na TV;
+- `js/tv-session-widget.js`: sessão da TV no desktop.
 
 ## CSS
 
-- `css/site.css`: estilos gerais do site e dos players;
-- `css/community.css`: estilos da Comunidade;
-- `css/tv-pairing.css`: tela de conexão e reprodução na TV;
-- `css/tv-session-widget.css`: widget de sessão da TV.
+- `css/site.css`: estilos gerais;
+- `css/community.css`: Comunidade;
+- `css/tv-pairing.css`: conexão e reprodução na TV;
+- `css/tv-session-widget.css`: widget da sessão da TV.
 
-## Outros recursos
+## Recursos
 
-- `i18n/`: dicionários `en-us`, `es` e `fr`;
-- `icons/`: ícones do navegador e PWA;
-- `images/`: imagens organizadas por uso no site.
+- `i18n/`: arquivos de idioma, atualmente `pt-br`, `en-us`, `es`, `fr` e `it`;
+- `icons/`: ícones e recursos do PWA;
+- `images/`: imagens usadas pelo site.
 
-## Ao editar
-
-Alterações nesta pasta afetam diretamente a versão pública. Evite deixar comentários de changelog no CSS/JS; prefira comentários curtos apenas quando explicarem uma regra que não seja óbvia.
+Os arquivos daqui são considerados parte da versão publicada. Antes de mover ou renomear qualquer coisa, procure as referências no HTML, no servidor e nos scripts de build.
