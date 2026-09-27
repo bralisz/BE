@@ -28,7 +28,6 @@ for(const [src,dest] of copies){await mkdir(dirname(dest),{recursive:true});awai
 await mkdir(`${out}/styles`,{recursive:true});
 await writeFile(`${out}/styles/site.css`,minifyCss(await readFile('assets/css/site.css','utf8')));
 await cp('assets/css/tv-pairing.css',`${out}/styles/tv.css`);
-for(const [src,dest] of copies){await mkdir(dirname(dest),{recursive:true});await cp(src,dest);}
 await mkdir(`${out}/locales`,{recursive:true});
 for(const lang of ['en-us','es','fr','it'])await cp(`assets/i18n/${lang}.json`,`${out}/locales/${lang}.json`);
 await mkdir(`${out}/media/icons`,{recursive:true});
