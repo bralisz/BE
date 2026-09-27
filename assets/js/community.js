@@ -49,6 +49,100 @@
     return '<span class="community-award-tag '+meta.className+' notranslate" data-i18n-ignore translate="no">'+meta.label+'</span>';
   }
 
+
+  var BOAF_STREAM_URL='https://open.spotify.com/playlist/7GsA1b3dcISozmOc9G0tcT?si=d0qmzIyJSxiFLUx0flAsng';
+  var BOAF_STREAM_IMAGE='/assets/images/community/boaf-stream-4bi.webp';
+  var BOAF_STREAM_MESSAGE='BIRDS OF A FEATHER, de Billie Eilish, está prestes a fazer história ABSOLUTA como a música solo mais rápida da história do Spotify atingir a marca de 4 BILHÕES de Streams e a PRIMEIRA canção de uma artista feminina a conseguir o feito.';
+  var BOAF_STREAM_NOTICE_KEY='betvBoafStreamNotice:4bi:v1';
+  var boafNoticeOpenedThisSession=false;
+
+  function boafNoticeDismissed(){
+    try{return localStorage.getItem(BOAF_STREAM_NOTICE_KEY)==='listened';}catch(_){return false;}
+  }
+  function dismissBoafNotice(){
+    try{localStorage.setItem(BOAF_STREAM_NOTICE_KEY,'listened');}catch(_){ }
+    try{window.dispatchEvent(new CustomEvent('be:boaf-stream-notice-dismissed'));}catch(_){ }
+  }
+
+  async function claimBoafStreamTag(statusNode){
+    var user=currentUser();
+    if(!user||!user.uid){
+      if(statusNode){statusNode.textContent=t('Entre na sua conta para receber a tag BOAF.');statusNode.classList.add('is-visible','is-warning');}
+      return false;
+    }
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')return false;
+      var result=await client.rpc('claim_boaf_stream_tag');
+      if(result&&result.error)throw result.error;
+      try{
+        if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.get==='function'){
+          var refreshed=await window.beBackend.profiles.get(user.uid,{force:true});
+          if(refreshed&&typeof refreshed==='object')window.dispatchEvent(new CustomEvent('be:profile-refreshed',{detail:{profile:refreshed}}));
+        }
+      }catch(_){ }
+      try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(user.uid||''),tag:'boaf'}}));}catch(_){ }
+      if(statusNode){statusNode.textContent=t('Tag BOAF adicionada ao seu perfil.');statusNode.classList.remove('is-warning');statusNode.classList.add('is-visible','is-success');}
+      return true;
+    }catch(_){return false;}
+  }
+
+  function bindBoafListenLinks(root){
+    (root||document).querySelectorAll('[data-boaf-listen]').forEach(function(link){
+      if(link.dataset.boafBound==='true')return;
+      link.dataset.boafBound='true';
+      link.addEventListener('click',function(){
+        dismissBoafNotice();
+        var scope=link.closest('.community-boaf-card,.boaf-stream-panel');
+        var status=scope&&scope.querySelector?scope.querySelector('.boaf-stream-status'):null;
+        claimBoafStreamTag(status);
+        if(scope&&scope.classList.contains('boaf-stream-panel'))closeBoafStreamPanel();
+      });
+    });
+  }
+
+  function closeBoafStreamPanel(){
+    var modal=document.getElementById('boafStreamPanel');
+    if(!modal)return;
+    modal.hidden=true;
+    document.body.classList.remove('boaf-stream-panel-open');
+  }
+
+  function openBoafStreamPanel(options){
+    options=options&&typeof options==='object'?options:{};
+    if(options.auto===true&&boafNoticeDismissed())return;
+    var modal=document.getElementById('boafStreamPanel');
+    if(!modal){
+      modal=document.createElement('div');
+      modal.id='boafStreamPanel';
+      modal.className='boaf-stream-panel-backdrop';
+      modal.hidden=true;
+      modal.innerHTML='<section class="boaf-stream-panel" role="dialog" aria-modal="true" aria-labelledby="boafStreamPanelTitle">'
+        +'<button class="boaf-stream-panel-close" type="button" aria-label="'+t('Fechar')+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>'
+        +'<div class="boaf-stream-panel-media"><img src="'+BOAF_STREAM_IMAGE+'" alt="BIRDS OF A FEATHER" decoding="async"></div>'
+        +'<div class="boaf-stream-panel-copy"><span class="boaf-stream-kicker">STREAM #4BI</span><h2 id="boafStreamPanelTitle">Stream Bird of a Feather</h2><p>'+t(BOAF_STREAM_MESSAGE)+'</p>'
+        +'<div class="boaf-stream-reward"><strong>'+t('Quem ouvir ganha a tag {tag}.',{tag:'<span class="profile-award-tag is-boaf notranslate boaf-stream-inline-tag" data-i18n-ignore translate="no">BOAF</span>'})+'</strong></div>'
+        +'<a class="boaf-stream-listen" data-boaf-listen href="'+BOAF_STREAM_URL+'" target="_blank" rel="noopener noreferrer">'+t('Ouvir')+'</a><p class="boaf-stream-status" aria-live="polite"></p></div></section>';
+      document.body.appendChild(modal);
+      var close=modal.querySelector('.boaf-stream-panel-close');if(close)close.addEventListener('click',closeBoafStreamPanel);
+      modal.addEventListener('click',function(event){if(event.target===modal)closeBoafStreamPanel();});
+      bindBoafListenLinks(modal);
+    }
+    modal.hidden=false;
+    document.body.classList.add('boaf-stream-panel-open');
+    applyI18n(modal);
+  }
+
+  function scheduleBoafStreamNotice(){
+    if(boafNoticeOpenedThisSession||boafNoticeDismissed())return;
+    boafNoticeOpenedThisSession=true;
+    window.setTimeout(function(){
+      if(boafNoticeDismissed())return;
+      openBoafStreamPanel({auto:true});
+    },1200);
+  }
+
   async function loadCommunityOngBanner(){
     var spotlight=document.getElementById('communityOngSpotlight');
     var image=document.getElementById('communityOngSpotlightImage');
@@ -92,6 +186,7 @@
       +  '</div>'
       +'</div>';
     main.appendChild(page);
+    bindBoafListenLinks(page);
     page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
     var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
     var rulesDetails=page.querySelector('.community-rules-details');
@@ -444,7 +539,7 @@
   }
 
   function bind(){
-    createPage();createMobileAccountMenu();
+    createPage();createMobileAccountMenu();scheduleBoafStreamNotice();
     var tab=document.querySelector('[data-community-tab]');if(tab)tab.addEventListener('click',function(event){event.preventDefault();openCommunity();});
     var play=document.getElementById('contentDetailPlay');
     if(play&&play.dataset.communityRecentBound!=='true'){
