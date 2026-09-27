@@ -4629,7 +4629,10 @@ body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned
 }
 
 .home-notification-menu{
-  top:27px;
+  position:fixed;
+  top:21px!important;
+  right:88px!important;
+  left:auto!important;
 }
 .notification-button{
   width:42px;
