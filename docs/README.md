@@ -4,10 +4,10 @@ Esta pasta guarda relatórios e notas de manutenção que não fazem parte da l�
 
 ## Arquivos atuais
 
-- `SECURITY-AUDIT-20260805.md`: revisão de segurança e pontos que exigem atenção.
+- `SECURITY-AUDIT-20260823.md`: revisão de segurança mais recente do projeto.
 
 ## Cuidados
 
 Não salve senhas, tokens, chaves privadas, cookies ou credenciais administrativas em documentação.
 
-Este pacote não contém uma `.vercelignore` na raiz. Se a intenção for impedir o envio de `docs/` ou outras fontes de manutenção para a Vercel, configure a exclusão explicitamente no fluxo de deploy.
+Os arquivos desta pasta são de manutenção e não fazem parte da aplicação pública. O fluxo de deploy já trata esses caminhos separadamente, então não é necessário duplicar código do site aqui.
