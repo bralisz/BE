@@ -112,7 +112,7 @@
   try{window.onerror=function(){return true;};}catch(_){ }
 })( );
 </script>
-<script src="/_static/chunks/locale.js?rev=20260823-account-mfa-v1"></script>
+<script defer src="/_static/chunks/locale.js?rev=20260823-account-mfa-v2"></script>
 <script>
 (function(){
                                                                          
@@ -213,7 +213,8 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
-<link rel="stylesheet" href="/_static/styles/site.css?rev=20260825-login-footer-centered-v40">
+<link rel="preload" href="/_static/styles/site.css?rev=20260825-login-footer-centered-v40" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20260825-login-footer-centered-v40"></noscript>
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/_static/chunks/site.js?rev=20260927-js-performance-v2"></script>
 
