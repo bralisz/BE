@@ -20146,3 +20146,30 @@ html[lang^="fr"] .login-trust-copy-fr{display:block}
 @media(max-width:699px){
   .login-trust-copy>span{white-space:normal}
 }
+
+/* Ajuste final do perfil mobile: ações um pouco mais baixas e likes logo abaixo delas. */
+@media(max-width:760px){
+  body.profile-page-active .profile-page-actions-row{
+    top:calc(24px + env(safe-area-inset-top))!important;
+  }
+  body.profile-page-active .profile-page-likes-received{
+    top:calc(24px + env(safe-area-inset-top) + var(--betv-profile-mobile-action-size,44px) + 8px)!important;
+    right:14px!important;
+    bottom:auto!important;
+    width:auto!important;
+    max-width:calc(100% - 28px)!important;
+    text-align:right!important;
+    white-space:nowrap!important;
+  }
+}
+
+/* BOAF: azul sólido e texto branco em todas as áreas do perfil/comunidade. */
+.community-award-tag.is-boaf,
+.profile-page-award-tags .is-boaf,
+.profile-award-tag.is-boaf,
+.detail-comment-award-tag.is-boaf,
+[data-community-tag="boaf"]{
+  color:#fff!important;
+  background:#168cff!important;
+  border-color:#168cff!important;
+}
