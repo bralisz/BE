@@ -683,11 +683,21 @@
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
     } catch (_) { return ''; }
   }
+  function mediaProxyWidth() {
+    try {
+      const viewport = Math.max(320, Number(window.innerWidth) || 1280);
+      const density = Math.min(2, Math.max(1, Number(window.devicePixelRatio) || 1));
+      return Math.min(1600, Math.max(480, Math.ceil(viewport * density)));
+    } catch (_) {
+      return 1280;
+    }
+  }
   window.BETVMediaProxyUrl = function BETVMediaProxyUrl(value) {
     const raw = String(value || '').trim();
     if (!/^https:\/\//i.test(raw)) return '';
     const token = encodeBase64Url(raw);
-    return token ? `/api/media?u=${token}` : '';
+    if (!token) return '';
+    return `/api/media?u=${token}&w=${mediaProxyWidth()}&q=78`;
   };
   window.beMediaUrl = function beMediaUrl(value) {
     const raw = String(value || '').trim();
@@ -697,10 +707,8 @@
                                                                                
                                                                                
                                                                            
-    if (prefersMediaProxy(raw)) {
-      const cachedProxy = window.BETVMediaProxyUrl ? window.BETVMediaProxyUrl(raw) : '';
-      if (cachedProxy) return cachedProxy;
-    }
+    const cachedProxy = window.BETVMediaProxyUrl ? window.BETVMediaProxyUrl(raw) : '';
+    if (cachedProxy) return cachedProxy;
     return raw;
   };
 

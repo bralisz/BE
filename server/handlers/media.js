@@ -1,5 +1,7 @@
 'use strict';
 
+const sharp = require('sharp');
+
 const MAX_BYTES = 12 * 1024 * 1024;
 const MAX_REDIRECTS = 3;
 const REQUEST_TIMEOUT_MS = 8000;
@@ -234,13 +236,27 @@ module.exports = async function mediaProxy(req, res) {
       return res.status(400).end();
     }
     const { bytes, contentType } = await fetchImage(source);
-    res.setHeader('Content-Type', contentType);
+    const requestedWidth = Number.parseInt(Array.isArray(req.query?.w) ? req.query.w[0] : req.query?.w, 10);
+    const requestedQuality = Number.parseInt(Array.isArray(req.query?.q) ? req.query.q[0] : req.query?.q, 10);
+    const width = Number.isFinite(requestedWidth) ? Math.min(2500, Math.max(320, requestedWidth)) : 0;
+    const quality = Number.isFinite(requestedQuality) ? Math.min(90, Math.max(45, requestedQuality)) : 78;
+    const canOptimize = width > 0 && ['image/jpeg', 'image/png', 'image/avif'].includes(contentType);
+    let output = bytes;
+    let outputType = contentType;
+    if (canOptimize) {
+      output = await sharp(bytes, { failOn: 'none' })
+        .resize({ width, withoutEnlargement: true, fit: 'inside' })
+        .webp({ quality })
+        .toBuffer();
+      outputType = 'image/webp';
+    }
+    res.setHeader('Content-Type', outputType);
     res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     res.setHeader('Vary', 'Accept');
     if (req.method === 'HEAD') return res.status(200).end();
-    return res.status(200).send(bytes);
+    return res.status(200).send(output);
   } catch (_) {
     const placeholder = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="9" viewBox="0 0 16 9"><rect width="16" height="9" fill="#142238"/><path d="M2 7l3-3 2 2 2-2 5 3" fill="none" stroke="#31527d" stroke-width=".6"/></svg>');
     res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
