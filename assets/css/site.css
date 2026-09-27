@@ -20014,25 +20014,26 @@ body.profile-page-active .profile-page-actions-row > [hidden]{display:none!impor
   text-align:center;
 }
 .boaf-stream-counter{
-  color:#fff;
-  font:850 clamp(40px,6vw,72px)/.96 var(--font-display);
+  color:#2D7FF9;
+  font:850 clamp(36px,5vw,58px)/.96 var(--font-display);
   letter-spacing:-.055em;
   text-align:center;
   text-wrap:balance;
 }
 .boaf-stream-counter-subtitle{
-  margin:6px 0 16px;
+  margin:5px 0 14px;
   color:rgba(255,255,255,.62);
   font-size:clamp(14px,1.5vw,18px);
   line-height:1.3;
   font-weight:650;
 }
 .community-boaf-media{
-  width:min(100%,1000px);
+  width:100%;
+  max-width:760px;
   height:auto;
   overflow:hidden;
   flex:0 0 auto;
-  border-radius:22px;
+  border-radius:18px;
   background:#080c12;
 }
 .community-boaf-media img{
@@ -20040,7 +20041,7 @@ body.profile-page-active .profile-page-actions-row > [hidden]{display:none!impor
   width:100%;
   height:auto;
   max-width:none;
-  object-fit:cover;
+  object-fit:contain;
   object-position:center;
   border:0;
 }
@@ -20048,17 +20049,14 @@ body.profile-page-active .profile-page-actions-row > [hidden]{display:none!impor
   .community-boaf-section{margin-bottom:36px;padding:0 16px}
   .community-boaf-section .community-section-head{margin:0 0 10px}
   .community-boaf-section .community-section-head h2{font-size:17px}
-  .boaf-stream-counter{font-size:clamp(38px,11vw,58px)}
-  .boaf-stream-counter-subtitle{margin-top:5px;margin-bottom:13px;font-size:14px}
-  .community-boaf-card{width:min(100%,700px)}
-  .community-boaf-media{border-radius:18px}
+  .boaf-stream-counter{font-size:clamp(34px,10vw,48px)}
+  .boaf-stream-counter-subtitle{margin-top:5px;margin-bottom:12px;font-size:14px}
+  .community-boaf-card{width:min(100%,760px)}
+  .community-boaf-media{border-radius:14px}
 }
 @media(max-width:390px){
   .community-boaf-section .community-section-head h2{font-size:15px}
-  .boaf-stream-counter{font-size:36px}
-}
-@media(prefers-reduced-motion:reduce){
-  .boaf-stream-counter{transition:none!important}
+  .boaf-stream-counter{font-size:32px}
 }
 
 .login-trust-note{
