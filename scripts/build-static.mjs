@@ -1,5 +1,20 @@
 import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+
+function minifyCss(input){
+  const strings=[];
+  let css=input.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,value=>{
+    strings.push(value);
+    return `___CSSSTR${strings.length-1}___`;
+  });
+  css=css.replace(/\/\*[\s\S]*?\*\//g,'');
+  css=css.replace(/\s+/g,' ');
+  css=css.replace(/\s*([{}:;,>+~])\s*/g,'$1');
+  css=css.replace(/;}/g,'}');
+  css=css.trim();
+  return css.replace(/___CSSSTR(\d+)___/g,(_,index)=>strings[Number(index)]);
+}
+
 const out='_static';
 await rm(out,{recursive:true,force:true});
 const copies=[
@@ -8,9 +23,11 @@ const copies=[
   ['assets/js/tv-controller.js',`${out}/chunks/tv.js`],
   ['assets/js/tv-session-widget.js',`${out}/chunks/session.js`],
   ['assets/js/lazy-loading.js',`${out}/chunks/lazy.js`],
-  ['assets/css/site.css',`${out}/styles/site.css`],
-  ['assets/css/tv-pairing.css',`${out}/styles/tv.css`],
 ];
+for(const [src,dest] of copies){await mkdir(dirname(dest),{recursive:true});await cp(src,dest);}
+await mkdir(`${out}/styles`,{recursive:true});
+await writeFile(`${out}/styles/site.css`,minifyCss(await readFile('assets/css/site.css','utf8')));
+await cp('assets/css/tv-pairing.css',`${out}/styles/tv.css`);
 for(const [src,dest] of copies){await mkdir(dirname(dest),{recursive:true});await cp(src,dest);}
 await mkdir(`${out}/locales`,{recursive:true});
 for(const lang of ['en-us','es','fr','it'])await cp(`assets/i18n/${lang}.json`,`${out}/locales/${lang}.json`);
