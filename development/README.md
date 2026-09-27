@@ -15,4 +15,4 @@ Esses arquivos não entram automaticamente no build público. O build atual publ
 
 Por isso, não mova ou renomeie arquivos daqui assumindo que são equivalentes aos arquivos publicados. Antes de alterar uma fonte, confira onde ela é usada e qual arquivo público recebe a mudança.
 
-A versão entregue ao painel administrativo é montada no servidor por `server/handlers/admin-runtime.js`.
+O painel administrativo usa `source/admin/admin.js` como fonte principal. O código entregue ao navegador é montado no servidor por `server/handlers/admin-runtime.js`.
