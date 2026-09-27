@@ -520,6 +520,13 @@
     return supportersLoading;
   }
 
+  function isBoafPromotionNotification(item){
+    var title=String(item&&item.title||'').trim();
+    var description=String(item&&item.description||'').trim();
+    if(/stream\s+bird\s+of\s+a\s+feather/i.test(title))return true;
+    return /birds?\s+of\s+a\s+feather/i.test(description)&&/4\s*(?:billion|bilh(?:õ|o|ó|ö|ô)es|mil\s*millones|milliards)/i.test(description);
+  }
+
   function notificationTime(item){
     var value=item&&(item.updatedAt||item.updated_at||item.createdAt||item.created_at||item.date)||'';
     var time=new Date(value).getTime();
@@ -567,7 +574,7 @@
         await window.beBackend.ready;
         var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
         notificationItems=(Array.isArray(items)?items:[])
-          .filter(function(item){return active(item)&&String(item.title||'').trim();})
+          .filter(function(item){return active(item)&&!isBoafPromotionNotification(item)&&String(item.title||'').trim();})
           .sort(function(a,b){return notificationTime(b)-notificationTime(a);});
         notificationLoaded=true;
         renderNotificationPreview();
