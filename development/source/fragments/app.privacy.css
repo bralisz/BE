@@ -6078,3 +6078,30 @@ body.login-mode .login-brand img{
 .fans-page-community-help:hover,.fans-page-community-help:focus-visible{color:#72b7ff;text-decoration:underline;text-underline-offset:3px}
 @media(min-width:901px){.fans-page-intro{max-width:980px}.fans-page-intro .fans-page-description{white-space:nowrap}}
 @media(max-width:900px){.fans-page-intro .fans-page-description{margin-top:18px;font-size:15px;line-height:1.55}.fans-page-community-help{max-width:330px;margin-top:10px;font-size:13px}}
+
+/* Ajuste final do perfil mobile: ações um pouco mais baixas e likes logo abaixo delas. */
+@media(max-width:760px){
+  body.profile-page-active .profile-page-actions-row{
+    top:calc(24px + env(safe-area-inset-top))!important;
+  }
+  body.profile-page-active .profile-page-likes-received{
+    top:calc(24px + env(safe-area-inset-top) + var(--betv-profile-mobile-action-size,44px) + 8px)!important;
+    right:14px!important;
+    bottom:auto!important;
+    width:auto!important;
+    max-width:calc(100% - 28px)!important;
+    text-align:right!important;
+    white-space:nowrap!important;
+  }
+}
+
+/* BOAF: azul sólido e texto branco em todas as áreas do perfil/comunidade. */
+.community-award-tag.is-boaf,
+.profile-page-award-tags .is-boaf,
+.profile-award-tag.is-boaf,
+.detail-comment-award-tag.is-boaf,
+[data-community-tag="boaf"]{
+  color:#fff!important;
+  background:#168cff!important;
+  border-color:#168cff!important;
+}
