@@ -49,31 +49,6 @@
     return '<span class="community-award-tag '+meta.className+' notranslate" data-i18n-ignore translate="no">'+meta.label+'</span>';
   }
 
-  function animateBoafStreamCounter(root){
-    var counter=(root||document).querySelector('#boafStreamCounter');
-    if(!counter||counter.dataset.boafCounterAnimated==='true')return;
-    counter.dataset.boafCounterAnimated='true';
-    var reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var render=function(value){
-      var amount=Math.max(1,Math.min(4,Math.round(value)));
-      counter.textContent=amount===1?t('1 bilhão'):t('{count} bilhões',{count:amount});
-    };
-    if(reduced){render(4);return;}
-    var start=1;
-    var end=4;
-    var duration=2200;
-    var startedAt=0;
-    var tick=function(now){
-      if(!startedAt)startedAt=now;
-      var progress=Math.min(1,(now-startedAt)/duration);
-      var eased=1-Math.pow(1-progress,3);
-      render(start+(end-start)*eased);
-      if(progress<1)window.requestAnimationFrame(tick);
-    };
-    render(start);
-    window.requestAnimationFrame(tick);
-  }
-
   async function loadCommunityOngBanner(){
     var spotlight=document.getElementById('communityOngSpotlight');
     var image=document.getElementById('communityOngSpotlightImage');
@@ -108,7 +83,7 @@
       +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/assets/images/community/community-hero-banner.webp" alt="Banner da comunidade dos Avocados" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<div class="community-content-shell">'
       +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
-      +    '<section class="community-section community-boaf-section" id="communityBoafSection"><div class="community-section-head"><h2>'+t('Obrigado por ajudar BIRDS OF A FEATHER a alcançar')+'</h2></div><article class="community-boaf-card" id="communityBoafCard"><div class="community-boaf-promo"><div class="boaf-stream-counter" id="boafStreamCounter" aria-live="polite">1 bilhão</div><p class="boaf-stream-counter-subtitle">'+t('de streams no Spotify')+'</p><div class="community-boaf-media"><img src="/assets/images/community/boaf-stream-4bi.webp" alt="BIRDS OF A FEATHER" decoding="async"></div></div></article></section>'
+      +    '<section class="community-section community-boaf-section" id="communityBoafSection"><div class="community-section-head"><h2>'+t('Obrigado por ajudar BIRDS OF A FEATHER a alcançar')+'</h2></div><article class="community-boaf-card" id="communityBoafCard"><div class="community-boaf-promo"><div class="boaf-stream-counter" id="boafStreamCounter" aria-live="polite">4 bilhões</div><p class="boaf-stream-counter-subtitle">'+t('de streams no Spotify')+'</p><div class="community-boaf-media"><img src="/assets/images/community/boaf-stream-4bi.webp" alt="BIRDS OF A FEATHER" decoding="async"></div></div></article></section>'
       +    '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2>Perfis em destaque</h2><p class="community-section-subtitle">Compartilhe seu perfil para receber curtidas e aparecer no ranking.</p></div><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado notranslate" data-i18n-ignore translate="no">Avocado</span></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash notranslate" data-i18n-ignore translate="no">Eyelash</span></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh notranslate" data-i18n-ignore translate="no">Blohsh</span></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
@@ -117,8 +92,6 @@
       +  '</div>'
       +'</div>';
     main.appendChild(page);
-    animateBoafStreamCounter(page);
-    bindBoafListenLinks(page);
     page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
     var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
     var rulesDetails=page.querySelector('.community-rules-details');
