@@ -3141,7 +3141,9 @@
     .profile-page-hero{min-height:100svh;border-radius:0}
     .profile-page-more{top:96px;right:16px;width:44px;height:44px}
     .profile-page-info{padding:150px 18px 28px;gap:14px;align-items:flex-end}
-    .profile-page-avatar{width:108px;height:108px}
+    .profile-page-avatar{width:108px;height:108px;flex:0 0 108px;align-self:flex-end}
+    .profile-page-copy{min-width:0;max-width:calc(100% - 122px);padding-bottom:2px}
+    .profile-page-likes-received{font-size:13px;line-height:1.25}
     .profile-page-name{font-size:clamp(28px,10vw,42px)}
     .profile-page-handle{font-size:22px}
     .settings-wrap,.profile-page-body{padding-left:18px;padding-right:18px}
