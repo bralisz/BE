@@ -1,7 +1,5 @@
 'use strict';
 
-// Lazy loading evita inicializar sitemap/Wikipedia em toda checagem simples da
-// versão do deployment.
 const loaders = Object.freeze({
   'deployment-version': () => require('../api-handlers/deployment-version'),
   robots: () => require('../api-handlers/robots'),

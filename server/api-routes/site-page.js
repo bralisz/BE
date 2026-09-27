@@ -60,7 +60,6 @@ function readTemplate() {
   throw new Error('index.html não encontrado');
 }
 
-
 function deploymentVersion() {
   const commit = String(process.env.VERCEL_GIT_COMMIT_SHA || '').trim();
   const deploymentUrl = String(process.env.VERCEL_URL || '').trim();
@@ -261,7 +260,6 @@ function profileUsernameFromRoute(routeInfo) {
   return PUBLIC_PROFILE_API.validUsername(username) ? username : '';
 }
 
-
 function numericPublicId(value) {
   const text = String(value || 'video').trim();
   if (/^\d{8}$/.test(text)) return text;
@@ -313,7 +311,6 @@ async function fetchSeoCollection(collection) {
     }
   } catch (_) {}
 
-  // Compatibilidade com ambientes em que a RPC pública ainda não foi aplicada.
   const params = new URLSearchParams({ select: 'id,data,created_at,updated_at', collection: `eq.${collection}` });
   const legacy = await fetch(`${url}/rest/v1/content_items?${params.toString()}`, { headers, cache: 'no-store' });
   if (!legacy.ok) throw new Error(`seo_${collection}_unavailable`);
@@ -783,8 +780,6 @@ module.exports = async function sitePage(req, res) {
     const legalRequest = isLegalRouteInfo(routeInfo);
     const recoveryRequest = routeInfo.logicalPath === '/reset-password' || routeInfo.logicalPath === '/reset-password/';
     const needsSeoCatalog = /^\/\d{6,12}$/.test(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
-    // Páginas legais são totalmente estáticas e localizadas no servidor.
-    // Não aguardam o Supabase, reduzindo o tempo de resposta em cache frio.
     const [settings, seoCatalog] = await Promise.all([
       (legalRequest || recoveryRequest || profileUsername) ? Promise.resolve(settingsCache.value || {}) : loadSettings(),
       needsSeoCatalog ? loadSeoCatalog() : Promise.resolve([])

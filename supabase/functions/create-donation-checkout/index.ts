@@ -196,7 +196,6 @@ Deno.serve(async (req: Request) => {
   stripeBody.set("cancel_url", cancelUrl);
   stripeBody.set("locale", locale.stripe);
   stripeBody.set("submit_type", "donate");
-  // Payment methods are selected dynamically by Stripe from the methods enabled on the account.
   stripeBody.set("client_reference_id", `${user.id}:${ngoId}`.slice(0, 200));
   stripeBody.set("line_items[0][price_data][currency]", currency);
   stripeBody.set("line_items[0][price_data][unit_amount]", String(amountCents));

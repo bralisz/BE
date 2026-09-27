@@ -372,16 +372,8 @@ module.exports = async function driveMediaProxy(req, res) {
 
     const kind = mediaKind(contentType, upstream.headers.get('content-disposition'), filename);
 
-    // Por padrão, vídeo não atravessa a Function da Vercel: o navegador é
-    // redirecionado para a origem final do Drive. Em Smart TVs antigas, porém,
-    // alguns navegadores falham ao seguir os redirects/TLS do Google. Nesses
-    // aparelhos o player pode pedir ?proxy=1 como fallback same-origin. Esse
-    // modo é intencionalmente opt-in para não aumentar o tráfego normal do site.
     if (kind === 'video' && upstream.url && !forceLegacyProxy) {
       try { await upstream.body?.cancel(); } catch (_) { /* sem ação */ }
-      // 302 é entendido por browsers de Smart TV bem antigos e mantém o GET.
-      // O vídeo passa a ser lido diretamente do Google, sem limite de duração da
-      // Function, e os próximos Range requests continuam indo para a origem.
       res.statusCode = 302;
       res.setHeader('Location', upstream.url);
       res.setHeader('Cache-Control', 'private, no-store, max-age=0');

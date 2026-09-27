@@ -63,7 +63,6 @@ async function serveSupabaseRuntime(req, res) {
       if (req.method === 'HEAD') return res.status(200).end();
       return res.status(200).send(body);
     } catch (_) {
-      // Tenta a próxima origem.
     }
   }
 
@@ -116,7 +115,6 @@ async function storedMediaSource(collection, id, field) {
     const record = Array.isArray(payload) ? payload[0] : payload;
     source = name === 'settings' ? record?.[mediaField] : record?.data?.[mediaField];
   } catch (_) {
-    // Compatibilidade temporária para publicar o código antes da migration de segurança.
     let legacyEndpoint = '';
     if (name === 'settings') {
       const params = new URLSearchParams({ select: 'data', id: `eq.${itemId}`, limit: '1' });

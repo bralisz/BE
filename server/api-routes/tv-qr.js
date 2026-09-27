@@ -37,8 +37,6 @@ module.exports = async function handler(req, res) {
 
   try {
     const QRCode = require('qrcode');
-    // PNG RGB simples, margem branca maior e tamanho moderado: combinação mais
-    // confiável em engines antigas de Tizen, WebOS e NetCast.
     const png = await QRCode.toBuffer(target.href, {
       type: 'png',
       errorCorrectionLevel: 'M',

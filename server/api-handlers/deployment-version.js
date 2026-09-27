@@ -65,9 +65,6 @@ async function loadReleaseState(forceRefresh = false) {
       releaseCache.expiresAt = Date.now() + RELEASE_CACHE_TTL_MS;
       return releaseCache.value;
     } catch (_) {
-      // A versão do deploy continua funcionando mesmo se o Supabase estiver
-      // temporariamente indisponível. O navegador preserva o último estado de
-      // liberação conhecido em vez de fazer uma segunda chamada à Vercel.
       return {
         releaseStateAvailable: false,
         updateReleaseEnabled: false,

@@ -1,4 +1,3 @@
-/* Fonte auxiliar. A versão publicada está no fim de assets/css/site.css. */
 :root{
   --betv-header-avatar-size:54px;
   --betv-header-avatar-padding:3px;
@@ -6,10 +5,8 @@
   --betv-header-avatar-inner-border:rgba(255,255,255,.30);
   --betv-header-avatar-bg:rgba(255,255,255,.075);
 }
-/* Os avatares dos cabeçalhos replicam a Home: borda externa no botão,
    padding de 3 px e borda interna diretamente na foto. Pseudo-elementos
    de contorno ficam desativados para impedir faixas e cortes inferiores. */
-
 
 html.profile-avatar-global-customized{
   --betv-avatar-ring-width:2px;

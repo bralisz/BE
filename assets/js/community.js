@@ -49,7 +49,6 @@
     return '<span class="community-award-tag '+meta.className+' notranslate" data-i18n-ignore translate="no">'+meta.label+'</span>';
   }
 
-
   var BOAF_STREAM_URL='https://open.spotify.com/playlist/7GsA1b3dcISozmOc9G0tcT?si=d0qmzIyJSxiFLUx0flAsng';
   var BOAF_STREAM_IMAGE='/assets/images/community/boaf-stream-4bi.webp';
   var BOAF_STREAM_MESSAGE='BIRDS OF A FEATHER, de Billie Eilish, está prestes a fazer história ABSOLUTA como a música solo mais rápida da história do Spotify atingir a marca de 4 BILHÕES de Streams e a PRIMEIRA canção de uma artista feminina a conseguir o feito.';

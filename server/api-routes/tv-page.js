@@ -249,7 +249,6 @@ function vkInfo(value) {
   }
 }
 
-
 function isLegacyTvRequest(req) {
   const ua = String((req && req.headers && req.headers['user-agent']) || '').toLowerCase();
   if (!ua) return false;
@@ -258,7 +257,6 @@ function isLegacyTvRequest(req) {
   if (tizen) return Number(tizen[1]) <= 7;
   const webos = ua.match(/(?:web0s|webos)[\s\/](\d+)(?:\.|\b)/i);
   if (webos) return Number(webos[1]) <= 7;
-  // Samsung Orsay e outros aparelhos pré-Tizen costumam expor apenas SMART-TV.
   if (/smart-tv|smarttv/i.test(ua)) return true;
   const chrome = ua.match(/(?:chrome|chromium)\/(\d+)/i);
   if (chrome && Number(chrome[1]) < 80 && /tizen|webos|web0s|smart-tv|smarttv|hbbtv/i.test(ua)) return true;
@@ -357,9 +355,6 @@ function subtitleClientUrl(value) {
   try {
     const url = new URL(raw, 'https://billieilishtv.site');
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
-    // As legendas enviadas pelo Dashboard ficam no bucket movie-subtitles.
-    // A TV lê pelo mesmo domínio do site para evitar bloqueios CORS em
-    // navegadores antigos de Smart TV.
     if (url.hostname.toLowerCase() === 'cxkevnnxibhezvospkce.supabase.co' && url.pathname.indexOf('/storage/v1/object/public/movie-subtitles/') === 0) {
       return `/api/tv-subtitle?${qs({ url: url.href })}`;
     }
@@ -400,9 +395,6 @@ function renderMedia(media, legacyPlayback, copy) {
     const preview = `https://drive.google.com/file/d/${encodeURIComponent(drive.id)}/preview?${qs({ autoplay: '1', resourcekey: drive.resourceKey })}`;
     provider = 'drive';
     if (legacyPlayback) {
-      // Players oficiais do Drive usam JavaScript moderno e costumam falhar em
-      // browsers antigos de Smart TV. No modo legado usamos HTML5 nativo e
-      // deixamos o Google entregar o arquivo diretamente após um 302 do resolver.
       const resolved = `/api/drive-media?${qs({ id: drive.id, resourcekey: drive.resourceKey, tv: '1' })}`;
       const direct = `https://drive.usercontent.google.com/download?${qs({ id: drive.id, export: 'download', confirm: 't', authuser: '0', resourcekey: drive.resourceKey })}`;
       const alternate = `https://drive.google.com/uc?${qs({ id: drive.id, export: 'download', confirm: 't', resourcekey: drive.resourceKey })}`;
@@ -410,7 +402,6 @@ function renderMedia(media, legacyPlayback, copy) {
       player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="auto" src="${escapeHtml(resolved)}" data-drive-src-1="${escapeHtml(resolved)}" data-drive-src-2="${escapeHtml(direct)}" data-drive-src-3="${escapeHtml(alternate)}" data-drive-src-4="${escapeHtml(sameOriginProxy)}" style="width:100%;height:100%;background:#000"></video>` +
         `<iframe id="legacyDriveFallback" src="about:blank" data-src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media" frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
     } else {
-      // TVs novas continuam usando o player oficial do Google Drive.
       player = `<iframe id="legacyTvFrame" src="${escapeHtml(preview)}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" frameborder="0" style="width:100%;height:100%;border:0;background:#000"></iframe>`;
     }
   } else if (yt) {
@@ -423,16 +414,12 @@ function renderMedia(media, legacyPlayback, copy) {
     const official = `https://vk.com/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', js_api: '1', hash: vk.hash })}`;
     const officialAlt = `https://vkvideo.ru/video_ext.php?${qs({ oid: vk.owner, id: vk.id, autoplay: '1', hd: '2', js_api: '1', hash: vk.hash })}`;
     if (legacyPlayback) {
-      // O iframe atual do VK também depende de APIs modernas. Para TVs antigas,
-      // o servidor resolve uma URL MP4 temporária e o <video> nativo reproduz o
-      // arquivo. Se a resolução falhar, o player oficial ainda fica como fallback.
       const resolved480 = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '480' })}`;
       const resolved360 = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '360' })}`;
       const resolved240 = `/api/vk-media?${qs({ oid: vk.owner, id: vk.id, hash: vk.hash, quality: '240' })}`;
       player = `<video id="legacyTvVideo" controls="controls" autoplay="autoplay" playsinline="playsinline" preload="metadata" src="${escapeHtml(resolved480)}" data-vk-src-1="${escapeHtml(resolved480)}" data-vk-src-2="${escapeHtml(resolved360)}" data-vk-src-3="${escapeHtml(resolved240)}" style="width:100%;height:100%;background:#000"></video>` +
         `<iframe id="legacyTvFrame" src="about:blank" data-src="${escapeHtml(official)}" data-fallback-src="${escapeHtml(officialAlt)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" frameborder="0" style="display:none;width:100%;height:100%;border:0;background:#000"></iframe>`;
     } else {
-      // TVs novas usam diretamente o player oficial incorporado do VK.
       player = `<iframe id="legacyTvFrame" src="${escapeHtml(official)}" data-fallback-src="${escapeHtml(officialAlt)}" onerror="var u=this.getAttribute('data-fallback-src');if(u&&this.src!==u){this.src=u;}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" frameborder="0"></iframe>`;
     }
   } else if (/^https?:\/\//i.test(selected) && /\.(?:mp4|m4v|webm)(?:$|[?#])/i.test(selected)) {
@@ -664,9 +651,6 @@ function playbackRemoteRuntimeScript(provider) {
       bindVk(0);
       return true;
     }
-    // O preview oficial do Google Drive não expõe uma API pública de
-    // play/pause/seek. Em TVs antigas o Drive usa o <video> nativo acima,
-    // onde os controles remotos funcionam normalmente.
     return false;
   }
   function flush(){
@@ -1054,8 +1038,6 @@ module.exports = async function handler(req, res) {
 
     if (state.status === 'waiting') {
       if (!pairingCode) {
-        // A sessão já existia, mas o navegador perdeu apenas o cookie do código.
-        // Recria para garantir que a TV sempre mostre um código válido.
         const created = await createSession();
         sessionId = created.sessionId;
         deviceToken = created.deviceToken;

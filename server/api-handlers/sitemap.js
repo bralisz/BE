@@ -13,7 +13,6 @@ const LOCALES = Object.freeze([
 ]);
 
 const CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents']);
-// O catálogo de álbuns do site ainda é armazenado na coleção pública "news".
 const ALBUM_COLLECTION = 'news';
 const STATIC_PATHS = Object.freeze([
   '/',
@@ -174,7 +173,6 @@ function alternateLinks(logicalPath) {
     const href = absoluteUrl(localizedPath(logicalPath, locale.slug));
     return `    <xhtml:link rel="alternate" hreflang="${xml(locale.hreflang)}" href="${xml(href)}" />`;
   });
-  // A rota sem prefixo funciona como escolha de idioma/fallback e é o x-default.
   lines.push(`    <xhtml:link rel="alternate" hreflang="x-default" href="${xml(absoluteUrl(logicalPath))}" />`);
   return lines.join('\n');
 }

@@ -30,7 +30,6 @@
     catch (_) { return Number(window.innerWidth || 0) >= 1000; }
   }
 
-
   function currentLocaleSlug() {
     const raw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase();
     if (raw === 'en' || raw === 'en-us' || raw.startsWith('en-')) return 'en-us';

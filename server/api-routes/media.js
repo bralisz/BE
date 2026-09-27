@@ -1,6 +1,5 @@
 'use strict';
 
-// Mantém o cold start menor: cada request carrega somente o handler necessário.
 const loaders = Object.freeze({
   default: () => require('../handlers/media'),
   'drive-media': () => require('../handlers/drive-media'),

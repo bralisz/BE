@@ -57,7 +57,6 @@
     if (e.key === 'Escape') toggleDropdown(false);
   });
 
-
   
   async function setupPublicAccount(){
     var callbackDestination=new URLSearchParams(location.search||'').get('auth_callback');
@@ -206,8 +205,6 @@
         });});
       }catch(error){avatarPickerBody.innerHTML='<div class="avatar-picker-empty">Não foi possível carregar a galeria.</div>';console.warn(error);}
     }
-
-
 
     function profileFallbackAvatar(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>';}
     function publicProfileYear(){
@@ -451,7 +448,6 @@
       var bio=document.getElementById('profileBio'),count=document.getElementById('profileBioCount');function updateCount(){count.textContent=bio.value.length;}bio.addEventListener('input',updateCount);updateCount();
       document.getElementById('profileForm').addEventListener('submit',async function(e){e.preventDefault();var form=e.currentTarget,msg=document.getElementById('profileMessage'),submit=form.querySelector('[type="submit"]');var displayName=form.displayName.value.trim(),handle=beBackend.normalizeUsername(form.username.value),bioText=form.bio.value.trim();form.username.value=handle;if(!beBackend.validUsername(handle)){msg.textContent='O @ deve ter de 3 a 20 caracteres, usando letras minúsculas, números, ponto ou underline.';msg.className='profile-message err';return;}submit.disabled=true;msg.textContent='Salvando…';msg.className='profile-message';try{var payload={displayName:displayName,username:handle,bio:bioText,updatedAt:beBackend.now()};currentProfile=await beBackend.profiles.update(user.uid,payload);await auth.updateCurrentUser({displayName:displayName});username.textContent=handle?'@'+handle:(displayName||'Usuário');msg.textContent='Perfil salvo com sucesso.';msg.className='profile-message ok';setTimeout(closeProfile,700);}catch(error){msg.textContent=error&&error.code==='username-in-use'?'Este @ já está em uso. Escolha outro.':'Não foi possível salvar: '+error.message;msg.className='profile-message err';}finally{submit.disabled=false;}});
     }
-
 
     function openOnboarding(user){
       if(!user||beBackend.isAdmin(user)||String(currentProfile.username||'').trim())return;
@@ -783,7 +779,6 @@
       try{
         if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('Digite um e-mail válido.');
         selectedAuthEmail=email;
-        // Avoid revealing whether an email is already registered.
         setMode('password',email);
       }catch(err){setStatus(friendly(err),'error');}
       finally{authFlowBusy=false;if(b)b.disabled=false;}
@@ -903,8 +898,6 @@
   var cookieAccept=document.getElementById('cookieAccept');
   var legalRoutes=['terms','privacy','cookies','dmca','comunidade'];
 
-  // Mantém a área legal fora da estrutura da Home para que ela nunca seja
-  // renderizada junto do catálogo, independentemente do restante do layout.
   if(legalPage&&legalPage.parentNode!==document.body){document.body.appendChild(legalPage);}
 
   function routeName(){
@@ -1049,8 +1042,6 @@
   if(document.readyState!=='loading'){renderLegalRoute();showCookieNotice();}
 })();
 
-
-/* Navegação de segurança dos três pontos do perfil, válida no mobile e desktop. */
 ;(function(){
   'use strict';
   function openProfileSettings(event){

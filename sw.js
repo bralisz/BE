@@ -1,7 +1,5 @@
 'use strict';
 
-// Cache apenas assets estáticos. HTML, APIs, autenticação e dados do catálogo
-// continuam sempre fora do Service Worker para não prender versões antigas.
 const BUILD_TOKEN = (() => {
   try {
     return String(new URL(self.location.href).searchParams.get('build') || 'quota-v1')

@@ -1,4 +1,3 @@
-/* Página pública Apoie uma ONG. */
 ;(function(){
   'use strict';
   if(String(location.hash||'').startsWith('#/admin'))return;

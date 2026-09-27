@@ -135,9 +135,6 @@ async function callRpc(url, publishableKey, accessToken, name, body) {
 }
 
 async function tryAdminRpc(url, publishableKey, accessToken, action, userId, reason) {
-  // Exclusão e bloqueio são fluxos separados. A ação "delete" nunca passa
-  // pelo RPC genérico de moderação, evitando que uma exclusão seja tratada
-  // como banimento por uma função antiga do banco.
   const attempts = action === 'delete'
     ? [
         ['admin_delete_user', { p_user_id: userId }],

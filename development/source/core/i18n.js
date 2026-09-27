@@ -353,8 +353,6 @@
     var inlineBundle=window.__BETV_INLINE_I18N__&&window.__BETV_INLINE_I18N__[slug];
     if(inlineBundle&&typeof inlineBundle==='object')mergeTranslations(inlineBundle,{applyNow:false});
 
-    // O núcleo italiano entra antes de qualquer fetch. Assim a primeira visita
-    // não exibe PT-BR enquanto espera o arquivo ou a tradução dinâmica.
     if(slug==='it'){
       window.BETVI18n=api;
       apply(document.documentElement);

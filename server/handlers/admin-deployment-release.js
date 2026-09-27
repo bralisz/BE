@@ -255,8 +255,6 @@ async function deploymentStateForProject(config) {
     .filter(item => String(item?.target || '').toLowerCase() === 'production')
     .sort((a, b) => Number(b.createdAt || b.created || 0) - Number(a.createdAt || a.created || 0));
 
-  // Só considera como "em espera" um deploy mais novo que o Production ativo.
-  // Isso evita confundir deploys históricos/antigos com uma atualização pendente.
   const stagedDeployment = readyProduction.find(item => {
     const id = deploymentId(item);
     if (!id || id === activeProductionId) return false;

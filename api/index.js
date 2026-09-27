@@ -1,6 +1,5 @@
 'use strict';
 
-// Rotas públicas centralizadas em uma única Function.
 const loaders = Object.freeze({
   account: () => require('../server/api-routes/account'),
   admin: () => require('../server/api-routes/admin'),

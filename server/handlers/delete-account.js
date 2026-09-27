@@ -49,7 +49,6 @@ function validRequestOrigin(req) {
   try { return new URL(origin).host === host; } catch (_) { return false; }
 }
 
-
 const EMAIL_DOMAIN_CACHE = globalThis.__betvEmailDomainCache || new Map();
 globalThis.__betvEmailDomainCache = EMAIL_DOMAIN_CACHE;
 const EMAIL_DOMAIN_CACHE_MS = 6 * 60 * 60 * 1000;
@@ -160,8 +159,6 @@ async function validateEmailDomain(domain) {
     if (kind !== 'not-found') return validateEmailDomainWithDoh(normalized);
   }
 
-  // RFC 5321 permite entrega implícita no host quando não existe MX explícito.
-  // Por isso, só rejeitamos definitivamente se MX e A/AAAA não existirem.
   try {
     const addresses = await dns.resolve4(normalized);
     if (Array.isArray(addresses) && addresses.length) {
@@ -221,7 +218,6 @@ async function deleteWithServiceRole(url, serviceRoleKey, userId) {
   } catch (_) {}
 }
 
-
 async function accountStatusHandler(req, res) {
   const { url, publishableKey, serviceRoleKey } = getConfig();
 
@@ -255,8 +251,6 @@ async function accountStatusHandler(req, res) {
       } catch (_) {}
     }
 
-    // Uma conta já existente continua podendo entrar mesmo que o DNS do domínio
-    // esteja temporariamente indisponível ou tenha mudado depois do cadastro.
     return res.status(200).json({
       ok: true,
       exists,
@@ -371,8 +365,6 @@ module.exports = async function deleteAccountHandler(req, res) {
       });
     }
 
-    // Exclusão própria é sempre permanente: não altera ban_duration nem marca
-    // o perfil como banido. O usuário é removido diretamente do Supabase Auth.
     await deleteWithServiceRole(url, serviceRoleKey, user.id);
 
     return res.status(200).json({ ok: true, deleted: true, banned: false, userId: user.id });

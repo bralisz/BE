@@ -80,9 +80,6 @@ function enforceSubtitleLocale(source, requestedLocale, localizedPayload) {
 
 function upstreamTtl(name, id) {
   if (name === 'settings' && id === 'site') return 10 * 60 * 1000;
-  // A borda da Vercel já segura o tráfego de notificações. Não mantenha uma
-  // segunda cópia em memória na Function, pois ela pode sobreviver a uma
-  // invalidação por tag e reconstruir o CDN com uma lista antiga.
   if (name === 'notifications') return 0;
   if (name === 'featured') return 0;
   if (name === 'movies') return 30 * 60 * 1000;
@@ -166,9 +163,6 @@ function mediaReference(collection, id, field, value) {
   const raw = String(value || '').trim();
   if (!raw || isLocalAsset(raw)) return raw;
   if (!/^https:\/\//i.test(raw)) return '';
-  // Entrega a URL original ao navegador. O frontend tenta a origem diretamente
-  // e recorre a /api/media apenas se a imagem falhar, evitando uma Function por
-  // imagem em cada visita ao catálogo/perfil.
   return raw.slice(0, 6000);
 }
 
@@ -187,7 +181,6 @@ function safeLink(value, allowLocal = true) {
     return '';
   }
 }
-
 
 function sanitizeTranslations(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
@@ -409,9 +402,6 @@ async function fetchRowsUncached(name, id, locale) {
       sanitizedRows = rows.map(row => sanitizeItem(name, row, locale, false)).filter(Boolean);
     }
   }
-  // O segundo link do Dashboard é exclusivo da TV. A chave legada
-  // mobileAppDriveUrl continua sendo aceita para filmes já cadastrados, mas
-  // a resposta pública também expõe tvDriveUrl para deixar a finalidade clara.
   return name === 'movies' ? mergeMovieDashboardDrive(sanitizedRows, id) : sanitizedRows;
 }
 
@@ -438,8 +428,6 @@ async function fetchHomeVersions() {
 }
 
 async function fetchHomeBootstrapUncached(locale) {
-  // V2 inclui versões pequenas do catálogo/configuração no mesmo RPC. Elas
-  // permitem ao navegador validar o cache sem baixar novamente o catálogo todo.
   try {
     const raw = await callRpc('get_public_home_bootstrap_v2', { p_locale: locale });
     const value = Array.isArray(raw) ? raw[0] : raw;
@@ -457,7 +445,6 @@ async function fetchHomeBootstrapUncached(locale) {
       return bundle;
     }
   } catch (_) {
-    // Compatibilidade durante rollout: tenta a função anterior.
   }
 
   try {
@@ -477,7 +464,6 @@ async function fetchHomeBootstrapUncached(locale) {
       return bundle;
     }
   } catch (_) {
-    // Compatibilidade durante rollout/migration: cai no fluxo antigo.
   }
 
   const entries = await Promise.all(HOME_BOOTSTRAP_COLLECTIONS.map(async name => [name, await fetchRows(name, '', locale)]));
@@ -495,8 +481,6 @@ async function fetchHomeBootstrapUncached(locale) {
 async function fetchHomeBootstrap(locale, revision = '') {
   const safeRevision = String(revision || '').trim().replace(/[^a-zA-Z0-9._:-]/g, '').slice(0, 160);
   const key = `home-bootstrap:${locale}:${safeRevision || 'unversioned'}`;
-  // A URL versionada muda quando o catálogo muda. Assim uma instância quente
-  // pode reaproveitar o JSON sem risco de esconder conteúdo novo.
   const ttl = safeRevision ? 30 * 60 * 1000 : 5 * 60 * 1000;
   return cachedUpstream(key, ttl, () => fetchHomeBootstrapUncached(locale));
 }
@@ -514,21 +498,15 @@ function setPublicCacheHeaders(res, name, id, hasData, options = {}) {
   let staleSeconds = 10800;
 
   if (name === 'home-version') {
-    // Resposta minúscula: é o "ETag lógico" do catálogo. Cinco minutos na
-    // borda + validação do browser a cada ~25 min mantém conteúdo novo dentro
-    // da janela de ~30 min sem baixar centenas de itens de novo.
     browserSeconds = 60;
     edgeSeconds = 300;
     staleSeconds = 900;
   } else if (name === 'home-bootstrap') {
     if (versioned) {
-      // A revisão está na própria URL (?v=...). Quando o catálogo muda, muda a
-      // URL; portanto esta resposta pesada pode ficar muito mais tempo na CDN.
       browserSeconds = 1800;
       edgeSeconds = 7 * 24 * 60 * 60;
       staleSeconds = 30 * 24 * 60 * 60;
     } else {
-      // Compatibilidade com clientes antigos que ainda usam URL sem revisão.
       browserSeconds = 120;
       edgeSeconds = 1800;
       staleSeconds = 21600;
@@ -593,8 +571,6 @@ module.exports = async function publicData(req, res) {
     }
 
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    // Nunca mantém uma resposta vazia em cache: um vazio transitório fazia a Home
-    // interpretar que não existiam seções e ocultar todo o catálogo.
     if (freshMovie) {
       res.setHeader('Cache-Control', 'private, no-store, max-age=0');
       res.setHeader('Vercel-CDN-Cache-Control', 'private, no-store, max-age=0');

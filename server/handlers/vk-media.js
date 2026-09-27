@@ -67,7 +67,6 @@ function normalizeVkMediaUrl(value) {
     const url = new URL(raw);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
     const host = url.hostname.toLowerCase();
-    // Restringe redirecionamentos aos CDNs do VK.
     if (!/(^|\.)(?:vk\.com|vkvideo\.ru|vk-cdn\.com|vk-cdn\.net|vkcdn\.net|vkuseraudio\.(?:net|ru)|vkuserlive\.net|vkuservideo\.net|vkuser\.net|userapi\.com|mycdn\.me|vk\.me)$/i.test(host)) return '';
     return url.href;
   } catch (_) {
@@ -103,7 +102,6 @@ function extractVkMediaUrl(html, maxQuality) {
     }
   }
 
-  // Lê fontes alternativas do player do VK.
   const sourceRegex = /<(?:source|video)[^>]+(?:src|data-src)=["']([^"']+)["'][^>]*>/gi;
   let sourceMatch;
   while ((sourceMatch = sourceRegex.exec(source))) {
@@ -112,8 +110,6 @@ function extractVkMediaUrl(html, maxQuality) {
     collectCandidate(found, q ? Number(q[1]) : 360, candidate);
   }
 
-  // JSON may be escaped inside another JSON string. A broad pass catches URLs
-  // such as \"url720\":\"https:\/\/...\".
   const escaped = decodeJsEscapes(source);
   for (const quality of qualities) {
     if (found[quality]) continue;
@@ -131,8 +127,6 @@ function extractVkMediaUrl(html, maxQuality) {
     if (normalized) return normalized;
   }
 
-  // Alguns players do VK entregam somente HLS. Muitas Smart TVs antigas têm
-  // suporte HLS nativo mesmo quando o iframe moderno do VK não funciona.
   const hlsPatterns = [
     /["'](?:hls|hls_url|hls_m3u8|manifest)["']\s*[:=]\s*["']([^"']+\.m3u8[^"']*)["']/i,
     /(https?:\\?\/\\?\/[^"'<>\s]+\.m3u8(?:\?[^"'<>\s]*)?)/i
@@ -204,8 +198,6 @@ module.exports = async function vkMediaResolver(req, res) {
     }
     if (!mediaUrl) return res.status(sawNotFound ? 404 : 502).end();
 
-    // O endpoint descobre a URL temporária do CDN do VK e redireciona a TV.
-    // O arquivo longo não passa pela Function da Vercel.
     res.statusCode = 302;
     res.setHeader('Location', mediaUrl);
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');

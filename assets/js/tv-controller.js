@@ -175,7 +175,6 @@
     return `${location.pathname}${location.search}`;
   }
 
-
   function returnHome() {
     try { location.replace('/'); }
     catch (_) { location.href = '/'; }
@@ -388,7 +387,6 @@
     requestAnimationFrame(() => toast.classList.add('show'));
     castToastTimer = window.setTimeout(() => toast.classList.remove('show'), 3200);
   }
-
 
   function syncSubtitleRemote() {
     if (!subtitleRemoteButton) return;
