@@ -263,6 +263,25 @@
       profilePageBanner.hidden=false;profilePageBanner.removeAttribute('hidden');profilePageBanner.style.display='block';
       profilePageBannerFallback.hidden=true;profilePageBannerFallback.setAttribute('hidden','');profilePageBannerFallback.style.display='none';
     }
+    function loadProfileLikesReceived(user,username){
+      var likesEl=document.getElementById('profilePageLikesReceived');
+      var expectedUser=user;
+      var expectedUsername=String(username||'').trim().replace(/^@/,'').toLowerCase();
+      if(!likesEl)return;
+      likesEl.hidden=true;
+      likesEl.textContent='';
+      if(!expectedUser||!expectedUsername||!window.beBackend||!beBackend.profiles||typeof beBackend.profiles.getPublic!=='function')return;
+      Promise.resolve(beBackend.ready).then(function(){return beBackend.profiles.getPublic(expectedUsername);}).then(function(publicProfile){
+        if(auth.currentUser!==expectedUser)return;
+        var currentUsername=String(currentProfile&&currentProfile.username||'').trim().toLowerCase();
+        if(currentUsername!==expectedUsername)return;
+        var count=Math.max(0,Math.floor(Number(publicProfile&&publicProfile.likesReceived||0)||0));
+        likesEl.textContent=window.BETVI18n&&typeof window.BETVI18n.t==='function'
+          ?window.BETVI18n.t('{count} curtidas recebidas',{count:count})
+          :String(count)+' curtidas recebidas';
+        likesEl.hidden=false;
+      }).catch(function(){likesEl.hidden=true;likesEl.textContent='';});
+    }
     function renderProfilePage(){
       var user=auth.currentUser;
       if(!user){
@@ -286,6 +305,7 @@
       profilePageMetaLabel.textContent='Conta pessoal';
       profilePageMemberSince.textContent='Membro desde '+publicProfileYear();
       profilePageAvatar.innerHTML=avatar?'<img loading="lazy" decoding="async" src="'+escapePublic(avatar)+'" alt="Avatar do perfil">':profileFallbackAvatar();
+      loadProfileLikesReceived(user,currentProfile.username);
       applyProfileBanner(banner);
     }
     function renderSettingsPage(){
