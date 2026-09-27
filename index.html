@@ -213,6 +213,15 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
   }catch(_){ }
 })();
 </script>
+<style id="critical-loading-style">
+html,body{background:#030405!important}
+body.site-loading-active{overflow:hidden!important}
+body.site-loading-active>#authLoading{display:block!important;visibility:visible!important;opacity:1!important;position:fixed!important;inset:0!important;z-index:2147483647!important}
+body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!important;visibility:hidden!important}
+@media(min-width:761px){
+  body:not(.login-mode) .home-notification-menu{position:fixed!important;top:21px!important;right:88px!important;left:auto!important;z-index:10025!important}
+}
+</style>
 <link rel="preload" href="/_static/styles/site.css?rev=20260825-login-footer-centered-v40" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20260825-login-footer-centered-v40"></noscript>
 <script defer src="/api/runtime?v=2.112.0"></script>
