@@ -306,3 +306,16 @@ body.community-page-active .site-footer{
   object-fit:cover!important;
   display:block!important;
 }
+
+@media (hover:hover){
+  .community-ong-spotlight-frame>img,
+  .community-hero-banner-frame>img,
+  .community-boaf-media img{
+    transition:filter .3s ease;
+  }
+  .community-ong-spotlight-frame:hover>img,
+  .community-hero-banner-frame:hover>img,
+  .community-boaf-media:hover img{
+    filter:brightness(1.04) saturate(1.02);
+  }
+}
