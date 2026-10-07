@@ -21636,8 +21636,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   function positionMobileAccountMenu(){
     if(!mobileMenu)return;var trigger=document.getElementById('mobileProfileButton');if(!trigger)return;
-    var rect=trigger.getBoundingClientRect();var width=Math.min(260,window.innerWidth-24);var top=Math.max(12,Math.min(rect.bottom+8,window.innerHeight-180));
-    mobileMenu.style.width=width+'px';mobileMenu.style.maxHeight=Math.max(120,window.innerHeight-top-12)+'px';mobileMenu.style.left=Math.max(12,Math.min(rect.right-width,window.innerWidth-width-12))+'px';mobileMenu.style.top=top+'px';
+    var rect=trigger.getBoundingClientRect();var viewport=window.visualViewport;
+    var height=Math.min(window.innerHeight,viewport&&viewport.height||window.innerHeight);var width=Math.min(260,window.innerWidth-24);
+    var top=Math.max(12,Math.min(rect.bottom+8,height-120));
+    var alignRight=rect.left+rect.width/2>=window.innerWidth/2;
+    var left=alignRight?rect.right-width:rect.left;
+    mobileMenu.style.width=width+'px';mobileMenu.style.maxHeight=Math.max(80,height-top-12)+'px';mobileMenu.style.left=Math.max(12,Math.min(left,window.innerWidth-width-12))+'px';mobileMenu.style.top=top+'px';
+    mobileMenu.style.transformOrigin=alignRight?'top right':'top left';
   }
   function openMobileAccountMenu(){
     if(!window.matchMedia('(max-width:760px)').matches)return;createMobileAccountMenu();
@@ -21712,6 +21717,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('popstate',function(){closeMobileAccountMenu();if(document.body.classList.contains('community-page-active'))closeCommunity(true);window.setTimeout(function(){if(state.detailReturnToCommunity&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')){state.detailReturnToCommunity=false;openCommunity();return;}if(!document.body.classList.contains('community-page-active')&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')&&!document.body.classList.contains('support-page-active')&&!document.body.classList.contains('legal-page-active')&&!document.body.classList.contains('billie-page-active')&&!document.body.classList.contains('donate-page-active')&&!document.body.classList.contains('fans-page-active')&&!document.body.classList.contains('album-page-active'))setHomeTab(catalogTabForView(state.catalogHomeView));},0);});
     window.addEventListener('hashchange',closeMobileAccountMenu);
     window.addEventListener('resize',function(){if(!window.matchMedia('(max-width:760px)').matches)closeMobileAccountMenu();else if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();});
+    function syncMobileMenuPosition(){if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();}
+    if(window.visualViewport)window.visualViewport.addEventListener('resize',syncMobileMenuPosition);
+    new MutationObserver(syncMobileMenuPosition).observe(document.body,{attributes:true,attributeFilter:['class']});
     document.addEventListener('keydown',function(event){if(event.key==='Escape')closeMobileAccountMenu();});
     var settingsBody=document.getElementById('settingsPageBody');if(settingsBody){new MutationObserver(function(){injectPrivacySettings();}).observe(settingsBody,{childList:true,subtree:true});}
     window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('community-page-active')){toggleCatalogVisibility(true);setHomeTab('community');}});
