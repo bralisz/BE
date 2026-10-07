@@ -21269,16 +21269,7 @@ html[lang^="fr"] .login-trust-copy-fr{display:block}
 }
 
 /* Mobile TV home: edge-to-edge feature, persistent tabs and compact editorial widgets. */
-.mobile-tab-bar{display:none}
 @media(max-width:760px){
-  body:not(.login-mode):not(.admin-mode){--mobile-tab-height:74px;padding-bottom:calc(var(--mobile-tab-height) + env(safe-area-inset-bottom))!important}
-  body:not(.login-mode):not(.admin-mode) .mobile-tab-bar{position:fixed;inset:auto 0 0;z-index:10019;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;min-height:calc(var(--mobile-tab-height) + env(safe-area-inset-bottom));padding:7px 8px calc(7px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08);background:rgba(6,7,9,.96);color:#fff;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-  .mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:56px;padding:4px 2px;border:0;background:transparent;color:#929397;font:600 10px/1.2 var(--font-body);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-  .mobile-tab svg{box-sizing:content-box;width:23px;height:23px;padding:5px 13px;border-radius:22px;transition:background .15s,color .15s}
-  .mobile-tab.active,.mobile-tab[aria-expanded="true"]{color:#fff}
-  .mobile-tab.active svg,.mobile-tab[aria-expanded="true"] svg{background:#252830;color:#fff}
-  .mobile-tab:focus-visible{outline:2px solid #60a5fa;outline-offset:-2px;border-radius:12px}
-  body.drive-player-open .mobile-tab-bar,body.player-open .mobile-tab-bar,body.profile-onboarding-active .mobile-tab-bar,body.avatar-picker-active .mobile-tab-bar,body.banner-picker-active .mobile-tab-bar,body.profile-favorites-picker-active .mobile-tab-bar{display:none!important}
   body:not(.login-mode):not(.admin-mode) .mobile-app-bar button{touch-action:manipulation;cursor:pointer;pointer-events:auto!important}
   body:not(.login-mode):not(.admin-mode) .mobile-app-bar .mobile-header-actions{pointer-events:auto!important}
   body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-app-bar{height:calc(78px + env(safe-area-inset-top));padding:calc(16px + env(safe-area-inset-top)) 20px 12px!important;gap:10px;background:linear-gradient(180deg,rgba(3,4,4,.7),transparent)!important}
@@ -21319,10 +21310,43 @@ html[lang^="fr"] .login-trust-copy-fr{display:block}
   body.profile-page-active .profile-favorites-content{overflow:hidden!important}
   body.profile-page-active .profile-favorite-rank{filter:none!important;text-shadow:none!important}
 }
-@media(prefers-reduced-motion:reduce){.mobile-tab svg{transition:none}}
+
 
 @media(max-width:760px){
   body:not(.login-mode):not(.admin-mode).mobile-drawer-open .mobile-drawer{transform:translateX(0)!important}
   body:not(.login-mode):not(.admin-mode).mobile-drawer-open .mobile-drawer-backdrop{visibility:visible!important;opacity:1!important}
   body:not(.login-mode):not(.admin-mode) .mobile-drawer{max-height:100dvh;overscroll-behavior:contain}
+}
+
+/* iOS-style grouped menu anchored to the avatar. */
+@media(max-width:760px){
+  body:not(.login-mode):not(.admin-mode){padding-bottom:env(safe-area-inset-bottom)!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-account-popover{padding:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:none;border:1px solid rgba(255,255,255,.18);border-radius:18px;background:rgba(35,36,40,.94);box-shadow:0 12px 38px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.08);transform-origin:top right;backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%)}
+  .mobile-account-popover::-webkit-scrollbar{display:none}
+  .mobile-account-group{padding:2px 0;background:rgba(255,255,255,.015)}
+  .mobile-account-group+.mobile-account-group{border-top:7px solid rgba(0,0,0,.17)}
+  body:not(.login-mode):not(.admin-mode) .mobile-account-popover button{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:46px;padding:12px 16px;border-radius:0;border-bottom:1px solid rgba(255,255,255,.065);font-size:15px;font-weight:450;line-height:1.25;touch-action:manipulation;transform:none}
+  .mobile-account-popover button:last-child{border-bottom:0!important}
+  .mobile-account-popover button[hidden]{display:none!important}
+  .mobile-account-label{min-width:0}
+  .mobile-account-icon{width:21px;height:21px;flex:0 0 21px;opacity:.92}
+  .mobile-account-popover button:focus-visible{outline:2px solid #60a5fa;outline-offset:-3px;background:rgba(255,255,255,.08)}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode):not(.mobile-search-open) .mobile-search-control{display:flex!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-header-actions{gap:8px!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-search-button{height:44px!important;width:44px!important;flex-basis:44px!important;box-shadow:none!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode):not(.mobile-search-open) .mobile-search-control{width:44px!important;min-width:44px!important;height:44px!important}
+}
+
+@media(max-width:760px){
+  .mobile-account-popover.is-logged-out > .mobile-account-group{display:block!important}
+  .mobile-account-popover.is-logged-out [data-mobile-account="create-account"][hidden]{display:none!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-account-popover.is-logged-out [data-mobile-account="create-account"]{justify-content:space-between;border:0!important;border-bottom:1px solid rgba(255,255,255,.065)!important;border-radius:0;background:transparent!important;font-weight:450!important;text-align:left}
+  .mobile-footer-support-cta,.footer-fans-support-link,.donate-home-spotlight{display:none!important}
+}
+
+@media(max-width:760px){
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover{display:block!important;background:rgba(35,36,40,.98)!important}
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover button{background:transparent!important;color:#f5f5f7!important;font-weight:450!important;box-shadow:none!important}
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover button.danger{color:#ff6961!important}
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover button:active{background:rgba(255,255,255,.09)!important}
 }
