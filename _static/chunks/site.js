@@ -21735,7 +21735,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var mq=window.matchMedia?window.matchMedia('(max-width:760px)'):null;
 
   function el(id){return document.getElementById(id);}
-  function important(node,name,value){if(node)node.style.setProperty(name,value,'important');}
+  function important(node,name,value){if(node&&(node.style.getPropertyValue(name)!==value||node.style.getPropertyPriority(name)!=='important'))node.style.setProperty(name,value,'important');}
   function visible(node,show){if(node)important(node,'display',show?'grid':'none');}
   function order(node,value){if(node)important(node,'order',String(value));}
 
@@ -21794,6 +21794,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     buttons.forEach(function(button){resetButton(button,mobile?44:48);});
 
+    var info=body.querySelector('.profile-page-info');
+    var copy=body.querySelector('.profile-page-copy');
+    if(likes){
+      if(mobile&&copy&&likes.parentNode!==copy)copy.appendChild(likes);
+      else if(!mobile&&info&&likes.parentNode!==info.parentNode)info.parentNode.insertBefore(likes,info);
+    }
+
     if(!mobile){
       important(row,'top','auto');
       important(row,'right','clamp(24px,3vw,46px)');
@@ -21833,13 +21840,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     important(row,'top','calc(14px + env(safe-area-inset-top))');
-    important(row,'right','14px');
+    important(row,'right','16px');
     important(row,'bottom','auto');
-    important(row,'left','14px');
+    important(row,'left','16px');
     important(row,'width','auto');
     important(row,'height','44px');
     important(row,'justify-content','flex-end');
     important(row,'gap','8px');
+
+    if(likes){
+      important(likes,'position','static');
+      ['top','right','bottom','left'].forEach(function(edge){important(likes,edge,'auto');});
+      important(likes,'width','auto');important(likes,'margin','0');
+      important(likes,'text-align','left');important(likes,'white-space','normal');
+    }
+
+    // Actions align with the avatar below the cover; Home stays on the cover.
+    [follow,like,share,more].forEach(function(button){important(button,'top','var(--profile-mobile-cover-height)');});
 
     /* Home is always isolated on the upper-left on mobile. */
     visible(home,true);
@@ -21878,7 +21895,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     var row=el('profilePageActionsRow');
     if(row&&window.MutationObserver){
-      new MutationObserver(schedule).observe(row,{attributes:true,childList:true,subtree:true});
+      new MutationObserver(schedule).observe(row,{attributes:true,attributeFilter:['hidden','aria-hidden','aria-pressed'],childList:true,subtree:true});
     }
   }
 
