@@ -14,6 +14,8 @@
   var pendingRoots=[];
   var translateTimer=0;
   var translationBusy=false;
+  var retryAfter=0;
+  var translationAttempts=new Map();
   var missingTexts=new Set();
   var translatedThisSession=new Set();
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
@@ -31,7 +33,7 @@
   ]);
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v15-security-update';
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v16-reliable-translations';
   var STATIC_REV='20260825-discord-session-guard-v43';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
@@ -50,6 +52,7 @@
   function translateExact(value){
     var key=normalize(value);
     if(!key)return String(value||'');
+    rememberMissing(key);
     return Object.prototype.hasOwnProperty.call(map,key)?map[key]:String(value||'');
   }
   function parentSkipped(node){
@@ -145,7 +148,7 @@
   function rememberMissing(value){
     if(slug==='pt-br'||isAdmin())return;
     var key=normalize(value);
-    if(!eligibleText(key)||Object.prototype.hasOwnProperty.call(map,key)||translatedThisSession.has(key))return;
+    if(!eligibleText(key)||Object.prototype.hasOwnProperty.call(map,key)||translatedThisSession.has(key)||(translationAttempts.get(key)||0)>=3)return;
     missingTexts.add(key);
     scheduleMissingTranslation();
   }
@@ -162,7 +165,7 @@
     if(!element||element.nodeType!==1||parentSkipped(element))return;
     TRANSLATABLE_ATTRIBUTES.forEach(function(attribute){
       if(!element.hasAttribute(attribute))return;
-      if(attribute==='value'&&!['BUTTON','INPUT'].includes(element.tagName))return;
+      if(attribute==='value'&&element.tagName!=='BUTTON'&&!(element.tagName==='INPUT'&&/^(button|submit|reset)$/i.test(element.type)))return;
       var raw=element.getAttribute(attribute)||'';
       var key=normalize(raw);
       if(!eligibleText(key))return;
@@ -252,7 +255,7 @@
   function loadDynamicCache(){
     try{
       var cached=JSON.parse(localStorage.getItem(DYNAMIC_CACHE_KEY)||'{}');
-      if(cached&&typeof cached==='object')Object.keys(cached).forEach(function(key){if(typeof cached[key]==='string')map[key]=cached[key];});
+      if(cached&&typeof cached==='object')Object.keys(cached).forEach(function(key){if(typeof cached[key]==='string'){map[key]=cached[key];map[cached[key]]=cached[key];}});
     }catch(_){ }
   }
   function saveDynamicCache(){
@@ -280,6 +283,7 @@
   }
   async function translateMissingNow(){
     if(translationBusy||slug==='pt-br'||isAdmin()||!missingTexts.size)return;
+    if(Date.now()<retryAfter){scheduleMissingTranslation(retryAfter-Date.now());return;}
     var batch=takeBatch();
     if(!batch.length)return;
     translationBusy=true;
@@ -291,11 +295,15 @@
         method:'POST',
         mode:'cors',
         credentials:'omit',
+        signal:typeof AbortSignal!=='undefined'&&AbortSignal.timeout?AbortSignal.timeout(20000):undefined,
         headers:headers,
         body:JSON.stringify({mode:'texts',locale:slug,style:'informal-native',texts:batch})
       });
       var payload=await response.json().catch(function(){return null;});
-      if(!response.ok||!payload||!Array.isArray(payload.translations))throw new Error(payload&&payload.error||'translation_failed');
+      if(!response.ok||!payload||!Array.isArray(payload.translations)||payload.translations.length!==batch.length||payload.translations.some(function(value){return typeof value!=='string'||!value.trim();})){
+        retryAfter=Date.now()+Math.max(10000,Math.min(300000,Number(response.headers.get('Retry-After')||30)*1000));
+        throw new Error(payload&&payload.error||'translation_failed');
+      }
       payload.translations.forEach(function(item,index){
         var source=batch[index];
         var translated=String(item||'').trim();
@@ -309,11 +317,16 @@
       saveDynamicCache();
       apply(document.documentElement);
     }catch(error){
-      batch.forEach(function(text){translatedThisSession.delete(text);});
+      retryAfter=Math.max(retryAfter,Date.now()+10000);
+      batch.forEach(function(text){
+        translatedThisSession.delete(text);
+        var attempts=(translationAttempts.get(text)||0)+1;translationAttempts.set(text,attempts);
+        if(attempts<3)missingTexts.add(text);
+      });
       (void error);
     }finally{
       translationBusy=false;
-      if(missingTexts.size)scheduleMissingTranslation(800);
+      if(missingTexts.size)scheduleMissingTranslation(Math.max(800,retryAfter-Date.now()));
     }
   }
   async function translateTexts(values){
@@ -349,7 +362,7 @@
   function scheduleMissingTranslation(delay){
     if(slug==='pt-br'||isAdmin())return;
     clearTimeout(translateTimer);
-    var requested=Number(delay||350);
+    var requested=Math.max(Number(delay||350),retryAfter-Date.now());
     if(slug==='it'&&!window.__BETV_ITALIAN_SHARED_I18N_READY__)requested=Math.max(requested,1800);
     translateTimer=setTimeout(translateMissingNow,requested);
   }
@@ -1618,7 +1631,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
 
-  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','gallery','movies','news','notifications','ongs','sections','series','settings','videos']);
   const MUSIC_TITLE_SECTION_IDS_BACKEND = new Set([
     '18db9515-179c-4bad-9646-1fcda63df14a',
     '14386598-4978-403a-8548-db0ee582e291'
@@ -1715,27 +1728,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function queueRecordTranslation(collection, id) {
-    var normalizedCollection=String(collection||'').trim().toLowerCase();
-    var recordId=String(id||'').trim();
-    if(!TRANSLATABLE_COLLECTIONS.has(normalizedCollection)||!recordId)return false;
-    // O trigger do banco continua sendo o caminho principal. Para notificações,
-    // faça uma checagem curta depois da publicação e reenvie somente o italiano
-    // se a tradução não tiver sido persistida. Isso evita notificações novas em PT.
-    if(normalizedCollection==='notifications'&&supabaseClient){
-      window.setTimeout(async function(){
-        try{
-          var result=await supabaseClient.from('content_items').select('data').eq('collection','notifications').eq('id',recordId).maybeSingle();
-          var data=result&&result.data&&result.data.data&&typeof result.data.data==='object'?result.data.data:{};
-          var it=data.translations&&data.translations.it&&typeof data.translations.it==='object'?data.translations.it:null;
-          var title=String(data.title||'').trim(),description=String(data.description||'').trim();
-          if(it&&(!title||String(it.title||'').trim())&&(!description||String(it.description||'').trim()))return;
-          if(supabaseClient.functions&&typeof supabaseClient.functions.invoke==='function'){
-            await supabaseClient.functions.invoke(ITALIAN_TRANSLATION_FUNCTION_NAME,{body:{collection:'notifications',ids:[recordId],locales:['it']}});
-          }
-        }catch(_){ }
-      },2600);
-    }
-    return true;
+    // Durable database jobs handle all locales once per source edit.
+    return TRANSLATABLE_COLLECTIONS.has(String(collection||'').trim().toLowerCase())&&Boolean(String(id||'').trim());
   }
 
 
@@ -17919,7 +17913,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return items.slice(0,3).map(function(item){
       return '<button class="notification-preview-item" type="button" data-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
-        '<span class="notification-preview-copy notranslate" translate="no"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(notificationPlainText(item.description),100)||'Confira esta atualização.')+'</span></span>'+
+        '<span class="notification-preview-copy"'+notificationI18nAttributes(item)+'><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimText(notificationPlainText(item.description),100)||'Confira esta atualização.')+'</span></span>'+
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+
       '</button>';
     }).join('');
@@ -17949,7 +17943,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     selectedId=String(active.id||'');
     pageNav.innerHTML=notifications.map(function(item){
       var selected=String(item.id)===selectedId;
-      return '<button class="notification-page-link notranslate '+(selected?'active':'')+'" translate="no" type="button" data-notification-page-id="'+esc(item.id)+'" aria-current="'+(selected?'page':'false')+'">'+
+      return '<button class="notification-page-link '+(selected?'active':'')+'"'+notificationI18nAttributes(item)+' type="button" data-notification-page-id="'+esc(item.id)+'" aria-current="'+(selected?'page':'false')+'">'+
         '<strong>'+esc(item.title||'Atualização')+'</strong>'+
         '<span>'+esc(trimText(notificationPlainText(item.description),92)||'Confira esta atualização.')+'</span>'+
       '</button>';
@@ -17957,7 +17951,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     pageNav.querySelectorAll('[data-notification-page-id]').forEach(function(button){
       button.addEventListener('click',function(){openPage(button.dataset.notificationPageId,true);});
     });
-    pageContent.innerHTML='<article class="notification-article notranslate" translate="no">'+
+    pageContent.innerHTML='<article class="notification-article"'+notificationI18nAttributes(active)+'>'+
       '<h1>'+esc(active.title||'Atualização')+'</h1>'+
       '<p class="notification-article-date" data-i18n-ignore>'+esc(formatDate(active))+'</p>'+
       '<div class="notification-article-body be-markdown">'+renderNotificationMarkdown(active.description||'')+'</div>'+
@@ -17966,30 +17960,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return active;
   }
 
-  async function ensureItalianNotificationTranslations(items){
-    var values=Array.isArray(items)?items:[];
+  function notificationI18nAttributes(item){
     var slug=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
-    if(slug!=='it'||!values.length)return values;
-    var missing=values.filter(function(item){var it=item&&item.translations&&item.translations.it;return item&&item.id&&(!it||!String(it.title||'').trim()||!String(it.description||'').trim());}).slice(0,12);
-    if(!missing.length)return values;
-    var translations={};
-    try{
-      var client=window.beBackend&&window.beBackend.client;
-      if(client&&client.functions&&typeof client.functions.invoke==='function'){
-        var response=await client.functions.invoke('translate-content-record-it',{body:{collection:'notifications',ids:missing.map(function(item){return String(item.id);}),locales:['it']}});
-        var records=response&&response.data&&Array.isArray(response.data.records)?response.data.records:[];
-        records.forEach(function(row){if(row&&row.id&&row.translation)translations[String(row.id)]=row.translation;});
-      }
-    }catch(_){ }
-    var stillMissing=missing.filter(function(item){return !translations[String(item.id)];});
-    if(stillMissing.length&&window.BETVI18n&&typeof window.BETVI18n.translateTexts==='function'){
-      var sources=[];stillMissing.forEach(function(item){sources.push(String(item.title||''));sources.push(String(item.description||''));});
-      try{
-        var translated=await window.BETVI18n.translateTexts(sources),cursor=0;
-        stillMissing.forEach(function(item){translations[String(item.id)]={title:translated[cursor++]||item.title,description:translated[cursor++]||item.description};});
-      }catch(_){ }
-    }
-    return values.map(function(item){var translated=translations[String(item&&item.id||'')];return translated?Object.assign({},item,translated):item;});
+    var localized=item&&item.translations&&(item.translations[slug]||item.translations[slug==='en-us'?'en':slug]);
+    return slug==='pt-br'||(localized&&String(localized.title||'').trim()&&String(localized.description||'').trim())?' data-i18n-ignore translate="no"':'';
+  }
+
+  async function ensureNotificationTranslations(items){
+    return (Array.isArray(items)?items:[]).map(function(item){
+      return window.BETVI18n&&typeof window.BETVI18n.localizeRecord==='function'?window.BETVI18n.localizeRecord(item,'notifications'):item;
+    });
   }
 
   async function loadNotifications(force){
@@ -18000,7 +17980,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if(!window.beBackend)throw new Error('Backend indisponível.');
         await window.beBackend.ready;
         var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
-        items=await ensureItalianNotificationTranslations(items);
+        items=await ensureNotificationTranslations(items);
         notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&String(item.type||'')!=='profile-share-campaign'&&String(item.title||'').trim();}).sort(compareNewest);
         loaded=true;
         notificationsLoadedAt=Date.now();
@@ -20022,7 +20002,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     notificationPreviewList.innerHTML=visibleItems.slice(0,3).map(function(item){
       return '<button class="notification-preview-item" type="button" data-donate-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+ 
-        '<span class="notification-preview-copy notranslate" translate="no"><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimNotification(item.description,100)||'Confira esta atualização.')+'</span></span>'+ 
+        '<span class="notification-preview-copy"'+(item.translations&&item.translations[String(window.BETVLocale&&window.BETVLocale.slug||'pt-br')]?' data-i18n-ignore translate="no"':'')+'><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimNotification(item.description,100)||'Confira esta atualização.')+'</span></span>'+
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+ 
       '</button>';
     }).join('');

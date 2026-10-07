@@ -7,8 +7,8 @@ const ALLOWED_COLLECTIONS = new Set([
 ]);
 const HOME_BOOTSTRAP_COLLECTIONS = Object.freeze(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
 const PUBLIC_ITEM_FIELDS = new Set([
-  'active', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
-  'description', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
+  'active', 'preserveTitle', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
+  'description', 'body', 'summary', 'subtitle', 'name', 'buttonLabel', 'buttonText', 'actionLabel', 'ctaLabel', 'label', 'text', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
   'mediaType', 'mobileAppDriveUrl', 'tvDriveUrl', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'showCardLogo', 'slug',
   'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'subtitleLocale', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
@@ -205,7 +205,18 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
     : null;
   if (!wrapped || typeof wrapped !== 'object') return null;
   row = wrapped;
-  const raw = row.data && typeof row.data === 'object' ? row.data : {};
+  let raw = row.data && typeof row.data === 'object' ? row.data : {};
+  if (!localizedPayload && requestedLocale !== 'pt-br') {
+    const translated = raw.translations && (raw.translations[requestedLocale] || raw.translations[requestedLocale === 'en-us' ? 'en' : requestedLocale]);
+    if (translated && typeof translated === 'object') {
+      const originalTitle = raw.title, originalName = raw.name;
+      const keepTitle = raw.preserveTitle === true || String(raw.preserveTitle || '').toLowerCase() === 'true'
+        || (collection === 'news' && ['album','álbum','single'].includes(String(raw.type || raw.itemType || '').toLowerCase()))
+        || (collection === 'videos' && ['14386598-4978-403a-8548-db0ee582e291','18db9515-179c-4bad-9646-1fcda63df14a'].includes(String(raw.sectionId || '')));
+      raw = { ...raw, ...translated };
+      if (keepTitle) { raw.title = originalTitle; raw.name = originalName; }
+    }
+  }
   const source = {};
   for (const field of PUBLIC_ITEM_FIELDS) {
     if (!Object.prototype.hasOwnProperty.call(raw, field)) continue;
@@ -226,7 +237,7 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
   }
   enforceSubtitleLocale(source, requestedLocale, localizedPayload);
   for (const field of ['title', 'type', 'category', 'description', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug']) {
-    if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? 4000 : 500);
+    if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? (collection === 'notifications' ? 20000 : 8000) : 500);
   }
   if (Object.prototype.hasOwnProperty.call(source, 'streamingAvailability')) {
     const allowedStreamingServices = new Set(['netflix', 'apple-tv', 'prime-video', 'paramount-plus', 'disney-plus']);
