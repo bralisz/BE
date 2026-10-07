@@ -82,3 +82,6 @@ As migrations marcadas como `noop` são registros históricos intencionais e pre
 
 - `20260823041025_harden_public_grants_and_email_privacy.sql` — remove enumeração pública de e-mails, retira acesso anônimo de RPCs administrativas e aplica grants mínimos nas tabelas sensíveis revisadas.
 - `20260823041303_sanitize_public_community_payload.sql` — limita o payload público da Comunidade a campos explicitamente permitidos e restringe atividade diária a usuários autenticados.
+
+- `20261007155949_restore_optimized_profile_follows.sql` — recupera vínculos antigos, restaura RPCs do backup, índices e RLS.
+- `20261007160242_isolate_profile_follow_rpc_privileges.sql` — isola código privilegiado no schema privado e restringe RPCs antigas.

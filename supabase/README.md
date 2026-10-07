@@ -12,7 +12,7 @@ Esta pasta reúne o schema consolidado e as Edge Functions do Billie Eilish TV.
 - `functions/translate-content-record/`: traduz conteúdo e textos da interface em inglês, espanhol e francês;
 - `functions/translate-content-record-it/`: tradutor dedicado ao italiano.
 
-As migrations versionadas ficam na pasta `migrations/` da raiz do projeto.
+As novas migrations versionadas ficam em `supabase/migrations/`. O histórico remoto anterior está documentado em `MIGRATIONS.md`.
 
 ## Traduções
 

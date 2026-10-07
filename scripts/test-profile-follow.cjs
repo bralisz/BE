@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');const vm=require('node:vm');
+const source=fs.readFileSync('assets/js/site.js','utf8');
+const calls=[];const nodes=new Map();
+const node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:false,disabled:false,innerHTML:'',classList:{toggle(){}},setAttribute(){}});return nodes.get(id)};
+let handle='target',following=false;
+const ctx={Map,Date,Boolean,Number,String,Math,Promise,auth:{currentUser:{uid:'viewer'}},viewedProfile:{username:'target'},viewedProfileStatus:'ready',profileFollowState:{},profileRelationshipsState:{open:false},document:{getElementById:node,body:{classList:{contains:()=>true}}},window:{},localizedProfileText:x=>x,currentViewedProfileHandle:()=>handle,isOwnProfileView:()=>false,beBackend:{ready:Promise.resolve(),normalizeUsername:x=>x,client:{rpc:async(fn,args)=>{calls.push({fn,args});await Promise.resolve();if(fn==='set_profile_follow')following=args.p_following;return {data:[{target_id:'target-id',following,followers_count:following?1:0,following_count:2}]}}}},loadProfileRelationshipsPage:()=>{}};
+for(const id of ['profilePageFollow','profilePageFollowersCount','profilePageFollowingCount','profilePageFollowersLabel','profilePageFollowingLabel','profilePageFollowersButton','profilePageFollowingButton'])ctx[id]=node(id);
+vm.createContext(ctx);
+vm.runInContext(source.slice(source.indexOf('    function profileFollowIconMarkup'),source.indexOf('    function relationshipItemMarkup')),ctx);
+(async()=>{
+ await Promise.all([ctx.refreshProfileFollowState(false),ctx.refreshProfileFollowState(false)]);assert.equal(calls.length,1,'deduplicate concurrent profile renders');
+ await ctx.refreshProfileFollowState(false);assert.equal(calls.length,1,'reuse recent state');assert.equal(ctx.profilePageFollow.disabled,false);
+ await Promise.all([ctx.toggleProfileFollow(),ctx.toggleProfileFollow()]);assert.equal(calls.length,2,'one mutation for double click');assert.equal(calls[1].fn,'set_profile_follow');assert.equal(calls[1].args.p_following,true);assert.equal(ctx.profilePageFollowersCount.textContent,'1');
+ await ctx.toggleProfileFollow();assert.equal(calls[2].args.p_following,false);assert.equal(ctx.profilePageFollowersCount.textContent,'0');
+ ctx.beBackend.client.rpc=async()=>({error:new Error('offline')});await ctx.toggleProfileFollow();assert.equal(ctx.profileFollowState.following,false,'failed writes retain saved state');assert.match(node('profileFollowStatus').textContent,/Não foi possível/);
+ ctx.auth.currentUser=null;ctx.renderProfileFollowUi();assert.equal(ctx.profilePageFollow.hidden,true,'guest cannot follow');
+ console.log('PASS frontend: deduplication, cache, follow/unfollow, double click, failed write, guest visibility');
+ const route=require(process.cwd()+'/server/api-routes/public-profile.js');let requested;
+ global.fetch=async(url,options)=>{requested={url,options};return {ok:true,status:200,json:async()=>[{id:'id',username:'person',display_name:'Person',avatar_url:'https://evil.example/pic',total_count:23}]}};
+ const list=await route.fetchRelationshipList('target','following',20,20,'person');assert.equal(list.total,23);assert.equal(list.offset,20);assert.equal(list.hasMore,true);assert.equal(list.items[0].avatarUrl,'');assert.match(requested.url,/get_profile_relationships/);assert.equal(JSON.parse(requested.options.body).p_offset,20);
+ console.log('PASS API: canonical RPC, pagination, count and unsafe media rejection');
+})().catch(e=>{console.error(e);process.exitCode=1});

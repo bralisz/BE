@@ -13272,11 +13272,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       element.textContent=localizedProfileText(source);
       if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(element);
     }
-    function followingStorageKey(userId){return 'beFollowingUsers:'+String(userId||'guest');}
-    function readFollowingUsers(userId){return normalizeFollowingUsernames(readStorageJson(followingStorageKey(userId),[]));}
-    function writeFollowingUsers(userId,value){var normalized=normalizeFollowingUsernames(value);try{localStorage.setItem(followingStorageKey(userId),JSON.stringify(normalized));}catch(_){ }return normalized;}
     function currentViewedProfileHandle(){return beBackend.normalizeUsername(profileRouteUsername()||(viewedProfile&&viewedProfile.username)||(currentProfile&&currentProfile.username)||'');}
-    function isFollowingViewedProfile(){var user=auth.currentUser;var handle=currentViewedProfileHandle();if(!user||!handle)return false;return readFollowingUsers(user.uid).indexOf(handle)>=0;}
     function profileFollowIconMarkup(isFollowing){
       return isFollowing
         ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 19a6 6 0 0 0-12 0"></path><circle cx="14" cy="8" r="4"></circle><path d="M1.5 12h7"></path></svg>'
@@ -13295,7 +13291,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profilePageFollow.setAttribute('aria-pressed',following?'true':'false');
       profilePageFollow.setAttribute('aria-label',localizedProfileText(following?'Deixar de seguir':'Seguir perfil'));
       profilePageFollow.title=localizedProfileText(following?'Deixar de seguir':'Seguir perfil');
-      profilePageFollow.disabled=profileFollowState.loading===true;
+      profilePageFollow.disabled=profileFollowState.loading===true||profileFollowState.ready!==true||profileFollowWritePending;
       profilePageFollow.innerHTML=profileFollowIconMarkup(following);
       if(window.BETVI18n&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(profilePageFollow);
     }
@@ -13306,58 +13302,68 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(profilePageFollowingCount)profilePageFollowingCount.textContent=String(following);
       if(profilePageFollowersLabel)profilePageFollowersLabel.textContent=localizedProfileText('Seguidores');
       if(profilePageFollowingLabel)profilePageFollowingLabel.textContent=localizedProfileText('Seguindo');
-      if(profilePageFollowersButton){profilePageFollowersButton.disabled=followers<1;profilePageFollowersButton.setAttribute('aria-label',localizedProfileText('{count} seguidores',{count:followers}));}
-      if(profilePageFollowingButton){profilePageFollowingButton.disabled=following<1;profilePageFollowingButton.setAttribute('aria-label',localizedProfileText('{count} seguindo',{count:following}));}
+      if(profilePageFollowersButton){profilePageFollowersButton.disabled=false;profilePageFollowersButton.setAttribute('aria-label',localizedProfileText('{count} seguidores',{count:followers}));}
+      if(profilePageFollowingButton){profilePageFollowingButton.disabled=false;profilePageFollowingButton.setAttribute('aria-label',localizedProfileText('{count} seguindo',{count:following}));}
     }
-    async function fetchPublicProfileFollowData(handle){
-      var response=await fetch('/api/public-profile?username='+encodeURIComponent(handle),{headers:{Accept:'application/json'},cache:'no-store'});
-      if(!response.ok)throw new Error('profile_follow_stats_unavailable');
-      return response.json();
+    // The backup RPCs persist UUID relationships independently of preference sync.
+    var profileFollowCache=new Map();
+    var profileFollowPromises=new Map();
+    var profileFollowWritePending=false;
+    function followCacheKey(handle){return String(auth.currentUser&&auth.currentUser.uid||'guest')+':'+handle;}
+    function applyProfileFollowRow(handle,row){
+      if(currentViewedProfileHandle()!==handle)return;
+      profileFollowState={username:handle,following:Boolean(row.following),loading:false,ready:true};
+      var counts={followersCount:Math.max(0,Number(row.followers_count)||0),followingCount:Math.max(0,Number(row.following_count)||0)};
+      if(viewedProfile&&beBackend.normalizeUsername(viewedProfile.username)===handle)viewedProfile={...viewedProfile,...counts};
+      updateProfileFollowStatButtons(counts);renderProfileFollowUi();
     }
     async function refreshProfileFollowState(force){
-      var user=auth.currentUser;var handle=currentViewedProfileHandle();
-      if(!handle)return;
-      if(user&&user.uid){
-        profileFollowState={username:handle,following:isFollowingViewedProfile(),loading:false};
-        renderProfileFollowUi();
-      }else{
-        profileFollowState={username:handle,following:false,loading:false};
-        renderProfileFollowUi();
-      }
-      var needCounts=force||!(viewedProfile&&typeof viewedProfile.followersCount==='number'&&typeof viewedProfile.followingCount==='number');
-      if(!needCounts)return;
-      try{
-        var payload=await fetchPublicProfileFollowData(handle);
-        if(currentViewedProfileHandle()!==handle)return;
-        if(viewedProfile&&beBackend.normalizeUsername(viewedProfile.username)===handle){
-          viewedProfile={...viewedProfile,followersCount:Math.max(0,Number(payload&&payload.followersCount||0)||0),followingCount:Math.max(0,Number(payload&&payload.followingCount||0)||0)};
-          updateProfileFollowStatButtons(viewedProfile);
-        }
-      }catch(_){ }
+      var handle=currentViewedProfileHandle();
+      if(!handle||!document.body.classList.contains('profile-page-active')||viewedProfileStatus!=='ready'||profileFollowWritePending)return;
+      var key=followCacheKey(handle),cached=profileFollowCache.get(key);
+      if(!force&&cached&&Date.now()-cached.at<30000){applyProfileFollowRow(handle,cached.row);return;}
+      if(profileFollowPromises.has(key))return profileFollowPromises.get(key);
+      profileFollowState={username:handle,following:false,loading:true,ready:false};renderProfileFollowUi();
+      var request=(async function(){
+        try{
+          await beBackend.ready;
+          var result=await beBackend.client.rpc('get_profile_follow_state',{p_username:handle});
+          if(result.error)throw result.error;
+          var row=Array.isArray(result.data)?result.data[0]:result.data;
+          if(!row)throw new Error('profile_not_found');
+          if(followCacheKey(handle)!==key)return;
+          if(profileFollowCache.size>=100)profileFollowCache.delete(profileFollowCache.keys().next().value);
+          profileFollowCache.set(key,{row:row,at:Date.now()});applyProfileFollowRow(handle,row);
+        }catch(_){
+          if(currentViewedProfileHandle()===handle&&followCacheKey(handle)===key){profileFollowState={username:handle,following:false,loading:false,ready:false};renderProfileFollowUi();}
+        }finally{profileFollowPromises.delete(key);}
+      })();
+      profileFollowPromises.set(key,request);return request;
     }
     async function toggleProfileFollow(){
-      var user=auth.currentUser;var handle=currentViewedProfileHandle();
-      if(!user||!user.uid||!handle||isOwnProfileView()||profileFollowState.loading)return;
-      var current=readFollowingUsers(user.uid);var already=current.indexOf(handle)>=0;var next=already?current.filter(function(item){return item!==handle;}):current.concat(handle);
-      next=normalizeFollowingUsernames(next);
-      profileFollowState={username:handle,following:already,loading:true};renderProfileFollowUi();
+      var user=auth.currentUser,handle=currentViewedProfileHandle();
+      if(!user||!user.uid||!handle||isOwnProfileView()||profileFollowWritePending||profileFollowState.loading||!profileFollowState.ready)return;
+      var already=profileFollowState.following,key=followCacheKey(handle);
+      profileFollowWritePending=true;profileFollowState.loading=true;renderProfileFollowUi();
+      var status=document.getElementById('profileFollowStatus');if(status)status.textContent='';
       try{
-        var remote=await beBackend.preferences.get(user.uid,{force:true});
-        var data=normalizeCrossDeviceData(remote&&remote.data||captureCrossDeviceData(user.uid));
-        data.followingUsers=next;data.updatedAt=beBackend.now();
-        await beBackend.preferences.save(user.uid,data);
-        writeFollowingUsers(user.uid,next);
-        applyCrossDeviceData(data,user.uid,'follow-toggle');
-        profileFollowState={username:handle,following:!already,loading:false};
-        if(viewedProfile&&beBackend.normalizeUsername(viewedProfile.username)===handle){
-          var delta=already?-1:1;
-          viewedProfile={...viewedProfile,followersCount:Math.max(0,Number(viewedProfile.followersCount||0)+delta)};
-          updateProfileFollowStatButtons(viewedProfile);
-        }
-        renderProfileFollowUi();
+        await beBackend.ready;
+        // Explicit desired state is safe to retry; a toggle could reverse a saved action.
+        var result=await beBackend.client.rpc('set_profile_follow',{p_username:handle,p_following:!already});
+        if(result.error)throw result.error;
+        var row=Array.isArray(result.data)?result.data[0]:result.data;
+        if(!row)throw new Error('follow_unavailable');
+        profileFollowCache.clear();
+        if(auth.currentUser&&auth.currentUser.uid===user.uid){profileFollowCache.set(key,{row:row,at:Date.now()});applyProfileFollowRow(handle,row);}
+        if(profileRelationshipsState.open&&profileRelationshipsState.username===handle)loadProfileRelationshipsPage(1,true);
       }catch(_){
-        profileFollowState={username:handle,following:already,loading:false};
-        renderProfileFollowUi();
+        if(currentViewedProfileHandle()===handle&&followCacheKey(handle)===key){
+          profileFollowState={username:handle,following:already,loading:false,ready:true};renderProfileFollowUi();
+          if(status)status.textContent=localizedProfileText('Não foi possível salvar. Tente novamente.');
+        }
+      }finally{
+        profileFollowWritePending=false;
+        if(currentViewedProfileHandle()!==handle||followCacheKey(handle)!==key)refreshProfileFollowState(false);
       }
     }
     function relationshipItemMarkup(item){
@@ -13390,6 +13396,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     function renderProfileRelationships(){
       if(!profileRelationshipsList)return;
       var html='';
+      if(profileRelationshipsState.error){profileRelationshipsList.textContent=localizedProfileText('Não foi possível carregar a lista. Tente novamente.');return;}
       if(!profileRelationshipsState.items.length&&!profileRelationshipsState.loading){html='<div class="profile-relationships-empty">'+escapePublic(localizedProfileText('Nenhum usuário encontrado.'))+'</div>';}else{html=profileRelationshipsState.items.map(relationshipItemMarkup).join('');}
       if(profileRelationshipsState.loading)html+='<div class="profile-relationships-loading">'+escapePublic(localizedProfileText('Carregando…'))+'</div>';
       else html+=profileRelationshipPaginationMarkup();
@@ -13399,17 +13406,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       profileRelationshipsList.querySelectorAll('[data-relationship-username]').forEach(function(button){button.onclick=function(){var username=button.getAttribute('data-relationship-username');closeProfileRelationships();openPublicProfile(true,username);};});
     }
     async function loadProfileRelationshipsPage(page,reset){
-      if(profileRelationshipsState.loading||!profileRelationshipsState.username)return;
+      if(!profileRelationshipsState.username)return;
+      var listState=profileRelationshipsState;
+      var listRequest=(listState.request||0)+1;listState.request=listRequest;
       var pageSize=20;
       var targetPage=Math.max(1,Math.floor(Number(page)||1));
       if(reset){profileRelationshipsState.items=[];profileRelationshipsState.page=1;profileRelationshipsState.total=0;profileRelationshipsState.totalPages=0;targetPage=1;renderProfileRelationships();}
-      profileRelationshipsState.loading=true;renderProfileRelationships();
+      profileRelationshipsState.error=false;profileRelationshipsState.loading=true;renderProfileRelationships();
       try{
         var offset=(targetPage-1)*pageSize;
         var url='/api/public-profile?view=relationships&username='+encodeURIComponent(profileRelationshipsState.username)+'&type='+encodeURIComponent(profileRelationshipsState.type)+'&offset='+encodeURIComponent(offset)+'&limit='+pageSize+'&q='+encodeURIComponent(profileRelationshipsState.query||'');
-        var response=await fetch(url,{headers:{Accept:'application/json'},cache:'no-store'});
+        var response=await fetch(url,{headers:{Accept:'application/json'},cache:'default'});
         if(!response.ok)throw new Error('relationships_unavailable');
         var payload=await response.json();
+        if(profileRelationshipsState!==listState||listState.request!==listRequest)return;
         var items=Array.isArray(payload&&payload.items)?payload.items:[];
         var total=Math.max(0,Number(payload&&payload.total||0)||0);
         var totalPages=Math.ceil(total/pageSize);
@@ -13420,12 +13430,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         profileRelationshipsState.total=total;
         profileRelationshipsState.totalPages=totalPages;
       }catch(_){
+        if(profileRelationshipsState!==listState||listState.request!==listRequest)return;
+        profileRelationshipsState.error=true;
         profileRelationshipsState.items=[];
         profileRelationshipsState.total=0;
         profileRelationshipsState.totalPages=0;
       }finally{
+        if(profileRelationshipsState===listState&&listState.request===listRequest){
         profileRelationshipsState.loading=false;renderProfileRelationships();
         if(profileRelationshipsList)profileRelationshipsList.scrollTop=0;
+        }
       }
     }
     var profileRelationshipsSearchTimer=0;
@@ -14590,7 +14604,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{window.dispatchEvent(new CustomEvent('be:favorites-changed',{detail:{synced:true}}));}catch(_){ }
       try{window.dispatchEvent(new CustomEvent('be:profile-favorites-changed',{detail:{items:profileFavoritesItems,synced:true}}));}catch(_){ }
       try{window.dispatchEvent(new CustomEvent('be:profile-loved-albums-changed',{detail:{items:profileLovedAlbumsItems,synced:true}}));}catch(_){ }
-      if(document.body.classList.contains('profile-page-active')){applyProfileTheme(viewedProfile||currentProfile);renderProfileSocials(viewedProfile||currentProfile);renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();profileFollowState={username:currentViewedProfileHandle(),following:isFollowingViewedProfile(),loading:false};renderProfileFollowUi();}
+      if(document.body.classList.contains('profile-page-active')){applyProfileTheme(viewedProfile||currentProfile);renderProfileSocials(viewedProfile||currentProfile);renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();renderProfileFollowUi();}
       if(document.body.classList.contains('settings-page-active')){window.setTimeout(function(){renderSettingsPage();keepSettingsOpen();},0);}
     }
     async function persistCrossDeviceData(reason){
@@ -16208,7 +16222,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});if(profilePageMore)profilePageMore.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileActionsMenu();});if(profilePageEdit)profilePageEdit.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openProfileEditor();});if(profilePageSettings)profilePageSettings.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openSettingsPage(true);});document.addEventListener('click',function(event){if(!profilePageActionsMenu||profilePageActionsMenu.hidden)return;if(event.target===profilePageMore||profilePageMore.contains(event.target)||profilePageActionsMenu.contains(event.target))return;closeProfileActionsMenu(false);});document.addEventListener('keydown',function(event){if(event.key!=='Escape')return;var boafPanel=document.getElementById('boafStreamPanel');if(boafPanel&&!boafPanel.hidden){event.preventDefault();boafPanel.hidden=true;document.body.classList.remove('boaf-stream-panel-open');return;}if(profileRelationshipsState.open){event.preventDefault();closeProfileRelationships();return;}if(profilePageActionsMenu&&!profilePageActionsMenu.hidden){event.preventDefault();closeProfileActionsMenu(true);}});window.addEventListener('resize',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)positionProfileActionsMenu();});
     window.addEventListener('pageshow',function(){if(document.body.classList.contains('profile-page-active'))updateProfileActionVisibility();});
     document.addEventListener('visibilitychange',function(){if(!document.hidden&&document.body.classList.contains('profile-page-active'))updateProfileActionVisibility();});
-    window.addEventListener('scroll',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)closeProfileActionsMenu(false);},true);if(profilePageFollow)profilePageFollow.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileFollow();});if(profilePageLike)profilePageLike.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileLike();});if(profilePageFollowersButton)profilePageFollowersButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowersButton.disabled)openProfileRelationships('followers');});if(profilePageFollowingButton)profilePageFollowingButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowingButton.disabled)openProfileRelationships('following');});if(profileRelationshipsClose)profileRelationshipsClose.addEventListener('click',function(){closeProfileRelationships();});if(profileRelationshipsModal)profileRelationshipsModal.addEventListener('click',function(event){if(event.target===profileRelationshipsModal)closeProfileRelationships();});if(profileRelationshipsSearch)profileRelationshipsSearch.addEventListener('input',function(){if(!profileRelationshipsState.allowSearch)return;clearTimeout(profileRelationshipsSearchTimer);profileRelationshipsState.query=String(profileRelationshipsSearch.value||'').trim();profileRelationshipsSearchTimer=setTimeout(function(){loadProfileRelationshipsPage(1,true);},180);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
+    window.addEventListener('scroll',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)closeProfileActionsMenu(false);},true);if(profilePageFollow)profilePageFollow.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileFollow();});if(profilePageLike)profilePageLike.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileLike();});if(profilePageFollowersButton)profilePageFollowersButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowersButton.disabled)openProfileRelationships('followers');});if(profilePageFollowingButton)profilePageFollowingButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowingButton.disabled)openProfileRelationships('following');});if(profileRelationshipsClose)profileRelationshipsClose.addEventListener('click',function(){closeProfileRelationships();});if(profileRelationshipsModal)profileRelationshipsModal.addEventListener('click',function(event){if(event.target===profileRelationshipsModal)closeProfileRelationships();});if(profileRelationshipsSearch)profileRelationshipsSearch.addEventListener('input',function(){if(!profileRelationshipsState.allowSearch)return;clearTimeout(profileRelationshipsSearchTimer);profileRelationshipsState.query=String(profileRelationshipsSearch.value||'').trim();profileRelationshipsSearchTimer=setTimeout(function(){loadProfileRelationshipsPage(1,true);},350);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
       if(event){event.preventDefault();event.stopPropagation();}
 
                                                                                
