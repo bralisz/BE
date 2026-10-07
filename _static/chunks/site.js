@@ -21611,7 +21611,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var item=mobileAccountItem;
     mobileMenu=document.createElement('div');mobileMenu.className='mobile-account-popover';mobileMenu.id='mobileAccountPopover';mobileMenu.setAttribute('role','menu');mobileMenu.setAttribute('aria-label','Menu');
     mobileMenu.innerHTML='<div class="mobile-account-group" role="none">'+item('profile','Perfil',icons.user)+item('community','Comunidade',icons.people)+item('settings','Configurações',icons.settings)+'</div>'+
-      '<div class="mobile-account-group" role="none">'+item('home','Home',icons.home)+item('donate','Apoie uma ONG',icons.heart)+item('support','Suporte',icons.support)+item('fans','Fãs que ajudaram o site',icons.people)+'</div>'+
+      '<div class="mobile-account-group" role="none">'+item('support','Suporte',icons.support)+item('donate','Apoie uma ONG',icons.heart)+'</div>'+
       '<div class="mobile-account-group" role="none">'+item('login','Entrar',icons.user)+item('create-account','Criar conta',icons.user,' hidden')+item('install','Instalar app',icons.install)+item('logout','Sair',icons.logout,' class="danger"')+'</div>';
     document.body.appendChild(mobileMenu);applyI18n(mobileMenu);if(typeof window.BETVSyncInstallUi==='function')window.BETVSyncInstallUi();
     mobileMenu.addEventListener('click',function(event){
