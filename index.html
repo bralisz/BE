@@ -233,10 +233,10 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   body:not(.login-mode) .home-notification-menu{position:fixed!important;top:21px!important;right:88px!important;left:auto!important;z-index:10025!important}
 }
 </style>
-<link rel="preload" href="/_static/styles/site.css?rev=20260927-profile-mobile-boaf" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20260927-profile-mobile-boaf"></noscript>
+<link rel="preload" href="/_static/styles/site.css?rev=20261007-profile-follow-v1" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261007-profile-follow-v1"></noscript>
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/_static/chunks/site.js?rev=20260927-profile-mobile-boaf"></script>
+<script defer src="/_static/chunks/site.js?rev=20261007-profile-follow-v1"></script>
 
 <script>
 (function(){
@@ -804,6 +804,9 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
     <div class="profile-page-banner" id="profilePageBanner" hidden><img loading="eager" fetchpriority="high" decoding="async" id="profilePageBannerImg" alt="Banner do perfil"></div>
     <div class="profile-page-banner-fallback" id="profilePageBannerFallback"></div>
     <div class="profile-page-actions-row" id="profilePageActionsRow" aria-label="Ações do perfil">
+      <button class="profile-page-follow" id="profilePageFollow" type="button" aria-label="Seguir perfil" title="Seguir perfil" aria-pressed="false" hidden disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 19a6 6 0 0 0-12 0"></path><circle cx="14" cy="8" r="4"></circle><path d="M5 8.5v7M1.5 12h7"></path></svg>
+      </button>
       <button class="profile-page-like" id="profilePageLike" type="button" aria-label="Curtir perfil" title="Curtir perfil" aria-pressed="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg>
           </button>
@@ -838,6 +841,10 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
         <div class="profile-page-award-tags" id="profilePageAwardTags" hidden></div>
         <nav class="profile-page-socials" id="profilePageSocials" aria-label="Redes sociais do perfil" hidden></nav>
         <p class="profile-page-handle" id="profilePageHandle">@usuario</p>
+        <div class="profile-page-follow-stats" aria-label="Seguidores e seguindo">
+          <button class="profile-page-follow-stat" id="profilePageFollowersButton" type="button"><strong id="profilePageFollowersCount">0</strong><span id="profilePageFollowersLabel">Seguidores</span></button>
+          <button class="profile-page-follow-stat" id="profilePageFollowingButton" type="button"><strong id="profilePageFollowingCount">0</strong><span id="profilePageFollowingLabel">Seguindo</span></button>
+        </div>
         <div class="profile-page-meta">
           <span id="profilePageMetaLabel">Coleção BE</span>
           <span class="profile-page-dot"></span>
@@ -846,6 +853,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
       </div>
     </div>
   </div>
+  <p id="profileFollowStatus" role="status" aria-live="polite" style="text-align:center"></p>
   <section class="profile-favorites-section" id="profileFavoritesSection" hidden aria-labelledby="profileFavoritesTitle">
     <div class="profile-favorites-heading">
       <div>
