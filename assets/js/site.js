@@ -4762,7 +4762,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     await addBillieHomeSpotlight(host);
     await addAlbumsHomeSection(host, allAlbums);
-    await addDonateHomeSpotlight(host);
     main.insertAdjacentElement('afterend', host);
     setupContentDetailInteractions(host);
     setupSectionTitleInteractions(host);
@@ -4845,37 +4844,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (billie) billie.insertAdjacentElement('afterend', block);
     else host.append(block);
     setupRail(block);
-  }
-
-  async function addDonateHomeSpotlight(host) {
-    if (!host || host.querySelector('.donate-home-spotlight')) return;
-
-    let settings = null;
-    try {
-      settings = await beBackend.data.get('settings', 'ong');
-    } catch (_) {
-      settings = null;
-    }
-
-    const rawBanner = String(settings?.bannerUrl || '').trim();
-    if (!rawBanner) return;
-    const banner = safeAssetUrl(rawBanner);
-    if (!banner || banner === '#') return;
-
-    const spotlight = document.createElement('section');
-    spotlight.className = 'donate-home-spotlight';
-    spotlight.setAttribute('aria-label', 'Apoie uma ONG');
-    spotlight.innerHTML = `
-      <div class="donate-home-spotlight-frame">
-        <img src="${banner}" alt="Apoie uma ONG" loading="lazy" decoding="async" fetchpriority="low">
-        <div class="donate-home-spotlight-overlay" aria-hidden="true"></div>
-        <div class="donate-home-spotlight-copy"><strong>${escapeHtml(localizedUiText('Apoie uma ONG'))}</strong></div>
-        <a class="donate-home-spotlight-button" href="/ong" data-open-donate="true">${escapeHtml(localizedUiText('Saiba mais'))}</a>
-      </div>`;
-
-    host.append(spotlight);
-    const image = spotlight.querySelector('.donate-home-spotlight-frame > img');
-    if (image) image.addEventListener('error', () => spotlight.remove(), { once:true });
   }
 
   const MUSIC_TITLE_SECTION_IDS_FRONTEND = new Set([
@@ -12197,7 +12165,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                                    
                                             
       mobileAccountInstall.hidden = runningAsApp || !isMobile();
-      mobileAccountInstall.textContent = installed && !runningAsApp ? 'Abrir app' : 'Instalar app';
+      const accountInstallLabel = mobileAccountInstall.querySelector('.mobile-account-label') || mobileAccountInstall;
+      accountInstallLabel.textContent = installed && !runningAsApp ? 'Abrir app' : 'Instalar app';
       mobileAccountInstall.dataset.installState = installed && !runningAsApp ? 'installed' : 'available';
     }
   }
@@ -12429,11 +12398,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const input = document.getElementById('mobileSearchInput');
     const button = document.getElementById('mobileSearchButton');
     document.body.classList.toggle('mobile-search-open', shouldOpen);
-    const tabSearch = document.getElementById('mobileTabSearch');
-    if (tabSearch) {
-      tabSearch.classList.toggle('active', shouldOpen);
-      tabSearch.setAttribute('aria-expanded', String(shouldOpen));
-    }
     if (button) {
       button.setAttribute('aria-expanded', String(shouldOpen));
       button.setAttribute('aria-label', shouldOpen ? 'Fechar pesquisa' : 'Abrir pesquisa');
@@ -12451,6 +12415,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   window.addEventListener('be:close-mobile-search', () => openMobileSearch(false));
+  window.addEventListener('be:mobile-destination', event => {
+    const destination = event.detail?.destination;
+    if (destination === 'search') { openDrawer(false); openMobileSearch(true); }
+    else if (destination) selectView(destination);
+  });
 
   function setActiveDestination(destination) {
     document.querySelectorAll('[data-mobile-destination]').forEach(button => {
@@ -12583,17 +12552,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <button class="mobile-logout-button" id="mobileLogoutButton" type="button">${icon('logout')}<span>Sair do site</span></button>
       </div>`;
 
-    const bottom = document.createElement('nav');
-    bottom.className = 'mobile-tab-bar';
-    bottom.id = 'mobileTabBar';
-    bottom.setAttribute('aria-label', 'Navegação principal');
-    bottom.innerHTML = `
-      <button type="button" class="mobile-tab active" data-mobile-destination="home">${icon('home')}<span>Home</span></button>
-      <button type="button" class="mobile-tab" data-mobile-destination="films">${icon('film')}<span>Filmes</span></button>
-      <button type="button" class="mobile-tab" data-mobile-destination="videos">${icon('video')}<span>Vídeos</span></button>
-      <button type="button" class="mobile-tab" id="mobileTabSearch" aria-controls="mobileSearchControl" aria-expanded="false">${icon('search')}<span>Pesquisar</span></button>
-      <button type="button" class="mobile-tab" id="mobileMenuToggle" aria-controls="mobileDrawer" aria-expanded="false">${icon('menu')}<span>Menu</span></button>`;
-    document.body.append(bar, backdrop, drawer, bottom);
+    document.body.append(bar, backdrop, drawer);
     bindMobileActions();
     syncProfile();
     updateInstallButton();
@@ -12634,16 +12593,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     }
 
-    bindActivation(document.getElementById('mobileTabSearch'), () => {
-      openDrawer(false);
-      openMobileSearch(!document.body.classList.contains('mobile-search-open'));
-    });
-    bindActivation(document.getElementById('mobileMenuToggle'), () => {
-      openMobileSearch(false);
-      closeMobileAccountPopover();
-      window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
-      openDrawer(!document.body.classList.contains('mobile-drawer-open'));
-    });
     bindActivation(document.getElementById('mobileNotificationButton'), () => {
       openDrawer(false);
       window.dispatchEvent(new CustomEvent('be:toggle-mobile-notifications'));
@@ -21937,16 +21886,57 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     recordWatchFromPlay(play);
   }
 
+  function mobileAccountItem(action,label,path,extra){
+    return '<button type="button" role="menuitem" data-mobile-account="'+action+'"'+(extra||'')+'><span class="mobile-account-label">'+t(label)+'</span><svg class="mobile-account-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+path+'</svg></button>';
+  }
   function createMobileAccountMenu(){
     if(document.getElementById('mobileAccountPopover')){mobileMenu=document.getElementById('mobileAccountPopover');return;}
-    var trigger=document.getElementById('mobileProfileButton');if(trigger){trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-expanded','false');}
-    mobileMenu=document.createElement('div');mobileMenu.className='mobile-account-popover';mobileMenu.id='mobileAccountPopover';mobileMenu.setAttribute('role','menu');mobileMenu.setAttribute('aria-label','Conta');
-    var runningAsMobileApp=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installItem=runningAsMobileApp?'':'<button type="button" role="menuitem" data-mobile-account="install">Instalar app</button>';mobileMenu.innerHTML='<button class="mobile-create-account" type="button" role="menuitem" data-mobile-account="create-account" hidden>Criar conta</button><button type="button" role="menuitem" data-mobile-account="profile">Perfil</button><button type="button" role="menuitem" data-mobile-account="community">Comunidade</button><button type="button" role="menuitem" data-mobile-account="settings">Configurações</button>'+installItem+'<div class="mobile-account-divider" aria-hidden="true"></div><button class="danger" type="button" role="menuitem" data-mobile-account="logout">Sair</button>';
+    var trigger=document.getElementById('mobileProfileButton');if(trigger){trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-controls','mobileAccountPopover');trigger.setAttribute('aria-expanded','false');}
+    var icons={home:'<path d="m3 10 9-7 9 7v10h-6v-7H9v7H3Z"/>',films:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4"/>',videos:'<rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2Z"/>',people:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M15 15a5 5 0 0 1 6 5"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',settings:'<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/>',heart:'<path d="M20.8 5.6a5.4 5.4 0 0 0-8.8 1 5.4 5.4 0 0 0-8.8 6L12 21l8.8-8.4a5.4 5.4 0 0 0 0-7Z"/>',support:'<path d="M4 13a8 8 0 0 1 16 0v6h-4v-7h4M4 12h4v7H4ZM16 19c0 2-2 3-4 3"/>',install:'<path d="M12 3v11m-4-4 4 4 4-4M5 18v3h14v-3"/>',logout:'<path d="M10 5H4v14h6m5-11 4 4-4 4M19 12H9"/>'};
+    var item=mobileAccountItem;
+    mobileMenu=document.createElement('div');mobileMenu.className='mobile-account-popover';mobileMenu.id='mobileAccountPopover';mobileMenu.setAttribute('role','menu');mobileMenu.setAttribute('aria-label','Menu');
+    mobileMenu.innerHTML='<div class="mobile-account-group" role="none">'+item('home','Home',icons.home)+item('films','Filmes',icons.films)+item('videos','Vídeos',icons.videos)+item('community','Comunidade',icons.people)+item('search','Pesquisar',icons.search)+item('notifications','Notificações',icons.bell)+'</div>'+
+      '<div class="mobile-account-group" role="none">'+item('billie','Conheça a Billie Eilish',icons.user)+item('donate','Apoie uma ONG',icons.heart)+item('support','Suporte',icons.support)+item('fans','Fãs que ajudaram o site',icons.people)+'</div>'+
+      '<div class="mobile-account-group" role="none">'+item('login','Entrar',icons.user)+item('create-account','Criar conta',icons.user,' hidden')+item('profile','Perfil',icons.user)+item('settings','Configurações',icons.settings)+item('install','Instalar app',icons.install)+item('logout','Sair',icons.logout,' class="danger"')+'</div>';
     document.body.appendChild(mobileMenu);applyI18n(mobileMenu);if(typeof window.BETVSyncInstallUi==='function')window.BETVSyncInstallUi();
-    mobileMenu.addEventListener('click',function(event){var button=event.target.closest('[data-mobile-account]');if(!button)return;var action=button.dataset.mobileAccount;closeMobileAccountMenu();if(action==='create-account'){var accountAction=document.getElementById('publicAuthAction');if(accountAction)accountAction.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='community'){openCommunity();return;}if(action==='profile'){var p=document.querySelector('#userDropdown [data-public-action="profile"]');if(p)p.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='settings'){var s=document.querySelector('#userDropdown [data-public-action="settings"]');if(s)s.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}if(action==='install'){if(typeof window.BETVRequestAppInstall==='function')window.BETVRequestAppInstall();return;}if(action==='logout'){var a=document.getElementById('publicAuthAction');if(a)a.click();}});
+    mobileMenu.addEventListener('click',function(event){
+      var button=event.target.closest('[data-mobile-account]');if(!button)return;
+      var action=button.dataset.mobileAccount;closeMobileAccountMenu();
+      if(['home','films','videos','search','support','fans'].includes(action)){window.dispatchEvent(new CustomEvent('be:mobile-destination',{detail:{destination:action}}));return;}
+      if(action==='community'){openCommunity();return;}
+      if(action==='notifications'){window.dispatchEvent(new CustomEvent('be:open-notifications'));return;}
+      if(action==='billie'||action==='donate'){var link=document.querySelector(action==='billie'?'a[data-open-billie]':'a[data-open-donate]');if(link)link.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go(action==='billie'?'/billie-eilish':'/ong');return;}
+      if(action==='login'||action==='create-account'){var accountAction=document.getElementById('publicAuthAction');if(accountAction)accountAction.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}
+      if(action==='profile'||action==='settings'){var nav=window.BETVNavigation;if(nav&&typeof nav[action==='profile'?'openProfile':'openSettings']==='function')nav[action==='profile'?'openProfile':'openSettings']();else{var original=document.querySelector('#userDropdown [data-public-action="'+action+'"]');if(original)original.click();}return;}
+      if(action==='install'){if(typeof window.BETVRequestAppInstall==='function')window.BETVRequestAppInstall();return;}
+      if(action==='logout'){var authAction=document.getElementById('publicAuthAction');if(authAction)authAction.click();}
+    });
+    mobileMenu.addEventListener('keydown',function(event){
+      var items=Array.from(mobileMenu.querySelectorAll('[role="menuitem"]')).filter(function(item){return !item.hidden;});
+      if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeMobileAccountMenu();document.getElementById('mobileProfileButton')?.focus();return;}
+      if(event.key==='Tab'){closeMobileAccountMenu();return;}
+      if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
+      event.preventDefault();var index=items.indexOf(document.activeElement);var next=event.key==='Home'?0:event.key==='End'?items.length-1:event.key==='ArrowDown'?(index+1)%items.length:(index-1+items.length)%items.length;items[next]?.focus();
+    });
   }
-  function positionMobileAccountMenu(){if(!mobileMenu)return;var trigger=document.getElementById('mobileProfileButton');if(!trigger)return;var rect=trigger.getBoundingClientRect();var width=Math.min(260,Math.max(180,window.innerWidth-24));var height=Math.max(1,mobileMenu.offsetHeight||210);var left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));var top=Math.max(8,Math.min(rect.bottom+8,window.innerHeight-height-8));mobileMenu.style.left=left+'px';mobileMenu.style.top=top+'px';}
-  function openMobileAccountMenu(){if(!window.matchMedia('(max-width:760px)').matches)return;createMobileAccountMenu();var user=currentUser();var expectedSession=false;try{expectedSession=localStorage.getItem('beAuthExpected')==='1'&&Boolean(localStorage.getItem('beSessionUid'));}catch(_){ }var loggedIn=Boolean(user)||expectedSession;var guestActive=!loggedIn&&Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());mobileMenu.classList.toggle('is-logged-out',!loggedIn);mobileMenu.classList.toggle('is-guest-account',guestActive);var createAccount=mobileMenu.querySelector('[data-mobile-account="create-account"]');if(createAccount)createAccount.hidden=!guestActive;['profile','community','settings'].forEach(function(action){var item=mobileMenu.querySelector('[data-mobile-account="'+action+'"]');if(item)item.hidden=!loggedIn;});var divider=mobileMenu.querySelector('.mobile-account-divider');if(divider)divider.hidden=!loggedIn;var logout=mobileMenu.querySelector('[data-mobile-account="logout"]');if(logout)logout.hidden=!loggedIn;var install=mobileMenu.querySelector('[data-mobile-account="install"]');if(install){var running=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installed=typeof window.BETVIsAppInstalled==='function'&&window.BETVIsAppInstalled();install.hidden=!loggedIn||running;install.textContent=installed&&!running?'Abrir app':'Instalar app';install.classList.toggle('is-installed',installed&&!running);}if(typeof window.BETVI18n==='object'&&typeof window.BETVI18n.apply==='function')window.BETVI18n.apply(mobileMenu);positionMobileAccountMenu();document.body.classList.add('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','true');}
+  function positionMobileAccountMenu(){
+    if(!mobileMenu)return;var trigger=document.getElementById('mobileProfileButton');if(!trigger)return;
+    var rect=trigger.getBoundingClientRect();var width=Math.min(304,window.innerWidth-24);var top=Math.max(12,Math.min(rect.bottom+8,window.innerHeight-180));
+    mobileMenu.style.width=width+'px';mobileMenu.style.maxHeight=Math.max(120,window.innerHeight-top-12)+'px';mobileMenu.style.left=Math.max(12,Math.min(rect.right-width,window.innerWidth-width-12))+'px';mobileMenu.style.top=top+'px';
+  }
+  function openMobileAccountMenu(){
+    if(!window.matchMedia('(max-width:760px)').matches)return;createMobileAccountMenu();
+    var user=currentUser();var expectedSession=false;try{expectedSession=localStorage.getItem('beAuthExpected')==='1'&&Boolean(localStorage.getItem('beSessionUid'));}catch(_){ }
+    var loggedIn=Boolean(user)||expectedSession;var guestActive=!loggedIn&&Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
+    mobileMenu.classList.toggle('is-logged-out',!loggedIn);mobileMenu.classList.toggle('is-guest-account',guestActive);
+    mobileMenu.querySelector('[data-mobile-account="create-account"]').hidden=!guestActive;mobileMenu.querySelector('[data-mobile-account="login"]').hidden=loggedIn;
+    ['profile','settings','logout'].forEach(function(action){mobileMenu.querySelector('[data-mobile-account="'+action+'"]').hidden=!loggedIn;});
+    var install=mobileMenu.querySelector('[data-mobile-account="install"]');var running=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installed=typeof window.BETVIsAppInstalled==='function'&&window.BETVIsAppInstalled();
+    install.hidden=running;install.querySelector('.mobile-account-label').textContent=installed&&!running?'Abrir app':'Instalar app';install.classList.toggle('is-installed',installed&&!running);
+    applyI18n(mobileMenu);positionMobileAccountMenu();document.body.classList.add('mobile-account-menu-open');
+    var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','true');
+    mobileMenu.querySelector('[role="menuitem"]:not([hidden])')?.focus({preventScroll:true});
+  }
   function closeMobileAccountMenu(){document.body.classList.remove('mobile-account-menu-open');var trigger=document.getElementById('mobileProfileButton');if(trigger)trigger.setAttribute('aria-expanded','false');}
   function toggleMobileAccountMenu(){if(document.body.classList.contains('mobile-account-menu-open'))closeMobileAccountMenu();else openMobileAccountMenu();}
 
