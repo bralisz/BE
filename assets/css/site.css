@@ -21350,3 +21350,22 @@ html[lang^="fr"] .login-trust-copy-fr{display:block}
   body:not(.login-mode):not(.admin-mode) #mobileAccountPopover button.danger{color:#ff6961!important}
   body:not(.login-mode):not(.admin-mode) #mobileAccountPopover button:active{background:rgba(255,255,255,.09)!important}
 }
+
+/* The mobile home header floats directly over the feature and catalog. */
+@media(max-width:760px){
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-app-bar,
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode).mobile-home-scrolled .mobile-app-bar{background:transparent!important;background-image:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+}
+
+/* Compact avatar popover, matching the original account menu. */
+@media(max-width:760px){
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover{padding:7px;border-radius:22px;border:1px solid rgba(255,255,255,.14);background:rgba(15,17,20,.96)!important;box-shadow:0 18px 48px rgba(0,0,0,.45);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  #mobileAccountPopover .mobile-account-group{padding:0;background:transparent;border:0}
+  #mobileAccountPopover .mobile-account-group+.mobile-account-group{border:0;margin-top:4px}
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover button{min-height:42px;padding:10px 14px;border:0!important;border-radius:14px;font-size:14px;font-weight:600!important;line-height:1.2;justify-content:flex-start;text-align:left}
+  #mobileAccountPopover .mobile-account-icon{display:none}
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover [data-mobile-account="install"]{margin:5px 0;background:#fff!important;color:#111114!important;-webkit-text-fill-color:#111114!important;font-weight:750!important}
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover [data-mobile-account="logout"],body:not(.login-mode):not(.admin-mode) #mobileAccountPopover button.danger{margin-top:5px;background:#ff3b30!important;color:#fff!important;-webkit-text-fill-color:#fff!important;font-weight:700!important}
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover [data-mobile-account="install"]:active{background:#e5e5ea!important}
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover [data-mobile-account="logout"]:active{background:#d93027!important}
+}
