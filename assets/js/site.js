@@ -12532,6 +12532,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bar.id = 'mobileAppBar';
     bar.innerHTML = `
       <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar"><img loading="eager" decoding="async" src="/_static/media/profile/default-avatar.png" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="Avatar"></span></button>
+      <button class="mobile-home-brand" type="button" data-mobile-destination="home" aria-label="BE — voltar para a Home"><img src="/_static/media/brand/logo.webp?v=20260809-performance-v1" width="60" height="32" alt="BE" decoding="async"></button>
       <div class="mobile-header-actions">
         <button class="mobile-notification-button" id="mobileNotificationButton" type="button" aria-label="Abrir notificações" aria-expanded="false">${icon('bell')}<span class="notification-unread-dot" id="mobileNotificationUnreadDot" hidden></span></button>
         <div class="mobile-search-control" id="mobileSearchControl">
@@ -14149,9 +14150,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(theme&&rgb){
         document.body.style.setProperty('--profile-theme-color',theme);
         document.body.style.setProperty('--profile-theme-rgb',rgb.r+','+rgb.g+','+rgb.b);
+        var linear=[rgb.r,rgb.g,rgb.b].map(function(value){value/=255;return value<=.04045?value/12.92:Math.pow((value+.055)/1.055,2.4);});
+        var light=linear[0]*.2126+linear[1]*.7152+linear[2]*.0722>.179;
+        document.body.style.setProperty('--profile-mobile-ink',light?'#111318':'#ffffff');
+        document.body.style.setProperty('--profile-mobile-muted',light?'rgba(17,19,24,.76)':'rgba(255,255,255,.78)');
+        document.body.style.setProperty('--profile-mobile-line',light?'rgba(17,19,24,.18)':'rgba(255,255,255,.18)');
       }else{
         document.body.style.removeProperty('--profile-theme-color');
         document.body.style.removeProperty('--profile-theme-rgb');
+        ['--profile-mobile-ink','--profile-mobile-muted','--profile-mobile-line'].forEach(function(key){document.body.style.removeProperty(key);});
       }
       if(border)document.body.style.setProperty('--profile-avatar-border',border);
       else document.body.style.removeProperty('--profile-avatar-border');
@@ -22062,6 +22069,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     var info=body.querySelector('.profile-page-info');
     var copy=body.querySelector('.profile-page-copy');
+    var handle=el('profilePageHandle'),tags=el('profilePageAwardTags'),identity=el('profilePageIdentityRow');
+    if(copy&&handle&&tags){
+      if(mobile){
+        if(!identity){identity=document.createElement('div');identity.id='profilePageIdentityRow';identity.className='profile-page-identity-row';copy.insertBefore(identity,handle);}
+        if(handle.parentNode!==identity)identity.appendChild(handle);
+        if(tags.parentNode!==identity)identity.appendChild(tags);
+      }else if(identity){
+        copy.insertBefore(tags,el('profilePageSocials'));
+        copy.insertBefore(handle,copy.querySelector('.profile-page-follow-stats'));
+        identity.remove();
+      }
+    }
     if(likes){
       if(mobile&&copy&&likes.parentNode!==copy)copy.appendChild(likes);
       else if(!mobile&&info&&likes.parentNode!==info.parentNode)info.parentNode.insertBefore(likes,info);
@@ -22165,5 +22184,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+
+/* Keep the mobile home treatment scoped to the actual catalog home. */
+;(function(){
+  'use strict';
+  var blocked=['login-mode','admin-mode','profile-page-active','settings-page-active','detail-page-active','community-page-active','section-catalog-active','notification-page-active','support-page-active','legal-page-active','billie-page-active','donate-page-active','album-page-active','fans-page-active'];
+  function sync(){
+    var body=document.body;if(!body)return;
+    var home=(!body.dataset.homeView||body.dataset.homeView==='home')&&!blocked.some(function(name){return body.classList.contains(name);});
+    if(body.classList.contains('mobile-home-layout')!==home)body.classList.toggle('mobile-home-layout',home);
+  }
+  function start(){sync();new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class','data-home-view']});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
