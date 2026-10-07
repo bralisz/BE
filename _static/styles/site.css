@@ -194,3 +194,62 @@
   body.profile-page-active.profile-color-customized #profilePage{background:var(--profile-theme-color)!important;background-image:none!important;color:var(--profile-mobile-ink,#fff)!important}
   body.mobile-home-layout:not(.login-mode):not(.admin-mode) #dynamicSections{margin-top:0!important;padding-top:28px!important;border-radius:0!important;box-shadow:none!important}
 }
+
+/* Mobile TV home: edge-to-edge feature, persistent tabs and compact editorial widgets. */
+.mobile-tab-bar{display:none}
+@media(max-width:760px){
+  body:not(.login-mode):not(.admin-mode){--mobile-tab-height:74px;padding-bottom:calc(var(--mobile-tab-height) + env(safe-area-inset-bottom))!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-tab-bar{position:fixed;inset:auto 0 0;z-index:10019;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;min-height:calc(var(--mobile-tab-height) + env(safe-area-inset-bottom));padding:7px 8px calc(7px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.08);background:rgba(6,7,9,.96);color:#fff;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:56px;padding:4px 2px;border:0;background:transparent;color:#929397;font:600 10px/1.2 var(--font-body);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .mobile-tab svg{box-sizing:content-box;width:23px;height:23px;padding:5px 13px;border-radius:22px;transition:background .15s,color .15s}
+  .mobile-tab.active,.mobile-tab[aria-expanded="true"]{color:#fff}
+  .mobile-tab.active svg,.mobile-tab[aria-expanded="true"] svg{background:#252830;color:#fff}
+  .mobile-tab:focus-visible{outline:2px solid #60a5fa;outline-offset:-2px;border-radius:12px}
+  body.drive-player-open .mobile-tab-bar,body.player-open .mobile-tab-bar,body.profile-onboarding-active .mobile-tab-bar,body.avatar-picker-active .mobile-tab-bar,body.banner-picker-active .mobile-tab-bar,body.profile-favorites-picker-active .mobile-tab-bar{display:none!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-app-bar button{touch-action:manipulation;cursor:pointer;pointer-events:auto!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-app-bar .mobile-header-actions{pointer-events:auto!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-app-bar{height:calc(78px + env(safe-area-inset-top));padding:calc(16px + env(safe-area-inset-top)) 20px 12px!important;gap:10px;background:linear-gradient(180deg,rgba(3,4,4,.7),transparent)!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode).mobile-home-scrolled .mobile-app-bar{background:rgba(6,7,9,.94)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.06)}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-home-brand{position:static!important;order:-1;transform:none!important;width:92px!important;height:46px!important;flex:0 0 92px;justify-content:start}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-home-brand img{width:90px!important;height:46px!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-profile-button{order:2;width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;flex:0 0 44px!important;padding:2px!important;margin:0!important;box-shadow:none!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-header-actions{order:1;margin-left:auto!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode):not(.mobile-search-open) .mobile-search-control{display:none!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .mobile-notification-button{width:44px!important;height:44px!important;min-width:44px!important;flex:0 0 44px!important;margin:0!important;box-shadow:none!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode).mobile-search-open .mobile-home-brand{display:none!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode).mobile-search-open .mobile-header-actions{order:2!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode).mobile-search-open .mobile-profile-button{order:0!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .featured-wrap{width:100%!important;margin:0!important;height:clamp(540px,82svh,760px)!important;min-height:clamp(540px,82svh,760px)!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .featured{height:100%!important;min-height:100%!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#030404!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .f-media::after{background:linear-gradient(180deg,rgba(3,4,4,.12),transparent 26%,rgba(3,4,4,.2) 46%,rgba(3,4,4,.86) 77%,#030404 96%)!important;pointer-events:none!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .f-info{left:24px!important;right:24px!important;bottom:70px!important;max-width:calc(100% - 48px)!important;gap:12px!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .f-logo{font-size:clamp(28px,8vw,42px)!important;line-height:1.1!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .f-desc{font-size:15px!important;line-height:1.45!important;max-width:380px!important;-webkit-line-clamp:3!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .f-play{height:52px!important;min-height:52px!important;max-width:280px!important;border-radius:999px!important;font-size:16px!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .f-fav{height:52px!important;width:52px!important;flex-basis:52px!important;border-radius:50%!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .f-dots{bottom:24px!important;max-width:calc(100% - 40px)!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .f-dot{width:7px!important;height:7px!important;padding:0!important;border-radius:999px!important;background:#777!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .f-dot.active{width:23px!important;background:#fff!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) #dynamicSections{padding-top:24px!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .video-rail-title,body.mobile-home-layout:not(.login-mode):not(.admin-mode) .album-home-title{font-size:clamp(20px,5.5vw,26px)!important;margin-bottom:14px!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .video-card{flex-basis:min(76vw,380px)!important;box-shadow:none!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .video-rail-arrow{display:none!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .billie-home-spotlight,body.mobile-home-layout:not(.login-mode):not(.admin-mode) .donate-home-spotlight{margin:4px 0 32px!important;padding:0 20px!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .billie-home-spotlight-frame,body.mobile-home-layout:not(.login-mode):not(.admin-mode) .donate-home-spotlight-frame{height:clamp(230px,65vw,340px)!important;min-height:0!important;max-height:none!important;border-radius:20px!important;box-shadow:0 8px 22px rgba(0,0,0,.16)!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .billie-home-spotlight-copy,body.mobile-home-layout:not(.login-mode):not(.admin-mode) .donate-home-spotlight-copy{position:absolute!important;z-index:2;inset:auto 20px 82px!important;display:block!important;max-width:calc(100% - 40px)!important;transform:none!important;color:#fff}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .billie-home-spotlight-copy strong,body.mobile-home-layout:not(.login-mode):not(.admin-mode) .donate-home-spotlight-copy strong{font-size:22px!important;line-height:1.2!important;letter-spacing:-.02em!important;text-wrap:balance}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .billie-home-spotlight-button,body.mobile-home-layout:not(.login-mode):not(.admin-mode) .donate-home-spotlight-button{inset:auto auto 20px 20px!important;min-height:44px!important;max-width:calc(100% - 40px)!important;padding:0 18px!important;border-radius:999px!important;font-size:13px!important;white-space:normal!important;text-align:center!important}
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .billie-home-spotlight-overlay,body.mobile-home-layout:not(.login-mode):not(.admin-mode) .donate-home-spotlight-overlay{background:linear-gradient(180deg,transparent 15%,rgba(2,5,10,.25) 38%,rgba(2,5,10,.88) 100%)!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-notification-popover{position:fixed!important;top:calc(78px + env(safe-area-inset-top))!important;left:12px!important;right:12px!important;bottom:auto!important;max-height:calc(100dvh - 170px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;overscroll-behavior:contain}
+  body.profile-page-active .profile-favorite-poster,body.profile-page-active .profile-favorite-ranked-item:hover .profile-favorite-poster{box-shadow:0 5px 12px rgba(0,0,0,.16)!important;transform:none!important}
+  body.profile-page-active .profile-favorites-ranking{padding-bottom:20px!important}
+  body.profile-page-active .profile-favorites-content{overflow:hidden!important}
+  body.profile-page-active .profile-favorite-rank{filter:none!important;text-shadow:none!important}
+}
+@media(prefers-reduced-motion:reduce){.mobile-tab svg{transition:none}}
+
+@media(max-width:760px){
+  body:not(.login-mode):not(.admin-mode).mobile-drawer-open .mobile-drawer{transform:translateX(0)!important}
+  body:not(.login-mode):not(.admin-mode).mobile-drawer-open .mobile-drawer-backdrop{visibility:visible!important;opacity:1!important}
+  body:not(.login-mode):not(.admin-mode) .mobile-drawer{max-height:100dvh;overscroll-behavior:contain}
+}

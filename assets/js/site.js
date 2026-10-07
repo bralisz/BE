@@ -4869,7 +4869,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       <div class="donate-home-spotlight-frame">
         <img src="${banner}" alt="Apoie uma ONG" loading="lazy" decoding="async" fetchpriority="low">
         <div class="donate-home-spotlight-overlay" aria-hidden="true"></div>
-        <a class="donate-home-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a>
+        <div class="donate-home-spotlight-copy"><strong>${escapeHtml(localizedUiText('Apoie uma ONG'))}</strong></div>
+        <a class="donate-home-spotlight-button" href="/ong" data-open-donate="true">${escapeHtml(localizedUiText('Saiba mais'))}</a>
       </div>`;
 
     host.append(spotlight);
@@ -12428,6 +12429,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const input = document.getElementById('mobileSearchInput');
     const button = document.getElementById('mobileSearchButton');
     document.body.classList.toggle('mobile-search-open', shouldOpen);
+    const tabSearch = document.getElementById('mobileTabSearch');
+    if (tabSearch) {
+      tabSearch.classList.toggle('active', shouldOpen);
+      tabSearch.setAttribute('aria-expanded', String(shouldOpen));
+    }
     if (button) {
       button.setAttribute('aria-expanded', String(shouldOpen));
       button.setAttribute('aria-label', shouldOpen ? 'Fechar pesquisa' : 'Abrir pesquisa');
@@ -12532,7 +12538,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bar.id = 'mobileAppBar';
     bar.innerHTML = `
       <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar"><img loading="eager" decoding="async" src="/_static/media/profile/default-avatar.png" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="Avatar"></span></button>
-      <button class="mobile-home-brand" type="button" data-mobile-destination="home" aria-label="BE — voltar para a Home"><img src="/_static/media/brand/logo.webp?v=20260809-performance-v1" width="60" height="32" alt="BE" decoding="async"></button>
+      <button class="mobile-home-brand" type="button" data-mobile-destination="home" aria-label="BE TV — Home"><img src="/_static/media/brand/logo.webp?v=20260809-performance-v1" width="60" height="32" alt="BE TV" decoding="async"></button>
       <div class="mobile-header-actions">
         <button class="mobile-notification-button" id="mobileNotificationButton" type="button" aria-label="Abrir notificações" aria-expanded="false">${icon('bell')}<span class="notification-unread-dot" id="mobileNotificationUnreadDot" hidden></span></button>
         <div class="mobile-search-control" id="mobileSearchControl">
@@ -12577,7 +12583,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         <button class="mobile-logout-button" id="mobileLogoutButton" type="button">${icon('logout')}<span>Sair do site</span></button>
       </div>`;
 
-    document.body.append(bar, backdrop, drawer);
+    const bottom = document.createElement('nav');
+    bottom.className = 'mobile-tab-bar';
+    bottom.id = 'mobileTabBar';
+    bottom.setAttribute('aria-label', 'Navegação principal');
+    bottom.innerHTML = `
+      <button type="button" class="mobile-tab active" data-mobile-destination="home">${icon('home')}<span>Home</span></button>
+      <button type="button" class="mobile-tab" data-mobile-destination="films">${icon('film')}<span>Filmes</span></button>
+      <button type="button" class="mobile-tab" data-mobile-destination="videos">${icon('video')}<span>Vídeos</span></button>
+      <button type="button" class="mobile-tab" id="mobileTabSearch" aria-controls="mobileSearchControl" aria-expanded="false">${icon('search')}<span>Pesquisar</span></button>
+      <button type="button" class="mobile-tab" id="mobileMenuToggle" aria-controls="mobileDrawer" aria-expanded="false">${icon('menu')}<span>Menu</span></button>`;
+    document.body.append(bar, backdrop, drawer, bottom);
     bindMobileActions();
     syncProfile();
     updateInstallButton();
@@ -12586,21 +12602,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function bindActivation(element, handler) {
     if (!element || element.dataset.mobileBound === 'true') return;
     element.dataset.mobileBound = 'true';
-    let lastTouch = 0;
-    element.addEventListener('touchend', event => {
-      if (!isMobile()) return;
-      lastTouch = Date.now();
-      event.preventDefault();
-      event.stopPropagation();
-      handler(event);
-    }, { passive:false });
+    // Native clicks cover touch, mouse and keyboard without activating on a swipe.
     element.addEventListener('click', event => {
       if (!isMobile()) return;
-      if (Date.now() - lastTouch < 650) {
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
       event.preventDefault();
       event.stopPropagation();
       handler(event);
@@ -12630,6 +12634,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     }
 
+    bindActivation(document.getElementById('mobileTabSearch'), () => {
+      openDrawer(false);
+      openMobileSearch(!document.body.classList.contains('mobile-search-open'));
+    });
+    bindActivation(document.getElementById('mobileMenuToggle'), () => {
+      openMobileSearch(false);
+      closeMobileAccountPopover();
+      window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
+      openDrawer(!document.body.classList.contains('mobile-drawer-open'));
+    });
+    bindActivation(document.getElementById('mobileNotificationButton'), () => {
+      openDrawer(false);
+      window.dispatchEvent(new CustomEvent('be:toggle-mobile-notifications'));
+    });
     bindActivation(document.getElementById('mobileDrawerClose'), () => openDrawer(false));
     bindActivation(document.getElementById('mobileDrawerBackdrop'), () => openDrawer(false));
     bindActivation(document.getElementById('mobileProfileButton'), () => {
@@ -12717,6 +12735,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setActiveDestination('community');
       return;
     }
+    const secondary = ['profile-page-active','settings-page-active','notification-page-active','detail-page-active','album-page-active','support-page-active','donate-page-active','billie-page-active','fans-page-active','legal-page-active','section-catalog-active'];
+    if (secondary.some(name => document.body.classList.contains(name))) {
+      setActiveDestination('');
+      return;
+    }
     const view = document.body.dataset.homeView || 'home';
     setActiveDestination(view === 'films' ? 'films' : view === 'videos' ? 'videos' : 'home');
   }
@@ -12726,6 +12749,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     updateInstallButton();
     syncActiveFromPublicView();
     window.addEventListener('be:catalog-ready', syncActiveFromPublicView);
+    new MutationObserver(syncActiveFromPublicView).observe(document.body, {
+      attributes:true, attributeFilter:['data-home-view','class']
+    });
     window.addEventListener('resize', () => {
       updateInstallButton();
       if (!isMobile()) {
@@ -18136,10 +18162,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else{closeDesktop({restoreCommunity:true});closeMobile({restoreCommunity:true});}
   });
 
-  document.addEventListener('click',function(event){
-    var button=event.target&&event.target.closest?event.target.closest('#mobileNotificationButton'):null;
-    if(button)toggleMobile(event);
-  },true);
+  window.addEventListener('be:toggle-mobile-notifications',toggleMobile);
 
   window.addEventListener('be:close-notification-menus',closeMenus);
   window.addEventListener('be:open-config',closeMenus);
@@ -22198,4 +22221,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   function start(){sync();new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class','data-home-view']});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+
+/* Keep the mobile header readable after the feature scrolls away. */
+;(function(){
+  var pending=false;
+  function sync(){pending=false;var scrolled=window.scrollY>40;if(document.body.classList.contains('mobile-home-scrolled')!==scrolled)document.body.classList.toggle('mobile-home-scrolled',scrolled);}
+  window.addEventListener('scroll',function(){if(!pending){pending=true;requestAnimationFrame(sync);}},{passive:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
 })();

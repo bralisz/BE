@@ -9,7 +9,8 @@ function minifyCss(input){
   });
   css=css.replace(/\/\*[\s\S]*?\*\//g,'');
   css=css.replace(/\s+/g,' ');
-  css=css.replace(/\s*([{}:;,>+~])\s*/g,'$1');
+  // Whitespace around + is required inside CSS math functions such as calc().
+  css=css.replace(/\s*([{}:;,>~])\s*/g,'$1');
   css=css.replace(/;}/g,'}');
   css=css.trim();
   return css.replace(/___CSSSTR(\d+)___/g,(_,index)=>strings[Number(index)]);
