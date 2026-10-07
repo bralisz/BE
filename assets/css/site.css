@@ -21456,3 +21456,7 @@ html[lang^="fr"] .login-trust-copy-fr{display:block}
   body.donate-page-active .donate-ngo-details-content{padding:18px 16px!important;border-radius:0 0 22px 22px;background:#111316}
   body.donate-page-active .donate-ngo-support-button{min-height:48px;border-radius:999px}
 }
+
+/* Hide both search entry points outside the four supported public views. */
+body:not(.catalog-search-available) #homeSearchWrap,
+body:not(.catalog-search-available):not(.login-mode):not(.admin-mode) #mobileAppBar .mobile-header-actions #mobileSearchControl{display:none!important;pointer-events:none!important}
