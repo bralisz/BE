@@ -233,10 +233,10 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   body:not(.login-mode) .home-notification-menu{position:fixed!important;top:21px!important;right:88px!important;left:auto!important;z-index:10025!important}
 }
 </style>
-<link rel="preload" href="/_static/styles/site.css?rev=20261007-search-visibility-v7" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261007-search-visibility-v7"></noscript>
+<link rel="preload" href="/_static/styles/site.css?rev=20261008-centered-profile-v8" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261008-centered-profile-v8"></noscript>
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/_static/chunks/site.js?rev=20261007-search-visibility-v7"></script>
+<script defer src="/_static/chunks/site.js?rev=20261008-centered-profile-v8"></script>
 
 <script>
 (function(){
@@ -801,6 +801,12 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
 </div>
 <section class="profile-page-shell" id="profilePage" hidden aria-label="Perfil público">
   <div class="profile-page-hero">
+    <nav class="profile-header-nav" id="profileHeaderNav" aria-label="Navegação do perfil">
+      <button class="profile-page-home" id="profilePageHome" type="button" aria-label="Voltar para a Home" title="Home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg>
+          </button>
+      <button class="profile-header-notifications" id="profileHeaderNotifications" type="button" aria-label="Abrir notificações" title="Notificações"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button>
+    </nav>
     <div class="profile-page-banner" id="profilePageBanner" hidden><img loading="eager" fetchpriority="high" decoding="async" id="profilePageBannerImg" alt="Banner do perfil"></div>
     <div class="profile-page-banner-fallback" id="profilePageBannerFallback"></div>
     <div class="profile-page-actions-row" id="profilePageActionsRow" aria-label="Ações do perfil">
@@ -812,9 +818,6 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
           </button>
       <button class="profile-page-share" id="profilePageShare" type="button" aria-label="Compartilhar perfil" title="Compartilhar perfil">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="M8.2 10.7 15.8 6.3M8.2 13.3l7.6 4.4"></path></svg>
-          </button>
-      <button class="profile-page-home" id="profilePageHome" type="button" aria-label="Voltar para a Home" title="Home">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg>
           </button>
       <button class="profile-page-more" id="profilePageMore" type="button" aria-label="Mais opções do perfil" title="Mais opções" aria-haspopup="menu" aria-expanded="false" aria-controls="profilePageActionsMenu">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>

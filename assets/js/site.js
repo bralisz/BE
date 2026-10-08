@@ -14931,7 +14931,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       renderProfileLikeUi();
       renderProfileFollowUi();
       if(profilePageMore){var hideMore=guest||!own;profilePageMore.hidden=hideMore;profilePageMore.setAttribute('aria-hidden',hideMore?'true':'false');if(hideMore)closeProfileActionsMenu(false);}
-      if(profilePageHome){profilePageHome.title=guest&&!browsingAsGuest?'Entrar':'Home';profilePageHome.setAttribute('aria-label',guest&&!browsingAsGuest?'Ir para o login':'Voltar para a Home');}
+      if(profilePageHome){profilePageHome.title='Home';profilePageHome.setAttribute('aria-label','Voltar para a Home');}
     }
     async function refreshProfileLikeState(){
       var profile=viewedProfile;
@@ -16197,7 +16197,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     avatarPickerClose.addEventListener('click',closeAvatarPicker);avatarPickerCancel.addEventListener('click',closeAvatarPicker);bannerPickerClose.addEventListener('click',closeBannerPicker);if(bannerPickerCancel)bannerPickerCancel.addEventListener('click',closeBannerPicker);profileClose.addEventListener('click',closeProfile);if(settingsSaveCancel)settingsSaveCancel.addEventListener('click',function(){resolveSettingsConfirm(false);});if(settingsSaveApprove)settingsSaveApprove.addEventListener('click',function(){resolveSettingsConfirm(true);});if(settingsSaveConfirm)settingsSaveConfirm.addEventListener('click',function(event){if(event.target===settingsSaveConfirm)resolveSettingsConfirm(false);});profileModal.addEventListener('click',function(e){if(e.target===profileModal)closeProfile();});if(profilePageMore)profilePageMore.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileActionsMenu();});if(profilePageEdit)profilePageEdit.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openProfileEditor();});if(profilePageSettings)profilePageSettings.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();openSettingsPage(true);});document.addEventListener('click',function(event){if(!profilePageActionsMenu||profilePageActionsMenu.hidden)return;if(event.target===profilePageMore||profilePageMore.contains(event.target)||profilePageActionsMenu.contains(event.target))return;closeProfileActionsMenu(false);});document.addEventListener('keydown',function(event){if(event.key!=='Escape')return;var boafPanel=document.getElementById('boafStreamPanel');if(boafPanel&&!boafPanel.hidden){event.preventDefault();boafPanel.hidden=true;document.body.classList.remove('boaf-stream-panel-open');return;}if(profileRelationshipsState.open){event.preventDefault();closeProfileRelationships();return;}if(profilePageActionsMenu&&!profilePageActionsMenu.hidden){event.preventDefault();closeProfileActionsMenu(true);}});window.addEventListener('resize',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)positionProfileActionsMenu();});
     window.addEventListener('pageshow',function(){if(document.body.classList.contains('profile-page-active'))updateProfileActionVisibility();});
     document.addEventListener('visibilitychange',function(){if(!document.hidden&&document.body.classList.contains('profile-page-active'))updateProfileActionVisibility();});
-    window.addEventListener('scroll',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)closeProfileActionsMenu(false);},true);if(profilePageFollow)profilePageFollow.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileFollow();});if(profilePageLike)profilePageLike.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileLike();});if(profilePageFollowersButton)profilePageFollowersButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowersButton.disabled)openProfileRelationships('followers');});if(profilePageFollowingButton)profilePageFollowingButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowingButton.disabled)openProfileRelationships('following');});if(profileRelationshipsClose)profileRelationshipsClose.addEventListener('click',function(){closeProfileRelationships();});if(profileRelationshipsModal)profileRelationshipsModal.addEventListener('click',function(event){if(event.target===profileRelationshipsModal)closeProfileRelationships();});if(profileRelationshipsSearch)profileRelationshipsSearch.addEventListener('input',function(){if(!profileRelationshipsState.allowSearch)return;clearTimeout(profileRelationshipsSearchTimer);profileRelationshipsState.query=String(profileRelationshipsSearch.value||'').trim();profileRelationshipsSearchTimer=setTimeout(function(){loadProfileRelationshipsPage(1,true);},350);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&!(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())){window.BETVPublicRoutes.go('/login');return;}closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
+    window.addEventListener('scroll',function(){if(profilePageActionsMenu&&!profilePageActionsMenu.hidden)closeProfileActionsMenu(false);},true);if(profilePageFollow)profilePageFollow.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileFollow();});if(profilePageLike)profilePageLike.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();toggleProfileLike();});if(profilePageFollowersButton)profilePageFollowersButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowersButton.disabled)openProfileRelationships('followers');});if(profilePageFollowingButton)profilePageFollowingButton.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();if(!profilePageFollowingButton.disabled)openProfileRelationships('following');});if(profileRelationshipsClose)profileRelationshipsClose.addEventListener('click',function(){closeProfileRelationships();});if(profileRelationshipsModal)profileRelationshipsModal.addEventListener('click',function(event){if(event.target===profileRelationshipsModal)closeProfileRelationships();});if(profileRelationshipsSearch)profileRelationshipsSearch.addEventListener('input',function(){if(!profileRelationshipsState.allowSearch)return;clearTimeout(profileRelationshipsSearchTimer);profileRelationshipsState.query=String(profileRelationshipsSearch.value||'').trim();profileRelationshipsSearchTimer=setTimeout(function(){loadProfileRelationshipsPage(1,true);},350);});if(profilePageLogout)profilePageLogout.addEventListener('click',logoutFromProfile);if(profilePageHome)profilePageHome.addEventListener('click',function(event){if(event){event.preventDefault();event.stopPropagation();}if(!auth.currentUser&&window.BETVGuestAccess)window.BETVGuestAccess.setActive(true);closePublicPages(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){window.BETVPublicRoutes.go('/');}else{location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}window.requestAnimationFrame(function(){var home=document.getElementById('logoBtn');if(home){home.dataset.beHistoryMode='none';home.click();delete home.dataset.beHistoryMode;}window.scrollTo({top:0,left:0,behavior:'auto'});});});bindProfileFavorites();bindProfileLovedAlbums();bindProfileSavedGrid();window.addEventListener('be:favorites-changed',function(){if(document.body.classList.contains('profile-page-active'))renderProfileSaved();});window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('profile-page-active')){renderProfileFavorites();renderProfileLovedAlbums();renderProfileSaved();}if(profileFavoritesPicker&&!profileFavoritesPicker.hidden){profileFavoritesCatalog=profileCatalogContents();renderProfileFavoritesPicker();}});window.addEventListener('storage',function(event){if(['beSavedContents','beDetailFavorites','beFeaturedFavorites'].indexOf(event.key)>=0&&document.body.classList.contains('profile-page-active'))renderProfileSaved();if(event.key===profileFavoritesStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileFavorites();if(event.key===profileLovedAlbumsStorageKey()&&document.body.classList.contains('profile-page-active'))renderProfileLovedAlbums();});document.getElementById('settingsClosePage').addEventListener('click',function(event){
       if(event){event.preventDefault();event.stopPropagation();}
 
                                                                                
@@ -22073,9 +22073,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var own=body.classList.contains('profile-view-own');
     var guest=body.classList.contains('profile-viewer-guest');
     var mobile=mq?mq.matches:window.innerWidth<=760;
-    var buttons=[follow,like,share,home,more].filter(Boolean);
+    var buttons=[follow,like,share,more].filter(Boolean);
 
-    important(row,'position','absolute');
+    important(row,'position','relative');
     important(row,'display','flex');
     important(row,'flex-direction','row');
     important(row,'flex-wrap','nowrap');
@@ -22083,7 +22083,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     important(row,'margin','0');
     important(row,'padding','0');
     important(row,'transform','none');
-    important(row,'z-index','10022');
+    important(row,'z-index','2');
 
     buttons.forEach(function(button){resetButton(button,mobile?44:48);});
 
@@ -22101,19 +22101,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         identity.remove();
       }
     }
-    if(likes){
-      if(mobile&&copy&&likes.parentNode!==copy)copy.appendChild(likes);
-      else if(!mobile&&info&&likes.parentNode!==info.parentNode)info.parentNode.insertBefore(likes,info);
-    }
+    if(likes&&copy&&likes.parentNode!==copy)copy.appendChild(likes);
+    if(info&&row.previousElementSibling!==info)info.parentNode.insertBefore(row,info.nextSibling);
 
     if(!mobile){
       important(row,'top','auto');
-      important(row,'right','clamp(24px,3vw,46px)');
-      important(row,'bottom','28px');
+      important(row,'right','auto');
+      important(row,'bottom','auto');
       important(row,'left','auto');
-      important(row,'width','auto');
+      important(row,'width','calc(100% - 40px)');important(row,'margin','16px auto 24px');
       important(row,'height','48px');
-      important(row,'justify-content','flex-end');
+      important(row,'justify-content','center');
       important(row,'gap','10px');
 
       if(own){
@@ -22129,48 +22127,27 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         order(follow,1);order(like,2);order(share,3);order(home,4);
       }
 
-      if(likes){
-        var count=own?3:(guest?2:4);
-        important(likes,'position','absolute');
-        important(likes,'top','auto');
-        important(likes,'right','clamp(24px,3vw,46px)');
-        important(likes,'bottom','86px');
-        important(likes,'left','auto');
-        important(likes,'width',((count*48)+((count-1)*10))+'px');
-        important(likes,'margin','0');
-        important(likes,'text-align','center');
-        important(likes,'white-space','nowrap');
-      }
+      if(likes){important(likes,'position','static');important(likes,'width','auto');important(likes,'margin','0');important(likes,'text-align','center');}
       return;
     }
 
-    important(row,'top','calc(14px + env(safe-area-inset-top))');
-    important(row,'right','16px');
+    important(row,'top','auto');
+    important(row,'right','auto');
     important(row,'bottom','auto');
-    important(row,'left','16px');
-    important(row,'width','auto');
+    important(row,'left','auto');
+    important(row,'width','calc(100% - 40px)');important(row,'margin','16px auto 24px');
     important(row,'height','44px');
-    important(row,'justify-content','flex-end');
+    important(row,'justify-content','center');
     important(row,'gap','8px');
 
     if(likes){
       important(likes,'position','static');
       ['top','right','bottom','left'].forEach(function(edge){important(likes,edge,'auto');});
       important(likes,'width','auto');important(likes,'margin','0');
-      important(likes,'text-align','left');important(likes,'white-space','normal');
+      important(likes,'text-align','center');important(likes,'white-space','normal');
     }
 
-    // Actions align with the avatar below the cover; Home stays on the cover.
-    [follow,like,share,more].forEach(function(button){important(button,'top','var(--profile-mobile-cover-height)');});
-
-    /* Home is always isolated on the upper-left on mobile. */
     visible(home,true);
-    important(home,'position','absolute');
-    important(home,'top','0');
-    important(home,'left','0');
-    important(home,'right','auto');
-    important(home,'bottom','auto');
-
     if(own){
       visible(follow,false);visible(like,false);
       visible(share,true);visible(more,true);
@@ -22191,6 +22168,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function start(){
+    var bell=el('profileHeaderNotifications');
+    if(bell)bell.addEventListener('click',function(){if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/notificacoes');else window.dispatchEvent(new CustomEvent('be:open-notifications'));});
     schedule();
     window.addEventListener('resize',schedule,{passive:true});
     window.addEventListener('orientationchange',schedule,{passive:true});
