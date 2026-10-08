@@ -21941,3 +21941,21 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.addEventListener('scroll',function(){if(!pending){pending=true;requestAnimationFrame(sync);}},{passive:true});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync,{once:true});else sync();
 })();
+
+/* Search belongs only to the home, movie/video catalogs and community. */
+;(function(){
+  function sync(){
+    var body=document.body;if(!body)return;
+    var blocked=Array.from(body.classList).some(function(name){return name.endsWith('-page-active')&&name!=='community-page-active';});
+    blocked=blocked||['login-mode','admin-mode','section-catalog-active','drive-player-open','player-open','profile-onboarding-active','avatar-picker-active','banner-picker-active','profile-favorites-picker-active'].some(function(name){return body.classList.contains(name);});
+    var allowed=!blocked&&(body.classList.contains('community-page-active')||['home','films','videos'].includes(body.dataset.homeView||'home'));
+    if(body.classList.contains('catalog-search-available')!==allowed)body.classList.toggle('catalog-search-available',allowed);
+    if(allowed)return;
+    body.classList.remove('mobile-search-open');
+    var topbar=document.getElementById('topbar');if(topbar)topbar.classList.remove('search-open');
+    ['homeSearchToggle','mobileSearchButton'].forEach(function(id){var button=document.getElementById(id);if(button)button.setAttribute('aria-expanded','false');});
+    var active=document.activeElement;if(active&&active.matches('#homeSearchInput,#mobileSearchInput,#homeSearchToggle,#mobileSearchButton'))active.blur();
+  }
+  function start(){sync();new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class','data-home-view']});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
