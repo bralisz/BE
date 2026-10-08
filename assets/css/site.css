@@ -21520,3 +21520,23 @@ body.profile-page-active #profilePage .profile-page-body{background:var(--profil
   body.profile-page-active:not(.login-mode):not(.admin-mode).banner-picker-active #profileHeaderNav,
   body.profile-page-active:not(.login-mode):not(.admin-mode).profile-favorites-picker-active #profileHeaderNav{display:none!important}
 }
+/* Public mobile header stays transparent on every route and scroll position. */
+@media (max-width:760px){
+  body:not(.login-mode):not(.admin-mode) #mobileAppBar,
+  body:not(.login-mode):not(.admin-mode) .topbar-wrap,
+  body:not(.login-mode):not(.admin-mode) .home-topbar{
+    background:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    box-shadow:none!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+  }
+}
+
+/* Keep lightweight loading placeholders static instead of repainting constantly. */
+html.performance-lite .skeleton-shimmer::after,
+html.performance-lite .site-skeleton-shimmer,
+html.performance-lite .bg-grain{
+  animation:none!important;
+}

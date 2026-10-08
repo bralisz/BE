@@ -24,12 +24,11 @@
       return;
     }
 
+    if (!image.hasAttribute('loading')) image.loading = 'lazy';
     if (!image.getAttribute('fetchpriority')) {
       try { image.fetchPriority = 'low'; } catch (_) {}
     }
   };
-
-  const applyFramePolicy = frame => { void frame; };
 
   const revealDeferredSource = element => {
     if (!(element instanceof Element)) return;
@@ -60,21 +59,20 @@
           revealDeferredSource(entry.target);
           deferredObserver.unobserve(entry.target);
         });
-      }, { rootMargin: '500px 0px' })
+      }, { rootMargin: document.documentElement.classList.contains('performance-lite') ? '180px 0px' : '500px 0px' })
     : null;
 
   const processNode = node => {
     if (!(node instanceof Element)) return;
 
-    if (node.matches('img')) applyImagePolicy(node);
-    if (node.matches('iframe')) applyFramePolicy(node);
-
-    node.querySelectorAll('img').forEach(applyImagePolicy);
-    node.querySelectorAll('iframe').forEach(applyFramePolicy);
-
     const deferred = [];
-    if (node.matches('[data-src],[data-srcset],[data-bg-src]')) deferred.push(node);
-    node.querySelectorAll('[data-src],[data-srcset],[data-bg-src]').forEach(item => deferred.push(item));
+    const selector = 'img,[data-src],[data-srcset],[data-bg-src]';
+    const processElement = element => {
+      if (element.matches('img')) applyImagePolicy(element);
+      if (element.matches('[data-src],[data-srcset],[data-bg-src]')) deferred.push(element);
+    };
+    if (node.matches(selector)) processElement(node);
+    node.querySelectorAll(selector).forEach(processElement);
 
     deferred.forEach(item => {
       if (deferredObserver) deferredObserver.observe(item);
@@ -85,10 +83,29 @@
   const start = () => {
     processNode(document.documentElement);
 
-    const mutationObserver = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(processNode);
+    const pending = new Set();
+    let scheduled = false;
+    const flush = () => {
+      scheduled = false;
+      const roots = Array.from(pending);
+      roots.forEach(node => {
+        if (!node.isConnected) return;
+        for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+          if (pending.has(parent)) return;
+        }
+        processNode(node);
       });
+      pending.clear();
+    };
+    const mutationObserver = new MutationObserver(mutations => {
+      mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+        if (node instanceof Element) pending.add(node);
+      }));
+      if (!pending.size || scheduled) return;
+      scheduled = true;
+      // One scan per added subtree, coalesced across a catalog render.
+      if (document.hidden) window.setTimeout(flush, 0);
+      else window.requestAnimationFrame(flush);
     });
 
     mutationObserver.observe(document.documentElement, {

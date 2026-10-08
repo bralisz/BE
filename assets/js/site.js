@@ -4157,6 +4157,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function renderFeatured() {
     const host = document.getElementById('featured');
     if (!host) return;
+    host._beAutoplay?.dispose();
     const section = host.closest('.featured-wrap');
     if (section) section.hidden = true;
 
@@ -4280,7 +4281,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const slides = Array.from(host.querySelectorAll('.f-slide'));
     const dots = Array.from(host.querySelectorAll('.f-dot'));
     let index = 0;
-    let timer = null;
     const hydrateFeaturedSlide = slide => {
       if (!slide) return;
       slide.querySelectorAll('img[data-featured-src]').forEach(image => {
@@ -4291,10 +4291,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     };
     const scheduleNextFeatured = () => {
-      if (slides.length < 2) return;
+      if (document.hidden || document.documentElement.classList.contains('performance-lite') || slides.length < 2) return;
       const nextSlide = slides[(index + 1) % slides.length];
       const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 700));
-      idle(() => hydrateFeaturedSlide(nextSlide), { timeout: 1800 });
+      idle(() => { if (!document.hidden && host.isConnected && !document.documentElement.classList.contains('performance-lite')) hydrateFeaturedSlide(nextSlide); }, { timeout: 1800 });
     };
     const go = next => {
       index = (next + slides.length) % slides.length;
@@ -4303,15 +4303,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
       scheduleNextFeatured();
     };
-    const stop = () => { if (timer) clearInterval(timer); timer = null; };
-    const start = () => {
-      stop();
-      if (document.documentElement.classList.contains('performance-lite')) return;
-      if (slides.length > 1) timer = setInterval(() => go(index + 1), 10000);
-    };
+    const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(index + 1); }, 10000);
+    const { start, stop } = autoplay;
     dots.forEach(dot => dot.addEventListener('click', () => { go(Number(dot.dataset.goto || 0)); start(); }));
-    host.addEventListener('mouseenter', stop);
-    host.addEventListener('mouseleave', start);
+    host.onmouseenter = stop;
+    host.onmouseleave = start;
     start();
     scheduleNextFeatured();
     bindBannerImageFallbacks(host);
@@ -4406,16 +4402,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
 
+    host._beAutoplay?.dispose();
     const items = chooseRandomFeaturedItems(view, force, 3);
     if (!items.length) {
       host.innerHTML = '';
       section.hidden = true;
       return;
-    }
-
-    if (host._beRandomFeaturedTimer) {
-      clearInterval(host._beRandomFeaturedTimer);
-      host._beRandomFeaturedTimer = null;
     }
 
     host.innerHTML = items.map((item, index) => {
@@ -4496,11 +4488,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     };
     const scheduleNextSlide = () => {
-      if (document.documentElement.classList.contains('performance-lite')) return;
+      if (document.hidden || document.documentElement.classList.contains('performance-lite')) return;
       if (slides.length < 2) return;
       const nextSlide = slides[(activeIndex + 1) % slides.length];
       const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 700));
-      idle(() => hydrateSlide(nextSlide), { timeout: 1800 });
+      idle(() => { if (!document.hidden && host.isConnected && !document.documentElement.classList.contains('performance-lite')) hydrateSlide(nextSlide); }, { timeout: 1800 });
     };
     const go = next => {
       activeIndex = (next + slides.length) % slides.length;
@@ -4509,16 +4501,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       dots.forEach((dot, index) => dot.classList.toggle('active', index === activeIndex));
       scheduleNextSlide();
     };
-    const stop = () => {
-      if (!host._beRandomFeaturedTimer) return;
-      clearInterval(host._beRandomFeaturedTimer);
-      host._beRandomFeaturedTimer = null;
-    };
-    const start = () => {
-      stop();
-      if (document.documentElement.classList.contains('performance-lite')) return;
-      if (slides.length > 1) host._beRandomFeaturedTimer = setInterval(() => go(activeIndex + 1), 10000);
-    };
+    const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(activeIndex + 1); }, 10000);
+    const { start, stop } = autoplay;
 
     dots.forEach(dot => dot.addEventListener('click', () => {
       go(Number(dot.dataset.goto || 0));
@@ -12751,12 +12735,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
 
+    if (!image.hasAttribute('loading')) image.loading = 'lazy';
     if (!image.getAttribute('fetchpriority')) {
       try { image.fetchPriority = 'low'; } catch (_) {}
     }
   };
-
-  const applyFramePolicy = frame => { void frame; };
 
   const revealDeferredSource = element => {
     if (!(element instanceof Element)) return;
@@ -12787,21 +12770,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           revealDeferredSource(entry.target);
           deferredObserver.unobserve(entry.target);
         });
-      }, { rootMargin: '500px 0px' })
+      }, { rootMargin: document.documentElement.classList.contains('performance-lite') ? '180px 0px' : '500px 0px' })
     : null;
 
   const processNode = node => {
     if (!(node instanceof Element)) return;
 
-    if (node.matches('img')) applyImagePolicy(node);
-    if (node.matches('iframe')) applyFramePolicy(node);
-
-    node.querySelectorAll('img').forEach(applyImagePolicy);
-    node.querySelectorAll('iframe').forEach(applyFramePolicy);
-
     const deferred = [];
-    if (node.matches('[data-src],[data-srcset],[data-bg-src]')) deferred.push(node);
-    node.querySelectorAll('[data-src],[data-srcset],[data-bg-src]').forEach(item => deferred.push(item));
+    const selector = 'img,[data-src],[data-srcset],[data-bg-src]';
+    const processElement = element => {
+      if (element.matches('img')) applyImagePolicy(element);
+      if (element.matches('[data-src],[data-srcset],[data-bg-src]')) deferred.push(element);
+    };
+    if (node.matches(selector)) processElement(node);
+    node.querySelectorAll(selector).forEach(processElement);
 
     deferred.forEach(item => {
       if (deferredObserver) deferredObserver.observe(item);
@@ -12812,10 +12794,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const start = () => {
     processNode(document.documentElement);
 
-    const mutationObserver = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(processNode);
+    const pending = new Set();
+    let scheduled = false;
+    const flush = () => {
+      scheduled = false;
+      const roots = Array.from(pending);
+      roots.forEach(node => {
+        if (!node.isConnected) return;
+        for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+          if (pending.has(parent)) return;
+        }
+        processNode(node);
       });
+      pending.clear();
+    };
+    const mutationObserver = new MutationObserver(mutations => {
+      mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+        if (node instanceof Element) pending.add(node);
+      }));
+      if (!pending.size || scheduled) return;
+      scheduled = true;
+      // One scan per added subtree, coalesced across a catalog render.
+      if (document.hidden) window.setTimeout(flush, 0);
+      else window.requestAnimationFrame(flush);
     });
 
     mutationObserver.observe(document.documentElement, {
@@ -16305,7 +16306,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var fDots = Array.prototype.slice.call(document.querySelectorAll('.f-dot'));
     var fIndex = 0;
     var AUTOPLAY_MS = 10000;
-    var fTimer = null;
+    var initialAutoplay = window.BETVAutoplay(featured, nextSlide, AUTOPLAY_MS);
 
     function goToSlide(i){
       fIndex = (i + fSlides.length) % fSlides.length;
@@ -16313,13 +16314,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       fDots.forEach(function(d, idx){ d.classList.toggle('active', idx === fIndex); });
     }
     function nextSlide(){ goToSlide(fIndex + 1); }
-    function startAutoplay(){
-      stopAutoplay();
-      fTimer = window.setInterval(nextSlide, AUTOPLAY_MS);
-    }
-    function stopAutoplay(){
-      if (fTimer){ window.clearInterval(fTimer); fTimer = null; }
-    }
+    function startAutoplay(){ if (fSlides.length > 1) initialAutoplay.start(); }
+    function stopAutoplay(){ initialAutoplay.stop(); }
 
     fDots.forEach(function(dot){
       dot.addEventListener('click', function(){
@@ -16328,8 +16324,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     });
 
-    featured.addEventListener('mouseenter', stopAutoplay);
-    featured.addEventListener('mouseleave', startAutoplay);
+    featured.onmouseenter = stopAutoplay;
+    featured.onmouseleave = startAutoplay;
+    featured._beAutoplay = initialAutoplay;
 
     goToSlide(0);
     startAutoplay();
@@ -16578,15 +16575,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     function restart(){
       clearInterval(bgTimer);
-      if(document.hidden)return;
-      bgTimer=setInterval(function(){show(randomIndex(bgIndex))},isMobile?16000:10000);
+      if(document.hidden||!document.body.classList.contains('login-mode')||document.documentElement.classList.contains('performance-lite'))return;
+      bgTimer=setInterval(function(){if(document.body.classList.contains('login-mode')&&!document.documentElement.classList.contains('performance-lite'))show(randomIndex(bgIndex));else clearInterval(bgTimer)},isMobile?16000:10000);
     }
     if(dots)dots.addEventListener('click',function(e){var button=e.target.closest('[data-bg]');if(!button)return;show(Number(button.dataset.bg));restart()});
     document.addEventListener('visibilitychange',function(){if(document.hidden)clearInterval(bgTimer);else restart();},{passive:true});
+    window.addEventListener('be:performance-change',restart);
     show(bgIndex);
     restart();
     var idle=window.requestIdleCallback||function(callback){return setTimeout(callback,900)};
-    idle(function(){var next=randomIndex(bgIndex);ensureLoaded(slides[next]);});
+    idle(function(){if(document.hidden||document.documentElement.classList.contains('performance-lite'))return;var next=randomIndex(bgIndex);ensureLoaded(slides[next]);});
   }
 
   function discordLoginPending(){
