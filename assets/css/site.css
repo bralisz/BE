@@ -19361,33 +19361,6 @@ html.performance-lite .f-slide:not(.active) img{
   -webkit-text-fill-color:#fff!important;
 }
 
-@media(max-width:760px){
-  .mobile-account-popover.is-logged-out > :not([data-mobile-account="create-account"]){
-    display:none!important;
-  }
-  .mobile-account-popover.is-logged-out [data-mobile-account="create-account"]{
-    display:flex!important;
-    align-items:center;
-    justify-content:center;
-    min-height:50px;
-    padding:0 16px;
-    border:1px solid rgba(255,255,255,.10)!important;
-    border-radius:14px;
-    background:#1688ff!important;
-    color:#fff!important;
-    -webkit-text-fill-color:#fff!important;
-    font-weight:800!important;
-    text-align:center;
-  }
-  .mobile-account-popover.is-logged-out [data-mobile-account="create-account"]:active,
-  .mobile-account-popover.is-logged-out [data-mobile-account="create-account"]:focus-visible{
-    background:#087cf0!important;
-    color:#fff!important;
-    -webkit-text-fill-color:#fff!important;
-  }
-}
-
-
 /* 2026-08-24: login, skeleton stability, devices and Community CTA */
 @media (min-width:900px){
   .login-trust-note{width:min(720px,calc(100vw - 48px));max-width:calc(100vw - 48px)}
@@ -21339,8 +21312,6 @@ html[lang^="fr"] .login-trust-copy-fr{display:block}
 
 @media(max-width:760px){
   .mobile-account-popover.is-logged-out > .mobile-account-group{display:block!important}
-  .mobile-account-popover.is-logged-out [data-mobile-account="create-account"][hidden]{display:none!important}
-  body:not(.login-mode):not(.admin-mode) .mobile-account-popover.is-logged-out [data-mobile-account="create-account"]{justify-content:space-between;border:0!important;border-bottom:1px solid rgba(255,255,255,.065)!important;border-radius:0;background:transparent!important;font-weight:450!important;text-align:left}
   .mobile-footer-support-cta,.footer-fans-support-link,.donate-home-spotlight{display:none!important}
 }
 

@@ -730,7 +730,7 @@
     mobileMenu=document.createElement('div');mobileMenu.className='mobile-account-popover';mobileMenu.id='mobileAccountPopover';mobileMenu.setAttribute('role','menu');mobileMenu.setAttribute('aria-label','Menu');
     mobileMenu.innerHTML='<div class="mobile-account-group" role="none">'+item('profile','Perfil',icons.user)+item('community','Comunidade',icons.people)+item('settings','Configurações',icons.settings)+'</div>'+
       '<div class="mobile-account-group" role="none">'+item('support','Suporte',icons.support)+item('donate','Apoie uma ONG',icons.heart)+'</div>'+
-      '<div class="mobile-account-group" role="none">'+item('login','Entrar',icons.user)+item('create-account','Criar conta',icons.user,' hidden')+item('install','Instalar app',icons.install)+item('logout','Sair',icons.logout,' class="danger"')+'</div>';
+      '<div class="mobile-account-group" role="none">'+item('login','Entrar',icons.user)+item('install','Instalar app',icons.install)+item('logout','Sair',icons.logout,' class="danger"')+'</div>';
     document.body.appendChild(mobileMenu);applyI18n(mobileMenu);if(typeof window.BETVSyncInstallUi==='function')window.BETVSyncInstallUi();
     mobileMenu.addEventListener('click',function(event){
       var button=event.target.closest('[data-mobile-account]');if(!button)return;
@@ -739,7 +739,6 @@
       if(action==='community'){openCommunity();return;}
       if(action==='notifications'){window.dispatchEvent(new CustomEvent('be:open-notifications'));return;}
       if(action==='billie'||action==='donate'){var link=document.querySelector(action==='billie'?'a[data-open-billie]':'a[data-open-donate]');if(link)link.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go(action==='billie'?'/billie-eilish':'/ong');return;}
-      if(action==='create-account'){closeCommunity(false);window.dispatchEvent(new CustomEvent('be:auth-signup-entry'));return;}
       if(action==='login'){var accountAction=document.getElementById('publicAuthAction');if(accountAction)accountAction.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}
       if(action==='profile'||action==='settings'){var nav=window.BETVNavigation;if(nav&&typeof nav[action==='profile'?'openProfile':'openSettings']==='function')nav[action==='profile'?'openProfile':'openSettings']();else{var original=document.querySelector('#userDropdown [data-public-action="'+action+'"]');if(original)original.click();}return;}
       if(action==='install'){if(typeof window.BETVRequestAppInstall==='function')window.BETVRequestAppInstall();return;}
@@ -768,7 +767,7 @@
     var user=currentUser();var expectedSession=false;try{expectedSession=localStorage.getItem('beAuthExpected')==='1'&&Boolean(localStorage.getItem('beSessionUid'));}catch(_){ }
     var loggedIn=Boolean(user)||expectedSession;var guestActive=!loggedIn&&Boolean(window.BETVGuestAccess&&window.BETVGuestAccess.isActive());
     mobileMenu.classList.toggle('is-logged-out',!loggedIn);mobileMenu.classList.toggle('is-guest-account',guestActive);
-    mobileMenu.querySelector('[data-mobile-account="create-account"]').hidden=loggedIn;mobileMenu.querySelector('[data-mobile-account="login"]').hidden=loggedIn;
+    mobileMenu.querySelector('[data-mobile-account="login"]').hidden=loggedIn;
     ['profile','settings','logout'].forEach(function(action){mobileMenu.querySelector('[data-mobile-account="'+action+'"]').hidden=!loggedIn;});
     var install=mobileMenu.querySelector('[data-mobile-account="install"]');var running=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installed=typeof window.BETVIsAppInstalled==='function'&&window.BETVIsAppInstalled();
     install.hidden=running;install.querySelector('.mobile-account-label').textContent=installed&&!running?'Abrir app':'Instalar app';install.classList.toggle('is-installed',installed&&!running);

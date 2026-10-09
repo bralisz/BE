@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {execFileSync}=require('node:child_process');
 if(!process.argv[2]){
-  for(const scenario of ['profile','mobile-profile','guest-profile','community','community-ong','stale-community','signup','chunk-retry','history','images','settings','search']){
+  for(const scenario of ['profile','mobile-profile','guest-profile','community','community-ong','stale-community','guest-login','chunk-retry','history','images','settings','search']){
     process.stdout.write(execFileSync(process.execPath,[__filename,scenario],{timeout:10000,encoding:'utf8'}));
   }
   process.exit();
@@ -14,8 +14,8 @@ const errors=[];
 const vc=new VirtualConsole();vc.on('jsdomError',error=>{if(!error.message.includes('Not implemented'))errors.push(error.cause||error);});
 const dom=new JSDOM(fs.readFileSync('index.html','utf8'),{url:'https://billieilishtv.site/'+(scenario==='guest-profile'?'@other':''),runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
 const w=dom.window;
-if(scenario==='mobile-profile'||scenario==='signup')w.innerWidth=390;
-w.matchMedia=query=>({matches:(scenario==='mobile-profile'||scenario==='signup')&&query.includes('max-width'),addEventListener(){},addListener(){}});
+if(scenario==='mobile-profile'||scenario==='guest-login')w.innerWidth=390;
+w.matchMedia=query=>({matches:(scenario==='mobile-profile'||scenario==='guest-login')&&query.includes('max-width'),addEventListener(){},addListener(){}});
 w.scrollTo=options=>{w.scrollY=Number(options.top)||0;w.scrollX=Number(options.left)||0;};
 w.fetch=async()=>({ok:true,json:async()=>({}),text:async()=>'',headers:{get:()=>''}});
 w.IntersectionObserver=class{observe(){}unobserve(){}disconnect(){}};w.ResizeObserver=class{observe(){}disconnect(){}};w.CSS={escape:x=>x};w.navigator.sendBeacon=()=>true;
@@ -94,19 +94,18 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(2
     assert(w.document.body.classList.contains('donate-page-active'));
     assert(!w.document.body.classList.contains('community-page-active'),'late chunk must not reactivate Community');
   }
-  if(scenario==='signup'){
+  if(scenario==='guest-login'){
     w.document.getElementById('guestAccessButton').click();
     w.dispatchEvent(new w.CustomEvent('be:toggle-mobile-account-menu'));
     await until(()=>w.document.body.classList.contains('mobile-account-menu-open'));
     const menu=w.document.getElementById('mobileAccountPopover');
     const login=menu.querySelector('[data-mobile-account="login"]');
-    const signup=menu.querySelector('[data-mobile-account="create-account"]');
     assert.equal(login.hidden,false,'logged-out visitor must see Entrar');
-    assert.equal(signup.hidden,false,'logged-out visitor must see Criar conta');
-    signup.click();
+    assert.equal(menu.querySelector('[data-mobile-account="create-account"]'),null,'visitor must not see a separate Criar conta action');
+    assert.equal(w.document.getElementById('publicSignupAction'),null,'desktop menu must not contain a separate registration action');
+    login.click();
     await until(()=>w.document.body.classList.contains('login-mode'));
-    assert.match(w.document.getElementById('emailStepTitle').textContent,/criar sua conta/i);
-    assert.equal(w.document.getElementById('emailStep').hidden,false);
+    assert.equal(w.document.getElementById('emailStep').hidden,false,'Entrar opens email-first sign in or registration');
   }
   if(scenario==='settings'){
     w.document.querySelector('[data-public-action="settings"]').click();
