@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');const vm=require('node:vm');
-const source=fs.readFileSync('assets/js/site.js','utf8');
+const source=fs.readFileSync('assets/js/account.js','utf8');
 const calls=[];const nodes=new Map();
 const node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:false,disabled:false,innerHTML:'',classList:{toggle(){}},setAttribute(){}});return nodes.get(id)};
 let handle='target',following=false;
