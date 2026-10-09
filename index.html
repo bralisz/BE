@@ -207,20 +207,24 @@ html.legal-route-boot #legalPage,html.legal-route-boot .legal-page-header,html.l
 <script>
 (function(){
   try{
-    var mobile=window.matchMedia&&window.matchMedia('(max-width: 760px)').matches;
-    var memory=Number(navigator.deviceMemory||0);
-    var cores=Number(navigator.hardwareConcurrency||0);
+    var mobileQuery=window.matchMedia('(max-width: 760px)');
+    var motionQuery=window.matchMedia('(prefers-reduced-motion: reduce)');
     var connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection||null;
-    var saveData=Boolean(connection&&connection.saveData);
-    var effectiveType=String(connection&&connection.effectiveType||'').toLowerCase();
-    var slowNetwork=/^(slow-2g|2g)$/.test(effectiveType);
-    var reducedMotion=Boolean(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    var lite=saveData||slowNetwork||reducedMotion||(memory&&memory<=4)||(cores&&cores<=4);
-    if(mobile)document.documentElement.classList.add('mobile-optimized');
-    if(lite){
-      document.documentElement.classList.add('performance-lite');
-      if(mobile)document.documentElement.classList.add('mobile-lite');
+    function updatePerformance(){
+      var memory=Number(navigator.deviceMemory||0);
+      var cores=Number(navigator.hardwareConcurrency||0);
+      var slowNetwork=/^(slow-2g|2g)$/.test(String(connection&&connection.effectiveType||''));
+      var lite=Boolean(connection&&connection.saveData)||slowNetwork||motionQuery.matches||(memory>0&&memory<=4)||(cores>0&&cores<=4);
+      var root=document.documentElement;
+      root.classList.toggle('mobile-optimized',mobileQuery.matches);
+      root.classList.toggle('performance-lite',Boolean(lite));
+      root.classList.toggle('mobile-lite',Boolean(lite)&&mobileQuery.matches);
+      window.dispatchEvent(new Event('be:performance-change'));
     }
+    updatePerformance();
+    [mobileQuery,motionQuery,connection].forEach(function(target){
+      if(target&&target.addEventListener)target.addEventListener('change',updatePerformance);
+    });
   }catch(_){ }
 })();
 </script>
@@ -233,10 +237,11 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   body:not(.login-mode) .home-notification-menu{position:fixed!important;top:21px!important;right:88px!important;left:auto!important;z-index:10025!important}
 }
 </style>
-<link rel="preload" href="/_static/styles/site.css?rev=20261008-centered-profile-v8" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261008-centered-profile-v8"></noscript>
+<link rel="preload" href="/_static/styles/site.css?rev=20261009-loading-recovery-v11" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261009-loading-recovery-v11"></noscript>
 <script defer src="/api/runtime?v=2.112.0"></script>
-<script defer src="/_static/chunks/site.js?rev=20261008-centered-profile-v8"></script>
+<script defer src="/_static/chunks/performance.js?rev=20261009-loading-recovery-v11"></script>
+<script defer src="/_static/chunks/site.js?rev=20261009-loading-recovery-v11"></script>
 
 <script>
 (function(){
@@ -311,7 +316,28 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
       <div class="site-skeleton-cards"><i class="site-skeleton-card skeleton-shimmer"></i><i class="site-skeleton-card skeleton-shimmer"></i><i class="site-skeleton-card skeleton-shimmer"></i><i class="site-skeleton-card skeleton-shimmer"></i></div>
     </section>
   </div>
+  <div id="siteLoadingRecovery" hidden style="position:absolute;inset:0;display:grid;place-content:center;padding:24px;background:#030405;color:#fff;text-align:center;font-family:system-ui,sans-serif">
+    <p>O site demorou para responder. Verifique sua conexão e tente novamente.</p>
+    <button id="siteLoadingRetry" type="button" style="min-height:44px;padding:10px 18px;border:0;border-radius:12px;background:#fff;color:#111;font-weight:700">Tentar novamente</button>
+  </div>
 </div>
+<script>
+(function(){
+  var panel=document.getElementById('siteLoadingRecovery');
+  if(panel)panel.style.display='none';
+  document.getElementById('siteLoadingRetry').addEventListener('click',function(){location.reload();});
+  window.setTimeout(function(){
+    if(!panel||!document.documentElement.classList.contains('site-loading-active')||location.hash.startsWith('#/admin'))return;
+    var loading=document.getElementById('authLoading');
+    if(!loading||loading.hidden)return;
+    panel.hidden=false;
+    panel.style.display='grid';
+    loading.setAttribute('aria-label','O site demorou para responder');
+    var skeleton=loading.querySelector('.site-loading-skeleton');
+    if(skeleton)skeleton.style.display='none';
+  },12000);
+})();
+</script>
 <section id="authGate" aria-label="Entrar ou criar conta" data-nosnippet>
   <div class="login-bg-stack" id="loginBgStack" aria-hidden="true">
     <div class="login-bg-slide active" style="background-image:url('/_static/media/auth/login-admin-banner.webp')"></div>

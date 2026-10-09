@@ -1915,9 +1915,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const expiresAt = nowMs + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
     const featuredFresh = Math.max(0, Number(bundleAgeMs) || 0) < FEATURED_FRESH_TTL_MS;
     for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
-      if (name === 'featured' && !featuredFresh) continue;
+      const collectionExpiresAt = name === 'featured' && !featuredFresh ? nowMs + 30000 : expiresAt;
       const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
-      publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt });
+      publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt: collectionExpiresAt });
     }
     const siteSettings = bundle && bundle.settings && bundle.settings.site;
     if (siteSettings && typeof siteSettings === 'object') {
@@ -1928,24 +1928,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  // Public reads must settle even if a fetch/body stalls on a weak connection.
+  async function fetchPublicJson(url, timeoutMs = 8000) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    let timer;
+    const deadline = new Promise((_, reject) => {
+      timer = window.setTimeout(() => {
+        controller?.abort();
+        reject(backendError('public_data_timeout', 'A conexão demorou para responder. Tente novamente.'));
+      }, timeoutMs);
+    });
+    const request = Promise.resolve().then(() => fetch(url, {
+      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' },
+      ...(controller ? { signal: controller.signal } : {})
+    })).then(response => {
+      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+      return response.json();
+    });
+    try { return await Promise.race([request, deadline]); }
+    finally { window.clearTimeout(timer); }
+  }
+
   async function fetchHomeVersions(locale) {
     const params = new URLSearchParams({ name: 'home-version', locale: String(locale || activeLocaleSlug()) });
-    const response = await fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-    return normalizeHomeVersionState(await response.json());
+    return normalizeHomeVersionState(await fetchPublicJson(`/api/public-data?${params.toString()}`, 3000));
   }
 
   async function fetchVersionedSiteSettings(locale, settingsVersion) {
     const params = new URLSearchParams({ name: 'settings', id: 'site', locale: String(locale || activeLocaleSlug()) });
     const revision = String(settingsVersion || '').trim();
     if (revision) params.set('v', revision);
-    const response = await fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) return null;
-    const settings = await response.json();
+    const settings = await fetchPublicJson(`/api/public-data?${params.toString()}`);
     return settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : null;
   }
 
@@ -1955,17 +1968,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (existing) return existing;
     const promise = (async () => {
       let versions = normalizeHomeVersionState(versionHint);
-      if (!versions.catalogVersion) {
-        try { versions = await fetchHomeVersions(normalizedLocale); } catch (_) {}
-      }
-
       const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale });
       if (versions.catalogVersion) params.set('v', versions.catalogVersion);
-      const response = await fetch(`/api/public-data?${params.toString()}`, {
-        method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
-      });
-      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-      const bundle = await response.json();
+      const bundle = await fetchPublicJson(`/api/public-data?${params.toString()}`);
       const bundleVersions = normalizeHomeVersionState(bundle && bundle.__versions);
       if (!versions.catalogVersion) versions.catalogVersion = bundleVersions.catalogVersion;
       if (!versions.settingsVersion) versions.settingsVersion = bundleVersions.settingsVersion;
@@ -2019,8 +2024,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           changed = true;
         }
       }
-      bundle.__versions = versions;
-      markHomeBootstrapValidated(normalizedLocale, cachedEntry, bundle, versions);
+      bundle.__versions = { catalogVersion: versions.catalogVersion, settingsVersion: changed ? versions.settingsVersion : cachedVersions.settingsVersion };
+      markHomeBootstrapValidated(normalizedLocale, cachedEntry, bundle, bundle.__versions);
 
       const featuredSavedAt = Number(cachedEntry.featuredSavedAt || cachedEntry.savedAt || Date.now());
       const featuredAge = Math.max(0, Date.now() - featuredSavedAt);
@@ -2030,6 +2035,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return { bundle, changed, fullRefresh: false };
     })().finally(() => homeBootstrapValidationInFlight.delete(normalizedLocale));
     homeBootstrapValidationInFlight.set(normalizedLocale, promise);
+    return promise;
+  }
+
+  const featuredRefreshInFlight = new Map();
+  function refreshCachedFeaturedInBackground(locale) {
+    if (featuredRefreshInFlight.has(locale)) return featuredRefreshInFlight.get(locale);
+    const params = new URLSearchParams({ name: 'featured', locale });
+    const promise = fetchPublicJson(`/api/public-data?${params.toString()}`).then(rows => {
+      if (!Array.isArray(rows)) return;
+      publicDataMemoryCache.set(`featured::${locale}`, { promise: Promise.resolve(rows), expiresAt: Date.now() + FEATURED_FRESH_TTL_MS });
+      updateHomeBootstrapFeaturedBrowserCache(locale, rows);
+      const cached = homeBootstrapMemoryCache.get(locale);
+      if (cached) cached.promise.then(bundle => { bundle.featured = rows; }).catch(() => {});
+      if (window.__beContentReady) window.dispatchEvent(new CustomEvent('be:home-data-updated', { detail: { catalog: true } }));
+    }).finally(() => featuredRefreshInFlight.delete(locale));
+    featuredRefreshInFlight.set(locale, promise);
     return promise;
   }
 
@@ -2053,12 +2074,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         promise: browserPromise,
         expiresAt: nowMs + Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining)
       });
+      if (featuredAge >= FEATURED_FRESH_TTL_MS) {
+        const schedule = window.requestIdleCallback || (callback => window.setTimeout(callback, 350));
+        schedule(() => refreshCachedFeaturedInBackground(locale).catch(() => {}), { timeout: 1800 });
+      }
       if (browserCached.__stale) {
         const schedule = window.requestIdleCallback || (callback => window.setTimeout(callback, 350));
         schedule(() => validatePublicHomeDataInBackground(locale, browserCached).then(result => {
           if (result?.changed && window.__beContentReady && !document.hidden && !document.body.classList.contains('detail-page-active')) {
-            renderFeatured().catch(() => {});
-            renderVideoCatalog().catch(() => {});
+            window.dispatchEvent(new CustomEvent('be:home-data-updated', { detail: { catalog: result.fullRefresh, settings: true } }));
           }
         }).catch(() => {}), { timeout: 1800 });
       }
@@ -2093,12 +2117,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           : normalizedName === 'featured'
             ? FEATURED_FRESH_TTL_MS
             : 30 * 60 * 1000;
-    const promise = fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
-    }).then(response => {
-      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-      return response.json();
-    }).then(payload => {
+    const promise = fetchPublicJson(`/api/public-data?${params.toString()}`).then(payload => {
       if (normalizedName === 'featured' && !normalizedId && Array.isArray(payload)) {
         updateHomeBootstrapFeaturedBrowserCache(locale, payload);
       }
@@ -2167,6 +2186,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   const supabaseData = {
+    async refreshFeatured() {
+      if (usesProtectedAdminData()) return;
+      return refreshCachedFeaturedInBackground(activeLocaleSlug());
+    },
     async preloadHome() {
       if (usesProtectedAdminData()) return null;
       return preloadPublicHomeData();
@@ -4032,12 +4055,36 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.beRenderMarkdown = markdownToHtml;
   window.beMarkdownPlainText = markdownToPlainText;
 
-  async function startDynamicContent() {
+  let dynamicContentInFlight = null;
+  function showCatalogLoadError() {
+    if (document.getElementById('dynamicSections') || document.getElementById('catalogLoadError')) return;
+    const main = document.querySelector('main');
+    if (!main) return;
+    const message = document.createElement('section');
+    message.id = 'catalogLoadError';
+    message.className = 'catalog-load-error';
+    message.setAttribute('role', 'status');
+    message.innerHTML = '<p>Não foi possível carregar os conteúdos. Verifique sua conexão e tente novamente.</p><button type="button">Tentar novamente</button>';
+    message.querySelector('button').addEventListener('click', async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      button.textContent = 'Carregando…';
+      try { await startDynamicContent(); }
+      finally { button.disabled = false; button.textContent = 'Tentar novamente'; }
+    });
+    main.insertAdjacentElement('afterend', message);
+  }
+  function startDynamicContent() {
+    if (dynamicContentInFlight) return dynamicContentInFlight;
+    dynamicContentInFlight = loadDynamicContent().finally(() => { dynamicContentInFlight = null; });
+    return dynamicContentInFlight;
+  }
+  async function loadDynamicContent() {
     setupHomeNavigation();
     setupDetailControls();
     try {
       if (!window.beBackend) return;
-      await window.beBackend.ready;
+      if (window.beBackend.mode !== 'supabase') await window.beBackend.ready;
       if (window.beBackend.data && typeof window.beBackend.data.preloadHome === 'function') {
         await window.beBackend.data.preloadHome().catch(error => {
           (void 0);
@@ -4048,6 +4095,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         renderFeatured(),
         renderVideoCatalog()
       ]);
+      if (contentTasks[2].status === 'rejected') showCatalogLoadError();
+      else document.getElementById('catalogLoadError')?.remove();
       contentTasks.forEach(result => {
         if (result.status === 'rejected') (void 0);
       });
@@ -4067,6 +4116,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                               
                                                                             
                                                                            
+  window.addEventListener('be:home-data-updated', event => {
+    if (!window.__beContentReady || document.hidden || document.body.classList.contains('detail-page-active')) return;
+    const tasks = [];
+    if (event.detail?.settings) tasks.push(applySiteSettings());
+    if (event.detail?.catalog) tasks.push(renderFeatured(), renderVideoCatalog());
+    Promise.allSettled(tasks);
+  });
+
   let featuredPageHiddenAt = 0;
   let featuredResumeRefreshRunning = false;
   const FEATURED_RESUME_REFRESH_MS = 15 * 60 * 1000;
@@ -4078,13 +4135,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!force && (!featuredPageHiddenAt || elapsed < FEATURED_RESUME_REFRESH_MS)) return;
     featuredResumeRefreshRunning = true;
     try {
-      const locale = activeLocaleSlug();
-      // Atualiza apenas a coleção pequena de destaques. Não apaga o bootstrap
-      // inteiro nem força download do catálogo depois de uma simples troca de aba.
-      publicDataMemoryCache.delete(`featured::${locale}`);
-      const rows = await readPublicData('featured');
-      if (Array.isArray(rows)) updateHomeBootstrapFeaturedBrowserCache(locale, rows);
-      if (window.__beContentReady) await renderVideoCatalog();
+      const data = window.beBackend?.data;
+      if (typeof data?.refreshFeatured === 'function') await data.refreshFeatured();
+      else if (window.__beContentReady) await Promise.all([renderFeatured(), renderVideoCatalog()]);
     } catch (error) {
       (void 0);
     } finally {
@@ -4157,6 +4210,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   async function renderFeatured() {
     const host = document.getElementById('featured');
     if (!host) return;
+    host._beAutoplay?.dispose();
     const section = host.closest('.featured-wrap');
     if (section) section.hidden = true;
 
@@ -4280,7 +4334,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const slides = Array.from(host.querySelectorAll('.f-slide'));
     const dots = Array.from(host.querySelectorAll('.f-dot'));
     let index = 0;
-    let timer = null;
     const hydrateFeaturedSlide = slide => {
       if (!slide) return;
       slide.querySelectorAll('img[data-featured-src]').forEach(image => {
@@ -4291,10 +4344,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     };
     const scheduleNextFeatured = () => {
-      if (slides.length < 2) return;
+      if (document.hidden || document.documentElement.classList.contains('performance-lite') || slides.length < 2) return;
       const nextSlide = slides[(index + 1) % slides.length];
       const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 700));
-      idle(() => hydrateFeaturedSlide(nextSlide), { timeout: 1800 });
+      idle(() => { if (!document.hidden && host.isConnected && !document.documentElement.classList.contains('performance-lite')) hydrateFeaturedSlide(nextSlide); }, { timeout: 1800 });
     };
     const go = next => {
       index = (next + slides.length) % slides.length;
@@ -4303,15 +4356,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
       scheduleNextFeatured();
     };
-    const stop = () => { if (timer) clearInterval(timer); timer = null; };
-    const start = () => {
-      stop();
-      if (document.documentElement.classList.contains('performance-lite')) return;
-      if (slides.length > 1) timer = setInterval(() => go(index + 1), 10000);
-    };
+    const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(index + 1); }, 10000, slides.length > 1);
+    const { start, stop } = autoplay;
     dots.forEach(dot => dot.addEventListener('click', () => { go(Number(dot.dataset.goto || 0)); start(); }));
-    host.addEventListener('mouseenter', stop);
-    host.addEventListener('mouseleave', start);
+    host.onmouseenter = stop;
+    host.onmouseleave = start;
     start();
     scheduleNextFeatured();
     bindBannerImageFallbacks(host);
@@ -4406,16 +4455,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
 
+    host._beAutoplay?.dispose();
     const items = chooseRandomFeaturedItems(view, force, 3);
     if (!items.length) {
       host.innerHTML = '';
       section.hidden = true;
       return;
-    }
-
-    if (host._beRandomFeaturedTimer) {
-      clearInterval(host._beRandomFeaturedTimer);
-      host._beRandomFeaturedTimer = null;
     }
 
     host.innerHTML = items.map((item, index) => {
@@ -4496,11 +4541,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     };
     const scheduleNextSlide = () => {
-      if (document.documentElement.classList.contains('performance-lite')) return;
+      if (document.hidden || document.documentElement.classList.contains('performance-lite')) return;
       if (slides.length < 2) return;
       const nextSlide = slides[(activeIndex + 1) % slides.length];
       const idle = window.requestIdleCallback || (callback => window.setTimeout(callback, 700));
-      idle(() => hydrateSlide(nextSlide), { timeout: 1800 });
+      idle(() => { if (!document.hidden && host.isConnected && !document.documentElement.classList.contains('performance-lite')) hydrateSlide(nextSlide); }, { timeout: 1800 });
     };
     const go = next => {
       activeIndex = (next + slides.length) % slides.length;
@@ -4509,16 +4554,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       dots.forEach((dot, index) => dot.classList.toggle('active', index === activeIndex));
       scheduleNextSlide();
     };
-    const stop = () => {
-      if (!host._beRandomFeaturedTimer) return;
-      clearInterval(host._beRandomFeaturedTimer);
-      host._beRandomFeaturedTimer = null;
-    };
-    const start = () => {
-      stop();
-      if (document.documentElement.classList.contains('performance-lite')) return;
-      if (slides.length > 1) host._beRandomFeaturedTimer = setInterval(() => go(activeIndex + 1), 10000);
-    };
+    const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(activeIndex + 1); }, 10000, slides.length > 1);
+    const { start, stop } = autoplay;
 
     dots.forEach(dot => dot.addEventListener('click', () => {
       go(Number(dot.dataset.goto || 0));
@@ -4536,19 +4573,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     section.hidden = false;
   }
 
-  async function renderVideoCatalog() {
+  let catalogRenderInFlight = null;
+  let renderedCatalogSignature = '';
+  function renderVideoCatalog() {
+    if (catalogRenderInFlight) return catalogRenderInFlight;
+    catalogRenderInFlight = renderVideoCatalogNow().finally(() => { catalogRenderInFlight = null; });
+    return catalogRenderInFlight;
+  }
+  async function renderVideoCatalogNow() {
     const main = document.querySelector('main');
     if (!main) return;
+    const collections = ['sections', 'videos', 'movies', 'series', 'featured', 'news'];
+    const results = await Promise.allSettled(collections.map(name => beBackend.data.list(name, { orderBy: 'order', direction: 'asc' })));
+    if (results.every(result => result.status === 'rejected')) throw new Error('catalog-unavailable');
+    const [sectionRows, videoRows, movieRows, seriesRows, featuredRows, albumRows] = results.map(result => result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []);
+    const signature = JSON.stringify([activeLocaleSlug(), sectionRows, videoRows, movieRows, seriesRows, featuredRows, albumRows]);
+    if (document.getElementById('dynamicSections') && signature === renderedCatalogSignature) return;
     sectionViewItemsMemory.clear();
-
-    const [sectionRows, videoRows, movieRows, seriesRows, featuredRows, albumRows] = await Promise.all([
-      beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('series', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('news', { orderBy: 'order', direction: 'asc' }).catch(() => [])
-    ]);
     const sections = sectionRows.filter(section => section.active !== false);
     const allVideos = videoRows.filter(video => video.active !== false);
     const allMovies = movieRows.filter(movie => movie.active !== false);
@@ -4614,7 +4655,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!sections.length && !featuredContents.length && !allAlbums.length) return;
 
     const old = document.getElementById('dynamicSections');
-    if (old) old.remove();
 
     const host = document.createElement('section');
     host.id = 'dynamicSections';
@@ -4762,7 +4802,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     await addBillieHomeSpotlight(host);
     await addAlbumsHomeSection(host, allAlbums);
-    main.insertAdjacentElement('afterend', host);
+    if (old) old.replaceWith(host);
+    else main.insertAdjacentElement('afterend', host);
+    renderedCatalogSignature = signature;
     setupContentDetailInteractions(host);
     setupSectionTitleInteractions(host);
     window.dispatchEvent(new Event('be:catalog-ready'));
@@ -12751,12 +12793,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
 
+    if (!image.hasAttribute('loading')) image.loading = 'lazy';
     if (!image.getAttribute('fetchpriority')) {
       try { image.fetchPriority = 'low'; } catch (_) {}
     }
   };
-
-  const applyFramePolicy = frame => { void frame; };
 
   const revealDeferredSource = element => {
     if (!(element instanceof Element)) return;
@@ -12787,21 +12828,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           revealDeferredSource(entry.target);
           deferredObserver.unobserve(entry.target);
         });
-      }, { rootMargin: '500px 0px' })
+      }, { rootMargin: document.documentElement.classList.contains('performance-lite') ? '180px 0px' : '500px 0px' })
     : null;
 
   const processNode = node => {
     if (!(node instanceof Element)) return;
 
-    if (node.matches('img')) applyImagePolicy(node);
-    if (node.matches('iframe')) applyFramePolicy(node);
-
-    node.querySelectorAll('img').forEach(applyImagePolicy);
-    node.querySelectorAll('iframe').forEach(applyFramePolicy);
-
     const deferred = [];
-    if (node.matches('[data-src],[data-srcset],[data-bg-src]')) deferred.push(node);
-    node.querySelectorAll('[data-src],[data-srcset],[data-bg-src]').forEach(item => deferred.push(item));
+    const selector = 'img,[data-src],[data-srcset],[data-bg-src]';
+    const processElement = element => {
+      if (element.matches('img')) applyImagePolicy(element);
+      if (element.matches('[data-src],[data-srcset],[data-bg-src]')) deferred.push(element);
+    };
+    if (node.matches(selector)) processElement(node);
+    node.querySelectorAll(selector).forEach(processElement);
 
     deferred.forEach(item => {
       if (deferredObserver) deferredObserver.observe(item);
@@ -12812,10 +12852,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const start = () => {
     processNode(document.documentElement);
 
-    const mutationObserver = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(processNode);
+    const pending = new Set();
+    let scheduled = false;
+    const flush = () => {
+      scheduled = false;
+      const roots = Array.from(pending);
+      roots.forEach(node => {
+        if (!node.isConnected) return;
+        for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+          if (pending.has(parent)) return;
+        }
+        processNode(node);
       });
+      pending.clear();
+    };
+    const mutationObserver = new MutationObserver(mutations => {
+      mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+        if (node instanceof Element) pending.add(node);
+      }));
+      if (!pending.size || scheduled) return;
+      scheduled = true;
+      // One scan per added subtree, coalesced across a catalog render.
+      if (document.hidden) window.setTimeout(flush, 0);
+      else window.requestAnimationFrame(flush);
     });
 
     mutationObserver.observe(document.documentElement, {
@@ -16305,7 +16364,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var fDots = Array.prototype.slice.call(document.querySelectorAll('.f-dot'));
     var fIndex = 0;
     var AUTOPLAY_MS = 10000;
-    var fTimer = null;
+    var initialAutoplay = window.BETVAutoplay(featured, nextSlide, AUTOPLAY_MS, fSlides.length > 1);
 
     function goToSlide(i){
       fIndex = (i + fSlides.length) % fSlides.length;
@@ -16313,13 +16372,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       fDots.forEach(function(d, idx){ d.classList.toggle('active', idx === fIndex); });
     }
     function nextSlide(){ goToSlide(fIndex + 1); }
-    function startAutoplay(){
-      stopAutoplay();
-      fTimer = window.setInterval(nextSlide, AUTOPLAY_MS);
-    }
-    function stopAutoplay(){
-      if (fTimer){ window.clearInterval(fTimer); fTimer = null; }
-    }
+    function startAutoplay(){ if (fSlides.length > 1) initialAutoplay.start(); }
+    function stopAutoplay(){ initialAutoplay.stop(); }
 
     fDots.forEach(function(dot){
       dot.addEventListener('click', function(){
@@ -16328,8 +16382,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     });
 
-    featured.addEventListener('mouseenter', stopAutoplay);
-    featured.addEventListener('mouseleave', startAutoplay);
+    featured.onmouseenter = stopAutoplay;
+    featured.onmouseleave = startAutoplay;
+    featured._beAutoplay = initialAutoplay;
 
     goToSlide(0);
     startAutoplay();
@@ -16394,7 +16449,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                               
                                                                              
                                                                        
-    if(authReady&&auth&&(auth.currentUser||(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())))hideSiteSkeleton();
+    if((authReady&&auth&&auth.currentUser)||(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()))hideSiteSkeleton();
   });
 
   function q(id){return document.getElementById(id)}
@@ -16578,15 +16633,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
     function restart(){
       clearInterval(bgTimer);
-      if(document.hidden)return;
-      bgTimer=setInterval(function(){show(randomIndex(bgIndex))},isMobile?16000:10000);
+      if(document.hidden||!document.body.classList.contains('login-mode')||document.documentElement.classList.contains('performance-lite'))return;
+      bgTimer=setInterval(function(){if(document.body.classList.contains('login-mode')&&!document.documentElement.classList.contains('performance-lite'))show(randomIndex(bgIndex));else clearInterval(bgTimer)},isMobile?16000:10000);
     }
     if(dots)dots.addEventListener('click',function(e){var button=e.target.closest('[data-bg]');if(!button)return;show(Number(button.dataset.bg));restart()});
     document.addEventListener('visibilitychange',function(){if(document.hidden)clearInterval(bgTimer);else restart();},{passive:true});
+    window.addEventListener('be:performance-change',restart);
     show(bgIndex);
     restart();
     var idle=window.requestIdleCallback||function(callback){return setTimeout(callback,900)};
-    idle(function(){var next=randomIndex(bgIndex);ensureLoaded(slides[next]);});
+    idle(function(){if(document.hidden||document.documentElement.classList.contains('performance-lite'))return;var next=randomIndex(bgIndex);ensureLoaded(slides[next]);});
   }
 
   function discordLoginPending(){
@@ -18557,8 +18613,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var removableLocalKeys = [];
       for (var index = 0; index < localStorage.length; index += 1) {
         var key = String(localStorage.key(index) || '');
+        if (key.indexOf('betvHomeBootstrapV6:') === 0) {
+          // Preserve the public catalog, but validate its versions on next startup.
+          try {
+            var cachedHome = JSON.parse(localStorage.getItem(key) || 'null');
+            if (cachedHome && cachedHome.bundle) {
+              cachedHome.validatedAt = 1;
+              localStorage.setItem(key, JSON.stringify(cachedHome));
+            }
+          } catch (_) {}
+          continue;
+        }
         var transient = key.indexOf('betvDynamicI18n:') === 0 ||
-          key.indexOf('betvHomeBootstrap') === 0 ||
           key.indexOf('betvDeploymentVersionCheck') === 0 ||
           key.indexOf('betvObservedReleaseState') === 0 ||
           key === 'betvUpdateAssetCache' ||
@@ -18600,70 +18666,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     } catch (_) {}
 
-    return Promise.allSettled(jobs);
-  }
-
-  function currentResourceUrls() {
-    var urls = [];
-
-    try {
-      var documentUrl = new URL(window.location.href);
-      documentUrl.searchParams.delete('__betv_update');
-      documentUrl.searchParams.delete('_');
-      urls.push(documentUrl.href);
-    } catch (_) {}
-
-    try {
-      document.querySelectorAll('script[src],link[href]').forEach(function (node) {
-        if (node.tagName === 'LINK') {
-          var rel = String(node.getAttribute('rel') || '').toLowerCase();
-          if (!/(?:^|\s)(?:stylesheet|modulepreload|preload)(?:\s|$)/.test(rel)) return;
-        }
-
-        var raw = node.tagName === 'SCRIPT' ? node.getAttribute('src') : node.getAttribute('href');
-        if (!raw) return;
-
-        try {
-          var url = new URL(raw, window.location.href);
-          if (url.origin !== window.location.origin) return;
-          url.hash = '';
-          urls.push(url.href);
-        } catch (_) {}
-      });
-    } catch (_) {}
-
-    return Array.from(new Set(urls));
-  }
-
-  function refreshNetworkResources(targetVersion) {
-    var urls = currentResourceUrls();
-    if (!urls.length) return Promise.resolve();
-
-    var controller = typeof AbortController === 'function' ? new AbortController() : null;
-    var timeoutId = window.setTimeout(function () {
-      if (controller) controller.abort();
-    }, 8000);
-
-    var requests = urls.map(function (rawUrl) {
-      var requestUrl = rawUrl;
-      try {
-        var parsed = new URL(rawUrl, window.location.href);
-        parsed.searchParams.set('__betv_asset_update', String(targetVersion || Date.now()));
-        parsed.searchParams.set('_', String(Date.now()));
-        requestUrl = parsed.href;
-      } catch (_) {}
-      var options = {
-        method: 'GET',
-        cache: 'no-store',
-        credentials: 'same-origin',
-        redirect: 'follow',
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-      };
-      if (controller) options.signal = controller.signal;
-      return fetch(requestUrl, options);
+    var timeoutId;
+    var deadline = new Promise(function (resolve) {
+      timeoutId = window.setTimeout(resolve, 3000);
     });
-
-    return Promise.allSettled(requests).finally(function () {
+    return Promise.race([Promise.allSettled(jobs), deadline]).finally(function () {
       window.clearTimeout(timeoutId);
     });
   }
@@ -18703,7 +18710,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     Promise.resolve()
       .then(clearBrowserCaches)
-      .then(function () { return refreshNetworkResources(targetVersion); })
       .finally(function () {
         try {
           var url = new URL(window.location.href);
@@ -21234,6 +21240,289 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
 
+  var BOAF_STREAM_URL='https://open.spotify.com/playlist/7GsA1b3dcISozmOc9G0tcT?si=d0qmzIyJSxiFLUx0flAsng';
+  var BOAF_STREAM_IMAGE='/assets/images/community/boaf-stream-4bi.webp';
+  var BOAF_STREAM_MESSAGE='BIRDS OF A FEATHER, de Billie Eilish, está prestes a fazer história ABSOLUTA como a música solo mais rápida da história do Spotify atingir a marca de 4 BILHÕES de Streams e a PRIMEIRA canção de uma artista feminina a conseguir o feito.';
+  var BOAF_STREAM_NOTICE_KEY='betvBoafStreamNotice:4bi:v2';
+  var boafNoticeOpenedForUser='';
+  var boafNoticeTimer=0;
+  var boafOwnedTagCache=Object.create(null);
+
+  function profileOwnsBoafTag(profile){
+    if(!profile||typeof profile!=='object')return false;
+    var active=String(profile.communityTag||profile.community_tag||'').trim().toLowerCase();
+    if(active==='boaf')return true;
+    var owned=profile.communityTags||profile.community_tags;
+    return Array.isArray(owned)&&owned.some(function(tag){return String(tag||'').trim().toLowerCase()==='boaf';});
+  }
+  async function boafUserOwnsReward(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    if(boafOwnedTagCache[uid]===true)return true;
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var profiles=window.beBackend&&window.beBackend.profiles;
+      if(!profiles||typeof profiles.get!=='function')return false;
+      var profile=await profiles.get(uid);
+      var owned=profileOwnsBoafTag(profile);
+      boafOwnedTagCache[uid]=owned;
+      return owned;
+    }catch(_){return false;}
+  }
+
+  function boafNoticeUser(){
+    var user=currentUser();
+    return user&&user.uid?user:null;
+  }
+  function boafNoticeStorageKey(userId){
+    return BOAF_STREAM_NOTICE_KEY+':'+String(userId||'').trim();
+  }
+  function boafNoticeDismissed(userId){
+    var uid=String(userId||(boafNoticeUser()&&boafNoticeUser().uid)||'').trim();
+    if(!uid)return true;
+    try{return localStorage.getItem(boafNoticeStorageKey(uid))==='seen';}catch(_){return false;}
+  }
+  function dismissBoafNotice(){
+    var user=boafNoticeUser();
+    if(!user||!user.uid)return;
+    try{localStorage.setItem(boafNoticeStorageKey(user.uid),'seen');}catch(_){ }
+    try{window.dispatchEvent(new CustomEvent('be:boaf-stream-notice-dismissed',{detail:{userId:String(user.uid)}}));}catch(_){ }
+  }
+  function isBoafLoginSurface(){
+    var path=String(location.pathname||'').replace(/\/+$/,'').toLowerCase();
+    var hash=String(location.hash||'').toLowerCase();
+    return document.body.classList.contains('login-mode')||path==='/login'||/\/(?:pt-br|en-us|es|fr|it)\/login$/.test(path)||hash==='#login'||hash==='#/login';
+  }
+  function canShowBoafNotice(){
+    var user=boafNoticeUser();
+    if(!user||!user.uid)return false;
+    if(isBoafLoginSurface())return false;
+    if(window.BETVGuestAccess&&typeof window.BETVGuestAccess.isActive==='function'&&window.BETVGuestAccess.isActive())return false;
+    if(boafOwnedTagCache[String(user.uid)]===true)return false;
+    return !boafNoticeDismissed(user.uid);
+  }
+  function boafNewAccountFlowKey(userId){
+    return 'betvNewAccountFlowPending:'+String(userId||'').trim();
+  }
+  function boafNewAccountFlowPending(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    try{return localStorage.getItem(boafNewAccountFlowKey(uid))==='1';}catch(_){return false;}
+  }
+  function boafNewAccountFavoritesReady(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    try{
+      var favorites=JSON.parse(localStorage.getItem('beProfileTopFavorites:'+uid)||'[]');
+      return Array.isArray(favorites)&&favorites.length>=4;
+    }catch(_){return false;}
+  }
+  function boafNewAccountShareReady(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    try{
+      if(String(localStorage.getItem('beProfileShareCampaignSeen:'+uid)||'').trim())return true;
+      return String(localStorage.getItem('beCommunityTag:'+uid)||'').trim().toLowerCase()==='billie_fan';
+    }catch(_){return false;}
+  }
+  function boafNoticeBlockedBySetup(){
+    var body=document.body;
+    if(!body)return true;
+    if(body.classList.contains('profile-onboarding-active')||body.classList.contains('profile-share-campaign-open')||body.classList.contains('profile-favorites-picker-active'))return true;
+    var sharePrompt=document.getElementById('profileShareCampaignPrompt');
+    if(sharePrompt&&sharePrompt.offsetParent!==null)return true;
+    var favoritesPicker=document.getElementById('profileFavoritesPicker');
+    if(favoritesPicker&&!favoritesPicker.hidden)return true;
+    return false;
+  }
+  function boafNewAccountFlowReady(userId){
+    if(!boafNewAccountFlowPending(userId))return true;
+    return boafNewAccountShareReady(userId)&&!boafNoticeBlockedBySetup();
+  }
+  function completeBoafNewAccountFlow(userId){
+    try{localStorage.removeItem(boafNewAccountFlowKey(userId));}catch(_){ }
+  }
+  function hideBoafStreamPanelWithoutDismiss(){
+    var modal=document.getElementById('boafStreamPanel');
+    if(modal)modal.hidden=true;
+    document.body.classList.remove('boaf-stream-panel-open');
+  }
+
+  function boafPendingClaimKey(userId){
+    return 'betvBoafPendingClaim:4bi:'+String(userId||'').trim();
+  }
+  function setBoafPendingClaim(userId,pending){
+    var uid=String(userId||'').trim();
+    if(!uid)return;
+    try{
+      if(pending)localStorage.setItem(boafPendingClaimKey(uid),'1');
+      else localStorage.removeItem(boafPendingClaimKey(uid));
+    }catch(_){ }
+  }
+  function hasBoafPendingClaim(userId){
+    var uid=String(userId||'').trim();
+    if(!uid)return false;
+    try{return localStorage.getItem(boafPendingClaimKey(uid))==='1';}catch(_){return false;}
+  }
+  async function waitForBoafAuthenticatedUser(timeoutMs){
+    var deadline=Date.now()+Math.max(800,Number(timeoutMs)||4500);
+    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);}catch(_){ }
+    while(Date.now()<deadline){
+      var user=currentUser();
+      if(user&&user.uid)return user;
+      await new Promise(function(resolve){window.setTimeout(resolve,90);});
+    }
+    return currentUser();
+  }
+  async function claimBoafStreamTag(statusNode,options){
+    options=options||{};
+    var user=await waitForBoafAuthenticatedUser(options.waitMs||4500);
+    if(!user||!user.uid){
+      if(statusNode){statusNode.textContent=t('Entre na sua conta para receber a tag BOAF.');statusNode.classList.add('is-visible','is-warning');}
+      return false;
+    }
+    var uid=String(user.uid);
+    setBoafPendingClaim(uid,true);
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')throw new Error('boaf_rpc_unavailable');
+
+      /* A conta pode ter acabado de entrar e o perfil ainda estar sendo criado. */
+      try{
+        if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.ensure==='function'){
+          await window.beBackend.profiles.ensure(user);
+        }
+      }catch(_){ }
+
+      var lastError=null;
+      for(var attempt=0;attempt<3;attempt+=1){
+        var result=await client.rpc('claim_boaf_stream_tag');
+        if(!result||!result.error){lastError=null;break;}
+        lastError=result.error;
+        if(attempt<2){
+          try{
+            if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.ensure==='function')await window.beBackend.profiles.ensure(user);
+          }catch(_){ }
+          await new Promise(function(resolve){window.setTimeout(resolve,180+(attempt*180));});
+        }
+      }
+      if(lastError)throw lastError;
+      setBoafPendingClaim(uid,false);
+      boafOwnedTagCache[uid]=true;
+      dismissBoafNotice();
+      try{
+        if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.get==='function'){
+          var refreshed=await window.beBackend.profiles.get(uid,{force:true});
+          if(refreshed&&typeof refreshed==='object')window.dispatchEvent(new CustomEvent('be:profile-refreshed',{detail:{profile:refreshed}}));
+        }
+      }catch(_){ }
+      try{window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:uid,tag:'boaf'}}));}catch(_){ }
+      if(statusNode){statusNode.textContent=t('Tag BOAF adicionada ao seu perfil.');statusNode.classList.remove('is-warning');statusNode.classList.add('is-visible','is-success');}
+      return true;
+    }catch(_){
+      /* Mantém a concessão pendente para repetir quando a sessão/perfil terminar de inicializar. */
+      setBoafPendingClaim(uid,true);
+      return false;
+    }
+  }
+
+  async function retryPendingBoafClaim(){
+    var user=await waitForBoafAuthenticatedUser(1800);
+    if(!user||!user.uid||!hasBoafPendingClaim(user.uid))return false;
+    return claimBoafStreamTag(null,{waitMs:1800});
+  }
+
+  function bindBoafListenLinks(root){
+    (root||document).querySelectorAll('[data-boaf-listen]').forEach(function(link){
+      if(link.dataset.boafBound==='true')return;
+      link.dataset.boafBound='true';
+      link.addEventListener('click',async function(event){
+        event.preventDefault();
+        var destination=String(link.href||BOAF_STREAM_URL);
+        var popup=null;
+        try{
+          popup=window.open('about:blank','_blank');
+          if(popup)popup.opener=null;
+        }catch(_){popup=null;}
+        var scope=link.closest('.community-boaf-card,.boaf-stream-panel');
+        var status=scope&&scope.querySelector?scope.querySelector('.boaf-stream-status'):null;
+        link.setAttribute('aria-busy','true');
+        await claimBoafStreamTag(status,{waitMs:5000});
+        dismissBoafNotice();
+        if(scope&&scope.classList.contains('boaf-stream-panel'))closeBoafStreamPanel();
+        link.removeAttribute('aria-busy');
+        try{
+          if(popup&&!popup.closed)popup.location.replace(destination);
+          else window.open(destination,'_blank','noopener,noreferrer');
+        }catch(_){location.href=destination;}
+      });
+    });
+  }
+
+  function closeBoafStreamPanel(){
+    var modal=document.getElementById('boafStreamPanel');
+    if(!modal)return;
+    modal.hidden=true;
+    document.body.classList.remove('boaf-stream-panel-open');
+    dismissBoafNotice();
+  }
+
+  function openBoafStreamPanel(options){
+    options=options&&typeof options==='object'?options:{};
+    if(options.auto===true&&!canShowBoafNotice())return;
+    if(!boafNoticeUser()||isBoafLoginSurface())return;
+    var modal=document.getElementById('boafStreamPanel');
+    if(!modal){
+      modal=document.createElement('div');
+      modal.id='boafStreamPanel';
+      modal.className='boaf-stream-panel-backdrop';
+      modal.hidden=true;
+      modal.innerHTML='<section class="boaf-stream-panel" role="dialog" aria-modal="true" aria-labelledby="boafStreamPanelTitle">'
+        +'<button class="boaf-stream-panel-close" type="button" aria-label="'+t('Fechar')+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>'
+        +'<div class="boaf-stream-panel-media"><img src="'+BOAF_STREAM_IMAGE+'" alt="BIRDS OF A FEATHER" decoding="async"></div>'
+        +'<div class="boaf-stream-panel-copy"><h2 id="boafStreamPanelTitle">Stream Bird of a Feather</h2><p>'+t(BOAF_STREAM_MESSAGE)+'</p>'
+        +'<div class="boaf-stream-reward"><strong>'+t('Quem ouvir ganha a tag {tag}.',{tag:'<span class="profile-award-tag is-boaf notranslate boaf-stream-inline-tag" data-i18n-ignore translate="no">BOAF</span>'})+'</strong></div>'
+        +'<a class="boaf-stream-listen" data-boaf-listen href="'+BOAF_STREAM_URL+'" target="_blank" rel="noopener noreferrer">'+t('Ouvir')+'</a><p class="boaf-stream-status" aria-live="polite"></p></div></section>';
+      document.body.appendChild(modal);
+      var close=modal.querySelector('.boaf-stream-panel-close');if(close)close.addEventListener('click',closeBoafStreamPanel);
+      modal.addEventListener('click',function(event){if(event.target===modal)closeBoafStreamPanel();});
+      bindBoafListenLinks(modal);
+    }
+    modal.hidden=false;
+    document.body.classList.add('boaf-stream-panel-open');
+    applyI18n(modal);
+  }
+
+  function scheduleBoafStreamNotice(delay){
+    var user=boafNoticeUser();
+    if(!user||!user.uid){hideBoafStreamPanelWithoutDismiss();return;}
+    var uid=String(user.uid);
+    if(boafNoticeOpenedForUser===uid||boafNoticeDismissed(uid))return;
+    if(boafNoticeTimer)window.clearTimeout(boafNoticeTimer);
+    boafNoticeTimer=window.setTimeout(async function(){
+      boafNoticeTimer=0;
+      var active=boafNoticeUser();
+      if(!active||String(active.uid)!==uid){hideBoafStreamPanelWithoutDismiss();return;}
+      if(await boafUserOwnsReward(uid)){
+        dismissBoafNotice();
+        hideBoafStreamPanelWithoutDismiss();
+        return;
+      }
+      if(boafNoticeBlockedBySetup()||!boafNewAccountFlowReady(uid)){
+        scheduleBoafStreamNotice(700);
+        return;
+      }
+      if(!canShowBoafNotice()){
+        if(isBoafLoginSurface())scheduleBoafStreamNotice(700);
+        return;
+      }
+      if(boafNewAccountFlowPending(uid))completeBoafNewAccountFlow(uid);
+      boafNoticeOpenedForUser=uid;
+      openBoafStreamPanel({auto:true});
+    },Math.max(250,Number(delay)||900));
+  }
+
   async function loadCommunityOngBanner(){
     var spotlight=document.getElementById('communityOngSpotlight');
     var image=document.getElementById('communityOngSpotlightImage');
@@ -21268,7 +21557,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/_static/media/community/community-hero-banner.webp" alt="Banner da comunidade dos Avocados" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<div class="community-content-shell">'
       +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
-      +    '<section class="community-section community-boaf-section" id="communityBoafSection"><div class="community-section-head"><h2>'+t('Obrigado por ajudar BIRDS OF A FEATHER a alcançar')+'</h2></div><article class="community-boaf-card" id="communityBoafCard"><div class="community-boaf-promo"><div class="boaf-stream-counter" id="boafStreamCounter" aria-live="polite">'+t('{count} bilhões',{count:4})+'</div><p class="boaf-stream-counter-subtitle">'+t('de streams no Spotify')+'</p><div class="community-boaf-media"><img src="/_static/media/community/boaf-stream-4bi.webp?rev=20260927-boaf-image3" alt="BIRDS OF A FEATHER" decoding="async"></div></div></article></section>'
+      +    '<section class="community-section community-boaf-section" id="communityBoafSection"><div class="community-section-head"><h2>STREAM BIRDS OF A FEATHER #4BI</h2></div><article class="community-boaf-card" id="communityBoafCard"><div class="community-boaf-promo"><h3>'+t('Ganhe a tag')+'</h3><span class="community-award-tag is-boaf notranslate community-boaf-tag" data-i18n-ignore translate="no">BOAF</span><div class="community-boaf-media"><img src="/assets/images/community/boaf-stream-4bi.webp" alt="BIRDS OF A FEATHER" decoding="async"></div><a class="community-boaf-listen" data-boaf-listen href="https://open.spotify.com/playlist/7GsA1b3dcISozmOc9G0tcT?si=d0qmzIyJSxiFLUx0flAsng" target="_blank" rel="noopener noreferrer">'+t('Ouvir')+'</a><p class="boaf-stream-status" aria-live="polite"></p></div></article></section>'
       +    '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2>Perfis em destaque</h2><p class="community-section-subtitle">Compartilhe seu perfil para receber curtidas e aparecer no ranking.</p></div><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado notranslate" data-i18n-ignore translate="no">Avocado</span></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash notranslate" data-i18n-ignore translate="no">Eyelash</span></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh notranslate" data-i18n-ignore translate="no">Blohsh</span></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
@@ -21277,6 +21566,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       +  '</div>'
       +'</div>';
     main.appendChild(page);
+    bindBoafListenLinks(page);
     page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/fãs');else location.assign('/fãs');});
     var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
     var rulesDetails=page.querySelector('.community-rules-details');
@@ -21675,7 +21965,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function bind(){
-    createPage();createMobileAccountMenu();
+    createPage();createMobileAccountMenu();scheduleBoafStreamNotice(1000);window.setTimeout(retryPendingBoafClaim,900);
     var tab=document.querySelector('[data-community-tab]');if(tab)tab.addEventListener('click',function(event){event.preventDefault();openCommunity();});
     var play=document.getElementById('contentDetailPlay');
     if(play&&play.dataset.communityRecentBound!=='true'){
@@ -21726,7 +22016,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.addEventListener('be:open-config',function(){setTimeout(injectPrivacySettings,0);});
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
     window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});
-    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(user){setTimeout(injectPrivacySettings,50);if(document.body.classList.contains('community-page-active'))refreshCommunity();var active=user&&user.uid?user:currentUser();if(!active||!active.uid)return;});
+    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(user){setTimeout(injectPrivacySettings,50);if(document.body.classList.contains('community-page-active'))refreshCommunity();var active=user&&user.uid?user:currentUser();if(!active||!active.uid){boafNoticeOpenedForUser='';if(boafNoticeTimer){window.clearTimeout(boafNoticeTimer);boafNoticeTimer=0;}hideBoafStreamPanelWithoutDismiss();return;}window.setTimeout(function(){scheduleBoafStreamNotice(350);retryPendingBoafClaim();},450);});
+    window.addEventListener('be:profile-share-campaign-complete',function(){scheduleBoafStreamNotice(300);});
+    window.addEventListener('be:profile-favorites-changed',function(){scheduleBoafStreamNotice(300);});
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
