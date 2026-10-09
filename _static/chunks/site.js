@@ -13236,6 +13236,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(name)name.textContent=profile.username?'@'+profile.username:(user&&user.displayName||'Visitante');
     var action=document.getElementById('publicAuthAction');
     if(action){action.textContent=user?'Sair':'Entrar';action.classList.toggle('danger',Boolean(user));}
+    var signupAction=document.getElementById('publicSignupAction');
+    if(signupAction)signupAction.hidden=Boolean(user);
     var photo=document.getElementById('publicUserPhoto');
     if(photo&&window.BETVApplyAvatar)window.BETVApplyAvatar(photo,profile.avatarUrl||user&&user.photoURL||'');
     if(userDropdown){userDropdown.classList.toggle('is-logged-out',!user);userDropdown.setAttribute('data-account-state',user?'authenticated':'anonymous');}
@@ -13514,6 +13516,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(target)target.focus({preventScroll:true});
     });
   }
+  var desktopSignup=document.getElementById('publicSignupAction');
+  if(desktopSignup)desktopSignup.addEventListener('click',function(){window.dispatchEvent(new CustomEvent('be:auth-signup-entry'));});
   // Independent entry for first-time visitors, while preserving email verification.
   window.addEventListener('be:auth-signup-entry',function(){
     selectedAuthEmail='';
