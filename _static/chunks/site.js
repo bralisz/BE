@@ -4303,7 +4303,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
       scheduleNextFeatured();
     };
-    const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(index + 1); }, 10000);
+    const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(index + 1); }, 10000, slides.length > 1);
     const { start, stop } = autoplay;
     dots.forEach(dot => dot.addEventListener('click', () => { go(Number(dot.dataset.goto || 0)); start(); }));
     host.onmouseenter = stop;
@@ -4501,7 +4501,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       dots.forEach((dot, index) => dot.classList.toggle('active', index === activeIndex));
       scheduleNextSlide();
     };
-    const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(activeIndex + 1); }, 10000);
+    const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(activeIndex + 1); }, 10000, slides.length > 1);
     const { start, stop } = autoplay;
 
     dots.forEach(dot => dot.addEventListener('click', () => {
@@ -16306,7 +16306,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var fDots = Array.prototype.slice.call(document.querySelectorAll('.f-dot'));
     var fIndex = 0;
     var AUTOPLAY_MS = 10000;
-    var initialAutoplay = window.BETVAutoplay(featured, nextSlide, AUTOPLAY_MS);
+    var initialAutoplay = window.BETVAutoplay(featured, nextSlide, AUTOPLAY_MS, fSlides.length > 1);
 
     function goToSlide(i){
       fIndex = (i + fSlides.length) % fSlides.length;

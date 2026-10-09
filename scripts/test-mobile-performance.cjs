@@ -22,10 +22,14 @@ for(const io of [true,false]) {
   s.document.hidden=false;s.docEvents.get('visibilitychange')();assert.equal(s.jobs.size,1);
   s.rootClasses.add('performance-lite');s.events.get('be:performance-change')();ctrl.start();assert.equal(s.jobs.size,0);
   s.rootClasses.delete('performance-lite');s.events.get('be:performance-change')();assert.equal(s.jobs.size,1);
+  const oldCtrl=ctrl;
   ctrl=s.window.BETVAutoplay(host,()=>steps++,10000);if(io)s.visible(host,true);
+  oldCtrl.start();assert.equal(s.jobs.size,1,'disposed callbacks must not restart an old timer');
+  oldCtrl.dispose();assert.equal(s.jobs.size,1,'old disposal must not unregister the replacement');
   assert.equal(s.jobs.size,1);ctrl.stop();assert.equal(s.jobs.size,0);ctrl.start();assert.equal(s.jobs.size,1);
   host.isConnected=false;s.jobs.forEach(fn=>fn());assert.equal(s.jobs.size,0);
 }
+const single=surface(false);single.window.BETVAutoplay({isConnected:true},()=>{},10000,false).start();assert.equal(single.jobs.size,0,'a single slide needs no timer');
 const html=fs.readFileSync('index.html','utf8');
 const at=html.indexOf('var mobileQuery');
 const policy=html.slice(html.lastIndexOf('<script>',at)+8,html.indexOf('</script>',at));

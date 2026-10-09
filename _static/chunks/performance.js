@@ -12,15 +12,17 @@
     });
   }) : null;
 
-  window.BETVAutoplay = (host, advance, delay) => {
+  window.BETVAutoplay = (host, advance, delay, enabled = true) => {
     controllers.get(host)?.dispose();
     let timer = null;
     let paused = false;
+    let disposed = false;
     const controller = {
       visible: !observer,
       stop() { clearInterval(timer); timer = null; },
       sync() {
         controller.stop();
+        if (disposed || !enabled) return;
         if (!host.isConnected) { controller.dispose(); return; }
         if (paused || document.hidden || lite() || !controller.visible) return;
         timer = setInterval(() => {
@@ -29,6 +31,8 @@
         }, delay);
       },
       dispose() {
+        if (disposed) return;
+        disposed = true;
         controller.stop();
         observer?.unobserve(host);
         controllers.delete(host);
