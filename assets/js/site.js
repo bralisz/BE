@@ -1915,9 +1915,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const expiresAt = nowMs + Math.max(30000, Number(ttl) || HOME_BOOTSTRAP_MEMORY_TTL_MS);
     const featuredFresh = Math.max(0, Number(bundleAgeMs) || 0) < FEATURED_FRESH_TTL_MS;
     for (const name of HOME_BOOTSTRAP_COLLECTIONS) {
-      if (name === 'featured' && !featuredFresh) continue;
+      const collectionExpiresAt = name === 'featured' && !featuredFresh ? nowMs + 30000 : expiresAt;
       const rows = Array.isArray(bundle && bundle[name]) ? bundle[name] : [];
-      publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt });
+      publicDataMemoryCache.set(`${name}::${locale}`, { promise: Promise.resolve(rows), expiresAt: collectionExpiresAt });
     }
     const siteSettings = bundle && bundle.settings && bundle.settings.site;
     if (siteSettings && typeof siteSettings === 'object') {
@@ -1928,24 +1928,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  // Public reads must settle even if a fetch/body stalls on a weak connection.
+  async function fetchPublicJson(url, timeoutMs = 8000) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    let timer;
+    const deadline = new Promise((_, reject) => {
+      timer = window.setTimeout(() => {
+        controller?.abort();
+        reject(backendError('public_data_timeout', 'A conexão demorou para responder. Tente novamente.'));
+      }, timeoutMs);
+    });
+    const request = Promise.resolve().then(() => fetch(url, {
+      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' },
+      ...(controller ? { signal: controller.signal } : {})
+    })).then(response => {
+      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
+      return response.json();
+    });
+    try { return await Promise.race([request, deadline]); }
+    finally { window.clearTimeout(timer); }
+  }
+
   async function fetchHomeVersions(locale) {
     const params = new URLSearchParams({ name: 'home-version', locale: String(locale || activeLocaleSlug()) });
-    const response = await fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-    return normalizeHomeVersionState(await response.json());
+    return normalizeHomeVersionState(await fetchPublicJson(`/api/public-data?${params.toString()}`, 3000));
   }
 
   async function fetchVersionedSiteSettings(locale, settingsVersion) {
     const params = new URLSearchParams({ name: 'settings', id: 'site', locale: String(locale || activeLocaleSlug()) });
     const revision = String(settingsVersion || '').trim();
     if (revision) params.set('v', revision);
-    const response = await fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) return null;
-    const settings = await response.json();
+    const settings = await fetchPublicJson(`/api/public-data?${params.toString()}`);
     return settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : null;
   }
 
@@ -1955,17 +1968,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (existing) return existing;
     const promise = (async () => {
       let versions = normalizeHomeVersionState(versionHint);
-      if (!versions.catalogVersion) {
-        try { versions = await fetchHomeVersions(normalizedLocale); } catch (_) {}
-      }
-
       const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale });
       if (versions.catalogVersion) params.set('v', versions.catalogVersion);
-      const response = await fetch(`/api/public-data?${params.toString()}`, {
-        method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
-      });
-      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-      const bundle = await response.json();
+      const bundle = await fetchPublicJson(`/api/public-data?${params.toString()}`);
       const bundleVersions = normalizeHomeVersionState(bundle && bundle.__versions);
       if (!versions.catalogVersion) versions.catalogVersion = bundleVersions.catalogVersion;
       if (!versions.settingsVersion) versions.settingsVersion = bundleVersions.settingsVersion;
@@ -2019,8 +2024,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           changed = true;
         }
       }
-      bundle.__versions = versions;
-      markHomeBootstrapValidated(normalizedLocale, cachedEntry, bundle, versions);
+      bundle.__versions = { catalogVersion: versions.catalogVersion, settingsVersion: changed ? versions.settingsVersion : cachedVersions.settingsVersion };
+      markHomeBootstrapValidated(normalizedLocale, cachedEntry, bundle, bundle.__versions);
 
       const featuredSavedAt = Number(cachedEntry.featuredSavedAt || cachedEntry.savedAt || Date.now());
       const featuredAge = Math.max(0, Date.now() - featuredSavedAt);
@@ -2030,6 +2035,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return { bundle, changed, fullRefresh: false };
     })().finally(() => homeBootstrapValidationInFlight.delete(normalizedLocale));
     homeBootstrapValidationInFlight.set(normalizedLocale, promise);
+    return promise;
+  }
+
+  const featuredRefreshInFlight = new Map();
+  function refreshCachedFeaturedInBackground(locale) {
+    if (featuredRefreshInFlight.has(locale)) return featuredRefreshInFlight.get(locale);
+    const params = new URLSearchParams({ name: 'featured', locale });
+    const promise = fetchPublicJson(`/api/public-data?${params.toString()}`).then(rows => {
+      if (!Array.isArray(rows)) return;
+      publicDataMemoryCache.set(`featured::${locale}`, { promise: Promise.resolve(rows), expiresAt: Date.now() + FEATURED_FRESH_TTL_MS });
+      updateHomeBootstrapFeaturedBrowserCache(locale, rows);
+      const cached = homeBootstrapMemoryCache.get(locale);
+      if (cached) cached.promise.then(bundle => { bundle.featured = rows; }).catch(() => {});
+      if (window.__beContentReady) window.dispatchEvent(new CustomEvent('be:home-data-updated', { detail: { catalog: true } }));
+    }).finally(() => featuredRefreshInFlight.delete(locale));
+    featuredRefreshInFlight.set(locale, promise);
     return promise;
   }
 
@@ -2053,12 +2074,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         promise: browserPromise,
         expiresAt: nowMs + Math.min(HOME_BOOTSTRAP_MEMORY_TTL_MS, remaining)
       });
+      if (featuredAge >= FEATURED_FRESH_TTL_MS) {
+        const schedule = window.requestIdleCallback || (callback => window.setTimeout(callback, 350));
+        schedule(() => refreshCachedFeaturedInBackground(locale).catch(() => {}), { timeout: 1800 });
+      }
       if (browserCached.__stale) {
         const schedule = window.requestIdleCallback || (callback => window.setTimeout(callback, 350));
         schedule(() => validatePublicHomeDataInBackground(locale, browserCached).then(result => {
           if (result?.changed && window.__beContentReady && !document.hidden && !document.body.classList.contains('detail-page-active')) {
-            renderFeatured().catch(() => {});
-            renderVideoCatalog().catch(() => {});
+            window.dispatchEvent(new CustomEvent('be:home-data-updated', { detail: { catalog: result.fullRefresh, settings: true } }));
           }
         }).catch(() => {}), { timeout: 1800 });
       }
@@ -2093,12 +2117,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           : normalizedName === 'featured'
             ? FEATURED_FRESH_TTL_MS
             : 30 * 60 * 1000;
-    const promise = fetch(`/api/public-data?${params.toString()}`, {
-      method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' }
-    }).then(response => {
-      if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
-      return response.json();
-    }).then(payload => {
+    const promise = fetchPublicJson(`/api/public-data?${params.toString()}`).then(payload => {
       if (normalizedName === 'featured' && !normalizedId && Array.isArray(payload)) {
         updateHomeBootstrapFeaturedBrowserCache(locale, payload);
       }
@@ -2167,6 +2186,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   const supabaseData = {
+    async refreshFeatured() {
+      if (usesProtectedAdminData()) return;
+      return refreshCachedFeaturedInBackground(activeLocaleSlug());
+    },
     async preloadHome() {
       if (usesProtectedAdminData()) return null;
       return preloadPublicHomeData();
@@ -4032,12 +4055,36 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.beRenderMarkdown = markdownToHtml;
   window.beMarkdownPlainText = markdownToPlainText;
 
-  async function startDynamicContent() {
+  let dynamicContentInFlight = null;
+  function showCatalogLoadError() {
+    if (document.getElementById('dynamicSections') || document.getElementById('catalogLoadError')) return;
+    const main = document.querySelector('main');
+    if (!main) return;
+    const message = document.createElement('section');
+    message.id = 'catalogLoadError';
+    message.className = 'catalog-load-error';
+    message.setAttribute('role', 'status');
+    message.innerHTML = '<p>Não foi possível carregar os conteúdos. Verifique sua conexão e tente novamente.</p><button type="button">Tentar novamente</button>';
+    message.querySelector('button').addEventListener('click', async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      button.textContent = 'Carregando…';
+      try { await startDynamicContent(); }
+      finally { button.disabled = false; button.textContent = 'Tentar novamente'; }
+    });
+    main.insertAdjacentElement('afterend', message);
+  }
+  function startDynamicContent() {
+    if (dynamicContentInFlight) return dynamicContentInFlight;
+    dynamicContentInFlight = loadDynamicContent().finally(() => { dynamicContentInFlight = null; });
+    return dynamicContentInFlight;
+  }
+  async function loadDynamicContent() {
     setupHomeNavigation();
     setupDetailControls();
     try {
       if (!window.beBackend) return;
-      await window.beBackend.ready;
+      if (window.beBackend.mode !== 'supabase') await window.beBackend.ready;
       if (window.beBackend.data && typeof window.beBackend.data.preloadHome === 'function') {
         await window.beBackend.data.preloadHome().catch(error => {
           (void 0);
@@ -4048,6 +4095,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         renderFeatured(),
         renderVideoCatalog()
       ]);
+      if (contentTasks[2].status === 'rejected') showCatalogLoadError();
+      else document.getElementById('catalogLoadError')?.remove();
       contentTasks.forEach(result => {
         if (result.status === 'rejected') (void 0);
       });
@@ -4067,6 +4116,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                               
                                                                             
                                                                            
+  window.addEventListener('be:home-data-updated', event => {
+    if (!window.__beContentReady || document.hidden || document.body.classList.contains('detail-page-active')) return;
+    const tasks = [];
+    if (event.detail?.settings) tasks.push(applySiteSettings());
+    if (event.detail?.catalog) tasks.push(renderFeatured(), renderVideoCatalog());
+    Promise.allSettled(tasks);
+  });
+
   let featuredPageHiddenAt = 0;
   let featuredResumeRefreshRunning = false;
   const FEATURED_RESUME_REFRESH_MS = 15 * 60 * 1000;
@@ -4078,13 +4135,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!force && (!featuredPageHiddenAt || elapsed < FEATURED_RESUME_REFRESH_MS)) return;
     featuredResumeRefreshRunning = true;
     try {
-      const locale = activeLocaleSlug();
-      // Atualiza apenas a coleção pequena de destaques. Não apaga o bootstrap
-      // inteiro nem força download do catálogo depois de uma simples troca de aba.
-      publicDataMemoryCache.delete(`featured::${locale}`);
-      const rows = await readPublicData('featured');
-      if (Array.isArray(rows)) updateHomeBootstrapFeaturedBrowserCache(locale, rows);
-      if (window.__beContentReady) await renderVideoCatalog();
+      const data = window.beBackend?.data;
+      if (typeof data?.refreshFeatured === 'function') await data.refreshFeatured();
+      else if (window.__beContentReady) await Promise.all([renderFeatured(), renderVideoCatalog()]);
     } catch (error) {
       (void 0);
     } finally {
@@ -4520,19 +4573,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     section.hidden = false;
   }
 
-  async function renderVideoCatalog() {
+  let catalogRenderInFlight = null;
+  let renderedCatalogSignature = '';
+  function renderVideoCatalog() {
+    if (catalogRenderInFlight) return catalogRenderInFlight;
+    catalogRenderInFlight = renderVideoCatalogNow().finally(() => { catalogRenderInFlight = null; });
+    return catalogRenderInFlight;
+  }
+  async function renderVideoCatalogNow() {
     const main = document.querySelector('main');
     if (!main) return;
+    const collections = ['sections', 'videos', 'movies', 'series', 'featured', 'news'];
+    const results = await Promise.allSettled(collections.map(name => beBackend.data.list(name, { orderBy: 'order', direction: 'asc' })));
+    if (results.every(result => result.status === 'rejected')) throw new Error('catalog-unavailable');
+    const [sectionRows, videoRows, movieRows, seriesRows, featuredRows, albumRows] = results.map(result => result.status === 'fulfilled' && Array.isArray(result.value) ? result.value : []);
+    const signature = JSON.stringify([activeLocaleSlug(), sectionRows, videoRows, movieRows, seriesRows, featuredRows, albumRows]);
+    if (document.getElementById('dynamicSections') && signature === renderedCatalogSignature) return;
     sectionViewItemsMemory.clear();
-
-    const [sectionRows, videoRows, movieRows, seriesRows, featuredRows, albumRows] = await Promise.all([
-      beBackend.data.list('sections', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('videos', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('movies', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('series', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('featured', { orderBy: 'order', direction: 'asc' }).catch(() => []),
-      beBackend.data.list('news', { orderBy: 'order', direction: 'asc' }).catch(() => [])
-    ]);
     const sections = sectionRows.filter(section => section.active !== false);
     const allVideos = videoRows.filter(video => video.active !== false);
     const allMovies = movieRows.filter(movie => movie.active !== false);
@@ -4598,7 +4655,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!sections.length && !featuredContents.length && !allAlbums.length) return;
 
     const old = document.getElementById('dynamicSections');
-    if (old) old.remove();
 
     const host = document.createElement('section');
     host.id = 'dynamicSections';
@@ -4746,7 +4802,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     await addBillieHomeSpotlight(host);
     await addAlbumsHomeSection(host, allAlbums);
-    main.insertAdjacentElement('afterend', host);
+    if (old) old.replaceWith(host);
+    else main.insertAdjacentElement('afterend', host);
+    renderedCatalogSignature = signature;
     setupContentDetailInteractions(host);
     setupSectionTitleInteractions(host);
     window.dispatchEvent(new Event('be:catalog-ready'));
@@ -16391,7 +16449,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                                                                               
                                                                              
                                                                        
-    if(authReady&&auth&&(auth.currentUser||(window.BETVGuestAccess&&window.BETVGuestAccess.isActive())))hideSiteSkeleton();
+    if((authReady&&auth&&auth.currentUser)||(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()))hideSiteSkeleton();
   });
 
   function q(id){return document.getElementById(id)}
@@ -18555,8 +18613,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var removableLocalKeys = [];
       for (var index = 0; index < localStorage.length; index += 1) {
         var key = String(localStorage.key(index) || '');
+        if (key.indexOf('betvHomeBootstrapV6:') === 0) {
+          // Preserve the public catalog, but validate its versions on next startup.
+          try {
+            var cachedHome = JSON.parse(localStorage.getItem(key) || 'null');
+            if (cachedHome && cachedHome.bundle) {
+              cachedHome.validatedAt = 1;
+              localStorage.setItem(key, JSON.stringify(cachedHome));
+            }
+          } catch (_) {}
+          continue;
+        }
         var transient = key.indexOf('betvDynamicI18n:') === 0 ||
-          key.indexOf('betvHomeBootstrap') === 0 ||
           key.indexOf('betvDeploymentVersionCheck') === 0 ||
           key.indexOf('betvObservedReleaseState') === 0 ||
           key === 'betvUpdateAssetCache' ||
@@ -18598,70 +18666,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     } catch (_) {}
 
-    return Promise.allSettled(jobs);
-  }
-
-  function currentResourceUrls() {
-    var urls = [];
-
-    try {
-      var documentUrl = new URL(window.location.href);
-      documentUrl.searchParams.delete('__betv_update');
-      documentUrl.searchParams.delete('_');
-      urls.push(documentUrl.href);
-    } catch (_) {}
-
-    try {
-      document.querySelectorAll('script[src],link[href]').forEach(function (node) {
-        if (node.tagName === 'LINK') {
-          var rel = String(node.getAttribute('rel') || '').toLowerCase();
-          if (!/(?:^|\s)(?:stylesheet|modulepreload|preload)(?:\s|$)/.test(rel)) return;
-        }
-
-        var raw = node.tagName === 'SCRIPT' ? node.getAttribute('src') : node.getAttribute('href');
-        if (!raw) return;
-
-        try {
-          var url = new URL(raw, window.location.href);
-          if (url.origin !== window.location.origin) return;
-          url.hash = '';
-          urls.push(url.href);
-        } catch (_) {}
-      });
-    } catch (_) {}
-
-    return Array.from(new Set(urls));
-  }
-
-  function refreshNetworkResources(targetVersion) {
-    var urls = currentResourceUrls();
-    if (!urls.length) return Promise.resolve();
-
-    var controller = typeof AbortController === 'function' ? new AbortController() : null;
-    var timeoutId = window.setTimeout(function () {
-      if (controller) controller.abort();
-    }, 8000);
-
-    var requests = urls.map(function (rawUrl) {
-      var requestUrl = rawUrl;
-      try {
-        var parsed = new URL(rawUrl, window.location.href);
-        parsed.searchParams.set('__betv_asset_update', String(targetVersion || Date.now()));
-        parsed.searchParams.set('_', String(Date.now()));
-        requestUrl = parsed.href;
-      } catch (_) {}
-      var options = {
-        method: 'GET',
-        cache: 'no-store',
-        credentials: 'same-origin',
-        redirect: 'follow',
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-      };
-      if (controller) options.signal = controller.signal;
-      return fetch(requestUrl, options);
+    var timeoutId;
+    var deadline = new Promise(function (resolve) {
+      timeoutId = window.setTimeout(resolve, 3000);
     });
-
-    return Promise.allSettled(requests).finally(function () {
+    return Promise.race([Promise.allSettled(jobs), deadline]).finally(function () {
       window.clearTimeout(timeoutId);
     });
   }
@@ -18701,7 +18710,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     Promise.resolve()
       .then(clearBrowserCaches)
-      .then(function () { return refreshNetworkResources(targetVersion); })
       .finally(function () {
         try {
           var url = new URL(window.location.href);
