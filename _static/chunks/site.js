@@ -1929,7 +1929,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   // Public reads must settle even if a fetch/body stalls on a weak connection.
-  async function fetchPublicJson(url, timeoutMs = 8000) {
+  async function fetchPublicJson(url, timeoutMs = 8000, options = {}) {
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     let timer;
     const deadline = new Promise((_, reject) => {
@@ -1942,6 +1942,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       method: 'GET', credentials: 'omit', cache: 'default', headers: { Accept: 'application/json' },
       ...(controller ? { signal: controller.signal } : {})
     })).then(response => {
+      if (response.status === 404 && options.allowNotFound) return null;
       if (!response.ok) throw backendError('public_data_unavailable', 'Conteúdo público indisponível.');
       return response.json();
     });
@@ -2454,13 +2455,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (publicProfilePromises.has(normalized)) return clone(await publicProfilePromises.get(normalized));
 
       const publicProfilePromise = (async () => {
-        const response = await fetch(`/api/public-profile?username=${encodeURIComponent(normalized)}`, {
-          headers: { Accept: 'application/json' },
-          cache: 'default'
-        });
-        if (response.status === 404) return null;
-        if (!response.ok) throw new Error(`public_profile_${response.status}`);
-        const payload = await response.json();
+        const payload = await fetchPublicJson(`/api/public-profile?username=${encodeURIComponent(normalized)}`, 8000, { allowNotFound: true });
         const profile = payload && typeof payload === 'object' && !Array.isArray(payload) ? clone(payload) : null;
         if (profile) cachePublicProfile(normalized, profile);
         return profile;
@@ -13042,16 +13037,32 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.dispatchEvent(new CustomEvent('be:close-mobile-search'));
   }
   async function profileHandle(account){
+    var backend=window.beBackend;
+    var metadata=account&&account.raw&&(account.raw.user_metadata||account.raw.raw_user_meta_data)||{};
     var label=document.getElementById('ddUsername');
-    var value=label?String(label.textContent||'').replace(/^@/,'').trim():'';
-    if(value&&value!=='Visitante'&&value!=='Usuário')return value;
+    var labelText=String(label&&label.textContent||'').trim();
+    var candidates=[account&&account.profile&&account.profile.username,metadata.username,labelText.startsWith('@')?labelText:''];
+    for(var index=0;index<candidates.length;index++){
+      var handle=backend.normalizeUsername(candidates[index]);
+      if(backend.validUsername(handle))return handle;
+    }
+    var timer;
     try{
-      if(window.beBackend&&beBackend.profiles&&account){
-        var profile=await beBackend.profiles.ensure(account);
-        value=String(profile&&profile.username||'').trim();
-      }
-    }catch(_){ }
-    return value||'perfil';
+      var deadline=new Promise(function(_,reject){timer=window.setTimeout(function(){reject(new Error('profile_navigation_timeout'));},8000);});
+      var profile=await Promise.race([backend.profiles.ensure(account),deadline]);
+      var value=backend.normalizeUsername(profile&&profile.username);
+      if(backend.validUsername(value))return value;
+      throw new Error('profile_username_missing');
+    }finally{window.clearTimeout(timer);}
+  }
+  function showProfileNavigationError(){
+    var dropdown=document.getElementById('userDropdown');
+    if(!dropdown)return;
+    var message=document.getElementById('profileNavigationError');
+    if(!message){message=document.createElement('p');message.id='profileNavigationError';message.setAttribute('role','status');message.style.cssText='padding:12px;margin:0;color:inherit';dropdown.appendChild(message);}
+    message.textContent='Não foi possível abrir o perfil. Tente novamente.';
+    dropdown.classList.add('open');
+    var chip=document.getElementById('userChip');if(chip)chip.setAttribute('aria-expanded','true');
   }
   function activateSettings(){
     closeSearchOverlays();
@@ -13061,15 +13072,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(!document.body.classList.contains('settings-page-active'))location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/config'):'/config');
     },180);
   }
-  async function activateProfile(account){
-    closeSearchOverlays();
-    var handle=await profileHandle(account);
-    var path='/@'+encodeURIComponent(handle);
-    history.pushState({beRoute:'profile'},'',path+(location.search||''));
-    window.dispatchEvent(new CustomEvent('be:open-profile-route'));
-    window.setTimeout(function(){
-      if(!document.body.classList.contains('profile-page-active'))location.assign(window.BETVLocaleURL?window.BETVLocaleURL(path):path);
-    },180);
+  var profileNavigationInFlight=null;
+  function activateProfile(account){
+    if(profileNavigationInFlight)return profileNavigationInFlight;
+    profileNavigationInFlight=(async function(){
+      closeSearchOverlays();
+      var oldError=document.getElementById('profileNavigationError');if(oldError)oldError.remove();
+      try{
+        var handle=await profileHandle(account);
+        var path='/@'+encodeURIComponent(handle);
+        var localizedPath=window.BETVLocaleURL?window.BETVLocaleURL(path):path;
+        history.pushState({beRoute:'profile'},'',localizedPath+(location.search||''));
+        window.dispatchEvent(new CustomEvent('be:open-profile-route'));
+        window.setTimeout(function(){
+          if(!document.body.classList.contains('profile-page-active'))location.assign(localizedPath);
+        },1000);
+      }catch(_){showProfileNavigationError();}
+    })().finally(function(){profileNavigationInFlight=null;});
+    return profileNavigationInFlight;
   }
   document.addEventListener('click',function(event){
     var button=event.target&&event.target.closest?event.target.closest('[data-public-action="profile"],[data-public-action="settings"]'):null;
@@ -15623,7 +15643,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var handle=profileRouteUsername()||beBackend.normalizeUsername((viewedProfile&&viewedProfile.username)||(currentProfile&&currentProfile.username)||'perfil');
       if(viewedProfileStatus==='loading'){renderProfileState('Carregando perfil',handle,'');return;}
       if(viewedProfileStatus==='missing'){renderProfileState('Perfil não encontrado',handle,'Confira o link e tente novamente.');return;}
-      if(viewedProfileStatus==='error'){renderProfileState('Não foi possível carregar',handle,'Tente atualizar a página.');return;}
+      if(viewedProfileStatus==='error'){renderProfileState('Não foi possível carregar',handle,'Verifique sua conexão e tente novamente.');var retry=document.createElement('button');retry.type='button';retry.className='profile-btn';retry.textContent='Tentar novamente';retry.onclick=function(){openPublicProfile(false,handle);};profilePageMemberSince.appendChild(retry);return;}
       var profile=viewedProfile;
       if(!profile){renderProfileState('Perfil não encontrado',handle,'');return;}
       applyProfileTheme(profile);
@@ -16096,7 +16116,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       window.dispatchEvent(new CustomEvent('be:close-section-view'));
       document.body.classList.remove('section-catalog-active');
       toggleDropdown(false);settingsPage.hidden=true;profilePage.hidden=false;
-      document.body.classList.remove('settings-page-active','login-mode');document.body.classList.add('profile-page-active');
+      profilePage.removeAttribute('hidden');profilePage.setAttribute('aria-hidden','false');
+      document.body.classList.remove('settings-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active','legal-page-active');document.body.classList.add('profile-page-active');
       updateProfileActionVisibility();
       var handle=beBackend.normalizeUsername(requestedUsername||profileRouteUsername()||(currentProfile&&currentProfile.username)||'');
       if(!handle){
