@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {execFileSync}=require('node:child_process');
 if(!process.argv[2]){
-  for(const scenario of ['profile','mobile-profile','guest-profile','community','chunk-retry','history','images','settings','search']){
+  for(const scenario of ['profile','mobile-profile','guest-profile','community','community-ong','stale-community','signup','chunk-retry','history','images','settings','search']){
     process.stdout.write(execFileSync(process.execPath,[__filename,scenario],{timeout:10000,encoding:'utf8'}));
   }
   process.exit();
@@ -14,13 +14,13 @@ const errors=[];
 const vc=new VirtualConsole();vc.on('jsdomError',error=>{if(!error.message.includes('Not implemented'))errors.push(error.cause||error);});
 const dom=new JSDOM(fs.readFileSync('index.html','utf8'),{url:'https://billieilishtv.site/'+(scenario==='guest-profile'?'@other':''),runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
 const w=dom.window;
-if(scenario==='mobile-profile')w.innerWidth=390;
-w.matchMedia=query=>({matches:scenario==='mobile-profile'&&query.includes('max-width'),addEventListener(){},addListener(){}});
+if(scenario==='mobile-profile'||scenario==='signup')w.innerWidth=390;
+w.matchMedia=query=>({matches:(scenario==='mobile-profile'||scenario==='signup')&&query.includes('max-width'),addEventListener(){},addListener(){}});
 w.scrollTo=options=>{w.scrollY=Number(options.top)||0;w.scrollX=Number(options.left)||0;};
 w.fetch=async()=>({ok:true,json:async()=>({}),text:async()=>'',headers:{get:()=>''}});
 w.IntersectionObserver=class{observe(){}unobserve(){}disconnect(){}};w.ResizeObserver=class{observe(){}disconnect(){}};w.CSS={escape:x=>x};w.navigator.sendBeacon=()=>true;
 const user={uid:'u1',id:'u1',username:'bralis',displayName:'Miguel',email:'test@example.com'};
-if(scenario!=='guest-profile')w.localStorage.setItem('be_local_session_v2',JSON.stringify({email:user.email}));
+if(scenario!=='guest-profile'&&scenario!=='signup')w.localStorage.setItem('be_local_session_v2',JSON.stringify({email:user.email}));
 w.localStorage.setItem('be_local_database_v2',JSON.stringify({version:2,accounts:{[user.email]:user},collections:{users:{u1:user,other:{uid:'other',username:'other',displayName:'Outro perfil'}}}}));
 const original=w.document.head.appendChild.bind(w.document.head);const loaded=[];let failChunk=scenario==='chunk-retry';
 w.document.head.appendChild=node=>{
@@ -70,6 +70,43 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(2
     fail=false;w.document.getElementById('communityLoadError').click();
     await until(()=>!w.document.getElementById('communityLoadError'));await delay(30);
     assert.equal(calls,2);assert(w.document.body.classList.contains('community-page-active'));assert(loaded.includes('community'));
+  }
+
+  if(scenario==='community-ong'){
+    w.BETVPublicRoutes.go('/ong');
+    await until(()=>w.document.body.classList.contains('donate-page-active'));
+    w.document.querySelector('[data-community-tab]').click();
+    await until(()=>w.document.body.classList.contains('community-page-active'));
+    assert.equal(w.location.pathname,'/','Community should return to the catalog route');
+    assert.equal(w.document.body.classList.contains('donate-page-active'),false);
+    assert.equal(w.document.getElementById('donatePage').hidden,true);
+    assert.equal(w.document.getElementById('boafStreamCounter').textContent.trim(),'4 bilhões');
+    assert.equal(w.document.querySelector('#communityBoafCard [data-boaf-listen]'),null,'old Listen CTA must be absent');
+    w.BETVPublicRoutes.go('/ong');
+    await until(()=>w.document.body.classList.contains('donate-page-active'));
+    assert.equal(w.document.body.classList.contains('community-page-active'),false);
+    assert.equal(w.document.getElementById('communityPage').hidden,true);
+  }
+  if(scenario==='stale-community'){
+    w.document.querySelector('[data-community-tab]').click();
+    w.BETVPublicRoutes.go('/ong');
+    await delay(250);
+    assert(w.document.body.classList.contains('donate-page-active'));
+    assert(!w.document.body.classList.contains('community-page-active'),'late chunk must not reactivate Community');
+  }
+  if(scenario==='signup'){
+    w.document.getElementById('guestAccessButton').click();
+    w.dispatchEvent(new w.CustomEvent('be:toggle-mobile-account-menu'));
+    await until(()=>w.document.body.classList.contains('mobile-account-menu-open'));
+    const menu=w.document.getElementById('mobileAccountPopover');
+    const login=menu.querySelector('[data-mobile-account="login"]');
+    const signup=menu.querySelector('[data-mobile-account="create-account"]');
+    assert.equal(login.hidden,false,'logged-out visitor must see Entrar');
+    assert.equal(signup.hidden,false,'logged-out visitor must see Criar conta');
+    signup.click();
+    await until(()=>w.document.body.classList.contains('login-mode'));
+    assert.match(w.document.getElementById('emailStepTitle').textContent,/criar sua conta/i);
+    assert.equal(w.document.getElementById('emailStep').hidden,false);
   }
   if(scenario==='settings'){
     w.document.querySelector('[data-public-action="settings"]').click();
