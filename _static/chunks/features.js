@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revision = '20261009-community-v14';
+  const revision = '20261009-visitor-menu-v15';
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
