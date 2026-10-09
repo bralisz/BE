@@ -21485,3 +21485,26 @@ html.performance-lite .bg-grain{
 .catalog-load-error{margin:24px auto;padding:24px;max-width:680px;text-align:center;color:#fff;background:#101216;border-radius:18px}
 .catalog-load-error button{min-height:44px;padding:10px 18px;border:0;border-radius:12px;background:#fff;color:#111;font-weight:700;cursor:pointer}
 .catalog-load-error button:disabled{opacity:.6;cursor:wait}
+
+
+/* Community and ONG must never paint together, including during lazy navigation. */
+body.community-page-active #donatePage,
+body.donate-page-active #communityPage{display:none!important}
+.boaf-stream-counter{
+  color:#fff;
+  font:900 clamp(46px,7vw,76px)/1 var(--font-display,system-ui,sans-serif);
+  letter-spacing:-.055em;
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+.boaf-stream-counter-subtitle{
+  margin:8px 0 15px;
+  color:rgba(255,255,255,.82);
+  font-size:clamp(15px,2vw,19px);
+  font-weight:650;
+  text-align:center;
+}
+.community-boaf-promo>.community-award-tag.is-boaf{margin:0 0 15px}
+@media (max-width:760px){
+  .boaf-stream-counter{font-size:clamp(42px,12vw,64px)}
+}

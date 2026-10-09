@@ -13236,6 +13236,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(name)name.textContent=profile.username?'@'+profile.username:(user&&user.displayName||'Visitante');
     var action=document.getElementById('publicAuthAction');
     if(action){action.textContent=user?'Sair':'Entrar';action.classList.toggle('danger',Boolean(user));}
+    var signupAction=document.getElementById('publicSignupAction');
+    if(signupAction)signupAction.hidden=Boolean(user);
     var photo=document.getElementById('publicUserPhoto');
     if(photo&&window.BETVApplyAvatar)window.BETVApplyAvatar(photo,profile.avatarUrl||user&&user.photoURL||'');
     if(userDropdown){userDropdown.classList.toggle('is-logged-out',!user);userDropdown.setAttribute('data-account-state',user?'authenticated':'anonymous');}
@@ -13491,6 +13493,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:Boolean(preserveRoute)}}));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
   function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
+    if(mode==='email'){
+      var authTitle=q('emailStepTitle');
+      if(authTitle)authTitle.textContent='Insira seu e-mail para começar a explorar.';
+    }
     if(email)selectedAuthEmail=String(email).trim().toLowerCase();
     var steps={email:q('emailStep'),password:q('passwordStep'),mfa:q('mfaStep'),signup:q('signupStep'),recovery:q('passwordRecoveryStep')};
     Object.keys(steps).forEach(function(key){if(steps[key])steps[key].hidden=key!==mode;});
@@ -13510,6 +13516,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(target)target.focus({preventScroll:true});
     });
   }
+  var desktopSignup=document.getElementById('publicSignupAction');
+  if(desktopSignup)desktopSignup.addEventListener('click',function(){window.dispatchEvent(new CustomEvent('be:auth-signup-entry'));});
+  // Independent entry for first-time visitors, while preserving email verification.
+  window.addEventListener('be:auth-signup-entry',function(){
+    selectedAuthEmail='';
+    showLogin();
+    setMode('email');
+    var input=q('authEmail');if(input)input.value='';
+    var title=q('emailStepTitle');if(title)title.textContent='Insira seu e-mail para criar sua conta.';
+  });
   function initBackgrounds(){
     var allSlides=[].slice.call(document.querySelectorAll('.login-bg-slide'));
     var isMobile=window.matchMedia&&window.matchMedia('(max-width:760px)').matches;
