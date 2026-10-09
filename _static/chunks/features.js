@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revision = '20261009-responsive-v13';
+  const revision = '20261009-community-v14';
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
@@ -38,9 +38,10 @@
   }
   function run(names, action) {
     const version = ++actionVersion;
+    const routeAtStart = location.pathname + location.search + location.hash;
     showStatus('Abrindo esta área…');
     Promise.all(names.map(ensure)).then(() => {
-      if (version !== actionVersion) return;
+      if (version !== actionVersion || routeAtStart !== location.pathname + location.search + location.hash) { dismiss(); return; }
       dismiss();action();
     }).catch(() => { if (version === actionVersion) showStatus('Não foi possível abrir esta área. Verifique sua conexão.', () => run(names, action)); });
   }
@@ -62,6 +63,8 @@
     event.preventDefault();event.stopImmediatePropagation();
     run(names, () => target.isConnected && target.click());
   }, true);
+  window.addEventListener('popstate', () => { actionVersion++; dismiss(); });
+  window.addEventListener('hashchange', () => { actionVersion++; dismiss(); });
   // Keep history recording available even before Community has been opened.
   function recordPlay(event) {
     const play = event.target.closest?.('#contentDetailPlay');
