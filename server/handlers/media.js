@@ -240,7 +240,12 @@ module.exports = async function mediaProxy(req, res) {
     const requestedQuality = Number.parseInt(Array.isArray(req.query?.q) ? req.query.q[0] : req.query?.q, 10);
     const width = Number.isFinite(requestedWidth) ? Math.min(2500, Math.max(320, requestedWidth)) : 0;
     const quality = Number.isFinite(requestedQuality) ? Math.min(90, Math.max(45, requestedQuality)) : 78;
-    const canOptimize = width > 0 && ['image/jpeg', 'image/png', 'image/avif'].includes(contentType);
+    let canOptimize = width > 0 && ['image/jpeg', 'image/png', 'image/avif', 'image/webp'].includes(contentType);
+    // Keep animated WebP intact; resize static covers just like JPEG/PNG.
+    if (canOptimize && contentType === 'image/webp') {
+      const metadata = await sharp(bytes).metadata();
+      canOptimize = !metadata.pages || metadata.pages === 1;
+    }
     let output = bytes;
     let outputType = contentType;
     if (canOptimize) {

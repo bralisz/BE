@@ -42,4 +42,5 @@ for(const d of [{memory:2,cores:4,lite:true},{memory:8,cores:8,lite:false},{memo
 assert.equal(fs.readFileSync('_static/chunks/performance.js','utf8'),fs.readFileSync('assets/js/performance.js','utf8'));
 assert.equal(fs.readFileSync('_static/chunks/site.js','utf8'),fs.readFileSync('assets/js/site.js','utf8'));
 assert.equal(fs.readFileSync('_static/chunks/lazy.js','utf8'),fs.readFileSync('assets/js/lazy-loading.js','utf8'));
+for (const name of ['features','account','community']) assert.equal(fs.readFileSync('_static/chunks/'+name+'.js','utf8'),fs.readFileSync('assets/js/'+name+'.js','utf8'));
 console.log('PASS autoplay: offscreen/background/lite/resume/rerender/disconnect and observer fallback; device/network policy; published JS parity');

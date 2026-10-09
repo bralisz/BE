@@ -6,10 +6,14 @@
     "node": ">=20"
   },
   "dependencies": {
-    "sharp": "^0.34.1",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "sharp": "^0.34.1"
   },
   "scripts": {
-    "build:static": "node scripts/build-static.mjs"
+    "build:static": "node scripts/build-static.mjs",
+    "test:responsiveness": "node scripts/test-area-loading.cjs && node scripts/test-mobile-performance.cjs && node scripts/test-profile-navigation.cjs && node scripts/test-loading-recovery.cjs && node scripts/test-profile-follow.cjs && node scripts/test-static-css.cjs && node scripts/test-responsive-media.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.2"
   }
 }
