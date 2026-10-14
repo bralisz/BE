@@ -5678,6 +5678,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   let detailCommentsNextOffset = 0;
   let detailCommentsHasMore = false;
   let detailCommentsLoading = false;
+  let detailCommentsLoadFailed = false;
   let detailCommentsFetchId = 0;
   let detailCommentsObserver = null;
 
@@ -6097,11 +6098,23 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const sentinel = detailCommentsLoadSentinel();
     if (!sentinel) return;
     sentinel.hidden = !detailCommentsHasMore;
-    sentinel.textContent = detailCommentsLoading && detailCommentsRows.length
-      ? localizedUiText('Carregando comentários...') : '';
+    sentinel.replaceChildren();
+    if (detailCommentsLoadFailed) {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.textContent = localizedUiText('Tentar novamente');
+      retry.style.cssText = 'cursor:pointer;border:1px solid currentColor;border-radius:16px;background:transparent;color:inherit;padding:6px 12px';
+      retry.onclick = () => {
+        detailCommentsLoadFailed = false;
+        loadMoreVideoComments();
+      };
+      sentinel.appendChild(retry);
+    } else if (detailCommentsLoading && detailCommentsRows.length) {
+      sentinel.textContent = localizedUiText('Carregando comentários...');
+    }
 
     if (detailCommentsObserver) detailCommentsObserver.disconnect();
-    if (sentinel.hidden || detailCommentsLoading) return;
+    if (sentinel.hidden || detailCommentsLoading || detailCommentsLoadFailed) return;
     if ('IntersectionObserver' in window) {
       if (!detailCommentsObserver) {
         detailCommentsObserver = new IntersectionObserver(entries => {
@@ -6160,6 +6173,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const fetchId = ++detailCommentsFetchId;
     detailCommentsLoading = true;
+    detailCommentsLoadFailed = false;
     updateDetailCommentsLoadSentinel();
     try {
       const backend = window.beBackend;
@@ -6191,12 +6205,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     } catch (error) {
       (void 0);
       if (requestToken === detailCommentsRequestToken && fetchId === detailCommentsFetchId) {
-        // Keep a retry option available even on intermittent connection failures.
-        const sentinel = detailCommentsLoadSentinel();
-        if (sentinel) {
-          sentinel.textContent = localizedUiText('Não foi possível carregar os comentários.');
-          sentinel.hidden = false;
-        }
+        // Allow a manual retry without repeatedly hammering the backend.
+        detailCommentsLoadFailed = true;
       }
     } finally {
       if (fetchId === detailCommentsFetchId) {
@@ -6217,6 +6227,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       detailCommentsRows = [];
       detailCommentsNextOffset = 0;
       detailCommentsHasMore = false;
+      detailCommentsLoadFailed = false;
       list.innerHTML = '';
       empty.hidden = true;
       setDetailCommentStatus(localizedUiText('Carregando comentários...'));
@@ -6438,6 +6449,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     detailCommentsNextOffset = 0;
     detailCommentsHasMore = false;
     detailCommentsLoading = false;
+    detailCommentsLoadFailed = false;
     if (detailCommentsObserver) detailCommentsObserver.disconnect();
     const sentinel = document.getElementById('detailCommentsLoadMore');
     if (sentinel) sentinel.hidden = true;
