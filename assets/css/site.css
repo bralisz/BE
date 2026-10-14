@@ -21479,3 +21479,90 @@ body.donate-page-active #communityPage{display:none!important}
 @media (max-width:760px){
   .boaf-stream-counter{font-size:clamp(42px,12vw,64px)}
 }
+
+/* Community: Instagram follow card, with an iOS-inspired pill action. */
+.community-instagram-section{
+  width:min(calc(100% - 40px),940px);
+  margin:0 auto clamp(36px,5vw,56px);
+}
+.community-instagram-card{
+  display:flex;
+  align-items:center;
+  gap:20px;
+  min-width:0;
+  padding:24px 28px;
+  border:1px solid rgba(255,255,255,.11);
+  border-radius:28px;
+  background:linear-gradient(135deg,rgba(29,31,38,.96),rgba(12,13,17,.99));
+  box-shadow:0 16px 48px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.035);
+}
+.community-instagram-icon{
+  display:flex;
+  flex:0 0 66px;
+  align-items:center;
+  justify-content:center;
+  width:66px;
+  height:66px;
+  border-radius:21px;
+  color:#fff;
+  background:radial-gradient(circle at 29% 100%,#ffcc67 0,#fb8d35 25%,#e03778 56%,#9b37aa 79%,#5763d8 100%);
+  box-shadow:0 8px 23px rgba(214,42,118,.22),inset 0 1px rgba(255,255,255,.35);
+}
+.community-instagram-icon svg{width:37px;height:37px}
+.community-instagram-content{flex:1 1 auto;min-width:0}
+.community-instagram-content h2{
+  margin:0 0 7px;
+  color:#fff;
+  font-size:clamp(19px,2.3vw,24px);
+  line-height:1.18;
+  font-weight:800;
+  letter-spacing:-.025em;
+}
+.community-instagram-content p{
+  margin:0;
+  color:rgba(255,255,255,.64);
+  font-size:14px;
+  line-height:1.5;
+}
+.community-instagram-content p .notranslate{color:#fff;font-weight:700;white-space:nowrap}
+.community-instagram-follow{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  gap:10px;
+  min-width:195px;
+  min-height:51px;
+  padding:0 19px;
+  box-sizing:border-box;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  background:linear-gradient(112deg,#f99d35 0%,#ee4b6d 33%,#c13584 60%,#8134af 83%,#5851db 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 7px 17px rgba(165,40,135,.21);
+  font:700 14px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  letter-spacing:-.012em;
+  text-decoration:none!important;
+  white-space:nowrap;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;
+}
+.community-instagram-follow svg{width:20px;height:20px;flex:0 0 20px}
+.community-instagram-follow:hover{filter:brightness(1.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 9px 22px rgba(165,40,135,.3)}
+.community-instagram-follow:active{transform:scale(.97);filter:brightness(.97)}
+.community-instagram-follow:focus-visible{outline:3px solid #fff;outline-offset:4px}
+@media (max-width:760px){
+  .community-instagram-section{width:calc(100% - 36px);margin-bottom:36px}
+  .community-instagram-card{flex-direction:column;gap:14px;padding:24px 18px 20px;border-radius:26px;text-align:center}
+  .community-instagram-icon{flex:0 0 60px;width:60px;height:60px;border-radius:19px}
+  .community-instagram-icon svg{width:33px;height:33px}
+  .community-instagram-content h2{font-size:22px}
+  .community-instagram-content p{max-width:280px;margin:0 auto;font-size:13px}
+  .community-instagram-follow{width:100%;max-width:320px;min-height:52px;margin-top:5px;font-size:15px}
+}
+@media (prefers-reduced-motion:reduce){
+  .community-instagram-follow{transition:none}
+}
