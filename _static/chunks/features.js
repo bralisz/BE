@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revision = '20261009-visitor-menu-v15';
+  const revision = '20261014-quiet-access-community-v1';
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
@@ -39,7 +39,8 @@
   function run(names, action) {
     const version = ++actionVersion;
     const routeAtStart = location.pathname + location.search + location.hash;
-    showStatus('Abrindo esta área…');
+    // Load requested areas without a transient popup; display only real errors.
+    dismiss();
     Promise.all(names.map(ensure)).then(() => {
       if (version !== actionVersion || routeAtStart !== location.pathname + location.search + location.hash) { dismiss(); return; }
       dismiss();action();
