@@ -5673,6 +5673,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   let detailCommentsRealtimeKey = '';
   let detailCommentsRealtimeRefreshTimer = null;
   let detailCommentsRealtimeStartToken = 0;
+  const DETAIL_COMMENTS_PAGE_SIZE = 15;
+  let detailCommentsRows = [];
+  let detailCommentsNextOffset = 0;
+  let detailCommentsHasMore = false;
+  let detailCommentsLoading = false;
+  let detailCommentsFetchId = 0;
+  let detailCommentsObserver = null;
+
 
   function videoCommentKey(data) {
     const collection = String(data?.collection || 'videos').trim().toLowerCase();
@@ -5869,7 +5877,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (error) throw error;
         if (data !== true) throw new Error('comment_delete_failed');
         closeDetailCommentActionSheet();
-        if (activeDetailCommentsKey) await loadVideoComments(activeDetailCommentsKey, detailCommentsRequestToken);
+        if (activeDetailCommentsKey) await loadVideoComments(activeDetailCommentsKey, detailCommentsRequestToken, { silent: true });
       } catch (error) {
         (void 0);
         confirmButton.disabled = false;
@@ -6061,25 +6069,168 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     syncDetailCommentSubmit();
   }
 
+  function detailCommentsLoadSentinel() {
+    const list = document.getElementById('detailCommentsList');
+    if (!list) return null;
+    let sentinel = document.getElementById('detailCommentsLoadMore');
+    if (!sentinel) {
+      sentinel = document.createElement('div');
+      sentinel.id = 'detailCommentsLoadMore';
+      sentinel.className = 'detail-comments-load-more';
+      sentinel.setAttribute('aria-live', 'polite');
+      sentinel.style.cssText = 'min-height:1px;padding:8px 0;text-align:center;font-size:13px;opacity:.8';
+      list.insertAdjacentElement('afterend', sentinel);
+    }
+    return sentinel;
+  }
+
+  function checkDetailCommentsScrollPosition() {
+    if (detailCommentsLoading || !detailCommentsHasMore || !activeDetailCommentsKey) return;
+    const sentinel = document.getElementById('detailCommentsLoadMore');
+    if (!sentinel || sentinel.hidden) return;
+    if (sentinel.getBoundingClientRect().top <= window.innerHeight + 250) {
+      loadMoreVideoComments();
+    }
+  }
+
+  function updateDetailCommentsLoadSentinel() {
+    const sentinel = detailCommentsLoadSentinel();
+    if (!sentinel) return;
+    sentinel.hidden = !detailCommentsHasMore;
+    sentinel.textContent = detailCommentsLoading && detailCommentsRows.length
+      ? localizedUiText('Carregando comentários...') : '';
+
+    if (detailCommentsObserver) detailCommentsObserver.disconnect();
+    if (sentinel.hidden || detailCommentsLoading) return;
+    if ('IntersectionObserver' in window) {
+      if (!detailCommentsObserver) {
+        detailCommentsObserver = new IntersectionObserver(entries => {
+          if (entries.some(entry => entry.isIntersecting)) checkDetailCommentsScrollPosition();
+        }, { rootMargin: '0px 0px 250px 0px' });
+      }
+      detailCommentsObserver.observe(sentinel);
+    } else {
+      // Fallback for older webviews without IntersectionObserver.
+      checkDetailCommentsScrollPosition();
+    }
+  }
+
+  async function fetchVideoCommentsPage(backend, videoKey, offset, limit) {
+    let result = await backend.client.rpc('get_video_comments_page', {
+      p_video_key: videoKey,
+      p_limit: limit,
+      p_offset: offset
+    });
+    if (!result?.error) return Array.isArray(result?.data) ? result.data : [];
+
+    // Older previews without the paginated migration still show the first 100
+    // comments progressively, preserving the previous RPC's access controls.
+    const legacyLimit = Math.min(100, offset + limit);
+    result = await backend.client.rpc('get_video_comments_v2', {
+      p_video_key: videoKey,
+      p_limit: legacyLimit
+    });
+    if (result?.error) {
+      result = await backend.client.rpc('get_video_comments', {
+        p_video_key: videoKey,
+        p_limit: legacyLimit
+      });
+    }
+    if (result?.error) throw result.error;
+    return (Array.isArray(result?.data) ? result.data : []).slice(offset, offset + limit);
+  }
+
+  async function fetchVisibleVideoComments(backend, videoKey, limit) {
+    const rows = [];
+    for (let offset = 0; offset < limit; offset += 30) {
+      const pageSize = Math.min(30, limit - offset);
+      const page = await fetchVideoCommentsPage(backend, videoKey, offset, pageSize);
+      rows.push(...page);
+      if (page.length < pageSize) break;
+    }
+    return rows;
+  }
+
+  async function loadMoreVideoComments() {
+    const videoKey = activeDetailCommentsKey;
+    const requestToken = detailCommentsRequestToken;
+    if (!videoKey || !detailCommentsHasMore || detailCommentsLoading) return;
+    const list = document.getElementById('detailCommentsList');
+    if (!list) return;
+
+    const fetchId = ++detailCommentsFetchId;
+    detailCommentsLoading = true;
+    updateDetailCommentsLoadSentinel();
+    try {
+      const backend = window.beBackend;
+      if (backend?.ready) {
+        try { await backend.ready; } catch (_) {}
+      }
+      if (!backend?.client || backend.mode !== 'supabase') throw new Error('comments_unavailable');
+      const offset = detailCommentsNextOffset;
+      const page = await fetchVideoCommentsPage(backend, videoKey, offset, DETAIL_COMMENTS_PAGE_SIZE + 1);
+      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey || fetchId !== detailCommentsFetchId) return;
+
+      const seen = new Set(detailCommentsRows.map(row => String(row?.comment_id || row?.commentId || '')));
+      const nextRows = page.slice(0, DETAIL_COMMENTS_PAGE_SIZE).filter(row => {
+        const id = String(row?.comment_id || row?.commentId || '');
+        if (id && seen.has(id)) return false;
+        if (id) seen.add(id);
+        return true;
+      });
+      const firstNewIndex = detailCommentsRows.length;
+      detailCommentsRows.push(...nextRows);
+      detailCommentsNextOffset += DETAIL_COMMENTS_PAGE_SIZE;
+      detailCommentsHasMore = page.length > DETAIL_COMMENTS_PAGE_SIZE;
+      if (nextRows.length) {
+        list.insertAdjacentHTML('beforeend', nextRows.map((row, index) =>
+          detailCommentMarkup(row, firstNewIndex + index)).join(''));
+        hydrateDetailCommentAvatarRings(list);
+        setupDetailCommentItemActions();
+      }
+    } catch (error) {
+      (void 0);
+      if (requestToken === detailCommentsRequestToken && fetchId === detailCommentsFetchId) {
+        // Keep a retry option available even on intermittent connection failures.
+        const sentinel = detailCommentsLoadSentinel();
+        if (sentinel) {
+          sentinel.textContent = localizedUiText('Não foi possível carregar os comentários.');
+          sentinel.hidden = false;
+        }
+      }
+    } finally {
+      if (fetchId === detailCommentsFetchId) {
+        detailCommentsLoading = false;
+        updateDetailCommentsLoadSentinel();
+      }
+    }
+  }
+
   async function loadVideoComments(videoKey, requestToken = detailCommentsRequestToken, options = {}) {
     const list = document.getElementById('detailCommentsList');
     const empty = document.getElementById('detailCommentsEmpty');
     if (!list || !empty || !videoKey) return;
     const silent = options && options.silent === true;
+    if (silent && detailCommentsLoading) return;
 
     if (!silent) {
+      detailCommentsRows = [];
+      detailCommentsNextOffset = 0;
+      detailCommentsHasMore = false;
       list.innerHTML = '';
       empty.hidden = true;
       setDetailCommentStatus(localizedUiText('Carregando comentários...'));
     }
 
+    const fetchId = ++detailCommentsFetchId;
+    detailCommentsLoading = true;
+    updateDetailCommentsLoadSentinel();
     const backend = window.beBackend;
-    if (backend?.ready) {
-      try { await backend.ready; } catch (_) {}
-    }
-    if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
-
     try {
+      if (backend?.ready) {
+        try { await backend.ready; } catch (_) {}
+      }
+      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey || fetchId !== detailCommentsFetchId) return;
       if (!backend?.client || backend.mode !== 'supabase') {
         if (!silent) {
           empty.hidden = false;
@@ -6088,35 +6239,37 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         }
         return;
       }
-      let result = await backend.client.rpc('get_video_comments_v2', {
-        p_video_key: videoKey,
-        p_limit: 60
-      });
-      // Rollout seguro: clientes novos continuam funcionando mesmo antes de a
-      // migration v2 existir em outro ambiente/preview.
-      if (result?.error) {
-        result = await backend.client.rpc('get_video_comments', {
-          p_video_key: videoKey,
-          p_limit: 60
-        });
-      }
-      if (result?.error) throw result.error;
-      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
-      const rows = Array.isArray(result?.data) ? result.data : [];
-      list.innerHTML = rows.map((row, index) => detailCommentMarkup(row, index)).join('');
+
+      const visibleCount = silent
+        ? Math.max(DETAIL_COMMENTS_PAGE_SIZE, detailCommentsNextOffset)
+        : DETAIL_COMMENTS_PAGE_SIZE;
+      const fetched = silent
+        ? await fetchVisibleVideoComments(backend, videoKey, visibleCount + 1)
+        : await fetchVideoCommentsPage(backend, videoKey, 0, DETAIL_COMMENTS_PAGE_SIZE + 1);
+      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey || fetchId !== detailCommentsFetchId) return;
+
+      detailCommentsRows = fetched.slice(0, visibleCount);
+      detailCommentsNextOffset = visibleCount;
+      detailCommentsHasMore = fetched.length > visibleCount;
+      list.innerHTML = detailCommentsRows.map((row, index) => detailCommentMarkup(row, index)).join('');
       hydrateDetailCommentAvatarRings(list);
       setupDetailCommentItemActions();
-      empty.hidden = rows.length > 0;
+      empty.hidden = detailCommentsRows.length > 0;
       empty.textContent = localizedUiText('Ainda não há comentários.');
       if (!silent) setDetailCommentStatus('');
     } catch (error) {
       (void 0);
-      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey) return;
+      if (requestToken !== detailCommentsRequestToken || videoKey !== activeDetailCommentsKey || fetchId !== detailCommentsFetchId) return;
       if (silent) return;
       list.innerHTML = '';
       empty.hidden = false;
       empty.textContent = localizedUiText('Não foi possível carregar os comentários.');
       setDetailCommentStatus('');
+    } finally {
+      if (fetchId === detailCommentsFetchId) {
+        detailCommentsLoading = false;
+        updateDetailCommentsLoadSentinel();
+      }
     }
   }
 
@@ -6270,12 +6423,24 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       };
       document.addEventListener('visibilitychange', refreshActiveComments);
       window.addEventListener('online', refreshActiveComments);
+      if (!('IntersectionObserver' in window)) {
+        window.addEventListener('scroll', checkDetailCommentsScrollPosition, { passive: true });
+        window.addEventListener('resize', checkDetailCommentsScrollPosition, { passive: true });
+      }
     }
   }
 
   function closeVideoComments() {
     stopDetailCommentsRealtime();
     detailCommentsRequestToken += 1;
+    detailCommentsFetchId += 1;
+    detailCommentsRows = [];
+    detailCommentsNextOffset = 0;
+    detailCommentsHasMore = false;
+    detailCommentsLoading = false;
+    if (detailCommentsObserver) detailCommentsObserver.disconnect();
+    const sentinel = document.getElementById('detailCommentsLoadMore');
+    if (sentinel) sentinel.hidden = true;
     activeDetailCommentsKey = '';
     detailCommentProfile = null;
     detailCommentPosting = false;
