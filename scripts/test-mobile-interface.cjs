@@ -43,6 +43,64 @@ function checkPublicHeader(file) {
   parser.window.close();
 }
 
+function checkSettingsLayout(file) {
+  const parser = new JSDOM('<style></style>', {virtualConsole:quiet});
+  parser.window.document.querySelector('style').textContent = fs.readFileSync(file, 'utf8');
+  for (const width of [320,390,760]) {
+    const css = activeRules(parser.window.document.styleSheets[0].cssRules, width,
+      text => /mobileAppBar|mobile-app-bar|settings|legal-page|legal-article/.test(text)).join('\n');
+    const dom = new JSDOM(`<style></style><body class="settings-page-active mobile-secondary-page">
+      <header id="mobileAppBar" class="mobile-app-bar"></header>
+      <section id="settingsPage" class="settings-page-shell"><div class="settings-wrap"><div class="settings-header"></div>
+      <div id="settingsPageBody"><div class="settings-legal-layout"><nav class="settings-page-nav"><button>Perfil</button></nav></div></div></div></section>
+      <section id="legalPage" class="legal-page-shell"><header class="legal-page-header"></header><div class="legal-page-wrap"><nav class="legal-page-nav"><a>Termos</a></nav></div></section>`, {virtualConsole:quiet});
+    const d = dom.window.document;
+    d.querySelector('style').textContent = css;
+    const computed = selector => dom.window.getComputedStyle(d.querySelector(selector));
+    assert.equal(computed('#mobileAppBar').position, 'fixed');
+    assert.equal(computed('#mobileAppBar').backgroundColor, 'rgb(5, 6, 7)', 'settings controls have an opaque header');
+    assert.equal(computed('#settingsPage').position, 'relative', 'settings scroll in document flow');
+    assert.equal(computed('#settingsPage').overflow, 'visible');
+    assert.equal(computed('.settings-header').display, 'none', 'one header instead of overlapping headers');
+    const settingsNav = computed('.settings-page-nav');
+    const settingsBody = computed('#settingsPageBody');
+    assert.equal(settingsNav.position, 'static', 'settings tabs do not float over the form');
+    const spacing = [settingsNav.padding,settingsNav.borderRadius,settingsNav.marginBottom,settingsBody.width,settingsBody.paddingTop];
+    d.body.className = 'legal-page-active mobile-secondary-page';
+    const legalNav = computed('.legal-page-nav');
+    const legalBody = computed('.legal-page-wrap');
+    assert.deepEqual([legalNav.padding,legalNav.borderRadius,legalNav.marginBottom,legalBody.width,legalBody.paddingTop], spacing, 'settings use the legal-page layout');
+    dom.window.close();
+  }
+  parser.window.close();
+}
+
+function checkHomeVisibility() {
+  const source = fs.readFileSync('assets/js/site.js','utf8');
+  const start = source.indexOf('  function syncActiveFromPublicView() {');
+  const end = source.indexOf('  function start() {',start);
+  const dom = new JSDOM('<body><button id="mobileHomeButton" hidden>Home</button></body>', {runScripts:'outside-only'});
+  dom.window.isMobile = () => true;
+  dom.window.setActiveDestination = () => {};
+  dom.window.eval(source.slice(start,end) + '\nwindow.syncHome=syncActiveFromPublicView;');
+  const d = dom.window.document, button = d.getElementById('mobileHomeButton');
+  dom.window.syncHome();
+  assert(button.hidden);
+  for (const route of ['profile','settings','notification','detail','album','support','donate','billie','fans','legal','community']) {
+    d.body.className=route+'-page-active';
+    dom.window.syncHome();
+    assert.equal(button.hidden,false,route+' has Home');
+  }
+  for (const view of ['films','videos','movies','series']) {
+    d.body.className='';d.body.dataset.homeView=view;
+    dom.window.syncHome();assert.equal(button.hidden,false,view+' has Home');
+  }
+  d.body.className='section-catalog-active';dom.window.syncHome();assert.equal(button.hidden,false);
+  d.body.dataset.homeView='home';d.body.className='';dom.window.syncHome();assert(button.hidden);
+  d.body.className='settings-page-active';dom.window.isMobile=()=>false;dom.window.syncHome();assert(button.hidden,'desktop is unchanged');
+  dom.window.close();
+}
+
 async function checkAdminDOM() {
   const dom = new JSDOM(`<body class="admin-mode"><header class="admin-topbar"><nav class="admin-nav">
     <button class="active" data-route="dashboard">Início</button><button data-route="users">Pessoas</button>
@@ -120,7 +178,10 @@ async function checkProtectedRuntime() {
 (async () => {
   checkPublicHeader('assets/css/site.css');
   checkPublicHeader('_static/styles/site.css');
+  checkSettingsLayout('assets/css/site.css');
+  checkSettingsLayout('_static/styles/site.css');
+  checkHomeVisibility();
   await checkAdminDOM();
   await checkProtectedRuntime();
-  console.log('PASS mobile interface: profile/header cascade, route restoration, dynamic admin lists/navigation, preserved actions and authenticated delivery');
+  console.log('PASS mobile interface: profile/header cascade, settings/legal layout, Home visibility, dynamic admin lists/navigation, preserved actions and authenticated delivery');
 })().catch(error => {console.error(error);process.exitCode = 1;});

@@ -2612,7 +2612,10 @@ const userDropdown=document.getElementById('userDropdown');
           panel.setAttribute('aria-hidden',active?'false':'true');
         });
         if(tab==='devices')window.setTimeout(renderSettingsDevices,0);
-        if(moveToTop&&settingsPage){settingsPage.scrollTop=0;}
+        if(moveToTop&&settingsPage){
+          settingsPage.scrollTop=0;
+          if(window.matchMedia('(max-width:760px)').matches)window.scrollTo({top:0,behavior:'auto'});
+        }
       }
       settingsPageBody.querySelectorAll('[data-settings-tab]').forEach(function(button){
         button.onclick=function(event){

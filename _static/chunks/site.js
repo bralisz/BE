@@ -4210,10 +4210,84 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     } }));
   }
 
+  function bindFeaturedSwipe(host, getIndex, go, autoplay, count) {
+    host._beSwipeDispose?.();
+    if (count < 2) return;
+    let gesture = null;
+    let blockClickUntil = 0;
+    const listeners = [];
+    const mobile = () => window.matchMedia('(max-width:760px)').matches;
+    const listen = (target, name, handler, options) => {
+      target.addEventListener(name, handler, options);
+      listeners.push(() => target.removeEventListener(name, handler, options));
+    };
+    const cancel = () => {
+      if (!gesture) return;
+      gesture = null;
+      autoplay.start();
+    };
+    const begin = (point, id) => {
+      if (!mobile()) return;
+      gesture = {x:point.clientX, y:point.clientY, id};
+      autoplay.stop();
+    };
+    const move = (point, id) => {
+      if (!gesture || gesture.id !== id) return;
+      const dx = point.clientX - gesture.x;
+      const dy = point.clientY - gesture.y;
+      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) cancel();
+    };
+    const end = (point, id) => {
+      if (!gesture || gesture.id !== id) return;
+      const dx = point.clientX - gesture.x;
+      const dy = point.clientY - gesture.y;
+      gesture = null;
+      if (mobile() && Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+        go(getIndex() + (dx < 0 ? 1 : -1));
+        // A swipe starting on a CTA must not also open that content.
+        blockClickUntil = Date.now() + 350;
+      }
+      autoplay.start();
+    };
+    if ('PointerEvent' in window) {
+      listen(host, 'pointerdown', event => {
+        if (event.pointerType === 'mouse' || event.button > 0) return;
+        if (event.isPrimary === false) {cancel();return;}
+        begin(event, event.pointerId);
+      }, {passive:true});
+      listen(window, 'pointermove', event => move(event, event.pointerId), {passive:true});
+      listen(window, 'pointerup', event => end(event, event.pointerId), {passive:true});
+      listen(window, 'pointercancel', cancel, {passive:true});
+    } else {
+      listen(host, 'touchstart', event => {
+        if (event.touches.length !== 1) {cancel();return;}
+        const point = event.touches[0];
+        begin(point, point.identifier);
+      }, {passive:true});
+      listen(window, 'touchmove', event => {
+        if (event.touches.length !== 1) {cancel();return;}
+        const point = event.touches[0];
+        move(point, point.identifier);
+      }, {passive:true});
+      listen(window, 'touchend', event => {
+        Array.from(event.changedTouches).forEach(point => end(point, point.identifier));
+      }, {passive:true});
+      listen(window, 'touchcancel', cancel, {passive:true});
+    }
+    listen(host, 'click', event => {
+      if (event.detail !== 0 && Date.now() < blockClickUntil) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
+    host._beSwipeDispose = () => {listeners.forEach(remove => remove());gesture = null;};
+  }
+
   async function renderFeatured() {
     const host = document.getElementById('featured');
     if (!host) return;
     host._beAutoplay?.dispose();
+    host._beSwipeDispose?.();
     const section = host.closest('.featured-wrap');
     if (section) section.hidden = true;
 
@@ -4361,6 +4435,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
     const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(index + 1); }, 10000, slides.length > 1);
     const { start, stop } = autoplay;
+    bindFeaturedSwipe(host, () => index, go, autoplay, slides.length);
     dots.forEach(dot => dot.addEventListener('click', () => { go(Number(dot.dataset.goto || 0)); start(); }));
     host.onmouseenter = stop;
     host.onmouseleave = start;
@@ -4459,6 +4534,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     host._beAutoplay?.dispose();
+    host._beSwipeDispose?.();
     const items = chooseRandomFeaturedItems(view, force, 3);
     if (!items.length) {
       host.innerHTML = '';
@@ -4559,6 +4635,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     };
     const autoplay = host._beAutoplay = window.BETVAutoplay(host, () => { if (slides.length > 1) go(activeIndex + 1); }, 10000, slides.length > 1);
     const { start, stop } = autoplay;
+    bindFeaturedSwipe(host, () => activeIndex, go, autoplay, slides.length);
 
     dots.forEach(dot => dot.addEventListener('click', () => {
       go(Number(dot.dataset.goto || 0));
@@ -12669,9 +12746,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return true;
   }
 
-  function selectView(destination) {
+  function selectView(destination, historyMode = 'push') {
     if (destination === 'home') {
-      clickHomeView('home');
+      clickHomeView('home', historyMode);
       document.body.dataset.mobileCollection = '';
     } else if (destination === 'films') {
       clickHomeView('films');
@@ -12736,6 +12813,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bar.className = 'mobile-app-bar';
     bar.id = 'mobileAppBar';
     bar.innerHTML = `
+      <button class="mobile-home-button" id="mobileHomeButton" type="button" aria-label="Voltar para a página inicial" hidden>${icon('home')}</button>
       <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar"><img loading="eager" decoding="async" src="/_static/media/profile/default-avatar.png" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="Avatar"></span></button>
       <div class="mobile-header-actions">
         <button class="mobile-notification-button" id="mobileNotificationButton" type="button" aria-label="Abrir notificações" aria-expanded="false">${icon('bell')}<span class="notification-unread-dot" id="mobileNotificationUnreadDot" hidden></span></button>
@@ -12802,6 +12880,15 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function bindMobileActions() {
     const searchButton = document.getElementById('mobileSearchButton');
     const searchInput = document.getElementById('mobileSearchInput');
+
+    bindActivation(document.getElementById('mobileHomeButton'), () => {
+      closeMobileAccountPopover();
+      window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
+      const path = window.BETVLocalePath ? window.BETVLocalePath() : location.pathname;
+      const dedicatedPage = path !== '/' || document.body.classList.contains('community-page-active');
+      if (dedicatedPage && window.BETVPublicRoutes) window.BETVPublicRoutes.go('/');
+      selectView('home', dedicatedPage ? 'none' : 'push');
+    });
 
     bindActivation(searchButton, () => {
       openMobileSearch(!document.body.classList.contains('mobile-search-open'));
@@ -12909,6 +12996,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function syncActiveFromPublicView() {
+    const secondaryViews = ['profile-page-active','settings-page-active','notification-page-active','detail-page-active','album-page-active','support-page-active','donate-page-active','billie-page-active','fans-page-active','legal-page-active','section-catalog-active','community-page-active'];
+    const secondaryPage = isMobile() && !document.body.classList.contains('login-mode') &&
+      (secondaryViews.some(name => document.body.classList.contains(name)) || (document.body.dataset.homeView || 'home') !== 'home');
+    if (document.body.classList.contains('mobile-secondary-page') !== secondaryPage) {
+      document.body.classList.toggle('mobile-secondary-page', secondaryPage);
+    }
+    const homeButton = document.getElementById('mobileHomeButton');
+    if (homeButton && homeButton.hidden === secondaryPage) homeButton.hidden = !secondaryPage;
     if (document.body.classList.contains('community-page-active')) {
       setActiveDestination('community');
       return;
@@ -12932,6 +13027,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     });
     window.addEventListener('resize', () => {
       updateInstallButton();
+      syncActiveFromPublicView();
       if (!isMobile()) {
         openDrawer(false);
         openMobileSearch(false);
