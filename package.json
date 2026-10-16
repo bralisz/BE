@@ -12,6 +12,7 @@
   "scripts": {
     "build:static": "node scripts/build-static.mjs",
     "test:mobile-ui": "node scripts/test-mobile-interface.cjs && node scripts/test-featured-swipe.cjs && node scripts/test-area-loading.cjs mobile-navigation && node scripts/test-area-loading.cjs mobile-settings",
+    "test:admin-ui": "node scripts/test-admin-interface.cjs",
     "test:responsiveness": "node scripts/test-area-loading.cjs && node scripts/test-mobile-performance.cjs && node scripts/test-profile-navigation.cjs && node scripts/test-loading-recovery.cjs && node scripts/test-profile-follow.cjs && node scripts/test-static-css.cjs && node scripts/test-responsive-media.cjs"
   },
   "devDependencies": {

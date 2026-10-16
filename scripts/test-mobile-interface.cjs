@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const {JSDOM, VirtualConsole} = require('jsdom');
-const mobileUI = require('../development/source/admin/mobile');
+const adminInterface = require('../development/source/admin/interface');
 const adminRuntime = require('../server/handlers/admin-runtime');
 
 const quiet = new VirtualConsole();
@@ -57,8 +57,8 @@ function checkSettingsLayout(file) {
     const d = dom.window.document;
     d.querySelector('style').textContent = css;
     const computed = selector => dom.window.getComputedStyle(d.querySelector(selector));
-    assert.equal(computed('#mobileAppBar').position, 'fixed');
-    assert.equal(computed('#mobileAppBar').backgroundColor, 'rgb(5, 6, 7)', 'settings controls have an opaque header');
+    assert.equal(computed('#mobileAppBar').position, 'absolute', 'secondary navigation scrolls away');
+    assert.equal(computed('#mobileAppBar').backgroundColor, 'rgba(0, 0, 0, 0)', 'settings header stays transparent');
     assert.equal(computed('#settingsPage').position, 'relative', 'settings scroll in document flow');
     assert.equal(computed('#settingsPage').overflow, 'visible');
     assert.equal(computed('.settings-header').display, 'none', 'one header instead of overlapping headers');
@@ -70,6 +70,32 @@ function checkSettingsLayout(file) {
     const legalNav = computed('.legal-page-nav');
     const legalBody = computed('.legal-page-wrap');
     assert.deepEqual([legalNav.padding,legalNav.borderRadius,legalNav.marginBottom,legalBody.width,legalBody.paddingTop], spacing, 'settings use the legal-page layout');
+    dom.window.close();
+  }
+  parser.window.close();
+}
+
+function checkTransparentHeaders(file) {
+  const parser = new JSDOM('<style></style>', {virtualConsole:quiet});
+  parser.window.document.querySelector('style').textContent = fs.readFileSync(file,'utf8');
+  for (const width of [320,390,760,1024,1440]) {
+    const css = activeRules(parser.window.document.styleSheets[0].cssRules,width,
+      selector => /topbar|mobileAppBar|mobile-app-bar|page-header|settings-header/.test(selector)).join('\n');
+    const dom = new JSDOM('<style></style><body><div class="topbar-wrap"><header class="home-topbar"></header></div><header id="mobileAppBar" class="mobile-app-bar"></header><header class="settings-header"></header><header class="legal-page-header"></header><header class="notification-page-header"></header><header class="donate-page-header"></header><header class="billie-page-header"></header><header class="fans-page-header"></header>',{virtualConsole:quiet});
+    const {document:d} = dom.window;
+    d.querySelector('style').textContent = css;
+    for (const mode of ['', 'mobile-lite','performance-lite','mobile-lite performance-lite']) {
+      d.documentElement.className = mode;
+      for (const route of ['mobile-home-layout mobile-home-scrolled','profile-page-active','settings-page-active','legal-page-active','notification-page-active','donate-page-active','billie-page-active','fans-page-active']) {
+        d.body.className = route;
+        for (const header of d.querySelectorAll('header,.topbar-wrap')) {
+          const computed = dom.window.getComputedStyle(header);
+          assert.equal(computed.backgroundColor,'rgba(0, 0, 0, 0)',`${header.className} is transparent at ${width}px in ${mode || 'normal'} (${route})`);
+          assert.equal(computed.backgroundImage,'none',`${header.className} image, ${width}px, ${mode}, ${route}`);
+          assert.equal(computed.boxShadow,'none',`${header.className} shadow, ${width}px, ${mode}, ${route}`);
+        }
+      }
+    }
     dom.window.close();
   }
   parser.window.close();
@@ -101,47 +127,6 @@ function checkHomeVisibility() {
   dom.window.close();
 }
 
-async function checkAdminDOM() {
-  const dom = new JSDOM(`<body class="admin-mode"><header class="admin-topbar"><nav class="admin-nav">
-    <button class="active" data-route="dashboard">Início</button><button data-route="users">Pessoas</button>
-    </nav></header><main><div class="table-wrap"><table class="a-table"><thead><tr><th>Usuário</th><th>Acesso</th><th>Ações</th></tr></thead>
-    <tbody><tr><td>Miguel</td><td>Admin</td><td><button id="edit">Editar</button></td></tr></tbody></table></div></main>`, {runScripts:'outside-only', virtualConsole:quiet});
-  const {document} = dom.window;
-  let clicks = 0;
-  document.getElementById('edit').onclick = () => clicks++;
-  dom.window.eval(mobileUI);
-  const settle = () => new Promise(resolve => dom.window.setTimeout(resolve, 0));
-  assert(document.querySelector('.admin-mobile-tabs'));
-  assert.equal(document.querySelector('[aria-current="page"]').dataset.route, 'dashboard');
-  assert.equal(document.querySelector('.admin-nav button').type, 'button');
-  assert.equal(document.querySelector('table').getAttribute('role'), 'table');
-  assert.deepEqual(Array.from(document.querySelectorAll('td'), cell => cell.dataset.mobileLabel), ['Usuário','Acesso','Ações']);
-  assert.deepEqual(Array.from(document.querySelectorAll('td'), cell => cell.textContent), ['Miguel','Admin','Editar']);
-  document.getElementById('edit').click();
-  assert.equal(clicks, 1, 'table actions retain their original click handlers');
-
-  document.querySelector('tbody').innerHTML = '<tr><td>Outro fã</td><td>Editor</td><td>Editar</td></tr>';
-  await settle();
-  assert.equal(document.querySelector('tbody td').dataset.mobileLabel, 'Usuário', 'async rows receive labels');
-  document.querySelector('.admin-topbar').innerHTML = '<nav class="admin-nav"><button data-route="users" class="active">Pessoas</button></nav>';
-  await settle();
-  assert(document.querySelector('.admin-mobile-tabs'));
-  assert.equal(document.querySelector('[aria-current="page"]').dataset.route, 'users', 'replacement shell is enhanced');
-
-  document.querySelector('tbody').innerHTML = '<tr><td colspan="3">Nenhum usuário</td></tr>';
-  await settle();
-  assert(!document.querySelector('table').classList.contains('admin-mobile-cards'), 'spanning cells retain their table layout');
-  dom.window.eval(mobileUI);
-  assert.equal(document.querySelectorAll('#be-admin-mobile-ui').length, 1, 'reloading the runtime is idempotent');
-
-  const sheet = document.getElementById('be-admin-mobile-ui').sheet;
-  assert(sheet && sheet.cssRules.length > 0, 'mobile stylesheet parses');
-  assert.equal(activeRules(sheet.cssRules, 1024, () => true).length, 0, 'desktop has no new layout rules');
-  const mobileRules = activeRules(sheet.cssRules, 390, () => true).join('\n');
-  assert(mobileRules.includes('safe-area-inset-bottom'), 'dock reserves the iPhone safe area');
-  dom.window.close();
-}
-
 async function checkProtectedRuntime() {
   const savedFetch = global.fetch;
   let calls = 0;
@@ -157,7 +142,7 @@ async function checkProtectedRuntime() {
     const allowed = response();
     await adminRuntime(request, allowed);
     assert.equal(allowed.statusCode, 200);
-    assert(allowed.body.endsWith(mobileUI), 'authenticated response includes the actual mobile source');
+    assert(allowed.body.endsWith(adminInterface), 'authenticated response includes the responsive interface');
     new vm.Script(allowed.body);
     assert.equal(allowed.headers['Cache-Control'], 'private, no-store, max-age=0');
     const missing = response();
@@ -180,8 +165,9 @@ async function checkProtectedRuntime() {
   checkPublicHeader('_static/styles/site.css');
   checkSettingsLayout('assets/css/site.css');
   checkSettingsLayout('_static/styles/site.css');
+  checkTransparentHeaders('assets/css/site.css');
+  checkTransparentHeaders('_static/styles/site.css');
   checkHomeVisibility();
-  await checkAdminDOM();
   await checkProtectedRuntime();
-  console.log('PASS mobile interface: profile/header cascade, settings/legal layout, Home visibility, dynamic admin lists/navigation, preserved actions and authenticated delivery');
+  console.log('PASS mobile interface: profile/header cascade, settings/legal layout, Home visibility, authenticated admin delivery');
 })().catch(error => {console.error(error);process.exitCode = 1;});
