@@ -502,6 +502,8 @@
     var shouldRestore=document.body.classList.contains('community-page-active')||document.body.dataset.homeView==='community';
     if(!shouldRestore)return;
     window.requestAnimationFrame(function(){
+      // A pending utility callback must not reopen Community after Home is chosen.
+      if(!document.body.classList.contains('community-page-active')&&document.body.dataset.homeView!=='community')return;
       var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('legal-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('donate-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active');
       if(dedicated)return;
       createPage();

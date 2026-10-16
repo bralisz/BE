@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {execFileSync}=require('node:child_process');
 if(!process.argv[2]){
-  for(const scenario of ['profile','mobile-profile','guest-profile','community','community-ong','stale-community','guest-login','chunk-retry','history','images','settings','search']){
+  for(const scenario of ['mobile-navigation','mobile-settings','profile','mobile-profile','guest-profile','community','community-ong','stale-community','guest-login','chunk-retry','history','images','settings','search']){
     process.stdout.write(execFileSync(process.execPath,[__filename,scenario],{timeout:10000,encoding:'utf8'}));
   }
   process.exit();
@@ -14,8 +14,9 @@ const errors=[];
 const vc=new VirtualConsole();vc.on('jsdomError',error=>{if(!error.message.includes('Not implemented'))errors.push(error.cause||error);});
 const dom=new JSDOM(fs.readFileSync('index.html','utf8'),{url:'https://billieilishtv.site/'+(scenario==='guest-profile'?'@other':''),runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
 const w=dom.window;
-if(scenario==='mobile-profile'||scenario==='guest-login')w.innerWidth=390;
-w.matchMedia=query=>({matches:(scenario==='mobile-profile'||scenario==='guest-login')&&query.includes('max-width'),addEventListener(){},addListener(){}});
+const mobileScenario=['mobile-profile','guest-login','mobile-settings','mobile-navigation'].includes(scenario);
+if(mobileScenario)w.innerWidth=390;
+w.matchMedia=query=>({matches:mobileScenario&&query.includes('max-width'),addEventListener(){},addListener(){}});
 w.scrollTo=options=>{w.scrollY=Number(options.top)||0;w.scrollX=Number(options.left)||0;};
 w.fetch=async()=>({ok:true,json:async()=>({}),text:async()=>'',headers:{get:()=>''}});
 w.IntersectionObserver=class{observe(){}unobserve(){}disconnect(){}};w.ResizeObserver=class{observe(){}disconnect(){}};w.CSS={escape:x=>x};w.navigator.sendBeacon=()=>true;
@@ -107,11 +108,43 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(2
     await until(()=>w.document.body.classList.contains('login-mode'));
     assert.equal(w.document.getElementById('emailStep').hidden,false,'Entrar opens email-first sign in or registration');
   }
-  if(scenario==='settings'){
+  if(scenario==='settings'||scenario==='mobile-settings'){
     w.document.querySelector('[data-public-action="settings"]').click();
     await until(()=>w.document.getElementById('settingsPage').dataset.renderReady==='true');
     assert.equal(w.document.getElementById('settingsPage').hidden,false);
     assert(loaded.includes('account'));assert(loaded.includes('community'));
+    if(scenario==='mobile-settings'){
+      await until(()=>!w.document.getElementById('mobileHomeButton').hidden);
+      w.scrollY=500;
+      w.document.querySelector('[data-settings-tab="connections"]').click();
+      assert.equal(w.scrollY,0,'changing mobile settings tabs resets document scroll');
+      assert.equal(w.document.querySelector('[data-settings-panel="connections"]').hidden,false);
+      w.document.getElementById('mobileHomeButton').click();
+      await until(()=>!w.document.body.classList.contains('settings-page-active'));
+      await until(()=>w.document.getElementById('mobileHomeButton').hidden);
+      assert.equal(w.location.pathname,'/');
+    }
+  }
+  if(scenario==='mobile-navigation'){
+    const home=w.document.getElementById('mobileHomeButton');
+    assert(home.hidden,'initial Home has no redundant Home control');
+    for(const view of ['films','videos']){
+      w.document.querySelector('[data-home-view="'+view+'"]').click();
+      await until(()=>!home.hidden);
+      assert.equal(w.document.body.dataset.homeView,view);
+      home.click();
+      await until(()=>home.hidden);
+      assert.equal(w.document.body.dataset.homeView,'home');
+    }
+    w.BETVPublicRoutes.go('/terms');
+    await until(()=>w.document.body.classList.contains('legal-page-active')&&!home.hidden);
+    home.click();
+    await until(()=>!w.document.body.classList.contains('legal-page-active')&&home.hidden);
+    assert.equal(w.location.pathname,'/');
+    w.document.querySelector('[data-community-tab]').click();
+    await until(()=>w.document.body.classList.contains('community-page-active')&&!home.hidden);
+    home.click();
+    await until(()=>!w.document.body.classList.contains('community-page-active')&&home.hidden);
   }
   if(scenario==='search'){
     let calls=0;

@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revision = '20261014-instagram-minimal-v2';
+  const revision = '20261016-mobile-navigation-swipe-v1';
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
