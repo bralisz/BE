@@ -16,3 +16,5 @@ Esses arquivos não entram automaticamente no build público. O build atual publ
 Por isso, não mova ou renomeie arquivos daqui assumindo que são equivalentes aos arquivos publicados. Antes de alterar uma fonte, confira onde ela é usada e qual arquivo público recebe a mudança.
 
 O painel administrativo usa `source/admin/admin.js` como fonte principal. O código entregue ao navegador é montado no servidor por `server/handlers/admin-runtime.js`.
+
+Os ajustes atuais de interface mobile estão em `source/admin/mobile.js`, um módulo compartilhado acrescentado pelo handler somente à resposta administrativa autenticada. Edite esse arquivo diretamente; não substitua o bundle legado pelo conteúdo de `admin.js`, pois as duas versões têm diferenças anteriores.
