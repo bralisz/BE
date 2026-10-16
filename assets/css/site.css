@@ -21562,7 +21562,7 @@ body.donate-page-active #communityPage{display:none!important}
   .community-instagram-follow{transition:none}
 }
 
-/* A single mobile Home control and an opaque header on secondary pages. */
+/* A single mobile Home control; secondary-page controls scroll with the page. */
 #mobileHomeButton{display:none}
 @media(max-width:760px){
   body:not(.login-mode):not(.admin-mode) #mobileAppBar #mobileHomeButton:not([hidden]){
@@ -21576,9 +21576,9 @@ body.donate-page-active #communityPage{display:none!important}
   #mobileHomeButton[hidden]{display:none!important}
   #mobileHomeButton svg{display:block;width:22px;height:22px;pointer-events:none}
   #mobileHomeButton:focus-visible{outline:2px solid #8ec5ff;outline-offset:3px}
-  body.mobile-secondary-page:not(.profile-page-active):not(.login-mode):not(.admin-mode) #mobileAppBar{
-    background:#050607!important;background-image:none!important;
-    border-bottom:1px solid rgba(255,255,255,.08)!important;
+  body.mobile-secondary-page:not(.login-mode):not(.admin-mode):not(.drive-player-open):not(.player-open) #mobileAppBar{
+    position:absolute!important;
+    background:transparent!important;background-image:none!important;border:0!important;
   }
   body.mobile-secondary-page #profilePageHome,
   body.mobile-secondary-page #billiePageHome,
@@ -21587,6 +21587,24 @@ body.donate-page-active #communityPage{display:none!important}
   body.mobile-secondary-page #fansPageHome,
   body.mobile-secondary-page #legalHomeButton{display:none!important}
   #featured,#randomFeatured{touch-action:pan-y pinch-zoom}
+}
+
+/* Headers stay clear on every device, including the lightweight rendering modes.
+   Use no blur: transparency does not depend on GPU support or device performance. */
+html body:not(.admin-mode) #mobileAppBar,
+html body:not(.admin-mode) .topbar-wrap,
+html body:not(.admin-mode) .home-topbar,
+html body:not(.admin-mode) .settings-header,
+html body:not(.admin-mode) .legal-page-header,
+html body:not(.admin-mode) .notification-page-header,
+html body:not(.admin-mode) .donate-page-header,
+html body:not(.admin-mode) .billie-page-header,
+html body:not(.admin-mode) .support-page-header,
+html body:not(.admin-mode) .fans-page-header,
+html body:not(.admin-mode) .album-page-header,
+html body:not(.admin-mode) .login-topbar{
+  background:transparent!important;background-image:none!important;border:0!important;
+  box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
 }
 
 /* Settings and legal pages use the same document flow, tabs and spacing. */
