@@ -357,6 +357,78 @@
     }catch(_){spotlight.hidden=true;}
   }
 
+
+  // Uses the same active gallery banner pool as the profile banner picker.
+  var communityBannerRequest=0;
+  function loadRandomCommunityBanner(){
+    var host=page&&page.querySelector('.community-hero-banner');
+    var image=host&&host.querySelector('img');
+    if(!host||!image)return;
+    var version=++communityBannerRequest;
+    var previous=String(image.dataset.bannerSource||'');
+    image.onload=null;
+    image.onerror=null;
+    image.removeAttribute('src');
+    host.hidden=false;
+    page.classList.remove('community-banner-unavailable');
+
+    function hideUnavailable(){
+      if(version!==communityBannerRequest)return;
+      image.onload=null;
+      image.onerror=null;
+      image.removeAttribute('src');
+      host.hidden=true;
+      page.classList.add('community-banner-unavailable');
+    }
+
+    Promise.resolve(window.beBackend&&window.beBackend.ready).then(function(){
+      var data=window.beBackend&&window.beBackend.data;
+      if(!data||typeof data.list!=='function')return [];
+      return data.list('gallery',{orderBy:'order',direction:'asc'});
+    }).then(function(items){
+      if(version!==communityBannerRequest)return;
+      var options=(Array.isArray(items)?items:[]).filter(function(item){
+        if(!item||item.active===false||!item.imageUrl)return false;
+        var type=String(item.itemType||'').toLowerCase();
+        if(type!=='banner'&&!/banner/i.test(String(item.category||'')))return false;
+        var url=String(item.imageUrl||'').trim();
+        return /^https?:\/\//i.test(url)||/^\/(?!\/)/.test(url);
+      });
+      if(!options.length){hideUnavailable();return;}
+      // Shuffle the existing picker catalog; avoid repeating last banner when possible.
+      for(var i=options.length-1;i>0;i--){
+        var j=Math.floor(Math.random()*(i+1));
+        var swap=options[i];options[i]=options[j];options[j]=swap;
+      }
+      if(options.length>1&&String(options[0].imageUrl)===previous)options.push(options.shift());
+
+      function loadNext(){
+        if(version!==communityBannerRequest)return;
+        var item=options.shift();
+        if(!item){hideUnavailable();return;}
+        var src=mediaUrl(item.imageUrl);
+        if(!src||src==='#'){loadNext();return;}
+        image.onload=function(){
+          if(version!==communityBannerRequest)return;
+          image.dataset.bannerSource=String(item.imageUrl);
+          image.onload=null;
+          image.onerror=null;
+          host.hidden=false;
+          page.classList.remove('community-banner-unavailable');
+        };
+        image.onerror=function(){
+          if(version!==communityBannerRequest)return;
+          image.onload=null;
+          image.onerror=null;
+          loadNext();
+        };
+        image.src=src;
+        if(image.complete&&image.naturalWidth>0)image.onload();
+      }
+      loadNext();
+    }).catch(hideUnavailable);
+  }
+
   function createPage(){
     if(document.getElementById('communityPage')){page=document.getElementById('communityPage');return page;}
     var main=document.querySelector('body > main');
@@ -368,7 +440,7 @@
     page.setAttribute('aria-label','Comunidade dos Avocados');
     page.innerHTML=''
       +'<div class="community-page-inner">'
-      +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/_static/media/community/community-hero-banner.webp?rev=20261027-community-new-banner-v1" alt="Billie Eilish interagindo com fãs durante um show" loading="eager" decoding="async" fetchpriority="high"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
+      +  '<section class="community-hero-banner" aria-label="Banner aleatório da comunidade"><div class="community-hero-banner-frame"><img alt="Banner da Comunidade" loading="eager" decoding="async" fetchpriority="high"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<div class="community-content-shell">'
       +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
       +    '<section class="community-instagram-section" id="communityInstagramSection" aria-labelledby="communityInstagramTitle">'
@@ -539,6 +611,7 @@
     setCommunityNavActive(true);
     try{window.dispatchEvent(new CustomEvent('be:close-public-search'));window.dispatchEvent(new CustomEvent('be:close-mobile-search'));}catch(_){ }
     window.scrollTo({top:0,left:0,behavior:'auto'});
+    loadRandomCommunityBanner();
     refreshCommunity();
   }
   window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity,record:recordRecentFromPlay};
