@@ -25,3 +25,8 @@ e acrescenta navegação lateral no desktop, ajustes responsivos e busca de
 seções por Ctrl+K. Não regenere o bundle legado para atualizar essa camada.
 
 Valide com `npm run test:admin-ui` e `npm run test:seo`.
+
+O dashboard inspirado nas referências visuais está em
+`source/admin/studio.js`, aplicado após a camada workspace. Ele reorganiza
+os mesmos elementos com dados reais, sem recriar formulários ou ações.
+Os painéis de doação e ajustes ficam em seções expansíveis na visão geral.
