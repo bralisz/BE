@@ -34,7 +34,7 @@
     image.decoding = 'async';
     if (priority) {
       image.loading = 'eager';
-      if (!image.getAttribute('fetchpriority')) image.setAttribute('fetchpriority', 'high');
+      image.setAttribute('fetchpriority', 'high');
     } else {
       if (!image.hasAttribute('loading')) image.loading = 'lazy';
       if (image.loading === 'lazy' && !image.hasAttribute('fetchpriority')) {
@@ -110,12 +110,13 @@
     function flush() {
       scheduled = false;
       const roots = Array.from(pending);
+      const rootSet = new Set(roots);
       pending.clear();
       for (const node of roots) {
         if (!node.isConnected) continue;
         let hasParent = false;
         for (let parent = node.parentElement; parent; parent = parent.parentElement) {
-          if (roots.includes(parent)) { hasParent = true; break; }
+          if (rootSet.has(parent)) { hasParent = true; break; }
         }
         if (!hasParent) processNode(node);
       }
