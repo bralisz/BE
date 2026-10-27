@@ -21828,3 +21828,44 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
     background:linear-gradient(180deg,transparent 0%,transparent 36%,#050607 100%)!important;
   }
 }
+
+
+/* Mobile: artwork must extend behind the transparent Community/NGO navigation. */
+@media (max-width:760px) {
+  /* No dark navigation surface, including secondary-page and scroll variants. */
+  body.community-page-active #mobileAppBar,
+  body.community-page-active.mobile-secondary-page #mobileAppBar,
+  body.donate-page-active #mobileAppBar,
+  body.donate-page-active.mobile-secondary-page #mobileAppBar,
+  body.donate-page-active .donate-page-header {
+    background:transparent!important;
+    background-color:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    border-bottom:0!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  /* Pull the artwork up under the header, preserving the content's original position. */
+  body.donate-page-active #donateHero {
+    margin-top:calc(-78px - env(safe-area-inset-top))!important;
+    height:calc(clamp(280px,85vw,430px) + 78px + env(safe-area-inset-top))!important;
+    min-height:calc(280px + 78px + env(safe-area-inset-top))!important;
+  }
+  body.community-page-active .community-page-inner.has-community-banner .community-hero-banner {
+    margin-top:calc(-78px - env(safe-area-inset-top))!important;
+  }
+  body.community-page-active .community-page-inner.has-community-banner .community-hero-banner-frame>img {
+    height:calc(clamp(280px,85vw,430px) + 78px + env(safe-area-inset-top))!important;
+  }
+  body.community-page-active #mobileAppBar::before,
+  body.community-page-active #mobileAppBar::after,
+  body.donate-page-active #mobileAppBar::before,
+  body.donate-page-active #mobileAppBar::after,
+  body.donate-page-active .donate-page-header::before,
+  body.donate-page-active .donate-page-header::after {
+    content:none!important;
+    display:none!important;
+  }
+}
