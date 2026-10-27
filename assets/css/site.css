@@ -21659,3 +21659,110 @@ body.donate-page-active #communityPage{display:none!important}
   body.settings-page-active .settings-page-content{min-width:0}
   body.settings-page-active .settings-panel-card{padding:22px 18px;border-radius:22px}
 }
+
+
+/* 2026-10 — Header: standalone Home action aligned with account actions.
+   Keep the previous navigation nodes in the DOM for view/event compatibility. */
+@media (min-width: 761px) {
+  body:not(.login-mode):not(.admin-mode) .topbar-wrap {
+    top: var(--header-action-top, 21px);
+    justify-content: flex-start;
+    padding: 0 0 0 clamp(22px, 3.7vw, 56px);
+  }
+}
+body:not(.login-mode):not(.admin-mode) #topbar.home-topbar {
+  width: auto;
+  max-width: none;
+  height: var(--header-action-size, 54px);
+  padding: 0;
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: visible;
+}
+#homeNavLeading.home-nav-leading {
+  overflow: visible;
+  gap: 0;
+}
+#homeNavLeading.home-nav-leading::before,
+#homeNavLinks.home-nav-links,
+#topbar .home-search-wrap {
+  display: none !important;
+}
+#logoBtn.home-logo-pill,
+#logoBtn.home-logo-pill:hover,
+#logoBtn.home-logo-pill.active {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  width: auto;
+  min-width: 105px;
+  height: 46px;
+  padding: 5px 15px 5px 6px;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 999px;
+  color: #f7f7f8 !important;
+  background: rgba(22,24,27,.85) !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.06) !important;
+  cursor: pointer;
+}
+#logoBtn.home-logo-pill:hover {
+  background: rgba(45,48,52,.95) !important;
+  border-color: rgba(255,255,255,.3);
+}
+#logoBtn.home-logo-pill:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+#logoBtn .home-button-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #363a40;
+  color: #fff;
+}
+#logoBtn .home-button-icon svg {
+  width: 19px;
+  height: 19px;
+}
+#logoBtn .home-button-label {
+  color: #f7f7f8;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  body:not(.login-mode):not(.admin-mode) .topbar-wrap {
+    top: var(--header-action-top, 14px);
+    left: 0;
+    right: auto;
+    justify-content: flex-start;
+    padding: 0 0 0 12px;
+  }
+  body:not(.login-mode):not(.admin-mode) #topbar.home-topbar {
+    height: var(--header-action-size, 48px);
+  }
+  #logoBtn.home-logo-pill,
+  #logoBtn.home-logo-pill:hover,
+  #logoBtn.home-logo-pill.active {
+    min-width: 98px;
+    height: 42px;
+    padding-right: 12px;
+  }
+  #logoBtn .home-button-icon {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+  }
+  #logoBtn .home-button-label { font-size: 14px; }
+}
