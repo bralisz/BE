@@ -7,10 +7,10 @@ const css=fs.readFileSync('assets/css/site.css','utf8');
 const features=fs.readFileSync('assets/js/features.js','utf8');
 
 assert.equal(community,published,'published Community must match source');
-assert.doesNotMatch(community,/community-hero-banner\\.webp/);
+assert.doesNotMatch(community,/community-hero-banner\.webp/);
 assert(!fs.existsSync('assets/images/community/community-hero-banner.webp'));
 assert(!fs.existsSync('_static/media/community/community-hero-banner.webp'));
-assert.match(css,/community-page-inner:not\\(\\.has-community-banner\\)/);
+assert.match(css,/community-page-inner:not\(\.has-community-banner\)/);
 assert.match(features,/community:'20261027-random-gallery-banner-v1'/);
 
 const start=community.indexOf('  // The Community hero uses the same active banner gallery');
@@ -56,7 +56,7 @@ function fixture(rows){
   await tick();
   assert.equal(f.image.src,'https://example.org/two.webp','should avoid the previous banner');
   assert.equal(f.calls,1,'gallery should be cached during short navigation sessions');
-  assert(!f.displayed.some(url=>/hidden|av\\.webp|javascript/.test(url)),'only active gallery banners should load');
+  assert(!f.displayed.some(url=>/hidden|av\.webp|javascript/.test(url)),'only active gallery banners should load');
 
   const empty=fixture([{itemType:'avatar',imageUrl:'https://example.org/avatar.webp'}]);
   empty.controller.chooseCommunityBanner();
