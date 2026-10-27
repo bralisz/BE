@@ -14,7 +14,7 @@
     "test:mobile-ui": "node scripts/test-mobile-interface.cjs && node scripts/test-featured-swipe.cjs && node scripts/test-area-loading.cjs mobile-navigation && node scripts/test-area-loading.cjs mobile-settings",
     "test:responsiveness": "node scripts/test-area-loading.cjs && node scripts/test-mobile-performance.cjs && node scripts/test-profile-navigation.cjs && node scripts/test-loading-recovery.cjs && node scripts/test-profile-follow.cjs && node scripts/test-static-css.cjs && node scripts/test-responsive-media.cjs",
     "test:seo": "node scripts/test-seo.cjs && node scripts/test-seo-navigation.cjs",
-    "test:admin-ui": "node scripts/test-admin-studio.cjs && node scripts/test-admin-workspace.cjs && node scripts/test-mobile-interface.cjs"
+    "test:admin-ui": "node scripts/test-admin-media.cjs && node scripts/test-admin-studio.cjs && node scripts/test-admin-workspace.cjs && node scripts/test-mobile-interface.cjs"
   },
   "devDependencies": {
     "jsdom": "^30.1.2"
