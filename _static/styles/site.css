@@ -51,37 +51,49 @@
   body.detail-page-active #detailHomeLink .detail-home-icon svg{width:22px;height:22px}
 }
 
+/* BETV: simple dark-gray lazy states for video covers and avatars only. */
+:root { --betv-lazy-gray: #24262a; }
 
-/* Unified BETV media loading visual: one 1KB SVG, reused by posters, hero, banners and cards. */
-:root{--betv-media-placeholder:url("/_static/media/loading/media-placeholder.svg")}
-:is(.video-card,.f-media,.detail-bg,.community-hero-banner-frame,.billie-home-spotlight-frame,
-    .donate-home-spotlight-frame,.album-cover,.album-card-cover,.site-skeleton-hero,.site-skeleton-card){
-  background-color:#101522;
-  background-image:var(--betv-media-placeholder);
-  background-position:center;
-  background-size:cover;
-  background-repeat:no-repeat;
+/* Neutral backing while an image is waiting to render. */
+.video-card,
+.detail-reco-thumb,
+.f-media,
+.detail-bg,
+.user-chip,
+.mobile-profile-button,
+.mobile-drawer-avatar,
+.profile-page-avatar,
+.public-user-search-avatar,
+.detail-comment-avatar,
+.notification-page-avatar,
+.donate-supporter-avatar,
+.betv-header-avatar-inner,
+.billie-page-avatar,
+.fans-page-avatar-frame {
+  background-color: var(--betv-lazy-gray);
 }
-img.betv-image-pending:not(.logo-mark):not(.video-card-logo){
-  background-color:#101522;
-  background-image:var(--betv-media-placeholder);
-  background-position:center;
-  background-size:cover;
-  background-repeat:no-repeat;
-}
-img.betv-image-error:not(.logo-mark):not(.video-card-logo){
-  background:#111625 var(--betv-media-placeholder) center/cover no-repeat;
-}
-/* Keep the first-load layout immediately recognizable as BETV. */
-.site-loading-skeleton .site-skeleton-hero{
-  background:#0c1120 var(--betv-media-placeholder) center/cover no-repeat;
-}
-.site-loading-skeleton .site-skeleton-card{
-  background:#111625 var(--betv-media-placeholder) center/cover no-repeat;
-}
-.site-loading-skeleton .skeleton-shimmer::after{
-  background:linear-gradient(90deg,transparent,rgba(145,125,235,.08),transparent);
-}
-@media(prefers-reduced-motion:reduce){
-  .site-loading-skeleton .skeleton-shimmer::after{animation:none!important}
+
+/* No artwork, gradient, spinner or shimmer on loading covers and avatars. */
+img.betv-image-pending:is(
+  .video-card-thumbnail,
+  .f-media img,
+  .detail-bg img,
+  .detail-reco-thumb img,
+  [class*="avatar"],
+  [class*="avatar"] img,
+  .user-chip img,
+  .mobile-profile-button img
+),
+img.betv-image-error:is(
+  .video-card-thumbnail,
+  .f-media img,
+  .detail-bg img,
+  .detail-reco-thumb img,
+  [class*="avatar"],
+  [class*="avatar"] img,
+  .user-chip img,
+  .mobile-profile-button img
+) {
+  background-color: var(--betv-lazy-gray) !important;
+  background-image: none !important;
 }
