@@ -1,42 +1,68 @@
 (() => {
   'use strict';
+  if (window.__BETVLazyMediaStarted) return;
+  window.__BETVLazyMediaStarted = true;
 
   const PRIORITY_SELECTOR = [
     '.f-slide.active .f-media img',
+    '.f-slide.active .f-logo img',
     '.detail-bg img',
-    '.detail-background img',
+    '.community-hero-banner-frame > img',
     '.login-brand img',
     '.logo-mark',
-    '.home-logo-pill img',
+    '.mobile-app-bar img',
+    '.user-chip img',
     '.admin-logo-button img',
     '.admin-login-logo img'
   ].join(',');
 
-  const applyImagePolicy = image => {
-    if (!(image instanceof HTMLImageElement)) return;
+  const imageReady = image => image.complete && image.naturalWidth > 0;
 
-    const priority = image.matches(PRIORITY_SELECTOR);
+  function updateVisualState(image) {
+    if (!image || image.nodeType !== 1 || image.tagName !== 'IMG') return;
+    const hasSource = Boolean(image.currentSrc || image.getAttribute('src') || image.hasAttribute('data-src'));
+    if (!hasSource) return;
+    const loaded = imageReady(image);
+    image.classList.toggle('betv-image-pending', !loaded);
+    image.classList.toggle('betv-image-loaded', loaded);
+    if (loaded) image.classList.remove('betv-image-error');
+  }
+
+  function applyImagePolicy(image) {
+    if (!image || image.tagName !== 'IMG') return;
+    const priority = image.matches(PRIORITY_SELECTOR) || image.getAttribute('fetchpriority') === 'high';
     image.decoding = 'async';
-
     if (priority) {
       image.loading = 'eager';
-      try { image.fetchPriority = 'high'; } catch (_) {}
-      return;
+      if (!image.getAttribute('fetchpriority')) image.setAttribute('fetchpriority', 'high');
+    } else {
+      if (!image.hasAttribute('loading')) image.loading = 'lazy';
+      if (image.loading === 'lazy' && !image.hasAttribute('fetchpriority')) {
+        image.setAttribute('fetchpriority', 'low');
+      }
     }
+    updateVisualState(image);
+  }
 
-    if (!image.hasAttribute('loading')) image.loading = 'lazy';
-    if (!image.getAttribute('fetchpriority')) {
-      try { image.fetchPriority = 'low'; } catch (_) {}
+  // Capture load/error from dynamically created images without attaching
+  // individual listeners to every poster in a large catalog.
+  document.addEventListener('load', event => {
+    const image = event.target;
+    if (image && image.tagName === 'IMG') updateVisualState(image);
+  }, true);
+  document.addEventListener('error', event => {
+    const image = event.target;
+    if (image && image.tagName === 'IMG') {
+      image.classList.remove('betv-image-pending');
+      image.classList.add('betv-image-error');
     }
-  };
+  }, true);
 
-  const revealDeferredSource = element => {
+  function revealDeferredSource(element) {
     if (!(element instanceof Element)) return;
-
     const source = element.getAttribute('data-src');
     const sourceSet = element.getAttribute('data-srcset');
     const background = element.getAttribute('data-bg-src');
-
     if (source) {
       element.setAttribute('src', window.beMediaUrl ? window.beMediaUrl(source) : source);
       element.removeAttribute('data-src');
@@ -46,77 +72,75 @@
       element.removeAttribute('data-srcset');
     }
     if (background) {
-      const shownBackground = window.beMediaUrl ? window.beMediaUrl(background) : background;
-      element.style.backgroundImage = `url("${shownBackground.replace(/"/g, '\\"')}")`;
+      const src = window.beMediaUrl ? window.beMediaUrl(background) : background;
+      element.style.backgroundImage = 'url("' + src.replace(/"/g, '\\"') + '")';
       element.removeAttribute('data-bg-src');
     }
-  };
+    if (element.tagName === 'IMG') updateVisualState(element);
+  }
 
-  const deferredObserver = 'IntersectionObserver' in window
+  const observer = 'IntersectionObserver' in window
     ? new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if (!entry.isIntersecting) return;
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
           revealDeferredSource(entry.target);
-          deferredObserver.unobserve(entry.target);
-        });
-      }, { rootMargin: document.documentElement.classList.contains('performance-lite') ? '180px 0px' : '500px 0px' })
+          observer.unobserve(entry.target);
+        }
+      }, { rootMargin: document.documentElement.classList.contains('performance-lite') ? '180px 0px' : '360px 0px' })
     : null;
 
-  const processNode = node => {
+  function processNode(node) {
     if (!(node instanceof Element)) return;
-
-    const deferred = [];
     const selector = 'img,[data-src],[data-srcset],[data-bg-src]';
-    const processElement = element => {
-      if (element.matches('img')) applyImagePolicy(element);
-      if (element.matches('[data-src],[data-srcset],[data-bg-src]')) deferred.push(element);
-    };
-    if (node.matches(selector)) processElement(node);
-    node.querySelectorAll(selector).forEach(processElement);
+    function process(element) {
+      if (element.tagName === 'IMG') applyImagePolicy(element);
+      if (element.matches('[data-src],[data-srcset],[data-bg-src]')) {
+        if (observer) observer.observe(element);
+        else revealDeferredSource(element);
+      }
+    }
+    if (node.matches(selector)) process(node);
+    node.querySelectorAll(selector).forEach(process);
+  }
 
-    deferred.forEach(item => {
-      if (deferredObserver) deferredObserver.observe(item);
-      else revealDeferredSource(item);
-    });
-  };
-
-  const start = () => {
+  function start() {
     processNode(document.documentElement);
-
     const pending = new Set();
     let scheduled = false;
-    const flush = () => {
+    function flush() {
       scheduled = false;
       const roots = Array.from(pending);
-      roots.forEach(node => {
-        if (!node.isConnected) return;
-        for (let parent = node.parentElement; parent; parent = parent.parentElement) {
-          if (pending.has(parent)) return;
-        }
-        processNode(node);
-      });
       pending.clear();
-    };
-    const mutationObserver = new MutationObserver(mutations => {
-      mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
-        if (node instanceof Element) pending.add(node);
-      }));
+      for (const node of roots) {
+        if (!node.isConnected) continue;
+        let hasParent = false;
+        for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+          if (roots.includes(parent)) { hasParent = true; break; }
+        }
+        if (!hasParent) processNode(node);
+      }
+    }
+    const mutations = new MutationObserver(records => {
+      for (const record of records) {
+        if (record.type === 'attributes') {
+          if (record.target.tagName === 'IMG') pending.add(record.target);
+        } else {
+          for (const node of record.addedNodes) if (node instanceof Element) pending.add(node);
+        }
+      }
       if (!pending.size || scheduled) return;
       scheduled = true;
-      // One scan per added subtree, coalesced across a catalog render.
       if (document.hidden) window.setTimeout(flush, 0);
       else window.requestAnimationFrame(flush);
     });
-
-    mutationObserver.observe(document.documentElement, {
+    mutations.observe(document.documentElement, {
+      subtree: true,
       childList: true,
-      subtree: true
+      attributes: true,
+      attributeFilter: ['src', 'srcset']
     });
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, { once: true });
-  } else {
-    start();
   }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
 })();
