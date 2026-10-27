@@ -4437,7 +4437,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const { start, stop } = autoplay;
     bindFeaturedSwipe(host, () => index, go, autoplay, slides.length);
     dots.forEach(dot => dot.addEventListener('click', () => { go(Number(dot.dataset.goto || 0)); start(); }));
-    host.onmouseenter = stop;
+    host.onmouseenter = () => { if (window.matchMedia('(max-width: 760px)').matches) stop(); };
     host.onmouseleave = start;
     start();
     scheduleNextFeatured();
@@ -4641,7 +4641,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       go(Number(dot.dataset.goto || 0));
       start();
     }));
-    host.onmouseenter = stop;
+    host.onmouseenter = () => { if (window.matchMedia('(max-width: 760px)').matches) stop(); };
     host.onmouseleave = start;
     bindBannerImageFallbacks(host);
     setupFavoriteButtons(host);
@@ -13573,7 +13573,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     });
 
-    featured.onmouseenter = stopAutoplay;
+    featured.onmouseenter = function(){ if (window.matchMedia('(max-width: 760px)').matches) stopAutoplay(); };
     featured.onmouseleave = startAutoplay;
     featured._beAutoplay = initialAutoplay;
 

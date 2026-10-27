@@ -181,7 +181,7 @@
     const stop = () => { if (timer) clearInterval(timer); timer = null; };
     const start = () => { stop(); if (slides.length > 1) timer = setInterval(() => go(index + 1), 10000); };
     dots.forEach(dot => dot.addEventListener('click', () => { go(Number(dot.dataset.goto || 0)); start(); }));
-    host.addEventListener('mouseenter', stop);
+    host.addEventListener('mouseenter', () => { if (window.matchMedia('(max-width: 760px)').matches) stop(); });
     host.addEventListener('mouseleave', start);
     start();
     bindBannerImageFallbacks(host);
@@ -384,7 +384,7 @@
       go(Number(dot.dataset.goto || 0));
       start();
     }));
-    host.onmouseenter = stop;
+    host.onmouseenter = () => { if (window.matchMedia('(max-width: 760px)').matches) stop(); };
     host.onmouseleave = start;
     bindBannerImageFallbacks(host);
     setupFavoriteButtons(host);

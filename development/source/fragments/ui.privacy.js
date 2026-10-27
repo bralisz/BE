@@ -609,7 +609,7 @@
       });
     });
 
-    featured.addEventListener('mouseenter', stopAutoplay);
+    featured.addEventListener('mouseenter', function(){ if (window.matchMedia('(max-width: 760px)').matches) stopAutoplay(); });
     featured.addEventListener('mouseleave', startAutoplay);
 
     goToSlide(0);

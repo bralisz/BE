@@ -52,7 +52,6 @@
 
 
   var BOAF_STREAM_URL='https://open.spotify.com/playlist/7GsA1b3dcISozmOc9G0tcT?si=d0qmzIyJSxiFLUx0flAsng';
-  var BOAF_STREAM_IMAGE='/assets/images/community/boaf-stream-4bi.webp';
   var BOAF_STREAM_MESSAGE='BIRDS OF A FEATHER, de Billie Eilish, está prestes a fazer história ABSOLUTA como a música solo mais rápida da história do Spotify atingir a marca de 4 BILHÕES de Streams e a PRIMEIRA canção de uma artista feminina a conseguir o feito.';
   var BOAF_CAMPAIGN_ENDED=true; // O marco de 4 bilhões substituiu a campanha de ouvir.
   var BOAF_STREAM_NOTICE_KEY='betvBoafStreamNotice:4bi:v2';
@@ -293,7 +292,6 @@
       modal.hidden=true;
       modal.innerHTML='<section class="boaf-stream-panel" role="dialog" aria-modal="true" aria-labelledby="boafStreamPanelTitle">'
         +'<button class="boaf-stream-panel-close" type="button" aria-label="'+t('Fechar')+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>'
-        +'<div class="boaf-stream-panel-media"><img src="'+BOAF_STREAM_IMAGE+'" alt="BIRDS OF A FEATHER" loading="lazy" decoding="async" fetchpriority="low"></div>'
         +'<div class="boaf-stream-panel-copy"><h2 id="boafStreamPanelTitle">Stream Bird of a Feather</h2><p>'+t(BOAF_STREAM_MESSAGE)+'</p>'
         +'<div class="boaf-stream-reward"><strong>'+t('Quem ouvir ganha a tag {tag}.',{tag:'<span class="profile-award-tag is-boaf notranslate boaf-stream-inline-tag" data-i18n-ignore translate="no">BOAF</span>'})+'</strong></div>'
         +'<a class="boaf-stream-listen" data-boaf-listen href="'+BOAF_STREAM_URL+'" target="_blank" rel="noopener noreferrer">'+t('Ouvir')+'</a><p class="boaf-stream-status" aria-live="polite"></p></div></section>';
