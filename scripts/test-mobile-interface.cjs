@@ -6,6 +6,7 @@ const mobileUI = require('../development/source/admin/mobile');
 const adminRuntime = require('../server/handlers/admin-runtime');
 const workspaceUI = require('../development/source/admin/workspace');
 const studioUI = require('../development/source/admin/studio');
+const mediaUI = require('../development/source/admin/media');
 
 const quiet = new VirtualConsole();
 function mediaMatches(query, width) {
@@ -161,7 +162,8 @@ async function checkProtectedRuntime() {
     assert.equal(allowed.statusCode, 200);
     assert(allowed.body.includes(mobileUI), 'authenticated response includes the actual mobile source');
     assert(allowed.body.includes(workspaceUI), 'authenticated response includes the admin workspace');
-    assert(allowed.body.endsWith(studioUI), 'authenticated response includes the studio dashboard');
+    assert(allowed.body.includes(studioUI), 'authenticated response includes the studio dashboard');
+    assert(allowed.body.endsWith(mediaUI), 'authenticated response includes gallery and mobile redesign');
     new vm.Script(allowed.body);
     assert.equal(allowed.headers['Cache-Control'], 'private, no-store, max-age=0');
     const missing = response();

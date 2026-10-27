@@ -30,3 +30,9 @@ O dashboard inspirado nas referências visuais está em
 `source/admin/studio.js`, aplicado após a camada workspace. Ele reorganiza
 os mesmos elementos com dados reais, sem recriar formulários ou ações.
 Os painéis de doação e ajustes ficam em seções expansíveis na visão geral.
+
+A biblioteca de imagens, os ícones SVG e a navegação mobile por menu lateral
+ficam em `source/admin/media.js`, entregue após studio somente ao admin
+autenticado. Filtros e prévia ampliada usam os elementos existentes; operações
+de adicionar, editar e excluir continuam nos handlers originais. A paleta do
+studio usa azul, cinza e roxo.
