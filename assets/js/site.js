@@ -5681,7 +5681,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(data.streamingLinks))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}"
       aria-label="Abrir ${escapeHtml(title)}">
-      <span class="detail-reco-thumb">${image && image !== '#' ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" decoding="async">` : '<span class="ph ph-wide" style="height:100%"></span>'}</span>
+      <span class="detail-reco-thumb">${image && image !== '#' ? `<img src="${safeAssetUrl(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low">` : '<span class="ph ph-wide" style="height:100%"></span>'}</span>
       <span class="detail-reco-name">${escapeHtml(title)}</span>
     </a>`;
   }
@@ -11887,7 +11887,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const rawAvatar = String(profile?.avatar_url || profile?.avatarUrl || '').trim();
         const avatar = window.BETVResolveAvatar ? window.BETVResolveAvatar(rawAvatar) : (rawAvatar || '/_static/media/profile/default-avatar.png');
         return `<button class="public-user-search-item" type="button" role="option" data-profile-username="${escapeHtml(username)}">
-          <span class="public-user-search-avatar"><img decoding="async" src="${escapeHtml(avatar)}" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt=""></span>
+          <span class="public-user-search-avatar"><img loading="lazy" decoding="async" fetchpriority="low" src="${escapeHtml(avatar)}" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt=""></span>
           <strong class="notranslate" translate="no">@${escapeHtml(username)}</strong>
         </button>`;
       }).join('');
