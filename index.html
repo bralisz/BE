@@ -238,8 +238,8 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   body:not(.login-mode) .home-notification-menu{position:fixed!important;top:21px!important;right:88px!important;left:auto!important;z-index:10025!important}
 }
 </style>
-<link rel="preload" href="/_static/styles/site.css?rev=20261027-layout-fix-v2" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261027-layout-fix-v2"></noscript>
+<link rel="preload" href="/_static/styles/site.css?rev=20261027-detail-home-v1" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261027-detail-home-v1"></noscript>
 <script defer src="/api/runtime?v=2.112.0"></script>
 <script defer src="/_static/chunks/performance.js?rev=20261009-visitor-menu-v15"></script>
 <script defer src="/_static/chunks/features.js?rev=20261016-mobile-navigation-swipe-v1"></script>
@@ -720,6 +720,10 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   <section class="content-detail-wrap" id="contentDetailSection" hidden aria-label="Detalhes do conteúdo">
     <div class="content-detail" id="contentDetail">
       <div class="detail-bg" id="contentDetailBg"></div>
+      <a class="detail-home" id="detailHomeLink" href="/">
+        <span class="detail-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg></span>
+        <span>Início</span>
+      </a>
       <div class="detail-inner">
         <div class="detail-logo" id="contentDetailLogo">Selecione um vídeo</div>
         <div class="detail-meta" id="contentDetailMeta"></div>
