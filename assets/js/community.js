@@ -364,6 +364,8 @@
   var communityBannerLoadedAt=0;
   var communityBannerRequest=0;
   var lastCommunityBannerUrl='';
+  // Remember the previous image even if Community is reloaded in this tab.
+  try{lastCommunityBannerUrl=String(window.sessionStorage&&window.sessionStorage.getItem('betvCommunityLastBanner')||'');}catch(_){ }
 
   function loadCommunityBannerPool(){
     if(communityBannerPool&&Date.now()-communityBannerLoadedAt<300000)return Promise.resolve(communityBannerPool);
@@ -373,12 +375,16 @@
       var data=window.beBackend&&window.beBackend.data;
       if(!data||typeof data.list!=='function')return [];
       var items=await data.list('gallery',{orderBy:'order',direction:'asc'});
+      var seenUrls=Object.create(null);
       var banners=(Array.isArray(items)?items:[]).filter(function(item){
         if(!item||item.active===false)return false;
-        var type=String(item.itemType||'').toLowerCase();
+        // Use the same gallery items the profile banner picker shows, including older records.
+        var type=String(item.itemType||item.mediaType||'').trim().toLowerCase();
         if(type!=='banner'&&!/banner/i.test(String(item.category||'')))return false;
         var src=String(item.imageUrl||'').trim();
-        return /^https?:\/\//i.test(src)||/^\/(?!\/)/.test(src);
+        if(!(/^https?:\/\//i.test(src)||/^\/(?!\/)/.test(src))||seenUrls[src])return false;
+        seenUrls[src]=true;
+        return true;
       });
       communityBannerPool=banners;
       communityBannerLoadedAt=Date.now();
@@ -413,6 +419,7 @@
         image.onload=function(){
           if(request!==communityBannerRequest||page.hidden||!document.body.classList.contains('community-page-active'))return;
           lastCommunityBannerUrl=raw;
+          try{if(window.sessionStorage)window.sessionStorage.setItem('betvCommunityLastBanner',raw);}catch(_){ }
           image.alt='Banner da comunidade';
           inner.classList.add('has-community-banner');
           hero.hidden=false;

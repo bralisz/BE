@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revisions = {account:'20261016-mobile-navigation-swipe-v1',community:'20261027-random-gallery-banner-v1'};
+  const revisions = {account:'20261016-mobile-navigation-swipe-v1',community:'20261027-random-gallery-banner-v2'};
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
