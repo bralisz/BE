@@ -41,7 +41,8 @@ assert.equal(hero.getAttribute('fetchpriority'), 'high');
 assert.equal(poster.loading, 'lazy', 'catalog poster should load lazily');
 assert.equal(poster.getAttribute('fetchpriority'), 'low');
 assert(poster.classList.contains('betv-image-pending'));
-assert.equal(avatar.loading, 'lazy', 'avatar should load lazily');
+assert.equal(avatar.loading, 'eager', 'header avatar should retain high loading priority');
+assert.equal(avatar.getAttribute('fetchpriority'), 'high');
 assert(avatar.classList.contains('betv-image-pending'));
 
 (async () => {
