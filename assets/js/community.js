@@ -357,18 +357,88 @@
     }catch(_){spotlight.hidden=true;}
   }
 
+  // Reuse the same active profile banners shown in the user's banner picker.
+  // Community no longer ships a dedicated, fixed hero image.
+  var communityBannerOptions=null;
+  var communityBannerPromise=null;
+  var communityBannerRequest=0;
+  var previousCommunityBanner='';
+
+  async function activeProfileBanners(){
+    if(communityBannerOptions)return communityBannerOptions;
+    if(!communityBannerPromise){
+      communityBannerPromise=(async function(){
+        await Promise.resolve(window.beBackend&&window.beBackend.ready);
+        var api=window.beBackend&&window.beBackend.data;
+        if(!api||typeof api.list!=='function')return [];
+        var entries=await api.list('gallery',{orderBy:'order',direction:'asc'});
+        var seen=new Set();
+        var available=(Array.isArray(entries)?entries:[]).filter(function(item){
+          if(!item||item.active===false||!item.imageUrl)return false;
+          var type=String(item.itemType||'').toLowerCase();
+          if(type!=='banner'&&!/banner/i.test(String(item.category||'')))return false;
+          var url=String(item.imageUrl||'').trim();
+          if(!url||url==='#'||seen.has(url))return false;
+          seen.add(url);
+          return true;
+        }).map(function(item){return String(item.imageUrl).trim();});
+        communityBannerOptions=available;
+        return available;
+      })().finally(function(){communityBannerPromise=null;});
+    }
+    return communityBannerPromise;
+  }
+
+  async function chooseCommunityBanner(){
+    var request=++communityBannerRequest;
+    var hero=page&&page.querySelector('.community-hero-banner');
+    var display=hero&&hero.querySelector('img');
+    if(!hero||!display)return;
+    hero.hidden=true;
+    page.classList.add('community-banner-empty');
+    display.removeAttribute('src');
+    try{
+      var available=(await activeProfileBanners()).slice();
+      if(request!==communityBannerRequest||!document.body.classList.contains('community-page-active'))return;
+      if(available.length>1)available=available.filter(function(url){return url!==previousCommunityBanner;});
+      // Randomise the list so failed images can fall back to another gallery banner.
+      for(var i=available.length-1;i>0;i--){
+        var j=Math.floor(Math.random()*(i+1));var temp=available[i];available[i]=available[j];available[j]=temp;
+      }
+      for(var index=0;index<available.length;index++){
+        var selected=available[index];
+        var src=mediaUrl(selected);
+        if(!src||src==='#')continue;
+        var loaded=await new Promise(function(resolve){
+          var image=new Image();
+          image.onload=function(){resolve(true);};
+          image.onerror=function(){resolve(false);};
+          image.src=src;
+        });
+        if(request!==communityBannerRequest||!document.body.classList.contains('community-page-active'))return;
+        if(!loaded)continue;
+        display.src=src;
+        display.alt='Banner de perfil da Comunidade';
+        hero.hidden=false;
+        page.classList.remove('community-banner-empty');
+        previousCommunityBanner=selected;
+        return;
+      }
+    }catch(_){/* Empty gallery or network failure: show the page without a hero. */}
+  }
+
   function createPage(){
     if(document.getElementById('communityPage')){page=document.getElementById('communityPage');return page;}
     var main=document.querySelector('body > main');
     if(!main)return null;
     page=document.createElement('section');
     page.id='communityPage';
-    page.className='community-page';
+    page.className='community-page community-banner-empty';
     page.hidden=true;
     page.setAttribute('aria-label','Comunidade dos Avocados');
     page.innerHTML=''
       +'<div class="community-page-inner">'
-      +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/_static/media/community/community-hero-banner.webp?rev=20261027-community-new-banner-v1" alt="Billie Eilish interagindo com fãs durante um show" loading="eager" decoding="async" fetchpriority="high"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
+      +  '<section class="community-hero-banner" aria-label="Banner aleatório dos perfis" hidden><div class="community-hero-banner-frame"><img alt="Banner de perfil da Comunidade" loading="eager" decoding="async" fetchpriority="high"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<div class="community-content-shell">'
       +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
       +    '<section class="community-instagram-section" id="communityInstagramSection" aria-labelledby="communityInstagramTitle">'
@@ -479,6 +549,7 @@
   }
 
   function closeCommunity(resetView,tabAfter){
+    communityBannerRequest++;
     if(document.body.classList.contains('community-page-active')){
       document.body.classList.remove('community-page-active');
       toggleCatalogVisibility(false);
@@ -530,11 +601,13 @@
     if(donationPage){donationPage.hidden=true;donationPage.setAttribute('aria-hidden','true');}
     createPage();
     if(!page)return;
-    if(!document.body.classList.contains('community-page-active'))rememberCatalogHomeView();
+    var wasCommunityActive=document.body.classList.contains('community-page-active');
+    if(!wasCommunityActive)rememberCatalogHomeView();
     document.body.classList.add('community-page-active');
     document.body.dataset.homeView='community';
     page.hidden=false;
     toggleCatalogVisibility(true);
+    if(!wasCommunityActive)chooseCommunityBanner();
     document.querySelectorAll('.home-nav-link.active,#logoBtn.active').forEach(function(button){if(!button.matches('[data-community-tab]')){button.classList.remove('active');button.removeAttribute('aria-current');button.setAttribute('aria-pressed','false');}});
     setCommunityNavActive(true);
     try{window.dispatchEvent(new CustomEvent('be:close-public-search'));window.dispatchEvent(new CustomEvent('be:close-mobile-search'));}catch(_){ }
