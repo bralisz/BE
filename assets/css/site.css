@@ -21731,12 +21731,3 @@ body.donate-page-active #communityPage{display:none!important}
     height:22px;
   }
 }
-.detail-nav-morph {
-  overflow:hidden!important;
-  transition:none!important;
-  box-sizing:border-box!important;
-  will-change:transform,opacity;
-}
-@media (prefers-reduced-motion:reduce){
-  .detail-nav-morph{display:none!important}
-}
