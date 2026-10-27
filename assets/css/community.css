@@ -320,3 +320,21 @@ body.community-page-active .site-footer{
     filter:brightness(1.04) saturate(1.02);
   }
 }
+
+
+/* No fixed Community hero: position content safely while the gallery is empty/loading. */
+.community-hero-banner[hidden]{display:none!important}
+body.community-page-active .community-page-inner:not(.has-community-banner) .community-content-shell{
+  margin-top:0!important;
+}
+@media(min-width:761px){
+  body.community-page-active .community-page-inner:not(.has-community-banner) .community-content-shell{
+    padding-top:115px!important;
+  }
+}
+@media(max-width:760px){
+  body.community-page-active .community-page-inner:not(.has-community-banner) .community-content-shell{
+    margin-top:0!important;
+    padding-top:calc(96px + env(safe-area-inset-top))!important;
+  }
+}
