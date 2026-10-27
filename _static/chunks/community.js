@@ -357,6 +357,77 @@
     }catch(_){spotlight.hidden=true;}
   }
 
+
+  // The Community hero uses the same active banner gallery as the profile banner picker.
+  var communityBannerPool=null;
+  var communityBannerPromise=null;
+  var communityBannerLoadedAt=0;
+  var communityBannerRequest=0;
+  var lastCommunityBannerUrl='';
+
+  function loadCommunityBannerPool(){
+    if(communityBannerPool&&Date.now()-communityBannerLoadedAt<300000)return Promise.resolve(communityBannerPool);
+    if(communityBannerPromise)return communityBannerPromise;
+    communityBannerPromise=(async function(){
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var data=window.beBackend&&window.beBackend.data;
+      if(!data||typeof data.list!=='function')return [];
+      var items=await data.list('gallery',{orderBy:'order',direction:'asc'});
+      var banners=(Array.isArray(items)?items:[]).filter(function(item){
+        if(!item||item.active===false)return false;
+        var type=String(item.itemType||'').toLowerCase();
+        if(type!=='banner'&&!/banner/i.test(String(item.category||'')))return false;
+        var src=String(item.imageUrl||'').trim();
+        return /^https?:\/\//i.test(src)||/^\/(?!\/)/.test(src);
+      });
+      communityBannerPool=banners;
+      communityBannerLoadedAt=Date.now();
+      return banners;
+    })().finally(function(){communityBannerPromise=null;});
+    return communityBannerPromise;
+  }
+
+  function chooseCommunityBanner(){
+    var request=++communityBannerRequest;
+    if(!page)return;
+    var hero=page.querySelector('.community-hero-banner');
+    var image=hero&&hero.querySelector('img');
+    var inner=page.querySelector('.community-page-inner');
+    if(!hero||!image||!inner)return;
+    image.onload=null;
+    image.onerror=null;
+    image.removeAttribute('src');
+    hero.hidden=true;
+    inner.classList.remove('has-community-banner');
+    loadCommunityBannerPool().then(function(items){
+      if(request!==communityBannerRequest||page.hidden||!document.body.classList.contains('community-page-active'))return;
+      var options=items.slice();
+      // Avoid repeating the same banner across consecutive visits when possible.
+      if(options.length>1)options=options.filter(function(item){return String(item.imageUrl).trim()!==lastCommunityBannerUrl;});
+      function tryNext(){
+        if(request!==communityBannerRequest||page.hidden||!document.body.classList.contains('community-page-active'))return;
+        if(!options.length)return; // Gallery empty or every banner failed: no hero.
+        var index=Math.floor(Math.random()*options.length);
+        var chosen=options.splice(index,1)[0];
+        var raw=String(chosen.imageUrl||'').trim();
+        image.onload=function(){
+          if(request!==communityBannerRequest||page.hidden||!document.body.classList.contains('community-page-active'))return;
+          lastCommunityBannerUrl=raw;
+          image.alt='Banner da comunidade';
+          inner.classList.add('has-community-banner');
+          hero.hidden=false;
+        };
+        image.onerror=function(){image.onload=null;image.onerror=null;tryNext();};
+        image.src=mediaUrl(raw);
+        if(image.complete&&image.naturalWidth>0)image.onload();
+      }
+      tryNext();
+    }).catch(function(){
+      // A failed gallery request must not break the rest of Community.
+      if(request===communityBannerRequest){hero.hidden=true;inner.classList.remove('has-community-banner');}
+    });
+  }
+
   function createPage(){
     if(document.getElementById('communityPage')){page=document.getElementById('communityPage');return page;}
     var main=document.querySelector('body > main');
@@ -368,7 +439,7 @@
     page.setAttribute('aria-label','Comunidade dos Avocados');
     page.innerHTML=''
       +'<div class="community-page-inner">'
-      +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/_static/media/community/community-hero-banner.webp?rev=20261027-community-new-banner-v1" alt="Billie Eilish interagindo com fãs durante um show" loading="eager" decoding="async" fetchpriority="high"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
+      +  '<section class="community-hero-banner" aria-label="Banner da comunidade" hidden><div class="community-hero-banner-frame"><img alt="Banner da comunidade" loading="eager" decoding="async" fetchpriority="high"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<div class="community-content-shell">'
       +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
       +    '<section class="community-instagram-section" id="communityInstagramSection" aria-labelledby="communityInstagramTitle">'
@@ -479,6 +550,7 @@
   }
 
   function closeCommunity(resetView,tabAfter){
+    communityBannerRequest+=1; // Ignore late image loads after leaving this page.
     if(document.body.classList.contains('community-page-active')){
       document.body.classList.remove('community-page-active');
       toggleCatalogVisibility(false);
@@ -539,6 +611,7 @@
     setCommunityNavActive(true);
     try{window.dispatchEvent(new CustomEvent('be:close-public-search'));window.dispatchEvent(new CustomEvent('be:close-mobile-search'));}catch(_){ }
     window.scrollTo({top:0,left:0,behavior:'auto'});
+    chooseCommunityBanner();
     refreshCommunity();
   }
   window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity,record:recordRecentFromPlay};
