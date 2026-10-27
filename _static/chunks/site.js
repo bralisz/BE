@@ -10900,6 +10900,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const recordId = String(data.recordId || data.id || '');
     const canonicalFavoriteId = String(data.favoriteId || (recordId ? `${collection || 'videos'}:${recordId}` : itemId));
     if (options.updateRoute !== false) setDetailRoute(itemId, Boolean(options.replaceRoute));
+    window.dispatchEvent(new CustomEvent('be:content-seo', { detail: { ...data, itemId, title, description: data.description || '', thumbnailUrl } }));
 
     bg.innerHTML = bannerUrl && bannerUrl !== '#'
       ? `<img decoding="async" src="${safeAssetUrl(bannerUrl)}" alt="${escapeHtml(title)}" loading="eager" decoding="async" fetchpriority="high">`

@@ -189,10 +189,16 @@
   function currentLogicalPath(){return stripLocale(location.pathname);}
 
   history.pushState=function(state,title,url){
-    return nativePush(state,title,url===undefined?url:localize(url));
+    var previous=location.pathname;
+    var result=nativePush(state,title,url===undefined?url:localize(url));
+    if(location.pathname!==previous)window.dispatchEvent(new Event('be:route-change'));
+    return result;
   };
   history.replaceState=function(state,title,url){
-    return nativeReplace(state,title,url===undefined?url:localize(url));
+    var previous=location.pathname;
+    var result=nativeReplace(state,title,url===undefined?url:localize(url));
+    if(location.pathname!==previous)window.dispatchEvent(new Event('be:route-change'));
+    return result;
   };
 
   if(found){
@@ -244,6 +250,7 @@
   var initialDocumentTitle=document.title;
   var initialDocumentPath=currentLogicalPath();
   window.BETVPageTitle=function(){
+    if(window.BETVSeo){var current=window.BETVSeo.pageTitle();if(current)return current;}
     var samePage=currentLogicalPath()===initialDocumentPath;
     return samePage?initialDocumentTitle:'Billie Eilish TV';
   };
