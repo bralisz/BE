@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Carregando mídia">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#151b31"/><stop offset=".52" stop-color="#111625"/><stop offset="1" stop-color="#080d18"/></linearGradient>
+<radialGradient id="glow"><stop stop-color="#7858db" stop-opacity=".2"/><stop offset="1" stop-color="#7858db" stop-opacity="0"/></radialGradient>
+<linearGradient id="bar"><stop stop-color="#7061ed"/><stop offset="1" stop-color="#9b80fa"/></linearGradient>
+</defs>
+<rect width="960" height="540" fill="url(#bg)"/>
+<ellipse cx="485" cy="240" rx="380" ry="280" fill="url(#glow)"/>
+<path d="M0 462 233 230l140 149 185-213 402 337v37H0Z" fill="#222a43" opacity=".31"/>
+<path d="M0 507 288 317l143 112 208-139 321 171v79H0Z" fill="#070c16" opacity=".33"/>
+<circle cx="480" cy="245" r="59" fill="#21273b" stroke="#7662da" stroke-opacity=".66" stroke-width="2"/>
+<path d="m463 214 49 31-49 31Z" fill="#d7cfff"/>
+<rect x="385" y="351" width="190" height="5" rx="2.5" fill="#363e5c"/>
+<rect x="385" y="351" width="73" height="5" rx="2.5" fill="url(#bar)"/>
+</svg>

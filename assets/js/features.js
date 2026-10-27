@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revision = '20261016-mobile-navigation-swipe-v1';
+  const revisions = {account:'20261016-mobile-navigation-swipe-v1',community:'20261027-unified-lazy-v1'};
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
@@ -15,7 +15,7 @@
     if (ready.has(name)) return Promise.resolve();
     if (pending.has(name)) return pending.get(name);
     const script = document.createElement('script');
-    script.src = `/_static/chunks/${name}.js?rev=${revision}`;
+    script.src = `/_static/chunks/${name}.js?rev=${revisions[name]}`;
     const task = new Promise((resolve, reject) => {
       script.onload = () => Promise.resolve(name === 'account' ? window.BETVAccountReady : undefined).then(resolve, reject);
       script.onerror = () => reject(new Error('area_download_failed'));
