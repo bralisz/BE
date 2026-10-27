@@ -11,18 +11,29 @@ const title = 'Birds <of> a Feather </script><script>alert(1)</script>';
 const collections = {
   videos: [
     { id: 'video-one', updated_at: '2026-10-20T12:00:00Z', data: { publicId: '12345678', title, description: 'A live performance & interview.', translations: { es: { description: 'Una actuación en directo.' } } } },
+    { id: 'interview', data: { publicId: '87654321', title: 'Entrevista com Billie Eilish', description: '**Conversa** sobre [música](https://example.test).', thumbnailUrl: 'https://example.test/interview.webp', translations: {
+      en: { title: 'Billie Eilish interview', description: 'Interview in English.' },
+      es: { title: 'Entrevista con Billie Eilish', description: 'Entrevista en español.' },
+      fr: { title: 'Entretien avec Billie Eilish', description: 'Entretien en français.' },
+      it: { title: 'Intervista con Billie Eilish', description: 'Intervista in italiano.' }
+    } } },
+    { id: 'song', data: { publicId: '23456789', title: 'WILDFLOWER', sectionName: 'Music videos', translations: { es: { title: 'Título que não deve substituir o nome da música', description: 'Una actuación musical.' } } } },
+    { id: 'literal-title', data: { publicId: '34567890', title: "Título $& $' $$", description: 'Descrição do vídeo correto.' } },
     { id: 'private', data: { title: 'Unpublished video', active: false } }
   ],
+  movies: [{ id: 'film', data: { publicId: '45678901', title: 'Filme cadastrado', description: 'Sinopse do filme correspondente.' } }],
   news: [{ id: 'album-one', data: { title: 'HIT ME HARD AND SOFT' } }]
 };
+const requestedCollections = [];
 global.fetch = async (url, options = {}) => {
   assert(options.signal, 'SEO data requests must have a deadline');
   if (String(url).includes('site_settings')) return { ok: true, json: async () => [] };
   const collection = JSON.parse(options.body).p_collection;
+  requestedCollections.push(collection);
   return { ok: true, json: async () => collections[collection] || [] };
 };
 
-async function render(path, method = 'GET', extraHeaders = {}) {
+async function render(path, method = 'GET', extraHeaders = {}, query = {}) {
   const response = {
     headers: {}, code: null, body: '',
     setHeader(key, value) { this.headers[key.toLowerCase()] = value; },
@@ -30,7 +41,7 @@ async function render(path, method = 'GET', extraHeaders = {}) {
     send(body) { this.body = body; return this; },
     end() { return this; }
   };
-  await require(handlerPath)({ method, url: path, headers: { host: 'billieilishtv.site', ...extraHeaders }, query: {} }, response);
+  await require(handlerPath)({ method, url: path, headers: { host: 'billieilishtv.site', ...extraHeaders }, query }, response);
   return response;
 }
 function documentOf(response) {
@@ -65,6 +76,43 @@ function documentOf(response) {
   assert.equal(graph.find(item => item['@type'] === 'ItemPage').mainEntity.name, title);
   assert.equal(graph.find(item => item['@type'] === 'BreadcrumbList').itemListElement[1].item, 'https://billieilishtv.site/es/12345678');
   assert.equal(videoDoc.querySelectorAll('script').length, documentOf(await render('/es')).querySelectorAll('script').length, 'record text cannot inject scripts');
+
+  const expected = {
+    'pt-br': ['Entrevista com Billie Eilish', 'Conversa sobre música.'],
+    'en-us': ['Billie Eilish interview', 'Interview in English.'],
+    es: ['Entrevista con Billie Eilish', 'Entrevista en español.'],
+    fr: ['Entretien avec Billie Eilish', 'Entretien en français.'],
+    it: ['Intervista con Billie Eilish', 'Intervista in italiano.']
+  };
+  for (const [slug, [name, description]] of Object.entries(expected)) {
+    const path = `/${slug}/87654321`;
+    const doc = documentOf(await render(path));
+    assert.equal(doc.title, `${name} | Billie Eilish TV`);
+    assert.equal(doc.querySelector('meta[name="description"]').content, description);
+    assert.equal(doc.querySelector('meta[property="og:image"]').content, 'https://example.test/interview.webp');
+    assert.equal(doc.querySelector('meta[property="og:image:width"]'), null, 'do not claim dimensions of an unrelated banner');
+    assert.equal(doc.querySelector('meta[property="og:title"]').content, doc.title);
+    assert.equal(doc.querySelector('meta[name="twitter:title"]').content, doc.title);
+    assert.equal(doc.querySelector('title').getAttribute('translate'), 'no');
+    const response = await render('/api/site-page', 'GET', {}, { format: 'seo', path });
+    assert.equal(response.code, 200);
+    assert.match(response.headers['content-type'], /application\/json/);
+    const metadata = JSON.parse(response.body);
+    assert.equal(metadata.title, doc.title, 'SPA and direct visits use the same content/locale');
+    assert.equal(metadata.meta.find(item => item.key === 'description').content, description);
+    assert.equal(metadata.links.find(item => item.rel === 'canonical').href, `https://billieilishtv.site${path}`);
+    assert.equal(metadata.links.filter(item => item.rel === 'alternate').length, 6);
+    assert.equal(metadata.structuredData['@graph'].find(item => item['@type'] === 'ItemPage').mainEntity.name, name);
+  }
+  assert.equal(documentOf(await render('/es/23456789')).title, 'WILDFLOWER | Billie Eilish TV', 'original music names stay intact');
+  assert.equal(documentOf(await render('/pt-br/34567890')).title, "Título $& $' $$ | Billie Eilish TV", 'replacement tokens must remain literal title text');
+  assert(requestedCollections.every(name => name === 'videos'), 'video metadata does not wait for unrelated collections');
+  const missing = await render('/es/99999999');
+  assert.equal(missing.code, 404);
+  assert.match(missing.headers['cache-control'], /no-store/);
+  assert(!missing.body.includes('<title>Billie Eilish TV</title>'));
+  assert.equal(documentOf(await render('/pt-br/45678901')).title, 'Filme cadastrado | Billie Eilish TV', 'movie URLs still resolve the corresponding collection');
+  assert.equal((await render('/api/site-page', 'GET', {}, { format: 'seo', path: '//example.test' })).code, 400);
 
   const albums = documentOf(await render('/en-us/albums'));
   assert.equal(albums.querySelector('link[rel="canonical"]').href, 'https://billieilishtv.site/en-us/albuns');
@@ -109,6 +157,8 @@ function documentOf(response) {
   assert.equal(fallback.querySelector('#catalogOverview'), null);
   assert(fallback.querySelector('meta[name="description"]').content);
   assert.match(fallback.title, /Billie Eilish TV/);
+  const unavailable = await render('/fr/87654321');
+  assert.equal(unavailable.code, 503, 'temporary catalog outages must not serve unrelated home SEO as a success');
   console.log('SEO checks passed: localized HTML, unchanged public layout, escaping, canonicals, robots, routing, titles and upstream fallback.');
 })().finally(() => {
   global.fetch = originalFetch;

@@ -35,7 +35,7 @@ const LOCALE_PREFIXES = Object.freeze({
 });
 let cachedTemplate = '';
 let settingsCache = { value: {}, expiresAt: 0, promise: null };
-let seoCatalogCache = { value: [], expiresAt: 0, promise: null };
+const seoCollectionCaches = new Map();
 
 function supabaseConfig() {
   return {
@@ -157,6 +157,7 @@ async function loadSettings() {
 
 function normalizedRequestPath(req) {
   const candidates = [
+    req.query?.format === 'seo' ? req.query.path : '',
     req && req.headers && req.headers['x-vercel-original-path'],
     req && req.headers && req.headers['x-original-url'],
     req && req.headers && req.headers['x-rewrite-url'],
@@ -292,7 +293,8 @@ function unwrapSeoRow(collection, row) {
   };
 }
 
-async function fetchSeoCollection(collection) {
+async function fetchSeoCollection(collection, deadline) {
+  const timeout = maximum => AbortSignal.timeout(Math.max(1, Math.min(maximum, deadline - Date.now())));
   const { url, publishableKey } = supabaseConfig();
   const headers = {
     apikey: publishableKey,
@@ -304,7 +306,7 @@ async function fetchSeoCollection(collection) {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_collection: collection, p_id: null }),
-      signal: AbortSignal.timeout(4000),
+      signal: timeout(10000),
       cache: 'no-store'
     });
     if (response.ok) {
@@ -316,7 +318,7 @@ async function fetchSeoCollection(collection) {
   } catch (_) {}
 
   const params = new URLSearchParams({ select: 'id,data,created_at,updated_at', collection: `eq.${collection}` });
-  const legacy = await fetch(`${url}/rest/v1/content_items?${params.toString()}`, { headers, signal: AbortSignal.timeout(4000), cache: 'no-store' });
+  const legacy = await fetch(`${url}/rest/v1/content_items?${params.toString()}`, { headers, signal: timeout(4000), cache: 'no-store' });
   if (!legacy.ok) throw new Error(`seo_${collection}_unavailable`);
   const payload = await legacy.json();
   return (Array.isArray(payload) ? payload : [])
@@ -324,27 +326,35 @@ async function fetchSeoCollection(collection) {
     .filter(Boolean);
 }
 
-async function loadSeoCatalog() {
-  const now = Date.now();
-  if (seoCatalogCache.expiresAt > now) return seoCatalogCache.value;
-  if (seoCatalogCache.promise) return seoCatalogCache.promise;
-
-  seoCatalogCache.promise = (async () => {
+async function cachedSeoCollection(collection, deadline) {
+  const entry = seoCollectionCaches.get(collection) || { records: [], complete: false, expiresAt: 0, promise: null };
+  seoCollectionCaches.set(collection, entry);
+  if (entry.expiresAt > Date.now()) return { records: entry.records, complete: entry.complete };
+  if (entry.promise) return entry.promise;
+  entry.promise = (async () => {
     try {
-      const settled = await Promise.allSettled(SEO_CONTENT_COLLECTIONS.map(fetchSeoCollection));
-      const values = settled.flatMap(result => result.status === 'fulfilled' ? result.value : []);
-      if (values.length) seoCatalogCache.value = values;
-      seoCatalogCache.expiresAt = Date.now() + SEO_CATALOG_CACHE_TTL_MS;
-      return seoCatalogCache.value;
+      entry.records = await fetchSeoCollection(collection, deadline);
+      entry.complete = true;
+      entry.expiresAt = Date.now() + SEO_CATALOG_CACHE_TTL_MS;
     } catch (_) {
-      seoCatalogCache.expiresAt = Date.now() + 10000;
-      return seoCatalogCache.value;
-    } finally {
-      seoCatalogCache.promise = null;
-    }
+      entry.complete = false;
+      entry.expiresAt = Date.now() + 10000;
+    } finally { entry.promise = null; }
+    return { records: entry.records, complete: entry.complete };
   })();
+  return entry.promise;
+}
 
-  return seoCatalogCache.promise;
+async function loadSeoCatalog(routeInfo) {
+  // Most public detail URLs are videos. Do not wait for unrelated movies,
+  // series or albums when the requested video has already been identified.
+  const deadline = Date.now() + 14000;
+  if (/^\/(?:albuns|álbuns|albums)\//i.test(routeInfo.logicalPath)) return cachedSeoCollection('news', deadline);
+  const videos = await cachedSeoCollection('videos', deadline);
+  if (seoRecordFromRoute(routeInfo, videos.records)) return videos;
+  const others = await Promise.all(SEO_CONTENT_COLLECTIONS.filter(name => name !== 'videos' && name !== 'news').map(name => cachedSeoCollection(name, deadline)));
+  const results = [videos, ...others];
+  return { records: results.flatMap(result => result.records), complete: results.every(result => result.complete) };
 }
 
 function seoRecordFromRoute(routeInfo, catalog) {
@@ -369,16 +379,30 @@ function seoRecordFromRoute(routeInfo, catalog) {
   return null;
 }
 
-const ORIGINAL_TITLE_COLLECTIONS = new Set(['contents', 'featured', 'movies', 'series', 'videos', 'ongs', 'news']);
+const LOCALE_TRANSLATION_KEYS = Object.freeze({
+  'pt-br': ['pt-br', 'pt-BR', 'pt'], 'en-us': ['en-us', 'en-US', 'en'],
+  es: ['es', 'es-ES'], fr: ['fr', 'fr-FR'], it: ['it', 'it-IT']
+});
+const MUSIC_SECTION_IDS = new Set(['18db9515-179c-4bad-9646-1fcda63df14a', '14386598-4978-403a-8548-db0ee582e291']);
+const MUSIC_SECTION_NAMES = new Set(['videoclipes', 'videoclips', 'music videos', 'music video', 'videos musicais', 'vídeos musicais', 'videos musicales', 'vídeos musicales', 'vidéos musicales', 'vidéos musicaux', 'live performances & tv']);
+function plainDescription(value) {
+  return decodeHtmlText(String(value || '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<[^>]*>/g, ' ').replace(/!?\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[*_`#]/g, '')).replace(/\s+/g, ' ').trim();
+}
 
 function localizedRecord(record, slug) {
   if (!record) return null;
   const base = record.data && typeof record.data === 'object' ? record.data : {};
   const translations = base.translations && typeof base.translations === 'object' ? base.translations : {};
-  const translated = translations[slug] && typeof translations[slug] === 'object' ? translations[slug] : null;
+  const key = (LOCALE_TRANSLATION_KEYS[slug] || [slug]).find(key => translations[key] && typeof translations[key] === 'object');
+  const translated = key ? translations[key] : null;
   const data = translated ? { ...base, ...translated } : { ...base };
+  if (!String(data.title || '').trim()) data.title = base.title;
+  if (!String(data.description || '').trim()) data.description = base.description;
   const collection = String(record.collection || base.collection || '').toLowerCase();
-  const keepTitle = base.preserveTitle === true || String(base.preserveTitle || '').toLowerCase() === 'true' || ORIGINAL_TITLE_COLLECTIONS.has(collection);
+  const explicit = base.preserveTitle === true || String(base.preserveTitle || '').toLowerCase() === 'true';
+  const music = collection === 'videos' && (MUSIC_SECTION_IDS.has(String(base.sectionId || '')) || MUSIC_SECTION_NAMES.has(String(base.sectionName || base.sourceSectionTitle || '').toLowerCase().trim()));
+  const album = collection === 'news' && ['album', 'álbum', 'single'].includes(String(base.type || base.itemType || '').toLowerCase());
+  const keepTitle = ['es', 'fr', 'it'].includes(slug) && (explicit || music || album || ['albums', 'albuns', 'álbuns'].includes(collection));
   if (keepTitle) {
     if (Object.prototype.hasOwnProperty.call(base, 'title')) data.title = base.title;
     if (Object.prototype.hasOwnProperty.call(base, 'name')) data.name = base.name;
@@ -405,7 +429,7 @@ function xDefaultRouteUrl(origin, logicalPath) {
 
 function isNoindexRoute(routeInfo) {
   const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
-  return process.env.VERCEL_ENV === 'preview' ||
+  return routeInfo.contentUnavailable === 404 || process.env.VERCEL_ENV === 'preview' ||
     !(/^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|ong$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
     logical === '/login' ||
     logical === '/reset-password' ||
@@ -590,9 +614,10 @@ function pageCopy(routeInfo, settings, seoRecord) {
   if (seoRecord) {
     const localized = localizedRecord(seoRecord, routeInfo.slug);
     const data = localized.data || {};
-    const recordTitle = String(data.title || '').trim();
-    const recordDescription = String(data.description || '').replace(/\s+/g, ' ').trim();
-    if (recordTitle) title = `${recordTitle} | ${siteTitle}`;
+    const recordTitle = String(data.title || data.name || '').trim();
+    const recordDescription = plainDescription(data.description);
+    const contentLabel = { 'pt-br': 'Conteúdo', 'en-us': 'Content', es: 'Contenido', fr: 'Contenu', it: 'Contenuto' }[routeInfo.slug] || 'Content';
+    title = `${recordTitle || contentLabel} | ${siteTitle}`;
     if (recordDescription) description = recordDescription.slice(0, 300);
     else if (recordTitle) {
       description = routeInfo.slug === 'en-us'
@@ -608,6 +633,16 @@ function pageCopy(routeInfo, settings, seoRecord) {
     pageType = 'ItemPage';
   }
 
+  if (routeInfo.contentUnavailable) {
+    const unavailable = {
+      'pt-br': ['Conteúdo indisponível', 'Não foi possível encontrar ou carregar este conteúdo.'],
+      'en-us': ['Content unavailable', 'This content could not be found or loaded.'],
+      es: ['Contenido no disponible', 'No se pudo encontrar o cargar este contenido.'],
+      fr: ['Contenu indisponible', 'Ce contenu est introuvable ou ne peut pas être chargé.'],
+      it: ['Contenuto non disponibile', 'Non è stato possibile trovare o caricare questo contenuto.']
+    }[routeInfo.slug] || ['Content unavailable', 'This content could not be found or loaded.'];
+    title = `${unavailable[0]} | ${siteTitle}`; description = unavailable[1];
+  }
   return { title, description, pageType, fanProject: copy.fanProject };
 }
 
@@ -642,7 +677,7 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
       name: String(data.title || '').trim() || copy.title,
       about: { '@type': 'Person', name: 'Billie Eilish' }
     };
-    if (String(data.description || '').trim()) mainEntity.description = String(data.description).replace(/\s+/g, ' ').trim().slice(0, 1000);
+    if (String(data.description || '').trim()) mainEntity.description = plainDescription(data.description).slice(0, 1000);
     if (String(data.year || '').trim()) mainEntity.datePublished = String(data.year).trim();
     page.mainEntity = mainEntity;
   } else if (routeInfo.logicalPath === '/billie-eilish') {
@@ -723,6 +758,11 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   let image = FIXED_SHARE_IMAGE_URL;
   let imageAlt = fallbackImageAlt;
   let ogType = 'website';
+  if (seoRecord) {
+    const data = localizedRecord(seoRecord, routeInfo.slug).data;
+    image = absoluteHttpUrl(data.thumbnailUrl || data.imageUrl || data.bannerUrl, origin) || image;
+    imageAlt = String(data.title || '').trim() || imageAlt;
+  }
 
   if (publicProfile && publicProfile.username) {
     const displayName = String(publicProfile.displayName || publicProfile.username).trim().slice(0, 80);
@@ -736,7 +776,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   }
 
   html = html
-    .replace(/<title>[^<]*<\/title>/i, `<title>${attr(documentTitle)}</title>`)
+    .replace(/<title>[^<]*<\/title>/i, () => `<title translate="no" data-i18n-ignore>${attr(documentTitle)}</title>`)
     .replace(/\s*<meta\s+(?:property=["']og:[^>]+|name=["']twitter:[^>]+)[^>]*>/gi, '')
     .replace(/\s*<link\s+rel=["']canonical["'][^>]*>/gi, '')
     .replace(/\s*<link\s+rel=["']alternate["'][^>]*hreflang=["'][^>]*>/gi, '')
@@ -767,9 +807,7 @@ ${Object.values(LOCALE_PREFIXES).filter((value, index, list) => !value.alias && 
 <meta property="og:url" content="${attr(canonical)}">
 <meta property="og:image" content="${attr(image)}">
 <meta property="og:image:secure_url" content="${attr(image)}">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+${image === FIXED_SHARE_IMAGE_URL || ogType === 'profile' ? '<meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">' : ''}
 <meta property="og:image:alt" content="${attr(imageAlt)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${attr(socialTitle)}">
@@ -779,8 +817,28 @@ ${Object.values(LOCALE_PREFIXES).filter((value, index, list) => !value.alias && 
 <link rel="canonical" href="${attr(canonical)}">
 ${alternates}`;
 
-  html = html.replace('</title>', `</title>${metadata}`);
+  html = html.replace('</title>', () => `</title>${metadata}`);
   return injectStructuredData(html, origin, canonical, routeInfo, { ...copy, title: socialTitle, description: socialDescription }, seoRecord, publicProfile);
+}
+
+// The SPA consumes exactly the metadata rendered for direct visits. Keep this
+// whitelist limited to SEO fields; scripts or page markup are never executed.
+function extractPageMetadata(html) {
+  const attribute = (tag, name) => decodeHtmlText((tag.match(new RegExp(`\\b${name}=["']([^"']*)["']`, 'i')) || [])[1] || '');
+  const meta = (html.match(/<meta\s[^>]+>/gi) || []).flatMap(tag => {
+    const kind = /\bproperty=/.test(tag) ? 'property' : 'name';
+    const key = attribute(tag, kind);
+    return /^(?:description$|robots$|og:|twitter:)/.test(key) ? [{ kind, key, content: attribute(tag, 'content') }] : [];
+  });
+  const links = (html.match(/<link\s[^>]+>/gi) || []).flatMap(tag => {
+    const rel = attribute(tag, 'rel'), hreflang = attribute(tag, 'hreflang');
+    return rel === 'canonical' || (rel === 'alternate' && hreflang) ? [{ rel, href: attribute(tag, 'href'), hreflang }] : [];
+  });
+  const structured = (html.match(/<script[^>]+data-betv-seo=["']true["'][^>]*>([\s\S]*?)<\/script>/i) || [])[1];
+  return {
+    title: decodeHtmlText((html.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || ''),
+    meta, links, structuredData: structured ? JSON.parse(structured) : null
+  };
 }
 
 module.exports = async function sitePage(req, res) {
@@ -790,6 +848,11 @@ module.exports = async function sitePage(req, res) {
   }
 
   try {
+    const metadataOnly = req.query?.format === 'seo';
+    if (metadataOnly && (typeof req.query.path !== 'string' || !req.query.path.startsWith('/') || req.query.path.startsWith('//') || req.query.path.length > 2048 || /[\r\n\\]/.test(req.query.path))) {
+      res.setHeader('Cache-Control', 'no-store');
+      return res.status(400).send('Invalid metadata path');
+    }
     const requestOrigin = publicOrigin(req);
     const origin = /^https?:\/\/(?:localhost|127\.)/i.test(requestOrigin) ? requestOrigin : OFFICIAL_SITE_ORIGIN;
     const routeInfo = routeLocaleInfo(req);
@@ -798,10 +861,12 @@ module.exports = async function sitePage(req, res) {
     const recoveryRequest = routeInfo.logicalPath === '/reset-password' || routeInfo.logicalPath === '/reset-password/';
     const needsSeoCatalog = /^\/\d{6,12}$/.test(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
     const [settings, seoCatalog] = await Promise.all([
-      (legalRequest || recoveryRequest || profileUsername) ? Promise.resolve(settingsCache.value || {}) : loadSettings(),
-      needsSeoCatalog ? loadSeoCatalog() : Promise.resolve([])
+      (legalRequest || recoveryRequest || profileUsername || needsSeoCatalog) ? Promise.resolve(settingsCache.value || {}) : loadSettings(),
+      needsSeoCatalog ? loadSeoCatalog(routeInfo) : Promise.resolve({ records: [], complete: true })
     ]);
-    const seoRecord = needsSeoCatalog ? seoRecordFromRoute(routeInfo, seoCatalog) : null;
+    const seoRecord = needsSeoCatalog ? seoRecordFromRoute(routeInfo, seoCatalog.records) : null;
+    const responseStatus = needsSeoCatalog && !seoRecord ? (seoCatalog.complete ? 404 : 503) : 200;
+    if (responseStatus !== 200) routeInfo.contentUnavailable = responseStatus;
     let publicProfile = null;
     if (profileUsername) {
       try {
@@ -817,6 +882,14 @@ module.exports = async function sitePage(req, res) {
         routeInfo
       )
     );
+    if (metadataOnly) {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      res.setHeader('Cache-Control', responseStatus === 200 ? 'public, max-age=60, s-maxage=300' : 'no-store');
+      if (req.method === 'HEAD') return res.status(responseStatus).end();
+      return res.status(responseStatus).send(JSON.stringify(extractPageMetadata(html)));
+    }
     const updateCandidates = [
       req.query && req.query.__betv_update,
       req && req.url,
@@ -852,8 +925,9 @@ module.exports = async function sitePage(req, res) {
     if (isNoindexRoute(routeInfo)) {
       res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
     }
-    if (req.method === 'HEAD') return res.status(200).end();
-    return res.status(200).send(html);
+    if (responseStatus !== 200) res.setHeader('Cache-Control', 'no-store');
+    if (req.method === 'HEAD') return res.status(responseStatus).end();
+    return res.status(responseStatus).send(html);
   } catch (error) {
     res.setHeader('Cache-Control', 'no-store');
     return res.status(500).send('Não foi possível carregar o site.');

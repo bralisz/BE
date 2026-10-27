@@ -24,6 +24,7 @@ const copies=[
   ['assets/js/community.js',`${out}/chunks/community.js`],
   ['assets/js/performance.js',`${out}/chunks/performance.js`],
   ['assets/js/locale-routing.js',`${out}/chunks/locale.js`],
+  ['assets/js/seo.js',`${out}/chunks/seo.js`],
   ['assets/js/site.js',`${out}/chunks/site.js`],
   ['assets/js/tv-controller.js',`${out}/chunks/tv.js`],
   ['assets/js/tv-session-widget.js',`${out}/chunks/session.js`],
