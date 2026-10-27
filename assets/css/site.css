@@ -21631,3 +21631,9 @@ body.donate-page-active #communityPage{display:none!important}
   body.settings-page-active .settings-page-content{min-width:0}
   body.settings-page-active .settings-panel-card{padding:22px 18px;border-radius:22px}
 }
+/* Public server-rendered catalog summary, also available before JS loads. */
+.catalog-overview{max-width:1200px;margin:32px auto;padding:24px clamp(16px,4vw,40px);color:#dce3ef;line-height:1.7}
+.catalog-overview h1{font-size:clamp(20px,3vw,28px);line-height:1.3}
+.catalog-overview a{color:inherit;text-underline-offset:3px}
+.catalog-overview ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:8px 24px;padding-left:20px}
+.catalog-overview-note{font-size:13px;opacity:.75}

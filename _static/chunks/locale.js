@@ -240,6 +240,16 @@
     }
   });
 
+  // Preserve the route-specific title rendered by the server during app startup.
+  var initialDocumentTitle=document.title;
+  var initialDocumentPath=currentLogicalPath();
+  window.BETVPageTitle=function(){
+    var samePage=currentLogicalPath()===initialDocumentPath;
+    var overview=document.getElementById('catalogOverview');
+    if(overview)overview.hidden=!samePage;
+    return samePage?initialDocumentTitle:'Billie Eilish TV';
+  };
+
   window.BETVLocale=api;
   window.BETVRegional=regional;
   window.BETVLocalePath=currentLogicalPath;
