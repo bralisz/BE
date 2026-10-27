@@ -245,8 +245,6 @@
   var initialDocumentPath=currentLogicalPath();
   window.BETVPageTitle=function(){
     var samePage=currentLogicalPath()===initialDocumentPath;
-    var overview=document.getElementById('catalogOverview');
-    if(overview)overview.hidden=!samePage;
     return samePage?initialDocumentTitle:'Billie Eilish TV';
   };
 

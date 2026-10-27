@@ -4,6 +4,7 @@ const vm = require('node:vm');
 const {JSDOM, VirtualConsole} = require('jsdom');
 const mobileUI = require('../development/source/admin/mobile');
 const adminRuntime = require('../server/handlers/admin-runtime');
+const workspaceUI = require('../development/source/admin/workspace');
 
 const quiet = new VirtualConsole();
 function mediaMatches(query, width) {
@@ -157,7 +158,8 @@ async function checkProtectedRuntime() {
     const allowed = response();
     await adminRuntime(request, allowed);
     assert.equal(allowed.statusCode, 200);
-    assert(allowed.body.endsWith(mobileUI), 'authenticated response includes the actual mobile source');
+    assert(allowed.body.includes(mobileUI), 'authenticated response includes the actual mobile source');
+    assert(allowed.body.endsWith(workspaceUI), 'authenticated response includes the admin redesign');
     new vm.Script(allowed.body);
     assert.equal(allowed.headers['Cache-Control'], 'private, no-store, max-age=0');
     const missing = response();

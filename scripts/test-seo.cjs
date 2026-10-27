@@ -46,10 +46,7 @@ function documentOf(response) {
     assert.equal(doc.querySelector('link[rel="canonical"]').href, `https://billieilishtv.site/${locale}`);
     assert.equal(doc.querySelectorAll('link[hreflang]').length, 6);
     assert.match(doc.title, /Billie Eilish TV \|/);
-    assert(doc.querySelector('main #catalogOverview h1'));
-    assert(doc.querySelector(`#catalogOverview a[href="/${locale}/12345678"]`));
-    assert(doc.querySelector(`#catalogOverview a[href="/${locale}/albuns/album-one"]`));
-    assert(!doc.querySelector('#catalogOverview').textContent.includes('Unpublished video'));
+    assert.equal(doc.querySelector('#catalogOverview'), null, 'SEO must not add a duplicate catalog to the visible layout');
     assert(!result.body.includes('sinopse placeholder'));
     assert(!result.body.includes('Destaque 01'));
     // Inserting HTML must never corrupt the inline boot/recovery scripts.
@@ -63,7 +60,7 @@ function documentOf(response) {
   const videoDoc = documentOf(video);
   assert.equal(videoDoc.title, `${title} | Billie Eilish TV`);
   assert.equal(videoDoc.querySelector('meta[name="description"]').content, 'Una actuación en directo.');
-  assert.equal(videoDoc.querySelector('#catalogOverview h1').textContent, `${title} | Billie Eilish TV`);
+  assert.equal(videoDoc.querySelector('#catalogOverview'), null);
   const graph = JSON.parse(videoDoc.querySelector('[data-betv-seo]').textContent)['@graph'];
   assert.equal(graph.find(item => item['@type'] === 'ItemPage').mainEntity.name, title);
   assert.equal(graph.find(item => item['@type'] === 'BreadcrumbList').itemListElement[1].item, 'https://billieilishtv.site/es/12345678');
@@ -71,7 +68,7 @@ function documentOf(response) {
 
   const albums = documentOf(await render('/en-us/albums'));
   assert.equal(albums.querySelector('link[rel="canonical"]').href, 'https://billieilishtv.site/en-us/albuns');
-  assert(!albums.querySelector('#catalogOverview a[href="/en-us/12345678"]'));
+  assert.equal(albums.querySelector('#catalogOverview'), null);
   assert.equal(documentOf(await render('/billie')).querySelector('link[rel="canonical"]').href, 'https://billieilishtv.site/pt-br/billie-eilish');
   assert.equal(documentOf(await render('/fr/community')).querySelector('link[rel="canonical"]').href, 'https://billieilishtv.site/fr/communaute');
   const rewritten = documentOf(await render('/api?route=site-page', 'GET', { 'x-vercel-original-path': '/it/albuns/album-one' }));
@@ -102,16 +99,17 @@ function documentOf(response) {
   assert.equal(dom.window.BETVPageTitle(), `${title} | Billie Eilish TV`);
   dom.window.history.pushState({}, '', '/albuns');
   assert.equal(dom.window.BETVPageTitle(), 'Billie Eilish TV');
-  assert.equal(dom.window.document.getElementById('catalogOverview').hidden, true);
+
   dom.window.close();
 
-  // A data outage must still deliver a useful page and static discovery links.
+  // A data outage must still deliver the regular page and SEO metadata.
   delete require.cache[handlerPath];
   global.fetch = async () => { throw new Error('upstream unavailable'); };
   const fallback = documentOf(await render('/pt-br'));
-  assert(fallback.querySelector('#catalogOverview a[href="/pt-br/albuns"]'));
+  assert.equal(fallback.querySelector('#catalogOverview'), null);
+  assert(fallback.querySelector('meta[name="description"]').content);
   assert.match(fallback.title, /Billie Eilish TV/);
-  console.log('SEO checks passed: localized HTML, crawlable catalog, escaping, canonicals, robots, routing, titles and upstream fallback.');
+  console.log('SEO checks passed: localized HTML, unchanged public layout, escaping, canonicals, robots, routing, titles and upstream fallback.');
 })().finally(() => {
   global.fetch = originalFetch;
   if (originalEnv === undefined) delete process.env.VERCEL_ENV;

@@ -1,11 +1,9 @@
 # SEO da Billie Eilish TV
 
 As páginas públicas passam por `server/api-routes/site-page.js`, que entrega
-título, descrição, canonical, hreflang e JSON-LD no HTML inicial. As páginas
-de entrada e de álbuns incluem links HTML para registros públicos do catálogo.
-O conteúdo vem das mesmas consultas públicas já usadas pelo projeto; registros
-inativos não aparecem. A página inicial mostra até 24 links e a página de
-álbuns até 120, enquanto o sitemap continua oferecendo a descoberta do restante.
+título, descrição, canonical, hreflang e JSON-LD no HTML inicial. A descoberta do catálogo continua pelo sitemap e pelos componentes
+existentes do site. Não há um segundo catálogo ou lista textual inserida pelo
+renderizador no layout público.
 
 Aliases de biografia e álbuns apontam para o canonical correspondente. Rotas
 de conta, notificações pessoais, administração, caminhos desconhecidos e
@@ -15,14 +13,14 @@ servidor durante a inicialização.
 
 As consultas de SEO têm prazo de quatro segundos por tentativa, cache em memória
 de cinco minutos e cache HTTP. Se os dados estiverem indisponíveis, a página
-continua entregando apresentação e links para biografia e álbuns. Uma primeira
+continua entregando o layout regular e metadados padrão. Uma primeira
 requisição sem cache pode demorar mais por depender do catálogo; acompanhar o
 tempo de resposta após a publicação.
 
 ## Validação
 
 Execute `npm run test:seo` para verificar HTML em cinco idiomas, canonical,
-links públicos, escape de conteúdo, JSON-LD, indexação, navegação e fallback.
+ausência de blocos visuais duplicados, escape de conteúdo, JSON-LD, indexação, navegação e fallback.
 Os arquivos publicados de CSS e JavaScript estão em `_static`; mantenha-os
 sincronizados com `assets` e atualize as revisões dos URLs alterados.
 

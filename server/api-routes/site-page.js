@@ -611,47 +611,6 @@ function pageCopy(routeInfo, settings, seoRecord) {
   return { title, description, pageType, fanProject: copy.fanProject };
 }
 
-// Ordinary visible links let visitors and crawlers explore the public catalog
-// without waiting for authentication or the interactive application to start.
-function injectCatalogOverview(html, routeInfo, settings, catalog, seoRecord) {
-  const logical = routeInfo.logicalPath;
-  if (logical !== '/' && logical !== '/albuns' && !seoRecord) return html;
-  const copy = pageCopy(routeInfo, settings, seoRecord);
-  const labels = {
-    'pt-br': ['Explore o catálogo', 'Biografia de Billie Eilish', 'Álbuns e singles', 'Vídeos, shows e filmes'],
-    'en-us': ['Explore the catalog', 'Billie Eilish biography', 'Albums and singles', 'Videos, concerts and films'],
-    es: ['Explora el catálogo', 'Biografía de Billie Eilish', 'Álbumes y singles', 'Videos, conciertos y películas'],
-    fr: ['Explore le catalogue', 'Biographie de Billie Eilish', 'Albums et singles', 'Vidéos, concerts et films'],
-    it: ['Esplora il catalogo', 'Biografia di Billie Eilish', 'Album e singoli', 'Video, concerti e film']
-  }[routeInfo.slug];
-  const href = logicalPath => attr(localizedRouteUrl('', routeInfo.slug, logicalPath));
-  const unique = new Map();
-  (catalog || []).forEach(record => {
-    if (logical === '/albuns' && record.collection !== 'news') return;
-    const data = localizedRecord(record, routeInfo.slug).data;
-    const title = String(data.title || '').trim();
-    if (!title || (record.collection === 'news' && !record.id)) return;
-    const route = record.collection === 'news'
-      ? `/albuns/${encodeURIComponent(record.id)}`
-      : `/${numericPublicId(data.publicId || record.id || data.title)}`;
-    if (!unique.has(route)) unique.set(route, { title, route });
-  });
-  const limit = seoRecord ? 0 : logical === '/albuns' ? 120 : 24;
-  const links = Array.from(unique.values()).slice(0, limit).map(item =>
-    `<li><a href="${href(item.route)}" translate="no">${attr(item.title)}</a></li>`
-  ).join('');
-  const overview = `<section id="catalogOverview" class="catalog-overview" aria-labelledby="catalogOverviewTitle" data-i18n-ignore>
-<h1 id="catalogOverviewTitle">${attr(copy.title)}</h1>
-<p>${attr(copy.description)}</p>
-<nav aria-label="${attr(labels[0])}"><a href="${href('/billie-eilish')}">${attr(labels[1])}</a> · <a href="${href('/albuns')}">${attr(labels[2])}</a> · <a href="${href('/')}">${attr(labels[3])}</a></nav>
-${links ? `<ul>${links}</ul>` : ''}
-<p class="catalog-overview-note">${attr(copy.fanProject)}</p>
-</section>`;
-  // The first main belongs to the public catalog. Keep the overview within it,
-  // so the application's existing area visibility rules apply to this content.
-  return html.replace(/(<main>[\s\S]*?)(<\/main>)/, (_, content, end) => `${content}${overview}\n${end}`);
-}
-
 function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecord, publicProfile) {
   const graph = [];
   graph.push({
@@ -837,7 +796,7 @@ module.exports = async function sitePage(req, res) {
     const profileUsername = profileUsernameFromRoute(routeInfo);
     const legalRequest = isLegalRouteInfo(routeInfo);
     const recoveryRequest = routeInfo.logicalPath === '/reset-password' || routeInfo.logicalPath === '/reset-password/';
-    const needsSeoCatalog = routeInfo.logicalPath === '/' || routeInfo.logicalPath === '/albuns' || /^\/\d{6,12}$/.test(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
+    const needsSeoCatalog = /^\/\d{6,12}$/.test(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
     const [settings, seoCatalog] = await Promise.all([
       (legalRequest || recoveryRequest || profileUsername) ? Promise.resolve(settingsCache.value || {}) : loadSettings(),
       needsSeoCatalog ? loadSeoCatalog() : Promise.resolve([])
@@ -852,7 +811,7 @@ module.exports = async function sitePage(req, res) {
     const html = injectDeploymentVersion(
       injectLocalePreload(
         localizeStaticText(
-          injectSocialMetadata(injectCatalogOverview(injectLocaleDocument(readTemplate(), routeInfo), routeInfo, settings, seoCatalog, seoRecord), settings, origin, routeInfo, publicProfile, seoRecord),
+          injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo, publicProfile, seoRecord),
           routeInfo
         ),
         routeInfo
