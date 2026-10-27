@@ -17,7 +17,7 @@ assert.match(css, /img\.betv-image-pending:is\(/);
 assert.doesNotMatch(css, /media-placeholder\.svg|--betv-media-placeholder/);
 assert.equal(fs.existsSync('assets/images/loading/media-placeholder.svg'), false);
 
-const dom = new JSDOM('<!doctype html><html><body><div class="f-slide active"><div class="f-media"><img src="/featured.webp"></div></div><div class="video-card"><img src="/poster.webp"></div></body></html>', {
+const dom = new JSDOM('<!doctype html><html><body><div class="f-slide active"><div class="f-media"><img src="/featured.webp"></div></div><div class="video-card"><img src="/poster.webp"></div><div class="user-chip"><img src="/avatar.webp"></div></body></html>', {
   url: 'https://betv.example/', runScripts: 'outside-only', pretendToBeVisual: true
 });
 const { window } = dom;
@@ -35,11 +35,14 @@ document.dispatchEvent(new window.Event('DOMContentLoaded'));
 
 const hero = document.querySelector('.f-media img');
 const poster = document.querySelector('.video-card img');
+const avatar = document.querySelector('.user-chip img');
 assert.equal(hero.loading, 'eager', 'visible featured image should load eagerly');
 assert.equal(hero.getAttribute('fetchpriority'), 'high');
 assert.equal(poster.loading, 'lazy', 'catalog poster should load lazily');
 assert.equal(poster.getAttribute('fetchpriority'), 'low');
 assert(poster.classList.contains('betv-image-pending'));
+assert.equal(avatar.loading, 'lazy', 'avatar should load lazily');
+assert(avatar.classList.contains('betv-image-pending'));
 
 (async () => {
   const dynamic = document.createElement('img');
