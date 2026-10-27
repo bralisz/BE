@@ -21669,3 +21669,27 @@ body.donate-page-active #communityPage{display:none!important}
     top: calc(var(--header-action-top, 21px) + 5px) !important;
   }
 }
+
+
+/* Video details only — single mobile Home icon and see-through header. */
+@media (max-width:760px) {
+  body.detail-page-active #detailHomeLink {
+    display:none!important;
+  }
+  body.detail-page-active:not(.login-mode):not(.admin-mode) #mobileAppBar,
+  body.detail-page-active.mobile-secondary-page:not(.profile-page-active):not(.login-mode):not(.admin-mode) #mobileAppBar {
+    background:transparent!important;
+    background-color:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    border-bottom:0!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  body.detail-page-active #mobileAppBar::before,
+  body.detail-page-active #mobileAppBar::after {
+    content:none!important;
+    display:none!important;
+  }
+}
