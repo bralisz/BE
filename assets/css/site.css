@@ -21778,3 +21778,20 @@ img.betv-image-error:is(
   background-color: var(--betv-lazy-gray) !important;
   background-image: none !important;
 }
+
+/* Community hero now comes from the active profile-banner gallery.
+   No empty space remains if the gallery has no available banner. */
+#communityPage.community-banner-empty .community-hero-banner,
+#communityPage .community-hero-banner[hidden] {
+  display:none!important;
+}
+body.community-page-active #communityPage.community-banner-empty .community-content-shell {
+  margin:0 auto!important;
+  padding-top:clamp(110px,10vw,150px)!important;
+  border-radius:0!important;
+}
+@media(max-width:760px) {
+  body.community-page-active #communityPage.community-banner-empty .community-content-shell {
+    padding-top:calc(98px + env(safe-area-inset-top))!important;
+  }
+}
