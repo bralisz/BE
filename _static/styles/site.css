@@ -115,3 +115,35 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
     padding-top:calc(96px + env(safe-area-inset-top))!important;
   }
 }
+
+
+/* Community / NGOs: transparent top overlays on phones (including scrolled header). */
+@media(max-width:760px){
+  body.community-page-active:not(.login-mode):not(.admin-mode) #mobileAppBar,
+  body.donate-page-active:not(.login-mode):not(.admin-mode) #mobileAppBar,
+  body.community-page-active.mobile-home-layout.mobile-home-scrolled #mobileAppBar,
+  body.donate-page-active.mobile-home-layout.mobile-home-scrolled #mobileAppBar,
+  body.donate-page-active .donate-page-header{
+    background:transparent!important;
+    background-color:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    box-shadow:none!important;
+    -webkit-backdrop-filter:none!important;
+    backdrop-filter:none!important;
+  }
+  body.community-page-active #mobileAppBar::before,
+  body.community-page-active #mobileAppBar::after,
+  body.donate-page-active #mobileAppBar::before,
+  body.donate-page-active #mobileAppBar::after,
+  body.donate-page-active .donate-page-header::before,
+  body.donate-page-active .donate-page-header::after{
+    content:none!important;
+    display:none!important;
+  }
+  /* Keep the fade below the artwork, not across the top navigation. */
+  body.community-page-active .community-hero-banner-overlay,
+  body.donate-page-active .donate-hero::before{
+    background:linear-gradient(180deg,transparent 0%,transparent 36%,#050607 100%)!important;
+  }
+}
