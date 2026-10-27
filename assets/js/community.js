@@ -368,7 +368,7 @@
     page.setAttribute('aria-label','Comunidade dos Avocados');
     page.innerHTML=''
       +'<div class="community-page-inner">'
-      +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/_static/media/community/community-hero-banner.webp" alt="Banner da comunidade dos Avocados" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
+      +  '<section class="community-hero-banner" aria-label="Banner da comunidade"><div class="community-hero-banner-frame"><img src="/_static/media/community/community-hero-banner.webp?rev=20261027-community-new-banner-v1" alt="Billie Eilish interagindo com fãs durante um show" decoding="async"><div class="community-hero-banner-overlay" aria-hidden="true"></div></div></section>'
       +  '<div class="community-content-shell">'
       +    '<header class="community-page-heading"><h1>Comunidade dos Avocados</h1><p>Descubra o que os fãs estão assistindo, salvando e curtindo dentro do Billie Eilish TV.</p></header>'
       +    '<section class="community-instagram-section" id="communityInstagramSection" aria-labelledby="communityInstagramTitle">'
