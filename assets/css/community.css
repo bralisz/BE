@@ -320,3 +320,20 @@ body.community-page-active .site-footer{
     filter:brightness(1.04) saturate(1.02);
   }
 }
+
+
+/* Community gallery is dynamic: if no active profile banners exist,
+   remove the empty hero without placing the page title under the header. */
+.community-page.community-banner-unavailable .community-hero-banner{display:none!important}
+.community-page.community-banner-unavailable .community-content-shell{
+  margin:0 auto;
+  padding-top:116px;
+  border-radius:0;
+}
+@media(max-width:760px){
+  .community-page.community-banner-unavailable .community-content-shell{
+    margin:0 auto;
+    padding-top:calc(104px + env(safe-area-inset-top));
+    border-radius:0;
+  }
+}
