@@ -22,7 +22,8 @@ const LOCALIZED_ROUTE_SLUGS = Object.freeze({
 });
 const LOCALIZED_ROUTE_ALIASES = Object.freeze({
   '/comunidade': '/comunidade', '/community': '/comunidade', '/comunidad': '/comunidade', '/communaute': '/comunidade', '/communauté': '/comunidade', '/comunita': '/comunidade', '/comunità': '/comunidade',
-  '/fãs': '/fãs', '/fas': '/fãs', '/fans': '/fãs'
+  '/fãs': '/fãs', '/fas': '/fãs', '/fans': '/fãs',
+  '/billie': '/billie-eilish', '/álbuns': '/albuns', '/albums': '/albuns'
 });
 const LOCALE_PREFIXES = Object.freeze({
   'pt-br': { locale: 'pt-BR', ogLocale: 'pt_BR', slug: 'pt-br' },
@@ -134,7 +135,8 @@ async function loadSettings() {
           apikey: publishableKey,
           Authorization: `Bearer ${publishableKey}`,
           Accept: 'application/json'
-        }
+        },
+        signal: AbortSignal.timeout(4000)
       });
       if (!response.ok) return settingsCache.value || {};
       const rows = await response.json();
@@ -176,7 +178,8 @@ function canonicalLocalizedRoutePath(value) {
   try { raw = decodeURIComponent(raw); } catch (_) {}
   raw = raw.replace(/\/{2,}/g, '/').replace(/\/+$/, '') || '/';
   const key = raw.toLowerCase();
-  return LOCALIZED_ROUTE_ALIASES[key] || raw;
+  const albumDetail = raw.match(/^\/(?:álbuns|albums)\/(.+)$/i);
+  return LOCALIZED_ROUTE_ALIASES[key] || (albumDetail ? `/albuns/${albumDetail[1]}` : raw);
 }
 
 function localizedLogicalRoutePath(value, slug) {
@@ -301,6 +304,7 @@ async function fetchSeoCollection(collection) {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_collection: collection, p_id: null }),
+      signal: AbortSignal.timeout(4000),
       cache: 'no-store'
     });
     if (response.ok) {
@@ -312,7 +316,7 @@ async function fetchSeoCollection(collection) {
   } catch (_) {}
 
   const params = new URLSearchParams({ select: 'id,data,created_at,updated_at', collection: `eq.${collection}` });
-  const legacy = await fetch(`${url}/rest/v1/content_items?${params.toString()}`, { headers, cache: 'no-store' });
+  const legacy = await fetch(`${url}/rest/v1/content_items?${params.toString()}`, { headers, signal: AbortSignal.timeout(4000), cache: 'no-store' });
   if (!legacy.ok) throw new Error(`seo_${collection}_unavailable`);
   const payload = await legacy.json();
   return (Array.isArray(payload) ? payload : [])
@@ -401,7 +405,9 @@ function xDefaultRouteUrl(origin, logicalPath) {
 
 function isNoindexRoute(routeInfo) {
   const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
-  return logical === '/login' ||
+  return process.env.VERCEL_ENV === 'preview' ||
+    !(/^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|ong$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
+    logical === '/login' ||
     logical === '/reset-password' ||
     logical === '/config' ||
     logical === '/auth/callback' ||
@@ -412,7 +418,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
   const siteTitle = 'Billie Eilish TV';
   const copies = {
     'pt-br': {
-      homeTitle: 'Billie Eilish TV',
+      homeTitle: "Billie Eilish TV | Vídeos, shows e álbuns",
       homeDescription: 'Explore vídeos, shows, filmes, séries, álbuns e outros conteúdos sobre Billie Eilish em um projeto de fãs reunido em um só lugar.',
       billieTitle: `Billie Eilish — Biografia e informações | ${siteTitle}`,
       billieDescription: 'Conheça Billie Eilish, sua trajetória, informações e redes sociais reunidas pela Billie Eilish TV, um projeto de fãs.',
@@ -435,7 +441,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Projeto de fãs não oficial dedicado a organizar conteúdo e informações sobre Billie Eilish.'
     },
     'en-us': {
-      homeTitle: 'Billie Eilish TV',
+      homeTitle: "Billie Eilish TV | Videos, concerts and albums",
       homeDescription: 'Explore videos, performances, films, series, albums and more Billie Eilish content in one fan-made project.',
       billieTitle: `Billie Eilish — Biography and information | ${siteTitle}`,
       billieDescription: 'Learn about Billie Eilish, her journey, information and social links gathered by Billie Eilish TV, a fan-made project.',
@@ -458,7 +464,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Unofficial fan-made project dedicated to organizing content and information about Billie Eilish.'
     },
     fr: {
-      homeTitle: 'Billie Eilish TV',
+      homeTitle: "Billie Eilish TV | Vidéos, concerts et albums",
       homeDescription: 'Explore des vidéos, concerts, films, séries, albums et d’autres contenus sur Billie Eilish dans un projet créé par des fans.',
       billieTitle: `Billie Eilish — Biographie et informations | ${siteTitle}`,
       billieDescription: 'Découvre Billie Eilish, son parcours, ses informations et ses réseaux sociaux réunis par Billie Eilish TV, un projet de fans.',
@@ -481,7 +487,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Projet non officiel créé par des fans pour organiser du contenu et des informations sur Billie Eilish.'
     },
     es: {
-      homeTitle: 'Billie Eilish TV',
+      homeTitle: "Billie Eilish TV | Videos, conciertos y álbumes",
       homeDescription: 'Explora videos, conciertos, películas, series, álbumes y más contenido de Billie Eilish en un proyecto creado por fans.',
       billieTitle: `Billie Eilish — Biografía e información | ${siteTitle}`,
       billieDescription: 'Conoce a Billie Eilish, su trayectoria, información y redes sociales reunidas por Billie Eilish TV, un proyecto de fans.',
@@ -504,7 +510,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Proyecto no oficial creado por fans para organizar contenido e información sobre Billie Eilish.'
     },
     it: {
-      homeTitle: 'Billie Eilish TV',
+      homeTitle: "Billie Eilish TV | Video, concerti e album",
       homeDescription: 'Esplora video, concerti, film, serie, album e altri contenuti su Billie Eilish in un progetto creato dai fan.',
       billieTitle: `Billie Eilish — Biografia e informazioni | ${siteTitle}`,
       billieDescription: 'Scopri Billie Eilish, il suo percorso, le informazioni e i social raccolti da Billie Eilish TV, un progetto creato dai fan.',
@@ -605,6 +611,47 @@ function pageCopy(routeInfo, settings, seoRecord) {
   return { title, description, pageType, fanProject: copy.fanProject };
 }
 
+// Ordinary visible links let visitors and crawlers explore the public catalog
+// without waiting for authentication or the interactive application to start.
+function injectCatalogOverview(html, routeInfo, settings, catalog, seoRecord) {
+  const logical = routeInfo.logicalPath;
+  if (logical !== '/' && logical !== '/albuns' && !seoRecord) return html;
+  const copy = pageCopy(routeInfo, settings, seoRecord);
+  const labels = {
+    'pt-br': ['Explore o catálogo', 'Biografia de Billie Eilish', 'Álbuns e singles', 'Vídeos, shows e filmes'],
+    'en-us': ['Explore the catalog', 'Billie Eilish biography', 'Albums and singles', 'Videos, concerts and films'],
+    es: ['Explora el catálogo', 'Biografía de Billie Eilish', 'Álbumes y singles', 'Videos, conciertos y películas'],
+    fr: ['Explore le catalogue', 'Biographie de Billie Eilish', 'Albums et singles', 'Vidéos, concerts et films'],
+    it: ['Esplora il catalogo', 'Biografia di Billie Eilish', 'Album e singoli', 'Video, concerti e film']
+  }[routeInfo.slug];
+  const href = logicalPath => attr(localizedRouteUrl('', routeInfo.slug, logicalPath));
+  const unique = new Map();
+  (catalog || []).forEach(record => {
+    if (logical === '/albuns' && record.collection !== 'news') return;
+    const data = localizedRecord(record, routeInfo.slug).data;
+    const title = String(data.title || '').trim();
+    if (!title || (record.collection === 'news' && !record.id)) return;
+    const route = record.collection === 'news'
+      ? `/albuns/${encodeURIComponent(record.id)}`
+      : `/${numericPublicId(data.publicId || record.id || data.title)}`;
+    if (!unique.has(route)) unique.set(route, { title, route });
+  });
+  const limit = seoRecord ? 0 : logical === '/albuns' ? 120 : 24;
+  const links = Array.from(unique.values()).slice(0, limit).map(item =>
+    `<li><a href="${href(item.route)}" translate="no">${attr(item.title)}</a></li>`
+  ).join('');
+  const overview = `<section id="catalogOverview" class="catalog-overview" aria-labelledby="catalogOverviewTitle" data-i18n-ignore>
+<h1 id="catalogOverviewTitle">${attr(copy.title)}</h1>
+<p>${attr(copy.description)}</p>
+<nav aria-label="${attr(labels[0])}"><a href="${href('/billie-eilish')}">${attr(labels[1])}</a> · <a href="${href('/albuns')}">${attr(labels[2])}</a> · <a href="${href('/')}">${attr(labels[3])}</a></nav>
+${links ? `<ul>${links}</ul>` : ''}
+<p class="catalog-overview-note">${attr(copy.fanProject)}</p>
+</section>`;
+  // The first main belongs to the public catalog. Keep the overview within it,
+  // so the application's existing area visibility rules apply to this content.
+  return html.replace(/(<main>[\s\S]*?)(<\/main>)/, (_, content, end) => `${content}${overview}\n${end}`);
+}
+
 function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecord, publicProfile) {
   const graph = [];
   graph.push({
@@ -646,6 +693,18 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
   }
 
   graph.push(page);
+  if (routeInfo.logicalPath !== '/' && !isNoindexRoute(routeInfo)) {
+    const breadcrumbId = `${canonical}#breadcrumb`;
+    page.breadcrumb = { '@id': breadcrumbId };
+    graph.push({
+      '@type': 'BreadcrumbList',
+      '@id': breadcrumbId,
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Billie Eilish TV', item: localizedRouteUrl(origin, routeInfo.slug, '/') },
+        { '@type': 'ListItem', position: 2, name: copy.title, item: canonical }
+      ]
+    });
+  }
   const payload = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
   const script = `<script type="application/ld+json" data-betv-seo="true">${payload}<\/script>`;
   return html.replace('</head>', `${script}\n</head>`);
@@ -699,8 +758,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   const canonical = `${origin}${canonicalPath}`;
   const noindex = isNoindexRoute(routeInfo);
 
-  const logicalPath = String(routeInfo.logicalPath || '/').replace(/\/+$/, '') || '/';
-  let documentTitle = logicalPath === '/' ? siteTitle : copy.title;
+  let documentTitle = copy.title;
   let socialTitle = copy.title;
   let socialDescription = copy.description;
   let image = FIXED_SHARE_IMAGE_URL;
@@ -779,7 +837,7 @@ module.exports = async function sitePage(req, res) {
     const profileUsername = profileUsernameFromRoute(routeInfo);
     const legalRequest = isLegalRouteInfo(routeInfo);
     const recoveryRequest = routeInfo.logicalPath === '/reset-password' || routeInfo.logicalPath === '/reset-password/';
-    const needsSeoCatalog = /^\/\d{6,12}$/.test(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
+    const needsSeoCatalog = routeInfo.logicalPath === '/' || routeInfo.logicalPath === '/albuns' || /^\/\d{6,12}$/.test(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
     const [settings, seoCatalog] = await Promise.all([
       (legalRequest || recoveryRequest || profileUsername) ? Promise.resolve(settingsCache.value || {}) : loadSettings(),
       needsSeoCatalog ? loadSeoCatalog() : Promise.resolve([])
@@ -794,7 +852,7 @@ module.exports = async function sitePage(req, res) {
     const html = injectDeploymentVersion(
       injectLocalePreload(
         localizeStaticText(
-          injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo, publicProfile, seoRecord),
+          injectSocialMetadata(injectCatalogOverview(injectLocaleDocument(readTemplate(), routeInfo), routeInfo, settings, seoCatalog, seoRecord), settings, origin, routeInfo, publicProfile, seoRecord),
           routeInfo
         ),
         routeInfo

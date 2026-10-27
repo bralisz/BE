@@ -340,111 +340,111 @@
     },
     {
       "source": "/pt-br",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/pt-br/:path*",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/en-us",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/en-us/:path*",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/es",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/es/:path*",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fr",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/it",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fr/:path*",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/it/:path*",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/login",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/login/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/auth/callback",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/auth/callback/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/terms",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/terms/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/privacy",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/privacy/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/cookies",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/cookies/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/dmca",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/dmca/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/reset-password",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/reset-password/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/config",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/config/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/admin",
@@ -456,147 +456,147 @@
     },
     {
       "source": "/perfil",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/perfil/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/suporte",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/suporte/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/atualizacoes",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/atualizacoes/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/notificacoes",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/notificacoes/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/billie-eilish",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/billie-eilish/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/billie",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/billie/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/ong",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/ong/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/albuns",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/albuns/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/álbuns",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/álbuns/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/albums",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/albums/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/comunidade",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/comunidade/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/community",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/community/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/comunidad",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/comunidad/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/communaute",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/communaute/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fãs",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fãs/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fas",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fas/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fans",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/fans/",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/atualizacoes/:notificationId",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     },
     {
       "source": "/notificacoes/:notificationId",
-      "destination": "/index.html"
+      "destination": "/api?route=site-page"
     }
   ],
   "headers": [
