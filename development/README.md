@@ -18,3 +18,10 @@ Por isso, não mova ou renomeie arquivos daqui assumindo que são equivalentes a
 O painel administrativo usa `source/admin/admin.js` como fonte principal. O código entregue ao navegador é montado no servidor por `server/handlers/admin-runtime.js`.
 
 Os ajustes atuais de interface mobile estão em `source/admin/mobile.js`, um módulo compartilhado acrescentado pelo handler somente à resposta administrativa autenticada. Edite esse arquivo diretamente; não substitua o bundle legado pelo conteúdo de `admin.js`, pois as duas versões têm diferenças anteriores.
+
+A reformulação visual do admin fica em `source/admin/workspace.js`, também
+acrescentada somente à resposta autenticada. Ela mantém os controles do runtime
+e acrescenta navegação lateral no desktop, ajustes responsivos e busca de
+seções por Ctrl+K. Não regenere o bundle legado para atualizar essa camada.
+
+Valide com `npm run test:admin-ui` e `npm run test:seo`.
