@@ -1,0 +1,26 @@
+.watch-party-main-cta{display:inline-flex!important;align-items:center;justify-content:center;gap:8px;min-height:46px!important;padding:0 17px!important;background:linear-gradient(135deg,#2865bc,#436ac0)!important;border:1px solid #6999e6!important;color:#fff!important;border-radius:999px!important;font-weight:800!important;font-size:13px!important;white-space:nowrap;box-shadow:0 5px 20px rgba(34,95,184,.24)}
+.watch-party-main-cta svg{width:20px!important;height:20px!important;stroke-width:1.9!important}
+.watch-party-community-widget{margin-left:auto;min-width:260px;max-width:300px;display:flex;align-items:center;gap:10px;min-height:54px;text-align:left;background:linear-gradient(120deg,rgba(35,63,106,.65),rgba(21,28,43,.94));border:1px solid rgba(107,148,214,.38);border-radius:15px;color:#fff;padding:9px 11px;cursor:pointer}
+.watch-party-community-symbol{width:36px;height:36px;display:grid;place-items:center;flex:none;border-radius:13px;background:linear-gradient(135deg,#327ad2,#7a66d6);font-size:24px}
+.watch-party-community-copy{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}
+.watch-party-community-copy strong{font-weight:800;font-size:13px}
+.watch-party-community-copy small{color:#b8c6df;font-size:11px}
+.watch-party-community-price{font-size:11px;color:#f4d18c;font-weight:800;white-space:nowrap}
+.watch-party-paywall[hidden]{display:none!important}
+.watch-party-paywall{position:fixed;inset:0;z-index:2147483640;display:grid;place-items:center;padding:16px;box-sizing:border-box}
+.watch-party-paywall-overlay{position:absolute;inset:0;background:rgba(2,5,13,.67);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
+.watch-party-unlock-card{position:relative;box-sizing:border-box;width:min(420px,100%);padding:28px 24px 23px;max-height:95dvh;overflow-y:auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;color:#f4f6fd;border:1px solid rgba(134,167,224,.33);border-radius:25px;background:linear-gradient(160deg,#111d34,#0b101d);box-shadow:0 24px 90px #000b}
+.watch-party-unlock-close{position:absolute;right:15px;top:13px;border:0;background:#253248;color:#fff;border-radius:50%;height:32px;width:32px;font-size:23px;cursor:pointer}
+.watch-party-unlock-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:18px;background:linear-gradient(135deg,#3279cb,#766acb);font-size:30px;color:#fff}
+.watch-party-unlock-card h2{margin:0;font-size:25px;font-weight:850;letter-spacing:-.04em}
+.watch-party-unlock-card>p{font-size:13px;line-height:1.55;color:#bfc9dc;margin:0}
+.watch-party-unlock-price{width:100%;display:flex;flex-direction:column;gap:5px;padding:14px 0;border-top:1px solid #2b3850;border-bottom:1px solid #2b3850}
+.watch-party-unlock-price strong{font-size:28px}
+.watch-party-unlock-price span{font-size:14px;color:#c6d7f5}
+.watch-party-unlock-price small{font-size:10px;color:#9eacc2}
+.watch-party-unlock-reward{display:flex;align-items:center;gap:12px;text-align:left;font-size:12px;line-height:1.45;color:#d2d6e0}
+.watch-party-gold-tag,.community-award-tag.is-happier-than-ever{display:inline-flex;align-items:center;justify-content:center;border:1px solid #f5cd6b;background:linear-gradient(135deg,#ffe39a,#b88428);color:#3b2702;font-size:10px;font-weight:900;letter-spacing:.01em;padding:7px 9px;border-radius:999px;white-space:nowrap;box-shadow:0 0 15px #d7ae4a25}
+.watch-party-unlock-checkout{width:100%;min-height:48px;border:0;border-radius:13px;background:#3478d6;color:white;font-size:14px;font-weight:800;cursor:pointer}
+.watch-party-unlock-checkout:disabled{opacity:.65}
+.watch-party-unlock-status{font-size:12px;color:#e3c386;min-height:18px}
+@media(max-width:760px){.watch-party-community-widget{min-width:0;width:100%;max-width:none;margin:8px 0 0}.community-section-head:has(.watch-party-community-widget){flex-wrap:wrap}.watch-party-main-cta{padding:0 13px!important;font-size:12px!important}.watch-party-unlock-card{padding:25px 17px 18px}.watch-party-unlock-reward{flex-direction:column;align-items:center;text-align:center}}
