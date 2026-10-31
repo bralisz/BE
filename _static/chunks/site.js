@@ -8085,6 +8085,40 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       }
     };
 
+    // Optional Watch Party bridge for the VK embed: only advertise syncing when
+    // its actual player API exposes play, pause and seek controls.
+    window.BETVExternalPlayerSync = Object.freeze({
+      read() {
+        if (overlay.hidden || activeProvider !== 'vk' || !vkApiReady || !vkPlayer
+            || typeof vkPlayer.getCurrentTime !== 'function'
+            || typeof vkPlayer.getState !== 'function') return null;
+        const seek = vkPlayer.seek || vkPlayer.seekTo || vkPlayer.setCurrentTime;
+        if (typeof seek !== 'function' || typeof vkPlayer.play !== 'function'
+            || typeof vkPlayer.pause !== 'function') return null;
+        const position = readVkCurrentTime();
+        if (!Number.isFinite(position)) return null;
+        return {provider:'vk',position,playing:!readVkPaused()};
+      },
+      apply(snapshot) {
+        if (overlay.hidden || activeProvider !== 'vk' || !vkApiReady || !vkPlayer
+            || snapshot?.provider !== 'vk') return false;
+        const seek = vkPlayer.seek || vkPlayer.seekTo || vkPlayer.setCurrentTime;
+        if (typeof seek !== 'function' || typeof vkPlayer.play !== 'function'
+            || typeof vkPlayer.pause !== 'function') return false;
+        const position = Number(snapshot.position);
+        if (!Number.isFinite(position) || position < 0 || position > 86400) return false;
+        try {
+          if (Math.abs(readVkCurrentTime() - position) > .85)
+            Promise.resolve(seek.call(vkPlayer,position)).catch(() => {});
+          if (snapshot.playing && readVkPaused())
+            Promise.resolve(vkPlayer.play()).catch(() => {});
+          else if (!snapshot.playing && !readVkPaused())
+            Promise.resolve(vkPlayer.pause()).catch(() => {});
+          return true;
+        } catch (_) { return false; }
+      }
+    });
+
     const switchVkQuality = quality => {
       const hd = Math.min(6, Math.max(1, Math.round(Number(quality) || 4)));
       if (activeProvider !== 'vk' || !activeVkInfo) return;
