@@ -51,10 +51,12 @@
   }
   function showPanel() {
     el('watchPartyPanel').hidden = false;
+    el('watchPartyFloating').hidden = true;
     el('contentDetailWatchParty').setAttribute('aria-expanded', 'true');
   }
   function hidePanel() {
     el('watchPartyPanel').hidden = true;
+    el('watchPartyFloating').hidden = !joined;
     el('contentDetailWatchParty').setAttribute('aria-expanded', 'false');
   }
   function resetChat() {
@@ -133,6 +135,7 @@
       try { await client()?.removeChannel(old); } catch (_) {}
     }
     resetChat();
+    el('watchPartyFloating').hidden = true;
     el('watchPartyCount').textContent = '0 ' + tx(KEY.ONLINE);
     el('watchPartyCopy').disabled = true;
     el('watchPartyLeave').hidden = true;
@@ -212,6 +215,15 @@
       '<form id="watchPartyForm" class="watch-party-composer"><input id="watchPartyInput" maxlength="280" autocomplete="off" required aria-label="Chat"><button id="watchPartySend" type="submit"></button></form>' +
       '<button id="watchPartyLeave" type="button" class="watch-party-leave" hidden></button>';
     document.body.appendChild(panel);
+    const floating = document.createElement('button');
+    floating.id = 'watchPartyFloating';
+    floating.type = 'button';
+    floating.className = 'watch-party-floating';
+    floating.hidden = true;
+    floating.textContent = '◉ Watch Party';
+    floating.setAttribute('aria-label','Watch Party');
+    floating.addEventListener('click', showPanel);
+    document.body.appendChild(floating);
     el('watchPartyClose').addEventListener('click', hidePanel);
     el('watchPartyCopy').addEventListener('click', async () => {
       if (!room) return;
