@@ -33,7 +33,7 @@
 
   function normalizeCommunityTag(value){
     var normalized=String(value||'').trim().toLowerCase();
-    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'||normalized==='boaf'?normalized:'';
+    return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'||normalized==='boaf'||normalized==='happier_than_ever'?normalized:'';
   }
   function communityTagMeta(value){
     var tag=normalizeCommunityTag(value);
@@ -42,6 +42,7 @@
     if(tag==='blohsh')return {key:'blohsh',label:'Blohsh',className:'is-blohsh'};
     if(tag==='billie_fan')return {key:'billie_fan',label:t('Fã da Billie'),className:'is-billie-fan'};
     if(tag==='boaf')return {key:'boaf',label:'BOAF',className:'is-boaf'};
+    if(tag==='happier_than_ever')return {key:'happier_than_ever',label:'Happier Than Ever',className:'is-happier-than-ever'};
     return null;
   }
   function communityTagMarkup(value){
