@@ -154,6 +154,15 @@
     if (!video || (expectedId && video.id !== expectedId)) return;
     try {await Promise.resolve(window.beBackend?.ready);}catch(_){}
     if (!client() || !myId()) {showPanel();textStatus(t(5),true);return;}
+    // Invitations are individual. A guest must have explicitly accepted this
+    // room's invitation before their browser may subscribe to its presence.
+    if (!asHost) {
+      const permission=await client().from('watch_party_invites').select('id')
+        .eq('room_id',id).eq('invitee_id',myId()).eq('status','accepted').limit(1);
+      if (permission.error || !Array.isArray(permission.data) || !permission.data.length) {
+        showPanel();textStatus(t(18),true);return;
+      }
+    }
     connecting=true;room=id;videoId=video.id;isHost=asHost;hostId=asHost?myId():'';
     showPanel();textStatus(asHost?t(6):t(10));
     try {
@@ -382,7 +391,8 @@
     window.setInterval(()=>{
       tryJoinFromUrl();setupPlayerButtons();ensurePlacement();
       if(myId()!==inboxUser)subscribeInbox();
-      if(joined && !isHost && !activePlayer() && !document.body.classList.contains('detail-page-active'))leaveRoom();
+      if (joined && currentVideo()?.id && currentVideo().id!==videoId) {leaveRoom();hidePanel();}
+      if(joined && !activePlayer() && !document.body.classList.contains('detail-page-active')){leaveRoom();hidePanel();}
       if(pendingInvites.length)renderInbox();
     },2400);
     pollTimer=setInterval(()=>pollInbox(),14000);
