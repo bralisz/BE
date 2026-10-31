@@ -5965,6 +5965,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (tag === 'blohsh') return { label: 'Blohsh', className: 'is-blohsh' };
     if (tag === 'billie_fan') return { label: localizedUiText('Fã da Billie'), className: 'is-billie-fan' };
     if (tag === 'boaf') return { label: 'BOAF', className: 'is-boaf' };
+    if (tag === 'happier_than_ever') return { label: 'Happier Than Ever', className: 'is-happier-than-ever' };
     return null;
   }
 
