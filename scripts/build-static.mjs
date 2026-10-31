@@ -27,6 +27,7 @@ const copies=[
   ['assets/js/seo.js',`${out}/chunks/seo.js`],
   ['assets/js/site.js',`${out}/chunks/site.js`],
   ['assets/js/watch-party.js',`${out}/chunks/watch-party.js`],
+  ['assets/js/watch-party-paywall.js',`${out}/chunks/watch-party-paywall.js`],
   ['assets/js/tv-controller.js',`${out}/chunks/tv.js`],
   ['assets/js/tv-session-widget.js',`${out}/chunks/session.js`],
   ['assets/js/lazy-loading.js',`${out}/chunks/lazy.js`],
@@ -35,6 +36,7 @@ for(const [src,dest] of copies){await mkdir(dirname(dest),{recursive:true});awai
 await mkdir(`${out}/styles`,{recursive:true});
 await writeFile(`${out}/styles/site.css`,minifyCss(await readFile('assets/css/site.css','utf8')));
 await writeFile(`${out}/styles/watch-party.css`,minifyCss(await readFile('assets/css/watch-party.css','utf8')));
+await writeFile(`${out}/styles/watch-party-paywall.css`,minifyCss(await readFile('assets/css/watch-party-paywall.css','utf8')));
 await cp('assets/css/tv-pairing.css',`${out}/styles/tv.css`);
 await mkdir(`${out}/locales`,{recursive:true});
 for(const lang of ['en-us','es','fr','it'])await cp(`assets/i18n/${lang}.json`,`${out}/locales/${lang}.json`);
