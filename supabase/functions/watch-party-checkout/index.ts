@@ -72,7 +72,8 @@ Deno.serve(async(req:Request)=>{
  if(!profileError&&profile){
   const tags=Array.isArray(profile.community_tags)?profile.community_tags:[];
   const next=Array.from(new Set([...tags,"happier_than_ever"]));
-  if(next.length!==tags.length)await admin.from("profiles").update({community_tags:next}).eq("id",user.id);
- }
+  const {error:tagError}=await admin.from("profiles").update({community_tags:next,community_tag:"happier_than_ever"}).eq("id",user.id);
+  if(tagError)return reply(origin,503,{error:"reward_sync_failed"});
+ } else return reply(origin,503,{error:"profile_not_found"});
  return reply(origin,200,{unlocked:true,tag:"happier_than_ever"});
 });
