@@ -30,10 +30,15 @@ Deno.serve(async(req:Request)=>{
  const {data:{user},error:userError}=await userClient.auth.getUser();
  if(userError||!user)return reply(origin,401,{error:"sign_in_required"});
  let payload:any={};try{payload=await req.json();}catch{return reply(origin,400,{error:"invalid_request"});}
- const {data:already}=await admin.from("watch_party_unlocks").select("user_id").eq("user_id",user.id).maybeSingle();
- if(payload.action==="status")return reply(origin,200,{unlocked:Boolean(already)});
+ const [{data:already},{data:adminGrant},{data:receivedGift}]=await Promise.all([
+  admin.from("watch_party_unlocks").select("user_id").eq("user_id",user.id).maybeSingle(),
+  admin.from("watch_party_grants").select("user_id").eq("user_id",user.id).maybeSingle(),
+  admin.from("watch_party_gifts").select("recipient_id").eq("recipient_id",user.id).maybeSingle()
+ ]);
+ const hasAccess=Boolean(already||adminGrant||receivedGift);
+ if(payload.action==="status")return reply(origin,200,{unlocked:hasAccess});
  if(payload.action==="create"){
-  if(already)return reply(origin,200,{unlocked:true});
+  if(hasAccess)return reply(origin,200,{unlocked:true});
   // Checkout is always USD 5. Stripe Adaptive Pricing can present local currencies.
   const params=new URLSearchParams();
   params.set("mode","payment");params.set("locale","auto");
@@ -68,11 +73,14 @@ Deno.serve(async(req:Request)=>{
  },{onConflict:"user_id",ignoreDuplicates:true});
  if(insertError)return reply(origin,503,{error:"unlock_save_failed"});
  // Preserve existing badges; add the new gold reward only after Stripe confirms payment.
- const {data:profile,error:profileError}=await admin.from("profiles").select("community_tags").eq("id",user.id).single();
+ const {data:profile,error:profileError}=await admin.from("profiles").select("community_tag,community_tags").eq("id",user.id).single();
  if(!profileError&&profile){
   const tags=Array.isArray(profile.community_tags)?profile.community_tags:[];
   const next=Array.from(new Set([...tags,"happier_than_ever"]));
-  const {error:tagError}=await admin.from("profiles").update({community_tags:next,community_tag:"happier_than_ever"}).eq("id",user.id);
+  const {error:tagError}=await admin.from("profiles").update({
+    community_tags:next,
+    community_tag:profile.community_tag || "happier_than_ever"
+  }).eq("id",user.id);
   if(tagError)return reply(origin,503,{error:"reward_sync_failed"});
  } else return reply(origin,503,{error:"profile_not_found"});
  return reply(origin,200,{unlocked:true,tag:"happier_than_ever"});
