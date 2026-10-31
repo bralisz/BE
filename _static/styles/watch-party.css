@@ -58,3 +58,38 @@
 }
 @media(max-height:520px){#driveVideoPlayerShell>.watch-party-panel,#externalNativePlayerShell>.watch-party-panel{top:41px;max-height:calc(100% - 46px)}}
 @media(prefers-reduced-motion:reduce){.detail-watch-party{transition:none}}
+
+/* Native iPhone-like participant sheet, based on actual BETV profile assets. */
+.watch-party-panel{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif!important;border-radius:24px!important;border-color:rgba(172,190,227,.23)!important;background:linear-gradient(155deg,rgba(30,40,59,.97),rgba(11,18,32,.98))!important;backdrop-filter:blur(24px)!important;-webkit-backdrop-filter:blur(24px)!important;padding:15px!important}
+.watch-party-heading-icon{display:none!important}
+.watch-party-host{overflow:hidden;margin:10px 0 12px;border-radius:18px;border:1px solid rgba(156,182,226,.19);background:rgba(55,78,112,.17)}
+.watch-party-host-cover{height:80px;background:linear-gradient(115deg,#263e65,#4d5c7d);overflow:hidden}
+.watch-party-host-cover img{display:block;width:100%;height:100%;object-fit:cover}
+.watch-party-host-cover img[hidden]{display:none!important}
+.watch-party-host-identity{display:flex;align-items:center;gap:9px;padding:0 11px 10px}
+.watch-party-host-avatar{flex:none;margin-top:-14px;width:47px;height:47px;border:3px solid #222e44;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:#4c6998;color:#fff;font-weight:800;z-index:1}
+.watch-party-host-photo{display:block;width:100%;height:100%;object-fit:cover}
+.watch-party-host-text{display:flex;flex-direction:column;gap:2px;min-width:0;padding-top:4px}
+.watch-party-host-text small{color:#acbfdc;font-size:10px}
+.watch-party-host-text strong{font-size:14px;font-weight:780;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.watch-party-members{margin:0!important;padding:7px 3px}
+.watch-party-avatar{overflow:hidden!important;width:36px!important;height:36px!important;border:2px solid #1d293c!important;background:#4c648e!important}
+.watch-party-avatar-image{display:block;width:100%;height:100%;object-fit:cover}
+.watch-party-members>strong{font-size:13px!important}
+.watch-party-status{font-size:11px!important;color:#a5bad9!important}
+.watch-party-close{background:rgba(145,158,190,.15)!important;border:1px solid rgba(200,208,229,.13)!important}
+.watch-party-actions button{border-radius:12px!important;min-height:39px!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+.watch-party-gift-cta{display:block;width:100%;margin-top:12px;border:1px solid rgba(177,195,229,.24);background:rgba(85,116,174,.11);color:#bdd6ff;font-size:11px;font-weight:700;padding:10px;border-radius:12px;cursor:pointer}
+.watch-party-notification{position:relative;overflow:hidden;border-radius:17px!important;border-color:rgba(160,182,222,.25)!important;background:linear-gradient(135deg,rgba(40,59,87,.96),rgba(18,30,48,.98))!important;padding:10px!important;gap:9px!important}
+.watch-party-notification-banner{display:block;width:calc(100% + 20px);height:63px;margin:-10px -10px 0;object-fit:cover;opacity:.82}
+.watch-party-notification-identity{display:flex;align-items:center;gap:9px;min-width:0}
+.watch-party-notification-avatar{width:40px;height:40px;flex:none;display:grid;place-items:center;overflow:hidden;border:2px solid rgba(206,225,251,.48);border-radius:50%;background:#415d89;color:#fff;font-weight:800}
+.watch-party-notification-photo{display:block;width:100%;height:100%;object-fit:cover}
+.watch-party-invite-copy small{font-size:10px;color:#96b5df}
+.watch-party-invite-copy strong{font-size:12px!important}
+.watch-party-invite-copy span{font-size:11px!important}
+.watch-party-invite-actions button{min-height:36px!important;border-radius:10px!important}
+.watch-party-fan-result{display:flex;align-items:center;gap:9px;padding:7px!important;border-radius:12px!important}
+.watch-party-fan-avatar{display:grid;place-items:center;flex:none;width:31px;height:31px;overflow:hidden;border-radius:50%;background:#526b92;color:#fff}
+.watch-party-fan-photo{width:100%;height:100%;object-fit:cover}
+@media(max-width:760px){.watch-party-panel{padding:12px!important;border-radius:20px!important}.watch-party-host-cover{height:64px}}
