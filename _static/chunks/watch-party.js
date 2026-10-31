@@ -13,6 +13,40 @@
     it: ['Guarda insieme','Invita fan','Cerca @utente','Esci dalla stanza','Crea stanza','Accedi per invitare o ricevere inviti.','In attesa di invitati…','Invito inviato!','Impossibile inviare.','Stanza connessa','In attesa dell’host…','Il player esterno non supporta la sincronizzazione.','Sincronizzazione…','Tocca Riproduci.','Watch Party','ti ha invitato a guardare','Accetta','Rifiuta','Invito scaduto.','Nessun fan trovato.','Cerca un fan per @utente.','Persone nella stanza','Chiudi','Errore di connessione.']
   };
   const t = i => (strings[String(window.BETVLocale?.slug || 'pt-br').toLowerCase()] || strings['pt-br'])[i];
+  const extra = {
+    'pt-br':{host:'Anfitrião',members:'Na sala',room:'Sala compartilhada',profile:'Perfil do fã',invite:'Convite para assistir juntos',gift:'Presentear +1 acesso',search:'Buscar fãs por @usuário'},
+    'en-us':{host:'Host',members:'In the room',room:'Shared room',profile:'Fan profile',invite:'Watch together invitation',gift:'Gift +1 access',search:'Find fans by @username'},
+    es:{host:'Anfitrión',members:'En la sala',room:'Sala compartida',profile:'Perfil del fan',invite:'Invitación para ver juntos',gift:'Regalar +1 acceso',search:'Buscar fans por @usuario'},
+    fr:{host:'Hôte',members:'Dans le salon',room:'Salon partagé',profile:'Profil du fan',invite:'Invitation à regarder ensemble',gift:'Offrir +1 accès',search:'Chercher des fans par @pseudo'},
+    it:{host:'Host',members:'Nella stanza',room:'Stanza condivisa',profile:'Profilo del fan',invite:'Invito a guardare insieme',gift:'Regala +1 accesso',search:'Cerca fan per @utente'}
+  };
+  const xt = key => (extra[String(window.BETVLocale?.slug || 'pt-br').toLowerCase()] || extra['pt-br'])[key];
+  const cleanImage = value => {
+    try {
+      const u = new URL(String(value || '').trim());
+      return u.protocol === 'https:' && !u.username && !u.password && String(value).length <= 2048 ? u.href : '';
+    } catch (_) { return ''; }
+  };
+  function profileImage(value, alt, className) {
+    const img = document.createElement('img');
+    img.className = className; img.alt = alt || '';
+    img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
+    const url = cleanImage(value);
+    if (url) img.src = url; else img.hidden = true;
+    return img;
+  }
+  async function ownProfile() {
+    try {
+      const p = await window.beBackend?.profiles?.get(myId(),{force:true});
+      if (p && typeof p === 'object') return {
+        name:String(p.displayName || p.display_name || myName()).slice(0,64),
+        username:String(p.username || '').slice(0,42),
+        avatar:cleanImage(p.avatarUrl || p.avatar_url),
+        banner:cleanImage(p.bannerUrl || p.banner_url)
+      };
+    } catch (_) {}
+    return {name:myName(),username:String(authUser()?.username||''),avatar:'',banner:''};
+  }
   const client = () => window.beBackend?.client;
   const authUser = () => window.beBackend?.auth?.currentUser;
   const myId = () => String(authUser()?.uid || authUser()?.id || '');
@@ -76,15 +110,34 @@
       users.replaceChildren();
       for (const p of people.slice(0,7)) {
         const tag = document.createElement('span');
-        tag.className = 'watch-party-avatar'; tag.title = p.name || 'Fã';
-        tag.textContent = safeInitial(p.name); users.appendChild(tag);
+        tag.className = 'watch-party-avatar'; tag.title = String(p.name || '') + (p.username ? ' · @'+p.username : '');
+        tag.textContent = safeInitial(p.name);
+        const img = profileImage(p.avatar, p.name, 'watch-party-avatar-image');
+        if (!img.hidden) {tag.textContent='';tag.appendChild(img);}
+        users.appendChild(tag);
       }
+    }
+    const owner = people.find(p=>p.isHost) || (isHost ? people.find(p=>p.id===myId()) : null);
+    const cover = $('watchPartyBanner'), name = $('watchPartyHostName'), avatar = $('watchPartyHostAvatar');
+    if (cover) {
+      const url = cleanImage(owner?.banner);
+      if (url && cover.getAttribute('src') !== url) {cover.src=url;cover.hidden=false;}
+      if (!url){cover.hidden=true;cover.removeAttribute('src');}
+    }
+    if (name) name.textContent=owner?.name || t(14);
+    if (avatar) {
+      const url=cleanImage(owner?.avatar);
+      avatar.replaceChildren();
+      if(url)avatar.appendChild(profileImage(url,owner?.name,'watch-party-host-photo'));
+      else avatar.textContent=safeInitial(owner?.name || 'Fã');
     }
     if (invite) { invite.hidden = !joined || !isHost; invite.textContent = t(1); }
     if (leave) { leave.hidden = !joined; leave.textContent = t(3); }
     if (make) { make.hidden = joined || connecting; make.textContent = t(4); }
     if ($('watchPartyTitle')) $('watchPartyTitle').textContent = t(14);
-    if ($('watchPartyPeopleLabel')) $('watchPartyPeopleLabel').textContent = t(21);
+    if ($('watchPartyPeopleLabel')) $('watchPartyPeopleLabel').textContent = xt('members');
+    if ($('watchPartyHostLabel')) $('watchPartyHostLabel').textContent = xt('host');
+    if ($('watchPartyGiftOpen')) $('watchPartyGiftOpen').textContent = xt('gift');
     for (const button of document.querySelectorAll('.watch-party-player-button')) {
       button.classList.toggle('is-active',joined);
       button.setAttribute('aria-pressed',String(joined));
@@ -187,7 +240,7 @@
           const url=new URL(location.href);
           url.searchParams.set('watchParty',room);url.searchParams.set('watchVideo',videoId);
           history.replaceState(history.state,'',url.pathname+url.search+url.hash);
-          try {await ch.track({id:myId(),name:myName(),isHost,token});}catch(_){}
+          try {const p=await ownProfile();await ch.track({id:myId(),name:p.name,username:p.username,avatar:p.avatar,banner:p.banner,isHost,token});}catch(_){}
           textStatus(isHost?t(6):t(10));updateUi();
           syncTimer=setInterval(()=>{if(isHost)publish();else if(state)syncPlayback(state);},1050);
           if(isHost)publish(true);else send('sync-request',{from:myId()});
@@ -202,17 +255,25 @@
   function inviteRow(invite) {
     const row=document.createElement('div');row.className='watch-party-notification';
     row.dataset.invite=invite.id;
+    const cover=profileImage(invite.host_banner_url,'','watch-party-notification-banner');
+    if (!cover.hidden) row.appendChild(cover);
+    const identity=document.createElement('div');identity.className='watch-party-notification-identity';
+    const avatar=document.createElement('span');avatar.className='watch-party-notification-avatar';
+    avatar.textContent=safeInitial(invite.host_label);
+    const image=profileImage(invite.host_avatar_url,invite.host_label,'watch-party-notification-photo');
+    if(!image.hidden){avatar.textContent='';avatar.appendChild(image);}
     const copy=document.createElement('div');copy.className='watch-party-invite-copy';
-    const title=document.createElement('strong');title.textContent=t(14);
+    const title=document.createElement('strong');title.textContent=String(invite.host_label||'Fã');
+    const username=document.createElement('small');username.textContent=invite.host_username?'@'+invite.host_username:xt('invite');
     const summary=document.createElement('span');
-    summary.textContent=String(invite.host_label||'Fã')+' '+t(15)+' '+String(invite.video_title||'Vídeo');
-    copy.append(title,summary);
+    summary.textContent=t(15)+' '+String(invite.video_title||'Vídeo');
+    copy.append(title,username,summary);identity.append(avatar,copy);row.append(identity);
     const actions=document.createElement('div');actions.className='watch-party-invite-actions';
     const accept=btn(t(16),'watch-party-accept');
     const decline=btn(t(17),'watch-party-decline');
     accept.addEventListener('click',e=>{e.stopPropagation();respond(invite,true,actions);});
     decline.addEventListener('click',e=>{e.stopPropagation();respond(invite,false,actions);});
-    actions.append(accept,decline);row.append(copy,actions);return row;
+    actions.append(accept,decline);row.append(actions);return row;
   }
   function renderInbox() {
     const invites=pendingInvites.filter(x=>x.status==='pending' && new Date(x.expires_at).getTime()>Date.now());
@@ -255,7 +316,7 @@
     lastInboxAt=Date.now();
     try {
       const {data,error}=await client().from('watch_party_invites')
-        .select('id,room_id,host_label,video_id,video_title,created_at,expires_at,status')
+        .select('id,room_id,host_label,host_username,host_avatar_url,host_banner_url,video_id,video_title,created_at,expires_at,status')
         .eq('invitee_id',myId()).eq('status','pending')
         .gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(8);
       if (error) return;
@@ -291,7 +352,13 @@
     const fans=(Array.isArray(data)?data:[]).filter(x=>String(x.username).toLowerCase()!==String(authUser()?.username||'').toLowerCase());
     if(!fans.length) {results.textContent=t(19);return;}
     for (const fan of fans) {
-      const item=btn('@'+fan.username,'watch-party-fan-result');
+      const item=btn('','watch-party-fan-result');
+      const avatar=document.createElement('span');avatar.className='watch-party-fan-avatar';
+      avatar.textContent=safeInitial(fan.username);
+      const img=profileImage(fan.avatar_url,fan.username,'watch-party-fan-photo');
+      if(!img.hidden){avatar.textContent='';avatar.appendChild(img);}
+      const label=document.createElement('span');label.textContent='@'+fan.username;
+      item.append(avatar,label);
       item.addEventListener('click',()=>sendInvite(fan.username,item));
       results.appendChild(item);
     }
@@ -340,21 +407,24 @@
     const panel=document.createElement('aside');
     panel.id='watchPartyPanel';panel.className='watch-party-panel';panel.hidden=true;
     panel.setAttribute('aria-label','Watch Party');
-    panel.innerHTML='<div class="watch-party-heading"><div class="watch-party-heading-icon">'+svgIcon+'</div>'+
-      '<div class="watch-party-headlines"><strong id="watchPartyTitle">Watch Party</strong><span id="watchPartyPeopleLabel">Pessoas na sala</span></div>'+
-      '<button id="watchPartyClose" type="button" aria-label="Fechar" class="watch-party-close">×</button></div>'+
+    panel.innerHTML='<div class="watch-party-heading"><div class="watch-party-headlines"><strong id="watchPartyTitle">Watch Party</strong><span id="watchPartyPeopleLabel"></span></div>'+
+      '<button id="watchPartyClose" type="button" aria-label="Close" class="watch-party-close">×</button></div>'+
+      '<div class="watch-party-host"><div class="watch-party-host-cover"><img id="watchPartyBanner" alt="" hidden></div>'+
+      '<div class="watch-party-host-identity"><span id="watchPartyHostAvatar" class="watch-party-host-avatar"></span><div class="watch-party-host-text"><small id="watchPartyHostLabel"></small><strong id="watchPartyHostName"></strong></div></div></div>'+
       '<div class="watch-party-members"><div id="watchPartyUsers" class="watch-party-users"></div><strong id="watchPartyCount">0</strong></div>'+
       '<p class="watch-party-status" id="watchPartyStatus" aria-live="polite"></p>'+
       '<div class="watch-party-actions"><button type="button" id="watchPartyCreate"></button>'+
       '<button type="button" id="watchPartyInviteToggle" hidden></button>'+
       '<button type="button" id="watchPartyLeave" hidden></button></div>'+
       '<div class="watch-party-invite-form" id="watchPartyInviteForm" hidden>'+
-      '<input type="search" id="watchPartyInviteSearch" autocomplete="off" maxlength="30" aria-label="Pesquisar @usuário">'+
-      '<div class="watch-party-search-results" id="watchPartySearchResults"></div></div>';
+      '<input type="search" id="watchPartyInviteSearch" autocomplete="off" maxlength="30" aria-label="Search username">'+
+      '<div class="watch-party-search-results" id="watchPartySearchResults"></div></div>'+
+      '<button type="button" id="watchPartyGiftOpen" class="watch-party-gift-cta"></button>';
     document.body.append(panel);
     const toast=document.createElement('div');toast.id='watchPartyInviteToast';toast.className='watch-party-invite-toast';toast.hidden=true;
     toast.setAttribute('role','region');toast.setAttribute('aria-label','Watch Party');document.body.append(toast);
     $('watchPartyClose').addEventListener('click',hidePanel);
+    $('watchPartyGiftOpen').addEventListener('click',()=>window.BETVWatchPartyPaywall?.open?.());
     $('watchPartyCreate').addEventListener('click',()=>{
       const id=window.crypto?.randomUUID?.();
       if(!id){textStatus(t(23),true);return;}
@@ -362,7 +432,7 @@
     });
     $('watchPartyInviteToggle').addEventListener('click',()=>{
       const form=$('watchPartyInviteForm');form.hidden=!form.hidden;
-      $('watchPartyInviteSearch').placeholder=t(2);
+      $('watchPartyInviteSearch').placeholder=xt('search');
       if(!form.hidden){$('watchPartyInviteSearch').focus();$('watchPartySearchResults').textContent=t(20);}
     });
     $('watchPartyInviteSearch').addEventListener('input',()=>{
@@ -386,7 +456,7 @@
     window.addEventListener('pagehide',()=>{if(channel)client()?.removeChannel(channel);if(inboxChannel)client()?.removeChannel(inboxChannel);});
     window.addEventListener('be:content-ready',tryJoinFromUrl);
     window.addEventListener('popstate',tryJoinFromUrl);
-    window.addEventListener('be:i18n-ready',updateUi);
+    window.addEventListener('be:i18n-ready',()=>{updateUi();renderInbox();});
     window.addEventListener('be:notifications-ready',renderInbox);
     window.setInterval(()=>{
       tryJoinFromUrl();setupPlayerButtons();ensurePlacement();
