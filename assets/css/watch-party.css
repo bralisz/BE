@@ -1,0 +1,34 @@
+/* Watch Party uses BETV's existing dark gray / blue visual language. */
+.detail-watch-party{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:0 15px;border:1px solid rgba(126,169,255,.37);background:rgba(24,49,89,.58);border-radius:999px;color:#e8f1ff;font:700 13px/1.2 inherit;cursor:pointer;transition:background .2s,border-color .2s}
+.detail-watch-party:hover,.detail-watch-party:focus-visible,.detail-watch-party.is-active{background:rgba(46,96,173,.74);border-color:rgba(157,193,255,.8)}
+.detail-watch-party svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
+.watch-party-panel[hidden]{display:none!important}
+.watch-party-panel{position:fixed;z-index:2147483000;right:clamp(12px,3vw,32px);bottom:clamp(12px,3vw,32px);width:min(370px,calc(100vw - 24px));height:min(590px,calc(100dvh - 24px));display:flex;flex-direction:column;overflow:hidden;padding:18px;border-radius:22px;border:1px solid rgba(163,185,225,.23);background:#10151f;box-shadow:0 24px 100px rgba(0,0,0,.68);color:#f5f7fd;font-family:inherit}
+.watch-party-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.watch-party-heading{display:flex;align-items:center;gap:12px}
+.watch-party-heading strong{font-size:19px}
+.watch-party-heading p{font-size:12px;line-height:1.4;color:#aeb9ce;margin:3px 0 0}
+.watch-party-symbol{display:grid;place-items:center;width:40px;height:40px;border-radius:14px;background:linear-gradient(135deg,#1d4d9b,#7f70de);font-size:22px}
+.watch-party-close{width:36px;height:36px;border-radius:50%;border:1px solid #364357;background:#1c2738;color:#fff;cursor:pointer;font-size:25px;line-height:1}
+.watch-party-status{display:flex;align-items:center;gap:8px;padding:14px 0 2px;color:#b7c7df;font-size:12px;font-weight:600}
+.watch-party-pulse{width:8px;height:8px;border-radius:50%;background:#56caa2;box-shadow:0 0 0 3px rgba(86,202,162,.1)}
+.watch-party-feedback{min-height:26px;font-size:12px;line-height:1.4;margin:8px 0;color:#a9c9ff}
+.watch-party-feedback.is-error{color:#ff9eae}
+.watch-party-buttons{display:flex;gap:8px;margin:0 0 16px}
+.watch-party-buttons button{flex:1;min-height:39px;border:1px solid #314766;border-radius:11px;background:#1a2a40;color:#f5f7fd;font-weight:700;cursor:pointer}
+.watch-party-buttons button.watch-party-primary{background:#3979d9;border-color:#3979d9}
+.watch-party-buttons button:disabled{opacity:.5;cursor:not-allowed}
+.watch-party-chat-heading{padding:0 0 11px;border-bottom:1px solid #293447;font-size:13px;font-weight:700}
+.watch-party-chat{position:relative;overflow-y:auto;flex:1;min-height:90px;padding:12px 2px;scrollbar-color:#3a4f6d transparent}
+.watch-party-chat #watchPartyEmpty{font-size:12px;color:#8d9aaf;text-align:center;margin:34px 0}
+.watch-party-messages,#watchPartyMessages{display:flex;flex-direction:column;gap:12px}
+.watch-party-message{padding:10px 12px;background:#182332;border:1px solid #243346;border-radius:12px;overflow-wrap:anywhere}
+.watch-party-message.is-self{background:#1c3354;border-color:#2a5080}
+.watch-party-message strong{color:#9fc4ff;font-size:11px}
+.watch-party-message p{margin:5px 0 0;font-size:13px;line-height:1.42}
+.watch-party-composer{display:flex;gap:8px;padding-top:12px;border-top:1px solid #293447}
+.watch-party-composer input{flex:1;min-width:0;min-height:42px;padding:0 12px;background:#1a2434;border:1px solid #36465b;color:#fff;border-radius:12px;font:inherit;font-size:13px}
+.watch-party-composer button{padding:0 12px;border:0;border-radius:12px;background:#3979d9;color:white;font-weight:700;cursor:pointer}
+.watch-party-leave{margin:12px 0 0;padding:8px 10px;min-height:36px;border:1px solid #453d56;border-radius:9px;background:transparent;color:#d3bdcc;cursor:pointer;font-weight:600}
+@media(max-width:760px){.detail-watch-party{min-height:42px;padding:0 12px;font-size:12px}.watch-party-panel{right:0;bottom:0;width:100%;height:min(620px,88dvh);border-radius:22px 22px 0 0;padding:16px 16px max(14px,env(safe-area-inset-bottom));border-left:0;border-right:0;border-bottom:0}}
+@media(prefers-reduced-motion:reduce){.detail-watch-party{transition:none}}
