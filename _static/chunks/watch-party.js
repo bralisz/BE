@@ -360,7 +360,7 @@
       if(watchTimer)return;
       watchTimer=setTimeout(()=>{watchTimer=0;setupPlayerButtons();tryJoinFromUrl();},80);
     });
-    observer.observe(document.body,{childList:true,subtree:true});
+    observer.observe(document.body,{childList:true,subtree:false});
     document.addEventListener('play',e=>{if(e.target?.id==='driveVideoPlayerVideo')publish(true);},true);
     document.addEventListener('pause',e=>{if(e.target?.id==='driveVideoPlayerVideo')publish(true);},true);
     document.addEventListener('seeked',e=>{if(e.target?.id==='driveVideoPlayerVideo')publish(true);},true);
