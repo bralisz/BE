@@ -26,3 +26,69 @@
 @media(max-width:760px){.watch-party-community-widget{min-width:0;width:100%;max-width:none;margin:8px 0 0}.community-section-head:has(.watch-party-community-widget){flex-wrap:wrap}.watch-party-main-cta{padding:0 13px!important;font-size:12px!important}.watch-party-unlock-card{padding:25px 17px 18px}.watch-party-unlock-reward{flex-direction:column;align-items:center;text-align:center}}
 
 .profile-award-tag.is-happier-than-ever,.detail-comment-community-tag.is-happier-than-ever{display:inline-flex;align-items:center;border:1px solid #e4b858;background:linear-gradient(135deg,#ffe49f,#be8a2c);color:#342006;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900;white-space:nowrap}
+
+/* iOS-like BETV Watch Party sheets: soft glass, native-feeling typography, no brand icon. */
+.watch-party-paywall{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif!important}
+.watch-party-paywall-overlay{background:rgba(4,8,17,.62)!important;backdrop-filter:blur(22px) saturate(1.25)!important;-webkit-backdrop-filter:blur(22px) saturate(1.25)!important}
+.watch-party-unlock-card{width:min(428px,100%)!important;max-height:min(700px,92dvh)!important;padding:19px 19px 22px!important;border:1px solid rgba(180,199,232,.27)!important;border-radius:32px!important;background:linear-gradient(165deg,rgba(29,39,57,.97),rgba(11,17,31,.98))!important;box-shadow:0 26px 80px #000a!important;gap:13px!important}
+.watch-party-ios-handle{width:39px;height:5px;border-radius:99px;background:rgba(218,228,246,.28);margin:-10px 0 0}
+.watch-party-unlock-close{top:14px!important;right:15px!important;width:32px!important;height:32px!important;background:rgba(136,153,185,.17)!important;font:22px/1 -apple-system,BlinkMacSystemFont,sans-serif!important}
+.watch-party-paywall-profile{display:flex;flex-direction:column;align-items:stretch;width:100%;min-width:0;overflow:hidden;border:1px solid rgba(153,178,225,.21);border-radius:19px;background:rgba(68,85,115,.16);margin:7px 0 1px}
+.watch-party-paywall-banner{position:relative;overflow:hidden;height:73px;width:100%;background:linear-gradient(125deg,#203c65,#222b50 58%,#485b70)}
+.watch-party-paywall-banner img{display:block!important;width:100%;height:100%;object-fit:cover}
+.watch-party-paywall-banner img[hidden]{display:none!important}
+.watch-party-paywall-identity{display:flex;align-items:center;gap:11px;padding:0 12px 11px;min-width:0}
+.watch-party-paywall-avatar{width:47px;height:47px;flex:none;display:grid;place-items:center;overflow:hidden;border-radius:50%;background:#475c88;border:3px solid #1a2539;color:#fff;font-size:18px;font-weight:780;margin-top:-16px;z-index:1}
+.watch-party-paywall-avatar-image{display:block;width:100%;height:100%;object-fit:cover}
+.watch-party-paywall-names{display:flex;flex-direction:column;gap:2px;min-width:0;padding-top:5px}
+.watch-party-paywall-names small{font-size:10px;line-height:1.1;color:#a9b6d0}
+.watch-party-paywall-names strong{color:#fff;font-size:14px;font-weight:760;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.watch-party-paywall-names span{color:#9daecb;font-size:11px;white-space:nowrap}
+.watch-party-unlock-card h2{font-size:25px!important;letter-spacing:-.045em}
+.watch-party-unlock-card>p{font-size:13px!important;line-height:1.5!important;color:#b7c2d7!important}
+#watchPartyPurchaseSection,#watchPartyGiftSection{width:100%;display:flex;flex-direction:column;gap:13px}
+#watchPartyPurchaseSection[hidden],#watchPartyGiftSection[hidden],#watchPartyGiftPicker[hidden]{display:none!important}
+.watch-party-unlock-price{padding:15px 0!important;border-color:rgba(157,177,216,.19)!important;gap:5px!important}
+.watch-party-unlock-price strong{font-size:29px!important;letter-spacing:-.05em}
+.watch-party-unlock-price span{font-size:12px!important;font-weight:650;color:#d0dcf2!important}
+.watch-party-unlock-price small{font-size:10px!important;line-height:1.4;color:#98a9c8!important}
+.watch-party-unlock-reward{padding:10px 11px;background:rgba(245,193,85,.075);border:1px solid rgba(235,189,86,.17);border-radius:16px;gap:11px!important}
+.watch-party-unlock-reward>div{min-width:0;display:flex;flex-direction:column;gap:4px}
+.watch-party-unlock-reward strong{font-size:12px;color:#fce8b6}
+.watch-party-unlock-reward>div span{font-size:11px;line-height:1.45;color:#c5c9d4}
+.watch-party-gold-tag{flex:none}
+.watch-party-unlock-plus{display:flex;flex-direction:column;gap:5px;text-align:left;padding:11px 12px;border:1px solid rgba(110,164,244,.25);border-radius:15px;background:rgba(61,110,176,.10)}
+.watch-party-unlock-plus strong{color:#e2edff;font-size:13px}
+.watch-party-unlock-plus p{margin:0;color:#b5c5de;font-size:11px;line-height:1.5}
+.watch-party-unlock-checkout{background:linear-gradient(180deg,#4488f0,#2774d8)!important;border-radius:14px!important;min-height:48px!important;font:750 14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+.watch-party-gift-section{width:100%;padding:2px 0 0}
+.watch-party-gift-section>p{margin:0;text-align:center;font-size:12px;line-height:1.5;color:#c3cce0}
+#watchPartyGiftPicker{display:flex;flex-direction:column;gap:10px}
+#watchPartyGiftSearchLabel{display:block;color:#e1e7f6;font-size:12px;font-weight:750;text-align:left}
+#watchPartyGiftSearch{width:100%;box-sizing:border-box;min-height:44px;border-radius:13px;border:1px solid rgba(154,182,231,.31);background:rgba(53,73,107,.3);padding:0 13px;font:13px -apple-system,BlinkMacSystemFont,sans-serif;color:#fff;outline:none}
+#watchPartyGiftSearch:focus{border-color:#8ebcff}
+.watch-party-gift-results{max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#a4b5cf;text-align:left}
+.watch-party-ios-user{width:100%;min-height:48px;display:flex;align-items:center;gap:10px;text-align:left;border:1px solid rgba(137,159,202,.2);border-radius:13px;background:rgba(100,119,154,.14);padding:6px 10px;color:#fff;font-size:12px;font-weight:750;cursor:pointer}
+.watch-party-ios-user-photo{width:35px;height:35px;flex:none;border-radius:50%;object-fit:cover}
+.watch-party-selected-card{overflow:hidden;border:1px solid rgba(145,178,239,.3);border-radius:16px;background:rgba(70,98,142,.13)}
+.watch-party-selected-card[hidden],.watch-party-gift-used[hidden],#watchPartyGiftSearch[hidden],#watchPartyGiftResults[hidden],#watchPartyGiftConfirm[hidden],#watchPartyGiftCancel[hidden]{display:none!important}
+.watch-party-selected-banner{display:block;width:100%;height:86px;object-fit:cover}
+.watch-party-selected-identity{display:flex;align-items:center;gap:10px;padding:9px 12px}
+.watch-party-selected-avatar{width:45px;height:45px;border-radius:50%;object-fit:cover;border:2px solid #283650}
+.watch-party-selected-names{display:flex;flex-direction:column;gap:3px;min-width:0}
+.watch-party-selected-names strong{font-size:13px}
+.watch-party-selected-names span{font-size:11px;color:#b2c0da}
+.watch-party-ios-secondary{min-height:40px;border:0;background:transparent;color:#a7c7ff;font:650 12px -apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer}
+.watch-party-gift-used{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:15px;border:1px solid rgba(170,192,226,.22);background:rgba(62,81,113,.2);font-size:12px;line-height:1.5;color:#e6edfa}
+.watch-party-gifted-photo{width:38px;height:38px;border-radius:50%;object-fit:cover}
+.watch-party-unlock-status{color:#cfdaef!important;font-size:11px!important;line-height:1.5!important}
+.watch-party-community-widget{border-radius:18px!important;background:rgba(30,44,66,.88)!important;border-color:rgba(135,172,228,.3)!important;box-shadow:0 5px 16px rgba(0,0,0,.14)}
+.watch-party-community-symbol,.watch-party-unlock-icon{display:none!important}
+.watch-party-main-cta{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+@media(max-width:760px){
+.watch-party-unlock-card{width:min(100%,420px)!important;border-radius:28px!important;padding:18px 15px 19px!important;gap:10px!important}
+.watch-party-paywall-banner{height:64px}
+.watch-party-unlock-price{padding:11px 0!important}
+.watch-party-unlock-reward{flex-direction:row!important;text-align:left!important}
+.watch-party-unlock-card h2{font-size:23px!important}
+}
