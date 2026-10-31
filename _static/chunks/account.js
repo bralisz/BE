@@ -2407,7 +2407,7 @@ const userDropdown=document.getElementById('userDropdown');
 
     function normalizeProfileCommunityTag(value){
       var normalized=String(value||'').trim().toLowerCase();
-      return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'||normalized==='boaf'?normalized:'';
+      return normalized==='avocado'||normalized==='eyelash'||normalized==='blohsh'||normalized==='billie_fan'||normalized==='boaf'||normalized==='happier_than_ever'?normalized:'';
     }
     function profileCommunityTagMeta(value){
       var tag=normalizeProfileCommunityTag(value);
@@ -2416,6 +2416,7 @@ const userDropdown=document.getElementById('userDropdown');
       if(tag==='blohsh')return {label:'Blohsh',className:'is-blohsh'};
       if(tag==='billie_fan')return {label:localizedProfileText('Fã da Billie'),className:'is-billie-fan'};
       if(tag==='boaf')return {label:'BOAF',className:'is-boaf'};
+      if(tag==='happier_than_ever')return {label:'Happier Than Ever',className:'is-happier-than-ever'};
       return null;
     }
     function renderProfileAwardTags(profile){
