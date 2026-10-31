@@ -102,10 +102,13 @@
     if (!isHost || !joined || !channel) return;
     if (!force && Date.now()-lastPublish < 700) return;
     const v = nativeVideo();
-    if (!v) { textStatus(t(11),true); return; }
+    const external = !v ? window.BETVExternalPlayerSync?.read?.() : null;
+    if (!v && !external) { textStatus(t(11),true); return; }
     lastPublish = Date.now();
     const snapshot = {host:myId(),room,video:videoId,at:Date.now(),seq:++sequence,
-      position:Number(v.currentTime || 0),playing:!v.paused && !v.ended};
+      provider:v ? 'html5' : external.provider,
+      position:v ? Number(v.currentTime || 0) : Number(external.position || 0),
+      playing:v ? (!v.paused && !v.ended) : Boolean(external.playing)};
     send('playback',snapshot);
   }
   function syncPlayback(snapshot) {
@@ -113,13 +116,18 @@
     if (!Number.isFinite(snapshot.seq) || snapshot.seq < lastSyncSeq) return;
     lastSyncSeq = snapshot.seq;
     state = snapshot;
-    const v = nativeVideo();
-    if (!v || v.readyState < 1) { textStatus(t(11),true); return; }
     const position = Number(snapshot.position);
     if (!Number.isFinite(position) || position < 0 || position > 86400) return;
     const elapsed = snapshot.playing ? Math.max(0,Math.min(5,(Date.now()-Number(snapshot.at||Date.now()))/1000)) : 0;
-    const target = Math.min(Number.isFinite(v.duration) ? v.duration : 86400,position+elapsed);
-    if (Math.abs(v.currentTime-target)>0.65) { try { v.currentTime=target; } catch(_){} }
+    const target = position+elapsed;
+    if (snapshot.provider === 'vk') {
+      if (!window.BETVExternalPlayerSync?.apply?.({...snapshot,position:target})) textStatus(t(11),true);
+      return;
+    }
+    const v = nativeVideo();
+    if (snapshot.provider !== 'html5' || !v || v.readyState < 1) { textStatus(t(11),true); return; }
+    const safeTarget = Math.min(Number.isFinite(v.duration) ? v.duration : 86400,target);
+    if (Math.abs(v.currentTime-safeTarget)>0.65) { try { v.currentTime=safeTarget; } catch(_){} }
     if (snapshot.playing && v.paused) v.play().catch(()=>textStatus(t(13)));
     if (!snapshot.playing && !v.paused) v.pause();
   }
