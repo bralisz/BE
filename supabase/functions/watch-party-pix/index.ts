@@ -10,7 +10,7 @@ function isPaymentId(v:unknown){return /^[0-9]{5,25}$/.test(String(v||""));}
 async function getPayment(id:string){const r=await fetch("https://api.mercadopago.com/v1/payments/"+encodeURIComponent(id),{headers:{Authorization:"Bearer "+mpToken}});return {ok:r.ok,data:await r.json().catch(()=>null)};}
 Deno.serve(async(req:Request)=>{
  const origin=req.headers.get("origin")||"";
- if(req.method==="OPTIONS")return reply(origin,204,{});
+ if(req.method==="OPTIONS")return new Response(null,{status:204,headers:{"Access-Control-Allow-Origin":origin&&allowed(origin)?origin:ORIGIN,"Access-Control-Allow-Headers":"authorization,apikey,x-client-info,content-type","Access-Control-Allow-Methods":"POST,OPTIONS","Vary":"Origin"}});
  if(req.method!=="POST")return reply(origin,405,{error:"method_not_allowed"});
  if(!allowed(origin))return reply(origin,403,{error:"origin_not_allowed"});
  const authorization=req.headers.get("authorization")||"";

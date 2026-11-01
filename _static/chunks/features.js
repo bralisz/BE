@@ -54,7 +54,7 @@
     run(names, () => window.dispatchEvent(new CustomEvent(type, {detail})));
   }, true));
   document.addEventListener('click', event => {
-    const target = event.target.closest?.('[data-public-action="profile"],[data-public-action="settings"],[data-public-action="avatar"],[data-public-action="auth"],[data-community-tab],#profilePageSettings');
+    const target = event.target.closest?.('[data-public-action="profile"],[data-public-action="settings"],[data-public-action="avatar"],[data-public-action="auth"],[data-public-action="fans"],[data-community-tab],#profilePageSettings');
     if (!target) {
       if(event.target.closest?.('#logoBtn,[data-home-view],a[href]')){actionVersion++;dismiss();}
       return;
