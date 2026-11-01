@@ -105,7 +105,7 @@
     const people = participants();
     const count = $('watchPartyCount'), users = $('watchPartyUsers'), invite = $('watchPartyInviteToggle');
     const leave = $('watchPartyLeave'), make = $('watchPartyCreate');
-    if (count) count.textContent = String(people.length);
+    if (count) { count.textContent = people.length ? String(people.length) : ''; count.hidden = people.length === 0; }
     if (users) {
       users.replaceChildren();
       for (const p of people.slice(0,7)) {
@@ -411,7 +411,7 @@
       '<button id="watchPartyClose" type="button" aria-label="Close" class="watch-party-close">×</button></div>'+
       '<div class="watch-party-host"><div class="watch-party-host-cover"><img id="watchPartyBanner" alt="" hidden></div>'+
       '<div class="watch-party-host-identity"><span id="watchPartyHostAvatar" class="watch-party-host-avatar"></span><div class="watch-party-host-text"><small id="watchPartyHostLabel"></small><strong id="watchPartyHostName"></strong></div></div></div>'+
-      '<div class="watch-party-members"><div id="watchPartyUsers" class="watch-party-users"></div><strong id="watchPartyCount">0</strong></div>'+
+      '<div class="watch-party-members"><div id="watchPartyUsers" class="watch-party-users"></div><strong id="watchPartyCount" hidden></strong></div>'+
       '<p class="watch-party-status" id="watchPartyStatus" aria-live="polite"></p>'+
       '<div class="watch-party-actions"><button type="button" id="watchPartyCreate"></button>'+
       '<button type="button" id="watchPartyInviteToggle" hidden></button>'+
