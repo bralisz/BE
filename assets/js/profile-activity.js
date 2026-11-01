@@ -52,7 +52,7 @@
   const top=document.createElement('div');top.className='profile-recent-watch-head';
   const eyebrow=document.createElement('span');eyebrow.textContent=t(10);
   const tag=document.createElement('span');tag.textContent=item.collection==='movies'?t(7):item.collection==='series'?t(8):t(9);
-  top.append(eyebrow,tag);
+  top.append(eyebrow,tag);card.append(top);
   const image=cleanUrl(item.image_url);
   if(image){
    const cover=document.createElement('img');cover.className='profile-recent-watch-cover';
@@ -60,12 +60,12 @@
    card.append(cover);
   }
   const title=document.createElement('strong');title.className='profile-recent-watch-title notranslate';title.setAttribute('translate','no');title.textContent=String(item.title||'').slice(0,180);
-  card.append(top,title);
+  card.append(title);
  }
  async function refreshProfile(){
   attach();
   const handle=String($('profilePageHandle')?.textContent||'').trim().replace(/^@/,'');
-  const active=document.body.classList.contains('profile-page-active')&&handle&&$ ('profilePage')?.hidden===false;
+  const active=document.body.classList.contains('profile-page-active')&&handle&&$('profilePage')?.hidden===false;
   const serial=++request;
   if(!active){displayed=null;if(trigger)trigger.hidden=true;close();return;}
   close();
