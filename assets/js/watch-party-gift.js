@@ -44,7 +44,7 @@
   if(modal)return;
   modal=document.createElement('div');modal.className='watch-party-gift-modal';modal.id='watchPartyGiftModal';modal.hidden=true;
   modal.innerHTML='<div class="watch-party-gift-backdrop"></div><section class="watch-party-gift-dialog" role="dialog" aria-modal="true" aria-labelledby="watchPartyGiftTitle">'+
-   '<div class="watch-party-ios-handle"></div><header class="watch-party-gift-heading"><div><h2 id="watchPartyGiftTitle"></h2><p id="watchPartyGiftSubtitle"></p></div><button id="watchPartyGiftClose" type="button" aria-label="Close">×</button></header>'+
+   '<div class="watch-party-ios-handle"></div><header class="watch-party-gift-heading"><div><h2 id="watchPartyGiftTitle"></h2><p id="watchPartyGiftSubtitle"></p></div><button id="watchPartyGiftClose" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></header>'+
    '<input type="search" id="watchPartyGiftQuery" maxlength="40" autocomplete="off" spellcheck="false">'+
    '<p class="watch-party-gift-info" id="watchPartyGiftInfoLine"></p><div id="watchPartyGiftMatches" class="watch-party-gift-matches"></div>'+
    '<p id="watchPartyGiftFeedback" class="watch-party-gift-feedback" aria-live="polite"></p></section>';
@@ -58,9 +58,14 @@
  function close(){if(modal)modal.hidden=true;selected=null;}
  async function open(){
   init();
-  if(!window.BETVWatchPartyPaywall?.isUnlocked?.()){
-    window.BETVWatchPartyPaywall?.open?.();return;
-  }
+  const paywall=window.BETVWatchPartyPaywall;
+  if(!paywall?.isUnlocked?.())await paywall?.refresh?.();
+  if(!paywall?.isUnlocked?.()){paywall?.open?.();return;}
+  if(!client()||!userid())return;
+  const {data:quota,error:quotaError}=await client().rpc('my_watch_party_gift_status');
+  const available=Array.isArray(quota)?quota[0]:quota;
+  // Grants and received gifts have no paid +1 quota. Never display an empty sheet.
+  if(quotaError||!available?.eligible||available?.gifted_to){refreshShortcut();return;}
   modal.hidden=false;
   $('watchPartyGiftTitle').textContent=txt(0);$('watchPartyGiftSubtitle').textContent=txt(1);
   $('watchPartyGiftClose').setAttribute('aria-label',txt(15));
@@ -106,10 +111,15 @@
   if(serial!==searching)return;
   const fans=Array.isArray(data)?data:[];
   if(error||!fans.length){$('watchPartyGiftInfoLine').textContent=txt(4);return;}
-  const infos=await Promise.all(fans.filter(f=>String(f.username||'').toLowerCase()!==String(window.beBackend?.auth?.currentUser?.username||'').toLowerCase()).map(f=>lookup(f.username,f)));
+  const infos=await Promise.all(fans.filter(f=>String(f.username||'').toLowerCase()!==String(window.beBackend?.auth?.currentUser?.username||'').toLowerCase()).map(async f=>{
+    const {data:available,error:accessError}=await client().rpc('watch_party_recipient_available',{p_username:f.username});
+    if(accessError||available!==true)return null;
+    return lookup(f.username,f);
+  }));
   if(serial!==searching)return;
   $('watchPartyGiftInfoLine').textContent=txt(1);
-  for(const info of infos)matches.append(card(info));
+  for(const info of infos.filter(Boolean))matches.append(card(info));
+  if(!matches.childElementCount)$('watchPartyGiftInfoLine').textContent=txt(13);
  }
  function choose(profile,outer){
   if(sending||!currentStatus?.eligible||currentStatus.gifted_to)return;
@@ -159,7 +169,7 @@
  }
  function refreshShortcut(){
   const shortcut=$('watchPartyGiftShortcut');
-  if(shortcut){shortcut.hidden=!window.BETVWatchPartyPaywall?.isUnlocked?.();shortcut.textContent=txt(0);}
+  if(shortcut){shortcut.hidden=!window.BETVWatchPartyPaywall?.canGift?.();shortcut.textContent=txt(0);}
  }
  function start(){
   document.addEventListener('click',event=>{
@@ -169,6 +179,7 @@
   const watcher=new MutationObserver(()=>{attachToPaywall();refreshShortcut();});
   watcher.observe(document.body,{childList:true,subtree:false});
   attachToPaywall();
+  window.addEventListener('be:watch-party-gift-status',refreshShortcut);
   window.addEventListener('be:community-tag-updated',refreshShortcut);
   window.addEventListener('be:i18n-ready',refreshShortcut);
   window.setInterval(refreshShortcut,1400);
