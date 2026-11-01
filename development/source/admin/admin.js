@@ -353,7 +353,7 @@ body.admin-preview-open{overflow:hidden}
 (() => {
   'use strict';
 
-  const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','ongs','users','notifications'];
+  const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','users','notifications'];
   const LABELS = {dashboard:'Visão geral',notifications:'Notificações',contentHub:'Conteúdo',siteHub:'Site',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',unlinked:'Vídeos sem seção',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',ongs:'Apoie uma ONG',users:'Usuários',settings:'Comunidade'};
   const LOCAL_ADMIN_EMAIL = 'admin@local.invalid';
   const ADMIN_CONTENT_ICONS = {
@@ -526,7 +526,7 @@ body.admin-preview-open{overflow:hidden}
     if (queryDestination === 'admin') return true;
     try { return sessionStorage.getItem('beOAuthDestination') === 'admin'; } catch (_) { return false; }
   };
-  const route = () => adminHashRoute() ? (location.hash.replace(/^#\/admin\/?/, '') || 'dashboard') : 'dashboard';
+  const route = () => {const key=adminHashRoute() ? (location.hash.replace(/^#\/admin\/?/, '') || 'dashboard') : 'dashboard';return key==='ongs'?'dashboard':key;};
   const go = value => { location.hash = '#/admin/' + value; };
   const adminRoute = () => adminHashRoute() || adminCallback();
   const now = () => beBackend.now();
@@ -858,7 +858,7 @@ body.admin-preview-open{overflow:hidden}
   function navButton(key) {
     const current = route();
     const contentRoutes = ['billie','featured','contents','gallery'];
-    const siteRoutes = ['sections','settings','ongs'];
+    const siteRoutes = ['sections','settings'];
     const isContentRoute = contentRoutes.includes(current) || current.startsWith('contents/');
     const isSiteRoute = siteRoutes.includes(current);
 
@@ -884,7 +884,7 @@ body.admin-preview-open{overflow:hidden}
 
     const current = route();
     const contentActive = ['billie','featured','contents','gallery'].includes(current) || current.startsWith('contents/');
-    const siteActive = ['sections','settings','ongs'].includes(current);
+    const siteActive = ['sections','settings'].includes(current);
 
     let tabs = [];
     if (contentActive) {
@@ -896,8 +896,7 @@ body.admin-preview-open{overflow:hidden}
     } else if (siteActive) {
       tabs = [
         ['sections', 'Seções do site', current === 'sections'],
-        ['settings', 'Comunidade', current === 'settings'],
-        ['ongs', 'Apoie uma ONG', current === 'ongs']
+        ['settings', 'Comunidade', current === 'settings']
       ];
     }
 
@@ -1002,10 +1001,7 @@ body.admin-preview-open{overflow:hidden}
 
     const [recent, donationOverview, siteSettings, dashboardMetrics, deploymentVersion] = await Promise.all([
       db.list('admin_logs', { orderBy: 'createdAt', direction: 'desc', limit: 8 }).catch(() => []),
-      loadDonationOverview().catch(error => {
-        console.warn('Não foi possível carregar os dados de doação:', error?.message || error);
-        return {};
-      }),
+      Promise.resolve({}),
       db.get('settings', 'site').catch(() => ({})),
       loadDashboardMetrics().catch(error => {
         console.warn('Não foi possível carregar os insights do dashboard:', error?.message || error);
@@ -1143,12 +1139,7 @@ body.admin-preview-open{overflow:hidden}
             ${contentMetricCard('Mais visto', overallMetric('topViewed'), 'visualizações', ADMIN_DASHBOARD_ICONS.viewed)}
             ${contentMetricCard('Mais comentado', overallMetric('topCommented'), 'comentários', ADMIN_DASHBOARD_ICONS.commented)}
 
-            <article class="dashboard-metric-card donation-approved-card">
-              <div class="dashboard-metric-label"><i>${ADMIN_DASHBOARD_ICONS.donations}</i><span>Doações para ONGs</span></div>
-              <span class="dashboard-approved-badge">Aprovado</span>
-              <strong class="dashboard-metric-big-number">${Number(dashboardMetrics?.approvedDonations || 0).toLocaleString('pt-BR')}</strong>
-              <small>doações confirmadas com sucesso</small>
-            </article>
+            
           </div>
         </div>
       </section>
@@ -1164,68 +1155,7 @@ body.admin-preview-open{overflow:hidden}
             <div class="activity-list">${logHtml}</div>
           </aside>
         </div>
-        <div class="dashboard-panel donation-dashboard-panel">
-          <div class="panel-head">
-            <div>
-              <h2>Apoios a ONGs</h2>
-              <p>Histórico de checkouts de doação, ordenado do mais recente para o mais antigo.</p>
-            </div>
-            <button class="a-btn" data-route="ongs">Gerenciar ONGs</button>
-          </div>
-
-          <div class="donation-log-toolbar">
-            <label class="donation-search-field">
-              <span>Pesquisar no histórico</span>
-              <input class="a-input" id="donationLogSearch" type="search" autocomplete="off" placeholder="Usuário, @, ONG, valor ou status">
-            </label>
-            <small id="donationLogCount">${rows.length.toLocaleString('pt-BR')} registro${rows.length === 1 ? '' : 's'}</small>
-          </div>
-
-          <div class="donation-table-wrap">
-            <table class="donation-table">
-              <thead>
-                <tr>
-                  <th>Usuário</th>
-                  <th>ONG escolhida</th>
-                  <th>Valor</th>
-                  <th>Mínimo</th>
-                  <th>Status</th>
-                  <th>Data</th>
-                </tr>
-              </thead>
-              <tbody id="donationLogBody"></tbody>
-            </table>
-          </div>
-          <p class="donation-log-note">O histórico mostra todos os checkouts. Apenas pagamentos com status Pago entram nos insights; registros criados, cancelados, expirados ou com falha não são contabilizados.</p>
-
-          <div class="donation-insights-heading">
-            <div>
-              <h3>Insights de apoio</h3>
-              <p>Indicadores calculados somente com pagamentos confirmados pela Stripe.</p>
-            </div>
-          </div>
-          <div class="donation-insights-grid">
-            ${insightCard('Valor total recebido', dualMoney('totalAmountCents'), `${numberOr(insights.totalCheckouts).toLocaleString('pt-BR')} doação${numberOr(insights.totalCheckouts) === 1 ? '' : 'ões'} paga${numberOr(insights.totalCheckouts) === 1 ? '' : 's'}`, '¤')}
-            ${insightCard('Média por doação', dualMoney('averageAmountCents'), 'pagamentos confirmados separados por moeda', '↗')}
-            ${insightCard('Doadores únicos', numberOr(insights.uniqueSupporters).toLocaleString('pt-BR'), 'pessoas com pagamento confirmado', '♙')}
-            ${insightCard('Últimos 7 dias', numberOr(insights.last7Days).toLocaleString('pt-BR'), 'doações pagas nesse período', '◷')}
-            ${insightCard(
-              'ONG mais apoiada',
-              topNgo ? (topNgo.title || 'ONG') : 'Sem dados',
-              topNgo ? `${numberOr(topNgo.checkoutCount).toLocaleString('pt-BR')} doação${numberOr(topNgo.checkoutCount) === 1 ? '' : 'ões'} paga${numberOr(topNgo.checkoutCount) === 1 ? '' : 's'}` : 'aparecerá após a primeira doação paga',
-              '♡'
-            )}
-            ${insightCard(
-              'Maior doação paga',
-              highestDonation ? money(highestDonation.amountCents, highestDonation.currency) : money(0, 'BRL'),
-              highestDonation
-                ? `${highestDonation.userDisplayName || highestDonation.username || 'Usuário'} · ${highestDonation.ngoTitle || 'ONG'}`
-                : 'aparecerá após a primeira doação paga',
-              '◆'
-            )}
-          </div>
-
-          <section class="dashboard-weekly-users">
+        <div class="dashboard-panel"><section class="dashboard-weekly-users">
             <div class="dashboard-section-head">
               <div>
                 <h3>Novos usuários da semana</h3>

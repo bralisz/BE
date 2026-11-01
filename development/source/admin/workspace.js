@@ -178,7 +178,7 @@ html.admin-workspace body.admin-mode .workspace-command[hidden] {display:none!im
     ['contents/series', 'Séries', 'Conteúdo'], ['contents/news', 'Álbuns', 'Conteúdo'],
     ['gallery', 'Galeria', 'Conteúdo'], ['billie', 'Billie Eilish', 'Conteúdo'],
     ['sections', 'Seções do site', 'Site'], ['settings', 'Comunidade', 'Site'],
-    ['ongs', 'Apoie uma ONG', 'Site'], ['users', 'Usuários', 'Pessoas']
+    ['users', 'Usuários', 'Pessoas']
   ];
   let previousFocus = null;
   let dialog = null;
