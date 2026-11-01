@@ -54,7 +54,7 @@
   const token = window.crypto?.randomUUID?.() || '';
   let channel = null, room = '', videoId = '', isHost = false, joined = false, connecting = false;
   let hostId = '', state = null, lastPublish = 0, lastSyncSeq = -1, sequence = 0, syncTimer = 0;
-  let pendingInvites = [], inboxChannel = null, inboxUser = '', pollTimer = 0, searchTimer = 0, lastInboxAt = 0;
+  let pendingInvites = [], pendingGifts = [], inboxChannel = null, inboxUser = '', pollTimer = 0, searchTimer = 0, lastInboxAt = 0;
   let lastInviteClickAt = 0, joinTimer = 0, notifiedIds = new Set(), panelOpened = false;
   let playbackStarted = false, startAt = 0, invitePicker = null, fanSearchSerial = 0;
   const svgIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2M17 9h5M19.5 6.5v5M17 15a4 4 0 0 1 4 4"/></svg>';
@@ -87,7 +87,7 @@
   function showPanel() {
     ensurePlacement();
     const panel = $('watchPartyPanel');
-    if (panel) { panel.hidden = false; panelOpened = true; }
+    if (panel) { panel.hidden = false;panel.classList.remove('is-compact'); panelOpened = true; }
     updateUi();
   }
   function hidePanel() { if ($('watchPartyPanel')) $('watchPartyPanel').hidden = true; panelOpened = false; updateUi(); }
@@ -151,8 +151,8 @@
     if ($('watchPartyCodeLabel')) $('watchPartyCodeLabel').textContent = extraText('code');
     if ($('watchPartyCodeHint')) $('watchPartyCodeHint').textContent = extraText('codeHint');
     if ($('watchPartyCodeInput')) $('watchPartyCodeInput').placeholder = extraText('code');
-    if ($('watchPartyRoomCodeBox')) $('watchPartyRoomCodeBox').hidden = !joined || !isHost;
-    if ($('watchPartyJoinBox')) $('watchPartyJoinBox').hidden = joined || connecting;
+    if ($('watchPartyRoomCodeBox')) $('watchPartyRoomCodeBox').hidden = !joined || !isHost || Boolean(window.BETVWatchPartyPaywall?.canGift?.());
+    if ($('watchPartyJoinBox')) $('watchPartyJoinBox').hidden = joined || connecting || Boolean(window.BETVWatchPartyPaywall?.canGift?.());
     for (const button of document.querySelectorAll('.watch-party-player-button')) {
       button.classList.toggle('is-active',joined);
       button.setAttribute('aria-pressed',String(joined));
@@ -339,22 +339,61 @@
     decline.addEventListener('click',e=>{e.stopPropagation();respond(invite,false,actions);});
     actions.append(accept,decline);row.append(actions);return row;
   }
+  const giftWords={
+    'pt-br':'presenteou você com acesso à Watch Party e à tag Happier Than Ever.',
+    'en-us':'gifted you Watch Party access and the Happier Than Ever badge.',
+    es:'te regaló acceso a Watch Party y la insignia Happier Than Ever.',
+    fr:'vous a offert l’accès à Watch Party et le badge Happier Than Ever.',
+    it:'ti ha regalato l’accesso a Watch Party e il badge Happier Than Ever.'
+  };
+  function giftRow(item){
+    const row=document.createElement('div');row.className='watch-party-notification watch-party-gift-notification';
+    row.dataset.gift=item.id;
+    const identity=document.createElement('div');identity.className='watch-party-notification-identity';
+    const label=String(item.sender_name||'Fã');
+    const avatar=document.createElement('span');avatar.className='watch-party-notification-avatar';
+    avatar.textContent=safeInitial(label);
+    const photo=profileImage(item.sender_avatar||'',label,'watch-party-notification-photo');
+    if(!photo.hidden){avatar.textContent='';avatar.append(photo);}
+    const copy=document.createElement('div');copy.className='watch-party-invite-copy';
+    const title=document.createElement('strong');title.textContent=label;
+    const sub=document.createElement('span');sub.textContent=giftWords[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||giftWords['pt-br'];
+    copy.append(title,sub);identity.append(avatar,copy);row.append(identity);
+    const actions=document.createElement('div');actions.className='watch-party-invite-actions';
+    const yes=btn(t(16),'watch-party-accept'),no=btn(t(17),'watch-party-decline');
+    yes.addEventListener('click',e=>{e.stopPropagation();respondGift(item,true,actions);});
+    no.addEventListener('click',e=>{e.stopPropagation();respondGift(item,false,actions);});
+    actions.append(yes,no);row.append(actions);return row;
+  }
+  async function respondGift(item,accept,actions){
+    for(const b of actions.querySelectorAll('button'))b.disabled=true;
+    try{
+      const {data,error}=await client().rpc('respond_watch_party_gift',{p_request_id:item.id,p_accept:accept});
+      if(error||data!==(accept?'gift_accepted':'gift_declined'))throw Error('gift_response_failed');
+      pendingGifts=pendingGifts.filter(g=>g.id!==item.id);renderInbox();
+      await window.BETVWatchPartyPaywall?.refresh?.();
+      window.dispatchEvent(new Event('be:watch-party-gift-status'));
+    }catch(_){textStatus(t(23),true);for(const b of actions.querySelectorAll('button'))b.disabled=false;}
+  }
   function renderInbox() {
     const invites=pendingInvites.filter(x=>x.status==='pending' && new Date(x.expires_at).getTime()>Date.now());
+    const gifts=pendingGifts.filter(x=>x.status==='pending');
     for (const listId of ['notificationPreviewList','mobileNotificationPreviewList']) {
       const list=$(listId);
       if (!list) continue;
       for (const card of list.querySelectorAll('.watch-party-notification')) card.remove();
       for (const invite of invites.slice(0,3).reverse()) list.prepend(inviteRow(invite));
+      for (const item of gifts.slice(0,3).reverse()) list.prepend(giftRow(item));
     }
     for (const dotId of ['notificationUnreadDot','mobileNotificationUnreadDot']) {
       const dot=$(dotId);
-      if (dot && invites.length) dot.hidden=false;
+      if (dot && (invites.length||gifts.length)) dot.hidden=false;
     }
     const toast=$('watchPartyInviteToast');
     if (toast) {
       toast.replaceChildren();
-      if (invites.length) {toast.append(inviteRow(invites[0]));toast.hidden=false;}
+      if (gifts.length) {toast.append(giftRow(gifts[0]));toast.hidden=false;}
+      else if (invites.length) {toast.append(inviteRow(invites[0]));toast.hidden=false;}
       else toast.hidden=true;
     }
   }
@@ -377,7 +416,7 @@
     }
   }
   async function pollInbox(force=false) {
-    if (!client()||!myId()) {pendingInvites=[];renderInbox();return;}
+    if (!client()||!myId()) {pendingInvites=[];pendingGifts=[];renderInbox();return;}
     if (!force && Date.now()-lastInboxAt<10000) return;
     lastInboxAt=Date.now();
     try {
@@ -386,10 +425,21 @@
         .eq('invitee_id',myId()).eq('status','pending')
         .gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(8);
       if (error) return;
+      const giftResult=await client().from('watch_party_gift_requests')
+        .select('id,purchaser_id,created_at,status').eq('recipient_id',myId()).eq('status','pending')
+        .order('created_at',{ascending:false}).limit(8);
+      const giftRecords=Array.isArray(giftResult.data)?giftResult.data:[];
+      const giftRows=await Promise.all(giftRecords.map(async g=>{
+        try{
+          const profile=await window.beBackend?.profiles?.get?.(g.purchaser_id);
+          return {...g,sender_name:String(profile?.displayName||profile?.display_name||profile?.username||'Fã'),sender_avatar:profile?.avatarUrl||profile?.avatar_url||''};
+        }catch(_){return {...g,sender_name:'Fã',sender_avatar:''};}
+      }));
+      pendingGifts=giftRows;
       const received=Array.isArray(data)?data:[];
-      const newOne=received.find(x=>!notifiedIds.has(x.id));
+      const newOne=[...giftRows,...received].find(x=>!notifiedIds.has(x.id));
       pendingInvites=received;
-      received.forEach(x=>notifiedIds.add(x.id));
+      [...giftRows,...received].forEach(x=>notifiedIds.add(x.id));
       renderInbox();
       if(newOne) window.dispatchEvent(new CustomEvent('be:watch-party-invitation',{detail:{id:newOne.id}}));
     } catch(_){}
@@ -405,6 +455,8 @@
     const ch=client().channel('betv-party-inbox:'+id);
     inboxChannel=ch;
     ch.on('postgres_changes',{event:'*',schema:'public',table:'watch_party_invites',filter:'invitee_id=eq.'+id},()=>pollInbox(true));
+    ch.on('postgres_changes',{event:'*',schema:'public',table:'watch_party_gift_requests',filter:'recipient_id=eq.'+id},()=>pollInbox(true));
+    ch.on('postgres_changes',{event:'*',schema:'public',table:'watch_party_gift_requests',filter:'purchaser_id=eq.'+id},()=>window.BETVWatchPartyPaywall?.refresh?.());
     ch.subscribe();
   }
   function createInvitePicker() {
@@ -556,6 +608,7 @@
       try{await navigator.clipboard.writeText(room);textStatus(extraText('copied'));}
       catch(_){textStatus(extraText('code')+': '+room);}
     });
+    $('watchPartyGiftOpen').addEventListener('click',()=>window.BETVWatchPartyGift?.open?.());
     $('watchPartyCreate').addEventListener('click',()=>{
       const id=window.crypto?.randomUUID?.();
       if(!id){textStatus(t(23),true);return;}
@@ -589,6 +642,7 @@
     window.addEventListener('be:i18n-ready',()=>{updateUi();renderInbox();if(invitePicker&&!invitePicker.hidden)renderInviteLabels();});
     window.addEventListener('be:notifications-ready',renderInbox);
     window.addEventListener('be:watch-party-gift-status',updateUi);
+    document.addEventListener('click',event=>{if(event.target?.closest?.('#contentDetailPlay')){const card=$('watchPartyPanel');if(card&&!card.hidden)card.classList.add('is-compact');}},true);
     window.setInterval(()=>{
       tryJoinFromUrl();setupPlayerButtons();ensurePlacement();
       if(myId()!==inboxUser)subscribeInbox();
