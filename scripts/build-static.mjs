@@ -28,6 +28,7 @@ const copies=[
   ['assets/js/site.js',`${out}/chunks/site.js`],
   ['assets/js/watch-party.js',`${out}/chunks/watch-party.js`],
   ['assets/js/watch-party-paywall.js',`${out}/chunks/watch-party-paywall.js`],
+  ['assets/js/watch-party-gift.js',`${out}/chunks/watch-party-gift.js`],
   ['assets/js/tv-controller.js',`${out}/chunks/tv.js`],
   ['assets/js/tv-session-widget.js',`${out}/chunks/session.js`],
   ['assets/js/lazy-loading.js',`${out}/chunks/lazy.js`],
