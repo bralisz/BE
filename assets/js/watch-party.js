@@ -56,6 +56,7 @@
   let hostId = '', state = null, lastPublish = 0, lastSyncSeq = -1, sequence = 0, syncTimer = 0;
   let pendingInvites = [], inboxChannel = null, inboxUser = '', pollTimer = 0, searchTimer = 0, lastInboxAt = 0;
   let lastInviteClickAt = 0, joinTimer = 0, notifiedIds = new Set(), panelOpened = false;
+  let playbackStarted = false, startAt = 0, invitePicker = null, fanSearchSerial = 0;
   const svgIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2M17 9h5M19.5 6.5v5M17 15a4 4 0 0 1 4 4"/></svg>';
 
   function currentVideo() {
@@ -117,19 +118,21 @@
         users.appendChild(tag);
       }
     }
-    const owner = people.find(p=>p.isHost) || (isHost ? people.find(p=>p.id===myId()) : null);
+    const owner = people.find(p=>p.isHost) || (isHost && joined ? people.find(p=>p.id===myId()) : null);
+    const hostCard = $('watchPartyHostCard');
+    if (hostCard) hostCard.hidden = !joined || !owner;
     const cover = $('watchPartyBanner'), name = $('watchPartyHostName'), avatar = $('watchPartyHostAvatar');
     if (cover) {
       const url = cleanImage(owner?.banner);
       if (url && cover.getAttribute('src') !== url) {cover.src=url;cover.hidden=false;}
       if (!url){cover.hidden=true;cover.removeAttribute('src');}
     }
-    if (name) name.textContent=owner?.name || t(14);
+    if (name) name.textContent=owner?.name || '';
     if (avatar) {
       const url=cleanImage(owner?.avatar);
       avatar.replaceChildren();
       if(url)avatar.appendChild(profileImage(url,owner?.name,'watch-party-host-photo'));
-      else avatar.textContent=safeInitial(owner?.name || 'Fã');
+      else avatar.textContent=owner ? safeInitial(owner.name) : '';
     }
     if (invite) { invite.hidden = !joined || !isHost; invite.textContent = t(1); }
     if (leave) { leave.hidden = !joined; leave.textContent = t(3); }
@@ -137,13 +140,16 @@
     if ($('watchPartyTitle')) $('watchPartyTitle').textContent = t(14);
     if ($('watchPartyPeopleLabel')) $('watchPartyPeopleLabel').textContent = xt('members');
     if ($('watchPartyHostLabel')) $('watchPartyHostLabel').textContent = xt('host');
-    if ($('watchPartyGiftOpen')) $('watchPartyGiftOpen').textContent = xt('gift');
+    if ($('watchPartyGiftOpen')) $('watchPartyGiftOpen').hidden = true;
+    if ($('watchPartyRoomCode')) $('watchPartyRoomCode').textContent = joined && isHost ? room : '';
+    if ($('watchPartyRoomCodeBox')) $('watchPartyRoomCodeBox').hidden = !joined || !isHost;
+    if ($('watchPartyJoinBox')) $('watchPartyJoinBox').hidden = joined || connecting;
     for (const button of document.querySelectorAll('.watch-party-player-button')) {
       button.classList.toggle('is-active',joined);
       button.setAttribute('aria-pressed',String(joined));
       button.title = t(0);
       const n = button.querySelector('.watch-party-player-count');
-      if (n) n.textContent = joined ? String(people.length) : '';
+      if (n) n.textContent = ''; // participant avatars are not repeated in the video toolbar
     }
     const detail = $('contentDetailWatchParty');
     if (detail) { detail.classList.toggle('is-active',joined);detail.setAttribute('aria-expanded',String(panelOpened)); }
@@ -156,7 +162,7 @@
     if (!force && Date.now()-lastPublish < 700) return;
     const v = nativeVideo();
     const external = !v ? window.BETVExternalPlayerSync?.read?.() : null;
-    if (!v && !external) { textStatus(t(11),true); return; }
+    if (!v && !external) { if(playbackStarted && activePlayer())textStatus(t(11),true); return; }
     lastPublish = Date.now();
     const snapshot = {host:myId(),room,video:videoId,at:Date.now(),seq:++sequence,
       provider:v ? 'html5' : external.provider,
@@ -186,7 +192,7 @@
   }
   async function leaveRoom(clearUrl=true) {
     const old=channel,wasHost=isHost;
-    channel=null; room='';videoId='';isHost=false;joined=false;connecting=false;hostId='';state=null;lastSyncSeq=-1;
+    channel=null; room='';videoId='';isHost=false;joined=false;connecting=false;hostId='';state=null;lastSyncSeq=-1;playbackStarted=false;startAt=0;
     clearInterval(syncTimer);syncTimer=0;
     if (old) {
       if (wasHost) old.send({type:'broadcast',event:'room-ended',payload:{host:myId()}}).catch(()=>{});
@@ -198,7 +204,7 @@
       url.searchParams.delete('watchParty');url.searchParams.delete('watchVideo');
       history.replaceState(history.state,'',url.pathname+url.search+url.hash);
     }
-    if ($('watchPartyInviteForm')) $('watchPartyInviteForm').hidden=true;
+    if(invitePicker)invitePicker.hidden=true;
     textStatus(''); updateUi();
   }
   async function connect(id,asHost,expectedId='') {
@@ -217,6 +223,7 @@
       }
     }
     connecting=true;room=id;videoId=video.id;isHost=asHost;hostId=asHost?myId():'';
+    playbackStarted=Boolean(activePlayer());
     showPanel();textStatus(asHost?t(6):t(10));
     try {
       const ch=client().channel('betv-party:'+id,{config:{presence:{key:token},broadcast:{self:false,ack:false}}});
@@ -231,7 +238,10 @@
       ch.on('broadcast',{event:'playback'},({payload})=>{
         if (!isHost && payload && (payload.host===hostId)) syncPlayback(payload);
       });
-      ch.on('broadcast',{event:'sync-request'},()=>{if(isHost)publish(true);});
+      ch.on('broadcast',{event:'sync-request'},()=>{if(isHost){if(playbackStarted)send('start-playback',{host:myId(),room,video:videoId});publish(true);}});
+      ch.on('broadcast',{event:'start-playback'},({payload})=>{
+        if(!isHost && payload?.host===hostId && payload.room===room && payload.video===videoId) openPlayerAfterHostStart();
+      });
       ch.on('broadcast',{event:'room-ended'},({payload})=>{if(!isHost && payload?.host===hostId){leaveRoom();hidePanel();}});
       ch.subscribe(async(status)=>{
         if (ch!==channel)return;
@@ -243,9 +253,9 @@
           try {const p=await ownProfile();await ch.track({id:myId(),name:p.name,username:p.username,avatar:p.avatar,banner:p.banner,isHost,token});}catch(_){}
           textStatus(isHost?t(6):t(10));updateUi();
           syncTimer=setInterval(()=>{if(isHost)publish();else if(state)syncPlayback(state);},1050);
-          if(isHost)publish(true);else send('sync-request',{from:myId()});
-          const overlay=activePlayer();
-          if (!overlay) $('contentDetailPlay')?.click();
+          if(isHost){if(playbackStarted)publish(true);}else send('sync-request',{from:myId()});
+          // Creating or accepting a room NEVER starts the video. Only the host
+          // pressing the actual Play button sends the start signal.
         } else if (status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED') {
           connecting=false;joined=false;textStatus(t(23),true);updateUi();
         }
