@@ -18,7 +18,6 @@ const STATIC_PATHS = Object.freeze([
   '/',
   '/billie-eilish',
   '/albuns',
-  '/ong',
   '/suporte',
   '/atualizacoes',
   '/comunidade',

@@ -580,8 +580,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
     description = copy.albumsDescription;
     pageType = 'CollectionPage';
   } else if (logical === '/ong') {
-    title = copy.ongTitle;
-    description = copy.ongDescription;
+    title = copy.fansTitle;
+    description = copy.fansDescription;
     pageType = 'CollectionPage';
   } else if (logical === '/suporte') {
     title = copy.supportTitle;
