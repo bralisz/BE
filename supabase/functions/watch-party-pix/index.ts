@@ -39,6 +39,7 @@ Deno.serve(async(req:Request)=>{
    transaction_amount:27.19,description:"BETV Watch Party - acesso permanente",
    payment_method_id:"pix",payer:{email:user.email},
    external_reference:"betv-wp:"+requestId,
+   notification_url:url+"/functions/v1/watch-party-pix-webhook",
    metadata:{purpose:"watch_party_unlock",user_id:user.id,request_id:requestId,amount_cents:"2719"},
    date_of_expiration:new Date(Date.now()+30*60000).toISOString()
   };
