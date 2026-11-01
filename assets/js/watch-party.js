@@ -138,10 +138,15 @@
     if (leave) { leave.hidden = !joined; leave.textContent = t(3); }
     if (make) { make.hidden = joined || connecting; make.textContent = t(4); }
     if ($('watchPartyTitle')) $('watchPartyTitle').textContent = t(14);
-    if ($('watchPartyPeopleLabel')) $('watchPartyPeopleLabel').textContent = xt('members');
+    if ($('watchPartyPeopleLabel')) $('watchPartyPeopleLabel').textContent = joined ? xt('members') : '';
     if ($('watchPartyHostLabel')) $('watchPartyHostLabel').textContent = xt('host');
     if ($('watchPartyGiftOpen')) $('watchPartyGiftOpen').hidden = true;
     if ($('watchPartyRoomCode')) $('watchPartyRoomCode').textContent = joined && isHost ? room : '';
+    if ($('watchPartyJoinButton')) $('watchPartyJoinButton').textContent = extraText('join');
+    if ($('watchPartyCopyCode')) $('watchPartyCopyCode').textContent = extraText('copy');
+    if ($('watchPartyCodeLabel')) $('watchPartyCodeLabel').textContent = extraText('code');
+    if ($('watchPartyCodeHint')) $('watchPartyCodeHint').textContent = extraText('codeHint');
+    if ($('watchPartyCodeInput')) $('watchPartyCodeInput').placeholder = extraText('code');
     if ($('watchPartyRoomCodeBox')) $('watchPartyRoomCodeBox').hidden = !joined || !isHost;
     if ($('watchPartyJoinBox')) $('watchPartyJoinBox').hidden = joined || connecting;
     for (const button of document.querySelectorAll('.watch-party-player-button')) {
@@ -157,6 +162,51 @@
   function send(event,payload) {
     if (joined && channel) channel.send({type:'broadcast',event,payload}).catch(()=>{});
   }
+  function openPlayerAfterHostStart() {
+    if (!joined || isHost || !videoId || currentVideo()?.id!==videoId) return;
+    playbackStarted=true;
+    if (activePlayer()) return;
+    const play=$('contentDetailPlay');
+    if (play?.dataset.itemId===videoId) {
+      // External media may still require a tap if the browser disallows
+      // autoplay without a gesture; the shared route/player are preserved.
+      play.click();
+      hidePanel();
+    }
+  }
+  function beginPlaybackByHost() {
+    if (!joined || !isHost || currentVideo()?.id!==videoId) return;
+    playbackStarted=true;startAt=Date.now();
+    send('start-playback',{host:myId(),room,video:videoId,at:startAt});
+    hidePanel();
+  }
+  async function joinByCode() {
+    const input=$('watchPartyCodeInput'),value=String(input?.value||'').trim().toLowerCase();
+    if (!ROOM_RE.test(value)) {textStatus(extraText('invalidCode'),true);return;}
+    if (!client() || !myId()){textStatus(t(5),true);return;}
+    const {data,error}=await client().from('watch_party_invites')
+      .select('room_id,video_id').eq('room_id',value).eq('invitee_id',myId())
+      .eq('status','accepted').gt('expires_at',new Date().toISOString()).limit(1);
+    const entry=Array.isArray(data)?data[0]:null;
+    if(error||!entry||!VIDEO_RE.test(String(entry.video_id||''))){
+      textStatus(extraText('mustAccept'),true);return;
+    }
+    if(currentVideo()?.id===entry.video_id){connect(value,false,entry.video_id);return;}
+    const pathname=typeof window.BETVLocaleURL==='function'
+      ?window.BETVLocaleURL('/'+encodeURIComponent(entry.video_id))
+      :'/'+encodeURIComponent(entry.video_id);
+    const url=new URL(pathname,location.origin);
+    url.searchParams.set('watchParty',value);url.searchParams.set('watchVideo',entry.video_id);
+    location.assign(url.href);
+  }
+  const additional={
+    'pt-br':{invalidCode:'Informe um código de sala válido.',mustAccept:'Aceite primeiro o convite nas notificações.',join:'Entrar com código',code:'Código da sala',codeHint:'O código funciona somente para fãs que aceitaram o convite.',copy:'Copiar código',copied:'Código copiado.',inviteTitle:'Convidar fã',inviteSubtitle:'Encontre um perfil e envie um convite para assistir juntos.',sent:'Convite enviado',lookup:'Pesquise pelo @usuário',startHint:'A sala está pronta. Clique em Assistir para iniciar com seus convidados.',connected:'Você entrou na sala. Aguarde o anfitrião iniciar o vídeo.'},
+    'en-us':{invalidCode:'Enter a valid room code.',mustAccept:'Accept your invitation in notifications first.',join:'Join with code',code:'Room code',codeHint:'Codes work only for fans who accepted an invitation.',copy:'Copy code',copied:'Code copied.',inviteTitle:'Invite a fan',inviteSubtitle:'Find a profile and invite them to watch together.',sent:'Invitation sent',lookup:'Search by @username',startHint:'Room ready. Press Play to start with your guests.',connected:'You joined the room. Wait for the host to start the video.'},
+    es:{invalidCode:'Introduce un código de sala válido.',mustAccept:'Primero acepta la invitación en notificaciones.',join:'Entrar con código',code:'Código de sala',codeHint:'Solo funciona si aceptaste una invitación.',copy:'Copiar código',copied:'Código copiado.',inviteTitle:'Invitar a un fan',inviteSubtitle:'Encuentra un perfil e invítalo a ver juntos.',sent:'Invitación enviada',lookup:'Buscar por @usuario',startHint:'Sala lista. Pulsa Reproducir para comenzar.',connected:'Estás en la sala. Espera a que inicie el anfitrión.'},
+    fr:{invalidCode:'Saisissez un code de salon valide.',mustAccept:'Acceptez votre invitation dans les notifications.',join:'Rejoindre avec un code',code:'Code du salon',codeHint:'Réservé aux fans ayant accepté une invitation.',copy:'Copier le code',copied:'Code copié.',inviteTitle:'Inviter un fan',inviteSubtitle:'Trouvez un profil et invitez-le à regarder ensemble.',sent:'Invitation envoyée',lookup:'Chercher par @pseudo',startHint:'Salon prêt. Appuyez sur Lecture pour commencer.',connected:'Vous avez rejoint le salon. Attendez le lancement de l’hôte.'},
+    it:{invalidCode:'Inserisci un codice stanza valido.',mustAccept:'Accetta prima l’invito dalle notifiche.',join:'Entra con codice',code:'Codice stanza',codeHint:'Valido solo per fan che hanno accettato un invito.',copy:'Copia codice',copied:'Codice copiato.',inviteTitle:'Invita un fan',inviteSubtitle:'Trova un profilo e invitalo a guardare insieme.',sent:'Invito inviato',lookup:'Cerca per @utente',startHint:'Stanza pronta. Premi Riproduci per iniziare.',connected:'Sei nella stanza. Attendi che l’host avvii il video.'}
+  };
+  const extraText=key=>(additional[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||additional['pt-br'])[key];
   function publish(force = false) {
     if (!isHost || !joined || !channel) return;
     if (!force && Date.now()-lastPublish < 700) return;
@@ -251,7 +301,7 @@
           url.searchParams.set('watchParty',room);url.searchParams.set('watchVideo',videoId);
           history.replaceState(history.state,'',url.pathname+url.search+url.hash);
           try {const p=await ownProfile();await ch.track({id:myId(),name:p.name,username:p.username,avatar:p.avatar,banner:p.banner,isHost,token});}catch(_){}
-          textStatus(isHost?t(6):t(10));updateUi();
+          textStatus(isHost?extraText('startHint'):extraText('connected'));updateUi();
           syncTimer=setInterval(()=>{if(isHost)publish();else if(state)syncPlayback(state);},1050);
           if(isHost){if(playbackStarted)publish(true);}else send('sync-request',{from:myId()});
           // Creating or accepting a room NEVER starts the video. Only the host
@@ -465,6 +515,12 @@
     window.addEventListener('be:detail-close',()=>{if(joined)leaveRoom();hidePanel();});
     window.addEventListener('pagehide',()=>{if(channel)client()?.removeChannel(channel);if(inboxChannel)client()?.removeChannel(inboxChannel);});
     window.addEventListener('be:content-ready',tryJoinFromUrl);
+    document.addEventListener('click',event=>{
+      if(event.target?.closest?.('#contentDetailPlay') && isHost && joined){
+        // The paid access check occurs before a host can create a room.
+        beginPlaybackByHost();
+      }
+    },true);
     window.addEventListener('popstate',tryJoinFromUrl);
     window.addEventListener('be:i18n-ready',()=>{updateUi();renderInbox();});
     window.addEventListener('be:notifications-ready',renderInbox);
