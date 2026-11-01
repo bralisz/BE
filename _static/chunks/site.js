@@ -475,7 +475,7 @@
     if(name==='config')return '/config';
     if(['terms','privacy','cookies','dmca','comunidade'].indexOf(name)!==-1)return '/'+name;if(name==='community'||name==='comunidad')return '/comunidade';
     if(name==='suporte'||name==='support')return '/suporte';
-    if(['ong','ongs'].indexOf(name)!==-1)return '/ong';
+    if(['ong','ongs'].indexOf(name)!==-1)return '/fãs';
     if(['fas','fãs','fans'].indexOf(name)!==-1)return '/fãs';
     if(['albuns','álbuns','albums'].indexOf(name)!==-1)return '/albuns'+(parts[1]?'/'+encodeURIComponent(parts[1]):'');
     if(name==='billie'||name==='billie-eilish'||name==='quem-e-billie')return '/billie-eilish';
@@ -12187,7 +12187,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const billieSpotlight = host.querySelector('.billie-home-spotlight');
       const donateSpotlight = host.querySelector('.donate-home-spotlight');
       if (billieSpotlight) billieSpotlight.hidden = currentView !== 'home' || Boolean(query);
-      if (donateSpotlight) donateSpotlight.hidden = currentView !== 'home' || Boolean(query);
+      if (donateSpotlight) donateSpotlight.remove();
       let visibleTotal = 0;
 
       sections.forEach(section => {
@@ -13751,7 +13751,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false,siteSkeletonReleased=document.documentElement.dataset.siteLoaded==='true';
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
   function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();window.clearTimeout(siteSkeletonHideTimer);var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;siteSkeletonReleased=true;document.documentElement.dataset.siteLoaded='true';if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
-  function donateVisualReady(){var donatePage=q('donatePage');return !isDonateRoute()||Boolean(donatePage&&donatePage.dataset&&donatePage.dataset.visualReady==='true');}
+  function donateVisualReady(){return true;}
   function notificationsVisualReady(){return !isNotificationsRoute()||window.__beNotificationsReady===true;}
   function waitForDonateVisualBeforeReveal(){
     if(donateVisualWaitBound)return;
@@ -13858,7 +13858,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isAlbumsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:albuns|álbuns|albums)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:albuns|álbuns|albums)(?:\/|$)/i.test(hash);}
   function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
   function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
-  function showDonateRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','support-page-active','fans-page-active','album-page-active','section-catalog-active');document.body.classList.add('donate-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-donate-page'));window.scrollTo(0,0);}
+  function showDonateRoute(){replaceRoute('/fãs');showFansRoute();}
   function showNotificationsRoute(){window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:true}}));document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
   function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
   function showFansRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','album-page-active');document.body.classList.add('fans-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:open-fans-page'));window.scrollTo(0,0);}
@@ -17448,8 +17448,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var link=event.target&&event.target.closest?event.target.closest('[data-open-donate="true"]'):null;
     if(!link)return;
     event.preventDefault();
-    if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/ong');
-    else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/ong'):'/ong');
+    if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/fãs');
+    else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs');
   });
 
   if(home)home.addEventListener('click',function(){

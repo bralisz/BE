@@ -21869,3 +21869,5 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
     display:none!important;
   }
 }
+
+.donate-page-shell,.donate-home-spotlight,.donate-ngos-section,.donate-ngo-list,.donate-hero,.donate-intro{display:none!important}

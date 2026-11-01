@@ -539,9 +539,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
       <button class="dd-item" data-public-action="profile">Perfil</button>
       <button class="dd-item" data-public-action="settings">Configurações</button>
       <button class="dd-item install-app-action" id="desktopInstallButton" data-public-action="install" type="button" hidden>Instalar app</button>
-      <button class="dd-item support-site-action" data-public-action="donate">
-        <span>Apoie uma ONG</span>
-      </button>
+      <button class="dd-item support-site-action" data-public-action="fans"><span>Fãs que apoiaram o site</span></button>
       <div class="dd-divider"></div>
       <button class="dd-item danger" id="publicAuthAction" data-public-action="auth">Entrar</button>
     </div>
@@ -1099,58 +1097,6 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
     </div>
   </main>
 </section>
-<section class="donate-page-shell" id="donatePage" hidden aria-label="Apoie uma ONG" aria-hidden="true">
-  <header class="donate-page-header" aria-label="Navegação da página Apoie uma ONG">
-    <button class="donate-page-home" id="donatePageHome" type="button" aria-label="Voltar para a Home" title="Home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg>
-    </button>
-    <div class="donate-page-header-actions">
-      <div class="donate-notification-wrap">
-        <button class="donate-page-notifications" id="donatePageNotifications" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Abrir notificações" title="Notificações">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-          <span class="donate-page-unread-dot" id="donatePageUnreadDot" hidden></span>
-        </button>
-        <div class="notification-dropdown donate-notification-dropdown" id="donateNotificationDropdown" aria-label="Notificações recentes">
-          <div class="notification-dropdown-header">
-            <strong>Notificações</strong>
-            <div class="notification-header-actions">
-              <button class="notification-mark-all" id="donateNotificationMarkAll" type="button">Marcar todas como lidas</button>
-              <button class="notification-header-close" id="donateNotificationClose" type="button" aria-label="Fechar notificações"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-            </div>
-          </div>
-          <div class="notification-preview-list" id="donateNotificationPreviewList"><div class="notification-preview-empty">Carregando…</div></div>
-          <button class="notification-view-all" id="donateNotificationViewAll" type="button">Ver todas as notificações</button>
-        </div>
-      </div>
-      <button class="donate-page-avatar" id="donatePageAvatar" type="button" aria-label="Abrir perfil" title="Perfil">
-        <span class="betv-header-avatar-inner" aria-hidden="true">
-          <img id="donatePageAvatarImage" src="/_static/media/profile/default-avatar.png" alt="Foto do usuário" data-avatar-fallback="/_static/media/profile/default-avatar.png">
-          <svg id="donatePageAvatarFallback" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
-        </span>
-      </button>
-    </div>
-  </header>
-  <section class="donate-hero" id="donateHero" aria-label="Banner da página de apoio às ONGs"></section>
-  <main class="donate-page-content">
-    <section class="donate-intro" aria-labelledby="donatePageTitle">
-      <h1 id="donatePageTitle">Apoie uma ONG</h1>
-      <p>Ao apoiar o site, parte do valor ajuda a manter a Billie Eilish TV e outra parte é destinada à ONG que você escolher. Assim, você apoia o projeto e também fortalece uma causa importante.</p>
-      <a class="donate-terms-link" href="/terms">Confira os termos aplicados</a>
-    </section>
-    <section class="donate-ngos-section" aria-label="ONGs disponíveis para apoio">
-      <div class="donate-ngo-status" id="donatePageStatus" role="status" aria-live="polite">Carregando ONGs…</div>
-      <div class="donate-ngo-list" id="donateNgoList"></div>
-      <div class="donate-ngo-show-more-wrap">
-        <button class="donate-ngo-show-more" id="donateNgoShowMore" type="button" hidden aria-hidden="true">Ver mais</button>
-      </div>
-    </section>
-    <section class="donate-supporters-section" id="donateSupportersSection" aria-labelledby="donateSupportersTitle" hidden>
-      <h2 id="donateSupportersTitle">Apoiadores</h2>
-      <div class="donate-supporters-status" id="donateSupportersStatus" role="status" aria-live="polite">Carregando apoiadores…</div>
-      <div class="donate-supporters-list" id="donateSupportersList"></div>
-    </section>
-  </main>
-</section>
 <section class="support-page-shell" id="supportPage" hidden aria-label="Central de suporte do BETV">
   <div class="support-page-inner">
     <header class="support-hero">
@@ -1602,7 +1548,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
       </nav>
     </div>
     <div class="footer-side">
-      <a class="footer-fans-link" id="footerFansLink" href="/fãs" data-open-fans="true">Ver fãs que apoiam o site</a>
+      <a class="footer-fans-link" id="footerFansLink" href="/fãs" data-open-fans="true">Fãs que apoiaram o site</a>
       <a class="footer-fans-link footer-fans-support-link" id="footerFansSupportLink" href="/suporte" data-public-action="support">Suporte</a>
       <nav class="footer-socials" aria-label="Links do site">
       <a class="footer-social-link" id="footerInstagram" href="#" target="_blank" rel="noopener noreferrer" aria-label="Instagram" title="Instagram" hidden>
