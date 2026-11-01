@@ -140,7 +140,11 @@
     if ($('watchPartyTitle')) $('watchPartyTitle').textContent = t(14);
     if ($('watchPartyPeopleLabel')) $('watchPartyPeopleLabel').textContent = joined ? xt('members') : '';
     if ($('watchPartyHostLabel')) $('watchPartyHostLabel').textContent = xt('host');
-    if ($('watchPartyGiftOpen')) $('watchPartyGiftOpen').hidden = true;
+    if ($('watchPartyGiftOpen')) {
+      const gift=$('watchPartyGiftOpen');
+      gift.hidden = !window.BETVWatchPartyPaywall?.canGift?.();
+      gift.textContent = xt('gift');
+    }
     if ($('watchPartyRoomCode')) $('watchPartyRoomCode').textContent = joined && isHost ? room : '';
     if ($('watchPartyJoinButton')) $('watchPartyJoinButton').textContent = extraText('join');
     if ($('watchPartyCopyCode')) $('watchPartyCopyCode').textContent = extraText('copy');
@@ -539,7 +543,8 @@
       '<button type="button" id="watchPartyInviteToggle" hidden></button>'+
       '<button type="button" id="watchPartyLeave" hidden></button></div>'+
       '<div id="watchPartyJoinBox" class="watch-party-code-entry"><input id="watchPartyCodeInput" type="text" autocomplete="off" maxlength="36" aria-label="Room code"><button id="watchPartyJoinButton" type="button"></button><small id="watchPartyCodeHint"></small></div>'+
-      '<div id="watchPartyRoomCodeBox" class="watch-party-room-code" hidden><small id="watchPartyCodeLabel"></small><code id="watchPartyRoomCode"></code><button type="button" id="watchPartyCopyCode"></button></div>';
+      '<div id="watchPartyRoomCodeBox" class="watch-party-room-code" hidden><small id="watchPartyCodeLabel"></small><code id="watchPartyRoomCode"></code><button type="button" id="watchPartyCopyCode"></button></div>'+
+      '<button type="button" id="watchPartyGiftOpen" class="watch-party-gift-cta" hidden></button>';
     document.body.append(panel);
     const toast=document.createElement('div');toast.id='watchPartyInviteToast';toast.className='watch-party-invite-toast';toast.hidden=true;
     toast.setAttribute('role','region');toast.setAttribute('aria-label','Watch Party');document.body.append(toast);
@@ -583,6 +588,7 @@
     window.addEventListener('popstate',tryJoinFromUrl);
     window.addEventListener('be:i18n-ready',()=>{updateUi();renderInbox();if(invitePicker&&!invitePicker.hidden)renderInviteLabels();});
     window.addEventListener('be:notifications-ready',renderInbox);
+    window.addEventListener('be:watch-party-gift-status',updateUi);
     window.setInterval(()=>{
       tryJoinFromUrl();setupPlayerButtons();ensurePlacement();
       if(myId()!==inboxUser)subscribeInbox();
