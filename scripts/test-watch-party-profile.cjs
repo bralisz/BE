@@ -56,4 +56,8 @@ assert.match(read('development/source/admin/admin.js'),/const siteRoutes = \['se
 assert.doesNotMatch(read('development/source/admin/workspace.js'),/\['ongs', 'Apoie uma ONG', 'Site'\]/);
 assert.ok(!html.includes('id="donatePage"'));
 assert.match(html,/data-public-action="fans"/);
+assert.match(html,'https://billieilishtv.site/en-us/fans');
+assert.match(read('assets/js/site.js'),/footerLink\.href='https:\/\/billieilishtv\.site\/en-us\/fans'/);
+assert.match(read('assets/js/account.js'),/location\.assign\('https:\/\/billieilishtv\.site\/en-us\/fans'\)/);
+assert.match(read('assets/js/community.js'),/location\.assign\('https:\/\/billieilishtv\.site\/en-us\/fans'\)/);
 console.log('BETV Watch Party, profile privacy, lazy-load cache and build checks passed.');
