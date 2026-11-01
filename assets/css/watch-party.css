@@ -111,7 +111,6 @@
 
 /* Waiting room: never render a placeholder host or duplicate avatar/0 count. */
 .watch-party-panel .watch-party-members,
-.watch-party-panel .watch-party-gift-cta,
 .watch-party-panel .watch-party-invite-form{display:none!important}
 .watch-party-panel .watch-party-host[hidden],
 .watch-party-panel .watch-party-code-entry[hidden],
