@@ -170,10 +170,21 @@
   .detail-actions{display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:wrap!important;gap:12px!important}
   .detail-primary-actions,.detail-secondary-actions{display:contents!important}
   .detail-actions #contentDetailPlay{order:0}
-  .detail-actions #contentDetailList{order:1}
-  .detail-actions #detailStreamingStore{order:2}
-  .detail-actions #detailStreamingButtonMobile{order:3}
-  .detail-actions #contentDetailCast{order:4}
-  .detail-actions #contentDetailWatchParty{order:5}
+  .detail-actions #contentDetailList{order:2}
+  .detail-actions #detailStreamingStore{order:3}
+  .detail-actions #detailStreamingButtonMobile{order:4}
+  .detail-actions #contentDetailCast{order:5}
+  .detail-actions #contentDetailWatchParty{order:1}
   .detail-actions #contentDetailShare{order:6}
 }
+
+/* Unified, accessible close icons and a discreet Pix alternative. */
+.watch-party-unlock-close,#watchPartyGiftClose{display:grid!important;place-items:center!important;position:absolute;z-index:4;top:14px;right:15px;width:36px!important;height:36px!important;padding:0!important;border:1px solid rgba(198,209,231,.15)!important;border-radius:50%!important;background:rgba(111,124,145,.20)!important;color:#eaf0fa!important;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.watch-party-unlock-close:hover,#watchPartyGiftClose:hover{background:rgba(133,151,183,.34)!important;border-color:rgba(213,226,250,.34)!important}
+.watch-party-unlock-close:active,#watchPartyGiftClose:active{transform:scale(.94)}
+.watch-party-unlock-close:focus-visible,#watchPartyGiftClose:focus-visible{outline:2px solid #8db8ff;outline-offset:3px}
+.watch-party-unlock-close svg,#watchPartyGiftClose svg{width:17px;height:17px;display:block}
+.watch-party-unlock-pix{width:100%;min-height:43px;border:1px solid rgba(155,184,229,.33);border-radius:13px;background:rgba(62,83,116,.19);color:#eaf4ff;font:750 13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer}
+.watch-party-unlock-pix:hover{background:rgba(76,107,153,.30)}
+.watch-party-unlock-pix:focus-visible{outline:2px solid #91bcff;outline-offset:2px}
+.watch-party-unlock-pix[hidden]{display:none!important}

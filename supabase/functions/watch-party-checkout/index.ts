@@ -51,6 +51,10 @@ Deno.serve(async(req:Request)=>{
   const localPrice = priceForLocale(payload.locale);
   const params=new URLSearchParams();
   params.set("mode","payment");params.set("locale",localPrice.locale);
+  if(payload.paymentMethod==="pix"){
+   if(localPrice.currency!=="brl")return reply(origin,400,{error:"pix_brl_only"});
+   params.set("payment_method_types[0]","pix");
+  }
   params.set("line_items[0][price_data][currency]",localPrice.currency);
   params.set("line_items[0][price_data][unit_amount]",String(localPrice.amount));
   params.set("line_items[0][price_data][product_data][name]","BETV Watch Party — desbloqueio permanente");
@@ -64,7 +68,7 @@ Deno.serve(async(req:Request)=>{
   params.set("cancel_url",origin+"/?watch_party_checkout=cancelled");
   if(user.email)params.set("customer_email",user.email);
   const out=await stripe("checkout/sessions",params);
-  if(!out.ok||!out.data?.id||!out.data?.url)return reply(origin,502,{error:"stripe_checkout_failed"});
+  if(!out.ok||!out.data?.id||!out.data?.url)return reply(origin,502,{error:payload.paymentMethod==="pix"?"pix_not_available":"stripe_checkout_failed"});
   return reply(origin,200,{url:out.data.url});
  }
  if(payload.action!=="verify"||typeof payload.session_id!=="string"||!/^cs_(test|live)_[a-zA-Z0-9]{10,200}$/.test(payload.session_id))
