@@ -146,3 +146,5 @@
 .detail-secondary-actions{gap:7px}
 .watch-party-gift-dialog{max-height:90dvh;border-radius:24px;padding:19px 13px}
 }
+
+.detail-secondary-actions .detail-streaming-store[hidden]{display:none!important}
