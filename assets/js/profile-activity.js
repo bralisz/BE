@@ -96,8 +96,8 @@
   section.querySelector('strong').textContent=t(2);
   section.querySelector('small').textContent=t(3);
   const input=section.querySelector('input'),notice=section.querySelector('.profile-watch-privacy-feedback');
-  const actions=panel.querySelector('.settings-data-actions');
-  if(actions)actions.insertAdjacentElement('afterend',section);
+  const exportControls=panel.querySelector('.settings-data-status')||panel.querySelector('.settings-data-actions');
+  if(exportControls)exportControls.insertAdjacentElement('afterend',section);
   else panel.insertBefore(section,panel.querySelector('.community-privacy-card'));
 
   const current=user().uid,serial=++settingsRequest;
