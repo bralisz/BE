@@ -1936,6 +1936,107 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
 
+  // In Vercel previews, recover public content directly from the existing
+  // anon-accessible Supabase RPC if the serverless public-data endpoint fails.
+  // Production, authenticated requests and writes never use this fallback.
+  const PREVIEW_PUBLIC_COLLECTIONS = new Set(['contents','featured','gallery','movies','news','notifications','ongs','sections','series','videos']);
+  const PREVIEW_HOME_COLLECTIONS = ['sections','videos','movies','series','featured','news'];
+  const PREVIEW_PUBLIC_FIELDS = new Set([
+    'active','preserveTitle','bannerUrl','category','contentCollection','contentId','contentUrl',
+    'description','body','summary','subtitle','name','buttonLabel','buttonText','actionLabel',
+    'ctaLabel','label','text','duration','imageUrl','itemLimit','itemType','link','logoUrl',
+    'mediaType','mobileAppDriveUrl','tvDriveUrl','minimumDonationCents','minimumDonationUsdCents',
+    'order','publicId','runtime','sectionId','sectionName','showCardLogo','slug',
+    'sourceCollection','streamingAvailability','streamingLinks','subtitleUrl','subtitleLocale',
+    'thumbnailUrl','title','tracks','translations','type','videoDuration','videoId','videoUrl','year'
+  ]);
+  const PREVIEW_PUBLIC_URL_FIELDS = ['contentUrl','videoUrl','link','subtitleUrl','mobileAppDriveUrl','tvDriveUrl','imageUrl','thumbnailUrl','bannerUrl','logoUrl'];
+
+  function previewPublicDataConfig() {
+    if (!String(location.hostname).toLowerCase().endsWith('.vercel.app')) return null;
+    const config = window.BE_SUPABASE_CONFIG || {};
+    const key = String(config.publishableKey || '').trim();
+    if (!key || (!key.startsWith('sb_publishable_') && !key.startsWith('eyJ'))) return null;
+    try {
+      const base = new URL(String(config.url || ''));
+      if (base.protocol !== 'https:' || !base.hostname.endsWith('.supabase.co')) return null;
+      return {url:base.origin, key};
+    } catch (_) { return null; }
+  }
+
+  async function fetchPreviewPublicRpc(functionName, params) {
+    const config = previewPublicDataConfig();
+    if (!config) throw new Error('preview_fallback_disabled');
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 9000);
+    try {
+      const response = await fetch(config.url + '/rest/v1/rpc/' + functionName, {
+        method:'POST', credentials:'omit', cache:'no-store', signal:controller.signal,
+        headers: {apikey:config.key, Authorization:'Bearer ' + config.key,
+          Accept:'application/json', 'Content-Type':'application/json'},
+        body:JSON.stringify(params)
+      });
+      if (!response.ok) throw new Error('preview_public_rpc_unavailable');
+      return await response.json();
+    } finally { window.clearTimeout(timer); }
+  }
+
+  function normalizePreviewPublicItem(record) {
+    if (!record || typeof record !== 'object' || !record.id || !record.data || typeof record.data !== 'object') return null;
+    const item = {id:String(record.id).slice(0,100)};
+    for (const field of PREVIEW_PUBLIC_FIELDS) {
+      if (Object.prototype.hasOwnProperty.call(record.data,field)) item[field] = record.data[field];
+    }
+    for (const field of PREVIEW_PUBLIC_URL_FIELDS) {
+      if (typeof item[field] !== 'string' || !item[field]) continue;
+      const value = item[field].trim();
+      if (value.startsWith('/') && !value.startsWith('//')) { item[field] = value; continue; }
+      try {
+        const parsed = new URL(value);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') item[field] = '';
+      } catch (_) { item[field] = ''; }
+    }
+    item.active = item.active !== false && String(item.active).toLowerCase() !== 'false';
+    item.createdAt = String(record.created_at || '').slice(0,80);
+    item.updatedAt = String(record.updated_at || '').slice(0,80);
+    return item;
+  }
+
+  async function fetchPreviewPublicData(requestPath) {
+    const requestUrl = new URL(requestPath, location.origin);
+    if (requestUrl.origin !== location.origin || requestUrl.pathname !== '/api/public-data') throw new Error('preview_fallback_bad_route');
+    const name = requestUrl.searchParams.get('name') || '';
+    const id = requestUrl.searchParams.get('id') || '';
+    const locale = String(requestUrl.searchParams.get('locale') || activeLocaleSlug()).toLowerCase();
+    if (name === 'home-version' && !id) {
+      return await fetchPreviewPublicRpc('get_public_home_versions_v1', {});
+    }
+    if (name === 'home-bootstrap' && !id) {
+      const raw = await fetchPreviewPublicRpc('get_public_home_bootstrap_v2', {p_locale:locale});
+      const data = Array.isArray(raw) ? raw[0] : raw;
+      if (!data || typeof data !== 'object') throw new Error('preview_bootstrap_invalid');
+      const bundle = {};
+      for (const collection of PREVIEW_HOME_COLLECTIONS) {
+        bundle[collection] = (Array.isArray(data[collection]) ? data[collection] : [])
+          .map(normalizePreviewPublicItem).filter(Boolean);
+      }
+      bundle.settings = {site:data.settings && data.settings.site || null};
+      bundle.__versions = data.__versions || {};
+      bundle.__generatedAt = Date.now();
+      return bundle;
+    }
+    if (name === 'settings' && ['site','ong','billie-eilish'].includes(id)) {
+      const raw = await fetchPreviewPublicRpc('get_public_site_setting_v2', {p_id:id,p_locale:locale});
+      return Array.isArray(raw) ? (raw[0] || null) : raw;
+    }
+    if (!PREVIEW_PUBLIC_COLLECTIONS.has(name)) throw new Error('preview_collection_disallowed');
+    const raw = await fetchPreviewPublicRpc('get_public_content_items_v2', {
+      p_collection:name, p_id:id || null, p_locale:locale
+    });
+    const rows = (Array.isArray(raw) ? raw : []).map(normalizePreviewPublicItem).filter(Boolean);
+    return id ? (rows[0] || null) : rows;
+  }
+
   // Public reads must settle even if a fetch/body stalls on a weak connection.
   async function fetchPublicJson(url, timeoutMs = 8000, options = {}) {
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
@@ -1955,6 +2056,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return response.json();
     });
     try { return await Promise.race([request, deadline]); }
+    catch (error) {
+      // Retry public data only on temporary Vercel preview domains.
+      if (previewPublicDataConfig() && String(url).startsWith('/api/public-data?')) {
+        try { return await fetchPreviewPublicData(url); } catch (_) {}
+      }
+      throw error;
+    }
     finally { window.clearTimeout(timer); }
   }
 
@@ -5857,6 +5965,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (tag === 'blohsh') return { label: 'Blohsh', className: 'is-blohsh' };
     if (tag === 'billie_fan') return { label: localizedUiText('Fã da Billie'), className: 'is-billie-fan' };
     if (tag === 'boaf') return { label: 'BOAF', className: 'is-boaf' };
+    if (tag === 'happier_than_ever') return { label: 'Happier Than Ever', className: 'is-happier-than-ever' };
     return null;
   }
 
@@ -7976,6 +8085,40 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         return false;
       }
     };
+
+    // Optional Watch Party bridge for the VK embed: only advertise syncing when
+    // its actual player API exposes play, pause and seek controls.
+    window.BETVExternalPlayerSync = Object.freeze({
+      read() {
+        if (overlay.hidden || activeProvider !== 'vk' || !vkApiReady || !vkPlayer
+            || typeof vkPlayer.getCurrentTime !== 'function'
+            || typeof vkPlayer.getState !== 'function') return null;
+        const seek = vkPlayer.seek || vkPlayer.seekTo || vkPlayer.setCurrentTime;
+        if (typeof seek !== 'function' || typeof vkPlayer.play !== 'function'
+            || typeof vkPlayer.pause !== 'function') return null;
+        const position = readVkCurrentTime();
+        if (!Number.isFinite(position)) return null;
+        return {provider:'vk',position,playing:!readVkPaused()};
+      },
+      apply(snapshot) {
+        if (overlay.hidden || activeProvider !== 'vk' || !vkApiReady || !vkPlayer
+            || snapshot?.provider !== 'vk') return false;
+        const seek = vkPlayer.seek || vkPlayer.seekTo || vkPlayer.setCurrentTime;
+        if (typeof seek !== 'function' || typeof vkPlayer.play !== 'function'
+            || typeof vkPlayer.pause !== 'function') return false;
+        const position = Number(snapshot.position);
+        if (!Number.isFinite(position) || position < 0 || position > 86400) return false;
+        try {
+          if (Math.abs(readVkCurrentTime() - position) > .85)
+            Promise.resolve(seek.call(vkPlayer,position)).catch(() => {});
+          if (snapshot.playing && readVkPaused())
+            Promise.resolve(vkPlayer.play()).catch(() => {});
+          else if (!snapshot.playing && !readVkPaused())
+            Promise.resolve(vkPlayer.pause()).catch(() => {});
+          return true;
+        } catch (_) { return false; }
+      }
+    });
 
     const switchVkQuality = quality => {
       const hd = Math.min(6, Math.max(1, Math.round(Number(quality) || 4)));

@@ -1,0 +1,3 @@
+alter table public.watch_party_unlocks drop constraint if exists watch_party_unlocks_amount_cents_check;
+alter table public.watch_party_unlocks drop constraint if exists watch_party_unlocks_currency_check;
+alter table public.watch_party_unlocks add constraint watch_party_unlocks_local_price_check check ((currency='usd' and amount_cents=500) or (currency='brl' and amount_cents=2719) or (currency='eur' and amount_cents=449));
