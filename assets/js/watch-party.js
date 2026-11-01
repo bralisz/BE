@@ -120,7 +120,7 @@
     }
     const owner = people.find(p=>p.isHost) || (isHost && joined ? people.find(p=>p.id===myId()) : null);
     const hostCard = $('watchPartyHostCard');
-    if (hostCard) hostCard.hidden = !joined || !owner;
+    if (hostCard) hostCard.hidden = !joined || !owner || !(cleanImage(owner.avatar)||cleanImage(owner.banner));
     const cover = $('watchPartyBanner'), name = $('watchPartyHostName'), avatar = $('watchPartyHostAvatar');
     if (cover) {
       const url = cleanImage(owner?.banner);
@@ -254,7 +254,7 @@
       url.searchParams.delete('watchParty');url.searchParams.delete('watchVideo');
       history.replaceState(history.state,'',url.pathname+url.search+url.hash);
     }
-    if(invitePicker)invitePicker.hidden=true;
+    closeInvitePicker();
     textStatus(''); updateUi();
   }
   async function connect(id,asHost,expectedId='') {
@@ -401,39 +401,99 @@
     ch.on('postgres_changes',{event:'*',schema:'public',table:'watch_party_invites',filter:'invitee_id=eq.'+id},()=>pollInbox(true));
     ch.subscribe();
   }
+  function createInvitePicker() {
+    if(invitePicker)return invitePicker;
+    invitePicker=document.createElement('div');
+    invitePicker.id='watchPartyInvitePicker';invitePicker.className='watch-party-invite-picker';invitePicker.hidden=true;
+    invitePicker.innerHTML='<div class="watch-party-picker-backdrop"></div>'+
+      '<section class="watch-party-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="watchPartyPickerTitle">'+
+      '<div class="watch-party-ios-handle"></div><header class="watch-party-picker-header">'+
+      '<div><strong id="watchPartyPickerTitle"></strong><p id="watchPartyPickerSubtitle"></p></div>'+
+      '<button type="button" id="watchPartyPickerClose" aria-label="Close">×</button></header>'+
+      '<div class="watch-party-picker-search"><input id="watchPartyInviteSearch" type="search" autocomplete="off" maxlength="30" spellcheck="false"></div>'+
+      '<div class="watch-party-picker-results" id="watchPartySearchResults"></div>'+
+      '<p class="watch-party-picker-status" id="watchPartyPickerStatus" role="status"></p></section>';
+    document.body.append(invitePicker);
+    invitePicker.querySelector('.watch-party-picker-backdrop').addEventListener('click',closeInvitePicker);
+    $('watchPartyPickerClose').addEventListener('click',closeInvitePicker);
+    $('watchPartyInviteSearch').addEventListener('input',()=>{
+      clearTimeout(searchTimer);searchTimer=setTimeout(findFans,240);
+    });
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!invitePicker.hidden)closeInvitePicker();});
+    return invitePicker;
+  }
+  function closeInvitePicker(){if(invitePicker)invitePicker.hidden=true;}
+  function renderInviteLabels() {
+    if(!invitePicker)return;
+    $('watchPartyPickerTitle').textContent=extraText('inviteTitle');
+    $('watchPartyPickerSubtitle').textContent=extraText('inviteSubtitle');
+    $('watchPartyInviteSearch').placeholder=extraText('lookup');
+    $('watchPartyPickerClose').setAttribute('aria-label',t(22));
+  }
+  function openInvitePicker(){
+    if(!joined || !isHost)return;
+    createInvitePicker();renderInviteLabels();
+    invitePicker.hidden=false;
+    $('watchPartyInviteSearch').value='';
+    $('watchPartySearchResults').textContent=extraText('lookup');
+    $('watchPartyPickerStatus').textContent='';
+    $('watchPartyInviteSearch').focus();
+  }
+  async function publicFanProfile(username,avatar) {
+    try {
+      const {data,error}=await client().rpc('get_public_profile',{p_username:username});
+      if(!error){
+        const p=Array.isArray(data)?data[0]:data;
+        if(p)return {username:p.username||username,name:p.display_name||username,avatar:p.avatar_url||avatar,banner:p.banner_url||''};
+      }
+    }catch(_){}
+    return {username,name:username,avatar,banner:''};
+  }
+  function fanPickerCard(fan){
+    const card=document.createElement('div');card.className='watch-party-picker-fan';
+    const cover=document.createElement('div');cover.className='watch-party-picker-cover';
+    const background=profileImage(fan.banner,'','watch-party-picker-banner');
+    if(!background.hidden)cover.append(background);
+    const row=document.createElement('div');row.className='watch-party-picker-fan-row';
+    const avatar=document.createElement('span');avatar.className='watch-party-picker-avatar';
+    const img=profileImage(fan.avatar,fan.name,'watch-party-picker-photo');
+    if(!img.hidden)avatar.append(img);else avatar.textContent=safeInitial(fan.name);
+    const names=document.createElement('div');names.className='watch-party-picker-names';
+    const full=document.createElement('strong');full.textContent=String(fan.name||fan.username);
+    const user=document.createElement('small');user.textContent='@'+fan.username;
+    names.append(full,user);row.append(avatar,names);
+    const action=btn(t(1),'watch-party-picker-send');
+    action.addEventListener('click',()=>sendInvite(fan.username,action));
+    row.append(action);card.append(cover,row);return card;
+  }
   async function findFans() {
-    const box=$('watchPartyInviteSearch'),results=$('watchPartySearchResults');
-    if(!box||!results)return;
-    const query=box.value.trim().replace(/^@+/,'').slice(0,30);
+    const input=$('watchPartyInviteSearch'),results=$('watchPartySearchResults');
+    if(!input||!results||!client())return;
+    const serial=++fanSearchSerial,query=input.value.trim().replace(/^@+/,'').slice(0,30);
     results.replaceChildren();
-    if(query.length<2) {results.textContent=t(20);return;}
+    if(query.length<2){results.textContent=extraText('lookup');return;}
     const {data,error}=await client().rpc('search_public_profiles',{p_query:query,p_limit:8});
+    if(serial!==fanSearchSerial||invitePicker?.hidden)return;
     if(error){results.textContent=t(8);return;}
-    const fans=(Array.isArray(data)?data:[]).filter(x=>String(x.username).toLowerCase()!==String(authUser()?.username||'').toLowerCase());
-    if(!fans.length) {results.textContent=t(19);return;}
-    for (const fan of fans) {
-      const item=btn('','watch-party-fan-result');
-      const avatar=document.createElement('span');avatar.className='watch-party-fan-avatar';
-      avatar.textContent=safeInitial(fan.username);
-      const img=profileImage(fan.avatar_url,fan.username,'watch-party-fan-photo');
-      if(!img.hidden){avatar.textContent='';avatar.appendChild(img);}
-      const label=document.createElement('span');label.textContent='@'+fan.username;
-      item.append(avatar,label);
-      item.addEventListener('click',()=>sendInvite(fan.username,item));
-      results.appendChild(item);
-    }
+    const found=(Array.isArray(data)?data:[]).filter(x=>String(x.username||'').toLowerCase()!==String(authUser()?.username||'').toLowerCase());
+    if(!found.length){results.textContent=t(19);return;}
+    const rich=await Promise.all(found.map(f=>publicFanProfile(f.username,f.avatar_url)));
+    if(serial!==fanSearchSerial||invitePicker?.hidden)return;
+    for(const fan of rich)results.append(fanPickerCard(fan));
   }
   async function sendInvite(username,button) {
-    if (!isHost||!joined||Date.now()-lastInviteClickAt<600||!client())return;
+    if(!isHost||!joined||Date.now()-lastInviteClickAt<600||!client())return;
     lastInviteClickAt=Date.now();button.disabled=true;
     const video=currentVideo();
     const {error}=await client().rpc('send_watch_party_invite',{
       p_username:username,p_room_id:room,p_video_id:videoId,p_video_title:video?.title||'Vídeo'
     });
-    if (error) {textStatus(t(8),true);button.disabled=false;return;}
-    $('watchPartyInviteForm').hidden=true;
-    $('watchPartyInviteSearch').value='';
-    $('watchPartySearchResults').replaceChildren();
+    if(error){
+      $('watchPartyPickerStatus').textContent=t(8);
+      button.disabled=false;return;
+    }
+    button.textContent=extraText('sent');
+    $('watchPartyPickerStatus').textContent=t(7);
     textStatus(t(7));
   }
   function tryJoinFromUrl() {
