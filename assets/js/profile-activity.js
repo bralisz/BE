@@ -96,7 +96,10 @@
   section.querySelector('strong').textContent=t(2);
   section.querySelector('small').textContent=t(3);
   const input=section.querySelector('input'),notice=section.querySelector('.profile-watch-privacy-feedback');
-  panel.insertBefore(section,panel.querySelector('.settings-data-actions'));
+  const actions=panel.querySelector('.settings-data-actions');
+  if(actions)actions.insertAdjacentElement('afterend',section);
+  else panel.insertBefore(section,panel.querySelector('.community-privacy-card'));
+
   const current=user().uid,serial=++settingsRequest;
   Promise.resolve(window.beBackend?.ready).then(async()=>{
    const result=await client()?.from('profile_watch_activity').select('public_visible').eq('user_id',current).maybeSingle();
