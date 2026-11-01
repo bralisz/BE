@@ -2,8 +2,17 @@ import "jsr:@supabase/functions-js@2.4.4/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const ROOT = "https://billieilishtv.site";
-const PROJECT_PREVIEW = /^be(?:-[a-z0-9-]+)?-gff17\\.vercel\\.app$/i;
+const PROJECT_PREVIEW = /^be(?:-[a-z0-9-]+)?-gff17\.vercel\.app$/i;
 const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
+// Launch prices are fixed in each checkout currency; any future FX update must
+// change the UI, server and database constraint together.
+const WATCH_PARTY_PRICES: Record<string, number> = { usd: 500, brl: 2719, eur: 449 };
+function priceForLocale(value: unknown): { currency: string; amount: number; locale: string } {
+ const slug = String(value || "en-us").trim().toLowerCase();
+ const currency = slug === "pt-br" ? "brl" : slug === "en-us" ? "usd" : "eur";
+ const locale = slug === "pt-br" ? "pt-BR" : slug === "en-us" ? "en" : slug === "es" ? "es" : slug === "fr" ? "fr" : "it";
+ return { currency, amount: WATCH_PARTY_PRICES[currency], locale };
+}
 const supaUrl = Deno.env.get("SUPABASE_URL") || "";
 const anon = Deno.env.get("SUPABASE_ANON_KEY") || "";
 const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -39,17 +48,18 @@ Deno.serve(async(req:Request)=>{
  if(payload.action==="status")return reply(origin,200,{unlocked:hasAccess});
  if(payload.action==="create"){
   if(hasAccess)return reply(origin,200,{unlocked:true});
-  // Checkout is always USD 5. Stripe Adaptive Pricing can present local currencies.
+  const localPrice = priceForLocale(payload.locale);
   const params=new URLSearchParams();
-  params.set("mode","payment");params.set("locale","auto");
-  params.set("line_items[0][price_data][currency]","usd");
-  params.set("line_items[0][price_data][unit_amount]","500");
+  params.set("mode","payment");params.set("locale",localPrice.locale);
+  params.set("line_items[0][price_data][currency]",localPrice.currency);
+  params.set("line_items[0][price_data][unit_amount]",String(localPrice.amount));
   params.set("line_items[0][price_data][product_data][name]","BETV Watch Party — desbloqueio permanente");
   params.set("line_items[0][quantity]","1");
   params.set("client_reference_id",user.id);
   params.set("metadata[purpose]","betv_watch_party_unlock");
   params.set("metadata[user_id]",user.id);
-  params.set("metadata[amount_usd_cents]","500");
+  params.set("metadata[price_currency]",localPrice.currency);
+  params.set("metadata[price_amount_cents]",String(localPrice.amount));
   params.set("success_url",origin+"/?watch_party_checkout=success&session_id={CHECKOUT_SESSION_ID}");
   params.set("cancel_url",origin+"/?watch_party_checkout=cancelled");
   if(user.email)params.set("customer_email",user.email);
@@ -64,12 +74,18 @@ Deno.serve(async(req:Request)=>{
  if(!result.ok||session?.id!==payload.session_id||
  session.mode!=="payment"||session.payment_status!=="paid"||session.status!=="complete"||
  session.client_reference_id!==user.id||session.metadata?.purpose!=="betv_watch_party_unlock"||
- session.metadata?.user_id!==user.id||session.metadata?.amount_usd_cents!=="500"||
- session.amount_subtotal!==500||session.currency!=="usd"){
+ session.metadata?.user_id!==user.id||
+ !Object.prototype.hasOwnProperty.call(WATCH_PARTY_PRICES,String(session.currency||"")) ||
+ session.amount_subtotal !== WATCH_PARTY_PRICES[String(session.currency||"")] ||
+ !(
+   (session.metadata?.price_currency===session.currency &&
+    session.metadata?.price_amount_cents===String(session.amount_subtotal))
+   || (session.currency==="usd" && session.metadata?.amount_usd_cents==="500")
+ )){
   return reply(origin,409,{error:"payment_not_confirmed"});
  }
  const {error:insertError}=await admin.from("watch_party_unlocks").upsert({
-  user_id:user.id,stripe_session_id:session.id,amount_cents:500,currency:"usd"
+  user_id:user.id,stripe_session_id:session.id,amount_cents:session.amount_subtotal,currency:session.currency
  },{onConflict:"user_id",ignoreDuplicates:true});
  if(insertError)return reply(origin,503,{error:"unlock_save_failed"});
  // Preserve existing badges; add the new gold reward only after Stripe confirms payment.
