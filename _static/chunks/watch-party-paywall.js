@@ -30,7 +30,11 @@
     const src=safeUrl(url);if(src)el.src=src;else el.hidden=true;return el;
   }
   let panel=null,unlocked=false,checked=false,busy=false,giftInfo=null,selected=null,searchTimer=0,searchSeq=0;
-  let verifyingPayment=false,pendingTimer=0,pendingTries=0;
+  let verifyingPayment=false,pendingTimer=0,pendingTries=0,pixData=null,pixTimer=0,pixChecking=false;
+  const pixStorage=()=> 'betvWatchPartyPix:'+String(user()?.uid||'guest');
+  const loadPix=()=>{try{const o=JSON.parse(localStorage.getItem(pixStorage())||'null');return o&&Date.now()-Number(o.savedAt||0)<35*60000&&/^[0-9]{5,25}$/.test(o.paymentId)?o:null;}catch(_){return null;}};
+  const savePix=v=>{try{localStorage.setItem(pixStorage(),JSON.stringify({...v,savedAt:Date.now()}));}catch(_){}};
+  const clearPix=()=>{clearInterval(pixTimer);pixTimer=0;pixData=null;try{localStorage.removeItem(pixStorage());}catch(_){}};
   const pendingStorageKey=()=> 'betvWatchPartyPending:'+String(user()?.uid||'guest');
   const pendingSession=()=>{
     try{
@@ -48,12 +52,13 @@
     panel.innerHTML='<div class="watch-party-paywall-overlay"></div><section class="watch-party-unlock-card" role="dialog" aria-modal="true" aria-labelledby="watchPartyUnlockTitle">'+
       '<div class="watch-party-ios-handle" aria-hidden="true"></div><button class="watch-party-unlock-close" id="watchPartyUnlockClose" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>'+
       '<div class="watch-party-paywall-profile"><div class="watch-party-paywall-banner"><img id="watchPartyPaywallBanner" hidden alt=""></div>'+
-      '<div class="watch-party-paywall-identity"><span class="watch-party-paywall-avatar" id="watchPartyPaywallAvatar"></span><div class="watch-party-paywall-names"><strong id="watchPartyPaywallName"></strong><span id="watchPartyPaywallUsername"></span></div></div></div>'+
+      '<div class="watch-party-paywall-identity"><span class="watch-party-paywall-avatar" id="watchPartyPaywallAvatar"></span><div class="watch-party-paywall-names"><strong id="watchPartyPaywallName"></strong><span class="watch-party-gold-tag watch-party-preview-tag notranslate" translate="no" title="Prévia da tag">Happier Than Ever</span><span id="watchPartyPaywallUsername" hidden></span></div></div></div>'+
       '<h2 id="watchPartyUnlockTitle">Watch Party</h2><p id="watchPartyUnlockDescription"></p>'+
       '<div id="watchPartyPurchaseSection"><div class="watch-party-unlock-price"><strong id="watchPartyUnlockPrice"></strong><span id="watchPartyOneTime"></span></div>'+
       '<div class="watch-party-unlock-reward"><span class="watch-party-gold-tag notranslate" translate="no">Happier Than Ever</span><div><strong id="watchPartyRewardTitle"></strong><span id="watchPartyRewardInfo"></span></div></div>'+
       '<div class="watch-party-unlock-plus"><strong id="watchPartyPlusTitle"></strong><p id="watchPartyPlusInfo"></p></div>'+
-      '<button id="watchPartyUnlockCheckout" type="button" class="watch-party-unlock-checkout"></button><button id="watchPartyUnlockPix" type="button" class="watch-party-unlock-pix" hidden>Pagar com Pix</button></div>'+
+      '<button id="watchPartyUnlockCheckout" type="button" class="watch-party-unlock-checkout"></button><button id="watchPartyUnlockPix" type="button" class="watch-party-unlock-pix" hidden>Pagar com Pix</button></div>'+ 
+      '<section id="watchPartyPixPanel" class="watch-party-pix-panel" hidden aria-label="Pagamento Pix"><header class="watch-party-pix-head"><strong>Pagamento via Pix</strong><button type="button" id="watchPartyPixBack" aria-label="Voltar">×</button></header><p>Escaneie o QR Code ou copie o código Pix. O acesso é liberado após a confirmação.</p><img id="watchPartyPixQr" alt="QR Code Pix" hidden><button type="button" id="watchPartyPixCopy" class="watch-party-unlock-checkout">Copiar código Pix</button><p id="watchPartyPixStatus" aria-live="polite"></p></section>'+
       '<div id="watchPartyGiftSection" class="watch-party-gift-section" hidden><p id="watchPartyGiftInfo"></p>'+
       '<div id="watchPartyGiftUsed" class="watch-party-gift-used" hidden></div><div id="watchPartyGiftPicker" hidden>'+
       '<label for="watchPartyGiftSearch" id="watchPartyGiftSearchLabel"></label><input type="search" id="watchPartyGiftSearch" autocomplete="off" spellcheck="false" maxlength="40">'+
@@ -64,7 +69,9 @@
     document.body.append(panel);
     panel.querySelector('.watch-party-paywall-overlay').addEventListener('click',close);
     $('watchPartyUnlockClose').addEventListener('click',close);
-    $('watchPartyUnlockCheckout').addEventListener('click',()=>checkout('card'));$('watchPartyUnlockPix').addEventListener('click',()=>checkout('pix'));
+    $('watchPartyUnlockCheckout').addEventListener('click',()=>checkout('card'));$('watchPartyUnlockPix').addEventListener('click',()=>startPix());
+    $('watchPartyPixBack').addEventListener('click',()=>{clearInterval(pixTimer);pixTimer=0;$('watchPartyPixPanel').hidden=true;render();});
+    $('watchPartyPixCopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(pixData?.qrCode||'');$('watchPartyPixStatus').textContent='Código Pix copiado.';}catch(_){$('watchPartyPixStatus').textContent='Selecione e copie o código manualmente.';}});
     $('watchPartyGiftSearch').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(findFans,260);});
     $('watchPartyGiftConfirm').addEventListener('click',sendGift);
     $('watchPartyGiftCancel').addEventListener('click',()=>{selected=null;renderGift();});
@@ -83,10 +90,10 @@
   }
   function open(){
     if(!user()){goToLogin();return;}
-    create();panel.hidden=false;render();loadMyProfile();if(unlocked)loadGift();
+    create();panel.hidden=false;render();loadMyProfile();if(unlocked)loadGift();else if(loadPix()){pixData=loadPix();showPix();}
     if(!verifyingPayment&&!unlocked&&pendingSession())queueMicrotask(()=>verifyReturn());
   }
-  function close(){if(panel)panel.hidden=true;clearTimeout(pendingTimer);}
+  function close(){if(panel)panel.hidden=true;clearTimeout(pendingTimer);clearInterval(pixTimer);pixTimer=0;}
   async function loadMyProfile(){
     let profile=null;
     try{if(user()?.uid)profile=await window.beBackend?.profiles?.get(user().uid,{force:true});}catch(_){}
@@ -94,7 +101,7 @@
     const name=String(profile?.displayName||profile?.display_name||user()?.displayName||user()?.username||t('profile'));
     const username=String(profile?.username||user()?.username||'').trim();
     $('watchPartyPaywallName').textContent=name;
-    $('watchPartyPaywallUsername').textContent=username?'@'+username:'';
+    $('watchPartyPaywallUsername').textContent='';
     const avatar=$('watchPartyPaywallAvatar');avatar.replaceChildren();
     const photo=picture(profile?.avatarUrl||profile?.avatar_url,'watch-party-paywall-avatar-image',name);
     if(!photo.hidden)avatar.append(photo);else avatar.textContent=name.trim().slice(0,1).toUpperCase();
@@ -192,10 +199,60 @@
         const code=String(error.message||'');
         throw Error(code.includes('gift_already_used')?t('giftUsed'):code.includes('fan_already_unlocked')?t('alreadyUnlocked'):t('error'));
       }
-      if(data!=='gift_granted')throw Error(t('error'));
-      selected=null;giftInfo=null;await loadGift();status(t('giftDone'));
+      if(data!=='gift_pending')throw Error(t('error'));
+      selected=null;giftInfo=null;await loadGift();status(t('giftDone'));window.dispatchEvent(new Event('be:watch-party-gift-status'));
     }catch(e){status(e.message||t('error'));}
     finally{busy=false;$('watchPartyGiftConfirm').disabled=false;}
+  }
+  function showPix(){
+    if(!panel||!pixData)return;
+    panel.hidden=false;
+    $('watchPartyPurchaseSection').hidden=true;
+    $('watchPartyPixPanel').hidden=false;
+    const image=$('watchPartyPixQr');
+    const b64=String(pixData.qrCodeBase64||'').replace(/\s/g,'');
+    if(/^[A-Za-z0-9+/=]+$/.test(b64)&&b64.length<100000){image.src='data:image/png;base64,'+b64;image.hidden=false;}
+    else {image.hidden=true;image.removeAttribute('src');}
+    $('watchPartyPixCopy').disabled=!pixData.qrCode;
+    $('watchPartyPixStatus').textContent='Aguardando confirmação do Mercado Pago…';
+    clearInterval(pixTimer);pixTimer=setInterval(checkPix,8000);
+    checkPix();
+  }
+  async function checkPix(){
+    if(pixChecking||!pixData||!user())return;
+    pixChecking=true;
+    try{
+      const {data,error}=await client().functions.invoke('watch-party-pix',{body:{action:'status',paymentId:pixData.paymentId}});
+      if(error||data?.error)throw Error(String(data?.error||'pix_status_unavailable'));
+      if(data?.unlocked){
+        clearPix();unlocked=true;checked=true;giftInfo=null;
+        $('watchPartyPixPanel').hidden=true;render();await loadGift();status(t('confirmed'));
+        window.dispatchEvent(new Event('be:watch-party-gift-status'));
+        window.dispatchEvent(new Event('be:community-tag-updated'));
+      }else if(pixData&&data?.status&&data.status!=='pending'){
+        $('watchPartyPixStatus').textContent='Status: '+String(data.status).slice(0,40);
+      }
+    }catch(_){if($('watchPartyPixStatus'))$('watchPartyPixStatus').textContent='Verificação indisponível. Tentaremos novamente.';}
+    finally{pixChecking=false;}
+  }
+  async function startPix(){
+    if(busy||!user())return;
+    pixData=loadPix();
+    if(pixData){showPix();return;}
+    busy=true;
+    const button=$('watchPartyUnlockPix');button.disabled=true;
+    status('Gerando Pix seguro…');
+    try{
+      const requestId=window.crypto?.randomUUID?.();
+      if(!requestId)throw Error('pix_request_unavailable');
+      const {data,error}=await client().functions.invoke('watch-party-pix',{body:{action:'create',requestId}});
+      if(error||data?.error)throw Error(String(data?.error||'pix_creation_failed'));
+      if(data?.unlocked){unlocked=true;checked=true;render();return;}
+      if(!data?.paymentId)throw Error('pix_missing_code');
+      pixData={paymentId:String(data.paymentId),qrCode:String(data.qrCode||''),qrCodeBase64:String(data.qrCodeBase64||'')};
+      savePix(pixData);showPix();status('');
+    }catch(e){status('Não foi possível gerar o Pix: '+String(e.message||'tente novamente'));}
+    finally{busy=false;button.disabled=false;}
   }
   async function checkout(method='card'){
     if(busy)return;
@@ -267,12 +324,12 @@
       $('watchPartyOneTime').textContent=t('oneTime');
       $('watchPartyRewardTitle').textContent=t('reward');$('watchPartyRewardInfo').textContent=t('rewardInfo');
       $('watchPartyPlusTitle').textContent=t('plus');$('watchPartyPlusInfo').textContent=t('plusInfo');
-      $('watchPartyUnlockCheckout').textContent=t('checkout');$('watchPartyUnlockPix').hidden=unlocked||String(window.BETVLocale?.slug||'pt-br').toLowerCase()!=='pt-br';if(unlocked)renderGift();
+      $('watchPartyUnlockCheckout').textContent=t('checkout');$('watchPartyUnlockPix').hidden=unlocked||String(window.BETVLocale?.slug||'pt-br').toLowerCase()!=='pt-br';if(unlocked){$('watchPartyPixPanel').hidden=true;clearPix();renderGift();}
     }
     const button=$('contentDetailWatchParty');
     if(button){
       const play=$('contentDetailPlay');
-      if(play&&button.previousElementSibling!==play)play.insertAdjacentElement('afterend',button);
+      if(play&&button.nextElementSibling!==play)play.insertAdjacentElement('beforebegin',button);
       button.classList.add('watch-party-main-cta');
       button.dataset.watchPartyUnlock=unlocked?'true':'false';
       button.setAttribute('aria-label','Watch Party');
@@ -299,7 +356,7 @@
     window.addEventListener('be:i18n-ready',render);
     window.addEventListener('be:community-tag-updated',render);
     render();
-    Promise.resolve(window.beBackend?.ready).then(async()=>{await refresh();await verifyReturn();}).catch(()=>{});
+    Promise.resolve(window.beBackend?.ready).then(async()=>{await refresh();await verifyReturn();if(!unlocked&&loadPix()){pixData=loadPix();checkPix();}}).catch(()=>{});
     window.beBackend?.auth?.onChange?.(()=>refresh());
   }
   window.BETVWatchPartyPaywall=Object.freeze({open,isUnlocked:()=>unlocked,canGift:()=>Boolean(giftInfo?.eligible&&!giftInfo?.gifted_to),refresh});

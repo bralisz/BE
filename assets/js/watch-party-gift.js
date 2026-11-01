@@ -153,11 +153,13 @@
       if(msg.includes('fan_already_unlocked'))throw Error(txt(13));
       throw Error(txt(12));
     }
-    if(data!=='gift_granted')throw Error(txt(12));
-    feedback(txt(9)+profile.username);
+    if(data!=='gift_pending')throw Error(txt(12));
+    feedback(String(window.BETVLocale?.slug||'pt-br').toLowerCase()==='pt-br'?'Presente enviado! O fã poderá aceitar ou recusar na notificação.':'Gift sent! The fan can accept or decline in notifications.');
     $('watchPartyGiftMatches').replaceChildren();selected=null;
     await refresh();
     await window.BETVWatchPartyPaywall?.refresh?.();
+    window.dispatchEvent(new Event('be:watch-party-gift-status'));
+    close();
   }catch(e){feedback(e.message||txt(12));button.disabled=false;button.textContent=txt(7);}
   finally{sending=false;}
  }
