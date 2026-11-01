@@ -15,6 +15,13 @@
     const index=keys.indexOf(key),locale=String(window.BETVLocale?.slug||'pt-br').toLowerCase();
     return (dict[locale]||dict['pt-br'])[index] || dict['pt-br'][index] || key;
   };
+  const CURRENCY_PRICE = Object.freeze({brl:2719,usd:500,eur:449});
+  function priceForLocale(){
+    const locale=String(window.BETVLocale?.slug||'pt-br').toLowerCase();
+    const currency=locale==='pt-br'?'brl':locale==='en-us'?'usd':'eur';
+    const fmt=locale==='pt-br'?'pt-BR':locale==='en-us'?'en-US':locale==='fr'?'fr-FR':locale==='it'?'it-IT':'es-ES';
+    return {currency,cents:CURRENCY_PRICE[currency],text:new Intl.NumberFormat(fmt,{style:'currency',currency:currency.toUpperCase()}).format(CURRENCY_PRICE[currency]/100)};
+  }
   const client=()=>window.beBackend?.client;
   const user=()=>window.beBackend?.auth?.currentUser;
   const safeUrl=value=>{try{const x=new URL(String(value||'').trim());return x.protocol==='https:' && !x.username && !x.password ? x.href:'';}catch{return '';}};
@@ -31,7 +38,7 @@
       '<div class="watch-party-paywall-profile"><div class="watch-party-paywall-banner"><img id="watchPartyPaywallBanner" hidden alt=""></div>'+
       '<div class="watch-party-paywall-identity"><span class="watch-party-paywall-avatar" id="watchPartyPaywallAvatar"></span><div class="watch-party-paywall-names"><small id="watchPartyProfileCaption"></small><strong id="watchPartyPaywallName"></strong><span id="watchPartyPaywallUsername"></span></div></div></div>'+
       '<h2 id="watchPartyUnlockTitle">Watch Party</h2><p id="watchPartyUnlockDescription"></p>'+
-      '<div id="watchPartyPurchaseSection"><div class="watch-party-unlock-price"><strong id="watchPartyUnlockPrice">US$ 5,00</strong><span id="watchPartyOneTime"></span><small id="watchPartyExchange"></small></div>'+
+      '<div id="watchPartyPurchaseSection"><div class="watch-party-unlock-price"><strong id="watchPartyUnlockPrice"></strong><span id="watchPartyOneTime"></span></div>'+
       '<div class="watch-party-unlock-reward"><span class="watch-party-gold-tag notranslate" translate="no">Happier Than Ever</span><div><strong id="watchPartyRewardTitle"></strong><span id="watchPartyRewardInfo"></span></div></div>'+
       '<div class="watch-party-unlock-plus"><strong id="watchPartyPlusTitle"></strong><p id="watchPartyPlusInfo"></p></div>'+
       '<button id="watchPartyUnlockCheckout" type="button" class="watch-party-unlock-checkout"></button></div>'+
@@ -169,7 +176,7 @@
     if(busy)return;
     busy=true;const button=$('watchPartyUnlockCheckout');button.disabled=true;status(t('connecting'));
     try{
-      const data=await invoke({action:'create'});
+      const data=await invoke({action:'create',locale:String(window.BETVLocale?.slug||'pt-br').toLowerCase()});
       if(data?.unlocked){unlocked=true;checked=true;render();await loadGift();return;}
       const url=new URL(String(data?.url||''));
       if(url.protocol!=='https:'||!/(^|\.)stripe\.com$/.test(url.hostname))throw Error(t('error'));
@@ -202,7 +209,7 @@
       head.append(card);card.addEventListener('click',open);
     }
     card.querySelector('small').textContent=t('community');
-    card.querySelector('.watch-party-community-price').textContent=unlocked?t('unlocked'):'US$ 5';
+    card.querySelector('.watch-party-community-price').textContent=unlocked?t('unlocked'):priceForLocale().text;
   }
   function render(){
     if(panel){
@@ -211,8 +218,8 @@
       $('watchPartyUnlockDescription').textContent=unlocked?t('unlockedInfo'):t('description');
       $('watchPartyPurchaseSection').hidden=unlocked;
       $('watchPartyGiftSection').hidden=!unlocked;
-      $('watchPartyUnlockPrice').textContent='US$ 5,00';
-      $('watchPartyOneTime').textContent=t('oneTime');$('watchPartyExchange').textContent=t('exchange');
+      $('watchPartyUnlockPrice').textContent=priceForLocale().text;
+      $('watchPartyOneTime').textContent=t('oneTime');
       $('watchPartyRewardTitle').textContent=t('reward');$('watchPartyRewardInfo').textContent=t('rewardInfo');
       $('watchPartyPlusTitle').textContent=t('plus');$('watchPartyPlusInfo').textContent=t('plusInfo');
       $('watchPartyUnlockCheckout').textContent=t('checkout');if(unlocked)renderGift();
