@@ -464,7 +464,7 @@
       +'</div>';
     main.appendChild(page);
     bindBoafListenLinks(page);
-    page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);location.assign('https://billieilishtv.site/en-us/fans');});
+    page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);location.assign((window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs'));});
     var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
     var rulesDetails=page.querySelector('.community-rules-details');
     var rulesButton=page.querySelector('.community-rules-button');
