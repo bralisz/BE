@@ -78,7 +78,7 @@
       '<div class="watch-party-gift-results" id="watchPartyGiftResults"></div><div class="watch-party-selected-card" id="watchPartySelectedCard" hidden></div>'+
       '<button id="watchPartyGiftConfirm" type="button" class="watch-party-unlock-checkout" hidden></button>'+
       '<button id="watchPartyGiftCancel" type="button" class="watch-party-ios-secondary" hidden></button></div></div>'+
-      '<div id="watchPartyUnlockedPanel" hidden><span class="watch-party-gold-tag watch-party-unlocked-tag notranslate" translate="no">Happier Than Ever</span><strong id="watchPartyUnlockedTitle">Watch Party liberada</strong><p id="watchPartyUnlockedInfo">Acesso permanente ativo na sua conta, com a tag Happier Than Ever.</p><button type="button" id="watchPartyUnlockedDone">Continuar</button></div><p id="watchPartyUnlockStatus" class="watch-party-unlock-status" role="status" aria-live="polite"></p></section>';
+      '<div id="watchPartyUnlockedPanel" hidden><div class="watch-party-unlocked-copy"><strong id="watchPartyUnlockedTitle">Acesso ativado</strong><p id="watchPartyUnlockedInfo">Você já tem acesso à Watch Party.</p></div><button type="button" id="watchPartyUnlockedDone">Fechar</button></div><p id="watchPartyUnlockStatus" class="watch-party-unlock-status" role="status" aria-live="polite"></p></section>';
     document.body.append(panel);
     panel.querySelector('.watch-party-paywall-overlay').addEventListener('click',close);
     $('watchPartyUnlockClose').addEventListener('click',close);
@@ -331,7 +331,11 @@
     if(panel){
       renderPixLocale();
       $('watchPartyUnlockClose').setAttribute('aria-label',t('close'));
-      $('watchPartyUnlockTitle').textContent=unlocked?t('unlocked'):'Watch Party';
+      const card=panel.querySelector('.watch-party-unlock-card');
+      card?.classList.toggle('is-unlocked',unlocked);
+      card?.setAttribute('aria-labelledby',unlocked?'watchPartyUnlockedTitle':'watchPartyUnlockTitle');
+      $('watchPartyUnlockTitle').textContent='Watch Party';
+      $('watchPartyUnlockTitle').hidden=unlocked;
       $('watchPartyUnlockDescription').textContent=unlocked?'':t('description');
       $('watchPartyUnlockDescription').hidden=unlocked;
       $('watchPartyPurchaseSection').hidden=unlocked;
