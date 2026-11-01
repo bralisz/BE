@@ -469,35 +469,32 @@
     panel.setAttribute('aria-label','Watch Party');
     panel.innerHTML='<div class="watch-party-heading"><div class="watch-party-headlines"><strong id="watchPartyTitle">Watch Party</strong><span id="watchPartyPeopleLabel"></span></div>'+
       '<button id="watchPartyClose" type="button" aria-label="Close" class="watch-party-close">×</button></div>'+
-      '<div class="watch-party-host"><div class="watch-party-host-cover"><img id="watchPartyBanner" alt="" hidden></div>'+
+      '<div class="watch-party-host" id="watchPartyHostCard" hidden><div class="watch-party-host-cover"><img id="watchPartyBanner" alt="" hidden></div>'+
       '<div class="watch-party-host-identity"><span id="watchPartyHostAvatar" class="watch-party-host-avatar"></span><div class="watch-party-host-text"><small id="watchPartyHostLabel"></small><strong id="watchPartyHostName"></strong></div></div></div>'+
-      '<div class="watch-party-members"><div id="watchPartyUsers" class="watch-party-users"></div><strong id="watchPartyCount" hidden></strong></div>'+
+
       '<p class="watch-party-status" id="watchPartyStatus" aria-live="polite"></p>'+
       '<div class="watch-party-actions"><button type="button" id="watchPartyCreate"></button>'+
       '<button type="button" id="watchPartyInviteToggle" hidden></button>'+
       '<button type="button" id="watchPartyLeave" hidden></button></div>'+
-      '<div class="watch-party-invite-form" id="watchPartyInviteForm" hidden>'+
-      '<input type="search" id="watchPartyInviteSearch" autocomplete="off" maxlength="30" aria-label="Search username">'+
-      '<div class="watch-party-search-results" id="watchPartySearchResults"></div></div>'+
-      '<button type="button" id="watchPartyGiftOpen" class="watch-party-gift-cta"></button>';
+      '<div id="watchPartyJoinBox" class="watch-party-code-entry"><input id="watchPartyCodeInput" type="text" autocomplete="off" maxlength="36" aria-label="Room code"><button id="watchPartyJoinButton" type="button"></button><small id="watchPartyCodeHint"></small></div>'+
+      '<div id="watchPartyRoomCodeBox" class="watch-party-room-code" hidden><small id="watchPartyCodeLabel"></small><code id="watchPartyRoomCode"></code><button type="button" id="watchPartyCopyCode"></button></div>';
     document.body.append(panel);
     const toast=document.createElement('div');toast.id='watchPartyInviteToast';toast.className='watch-party-invite-toast';toast.hidden=true;
     toast.setAttribute('role','region');toast.setAttribute('aria-label','Watch Party');document.body.append(toast);
     $('watchPartyClose').addEventListener('click',hidePanel);
-    $('watchPartyGiftOpen').addEventListener('click',()=>window.BETVWatchPartyPaywall?.open?.());
+    $('watchPartyJoinButton').addEventListener('click',joinByCode);
+    $('watchPartyCodeInput').addEventListener('keydown',event=>{if(event.key==='Enter')joinByCode();});
+    $('watchPartyCopyCode').addEventListener('click',async()=>{
+      if(!joined || !isHost || !room)return;
+      try{await navigator.clipboard.writeText(room);textStatus(extraText('copied'));}
+      catch(_){textStatus(extraText('code')+': '+room);}
+    });
     $('watchPartyCreate').addEventListener('click',()=>{
       const id=window.crypto?.randomUUID?.();
       if(!id){textStatus(t(23),true);return;}
       connect(id,true);
     });
-    $('watchPartyInviteToggle').addEventListener('click',()=>{
-      const form=$('watchPartyInviteForm');form.hidden=!form.hidden;
-      $('watchPartyInviteSearch').placeholder=xt('search');
-      if(!form.hidden){$('watchPartyInviteSearch').focus();$('watchPartySearchResults').textContent=t(20);}
-    });
-    $('watchPartyInviteSearch').addEventListener('input',()=>{
-      clearTimeout(searchTimer);searchTimer=setTimeout(findFans,240);
-    });
+    $('watchPartyInviteToggle').addEventListener('click',openInvitePicker);
     $('watchPartyLeave').addEventListener('click',async()=>{await leaveRoom();hidePanel();});
     const detail=$('contentDetailWatchParty');
     detail?.addEventListener('click',e=>{e.preventDefault();onPartyClick();});
@@ -522,7 +519,7 @@
       }
     },true);
     window.addEventListener('popstate',tryJoinFromUrl);
-    window.addEventListener('be:i18n-ready',()=>{updateUi();renderInbox();});
+    window.addEventListener('be:i18n-ready',()=>{updateUi();renderInbox();if(invitePicker&&!invitePicker.hidden)renderInviteLabels();});
     window.addEventListener('be:notifications-ready',renderInbox);
     window.setInterval(()=>{
       tryJoinFromUrl();setupPlayerButtons();ensurePlacement();
