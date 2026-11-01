@@ -30,6 +30,18 @@
     const src=safeUrl(url);if(src)el.src=src;else el.hidden=true;return el;
   }
   let panel=null,unlocked=false,checked=false,busy=false,giftInfo=null,selected=null,searchTimer=0,searchSeq=0;
+  let verifyingPayment=false,pendingTimer=0,pendingTries=0;
+  const pendingStorageKey=()=> 'betvWatchPartyPending:'+String(user()?.uid||'guest');
+  const pendingSession=()=>{
+    try{
+      const pending=JSON.parse(localStorage.getItem(pendingStorageKey())||'null');
+      if(!pending||Number(pending.expiresAt)<Date.now()){localStorage.removeItem(pendingStorageKey());return '';}
+      const id=String(pending.sessionId||'');
+      return /^cs_(test|live)_[a-zA-Z0-9]{10,200}$/.test(id)?id:'';
+    }catch(_){return '';}
+  };
+  const rememberPending=id=>{try{localStorage.setItem(pendingStorageKey(),JSON.stringify({sessionId:id,expiresAt:Date.now()+86400000}));}catch(_){}};
+  const forgetPending=()=>{clearTimeout(pendingTimer);pendingTries=0;try{localStorage.removeItem(pendingStorageKey());}catch(_){}};
   function create(){
     if(panel)return;
     panel=document.createElement('div');panel.id='watchPartyPaywall';panel.className='watch-party-paywall';panel.hidden=true;
@@ -72,8 +84,9 @@
   function open(){
     if(!user()){goToLogin();return;}
     create();panel.hidden=false;render();loadMyProfile();if(unlocked)loadGift();
+    if(!verifyingPayment&&!unlocked&&pendingSession())queueMicrotask(()=>verifyReturn());
   }
-  function close(){if(panel)panel.hidden=true;}
+  function close(){if(panel)panel.hidden=true;clearTimeout(pendingTimer);}
   async function loadMyProfile(){
     let profile=null;
     try{if(user()?.uid)profile=await window.beBackend?.profiles?.get(user().uid,{force:true});}catch(_){}
@@ -192,24 +205,38 @@
       if(data?.unlocked){unlocked=true;checked=true;render();await loadGift();return;}
       const url=new URL(String(data?.url||''));
       if(url.protocol!=='https:'||!/(^|\.)stripe\.com$/.test(url.hostname))throw Error(t('error'));
+      if(method==='pix'&&data.session_id)rememberPending(data.session_id);
       location.assign(url.href);
     }catch(e){const msg=String(e.message||'');status(msg==='pix_not_available'?'Pix indisponível nesta conta Stripe. Tente o pagamento por cartão.':(msg||t('error')));}
     finally{busy=false;button.disabled=false;pix.disabled=false;}
   }
   async function verifyReturn(){
+    if(verifyingPayment||!user())return;
     const params=new URLSearchParams(location.search);
-    if(params.get('watch_party_checkout')!=='success'||!params.get('session_id'))return;
-    open();status(t('verifying'));
-    try{
-      const result=await invoke({action:'verify',session_id:params.get('session_id')});
-      if(!result?.unlocked)throw Error(t('notConfirmed'));
-      unlocked=true;checked=true;giftInfo=null;render();await loadGift();status(t('confirmed'));
-      window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:user()?.uid,tag:'happier_than_ever'}}));
-    }catch(_){status(t('notConfirmed'));}
-    finally{
+    const checkoutReturn=params.get('watch_party_checkout')==='success';
+    const sessionId=(checkoutReturn?params.get('session_id'):'')||pendingSession();
+    if(!sessionId||!/^cs_(test|live)_[a-zA-Z0-9]{10,200}$/.test(sessionId))return;
+    if(checkoutReturn){
       const url=new URL(location.href);url.searchParams.delete('watch_party_checkout');url.searchParams.delete('session_id');
       history.replaceState(history.state,'',url.pathname+url.search+url.hash);
     }
+    verifyingPayment=true;clearTimeout(pendingTimer);
+    open();status(t('verifying'));
+    try{
+      const result=await invoke({action:'verify',session_id:sessionId});
+      if(result?.pending){
+        if(!pendingSession())rememberPending(sessionId);
+        status(String(window.BETVLocale?.slug||'pt-br').toLowerCase()==='pt-br'
+          ?'Aguardando a confirmação do pagamento. Você pode voltar mais tarde; verificaremos novamente.'
+          :'Waiting for payment confirmation. You can return later; we will check again.');
+        if(!panel.hidden&&pendingTries<24){pendingTries++;pendingTimer=setTimeout(()=>verifyReturn(),15000);}
+        return;
+      }
+      if(!result?.unlocked)throw Error(t('notConfirmed'));
+      forgetPending();unlocked=true;checked=true;giftInfo=null;render();await loadGift();status(t('confirmed'));
+      window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:user()?.uid,tag:'happier_than_ever'}}));
+    }catch(_){status(t('notConfirmed'));}
+    finally{verifyingPayment=false;}
   }
   function promote(){
     const head=$('communityFavoritesContent')?.closest('.community-section')?.querySelector('.community-section-head');

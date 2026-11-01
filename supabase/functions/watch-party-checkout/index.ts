@@ -69,14 +69,14 @@ Deno.serve(async(req:Request)=>{
   if(user.email)params.set("customer_email",user.email);
   const out=await stripe("checkout/sessions",params);
   if(!out.ok||!out.data?.id||!out.data?.url)return reply(origin,502,{error:payload.paymentMethod==="pix"?"pix_not_available":"stripe_checkout_failed"});
-  return reply(origin,200,{url:out.data.url});
+  return reply(origin,200,{url:out.data.url,session_id:out.data.id});
  }
  if(payload.action!=="verify"||typeof payload.session_id!=="string"||!/^cs_(test|live)_[a-zA-Z0-9]{10,200}$/.test(payload.session_id))
   return reply(origin,400,{error:"invalid_session"});
  const result=await stripe("checkout/sessions/"+encodeURIComponent(payload.session_id));
  const session=result.data;
  if(!result.ok||session?.id!==payload.session_id||
- session.mode!=="payment"||session.payment_status!=="paid"||session.status!=="complete"||
+ session.mode!=="payment"||
  session.client_reference_id!==user.id||session.metadata?.purpose!=="betv_watch_party_unlock"||
  session.metadata?.user_id!==user.id||
  !Object.prototype.hasOwnProperty.call(WATCH_PARTY_PRICES,String(session.currency||"")) ||
@@ -88,6 +88,9 @@ Deno.serve(async(req:Request)=>{
  )){
   return reply(origin,409,{error:"payment_not_confirmed"});
  }
+ // A pending Pix charge must never unlock membership until Stripe confirms it is paid.
+ if(session.payment_status!=="paid"||session.status!=="complete")
+  return reply(origin,202,{pending:true,unlocked:false});
  const {error:insertError}=await admin.from("watch_party_unlocks").upsert({
   user_id:user.id,stripe_session_id:session.id,amount_cents:session.amount_subtotal,currency:session.currency
  },{onConflict:"user_id",ignoreDuplicates:true});
