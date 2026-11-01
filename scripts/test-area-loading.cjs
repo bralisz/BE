@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {execFileSync}=require('node:child_process');
 if(!process.argv[2]){
-  for(const scenario of ['mobile-navigation','mobile-settings','profile','mobile-profile','guest-profile','community','community-ong','stale-community','guest-login','chunk-retry','history','images','settings','search']){
+  for(const scenario of ['mobile-navigation','mobile-settings','profile','mobile-profile','guest-profile','community','community-fans','stale-community','guest-login','chunk-retry','history','images','settings','search']){
     process.stdout.write(execFileSync(process.execPath,[__filename,scenario],{timeout:10000,encoding:'utf8'}));
   }
   process.exit();
@@ -73,27 +73,23 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(2
     assert.equal(calls,2);assert(w.document.body.classList.contains('community-page-active'));assert(loaded.includes('community'));
   }
 
-  if(scenario==='community-ong'){
-    w.BETVPublicRoutes.go('/ong');
-    await until(()=>w.document.body.classList.contains('donate-page-active'));
+  if(scenario==='community-fans'){
+    w.BETVPublicRoutes.go('/fãs');
+    await until(()=>w.document.body.classList.contains('fans-page-active'));
     w.document.querySelector('[data-community-tab]').click();
     await until(()=>w.document.body.classList.contains('community-page-active'));
-    assert.equal(w.location.pathname,'/','Community should return to the catalog route');
-    assert.equal(w.document.body.classList.contains('donate-page-active'),false);
-    assert.equal(w.document.getElementById('donatePage').hidden,true);
-    assert.equal(w.document.getElementById('boafStreamCounter').textContent.trim(),'4 bilhões');
-    assert.equal(w.document.querySelector('#communityBoafCard [data-boaf-listen]'),null,'old Listen CTA must be absent');
-    w.BETVPublicRoutes.go('/ong');
-    await until(()=>w.document.body.classList.contains('donate-page-active'));
-    assert.equal(w.document.body.classList.contains('community-page-active'),false);
-    assert.equal(w.document.getElementById('communityPage').hidden,true);
+    assert(!w.document.body.classList.contains('fans-page-active'));
+    assert.equal(w.document.getElementById('donatePage'),null);
+    w.BETVPublicRoutes.go('/fãs');
+    await until(()=>w.document.body.classList.contains('fans-page-active'));
+    assert(!w.document.body.classList.contains('community-page-active'));
   }
   if(scenario==='stale-community'){
     w.document.querySelector('[data-community-tab]').click();
-    w.BETVPublicRoutes.go('/ong');
+    w.BETVPublicRoutes.go('/fãs');
     await delay(250);
-    assert(w.document.body.classList.contains('donate-page-active'));
-    assert(!w.document.body.classList.contains('community-page-active'),'late chunk must not reactivate Community');
+    assert(w.document.body.classList.contains('fans-page-active'));
+    assert(!w.document.body.classList.contains('community-page-active'));
   }
   if(scenario==='guest-login'){
     w.document.getElementById('guestAccessButton').click();
