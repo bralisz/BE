@@ -12906,7 +12906,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     } else if (destination === 'support') {
       document.querySelector('.home-nav-link[data-public-action="support"]')?.click();
     } else if (destination === 'fans') {
-      location.assign('https://billieilishtv.site/en-us/fans');
+      location.assign((window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs'));
     }
     setActiveDestination(destination);
     openDrawer(false);
@@ -17447,7 +17447,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var link=event.target&&event.target.closest?event.target.closest('[data-open-donate="true"]'):null;
     if(!link)return;
     event.preventDefault();
-    location.assign('https://billieilishtv.site/en-us/fans');
+    location.assign((window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs'));
   });
 
   if(home)home.addEventListener('click',function(){
@@ -17706,7 +17706,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function goHome(replace){navigate('/',Boolean(replace));}
 
   footerLinks.forEach(function(footerLink){
-    footerLink.href='https://billieilishtv.site/en-us/fans';
+    footerLink.href=(window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs');
   });
   if(home)home.addEventListener('click',function(){goHome(false);});
   if(accountButton)accountButton.addEventListener('click',openAccount);
