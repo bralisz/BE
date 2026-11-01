@@ -36,7 +36,7 @@
     panel.innerHTML='<div class="watch-party-paywall-overlay"></div><section class="watch-party-unlock-card" role="dialog" aria-modal="true" aria-labelledby="watchPartyUnlockTitle">'+
       '<div class="watch-party-ios-handle" aria-hidden="true"></div><button class="watch-party-unlock-close" id="watchPartyUnlockClose" type="button">×</button>'+
       '<div class="watch-party-paywall-profile"><div class="watch-party-paywall-banner"><img id="watchPartyPaywallBanner" hidden alt=""></div>'+
-      '<div class="watch-party-paywall-identity"><span class="watch-party-paywall-avatar" id="watchPartyPaywallAvatar"></span><div class="watch-party-paywall-names"><small id="watchPartyProfileCaption"></small><strong id="watchPartyPaywallName"></strong><span id="watchPartyPaywallUsername"></span></div></div></div>'+
+      '<div class="watch-party-paywall-identity"><span class="watch-party-paywall-avatar" id="watchPartyPaywallAvatar"></span><div class="watch-party-paywall-names"><strong id="watchPartyPaywallName"></strong><span id="watchPartyPaywallUsername"></span></div></div></div>'+
       '<h2 id="watchPartyUnlockTitle">Watch Party</h2><p id="watchPartyUnlockDescription"></p>'+
       '<div id="watchPartyPurchaseSection"><div class="watch-party-unlock-price"><strong id="watchPartyUnlockPrice"></strong><span id="watchPartyOneTime"></span></div>'+
       '<div class="watch-party-unlock-reward"><span class="watch-party-gold-tag notranslate" translate="no">Happier Than Ever</span><div><strong id="watchPartyRewardTitle"></strong><span id="watchPartyRewardInfo"></span></div></div>'+
@@ -59,7 +59,20 @@
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel&&!panel.hidden)close();});
   }
   function status(message){if($('watchPartyUnlockStatus'))$('watchPartyUnlockStatus').textContent=message||'';}
-  function open(){create();panel.hidden=false;render();loadMyProfile();if(unlocked)loadGift();}
+  // Use BETV's existing login route instead of displaying the paid sheet to guests.
+  function goToLogin(){
+    if(panel)panel.hidden=true;
+    if(typeof window.BETVPublicRoutes?.go==='function'){
+      window.BETVPublicRoutes.go('/login');
+      document.body.classList.add('login-mode');
+    }else{
+      location.assign(typeof window.BETVLocaleURL==='function'?window.BETVLocaleURL('/login'):'/login');
+    }
+  }
+  function open(){
+    if(!user()){goToLogin();return;}
+    create();panel.hidden=false;render();loadMyProfile();if(unlocked)loadGift();
+  }
   function close(){if(panel)panel.hidden=true;}
   async function loadMyProfile(){
     let profile=null;
@@ -67,7 +80,6 @@
     if(!panel)return;
     const name=String(profile?.displayName||profile?.display_name||user()?.displayName||user()?.username||t('profile'));
     const username=String(profile?.username||user()?.username||'').trim();
-    $('watchPartyProfileCaption').textContent=t('profile');
     $('watchPartyPaywallName').textContent=name;
     $('watchPartyPaywallUsername').textContent=username?'@'+username:'';
     const avatar=$('watchPartyPaywallAvatar');avatar.replaceChildren();
@@ -215,7 +227,8 @@
     if(panel){
       $('watchPartyUnlockClose').setAttribute('aria-label',t('close'));
       $('watchPartyUnlockTitle').textContent=unlocked?t('unlocked'):'Watch Party';
-      $('watchPartyUnlockDescription').textContent=unlocked?t('unlockedInfo'):t('description');
+      $('watchPartyUnlockDescription').textContent=unlocked?'':t('description');
+      $('watchPartyUnlockDescription').hidden=unlocked;
       $('watchPartyPurchaseSection').hidden=unlocked;
       $('watchPartyGiftSection').hidden=!unlocked;
       $('watchPartyUnlockPrice').textContent=priceForLocale().text;
@@ -237,11 +250,15 @@
   }
   function guard(event){
     const target=event.target.closest?.('#contentDetailWatchParty,.watch-party-player-button');
-    if(!target||unlocked)return;
+    if(!target)return;
+    if(!user()){
+      event.preventDefault();event.stopImmediatePropagation();
+      goToLogin();return;
+    }
+    if(unlocked)return;
     event.preventDefault();event.stopImmediatePropagation();
-    if(!checked&&user())refresh().then(ok=>{if(ok)window.BETVWatchParty?.open?.();else open();});
+    if(!checked)refresh().then(ok=>{if(ok)window.BETVWatchParty?.open?.();else open();});
     else open();
-    if(!user())status(t('login'));
   }
   function initialize(){
     document.addEventListener('click',guard,true);

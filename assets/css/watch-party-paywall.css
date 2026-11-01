@@ -148,3 +148,32 @@
 }
 
 .detail-secondary-actions .detail-streaming-store[hidden]{display:none!important}
+
+
+/* Watch Party: neutral iOS-dark surfaces matching BETV's dark UI reference. */
+.watch-party-unlock-card,
+.watch-party-community-widget,
+.watch-party-gift-dialog {
+  background:#101216!important;
+  background-image:none!important;
+  border-color:rgba(181,190,207,.15)!important;
+}
+.watch-party-community-widget:hover,
+.watch-party-community-widget:focus-visible {
+  background:#17191e!important;
+}
+.watch-party-paywall-names{padding-top:3px!important}
+.watch-party-unlock-card #watchPartyUnlockDescription[hidden]{display:none!important}
+@media (min-width:761px) {
+  /* Restore the original desktop row: Play, favorites, availability, Cast,
+     Watch Party and Share. Mobile retains the requested two-level layout. */
+  .detail-actions{display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:wrap!important;gap:12px!important}
+  .detail-primary-actions,.detail-secondary-actions{display:contents!important}
+  .detail-actions #contentDetailPlay{order:0}
+  .detail-actions #contentDetailList{order:1}
+  .detail-actions #detailStreamingStore{order:2}
+  .detail-actions #detailStreamingButtonMobile{order:3}
+  .detail-actions #contentDetailCast{order:4}
+  .detail-actions #contentDetailWatchParty{order:5}
+  .detail-actions #contentDetailShare{order:6}
+}
