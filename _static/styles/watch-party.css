@@ -93,3 +93,18 @@
 .watch-party-fan-avatar{display:grid;place-items:center;flex:none;width:31px;height:31px;overflow:hidden;border-radius:50%;background:#526b92;color:#fff}
 .watch-party-fan-photo{width:100%;height:100%;object-fit:cover}
 @media(max-width:760px){.watch-party-panel{padding:12px!important;border-radius:20px!important}.watch-party-host-cover{height:64px}}
+
+
+/* Unified near-black panels: match Watch Party payment and Community widget. */
+.watch-party-panel,
+#driveVideoPlayerShell>.watch-party-panel,
+#externalNativePlayerShell>.watch-party-panel {
+  background:#101216!important;
+  background-image:none!important;
+  border-color:rgba(181,190,207,.15)!important;
+}
+.watch-party-notification,
+.watch-party-invite-toast .watch-party-notification {
+  background:#101216!important;
+  background-image:none!important;
+}
