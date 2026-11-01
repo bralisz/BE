@@ -19,13 +19,21 @@
 .watch-party-unlock-price span{font-size:14px;color:#c6d7f5}
 .watch-party-unlock-price small{font-size:10px;color:#9eacc2}
 .watch-party-unlock-reward{display:flex;align-items:center;gap:12px;text-align:left;font-size:12px;line-height:1.45;color:#d2d6e0}
-.watch-party-gold-tag,.community-award-tag.is-happier-than-ever{display:inline-flex;align-items:center;justify-content:center;border:1px solid #f5cd6b;background:linear-gradient(135deg,#ffe39a,#b88428);color:#3b2702;font-size:10px;font-weight:900;letter-spacing:.01em;padding:7px 9px;border-radius:999px;white-space:nowrap;box-shadow:0 0 15px #d7ae4a25}
+.watch-party-gold-tag{display:inline-flex;align-items:center;justify-content:center;border:1px solid #d4a343;background:linear-gradient(135deg,#c69332,#966315);color:#fff;font-size:10px;font-weight:900;letter-spacing:.01em;padding:7px 9px;border-radius:999px;white-space:nowrap;box-shadow:0 0 15px #d7ae4a25}
 .watch-party-unlock-checkout{width:100%;min-height:48px;border:0;border-radius:13px;background:#3478d6;color:white;font-size:14px;font-weight:800;cursor:pointer}
 .watch-party-unlock-checkout:disabled{opacity:.65}
 .watch-party-unlock-status{font-size:12px;color:#e3c386;min-height:18px}
 @media(max-width:760px){.watch-party-community-widget{min-width:0;width:100%;max-width:none;margin:8px 0 0}.community-section-head:has(.watch-party-community-widget){flex-wrap:wrap}.watch-party-main-cta{padding:0 13px!important;font-size:12px!important}.watch-party-unlock-card{padding:25px 17px 18px}.watch-party-unlock-reward{flex-direction:column;align-items:center;text-align:center}}
 
-.profile-award-tag.is-happier-than-ever,.detail-comment-community-tag.is-happier-than-ever{display:inline-flex;align-items:center;border:1px solid #e4b858;background:linear-gradient(135deg,#ffe49f,#be8a2c);color:#342006;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900;white-space:nowrap}
+/* Same geometry as all other profile, community and comment tags; gold is color-only. */
+.community-award-tag.is-happier-than-ever,
+.profile-award-tag.is-happier-than-ever,
+.detail-comment-award-tag.is-happier-than-ever{
+  color:#fff;
+  background:linear-gradient(135deg,#bd8c2a 0%,#a16d1b 100%);
+  border-color:#d5a343;
+  box-shadow:none;
+}
 
 /* iOS-like BETV Watch Party sheets: soft glass, native-feeling typography, no brand icon. */
 .watch-party-paywall{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif!important}
@@ -169,13 +177,13 @@
      Watch Party and Share. Mobile retains the requested two-level layout. */
   .detail-actions{display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:wrap!important;gap:12px!important}
   .detail-primary-actions,.detail-secondary-actions{display:contents!important}
-  .detail-actions #contentDetailPlay{order:1}
-  .detail-actions #contentDetailList{order:3}
-  .detail-actions #detailStreamingStore{order:4}
-  .detail-actions #detailStreamingButtonMobile{order:5}
-  .detail-actions #contentDetailCast{order:6}
-  .detail-actions #contentDetailWatchParty{order:2}
-  .detail-actions #contentDetailShare{order:7}
+  .detail-actions #contentDetailPlay{order:0!important}
+  .detail-actions #contentDetailList{order:2}
+  .detail-actions #detailStreamingStore{order:3}
+  .detail-actions #detailStreamingButtonMobile{order:4}
+  .detail-actions #contentDetailCast{order:5}
+  .detail-actions #contentDetailWatchParty{order:1!important}
+  .detail-actions #contentDetailShare{order:6}
 }
 
 /* Unified, accessible close icons and a discreet Pix alternative. */
@@ -190,8 +198,8 @@
 .watch-party-unlock-pix[hidden]{display:none!important}
 
 /* Watch is the primary action, followed by Watch Together on all screens. */
-.detail-primary-actions #contentDetailPlay{order:0}
-.detail-primary-actions #contentDetailWatchParty{order:1}
+.detail-primary-actions #contentDetailPlay{order:0!important}
+.detail-primary-actions #contentDetailWatchParty{order:1!important}
 .detail-primary-actions{width:auto;max-width:100%;gap:9px!important}
 .watch-party-paywall-profile{margin-top:4px!important}
 .watch-party-paywall-names{display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:wrap;gap:7px!important;min-width:0;padding-top:5px!important}
@@ -247,8 +255,8 @@
 @media(max-width:760px){#watchPartyPixCode{font-size:12px;min-height:60px}}
 
 /* Premium Happier Than Ever tag preview. */
-.watch-party-unlock-card .watch-party-gold-tag{position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:max-content;max-width:100%;box-sizing:border-box;overflow:hidden;border:1px solid #eecb78!important;border-radius:999px;background:linear-gradient(115deg,#fff0bf 0%,#f6d17a 38%,#b97a27 100%)!important;color:#3c2606!important;font-size:10px!important;font-weight:850!important;line-height:1.25!important;letter-spacing:.005em!important;padding:7px 11px!important;text-shadow:0 1px 0 rgba(255,245,212,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 3px 12px rgba(202,150,56,.2)!important;white-space:nowrap}
-.watch-party-unlock-card .watch-party-gold-tag::before{content:"✦";flex:none;color:#75460b;font-size:12px;line-height:1}
+.watch-party-unlock-card .watch-party-gold-tag{position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:max-content;max-width:100%;box-sizing:border-box;overflow:hidden;border:1px solid #eecb78!important;border-radius:999px;background:linear-gradient(115deg,#c59234 0%,#b58123 44%,#895a11 100%)!important;color:#fff!important;font-size:10px!important;font-weight:850!important;line-height:1.25!important;letter-spacing:.005em!important;padding:7px 11px!important;text-shadow:0 1px 2px rgba(54,35,5,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.75),0 3px 12px rgba(202,150,56,.2)!important;white-space:nowrap}
+.watch-party-unlock-card .watch-party-gold-tag::before{content:"✦";flex:none;color:#fff;font-size:12px;line-height:1}
 .watch-party-unlock-card .watch-party-gold-tag::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(120deg,transparent 8%,rgba(255,255,255,.38) 40%,transparent 64%);opacity:.55}
 .watch-party-unlock-card .watch-party-preview-tag{font-size:9px!important;padding:5px 9px!important;flex:none}
 .watch-party-unlock-card .watch-party-unlock-reward>.watch-party-gold-tag{align-self:center;min-width:0;text-align:center;white-space:normal;flex:0 1 auto}
