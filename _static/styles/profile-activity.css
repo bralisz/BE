@@ -1,0 +1,22 @@
+/* Minimal profile last-watched reveal and data-privacy switch. */
+.profile-page-name-row{position:relative}
+.profile-recent-watch-trigger{display:inline-grid;place-items:center;flex:none;width:33px;height:33px;margin-left:4px;padding:0;border:1px solid rgba(162,188,227,.22);border-radius:50%;background:rgba(92,124,163,.15);color:#d4e4fa;cursor:pointer;transition:background .18s,transform .18s}
+.profile-recent-watch-trigger[hidden],.profile-recent-watch-card[hidden]{display:none!important}
+.profile-recent-watch-trigger svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.profile-recent-watch-trigger:hover{background:rgba(114,154,217,.25);transform:translateY(-1px)}
+.profile-recent-watch-trigger:focus-visible{outline:2px solid #9cc8ff;outline-offset:3px}
+.profile-recent-watch-card{position:absolute;top:calc(100% + 12px);left:0;z-index:125;width:min(312px,calc(100vw - 40px));box-sizing:border-box;padding:12px;border:1px solid rgba(182,202,234,.18);border-radius:19px;background:rgba(16,20,29,.98);box-shadow:0 18px 52px rgba(0,0,0,.48);color:#f5f8ff;text-align:left;animation:profile-activity-reveal .22s cubic-bezier(.22,1,.36,1) both;backdrop-filter:blur(18px)}
+@keyframes profile-activity-reveal{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.profile-recent-watch-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px;font-size:11px;font-weight:650;color:#aebdd2}
+.profile-recent-watch-head span:last-child{color:#b0caff}
+.profile-recent-watch-cover{display:block;width:100%;height:135px;object-fit:cover;border-radius:12px;margin-bottom:10px;background:#1b2738}
+.profile-recent-watch-title{display:block;font-size:14px;line-height:1.45;letter-spacing:-.01em;overflow-wrap:anywhere}
+.profile-watch-privacy{margin:16px 0}
+.profile-watch-privacy h2{font-size:16px;font-weight:750;color:#fff;margin:0 0 13px}
+.profile-watch-privacy-row{display:flex;align-items:center;justify-content:space-between;gap:15px;cursor:pointer}
+.profile-watch-privacy-copy{display:flex;flex-direction:column;gap:5px;color:#e9eef7}
+.profile-watch-privacy-copy strong{font-size:13px;font-weight:680}
+.profile-watch-privacy-copy small{font-size:12px;line-height:1.5;color:#a1acbd;max-width:460px}
+.profile-watch-privacy-feedback{font-size:12px;color:#a9c4ec;min-height:15px;margin:9px 0 0}
+@media(max-width:760px){.profile-recent-watch-card{top:calc(100% + 9px);width:min(290px,calc(100vw - 32px))}.profile-watch-privacy{margin:13px 0}}
+@media(prefers-reduced-motion:reduce){.profile-recent-watch-card{animation:none}.profile-recent-watch-trigger{transition:none}}
