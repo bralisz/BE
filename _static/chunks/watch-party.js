@@ -363,8 +363,10 @@
     if (accept) {
       const result=Array.isArray(data)?data[0]:data;
       if (!result || !ROOM_RE.test(result.room_id) || !VIDEO_RE.test(String(result.video_id||'')))return;
-      const url=new URL(location.origin);
-      url.pathname='/'+encodeURIComponent(result.video_id);
+      const target=typeof window.BETVLocaleURL==='function'
+        ?window.BETVLocaleURL('/'+encodeURIComponent(result.video_id))
+        :'/'+encodeURIComponent(result.video_id);
+      const url=new URL(target,location.origin);
       url.searchParams.set('watchParty',result.room_id);
       url.searchParams.set('watchVideo',result.video_id);
       location.assign(url.href);
