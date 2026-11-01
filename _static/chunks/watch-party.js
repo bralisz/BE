@@ -6,7 +6,7 @@
   const ROOM_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
   const VIDEO_RE = /^[0-9]{6,12}$/;
   const strings = {
-    'pt-br': ['Assistir juntos','Convidar fã','Pesquisar @usuário','Sair da sala','Criar sala','Entre na sua conta para enviar ou receber convites.','Aguardando convidados…','Convite enviado!','Não foi possível enviar o convite.','Sala conectada','Aguardando anfitrião…','O player externo não oferece sincronização automática.','Sincronizando reprodução…','Toque em reproduzir para acompanhar.','Watch Party','convidou você para assistir','Aceitar','Recusar','Convite expirado ou indisponível.','Nenhum fã encontrado.','Busque um fã pelo @usuário.','Pessoas na sala','Fechar','Erro de conexão. Tente novamente.'],
+    'pt-br': ['Assistir junto','Convidar fã','Pesquisar @usuário','Sair da sala','Criar sala','Entre na sua conta para enviar ou receber convites.','Aguardando convidados…','Convite enviado!','Não foi possível enviar o convite.','Sala conectada','Aguardando anfitrião…','O player externo não oferece sincronização automática.','Sincronizando reprodução…','Toque em reproduzir para acompanhar.','Watch Party','convidou você para assistir','Aceitar','Recusar','Convite expirado ou indisponível.','Nenhum fã encontrado.','Busque um fã pelo @usuário.','Pessoas na sala','Fechar','Erro de conexão. Tente novamente.'],
     'en-us': ['Watch together','Invite fan','Search @username','Leave room','Create room','Sign in to send or receive invitations.','Waiting for guests…','Invitation sent!','Could not send invitation.','Room connected','Waiting for host…','External players do not support automatic syncing.','Syncing playback…','Tap play to join the playback.','Watch Party','invited you to watch','Accept','Decline','Invitation expired or unavailable.','No fans found.','Search for a fan by @username.','People in room','Close','Connection failed. Try again.'],
     'es': ['Ver juntos','Invitar fan','Buscar @usuario','Salir de la sala','Crear sala','Inicia sesión para enviar o recibir invitaciones.','Esperando invitados…','¡Invitación enviada!','No se pudo enviar.','Sala conectada','Esperando anfitrión…','Los reproductores externos no permiten sincronización.','Sincronizando…','Toca reproducir para unirte.','Watch Party','te invitó a ver','Aceptar','Rechazar','Invitación caducada.','No se encontraron fans.','Busca un fan por @usuario.','Usuarios en la sala','Cerrar','Error de conexión.'],
     fr: ['Regarder ensemble','Inviter un fan','Chercher @pseudo','Quitter','Créer un salon','Connectez-vous pour inviter ou recevoir des invitations.','En attente des invités…','Invitation envoyée !','Échec de l’invitation.','Salon connecté','En attente de l’hôte…','Synchronisation indisponible pour les lecteurs externes.','Synchronisation…','Appuyez sur Lecture.','Watch Party','vous invite à regarder','Accepter','Refuser','Invitation expirée.','Aucun fan trouvé.','Recherchez un fan par @pseudo.','Participants','Fermer','Erreur de connexion.'],
@@ -146,13 +146,9 @@
       gift.textContent = xt('gift');
     }
     if ($('watchPartyRoomCode')) $('watchPartyRoomCode').textContent = joined && isHost ? room : '';
-    if ($('watchPartyJoinButton')) $('watchPartyJoinButton').textContent = extraText('join');
     if ($('watchPartyCopyCode')) $('watchPartyCopyCode').textContent = extraText('copy');
     if ($('watchPartyCodeLabel')) $('watchPartyCodeLabel').textContent = extraText('code');
-    if ($('watchPartyCodeHint')) $('watchPartyCodeHint').textContent = extraText('codeHint');
-    if ($('watchPartyCodeInput')) $('watchPartyCodeInput').placeholder = extraText('code');
     if ($('watchPartyRoomCodeBox')) $('watchPartyRoomCodeBox').hidden = !joined || !isHost || Boolean(window.BETVWatchPartyPaywall?.canGift?.());
-    if ($('watchPartyJoinBox')) $('watchPartyJoinBox').hidden = joined || connecting || Boolean(window.BETVWatchPartyPaywall?.canGift?.());
     for (const button of document.querySelectorAll('.watch-party-player-button')) {
       button.classList.toggle('is-active',joined);
       button.setAttribute('aria-pressed',String(joined));
@@ -161,7 +157,7 @@
       if (n) n.textContent = ''; // participant avatars are not repeated in the video toolbar
     }
     const detail = $('contentDetailWatchParty');
-    if (detail) { detail.classList.toggle('is-active',joined);detail.setAttribute('aria-expanded',String(panelOpened)); }
+    if (detail) { detail.classList.toggle('is-active',joined);detail.setAttribute('aria-expanded',String(panelOpened));detail.setAttribute('aria-label',t(0));const label=detail.querySelector('span');if(label)label.textContent=t(0); }
   }
   function send(event,payload) {
     if (joined && channel) channel.send({type:'broadcast',event,payload}).catch(()=>{});
@@ -183,25 +179,6 @@
     playbackStarted=true;startAt=Date.now();
     send('start-playback',{host:myId(),room,video:videoId,at:startAt});
     hidePanel();
-  }
-  async function joinByCode() {
-    const input=$('watchPartyCodeInput'),value=String(input?.value||'').trim().toLowerCase();
-    if (!ROOM_RE.test(value)) {textStatus(extraText('invalidCode'),true);return;}
-    if (!client() || !myId()){textStatus(t(5),true);return;}
-    const {data,error}=await client().from('watch_party_invites')
-      .select('room_id,video_id').eq('room_id',value).eq('invitee_id',myId())
-      .eq('status','accepted').gt('expires_at',new Date().toISOString()).limit(1);
-    const entry=Array.isArray(data)?data[0]:null;
-    if(error||!entry||!VIDEO_RE.test(String(entry.video_id||''))){
-      textStatus(extraText('mustAccept'),true);return;
-    }
-    if(currentVideo()?.id===entry.video_id){connect(value,false,entry.video_id);return;}
-    const pathname=typeof window.BETVLocaleURL==='function'
-      ?window.BETVLocaleURL('/'+encodeURIComponent(entry.video_id))
-      :'/'+encodeURIComponent(entry.video_id);
-    const url=new URL(pathname,location.origin);
-    url.searchParams.set('watchParty',value);url.searchParams.set('watchVideo',entry.video_id);
-    location.assign(url.href);
   }
   const additional={
     'pt-br':{invalidCode:'Informe um código de sala válido.',mustAccept:'Aceite primeiro o convite nas notificações.',join:'Entrar com código',code:'Código da sala',codeHint:'O código funciona somente para fãs que aceitaram o convite.',copy:'Copiar código',copied:'Código copiado.',inviteTitle:'Convidar fã',inviteSubtitle:'Encontre um perfil e envie um convite para assistir juntos.',sent:'Convite enviado',lookup:'Pesquise pelo @usuário',startHint:'A sala está pronta. Clique em Assistir para iniciar com seus convidados.',connected:'Você entrou na sala. Aguarde o anfitrião iniciar o vídeo.'},
@@ -594,15 +571,12 @@
       '<div class="watch-party-actions"><button type="button" id="watchPartyCreate"></button>'+
       '<button type="button" id="watchPartyInviteToggle" hidden></button>'+
       '<button type="button" id="watchPartyLeave" hidden></button></div>'+
-      '<div id="watchPartyJoinBox" class="watch-party-code-entry"><input id="watchPartyCodeInput" type="text" autocomplete="off" maxlength="36" aria-label="Room code"><button id="watchPartyJoinButton" type="button"></button><small id="watchPartyCodeHint"></small></div>'+
       '<div id="watchPartyRoomCodeBox" class="watch-party-room-code" hidden><small id="watchPartyCodeLabel"></small><code id="watchPartyRoomCode"></code><button type="button" id="watchPartyCopyCode"></button></div>'+
       '<button type="button" id="watchPartyGiftOpen" class="watch-party-gift-cta" hidden></button>';
     document.body.append(panel);
     const toast=document.createElement('div');toast.id='watchPartyInviteToast';toast.className='watch-party-invite-toast';toast.hidden=true;
     toast.setAttribute('role','region');toast.setAttribute('aria-label','Watch Party');document.body.append(toast);
     $('watchPartyClose').addEventListener('click',hidePanel);
-    $('watchPartyJoinButton').addEventListener('click',joinByCode);
-    $('watchPartyCodeInput').addEventListener('keydown',event=>{if(event.key==='Enter')joinByCode();});
     $('watchPartyCopyCode').addEventListener('click',async()=>{
       if(!joined || !isHost || !room)return;
       try{await navigator.clipboard.writeText(room);textStatus(extraText('copied'));}
