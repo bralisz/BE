@@ -120,7 +120,7 @@
     }
     const owner = people.find(p=>p.isHost) || (isHost && joined ? people.find(p=>p.id===myId()) : null);
     const hostCard = $('watchPartyHostCard');
-    if (hostCard) hostCard.hidden = !joined || !owner || !(cleanImage(owner.avatar)||cleanImage(owner.banner));
+    if (hostCard) hostCard.hidden = !joined || !owner || !cleanImage(owner.avatar);
     const cover = $('watchPartyBanner'), name = $('watchPartyHostName'), avatar = $('watchPartyHostAvatar');
     if (cover) {
       const url = cleanImage(owner?.banner);
@@ -419,7 +419,7 @@
     $('watchPartyInviteSearch').addEventListener('input',()=>{
       clearTimeout(searchTimer);searchTimer=setTimeout(findFans,240);
     });
-    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!invitePicker.hidden)closeInvitePicker();});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!invitePicker.hidden){event.preventDefault();event.stopImmediatePropagation();closeInvitePicker();}},true);
     return invitePicker;
   }
   function closeInvitePicker(){if(invitePicker)invitePicker.hidden=true;}
