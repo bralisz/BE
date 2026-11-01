@@ -226,9 +226,14 @@
       const result=await invoke({action:'verify',session_id:sessionId});
       if(result?.pending){
         if(!pendingSession())rememberPending(sessionId);
-        status(String(window.BETVLocale?.slug||'pt-br').toLowerCase()==='pt-br'
-          ?'Aguardando a confirmação do pagamento. Você pode voltar mais tarde; verificaremos novamente.'
-          :'Waiting for payment confirmation. You can return later; we will check again.');
+        const waiting={
+          'pt-br':'Aguardando a confirmação do pagamento. Você pode voltar mais tarde; verificaremos novamente.',
+          'en-us':'Waiting for payment confirmation. You can return later; we will check again.',
+          es:'Esperando la confirmación del pago. Puedes volver más tarde; lo verificaremos de nuevo.',
+          fr:'En attente de la confirmation du paiement. Vous pouvez revenir plus tard ; nous vérifierons à nouveau.',
+          it:'In attesa della conferma del pagamento. Puoi tornare più tardi; controlleremo di nuovo.'
+        };
+        status(waiting[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||waiting['pt-br']);
         if(!panel.hidden&&pendingTries<24){pendingTries++;pendingTimer=setTimeout(()=>verifyReturn(),15000);}
         return;
       }

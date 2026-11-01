@@ -16,7 +16,8 @@
     "test:seo": "node scripts/test-seo.cjs && node scripts/test-seo-navigation.cjs",
     "test:admin-ui": "node scripts/test-admin-media.cjs && node scripts/test-admin-studio.cjs && node scripts/test-admin-workspace.cjs && node scripts/test-mobile-interface.cjs",
     "test:lazy-media": "node scripts/test-lazy-media.cjs",
-    "test:community-banner": "node scripts/test-community-banner.cjs"
+    "test:community-banner": "node scripts/test-community-banner.cjs",
+    "test:watch-party": "node scripts/test-watch-party-profile.cjs"
   },
   "devDependencies": {
     "jsdom": "^30.1.2"
