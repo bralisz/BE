@@ -181,7 +181,7 @@
       }
       if(data!=='gift_granted')throw Error(t('error'));
       selected=null;giftInfo=null;await loadGift();status(t('giftDone'));
-    }catch(e){const msg=String(e.message||'');status(msg==='pix_not_available'?'Pix indisponível nesta conta Stripe. Tente o pagamento por cartão.':(msg||t('error')));}
+    }catch(e){status(e.message||t('error'));}
     finally{busy=false;$('watchPartyGiftConfirm').disabled=false;}
   }
   async function checkout(method='card'){
@@ -193,7 +193,7 @@
       const url=new URL(String(data?.url||''));
       if(url.protocol!=='https:'||!/(^|\.)stripe\.com$/.test(url.hostname))throw Error(t('error'));
       location.assign(url.href);
-    }catch(e){status(e.message||t('error'));}
+    }catch(e){const msg=String(e.message||'');status(msg==='pix_not_available'?'Pix indisponível nesta conta Stripe. Tente o pagamento por cartão.':(msg||t('error')));}
     finally{busy=false;button.disabled=false;pix.disabled=false;}
   }
   async function verifyReturn(){

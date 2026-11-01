@@ -157,6 +157,7 @@
     feedback(txt(9)+profile.username);
     $('watchPartyGiftMatches').replaceChildren();selected=null;
     await refresh();
+    await window.BETVWatchPartyPaywall?.refresh?.();
   }catch(e){feedback(e.message||txt(12));button.disabled=false;button.textContent=txt(7);}
   finally{sending=false;}
  }
