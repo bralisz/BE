@@ -65,7 +65,7 @@
       '<div class="watch-party-gift-results" id="watchPartyGiftResults"></div><div class="watch-party-selected-card" id="watchPartySelectedCard" hidden></div>'+
       '<button id="watchPartyGiftConfirm" type="button" class="watch-party-unlock-checkout" hidden></button>'+
       '<button id="watchPartyGiftCancel" type="button" class="watch-party-ios-secondary" hidden></button></div></div>'+
-      '<div id="watchPartyUnlockedPanel" hidden><strong>Watch Party liberada</strong><p>Acesso permanente ativo na sua conta, com a tag Happier Than Ever.</p><button type="button" id="watchPartyUnlockedDone">Continuar</button></div><p id="watchPartyUnlockStatus" class="watch-party-unlock-status" role="status" aria-live="polite"></p></section>';
+      '<div id="watchPartyUnlockedPanel" hidden><span class="watch-party-gold-tag watch-party-unlocked-tag notranslate" translate="no">Happier Than Ever</span><strong id="watchPartyUnlockedTitle">Watch Party liberada</strong><p id="watchPartyUnlockedInfo">Acesso permanente ativo na sua conta, com a tag Happier Than Ever.</p><button type="button" id="watchPartyUnlockedDone">Continuar</button></div><p id="watchPartyUnlockStatus" class="watch-party-unlock-status" role="status" aria-live="polite"></p></section>';
     document.body.append(panel);
     panel.querySelector('.watch-party-paywall-overlay').addEventListener('click',close);
     $('watchPartyUnlockClose').addEventListener('click',close);
@@ -322,6 +322,9 @@
       $('watchPartyUnlockDescription').hidden=unlocked;
       $('watchPartyPurchaseSection').hidden=unlocked;
       $('watchPartyUnlockedPanel').hidden=!unlocked;
+      $('watchPartyUnlockedTitle').textContent=t('unlocked');
+      $('watchPartyUnlockedInfo').textContent=t('unlockedInfo');
+      $('watchPartyUnlockedDone').textContent=t('close');
       $('watchPartyGiftSection').hidden=!unlocked;
       $('watchPartyUnlockPrice').textContent=priceForLocale().text;
       $('watchPartyOneTime').textContent=t('oneTime');
@@ -332,11 +335,12 @@
     const button=$('contentDetailWatchParty');
     if(button){
       const play=$('contentDetailPlay');
-      if(play&&button.nextElementSibling!==play)play.insertAdjacentElement('beforebegin',button);
+      if(play&&play.nextElementSibling!==button)play.insertAdjacentElement('afterend',button);
       button.classList.add('watch-party-main-cta');
       button.dataset.watchPartyUnlock=unlocked?'true':'false';
-      button.setAttribute('aria-label','Watch Party');
-      const label=button.querySelector('span');if(label)label.textContent='Watch Party';
+      const actionLabel=({'pt-br':'Assistir junto','en-us':'Watch together',es:'Ver juntos',fr:'Regarder ensemble',it:'Guarda insieme'})[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||'Assistir junto';
+      button.setAttribute('aria-label',actionLabel);
+      const label=button.querySelector('span');if(label)label.textContent=actionLabel;
     }
     promote();
   }
