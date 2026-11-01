@@ -58,7 +58,7 @@
       '<div class="watch-party-unlock-reward"><span class="watch-party-gold-tag notranslate" translate="no">Happier Than Ever</span><div><strong id="watchPartyRewardTitle"></strong><span id="watchPartyRewardInfo"></span></div></div>'+
       '<div class="watch-party-unlock-plus"><strong id="watchPartyPlusTitle"></strong><p id="watchPartyPlusInfo"></p></div>'+
       '<button id="watchPartyUnlockCheckout" type="button" class="watch-party-unlock-checkout"></button><button id="watchPartyUnlockPix" type="button" class="watch-party-unlock-pix" hidden>Pagar com Pix</button></div>'+ 
-      '<section id="watchPartyPixPanel" class="watch-party-pix-panel" hidden aria-label="Pagamento Pix"><header class="watch-party-pix-head"><strong>Pagamento via Pix</strong><button type="button" id="watchPartyPixBack" aria-label="Voltar">×</button></header><p>Escaneie o QR Code ou copie o código Pix. O acesso é liberado após a confirmação.</p><img id="watchPartyPixQr" alt="QR Code Pix" hidden><button type="button" id="watchPartyPixCopy" class="watch-party-unlock-checkout">Copiar código Pix</button><p id="watchPartyPixStatus" aria-live="polite"></p></section>'+
+      '<section id="watchPartyPixPanel" class="watch-party-pix-panel" hidden aria-label="Pagamento Pix"><header class="watch-party-pix-head"><strong>Pagamento via Pix</strong><button type="button" id="watchPartyPixBack" aria-label="Voltar">×</button></header><p>Escaneie o QR Code ou copie o código Pix. O acesso é liberado após a confirmação.</p><img id="watchPartyPixQr" alt="QR Code Pix" hidden><label class="watch-party-pix-copy-label" for="watchPartyPixCode">Pix copia e cola</label><textarea id="watchPartyPixCode" rows="2" readonly spellcheck="false" aria-label="Código Pix para copiar"></textarea><button type="button" id="watchPartyPixCopy" class="watch-party-unlock-checkout">Copiar código Pix</button><p id="watchPartyPixStatus" aria-live="polite"></p></section>'+
       '<div id="watchPartyGiftSection" class="watch-party-gift-section" hidden><p id="watchPartyGiftInfo"></p>'+
       '<div id="watchPartyGiftUsed" class="watch-party-gift-used" hidden></div><div id="watchPartyGiftPicker" hidden>'+
       '<label for="watchPartyGiftSearch" id="watchPartyGiftSearchLabel"></label><input type="search" id="watchPartyGiftSearch" autocomplete="off" spellcheck="false" maxlength="40">'+
@@ -72,7 +72,7 @@
     $('watchPartyUnlockedDone').addEventListener('click',close);
     $('watchPartyUnlockCheckout').addEventListener('click',()=>checkout('card'));$('watchPartyUnlockPix').addEventListener('click',()=>startPix());
     $('watchPartyPixBack').addEventListener('click',()=>{clearInterval(pixTimer);pixTimer=0;$('watchPartyPixPanel').hidden=true;render();});
-    $('watchPartyPixCopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(pixData?.qrCode||'');$('watchPartyPixStatus').textContent='Código Pix copiado.';}catch(_){$('watchPartyPixStatus').textContent='Selecione e copie o código manualmente.';}});
+    $('watchPartyPixCopy').addEventListener('click',async()=>{const code=String(pixData?.qrCode||'');if(!code)return;const area=$('watchPartyPixCode');try{if(!navigator.clipboard?.writeText)throw Error('clipboard_unavailable');await navigator.clipboard.writeText(code);$('watchPartyPixStatus').textContent='Código Pix copiado.';}catch(_){area.focus();area.select();$('watchPartyPixStatus').textContent='Código selecionado. Use Copiar no menu do aparelho.';}});
     $('watchPartyGiftSearch').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(findFans,260);});
     $('watchPartyGiftConfirm').addEventListener('click',sendGift);
     $('watchPartyGiftCancel').addEventListener('click',()=>{selected=null;renderGift();});
@@ -214,6 +214,7 @@
     const b64=String(pixData.qrCodeBase64||'').replace(/\s/g,'');
     if(/^[A-Za-z0-9+/=]+$/.test(b64)&&b64.length<100000){image.src='data:image/png;base64,'+b64;image.hidden=false;}
     else {image.hidden=true;image.removeAttribute('src');}
+    $('watchPartyPixCode').value=String(pixData.qrCode||'');
     $('watchPartyPixCopy').disabled=!pixData.qrCode;
     $('watchPartyPixStatus').textContent='Aguardando confirmação do Mercado Pago…';
     clearInterval(pixTimer);pixTimer=setInterval(checkPix,8000);

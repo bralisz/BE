@@ -239,3 +239,9 @@
   .watch-party-pix-panel #watchPartyPixCopy{min-height:46px}
 }
 @media(max-height:610px){.watch-party-unlock-card{max-height:calc(100dvh - 12px)!important}}
+
+/* Pix copia e cola when clipboard permissions are unavailable. */
+.watch-party-pix-copy-label{align-self:flex-start;font-size:11px;font-weight:750;color:#c0d3ef}
+#watchPartyPixCode{display:block;width:100%;min-height:50px;max-height:110px;box-sizing:border-box;padding:10px 12px;border:1px solid rgba(158,182,218,.3);border-radius:12px;background:#171c27;color:#d7e5fa;font-size:11px;line-height:1.4;resize:vertical;overflow-wrap:anywhere;word-break:break-all;outline:none}
+#watchPartyPixCode:focus{border-color:#8db8ff}
+@media(max-width:760px){#watchPartyPixCode{font-size:12px;min-height:60px}}
