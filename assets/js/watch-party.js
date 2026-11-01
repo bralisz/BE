@@ -467,7 +467,7 @@
       '<section class="watch-party-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="watchPartyPickerTitle">'+
       '<div class="watch-party-ios-handle"></div><header class="watch-party-picker-header">'+
       '<div><strong id="watchPartyPickerTitle"></strong><p id="watchPartyPickerSubtitle"></p></div>'+
-      '<button type="button" id="watchPartyPickerClose" aria-label="Close">×</button></header>'+
+      '<button type="button" id="watchPartyPickerClose" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button></header>'+
       '<div class="watch-party-picker-search"><input id="watchPartyInviteSearch" type="search" autocomplete="off" maxlength="30" spellcheck="false"></div>'+
       '<div class="watch-party-picker-results" id="watchPartySearchResults"></div>'+
       '<p class="watch-party-picker-status" id="watchPartyPickerStatus" role="status"></p></section>';
@@ -586,7 +586,7 @@
     panel.id='watchPartyPanel';panel.className='watch-party-panel';panel.hidden=true;
     panel.setAttribute('aria-label','Watch Party');
     panel.innerHTML='<div class="watch-party-heading"><div class="watch-party-headlines"><strong id="watchPartyTitle">Watch Party</strong><span id="watchPartyPeopleLabel"></span></div>'+
-      '<button id="watchPartyClose" type="button" aria-label="Close" class="watch-party-close">×</button></div>'+
+      '<button id="watchPartyClose" type="button" aria-label="Close" class="watch-party-close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button></div>'+
       '<div class="watch-party-host" id="watchPartyHostCard" hidden><div class="watch-party-host-cover"><img id="watchPartyBanner" alt="" hidden></div>'+
       '<div class="watch-party-host-identity"><span id="watchPartyHostAvatar" class="watch-party-host-avatar"></span><div class="watch-party-host-text"><small id="watchPartyHostLabel"></small><strong id="watchPartyHostName"></strong></div></div></div>'+
 

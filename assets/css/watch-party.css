@@ -155,3 +155,30 @@
 .watch-party-picker-fan-row{padding:9px}
 .watch-party-picker-avatar{width:38px;height:38px}
 }
+
+/* Fixed close controls and compact playback panel, responsive at narrow widths. */
+.watch-party-panel{padding:16px!important;transition:width .22s ease,max-height .22s ease;max-height:min(560px,82dvh)}
+.watch-party-panel .watch-party-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:40px;margin:0 0 9px}
+.watch-party-panel .watch-party-headlines{min-width:0;padding-right:8px}
+.watch-party-panel .watch-party-close,
+#watchPartyPickerClose{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 36px!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;border:1px solid rgba(181,199,230,.19)!important;border-radius:50%!important;background:rgba(119,137,168,.17)!important;color:#fff!important;padding:0!important;line-height:0!important;box-sizing:border-box!important;cursor:pointer;z-index:2}
+.watch-party-close svg,#watchPartyPickerClose svg{width:17px!important;height:17px!important;display:block!important;margin:auto!important;flex:none}
+.watch-party-close:hover,#watchPartyPickerClose:hover{background:rgba(141,165,202,.32)!important}
+.watch-party-close:focus-visible,#watchPartyPickerClose:focus-visible{outline:2px solid #91b9ff;outline-offset:3px}
+.watch-party-panel .watch-party-gift-cta{display:block;width:100%;min-height:43px;margin-top:12px;border-radius:12px!important;background:rgba(64,113,184,.16)!important;border:1px solid rgba(124,167,229,.3)!important;font-size:12px!important;color:#d6e6ff!important}
+.watch-party-panel .watch-party-gift-cta[hidden]{display:none!important}
+.watch-party-panel.is-compact{width:min(278px,calc(100vw - 24px))!important;max-height:300px!important;padding:12px!important}
+.watch-party-panel.is-compact .watch-party-heading{margin-bottom:5px}
+.watch-party-panel.is-compact .watch-party-host,.watch-party-panel.is-compact .watch-party-code-entry,.watch-party-panel.is-compact .watch-party-room-code,.watch-party-panel.is-compact .watch-party-actions,.watch-party-panel.is-compact .watch-party-gift-cta{display:none!important}
+.watch-party-panel.is-compact .watch-party-status{margin:5px 0!important}
+@media(max-width:760px){
+ .watch-party-panel{right:10px!important;bottom:max(10px,env(safe-area-inset-bottom))!important;width:min(340px,calc(100vw - 20px))!important;max-height:min(68dvh,560px)!important;padding:13px!important;border-radius:20px!important}
+ #driveVideoPlayerShell>.watch-party-panel,#externalNativePlayerShell>.watch-party-panel{top:45px!important;right:8px!important;bottom:auto!important;width:min(300px,calc(100% - 16px))!important;max-height:calc(100% - 52px)!important}
+ .watch-party-panel.is-compact{width:min(250px,calc(100vw - 20px))!important;max-height:125px!important}
+ .watch-party-panel .watch-party-headlines strong{font-size:14px!important}
+ .watch-party-picker-header{position:relative;padding-right:44px}
+ #watchPartyPickerClose{position:absolute;right:0;top:0}
+ .watch-party-notification{padding:10px!important}
+ .watch-party-invite-actions button{min-height:39px!important}
+}
+@media(prefers-reduced-motion:reduce){.watch-party-panel{transition:none}}

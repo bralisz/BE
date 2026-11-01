@@ -169,12 +169,12 @@
      Watch Party and Share. Mobile retains the requested two-level layout. */
   .detail-actions{display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:wrap!important;gap:12px!important}
   .detail-primary-actions,.detail-secondary-actions{display:contents!important}
-  .detail-actions #contentDetailPlay{order:0}
+  .detail-actions #contentDetailPlay{order:1}
   .detail-actions #contentDetailList{order:2}
   .detail-actions #detailStreamingStore{order:3}
   .detail-actions #detailStreamingButtonMobile{order:4}
   .detail-actions #contentDetailCast{order:5}
-  .detail-actions #contentDetailWatchParty{order:1}
+  .detail-actions #contentDetailWatchParty{order:0}
   .detail-actions #contentDetailShare{order:6}
 }
 
@@ -188,3 +188,54 @@
 .watch-party-unlock-pix:hover{background:rgba(76,107,153,.30)}
 .watch-party-unlock-pix:focus-visible{outline:2px solid #91bcff;outline-offset:2px}
 .watch-party-unlock-pix[hidden]{display:none!important}
+
+/* Watch Party action is on the left of Play on desktop and mobile. */
+.detail-primary-actions #contentDetailWatchParty{order:0}
+.detail-primary-actions #contentDetailPlay{order:1}
+.detail-primary-actions{width:auto;max-width:100%;gap:9px!important}
+.watch-party-paywall-profile{margin-top:4px!important}
+.watch-party-paywall-names{display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:wrap;gap:7px!important;min-width:0;padding-top:5px!important}
+.watch-party-paywall-names strong{flex:0 1 auto;max-width:100%;font-size:14px!important}
+.watch-party-paywall-names #watchPartyPaywallUsername{display:none!important}
+.watch-party-preview-tag{padding:5px 8px!important;font-size:9px!important;max-width:100%;white-space:nowrap}
+.watch-party-unlock-card{padding-top:26px!important}
+.watch-party-unlock-card .watch-party-unlock-close,
+.watch-party-gift-dialog #watchPartyGiftClose{top:15px!important;right:15px!important;display:flex!important;align-items:center!important;justify-content:center!important;width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;box-sizing:border-box!important;line-height:0!important;padding:0!important;z-index:6!important;transform:none!important}
+.watch-party-unlock-close svg,#watchPartyGiftClose svg{width:16px!important;height:16px!important;margin:auto!important;flex:none!important}
+.watch-party-unlock-card .watch-party-ios-handle{margin:0 auto 18px!important;flex:none}
+.watch-party-unlock-card .watch-party-paywall-profile{margin-right:0!important;margin-left:0!important}
+.watch-party-paywall-banner{height:76px!important}
+.watch-party-paywall-identity{min-height:52px;box-sizing:border-box;padding-right:8px!important}
+.watch-party-unlock-card #watchPartyUnlockedPanel{width:100%;display:flex;flex-direction:column;gap:9px;padding:12px;border-radius:15px;background:rgba(71,111,171,.10);border:1px solid rgba(115,155,215,.21);box-sizing:border-box}
+#watchPartyUnlockedPanel strong{color:#dbeaff;font-size:14px}
+#watchPartyUnlockedPanel p{margin:0;color:#b4c4da;font-size:12px;line-height:1.5}
+#watchPartyUnlockedPanel button{border:1px solid rgba(148,187,236,.32);background:#2963aa;border-radius:12px;color:#fff;min-height:42px;font-weight:750;cursor:pointer}
+#watchPartyUnlockedPanel[hidden],#watchPartyPixPanel[hidden]{display:none!important}
+.watch-party-pix-panel{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px;padding:4px 0 9px}
+.watch-party-pix-head{display:flex;width:100%;justify-content:space-between;align-items:center;gap:12px}
+.watch-party-pix-head strong{font-size:16px;letter-spacing:-.02em}
+#watchPartyPixBack{width:32px;height:32px;display:grid;place-items:center;border:1px solid rgba(166,183,210,.25);border-radius:50%;background:rgba(117,141,179,.18);color:#fff;font-size:20px;cursor:pointer}
+.watch-party-pix-panel p{margin:0;color:#bbc7dd;font-size:12px;line-height:1.5}
+#watchPartyPixQr{width:min(235px,75vw);height:auto;aspect-ratio:1;object-fit:contain;background:#fff;border-radius:16px;padding:10px;box-sizing:border-box}
+#watchPartyPixQr[hidden]{display:none!important}
+.watch-party-pix-panel button:focus-visible{outline:2px solid #8db8ff;outline-offset:3px}
+@media(max-width:760px){
+  .detail-primary-actions{width:100%;flex-wrap:nowrap!important}
+  .detail-primary-actions #contentDetailWatchParty,.detail-primary-actions #contentDetailPlay{flex:1 1 0!important;min-width:0!important;padding:0 11px!important;font-size:12px!important}
+  .watch-party-unlock-card{width:min(100%,420px)!important;max-height:calc(100dvh - 24px)!important;padding:18px 14px 20px!important;gap:10px!important;border-radius:24px!important}
+  .watch-party-paywall{padding:12px!important;align-items:center}
+  .watch-party-unlock-card .watch-party-unlock-close{top:13px!important;right:12px!important}
+  .watch-party-unlock-card .watch-party-ios-handle{margin:0 auto 18px!important}
+  .watch-party-paywall-profile{margin:5px 0 0!important}
+  .watch-party-paywall-banner{height:67px!important}
+  .watch-party-paywall-identity{gap:7px!important;padding:0 8px 9px!important}
+  .watch-party-paywall-avatar{width:42px!important;height:42px!important}
+  .watch-party-preview-tag{font-size:8px!important;padding:4px 7px!important}
+  .watch-party-unlock-card h2{font-size:22px!important}
+  .watch-party-unlock-card #watchPartyPurchaseSection{gap:10px!important}
+  .watch-party-gift-dialog{width:100%!important;border-radius:23px!important;padding:21px 14px 18px!important;max-height:calc(100dvh - 26px)!important}
+  .watch-party-gift-heading{padding-right:39px;min-height:38px}
+  #watchPartyGiftClose{right:12px!important;top:12px!important}
+  .watch-party-pix-panel #watchPartyPixCopy{min-height:46px}
+}
+@media(max-height:610px){.watch-party-unlock-card{max-height:calc(100dvh - 12px)!important}}
