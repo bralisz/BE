@@ -15,6 +15,19 @@
     const index=keys.indexOf(key),locale=String(window.BETVLocale?.slug||'pt-br').toLowerCase();
     return (dict[locale]||dict['pt-br'])[index] || dict['pt-br'][index] || key;
   };
+  const pixWords={"pt-br":{"pay":"Pagar com Pix","panel":"Pagamento Pix","title":"Pagamento via Pix","back":"Voltar","instructions":"Escaneie o QR Code ou copie o código Pix. O acesso é liberado após a confirmação.","copyLabel":"Pix copia e cola","copyCodeLabel":"Código Pix para copiar","copy":"Copiar código Pix","copied":"Código Pix copiado.","copyFallback":"Código selecionado. Use Copiar no menu do aparelho.","waiting":"Aguardando confirmação do Mercado Pago…","status":"Status: ","verification":"Verificação indisponível. Tentaremos novamente.","generating":"Gerando Pix seguro…","errorPrefix":"Não foi possível gerar o Pix: ","retry":"tente novamente","stripeUnavailable":"Pix indisponível nesta conta Stripe. Tente o pagamento por cartão."},"en-us":{"pay":"Pay with Pix","panel":"Pix payment","title":"Pay via Pix","back":"Back","instructions":"Scan the QR code or copy the Pix code. Access unlocks after payment confirmation.","copyLabel":"Pix copy and paste","copyCodeLabel":"Pix code to copy","copy":"Copy Pix code","copied":"Pix code copied.","copyFallback":"Code selected. Use Copy in your device menu.","waiting":"Waiting for Mercado Pago confirmation…","status":"Status: ","verification":"Verification unavailable. We will try again.","generating":"Generating a secure Pix payment…","errorPrefix":"Could not generate Pix: ","retry":"try again","stripeUnavailable":"Pix is unavailable on this Stripe account. Please pay by card."},"es":{"pay":"Pagar con Pix","panel":"Pago Pix","title":"Pago mediante Pix","back":"Volver","instructions":"Escanea el código QR o copia el código Pix. El acceso se activa tras la confirmación.","copyLabel":"Pix copia y pega","copyCodeLabel":"Código Pix para copiar","copy":"Copiar código Pix","copied":"Código Pix copiado.","copyFallback":"Código seleccionado. Usa Copiar en el menú del dispositivo.","waiting":"Esperando confirmación de Mercado Pago…","status":"Estado: ","verification":"No se puede verificar ahora. Volveremos a intentarlo.","generating":"Generando un pago Pix seguro…","errorPrefix":"No se pudo generar Pix: ","retry":"inténtalo de nuevo","stripeUnavailable":"Pix no está disponible en esta cuenta de Stripe. Paga con tarjeta."},"fr":{"pay":"Payer avec Pix","panel":"Paiement Pix","title":"Paiement via Pix","back":"Retour","instructions":"Scannez le code QR ou copiez le code Pix. L’accès est activé après confirmation.","copyLabel":"Code Pix à copier-coller","copyCodeLabel":"Code Pix à copier","copy":"Copier le code Pix","copied":"Code Pix copié.","copyFallback":"Code sélectionné. Utilisez Copier dans le menu de votre appareil.","waiting":"En attente de la confirmation de Mercado Pago…","status":"Statut : ","verification":"Vérification indisponible. Nous réessaierons.","generating":"Création du paiement Pix sécurisé…","errorPrefix":"Impossible de générer le Pix : ","retry":"réessayez","stripeUnavailable":"Pix n’est pas disponible sur ce compte Stripe. Payez par carte."},"it":{"pay":"Paga con Pix","panel":"Pagamento Pix","title":"Pagamento tramite Pix","back":"Indietro","instructions":"Scansiona il codice QR o copia il codice Pix. L’accesso viene attivato dopo la conferma.","copyLabel":"Pix copia e incolla","copyCodeLabel":"Codice Pix da copiare","copy":"Copia il codice Pix","copied":"Codice Pix copiato.","copyFallback":"Codice selezionato. Usa Copia nel menu del dispositivo.","waiting":"In attesa di conferma da Mercado Pago…","status":"Stato: ","verification":"Verifica non disponibile. Riproveremo.","generating":"Generazione del pagamento Pix sicuro…","errorPrefix":"Impossibile generare il Pix: ","retry":"riprova","stripeUnavailable":"Pix non è disponibile su questo account Stripe. Paga con carta."}};
+  const px=key=>(pixWords[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||pixWords['pt-br'])[key];
+  function renderPixLocale(){
+    if(!panel)return;
+    $('watchPartyUnlockPix').textContent=px('pay');
+    $('watchPartyPixPanel').setAttribute('aria-label',px('panel'));
+    $('watchPartyPixPanel').querySelector('.watch-party-pix-head strong').textContent=px('title');
+    $('watchPartyPixBack').setAttribute('aria-label',px('back'));
+    $('watchPartyPixInstructions').textContent=px('instructions');
+    $('watchPartyPixCodeLabel').textContent=px('copyLabel');
+    $('watchPartyPixCode').setAttribute('aria-label',px('copyCodeLabel'));
+    $('watchPartyPixCopy').textContent=px('copy');
+  }
   const CURRENCY_PRICE = Object.freeze({brl:2719,usd:500,eur:449});
   function priceForLocale(){
     const locale=String(window.BETVLocale?.slug||'pt-br').toLowerCase();
@@ -58,7 +71,7 @@
       '<div class="watch-party-unlock-reward"><span class="watch-party-gold-tag notranslate" translate="no">Happier Than Ever</span><div><strong id="watchPartyRewardTitle"></strong><span id="watchPartyRewardInfo"></span></div></div>'+
       '<div class="watch-party-unlock-plus"><strong id="watchPartyPlusTitle"></strong><p id="watchPartyPlusInfo"></p></div>'+
       '<button id="watchPartyUnlockCheckout" type="button" class="watch-party-unlock-checkout"></button><button id="watchPartyUnlockPix" type="button" class="watch-party-unlock-pix" hidden>Pagar com Pix</button></div>'+ 
-      '<section id="watchPartyPixPanel" class="watch-party-pix-panel" hidden aria-label="Pagamento Pix"><header class="watch-party-pix-head"><strong>Pagamento via Pix</strong><button type="button" id="watchPartyPixBack" aria-label="Voltar">×</button></header><p>Escaneie o QR Code ou copie o código Pix. O acesso é liberado após a confirmação.</p><img id="watchPartyPixQr" alt="QR Code Pix" hidden><label class="watch-party-pix-copy-label" for="watchPartyPixCode">Pix copia e cola</label><textarea id="watchPartyPixCode" rows="2" readonly spellcheck="false" aria-label="Código Pix para copiar"></textarea><button type="button" id="watchPartyPixCopy" class="watch-party-unlock-checkout">Copiar código Pix</button><p id="watchPartyPixStatus" aria-live="polite"></p></section>'+
+      '<section id="watchPartyPixPanel" class="watch-party-pix-panel" hidden aria-label="Pagamento Pix"><header class="watch-party-pix-head"><strong>Pagamento via Pix</strong><button type="button" id="watchPartyPixBack" aria-label="Voltar">×</button></header><p id="watchPartyPixInstructions">Escaneie o QR Code ou copie o código Pix. O acesso é liberado após a confirmação.</p><img id="watchPartyPixQr" alt="QR Code Pix" hidden><label id="watchPartyPixCodeLabel" class="watch-party-pix-copy-label" for="watchPartyPixCode">Pix copia e cola</label><textarea id="watchPartyPixCode" rows="2" readonly spellcheck="false" aria-label="Código Pix para copiar"></textarea><button type="button" id="watchPartyPixCopy" class="watch-party-unlock-checkout">Copiar código Pix</button><p id="watchPartyPixStatus" aria-live="polite"></p></section>'+
       '<div id="watchPartyGiftSection" class="watch-party-gift-section" hidden><p id="watchPartyGiftInfo"></p>'+
       '<div id="watchPartyGiftUsed" class="watch-party-gift-used" hidden></div><div id="watchPartyGiftPicker" hidden>'+
       '<label for="watchPartyGiftSearch" id="watchPartyGiftSearchLabel"></label><input type="search" id="watchPartyGiftSearch" autocomplete="off" spellcheck="false" maxlength="40">'+
@@ -72,7 +85,7 @@
     $('watchPartyUnlockedDone').addEventListener('click',close);
     $('watchPartyUnlockCheckout').addEventListener('click',()=>checkout('card'));$('watchPartyUnlockPix').addEventListener('click',()=>startPix());
     $('watchPartyPixBack').addEventListener('click',()=>{clearInterval(pixTimer);pixTimer=0;$('watchPartyPixPanel').hidden=true;render();});
-    $('watchPartyPixCopy').addEventListener('click',async()=>{const code=String(pixData?.qrCode||'');if(!code)return;const area=$('watchPartyPixCode');try{if(!navigator.clipboard?.writeText)throw Error('clipboard_unavailable');await navigator.clipboard.writeText(code);$('watchPartyPixStatus').textContent='Código Pix copiado.';}catch(_){area.focus();area.select();$('watchPartyPixStatus').textContent='Código selecionado. Use Copiar no menu do aparelho.';}});
+    $('watchPartyPixCopy').addEventListener('click',async()=>{const code=String(pixData?.qrCode||'');if(!code)return;const area=$('watchPartyPixCode');try{if(!navigator.clipboard?.writeText)throw Error('clipboard_unavailable');await navigator.clipboard.writeText(code);$('watchPartyPixStatus').textContent=px('copied');}catch(_){area.focus();area.select();$('watchPartyPixStatus').textContent=px('copyFallback');}});
     $('watchPartyGiftSearch').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(findFans,260);});
     $('watchPartyGiftConfirm').addEventListener('click',sendGift);
     $('watchPartyGiftCancel').addEventListener('click',()=>{selected=null;renderGift();});
@@ -209,14 +222,14 @@
     if(!panel||!pixData)return;
     panel.hidden=false;
     $('watchPartyPurchaseSection').hidden=true;
-    $('watchPartyPixPanel').hidden=false;
+    $('watchPartyPixPanel').hidden=false;renderPixLocale();
     const image=$('watchPartyPixQr');
     const b64=String(pixData.qrCodeBase64||'').replace(/\s/g,'');
     if(/^[A-Za-z0-9+/=]+$/.test(b64)&&b64.length<100000){image.src='data:image/png;base64,'+b64;image.hidden=false;}
     else {image.hidden=true;image.removeAttribute('src');}
     $('watchPartyPixCode').value=String(pixData.qrCode||'');
     $('watchPartyPixCopy').disabled=!pixData.qrCode;
-    $('watchPartyPixStatus').textContent='Aguardando confirmação do Mercado Pago…';
+    $('watchPartyPixStatus').textContent=px('waiting');
     clearInterval(pixTimer);pixTimer=setInterval(checkPix,8000);
     checkPix();
   }
@@ -232,9 +245,9 @@
         window.dispatchEvent(new Event('be:watch-party-gift-status'));
         window.dispatchEvent(new Event('be:community-tag-updated'));
       }else if(pixData&&data?.status&&data.status!=='pending'){
-        $('watchPartyPixStatus').textContent='Status: '+String(data.status).slice(0,40);
+        $('watchPartyPixStatus').textContent=px('status')+String(data.status).slice(0,40);
       }
-    }catch(_){if($('watchPartyPixStatus'))$('watchPartyPixStatus').textContent='Verificação indisponível. Tentaremos novamente.';}
+    }catch(_){if($('watchPartyPixStatus'))$('watchPartyPixStatus').textContent=px('verification');}
     finally{pixChecking=false;}
   }
   async function startPix(){
@@ -243,7 +256,7 @@
     if(pixData){showPix();return;}
     busy=true;
     const button=$('watchPartyUnlockPix');button.disabled=true;
-    status('Gerando Pix seguro…');
+    status(px('generating'));
     try{
       const requestId=window.crypto?.randomUUID?.();
       if(!requestId)throw Error('pix_request_unavailable');
@@ -253,7 +266,7 @@
       if(!data?.paymentId)throw Error('pix_missing_code');
       pixData={paymentId:String(data.paymentId),qrCode:String(data.qrCode||''),qrCodeBase64:String(data.qrCodeBase64||'')};
       savePix(pixData);showPix();status('');
-    }catch(e){status('Não foi possível gerar o Pix: '+String(e.message||'tente novamente'));}
+    }catch(e){status(px('errorPrefix')+String(e.message||px('retry')));}
     finally{busy=false;button.disabled=false;}
   }
   async function checkout(method='card'){
@@ -266,7 +279,7 @@
       if(url.protocol!=='https:'||!/(^|\.)stripe\.com$/.test(url.hostname))throw Error(t('error'));
       if(method==='pix'&&data.session_id)rememberPending(data.session_id);
       location.assign(url.href);
-    }catch(e){const msg=String(e.message||'');status(msg==='pix_not_available'?'Pix indisponível nesta conta Stripe. Tente o pagamento por cartão.':(msg||t('error')));}
+    }catch(e){const msg=String(e.message||'');status(msg==='pix_not_available'?px('stripeUnavailable'):(msg||t('error')));}
     finally{busy=false;button.disabled=false;pix.disabled=false;}
   }
   async function verifyReturn(){
@@ -316,6 +329,7 @@
   }
   function render(){
     if(panel){
+      renderPixLocale();
       $('watchPartyUnlockClose').setAttribute('aria-label',t('close'));
       $('watchPartyUnlockTitle').textContent=unlocked?t('unlocked'):'Watch Party';
       $('watchPartyUnlockDescription').textContent=unlocked?'':t('description');
