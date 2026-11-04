@@ -52,6 +52,37 @@ function validRequestOrigin(req) {
 const EMAIL_DOMAIN_CACHE = globalThis.__betvEmailDomainCache || new Map();
 globalThis.__betvEmailDomainCache = EMAIL_DOMAIN_CACHE;
 const EMAIL_DOMAIN_CACHE_MS = 6 * 60 * 60 * 1000;
+
+const EMAIL_LOOKUP_WINDOW_MS = 10 * 60 * 1000;
+const EMAIL_LOOKUP_LIMIT_PER_IP = 30;
+const EMAIL_LOOKUP_LIMIT_PER_EMAIL = 8;
+// Best-effort per-instance throttle; edge/WAF rate limiting should also be enabled.
+const EMAIL_LOOKUP_BUCKETS = globalThis.__betvEmailLookupBuckets || new Map();
+globalThis.__betvEmailLookupBuckets = EMAIL_LOOKUP_BUCKETS;
+
+function allowEmailLookup(req, email) {
+  const source = String(req.headers['x-vercel-forwarded-for'] || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown')
+    .split(',')[0].trim().slice(0, 128);
+  const now = Date.now();
+  if (EMAIL_LOOKUP_BUCKETS.size > 2500) {
+    for (const [key, value] of EMAIL_LOOKUP_BUCKETS) {
+      if (value.expiresAt <= now) EMAIL_LOOKUP_BUCKETS.delete(key);
+    }
+  }
+  const keys = [['ip:' + source, EMAIL_LOOKUP_LIMIT_PER_IP], ['email:' + email, EMAIL_LOOKUP_LIMIT_PER_EMAIL]];
+  for (const [key, limit] of keys) {
+    const value = EMAIL_LOOKUP_BUCKETS.get(key);
+    if (value && value.expiresAt > now && value.count >= limit) return false;
+  }
+  for (const [key] of keys) {
+    const value = EMAIL_LOOKUP_BUCKETS.get(key);
+    EMAIL_LOOKUP_BUCKETS.set(key, value && value.expiresAt > now
+      ? { count: value.count + 1, expiresAt: value.expiresAt }
+      : { count: 1, expiresAt: now + EMAIL_LOOKUP_WINDOW_MS });
+  }
+  return true;
+}
+
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
   '10minutemail.com','10minutemail.net','20minutemail.com','33mail.com','anonaddy.com','dispostable.com',
   'emailondeck.com','fakeinbox.com','fakemail.net','getnada.com','guerrillamail.com','guerrillamail.net',
@@ -233,22 +264,50 @@ async function accountStatusHandler(req, res) {
       return res.status(400).json({ ok: false, error: 'E-mail inválido.', domainValid: false, domainCheckAvailable: true });
     }
 
+    if (String(req.headers['sec-fetch-site'] || '').toLowerCase() === 'cross-site') {
+      return res.status(403).json({ ok: false, error: 'Origem não permitida.' });
+    }
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    if (!allowEmailLookup(req, parsedEmail.email)) {
+      res.setHeader('Retry-After', '600');
+      return res.status(429).json({ ok: false, error: 'Muitas verificações. Aguarde alguns minutos.' });
+    }
+
     const domainCheck = await validateEmailDomain(parsedEmail.domain);
     let exists = null;
     let accountCheckAvailable = false;
 
     if (serviceRoleKey) {
+      // Auth is the source of truth. A profile may not exist yet for an active account.
+      // The RPC is restricted to service_role and must never be called by the browser.
       try {
-        const profileResponse = await fetch(
-          `${url}/rest/v1/profiles?email=eq.${encodeURIComponent(parsedEmail.email)}&select=id&limit=1`,
-          { headers: serviceHeaders(serviceRoleKey, { Accept: 'application/json' }) }
-        );
-        const profiles = await readJson(profileResponse);
-        if (profileResponse.ok) {
-          exists = Array.isArray(profiles) && profiles.length > 0;
+        const accountResponse = await fetch(`${url}/rest/v1/rpc/account_exists`, {
+          method: 'POST',
+          headers: serviceHeaders(serviceRoleKey, { 'Content-Type': 'application/json', Accept: 'application/json' }),
+          body: JSON.stringify({ p_email: parsedEmail.email })
+        });
+        const registered = await readJson(accountResponse);
+        if (accountResponse.ok && typeof registered === 'boolean') {
+          exists = registered;
           accountCheckAvailable = true;
         }
       } catch (_) {}
+
+      // A profile proves an account exists, but its absence cannot prove the opposite.
+      if (!accountCheckAvailable) {
+        try {
+          const profileResponse = await fetch(
+            `${url}/rest/v1/profiles?email=eq.${encodeURIComponent(parsedEmail.email)}&select=id&limit=1`,
+            { headers: serviceHeaders(serviceRoleKey, { Accept: 'application/json' }) }
+          );
+          const profiles = await readJson(profileResponse);
+          if (profileResponse.ok && Array.isArray(profiles) && profiles.length > 0) {
+            exists = true;
+            accountCheckAvailable = true;
+          }
+        } catch (_) {}
+      }
     }
 
     return res.status(200).json({
