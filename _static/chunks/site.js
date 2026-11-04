@@ -14149,7 +14149,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       try{
         if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('Digite um e-mail válido.');
         var emailCheck=typeof auth.validateEmailAddress==='function'?await auth.validateEmailAddress(email):null;
-        var accountExists=emailCheck&&typeof emailCheck.exists==='boolean'?emailCheck.exists:(typeof auth.accountExists==='function'?await auth.accountExists(email):null);
+        var accountExists=emailCheck?(typeof emailCheck.exists==='boolean'?emailCheck.exists:null):(typeof auth.accountExists==='function'?await auth.accountExists(email):null);
         if(accountExists===false&&emailCheck&&emailCheck.domainValid===false){var invalidDomain=new Error('Use um e-mail com domínio real e capaz de receber mensagens.');invalidDomain.code='auth/invalid-email-domain';throw invalidDomain;}
         selectedAuthEmail=email;
         setMode(accountExists===false?'signup':'password',email);
