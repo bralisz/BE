@@ -879,6 +879,8 @@
   "Verificação em duas etapas": "Two-step verification",
   "Verificação em duas etapas ativada com sucesso.": "Two-step verification enabled successfully.",
   "Verificação em duas etapas desativada.": "Two-step verification disabled.",
+  "Verificando e-mail…": "Checking email…",
+  "Não foi possível confirmar o cadastro agora. Se ainda não tem conta, escolha Criar conta abaixo.": "We couldn't confirm whether you already have an account. If you're new, choose Create account below.",
   "Verificando código…": "Verifying code…",
   "Verificando…": "Checking…",
   "Verificar código": "Verify code",
