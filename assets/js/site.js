@@ -3294,6 +3294,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
           if (response.status === 400) throw backendError('auth/invalid-email', payload && payload.error || 'Digite um e-mail válido.');
+          if (response.status === 429) throw backendError('auth/too-many-requests', 'Muitas verificações. Aguarde um pouco e tente novamente.');
           return { email: normalizedEmail, domain, exists: null, domainValid: null, checkAvailable: false, domainCheckAvailable: false };
         }
         const value = {
@@ -3310,7 +3311,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         emailValidationCache.set(normalizedEmail, { checkedAt: Date.now(), value });
         return { ...value };
       } catch (error) {
-        if (error && error.code === 'auth/invalid-email') throw error;
+        if (error && (error.code === 'auth/invalid-email' || error.code === 'auth/too-many-requests')) throw error;
         return { email: normalizedEmail, domain, exists: null, domainValid: null, accountCheckAvailable: false, domainCheckAvailable: false };
       }
     },
@@ -14144,16 +14145,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       e.preventDefault();
       var form=e.currentTarget,b=e.submitter||form.querySelector('[type="submit"]'),email=form.elements.namedItem('email').value.trim().toLowerCase();
       if(authFlowBusy)return;
-      authFlowBusy=true;if(b)b.disabled=true;setStatus('');
+      authFlowBusy=true;if(b)b.disabled=true;authButtonBusy(b,true,'Verificando e-mail…','Acessar a Plataforma');setStatus('');
       try{
         if(!/^\S+@\S+\.\S+$/.test(email))throw new Error('Digite um e-mail válido.');
         var emailCheck=typeof auth.validateEmailAddress==='function'?await auth.validateEmailAddress(email):null;
         var accountExists=emailCheck&&typeof emailCheck.exists==='boolean'?emailCheck.exists:(typeof auth.accountExists==='function'?await auth.accountExists(email):null);
-        if(accountExists!==true&&emailCheck&&emailCheck.domainValid===false){var invalidDomain=new Error('Use um e-mail com domínio real e capaz de receber mensagens.');invalidDomain.code='auth/invalid-email-domain';throw invalidDomain;}
+        if(accountExists===false&&emailCheck&&emailCheck.domainValid===false){var invalidDomain=new Error('Use um e-mail com domínio real e capaz de receber mensagens.');invalidDomain.code='auth/invalid-email-domain';throw invalidDomain;}
         selectedAuthEmail=email;
         setMode(accountExists===false?'signup':'password',email);
+        if(accountExists===null)setStatus('Não foi possível confirmar o cadastro agora. Se ainda não tem conta, escolha Criar conta abaixo.');
       }catch(err){setStatus(friendly(err),'error');}
-      finally{authFlowBusy=false;if(b)b.disabled=false;}
+      finally{authFlowBusy=false;if(b)b.disabled=false;authButtonBusy(b,false,'Verificando e-mail…','Acessar a Plataforma');}
     });
 
     document.querySelectorAll('.change-auth-email').forEach(function(button){
