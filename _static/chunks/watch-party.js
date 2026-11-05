@@ -6,11 +6,11 @@
   const ROOM_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
   const VIDEO_RE = /^[0-9]{6,12}$/;
   const strings = {
-    'pt-br': ['Assistir junto','Convidar fã','Pesquisar @usuário','Sair da sala','Criar sala','Entre na sua conta para enviar ou receber convites.','Aguardando convidados…','Convite enviado!','Não foi possível enviar o convite.','Sala conectada','Aguardando anfitrião…','O player externo não oferece sincronização automática.','Sincronizando reprodução…','Toque em reproduzir para acompanhar.','Watch Party','convidou você para assistir','Aceitar','Recusar','Convite expirado ou indisponível.','Nenhum fã encontrado.','Busque um fã pelo @usuário.','Pessoas na sala','Fechar','Erro de conexão. Tente novamente.'],
-    'en-us': ['Watch together','Invite fan','Search @username','Leave room','Create room','Sign in to send or receive invitations.','Waiting for guests…','Invitation sent!','Could not send invitation.','Room connected','Waiting for host…','External players do not support automatic syncing.','Syncing playback…','Tap play to join the playback.','Watch Party','invited you to watch','Accept','Decline','Invitation expired or unavailable.','No fans found.','Search for a fan by @username.','People in room','Close','Connection failed. Try again.'],
-    'es': ['Ver juntos','Invitar fan','Buscar @usuario','Salir de la sala','Crear sala','Inicia sesión para enviar o recibir invitaciones.','Esperando invitados…','¡Invitación enviada!','No se pudo enviar.','Sala conectada','Esperando anfitrión…','Los reproductores externos no permiten sincronización.','Sincronizando…','Toca reproducir para unirte.','Watch Party','te invitó a ver','Aceptar','Rechazar','Invitación caducada.','No se encontraron fans.','Busca un fan por @usuario.','Usuarios en la sala','Cerrar','Error de conexión.'],
-    fr: ['Regarder ensemble','Inviter un fan','Chercher @pseudo','Quitter','Créer un salon','Connectez-vous pour inviter ou recevoir des invitations.','En attente des invités…','Invitation envoyée !','Échec de l’invitation.','Salon connecté','En attente de l’hôte…','Synchronisation indisponible pour les lecteurs externes.','Synchronisation…','Appuyez sur Lecture.','Watch Party','vous invite à regarder','Accepter','Refuser','Invitation expirée.','Aucun fan trouvé.','Recherchez un fan par @pseudo.','Participants','Fermer','Erreur de connexion.'],
-    it: ['Guarda insieme','Invita fan','Cerca @utente','Esci dalla stanza','Crea stanza','Accedi per invitare o ricevere inviti.','In attesa di invitati…','Invito inviato!','Impossibile inviare.','Stanza connessa','In attesa dell’host…','Il player esterno non supporta la sincronizzazione.','Sincronizzazione…','Tocca Riproduci.','Watch Party','ti ha invitato a guardare','Accetta','Rifiuta','Invito scaduto.','Nessun fan trovato.','Cerca un fan per @utente.','Persone nella stanza','Chiudi','Errore di connessione.']
+    'pt-br': ['Assistir junto','Convide um amigo','Pesquisar @usuário','Sair da sala','Criar sala','Entre na sua conta para enviar ou receber convites.','Aguardando convidados…','Convite enviado!','Não foi possível enviar o convite.','Sala conectada','Aguardando anfitrião…','O player externo não oferece sincronização automática.','Sincronizando reprodução…','Toque em reproduzir para acompanhar.','Watch Party','convidou você para assistir','Aceitar','Recusar','Convite expirado ou indisponível.','Nenhum fã encontrado.','Busque um fã pelo @usuário.','Pessoas na sala','Fechar','Erro de conexão. Tente novamente.'],
+    'en-us': ['Watch together','Invite your friend','Search @username','Leave room','Create room','Sign in to send or receive invitations.','Waiting for guests…','Invitation sent!','Could not send invitation.','Room connected','Waiting for host…','External players do not support automatic syncing.','Syncing playback…','Tap play to join the playback.','Watch Party','invited you to watch','Accept','Decline','Invitation expired or unavailable.','No fans found.','Search for a fan by @username.','People in room','Close','Connection failed. Try again.'],
+    'es': ['Ver juntos','Invita a un amigo','Buscar @usuario','Salir de la sala','Crear sala','Inicia sesión para enviar o recibir invitaciones.','Esperando invitados…','¡Invitación enviada!','No se pudo enviar.','Sala conectada','Esperando anfitrión…','Los reproductores externos no permiten sincronización.','Sincronizando…','Toca reproducir para unirte.','Watch Party','te invitó a ver','Aceptar','Rechazar','Invitación caducada.','No se encontraron fans.','Busca un fan por @usuario.','Usuarios en la sala','Cerrar','Error de conexión.'],
+    fr: ['Regarder ensemble','Invitez un ami','Chercher @pseudo','Quitter','Créer un salon','Connectez-vous pour inviter ou recevoir des invitations.','En attente des invités…','Invitation envoyée !','Échec de l’invitation.','Salon connecté','En attente de l’hôte…','Synchronisation indisponible pour les lecteurs externes.','Synchronisation…','Appuyez sur Lecture.','Watch Party','vous invite à regarder','Accepter','Refuser','Invitation expirée.','Aucun fan trouvé.','Recherchez un fan par @pseudo.','Participants','Fermer','Erreur de connexion.'],
+    it: ['Guarda insieme','Invita un amico','Cerca @utente','Esci dalla stanza','Crea stanza','Accedi per invitare o ricevere inviti.','In attesa di invitati…','Invito inviato!','Impossibile inviare.','Stanza connessa','In attesa dell’host…','Il player esterno non supporta la sincronizzazione.','Sincronizzazione…','Tocca Riproduci.','Watch Party','ti ha invitato a guardare','Accetta','Rifiuta','Invito scaduto.','Nessun fan trovato.','Cerca un fan per @utente.','Persone nella stanza','Chiudi','Errore di connessione.']
   };
   const t = i => (strings[String(window.BETVLocale?.slug || 'pt-br').toLowerCase()] || strings['pt-br'])[i];
   const extra = {
@@ -56,6 +56,7 @@
   let hostId = '', state = null, lastPublish = 0, lastSyncSeq = -1, sequence = 0, syncTimer = 0;
   let pendingInvites = [], pendingGifts = [], inboxChannel = null, inboxUser = '', pollTimer = 0, searchTimer = 0, lastInboxAt = 0;
   let lastInviteClickAt = 0, joinTimer = 0, notifiedIds = new Set(), panelOpened = false;
+  let accessBlockedRoom = '';
   let playbackStarted = false, startAt = 0, invitePicker = null, fanSearchSerial = 0;
   const svgIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19v-2a6 6 0 0 1 12 0v2M17 9h5M19.5 6.5v5M17 15a4 4 0 0 1 4 4"/></svg>';
 
@@ -140,15 +141,6 @@
     if ($('watchPartyTitle')) $('watchPartyTitle').textContent = t(14);
     if ($('watchPartyPeopleLabel')) $('watchPartyPeopleLabel').textContent = joined ? xt('members') : '';
     if ($('watchPartyHostLabel')) $('watchPartyHostLabel').textContent = xt('host');
-    if ($('watchPartyGiftOpen')) {
-      const gift=$('watchPartyGiftOpen');
-      gift.hidden = !window.BETVWatchPartyPaywall?.canGift?.();
-      gift.textContent = xt('gift');
-    }
-    if ($('watchPartyRoomCode')) $('watchPartyRoomCode').textContent = joined && isHost ? room : '';
-    if ($('watchPartyCopyCode')) $('watchPartyCopyCode').textContent = extraText('copy');
-    if ($('watchPartyCodeLabel')) $('watchPartyCodeLabel').textContent = extraText('code');
-    if ($('watchPartyRoomCodeBox')) $('watchPartyRoomCodeBox').hidden = !joined || !isHost || Boolean(window.BETVWatchPartyPaywall?.canGift?.());
     for (const button of document.querySelectorAll('.watch-party-player-button')) {
       button.classList.toggle('is-active',joined);
       button.setAttribute('aria-pressed',String(joined));
@@ -181,11 +173,11 @@
     hidePanel();
   }
   const additional={
-    'pt-br':{invalidCode:'Informe um código de sala válido.',mustAccept:'Aceite primeiro o convite nas notificações.',join:'Entrar com código',code:'Código da sala',codeHint:'O código funciona somente para fãs que aceitaram o convite.',copy:'Copiar código',copied:'Código copiado.',inviteTitle:'Convidar fã',inviteSubtitle:'Encontre um perfil e envie um convite para assistir juntos.',sent:'Convite enviado',lookup:'Pesquise pelo @usuário',startHint:'A sala está pronta. Clique em Assistir para iniciar com seus convidados.',connected:'Você entrou na sala. Aguarde o anfitrião iniciar o vídeo.'},
-    'en-us':{invalidCode:'Enter a valid room code.',mustAccept:'Accept your invitation in notifications first.',join:'Join with code',code:'Room code',codeHint:'Codes work only for fans who accepted an invitation.',copy:'Copy code',copied:'Code copied.',inviteTitle:'Invite a fan',inviteSubtitle:'Find a profile and invite them to watch together.',sent:'Invitation sent',lookup:'Search by @username',startHint:'Room ready. Press Play to start with your guests.',connected:'You joined the room. Wait for the host to start the video.'},
-    es:{invalidCode:'Introduce un código de sala válido.',mustAccept:'Primero acepta la invitación en notificaciones.',join:'Entrar con código',code:'Código de sala',codeHint:'Solo funciona si aceptaste una invitación.',copy:'Copiar código',copied:'Código copiado.',inviteTitle:'Invitar a un fan',inviteSubtitle:'Encuentra un perfil e invítalo a ver juntos.',sent:'Invitación enviada',lookup:'Buscar por @usuario',startHint:'Sala lista. Pulsa Reproducir para comenzar.',connected:'Estás en la sala. Espera a que inicie el anfitrión.'},
-    fr:{invalidCode:'Saisissez un code de salon valide.',mustAccept:'Acceptez votre invitation dans les notifications.',join:'Rejoindre avec un code',code:'Code du salon',codeHint:'Réservé aux fans ayant accepté une invitation.',copy:'Copier le code',copied:'Code copié.',inviteTitle:'Inviter un fan',inviteSubtitle:'Trouvez un profil et invitez-le à regarder ensemble.',sent:'Invitation envoyée',lookup:'Chercher par @pseudo',startHint:'Salon prêt. Appuyez sur Lecture pour commencer.',connected:'Vous avez rejoint le salon. Attendez le lancement de l’hôte.'},
-    it:{invalidCode:'Inserisci un codice stanza valido.',mustAccept:'Accetta prima l’invito dalle notifiche.',join:'Entra con codice',code:'Codice stanza',codeHint:'Valido solo per fan che hanno accettato un invito.',copy:'Copia codice',copied:'Codice copiato.',inviteTitle:'Invita un fan',inviteSubtitle:'Trova un profilo e invitalo a guardare insieme.',sent:'Invito inviato',lookup:'Cerca per @utente',startHint:'Stanza pronta. Premi Riproduci per iniziare.',connected:'Sei nella stanza. Attendi che l’host avvii il video.'}
+    'pt-br':{invalidCode:'Informe um código de sala válido.',mustAccept:'Aceite primeiro o convite nas notificações.',join:'Entrar com código',code:'Código da sala',codeHint:'O código funciona somente para fãs que aceitaram o convite.',copy:'Copiar código',copied:'Código copiado.',inviteTitle:'Convide um amigo',inviteSubtitle:'Encontre um perfil e envie um convite para assistir juntos.',sent:'Convite enviado',lookup:'Pesquise pelo @usuário',startHint:'A sala está pronta. Clique em Assistir para iniciar com seus convidados.',connected:'Você entrou na sala. Aguarde o anfitrião iniciar o vídeo.'},
+    'en-us':{invalidCode:'Enter a valid room code.',mustAccept:'Accept your invitation in notifications first.',join:'Join with code',code:'Room code',codeHint:'Codes work only for fans who accepted an invitation.',copy:'Copy code',copied:'Code copied.',inviteTitle:'Invite your friend',inviteSubtitle:'Find a profile and invite them to watch together.',sent:'Invitation sent',lookup:'Search by @username',startHint:'Room ready. Press Play to start with your guests.',connected:'You joined the room. Wait for the host to start the video.'},
+    es:{invalidCode:'Introduce un código de sala válido.',mustAccept:'Primero acepta la invitación en notificaciones.',join:'Entrar con código',code:'Código de sala',codeHint:'Solo funciona si aceptaste una invitación.',copy:'Copiar código',copied:'Código copiado.',inviteTitle:'Invita a un amigo',inviteSubtitle:'Encuentra un perfil e invítalo a ver juntos.',sent:'Invitación enviada',lookup:'Buscar por @usuario',startHint:'Sala lista. Pulsa Reproducir para comenzar.',connected:'Estás en la sala. Espera a que inicie el anfitrión.'},
+    fr:{invalidCode:'Saisissez un code de salon valide.',mustAccept:'Acceptez votre invitation dans les notifications.',join:'Rejoindre avec un code',code:'Code du salon',codeHint:'Réservé aux fans ayant accepté une invitation.',copy:'Copier le code',copied:'Code copié.',inviteTitle:'Invitez un ami',inviteSubtitle:'Trouvez un profil et invitez-le à regarder ensemble.',sent:'Invitation envoyée',lookup:'Chercher par @pseudo',startHint:'Salon prêt. Appuyez sur Lecture pour commencer.',connected:'Vous avez rejoint le salon. Attendez le lancement de l’hôte.'},
+    it:{invalidCode:'Inserisci un codice stanza valido.',mustAccept:'Accetta prima l’invito dalle notifiche.',join:'Entra con codice',code:'Codice stanza',codeHint:'Valido solo per fan che hanno accettato un invito.',copy:'Copia codice',copied:'Codice copiato.',inviteTitle:'Invita un amico',inviteSubtitle:'Trova un profilo e invitalo a guardare insieme.',sent:'Invito inviato',lookup:'Cerca per @utente',startHint:'Stanza pronta. Premi Riproduci per iniziare.',connected:'Sei nella stanza. Attendi che l’host avvii il video.'}
   };
   const extraText=key=>(additional[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||additional['pt-br'])[key];
   function publish(force = false) {
@@ -244,6 +236,8 @@
     if (!video || (expectedId && video.id !== expectedId)) return;
     try {await Promise.resolve(window.beBackend?.ready);}catch(_){}
     if (!client() || !myId()) {showPanel();textStatus(t(5),true);return;}
+    if (!await requireWatchAccess()) { accessBlockedRoom=id; return; }
+    accessBlockedRoom='';
     // Invitations are individual. A guest must have explicitly accepted this
     // room's invitation before their browser may subscribe to its presence.
     if (!asHost) {
@@ -374,11 +368,27 @@
       else toast.hidden=true;
     }
   }
+  async function requireWatchAccess() {
+    try {
+      const {data,error}=await client().rpc('has_watch_party_access');
+      if(error)throw error;
+      if(data===true)return true;
+      // Refresh the sheet before opening it so an old cached entitlement cannot
+      // show the unlocked state to a guest who still needs to purchase access.
+      await window.BETVWatchPartyPaywall?.refresh?.();
+      window.BETVWatchPartyPaywall?.open?.();
+    } catch (_) { textStatus(t(23),true); }
+    return false;
+  }
   async function respond(invite,accept,actions) {
     if (!client() || !myId()) return;
     for (const b of actions.querySelectorAll('button'))b.disabled=true;
+    if (accept && !await requireWatchAccess()) {
+      for(const b of actions.querySelectorAll('button'))b.disabled=false;
+      return;
+    }
     const {data,error}=await client().rpc('respond_watch_party_invite',{p_invite_id:invite.id,p_accept:accept});
-    if (error) {textStatus(t(18),true);for(const b of actions.querySelectorAll('button'))b.disabled=false;return;}
+    if (error) {if(String(error.message||'').includes('watch_party_access_required')){await window.BETVWatchPartyPaywall?.refresh?.();window.BETVWatchPartyPaywall?.open?.();}else textStatus(t(18),true);for(const b of actions.querySelectorAll('button'))b.disabled=false;return;}
     pendingInvites=pendingInvites.filter(i=>i.id!==invite.id);renderInbox();
     if (accept) {
       const result=Array.isArray(data)?data[0]:data;
@@ -535,6 +545,7 @@
     if (joined||connecting)return;
     const url=new URL(location.href),id=url.searchParams.get('watchParty'),expected=url.searchParams.get('watchVideo');
     if (!id || !ROOM_RE.test(id) || !VIDEO_RE.test(String(expected||'')))return;
+    if(accessBlockedRoom===id && !window.BETVWatchPartyPaywall?.isUnlocked?.())return;
     if(currentVideo()?.id===expected)connect(id,false,expected);
   }
   function setupPlayerButtons() {
@@ -570,19 +581,11 @@
       '<p class="watch-party-status" id="watchPartyStatus" aria-live="polite"></p>'+
       '<div class="watch-party-actions"><button type="button" id="watchPartyCreate"></button>'+
       '<button type="button" id="watchPartyInviteToggle" hidden></button>'+
-      '<button type="button" id="watchPartyLeave" hidden></button></div>'+
-      '<div id="watchPartyRoomCodeBox" class="watch-party-room-code" hidden><small id="watchPartyCodeLabel"></small><code id="watchPartyRoomCode"></code><button type="button" id="watchPartyCopyCode"></button></div>'+
-      '<button type="button" id="watchPartyGiftOpen" class="watch-party-gift-cta" hidden></button>';
+      '<button type="button" id="watchPartyLeave" hidden></button></div>';
     document.body.append(panel);
     const toast=document.createElement('div');toast.id='watchPartyInviteToast';toast.className='watch-party-invite-toast';toast.hidden=true;
     toast.setAttribute('role','region');toast.setAttribute('aria-label','Watch Party');document.body.append(toast);
     $('watchPartyClose').addEventListener('click',hidePanel);
-    $('watchPartyCopyCode').addEventListener('click',async()=>{
-      if(!joined || !isHost || !room)return;
-      try{await navigator.clipboard.writeText(room);textStatus(extraText('copied'));}
-      catch(_){textStatus(extraText('code')+': '+room);}
-    });
-    $('watchPartyGiftOpen').addEventListener('click',()=>window.BETVWatchPartyGift?.open?.());
     $('watchPartyCreate').addEventListener('click',()=>{
       const id=window.crypto?.randomUUID?.();
       if(!id){textStatus(t(23),true);return;}

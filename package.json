@@ -17,7 +17,8 @@
     "test:admin-ui": "node scripts/test-admin-media.cjs && node scripts/test-admin-studio.cjs && node scripts/test-admin-workspace.cjs && node scripts/test-mobile-interface.cjs",
     "test:lazy-media": "node scripts/test-lazy-media.cjs",
     "test:community-banner": "node scripts/test-community-banner.cjs",
-    "test:watch-party": "node scripts/test-watch-party-profile.cjs"
+    "test:watch-party": "node scripts/test-watch-party-profile.cjs",
+    "test:watch-party:invites": "node scripts/test-watch-party-invites.cjs"
   },
   "devDependencies": {
     "jsdom": "^30.1.2"
