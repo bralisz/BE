@@ -1,4 +1,5 @@
 'use strict';
+const ios = require('../development/source/admin/ios');
 const assert=require('node:assert/strict');
 const {JSDOM}=require('jsdom');
 const workspace=require('../development/source/admin/workspace');
@@ -12,7 +13,7 @@ const w=dom.window,d=w.document,settle=()=>new Promise(r=>w.setTimeout(r,10));
  newButton.onclick=()=>creates++;
  settings.onsubmit=e=>{e.preventDefault();saves++;};
  release.onchange=()=>releases++;
- w.eval(workspace);w.eval(studio);await settle();
+ w.eval(workspace);w.eval(studio);await settle(); w.eval(ios);
  assert.equal(d.querySelectorAll('.studio-top').length,1);
  assert.equal(d.querySelectorAll('.dashboard-metric-card').length,5,'all original metrics remain');
  assert.deepEqual(Array.from(d.querySelector('.studio-primary-metrics').children,e=>e.id),['users','viewed','donations']);

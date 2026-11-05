@@ -1,4 +1,5 @@
 'use strict';
+const ios = require('../development/source/admin/ios');
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 const workspace = require('../development/source/admin/workspace');
@@ -11,7 +12,7 @@ const settle = () => new Promise(resolve => w.setTimeout(resolve, 10));
 (async () => {
   let edits = 0;
   d.getElementById('original-action').onclick = () => edits++;
-  w.eval(mobile); w.eval(workspace);
+  w.eval(mobile); w.eval(workspace); w.eval(ios);
   assert(d.querySelector('.workspace-brand'));
   assert.equal(d.querySelectorAll('.workspace-bar').length, 1);
   assert.equal(d.querySelector('.workspace-context strong').textContent, 'Visão geral');

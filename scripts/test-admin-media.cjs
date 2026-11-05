@@ -1,4 +1,5 @@
 'use strict';
+const ios = require('../development/source/admin/ios');
 const assert=require('node:assert/strict');
 const {JSDOM}=require('jsdom');
 const workspace=require('../development/source/admin/workspace');
@@ -17,7 +18,7 @@ const settle=()=>new Promise(resolve=>w.setTimeout(resolve,10));
  const edit=d.querySelector('[data-edit=a]'),del=d.querySelector('[data-del=a]'),create=d.querySelector('[data-gallery-create=avatar]');
  edit.onclick=()=>edits++;del.onclick=()=>deletes++;create.onclick=()=>creates++;
  d.querySelector('[data-route=notifications]').onclick=()=>notifications++;
- w.eval(workspace);w.eval(mobile);w.eval(media);await settle();
+ w.eval(workspace);w.eval(mobile);w.eval(media);await settle(); w.eval(ios);
  assert.equal(d.querySelectorAll('.gallery-expand-button').length,3);
  assert.equal(d.getElementById('gallerySearch').value,'minha busca');
  assert.equal(d.querySelector('#galleryStatus').value,'true');

@@ -36,3 +36,9 @@ ficam em `source/admin/media.js`, entregue após studio somente ao admin
 autenticado. Filtros e prévia ampliada usam os elementos existentes; operações
 de adicionar, editar e excluir continuam nos handlers originais. A paleta do
 studio usa azul, cinza e roxo.
+
+O tema escuro inspirado no iOS fica em `source/admin/ios.js`. O handler o
+acrescenta por último à resposta autenticada, após mobile/workspace/studio/media.
+Ele unifica as superfícies, os controles e os estados de foco de todo o admin,
+mantendo os elementos e handlers existentes. Não publique esse runtime como
+arquivo estático nem regenere o bundle legado para alterar o tema.
