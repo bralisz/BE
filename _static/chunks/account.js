@@ -1320,6 +1320,14 @@ const userDropdown=document.getElementById('userDropdown');
       values.unshift(currentAccountDeviceRecord(true));
       return writeAccountDevices(userId,values);
     }
+    function accountDeviceDisconnectApplies(device,user){
+      if(!device||device.active!==false)return false;
+      // A disconnect belongs to the login that existed when it was requested.
+      // Preference caches and realtime snapshots can still contain older records.
+      var signedInAt=Date.parse(user&&user.raw&&user.raw.last_sign_in_at||'')||0;
+      var disconnectedAt=Date.parse(device.disconnectedAt||'')||0;
+      return !signedInAt||!disconnectedAt||disconnectedAt>=signedInAt;
+    }
     function normalizeTvDeviceBrands(value){
       var source=value&&typeof value==='object'&&!Array.isArray(value)?value:{},out={};
       Object.keys(source).slice(0,16).forEach(function(id){var entry=source[id];if(!entry)return;var name=typeof entry==='string'?entry:String(entry.name||'');var updatedAt=typeof entry==='object'?String(entry.updatedAt||''):'';if(name.trim())out[String(id)]={name:name.trim().slice(0,80),updatedAt:updatedAt};});
@@ -1415,6 +1423,10 @@ const userDropdown=document.getElementById('userDropdown');
     function applyCrossDeviceData(value,userId,source){
       if(!userId)return;
       var data=normalizeCrossDeviceData(value);
+      var incomingOwnDevice=data.accountDevices.find(function(item){return item.id===accountDeviceId();});
+      if(source==='remote'&&auth.currentUser&&auth.currentUser.uid===userId&&incomingOwnDevice&&incomingOwnDevice.active===false&&!accountDeviceDisconnectApplies(incomingOwnDevice,auth.currentUser)){
+        data.accountDevices=ensureCurrentAccountDevice(userId,data.accountDevices);
+      }
       try{if(!data.profileShareCampaignSeen)data.profileShareCampaignSeen=String(localStorage.getItem('beProfileShareCampaignSeen:'+String(userId))||'');}catch(_){ }
       if(pendingProfileColorSync&&pendingProfileColorSync.userId===String(userId)){
         var remoteMatchesPending=data.profileColor===pendingProfileColorSync.profileColor&&data.profileAvatarBorderColor===pendingProfileColorSync.profileAvatarBorderColor;
@@ -1445,9 +1457,11 @@ const userDropdown=document.getElementById('userDropdown');
       }catch(error){(void 0);}
       applyingRemotePreferences=false;
       var ownDevice=data.accountDevices.find(function(item){return item.id===accountDeviceId();});
-      if(source==='remote'&&ownDevice&&ownDevice.active===false&&auth.currentUser&&auth.currentUser.uid===userId){
+      if(source==='remote'&&auth.currentUser&&auth.currentUser.uid===userId&&accountDeviceDisconnectApplies(ownDevice,auth.currentUser)){
         window.setTimeout(function(){
-          if(!auth.currentUser||auth.currentUser.uid!==userId)return;
+          if(!auth.currentUser||auth.currentUser.uid!==userId||!accountDeviceDisconnectApplies(ownDevice,auth.currentUser))return;
+          var latestDevice=readAccountDevices(userId).find(function(item){return item.id===accountDeviceId();});
+          if(!accountDeviceDisconnectApplies(latestDevice,auth.currentUser))return;
           try{localStorage.setItem('beRemoteDeviceDisconnect','1');}catch(_){ }
           Promise.resolve(auth.signOut()).catch(function(){}).finally(function(){try{localStorage.removeItem('beRemoteDeviceDisconnect');}catch(_){ }showLogin();setMode('email');});
         },80);
@@ -1540,8 +1554,8 @@ const userDropdown=document.getElementById('userDropdown');
         }
         var remoteDeviceData=remote?normalizeCrossDeviceData(remote.data):normalizeCrossDeviceData({});
         var remoteOwnDevice=remoteDeviceData.accountDevices.find(function(item){return item.id===accountDeviceId();});
-        var freshAccountLogin=false;try{freshAccountLogin=sessionStorage.getItem('beFreshAccountLogin')==='1';if(freshAccountLogin)sessionStorage.removeItem('beFreshAccountLogin');}catch(_){ }
-        if(remote&&remoteOwnDevice&&remoteOwnDevice.active===false&&!freshAccountLogin){applyCrossDeviceData(remote.data,userId,'remote');return;}
+        try{sessionStorage.removeItem('beFreshAccountLogin');}catch(_){ }
+        if(remote&&accountDeviceDisconnectApplies(remoteOwnDevice,auth.currentUser)){applyCrossDeviceData(remote.data,userId,'remote');return;}
         merged.accountDevices=ensureCurrentAccountDevice(userId,mergeAccountDevices(merged.accountDevices,remoteDeviceData.accountDevices));
         merged.tvDeviceBrands=mergeTvDeviceBrands(merged.tvDeviceBrands,remoteDeviceData.tvDeviceBrands);
         applyCrossDeviceData(merged,userId,remote?'remote':'local');
