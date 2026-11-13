@@ -61,3 +61,18 @@ Falhas sem nenhum registro válido usam cache curto para permitir nova tentativa
 A consulta prioriza vídeos e reutiliza o cache por coleção, sem aguardar álbuns ou
 filmes quando o vídeo solicitado já foi encontrado. O orçamento total das
 consultas por requisição é de 14 segundos, abaixo do limite da função.
+
+## Descoberta de capas e integridade do sitemap
+
+O sitemap inclui a capa cadastrada de cada vídeo ou álbum com a extensão de
+imagens do Google, preservando as cinco versões de idioma e seus alternates.
+Aceita apenas URLs HTTP/HTTPS; imagens ausentes não recebem uma capa inventada.
+O JSON-LD também associa a imagem principal e o conteúdo à URL canonical da página.
+
+As consultas do sitemap têm limites de 8 segundos para a RPC e 4 segundos para
+a compatibilidade legada. Quando alguma coleção falha ou retorna um formato
+inválido, a resposta é 503 com `Retry-After` e `no-store`, em vez de publicar
+um catálogo incompleto como sucesso. Coleções vazias válidas continuam aceitas.
+`npm run test:seo` inclui a validação de XML, imagens, idiomas, falhas e recuperação.
+
+Referência: https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps

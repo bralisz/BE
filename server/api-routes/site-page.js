@@ -674,11 +674,19 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
     const data = localized.data || {};
     const mainEntity = {
       '@type': 'CreativeWork',
+      '@id': `${canonical}#content`,
+      url: canonical,
+      mainEntityOfPage: { '@id': page['@id'] },
       name: String(data.title || '').trim() || copy.title,
       about: { '@type': 'Person', name: 'Billie Eilish' }
     };
     if (String(data.description || '').trim()) mainEntity.description = plainDescription(data.description).slice(0, 1000);
     if (String(data.year || '').trim()) mainEntity.datePublished = String(data.year).trim();
+    const image = absoluteHttpUrl(data.thumbnailUrl || data.imageUrl || data.bannerUrl, origin);
+    if (image) {
+      mainEntity.image = image;
+      page.primaryImageOfPage = { '@type': 'ImageObject', url: image };
+    }
     page.mainEntity = mainEntity;
   } else if (routeInfo.logicalPath === '/billie-eilish') {
     page.mainEntity = { '@type': 'Person', name: 'Billie Eilish' };
