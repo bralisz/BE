@@ -56,6 +56,14 @@ function documentOf(response) {
     const doc = documentOf(result);
     assert.equal(doc.querySelector('link[rel="canonical"]').href, `https://billieilishtv.site/${locale}`);
     assert.equal(doc.querySelectorAll('link[hreflang]').length, 6);
+    const brandGraph = JSON.parse(doc.querySelector('[data-betv-seo]').textContent)['@graph'];
+    const organization = brandGraph.find(item => item['@type'] === 'Organization');
+    assert.equal(organization.name, 'Billie Eilish TV');
+    assert.equal(organization.alternateName, 'BETV');
+    assert.deepEqual(organization.sameAs, ['https://www.instagram.com/billieilishtv_/']);
+    const website = brandGraph.find(item => item['@type'] === 'WebSite');
+    assert.equal(website.publisher['@id'], organization['@id']);
+    assert.equal(website.alternateName, 'BETV');
     assert.match(doc.title, /Billie Eilish TV \|/);
     assert.equal(doc.querySelector('#catalogOverview'), null, 'SEO must not add a duplicate catalog to the visible layout');
     assert(!result.body.includes('sinopse placeholder'));
