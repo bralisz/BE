@@ -11,7 +11,7 @@ assert.doesNotMatch(community,/community-hero-banner\.webp/);
 assert(!fs.existsSync('assets/images/community/community-hero-banner.webp'));
 assert(!fs.existsSync('_static/media/community/community-hero-banner.webp'));
 assert.match(css,/community-page-inner:not\(\.has-community-banner\)/);
-assert.match(features,/community:'20261027-random-gallery-banner-v2'/);
+assert.match(features,/community:'20261113-community-fans-navigation-v1'/);
 
 const start=community.indexOf('  // The Community hero uses the same active banner gallery');
 const end=community.indexOf('  function createPage(){',start);

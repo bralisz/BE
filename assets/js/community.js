@@ -597,10 +597,11 @@
 
   function openCommunity(){
     closeMobileAccountMenu();
-    // Community uses the catalog surface. Leave /ong first so its popstate handler
-    // cannot bring the ONG page back over Community.
+    // Community uses the catalog surface. Leave standalone listing routes first
+    // so their route handlers cannot reopen the previous page over Community.
     var route=String(window.BETVLocalePath?window.BETVLocalePath():location.pathname||'/').replace(/\/+$/,'').toLowerCase()||'/';
-    if(route==='/ong'&&window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/');
+    try{route=decodeURIComponent(route);}catch(_){ }
+    if(['/ong','/fãs','/fas','/fans'].includes(route)&&window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/');
     establishCatalogBase();
     window.dispatchEvent(new CustomEvent('be:close-donate-page'));
     document.body.classList.remove('donate-page-active');

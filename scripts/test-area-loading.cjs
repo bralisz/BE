@@ -6,13 +6,16 @@ if(!process.argv[2]){
   for(const scenario of ['mobile-navigation','mobile-settings','profile','mobile-profile','guest-profile','community','community-fans','stale-community','guest-login','chunk-retry','history','images','settings','search']){
     process.stdout.write(execFileSync(process.execPath,[__filename,scenario],{timeout:10000,encoding:'utf8'}));
   }
+  for(const locale of ['pt-br','en-us','es','fr','it']){
+    process.stdout.write(execFileSync(process.execPath,[__filename,'community-fans',locale],{timeout:10000,encoding:'utf8'}));
+  }
   process.exit();
 }
 const {JSDOM,VirtualConsole}=require('jsdom');
 const scenario=process.argv[2];
 const errors=[];
 const vc=new VirtualConsole();vc.on('jsdomError',error=>{if(!error.message.includes('Not implemented'))errors.push(error.cause||error);});
-const dom=new JSDOM(fs.readFileSync('index.html','utf8'),{url:'https://billieilishtv.site/'+(scenario==='guest-profile'?'@other':''),runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
+const dom=new JSDOM(fs.readFileSync('index.html','utf8'),{url:'https://billieilishtv.site/'+(process.argv[3]|| (scenario==='guest-profile'?'@other':'')),runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
 const w=dom.window;
 const mobileScenario=['mobile-profile','guest-login','mobile-settings','mobile-navigation'].includes(scenario);
 if(mobileScenario)w.innerWidth=390;
@@ -21,7 +24,7 @@ w.scrollTo=options=>{w.scrollY=Number(options.top)||0;w.scrollX=Number(options.l
 w.fetch=async()=>({ok:true,json:async()=>({}),text:async()=>'',headers:{get:()=>''}});
 w.IntersectionObserver=class{observe(){}unobserve(){}disconnect(){}};w.ResizeObserver=class{observe(){}disconnect(){}};w.CSS={escape:x=>x};w.navigator.sendBeacon=()=>true;
 const user={uid:'u1',id:'u1',username:'bralis',displayName:'Miguel',email:'test@example.com'};
-if(scenario!=='guest-profile'&&scenario!=='signup')w.localStorage.setItem('be_local_session_v2',JSON.stringify({email:user.email}));
+if(!['guest-profile','guest-login','signup'].includes(scenario))w.localStorage.setItem('be_local_session_v2',JSON.stringify({email:user.email}));
 w.localStorage.setItem('be_local_database_v2',JSON.stringify({version:2,accounts:{[user.email]:user},collections:{users:{u1:user,other:{uid:'other',username:'other',displayName:'Outro perfil'}}}}));
 const original=w.document.head.appendChild.bind(w.document.head);const loaded=[];let failChunk=scenario==='chunk-retry';
 w.document.head.appendChild=node=>{
@@ -79,6 +82,11 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(2
     w.document.querySelector('[data-community-tab]').click();
     await until(()=>w.document.body.classList.contains('community-page-active'));
     assert(!w.document.body.classList.contains('fans-page-active'));
+    assert.equal(w.BETVLocalePath?w.BETVLocalePath():w.location.pathname,'/','Community must leave the fans URL');
+    assert.equal(w.document.getElementById('fansPage').hidden,true,'Fans must be hidden when Community opens');
+    await delay(100);
+    assert(!w.document.body.classList.contains('fans-page-active'),'late route callbacks must not reopen Fans');
+    assert(w.document.body.classList.contains('community-page-active'));
     assert.equal(w.document.getElementById('donatePage'),null);
     w.BETVPublicRoutes.go('/fãs');
     await until(()=>w.document.body.classList.contains('fans-page-active'));
