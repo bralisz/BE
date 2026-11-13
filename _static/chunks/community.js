@@ -802,6 +802,10 @@
   async function refreshSimilarFans(){
     if(!document.body.classList.contains('community-page-active'))return;
     var requestId=++state.similarRequestId;
+    if(!currentUser()&&window.beBackend&&window.beBackend.ready){
+      try{await window.BETVFeatures.withTimeout(Promise.resolve(window.beBackend.ready),5000);}catch(_){ }
+    }
+    if(requestId!==state.similarRequestId||!document.body.classList.contains('community-page-active'))return;
     if(!currentUser()){
       similarMessage(similarCopy('login'),similarCopy('loginAction'),function(){
         closeCommunity(false);
