@@ -3,10 +3,24 @@
   if(window.BETVCommunity)return;
   if(String(location.hash||'').startsWith('#/admin')) return;
 
-  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null)};
+  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),similarRequestId:0};
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
+
+  var similarFanTranslations={
+    'pt-br':{title:'Encontrar fãs parecidos',subtitle:'Conheça fãs que escolheram os mesmos vídeos e álbuns favoritos que você.',loading:'Buscando fãs com gostos parecidos…',login:'Entre na sua conta para encontrar fãs com favoritos em comum.',loginAction:'Entrar',add:'Escolha seus vídeos ou álbuns favoritos no perfil para descobrir fãs parecidos.',addAction:'Abrir meu perfil',empty:'Ainda não encontramos fãs com os mesmos favoritos. Volte depois para ver novas combinações.',error:'Não foi possível encontrar fãs agora.',retry:'Tentar novamente',one:'1 favorito em comum',many:'{count} favoritos em comum',view:'Ver perfil'},
+    'en-us':{title:'Find fans like you',subtitle:'Meet fans who picked the same favorite videos and albums as you.',loading:'Finding fans with similar taste…',login:'Sign in to find fans who share your favorites.',loginAction:'Sign in',add:'Choose favorite videos or albums on your profile to find similar fans.',addAction:'Open my profile',empty:'No fans share your favorites yet. Check back for new matches.',error:'We could not find fans right now.',retry:'Try again',one:'1 shared favorite',many:'{count} shared favorites',view:'View profile'},
+    es:{title:'Encuentra fans como tú',subtitle:'Conoce fans que eligieron tus mismos vídeos y álbumes favoritos.',loading:'Buscando fans con gustos similares…',login:'Inicia sesión para encontrar fans con favoritos en común.',loginAction:'Iniciar sesión',add:'Elige tus vídeos o álbumes favoritos en tu perfil para descubrir fans similares.',addAction:'Abrir mi perfil',empty:'Todavía no hay fans con los mismos favoritos. Vuelve más tarde.',error:'No pudimos encontrar fans ahora.',retry:'Reintentar',one:'1 favorito en común',many:'{count} favoritos en común',view:'Ver perfil'},
+    fr:{title:'Trouver des fans similaires',subtitle:'Rencontrez des fans qui aiment les mêmes vidéos et albums que vous.',loading:'Recherche de fans aux goûts similaires…',login:'Connectez-vous pour trouver des fans partageant vos favoris.',loginAction:'Se connecter',add:'Ajoutez vos vidéos ou albums favoris à votre profil pour trouver des fans similaires.',addAction:'Ouvrir mon profil',empty:'Aucun fan ne partage encore vos favoris. Revenez plus tard.',error:'Impossible de trouver des fans pour le moment.',retry:'Réessayer',one:'1 favori en commun',many:'{count} favoris en commun',view:'Voir le profil'},
+    it:{title:'Trova fan simili a te',subtitle:'Incontra i fan che hanno scelto i tuoi stessi video e album preferiti.',loading:'Ricerca di fan con gusti simili…',login:'Accedi per trovare fan con preferiti in comune.',loginAction:'Accedi',add:'Seleziona i video o gli album preferiti sul tuo profilo per trovare fan simili.',addAction:'Apri il mio profilo',empty:'Non ci sono ancora fan con gli stessi preferiti. Riprova più tardi.',error:'Impossibile trovare fan al momento.',retry:'Riprova',one:'1 preferito in comune',many:'{count} preferiti in comune',view:'Apri profilo'}
+  };
+  function similarCopy(key,count){
+    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    var slug=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
+    var message=(similarFanTranslations[slug]||similarFanTranslations['pt-br'])[key]||key;
+    return message.replace('{count}',String(count||0));
+  }
 
   function t(source,vars){
     if(window.BETVI18n&&typeof window.BETVI18n.t==='function')return window.BETVI18n.t(source,vars||{});
@@ -457,6 +471,8 @@
       +    '</section>'
       +    '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
+
+      +    '<section class="community-section" id="communitySimilarSection" aria-labelledby="communitySimilarTitle"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2 id="communitySimilarTitle">'+similarCopy('title')+'</h2><p class="community-section-subtitle">'+similarCopy('subtitle')+'</p></div></div><div id="communitySimilarContent" class="community-similar-list" role="status" aria-live="polite"></div></section>'
       +    '<section class="community-section"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2>Perfis em destaque</h2><p class="community-section-subtitle">Compartilhe seu perfil para receber curtidas e aparecer no ranking.</p></div><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado notranslate" data-i18n-ignore translate="no">Avocado</span></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash notranslate" data-i18n-ignore translate="no">Eyelash</span></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh notranslate" data-i18n-ignore translate="no">Blohsh</span></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
       +    '<div class="community-supporters-cta-wrap"><button class="community-supporters-cta" id="communitySupportersButton" type="button">Ver fãs que apoiam o site</button></div>'
       +    '<section class="community-ong-spotlight" id="communityOngSpotlight" hidden aria-label="Apoie uma ONG"><div class="community-ong-spotlight-frame"><img id="communityOngSpotlightImage" alt="Apoie uma ONG" loading="lazy" decoding="async" fetchpriority="low"><div class="community-ong-spotlight-overlay" aria-hidden="true"></div><a class="community-ong-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a></div></section>'
@@ -620,6 +636,7 @@
     window.scrollTo({top:0,left:0,behavior:'auto'});
     chooseCommunityBanner();
     refreshCommunity();
+    refreshSimilarFans();
   }
   window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity,record:recordRecentFromPlay};
   window.addEventListener('be:open-community',openCommunity);
@@ -722,6 +739,93 @@
     if(position===2)return ' rank-second';
     if(position===3)return ' rank-third';
     return position>0&&position<=3?' top-three':'';
+  }
+
+
+  function similarMessage(message,buttonText,onClick){
+    var host=document.getElementById('communitySimilarContent');if(!host)return;
+    host.replaceChildren();
+    var empty=document.createElement('div');empty.className='community-similar-empty';
+    var copy=document.createElement('p');copy.textContent=message;empty.appendChild(copy);
+    if(buttonText&&onClick){
+      var action=document.createElement('button');action.type='button';action.className='community-similar-action';action.textContent=buttonText;
+      action.addEventListener('click',onClick);empty.appendChild(action);
+    }
+    host.appendChild(empty);
+  }
+  function renderSimilarFans(payload){
+    var host=document.getElementById('communitySimilarContent');if(!host)return;
+    var matches=Array.isArray(payload&&payload.matches)?payload.matches:[];
+    if(!payload||payload.hasFavorites!==true){
+      similarMessage(similarCopy('add'),similarCopy('addAction'),function(){
+        closeCommunity(false);
+        var nav=window.BETVNavigation;
+        if(nav&&typeof nav.openProfile==='function')nav.openProfile();
+        else document.querySelector('#userDropdown [data-public-action="profile"]')?.click();
+      });
+      return;
+    }
+    if(!matches.length){similarMessage(similarCopy('empty'));return;}
+    host.replaceChildren();
+    matches.forEach(function(person){
+      var username=String(person&&person.username||'').replace(/^@/,'').trim();
+      if(!username)return;
+      var button=document.createElement('button');button.type='button';button.className='community-similar-card';
+      var profile=document.createElement('span');profile.className='community-similar-profile';
+      var avatar=createRankAvatar(person.avatarUrl,person.displayName,person.avatarBorderColor,username);
+      profile.appendChild(avatar);
+      var identity=document.createElement('span');identity.className='community-similar-identity';
+      var name=document.createElement('strong');name.textContent=String(person.displayName||username);
+      var handle=document.createElement('span');handle.textContent='@'+username;
+      identity.appendChild(name);identity.appendChild(handle);profile.appendChild(identity);button.appendChild(profile);
+      var count=Math.max(0,Number(person.sharedCount)||0);
+      var common=document.createElement('span');common.className='community-similar-count';
+      common.textContent=count===1?similarCopy('one'):similarCopy('many',count);
+      button.appendChild(common);
+      var favorites=Array.isArray(person.sharedFavorites)?person.sharedFavorites.filter(Boolean).slice(0,2):[];
+      if(favorites.length){
+        var chips=document.createElement('span');chips.className='community-similar-favorites';
+        favorites.forEach(function(label){var chip=document.createElement('span');chip.textContent=String(label);chips.appendChild(chip);});
+        button.appendChild(chips);
+      }
+      var link=document.createElement('span');link.className='community-similar-view';link.textContent=similarCopy('view')+' →';button.appendChild(link);
+      button.addEventListener('click',function(){
+        closeCommunity(false);
+        var route='/@'+encodeURIComponent(username);
+        if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);
+        else location.assign(route);
+      });
+      host.appendChild(button);
+    });
+    hydrateRankingAvatarRings(host);
+  }
+  async function refreshSimilarFans(){
+    if(!document.body.classList.contains('community-page-active'))return;
+    var requestId=++state.similarRequestId;
+    if(!currentUser()){
+      similarMessage(similarCopy('login'),similarCopy('loginAction'),function(){
+        closeCommunity(false);
+        var button=document.getElementById('publicAuthAction');
+        if(button)button.click();
+        else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');
+      });
+      return;
+    }
+    similarMessage(similarCopy('loading'));
+    try{
+      var result=await window.BETVFeatures.withTimeout((async function(){
+        await Promise.resolve(window.beBackend&&window.beBackend.ready);
+        var client=window.beBackend&&window.beBackend.client;
+        if(!client||typeof client.rpc!=='function')throw new Error('similar_fans_backend_unavailable');
+        return client.rpc('get_similar_fans',{p_limit:8});
+      })(),8000);
+      if(result&&result.error)throw result.error;
+      if(requestId!==state.similarRequestId||!document.body.classList.contains('community-page-active'))return;
+      renderSimilarFans(result&&result.data||{});
+    }catch(error){
+      if(requestId!==state.similarRequestId||!document.body.classList.contains('community-page-active'))return;
+      similarMessage(similarCopy('error'),similarCopy('retry'),refreshSimilarFans);
+    }
   }
 
   function renderProfileRanking(rows){
