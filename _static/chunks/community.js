@@ -817,16 +817,17 @@
     var item=mobileAccountItem;
     mobileMenu=document.createElement('div');mobileMenu.className='mobile-account-popover';mobileMenu.id='mobileAccountPopover';mobileMenu.setAttribute('role','menu');mobileMenu.setAttribute('aria-label','Menu');
     mobileMenu.innerHTML='<div class="mobile-account-group" role="none">'+item('profile','Perfil',icons.user)+item('community','Comunidade',icons.people)+item('settings','Configurações',icons.settings)+'</div>'+
-      '<div class="mobile-account-group" role="none">'+item('support','Suporte',icons.support)+item('donate','Apoie uma ONG',icons.heart)+'</div>'+
+      '<div class="mobile-account-group" role="none">'+item('support','Suporte',icons.support)+item('fans','Fãs',icons.people)+'</div>'+
       '<div class="mobile-account-group" role="none">'+item('login','Entrar',icons.user)+item('install','Instalar app',icons.install)+item('logout','Sair',icons.logout,' class="danger"')+'</div>';
     document.body.appendChild(mobileMenu);applyI18n(mobileMenu);if(typeof window.BETVSyncInstallUi==='function')window.BETVSyncInstallUi();
     mobileMenu.addEventListener('click',function(event){
       var button=event.target.closest('[data-mobile-account]');if(!button)return;
       var action=button.dataset.mobileAccount;closeMobileAccountMenu();
-      if(['home','films','videos','search','support','fans'].includes(action)){window.dispatchEvent(new CustomEvent('be:mobile-destination',{detail:{destination:action}}));return;}
+      if(['home','films','videos','search','support'].includes(action)){window.dispatchEvent(new CustomEvent('be:mobile-destination',{detail:{destination:action}}));return;}
+      if(action==='fans'){location.assign((window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs'));return;}
       if(action==='community'){openCommunity();return;}
       if(action==='notifications'){window.dispatchEvent(new CustomEvent('be:open-notifications'));return;}
-      if(action==='billie'||action==='donate'){var link=document.querySelector(action==='billie'?'a[data-open-billie]':'a[data-open-donate]');if(link)link.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go(action==='billie'?'/billie-eilish':'/ong');return;}
+      if(action==='billie'){var link=document.querySelector('a[data-open-billie]');if(link)link.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/billie-eilish');return;}
       if(action==='login'){var accountAction=document.getElementById('publicAuthAction');if(accountAction)accountAction.click();else if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');return;}
       if(action==='profile'||action==='settings'){var nav=window.BETVNavigation;if(nav&&typeof nav[action==='profile'?'openProfile':'openSettings']==='function')nav[action==='profile'?'openProfile':'openSettings']();else{var original=document.querySelector('#userDropdown [data-public-action="'+action+'"]');if(original)original.click();}return;}
       if(action==='install'){if(typeof window.BETVRequestAppInstall==='function')window.BETVRequestAppInstall();return;}
