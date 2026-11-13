@@ -2582,7 +2582,7 @@
   }
   .detail-meta{
     display:flex;
-    align-items:center;
+    align-items:baseline;
     flex-wrap:wrap;
     gap:10px;
     color:rgba(255,255,255,.9);
@@ -2590,7 +2590,8 @@
   }
   .detail-year{color:#fff;font-weight:700}
   .detail-duration{color:#f3c84b;font-weight:700}
-  .detail-dot{width:4px;height:4px;border-radius:999px;background:rgba(255,255,255,.55)}
+  .detail-year,.detail-duration{line-height:1}
+  .detail-dot{width:4px;height:4px;border-radius:999px;background:rgba(255,255,255,.55);align-self:center}
   .detail-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .detail-play,
   .detail-list,
