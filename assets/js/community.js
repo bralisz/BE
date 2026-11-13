@@ -9,11 +9,11 @@
   var preferenceRequest=0;
 
   var similarFanTranslations={
-    'pt-br':{title:'Encontrar fãs parecidos',subtitle:'Conheça fãs que escolheram os mesmos vídeos e álbuns favoritos que você.',loading:'Buscando fãs com gostos parecidos…',login:'Entre na sua conta para encontrar fãs com favoritos em comum.',loginAction:'Entrar',add:'Escolha seus vídeos ou álbuns favoritos no perfil para descobrir fãs parecidos.',addAction:'Abrir meu perfil',empty:'Ainda não encontramos fãs com os mesmos favoritos. Volte depois para ver novas combinações.',error:'Não foi possível encontrar fãs agora.',retry:'Tentar novamente',one:'1 favorito em comum',many:'{count} favoritos em comum',view:'Ver perfil'},
-    'en-us':{title:'Find fans like you',subtitle:'Meet fans who picked the same favorite videos and albums as you.',loading:'Finding fans with similar taste…',login:'Sign in to find fans who share your favorites.',loginAction:'Sign in',add:'Choose favorite videos or albums on your profile to find similar fans.',addAction:'Open my profile',empty:'No fans share your favorites yet. Check back for new matches.',error:'We could not find fans right now.',retry:'Try again',one:'1 shared favorite',many:'{count} shared favorites',view:'View profile'},
-    es:{title:'Encuentra fans como tú',subtitle:'Conoce fans que eligieron tus mismos vídeos y álbumes favoritos.',loading:'Buscando fans con gustos similares…',login:'Inicia sesión para encontrar fans con favoritos en común.',loginAction:'Iniciar sesión',add:'Elige tus vídeos o álbumes favoritos en tu perfil para descubrir fans similares.',addAction:'Abrir mi perfil',empty:'Todavía no hay fans con los mismos favoritos. Vuelve más tarde.',error:'No pudimos encontrar fans ahora.',retry:'Reintentar',one:'1 favorito en común',many:'{count} favoritos en común',view:'Ver perfil'},
-    fr:{title:'Trouver des fans similaires',subtitle:'Rencontrez des fans qui aiment les mêmes vidéos et albums que vous.',loading:'Recherche de fans aux goûts similaires…',login:'Connectez-vous pour trouver des fans partageant vos favoris.',loginAction:'Se connecter',add:'Ajoutez vos vidéos ou albums favoris à votre profil pour trouver des fans similaires.',addAction:'Ouvrir mon profil',empty:'Aucun fan ne partage encore vos favoris. Revenez plus tard.',error:'Impossible de trouver des fans pour le moment.',retry:'Réessayer',one:'1 favori en commun',many:'{count} favoris en commun',view:'Voir le profil'},
-    it:{title:'Trova fan simili a te',subtitle:'Incontra i fan che hanno scelto i tuoi stessi video e album preferiti.',loading:'Ricerca di fan con gusti simili…',login:'Accedi per trovare fan con preferiti in comune.',loginAction:'Accedi',add:'Seleziona i video o gli album preferiti sul tuo profilo per trovare fan simili.',addAction:'Apri il mio profilo',empty:'Non ci sono ancora fan con gli stessi preferiti. Riprova più tardi.',error:'Impossibile trovare fan al momento.',retry:'Riprova',one:'1 preferito in comune',many:'{count} preferiti in comune',view:'Apri profilo'}
+    'pt-br':{title:'Encontre outros fãs da Billie',subtitle:'Encontre fãs com vídeos, álbuns e conteúdos salvos em comum com você.',loading:'Buscando fãs com gostos parecidos…',login:'Entre na sua conta para encontrar fãs com favoritos em comum.',loginAction:'Entrar',add:'Salve vídeos ou escolha seus álbuns favoritos para encontrar fãs parecidos.',addAction:'Abrir meu perfil',empty:'Ainda não encontramos fãs com os mesmos favoritos. Volte depois para ver novas combinações.',error:'Não foi possível encontrar fãs agora.',retry:'Tentar novamente',one:'1 favorito em comum',many:'{count} favoritos em comum',view:'Ver perfil'},
+    'en-us':{title:'Meet other Billie fans',subtitle:'Find fans who share your favorite videos, albums and saved content.',loading:'Finding fans with similar taste…',login:'Sign in to find fans who share your favorites.',loginAction:'Sign in',add:'Save videos or pick favorite albums to find fans with similar taste.',addAction:'Open my profile',empty:'No fans share your favorites yet. Check back for new matches.',error:'We could not find fans right now.',retry:'Try again',one:'1 shared favorite',many:'{count} shared favorites',view:'View profile'},
+    es:{title:'Encuentra otros fans de Billie',subtitle:'Encuentra fans con vídeos, álbumes y contenidos guardados en común.',loading:'Buscando fans con gustos similares…',login:'Inicia sesión para encontrar fans con favoritos en común.',loginAction:'Iniciar sesión',add:'Guarda vídeos o elige tus álbumes favoritos para descubrir fans similares.',addAction:'Abrir mi perfil',empty:'Todavía no hay fans con los mismos favoritos. Vuelve más tarde.',error:'No pudimos encontrar fans ahora.',retry:'Reintentar',one:'1 favorito en común',many:'{count} favoritos en común',view:'Ver perfil'},
+    fr:{title:'Rencontrez d’autres fans de Billie',subtitle:'Trouvez des fans qui partagent vos vidéos, albums et contenus enregistrés.',loading:'Recherche de fans aux goûts similaires…',login:'Connectez-vous pour trouver des fans partageant vos favoris.',loginAction:'Se connecter',add:'Enregistrez des vidéos ou choisissez des albums favoris pour trouver des fans similaires.',addAction:'Ouvrir mon profil',empty:'Aucun fan ne partage encore vos favoris. Revenez plus tard.',error:'Impossible de trouver des fans pour le moment.',retry:'Réessayer',one:'1 favori en commun',many:'{count} favoris en commun',view:'Voir le profil'},
+    it:{title:'Trova altri fan di Billie',subtitle:'Trova fan con video, album e contenuti salvati in comune.',loading:'Ricerca di fan con gusti simili…',login:'Accedi per trovare fan con preferiti in comune.',loginAction:'Accedi',add:'Salva video o scegli album preferiti per trovare fan simili.',addAction:'Apri il mio profilo',empty:'Non ci sono ancora fan con gli stessi preferiti. Riprova più tardi.',error:'Impossibile trovare fan al momento.',retry:'Riprova',one:'1 preferito in comune',many:'{count} preferiti in comune',view:'Apri profilo'}
   };
   function similarCopy(key,count){
     var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
@@ -753,6 +753,10 @@
     }
     host.appendChild(empty);
   }
+  function safeSimilarImage(value){
+    var url=mediaUrl(value);
+    return /^(https?:\/\/|\/(?!\/))/i.test(url)?url:'';
+  }
   function renderSimilarFans(payload){
     var host=document.getElementById('communitySimilarContent');if(!host)return;
     var matches=Array.isArray(payload&&payload.matches)?payload.matches:[];
@@ -770,25 +774,59 @@
     matches.forEach(function(person){
       var username=String(person&&person.username||'').replace(/^@/,'').trim();
       if(!username)return;
-      var button=document.createElement('button');button.type='button';button.className='community-similar-card';
-      var profile=document.createElement('span');profile.className='community-similar-profile';
-      var avatar=createRankAvatar(person.avatarUrl,person.displayName,person.avatarBorderColor,username);
-      profile.appendChild(avatar);
-      var identity=document.createElement('span');identity.className='community-similar-identity';
-      var name=document.createElement('strong');name.textContent=String(person.displayName||username);
-      var handle=document.createElement('span');handle.textContent='@'+username;
-      identity.appendChild(name);identity.appendChild(handle);profile.appendChild(identity);button.appendChild(profile);
-      var count=Math.max(0,Number(person.sharedCount)||0);
-      var common=document.createElement('span');common.className='community-similar-count';
-      common.textContent=count===1?similarCopy('one'):similarCopy('many',count);
-      button.appendChild(common);
-      var favorites=Array.isArray(person.sharedFavorites)?person.sharedFavorites.filter(Boolean).slice(0,2):[];
-      if(favorites.length){
-        var chips=document.createElement('span');chips.className='community-similar-favorites';
-        favorites.forEach(function(label){var chip=document.createElement('span');chip.textContent=String(label);chips.appendChild(chip);});
-        button.appendChild(chips);
+      var displayName=String(person.displayName||username);
+      var count=Math.max(0,Number(person.sharedContentsCount||person.sharedCount)||0);
+      var button=document.createElement('button');
+      button.type='button';
+      button.className='community-similar-card';
+      button.setAttribute('aria-label',similarCopy('view')+': '+displayName+'. '+(count===1?similarCopy('one'):similarCopy('many',count)));
+      var banner=document.createElement('span');
+      banner.className='community-similar-banner';
+      var bannerUrl=safeSimilarImage(person.bannerUrl);
+      if(bannerUrl){
+        var bannerImg=document.createElement('img');
+        bannerImg.src=bannerUrl;
+        bannerImg.alt='';
+        bannerImg.loading='lazy';
+        bannerImg.decoding='async';
+        banner.appendChild(bannerImg);
       }
-      var link=document.createElement('span');link.className='community-similar-view';link.textContent=similarCopy('view')+' →';button.appendChild(link);
+      button.appendChild(banner);
+      var body=document.createElement('span');
+      body.className='community-similar-body';
+      var avatar=createRankAvatar(person.avatarUrl,displayName,person.avatarBorderColor,username);
+      avatar.classList.add('community-similar-avatar');
+      body.appendChild(avatar);
+      var name=document.createElement('strong');
+      name.className='community-similar-name';
+      name.textContent=displayName;
+      body.appendChild(name);
+      var shared=document.createElement('span');
+      shared.className='community-similar-shared';
+      var thumbs=document.createElement('span');
+      thumbs.className='community-similar-thumbs';
+      var contents=Array.isArray(person.sharedContents)?person.sharedContents.slice(0,3):[];
+      contents.forEach(function(item){
+        var imageUrl=safeSimilarImage(item&&item.imageUrl);
+        if(!imageUrl)return;
+        var img=document.createElement('img');
+        img.className='community-similar-thumb';
+        img.src=imageUrl;
+        img.alt='';
+        img.title=String(item&&item.title||'');
+        img.loading='lazy';
+        img.decoding='async';
+        img.addEventListener('error',function(){img.remove();});
+        thumbs.appendChild(img);
+      });
+      shared.appendChild(thumbs);
+      var plus=document.createElement('span');
+      plus.className='community-similar-plus';
+      plus.textContent='+'+String(count);
+      plus.title=count===1?similarCopy('one'):similarCopy('many',count);
+      shared.appendChild(plus);
+      body.appendChild(shared);
+      button.appendChild(body);
       button.addEventListener('click',function(){
         closeCommunity(false);
         var route='/@'+encodeURIComponent(username);
