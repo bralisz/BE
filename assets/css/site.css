@@ -21872,3 +21872,36 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
 }
 
 .donate-page-shell,.donate-home-spotlight,.donate-ngos-section,.donate-ngo-list,.donate-hero,.donate-intro{display:none!important}
+
+/* Community: visual cards for fans with publicly shared content in common */
+.community-similar-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 clamp(24px,4vw,68px)}
+.community-similar-card{position:relative;display:flex;flex-direction:column;align-items:stretch;min-width:0;min-height:260px;overflow:hidden;padding:0;border:1px solid rgba(255,255,255,.11);border-radius:22px;background:#111317;color:#fff;text-align:center;font-family:inherit;cursor:pointer;transition:border-color .2s ease,background .2s ease,transform .2s ease}
+.community-similar-card:hover{border-color:rgba(188,202,225,.35);background:#161a21;transform:translateY(-2px)}
+.community-similar-card:focus-visible{outline:2px solid #9ebefa;outline-offset:3px}
+.community-similar-banner{position:relative;display:block;flex:0 0 121px;height:121px;overflow:hidden;background:linear-gradient(125deg,#292d39,#15191f 48%,#343b4b)}
+.community-similar-banner img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+.community-similar-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 20%,rgba(9,11,16,.55) 82%,rgba(9,11,16,.78))}
+.community-similar-body{position:relative;display:flex;flex:1;flex-direction:column;align-items:center;min-width:0;margin-top:-32px;padding:0 14px 19px}
+.community-similar-body>.community-similar-avatar{z-index:1;flex:0 0 66px;width:66px;height:66px;border:2px solid #222834;box-shadow:0 7px 22px rgba(0,0,0,.38);background:#1c2028}
+.community-similar-name{display:block;width:100%;margin-top:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;font-weight:800;line-height:1.3;color:#f5f6fa}
+.community-similar-shared{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;margin-top:auto;padding-top:16px}
+.community-similar-thumbs{display:flex;align-items:center;justify-content:center;min-height:38px}
+.community-similar-thumb{display:block;width:39px;height:39px;flex:0 0 39px;margin-left:-12px;border:2px solid #141720;border-radius:12px;object-fit:cover;background:#2e323b;box-shadow:0 3px 10px rgba(0,0,0,.28)}
+.community-similar-thumb:first-child{margin-left:0}
+.community-similar-plus{display:inline-flex;align-items:center;justify-content:center;min-height:33px;padding:0 11px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.10);font-size:13px;font-weight:800;color:#fff;white-space:nowrap}
+.community-similar-empty{grid-column:1/-1;padding:24px 22px;border:1px solid rgba(255,255,255,.10);border-radius:19px;background:#101216;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.community-similar-empty p{margin:0;font-size:13px;line-height:1.5;color:rgba(255,255,255,.66)}
+.community-similar-action{flex:0 0 auto;padding:10px 15px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(255,255,255,.09);color:#fff;font-family:inherit;font-size:12px;font-weight:700;line-height:1.2;cursor:pointer}
+.community-similar-action:hover,.community-similar-action:focus-visible{background:rgba(255,255,255,.17)}
+@media(max-width:1020px) and (min-width:761px){.community-similar-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){
+  .community-similar-list{display:flex;gap:12px;overflow-x:auto;overscroll-behavior-inline:contain;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0;padding:0 20px 8px;scroll-padding-left:20px}
+  .community-similar-list::-webkit-scrollbar{display:none}
+  .community-similar-card{flex:0 0 min(76vw,290px);min-height:247px;scroll-snap-align:start}
+  .community-similar-banner{flex-basis:110px;height:110px}
+  .community-similar-body{margin-top:-30px;padding:0 12px 17px}
+  .community-similar-body>.community-similar-avatar{flex-basis:62px;width:62px;height:62px}
+  .community-similar-thumb{width:35px;height:35px;flex-basis:35px;border-radius:11px;margin-left:-11px}
+  .community-similar-empty{flex:0 0 calc(100% - 40px);flex-direction:column;align-items:flex-start;padding:19px}
+}
+@media(prefers-reduced-motion:reduce){.community-similar-card{transition:none}.community-similar-card:hover{transform:none}}
