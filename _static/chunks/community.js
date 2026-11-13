@@ -3,17 +3,17 @@
   if(window.BETVCommunity)return;
   if(String(location.hash||'').startsWith('#/admin')) return;
 
-  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),similarRequestId:0};
+  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),similarRequestId:0,similarSeen:Object.create(null),similarHasMore:false,similarLoadingMore:false};
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
 
   var similarFanTranslations={
-    'pt-br':{title:'Encontre outros fãs da Billie',subtitle:'Encontre fãs com vídeos, álbuns e conteúdos salvos em comum com você.',loading:'Buscando fãs com gostos parecidos…',login:'Entre na sua conta para encontrar fãs com favoritos em comum.',loginAction:'Entrar',add:'Salve vídeos ou escolha seus álbuns favoritos para encontrar fãs parecidos.',addAction:'Abrir meu perfil',empty:'Ainda não encontramos fãs com os mesmos favoritos. Volte depois para ver novas combinações.',error:'Não foi possível encontrar fãs agora.',retry:'Tentar novamente',one:'1 favorito em comum',many:'{count} favoritos em comum',view:'Ver perfil'},
-    'en-us':{title:'Meet other Billie fans',subtitle:'Find fans who share your favorite videos, albums and saved content.',loading:'Finding fans with similar taste…',login:'Sign in to find fans who share your favorites.',loginAction:'Sign in',add:'Save videos or pick favorite albums to find fans with similar taste.',addAction:'Open my profile',empty:'No fans share your favorites yet. Check back for new matches.',error:'We could not find fans right now.',retry:'Try again',one:'1 shared favorite',many:'{count} shared favorites',view:'View profile'},
-    es:{title:'Encuentra otros fans de Billie',subtitle:'Encuentra fans con vídeos, álbumes y contenidos guardados en común.',loading:'Buscando fans con gustos similares…',login:'Inicia sesión para encontrar fans con favoritos en común.',loginAction:'Iniciar sesión',add:'Guarda vídeos o elige tus álbumes favoritos para descubrir fans similares.',addAction:'Abrir mi perfil',empty:'Todavía no hay fans con los mismos favoritos. Vuelve más tarde.',error:'No pudimos encontrar fans ahora.',retry:'Reintentar',one:'1 favorito en común',many:'{count} favoritos en común',view:'Ver perfil'},
-    fr:{title:'Rencontrez d’autres fans de Billie',subtitle:'Trouvez des fans qui partagent vos vidéos, albums et contenus enregistrés.',loading:'Recherche de fans aux goûts similaires…',login:'Connectez-vous pour trouver des fans partageant vos favoris.',loginAction:'Se connecter',add:'Enregistrez des vidéos ou choisissez des albums favoris pour trouver des fans similaires.',addAction:'Ouvrir mon profil',empty:'Aucun fan ne partage encore vos favoris. Revenez plus tard.',error:'Impossible de trouver des fans pour le moment.',retry:'Réessayer',one:'1 favori en commun',many:'{count} favoris en commun',view:'Voir le profil'},
-    it:{title:'Trova altri fan di Billie',subtitle:'Trova fan con video, album e contenuti salvati in comune.',loading:'Ricerca di fan con gusti simili…',login:'Accedi per trovare fan con preferiti in comune.',loginAction:'Accedi',add:'Salva video o scegli album preferiti per trovare fan simili.',addAction:'Apri il mio profilo',empty:'Non ci sono ancora fan con gli stessi preferiti. Riprova più tardi.',error:'Impossibile trovare fan al momento.',retry:'Riprova',one:'1 preferito in comune',many:'{count} preferiti in comune',view:'Apri profilo'}
+    'pt-br':{title:'Encontre outros fãs da Billie',subtitle:'Encontre fãs com vídeos, álbuns e conteúdos salvos em comum com você.',loading:'Buscando fãs com gostos parecidos…',login:'Entre na sua conta para encontrar fãs com favoritos em comum.',loginAction:'Entrar',add:'Salve vídeos ou escolha seus álbuns favoritos para encontrar fãs parecidos.',addAction:'Abrir meu perfil',empty:'Ainda não encontramos fãs com os mesmos favoritos. Volte depois para ver novas combinações.',error:'Não foi possível encontrar fãs agora.',retry:'Tentar novamente',one:'1 favorito em comum',many:'{count} favoritos em comum',view:'Ver perfil',follow:'Seguir',following:'Seguindo…',retryFollow:'Tentar novamente',followError:'Não foi possível seguir este fã.',more:'Ver mais fãs',loadingMore:'Carregando…',retryMore:'Tentar novamente'},
+    'en-us':{title:'Meet other Billie fans',subtitle:'Find fans who share your favorite videos, albums and saved content.',loading:'Finding fans with similar taste…',login:'Sign in to find fans who share your favorites.',loginAction:'Sign in',add:'Save videos or pick favorite albums to find fans with similar taste.',addAction:'Open my profile',empty:'No fans share your favorites yet. Check back for new matches.',error:'We could not find fans right now.',retry:'Try again',one:'1 shared favorite',many:'{count} shared favorites',view:'View profile',follow:'Follow',following:'Following…',retryFollow:'Try again',followError:'Could not follow this fan.',more:'More fans',loadingMore:'Loading…',retryMore:'Try again'},
+    es:{title:'Encuentra otros fans de Billie',subtitle:'Encuentra fans con vídeos, álbumes y contenidos guardados en común.',loading:'Buscando fans con gustos similares…',login:'Inicia sesión para encontrar fans con favoritos en común.',loginAction:'Iniciar sesión',add:'Guarda vídeos o elige tus álbumes favoritos para descubrir fans similares.',addAction:'Abrir mi perfil',empty:'Todavía no hay fans con los mismos favoritos. Vuelve más tarde.',error:'No pudimos encontrar fans ahora.',retry:'Reintentar',one:'1 favorito en común',many:'{count} favoritos en común',view:'Ver perfil',follow:'Seguir',following:'Siguiendo…',retryFollow:'Reintentar',followError:'No fue posible seguir a este fan.',more:'Ver más fans',loadingMore:'Cargando…',retryMore:'Reintentar'},
+    fr:{title:'Rencontrez d’autres fans de Billie',subtitle:'Trouvez des fans qui partagent vos vidéos, albums et contenus enregistrés.',loading:'Recherche de fans aux goûts similaires…',login:'Connectez-vous pour trouver des fans partageant vos favoris.',loginAction:'Se connecter',add:'Enregistrez des vidéos ou choisissez des albums favoris pour trouver des fans similaires.',addAction:'Ouvrir mon profil',empty:'Aucun fan ne partage encore vos favoris. Revenez plus tard.',error:'Impossible de trouver des fans pour le moment.',retry:'Réessayer',one:'1 favori en commun',many:'{count} favoris en commun',view:'Voir le profil',follow:'Suivre',following:'Abonnement…',retryFollow:'Réessayer',followError:'Impossible de suivre ce fan.',more:'Voir plus de fans',loadingMore:'Chargement…',retryMore:'Réessayer'},
+    it:{title:'Trova altri fan di Billie',subtitle:'Trova fan con video, album e contenuti salvati in comune.',loading:'Ricerca di fan con gusti simili…',login:'Accedi per trovare fan con preferiti in comune.',loginAction:'Accedi',add:'Salva video o scegli album preferiti per trovare fan simili.',addAction:'Apri il mio profilo',empty:'Non ci sono ancora fan con gli stessi preferiti. Riprova più tardi.',error:'Impossibile trovare fan al momento.',retry:'Riprova',one:'1 preferito in comune',many:'{count} preferiti in comune',view:'Apri profilo',follow:'Segui',following:'Seguendo…',retryFollow:'Riprova',followError:'Impossibile seguire questo fan.',more:'Altri fan',loadingMore:'Caricamento…',retryMore:'Riprova'}
   };
   function similarCopy(key,count){
     var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
@@ -786,10 +786,36 @@
     var url=mediaUrl(value);
     return /^(https?:\/\/|\/(?!\/))/i.test(url)?url:'';
   }
-  function renderSimilarFans(payload){
+  async function followSimilarFan(username,card,followButton){
+    if(followButton.disabled)return;
+    followButton.disabled=true;
+    followButton.textContent=similarCopy('following');
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')throw new Error('follow_backend_unavailable');
+      var result=await window.BETVFeatures.withTimeout(
+        client.rpc('set_profile_follow',{p_username:username,p_following:true}),10000
+      );
+      if(result&&result.error)throw result.error;
+      var row=Array.isArray(result&&result.data)?result.data[0]:result&&result.data;
+      if(!row||row.following!==true)throw new Error('follow_not_confirmed');
+      if(card.isConnected)card.remove();
+      var host=document.getElementById('communitySimilarContent');
+      if(host&&!host.querySelector('.community-similar-card')&&!state.similarHasMore){
+        similarMessage(similarCopy('empty'));
+      }
+    }catch(error){
+      if(!followButton.isConnected)return;
+      followButton.disabled=false;
+      followButton.textContent=similarCopy('retryFollow');
+      followButton.title=similarCopy('followError');
+    }
+  }
+  function renderSimilarFans(payload,append){
     var host=document.getElementById('communitySimilarContent');if(!host)return;
     var matches=Array.isArray(payload&&payload.matches)?payload.matches:[];
-    if(!payload||payload.hasFavorites!==true){
+    if(!append&&(!payload||payload.hasFavorites!==true)){
       similarMessage(similarCopy('add'),similarCopy('addAction'),function(){
         closeCommunity(false);
         var nav=window.BETVNavigation;
@@ -798,17 +824,20 @@
       });
       return;
     }
-    if(!matches.length){similarMessage(similarCopy('empty'));return;}
-    host.replaceChildren();
+    if(!append){
+      host.replaceChildren();
+    }else{
+      var oldMore=host.querySelector('.community-similar-load-more');
+      if(oldMore)oldMore.remove();
+    }
     matches.forEach(function(person){
       var username=String(person&&person.username||'').replace(/^@/,'').trim();
-      if(!username)return;
+      if(!username||state.similarSeen[username.toLowerCase()])return;
+      state.similarSeen[username.toLowerCase()]=true;
       var displayName=String(person.displayName||username);
       var count=Math.max(0,Number(person.sharedContentsCount||person.sharedCount)||0);
-      var button=document.createElement('button');
-      button.type='button';
-      button.className='community-similar-card';
-      button.setAttribute('aria-label',similarCopy('view')+': '+displayName+'. '+(count===1?similarCopy('one'):similarCopy('many',count)));
+      var card=document.createElement('article');
+      card.className='community-similar-card';
       var banner=document.createElement('span');
       banner.className='community-similar-banner';
       var bannerUrl=safeSimilarImage(person.bannerUrl);
@@ -820,7 +849,7 @@
         bannerImg.decoding='async';
         banner.appendChild(bannerImg);
       }
-      button.appendChild(banner);
+      card.appendChild(banner);
       var body=document.createElement('span');
       body.className='community-similar-body';
       var avatar=createRankAvatar(person.avatarUrl,displayName,person.avatarBorderColor,username);
@@ -830,6 +859,17 @@
       name.className='community-similar-name';
       name.textContent=displayName;
       body.appendChild(name);
+      var followButton=document.createElement('button');
+      followButton.type='button';
+      followButton.className='community-similar-follow';
+      followButton.textContent=similarCopy('follow');
+      followButton.setAttribute('aria-label',similarCopy('follow')+' '+displayName);
+      followButton.addEventListener('click',function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        followSimilarFan(username,card,followButton);
+      });
+      body.appendChild(followButton);
       var shared=document.createElement('span');
       shared.className='community-similar-shared';
       var thumbs=document.createElement('span');
@@ -855,20 +895,77 @@
       plus.title=count===1?similarCopy('one'):similarCopy('many',count);
       shared.appendChild(plus);
       body.appendChild(shared);
-      button.appendChild(body);
-      button.addEventListener('click',function(){
-        closeCommunity(false);
-        var route='/@'+encodeURIComponent(username);
-        if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(route);
-        else location.assign(route);
+      card.appendChild(body);
+      var link=document.createElement('a');
+      link.className='community-similar-open-profile';
+      link.href='/@'+encodeURIComponent(username);
+      link.setAttribute('aria-label',similarCopy('view')+': '+displayName);
+      link.addEventListener('click',function(event){
+        if(event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||event.button!==0)return;
+        if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function'){
+          event.preventDefault();
+          closeCommunity(false);
+          window.BETVPublicRoutes.go(link.getAttribute('href'));
+        }else{
+          closeCommunity(false);
+        }
       });
-      host.appendChild(button);
+      card.appendChild(link);
+      host.appendChild(card);
     });
+    state.similarHasMore=Boolean(payload&&payload.hasMore===true);
+    if(state.similarHasMore){
+      var more=document.createElement('button');
+      more.type='button';
+      more.className='community-similar-load-more';
+      more.setAttribute('aria-label',similarCopy('more'));
+      var symbol=document.createElement('span');symbol.className='community-similar-more-icon';symbol.textContent='+';
+      var label=document.createElement('span');label.className='community-similar-more-label';label.textContent=similarCopy('more');
+      more.appendChild(symbol);more.appendChild(label);
+      more.addEventListener('click',loadMoreSimilarFans);
+      host.appendChild(more);
+    }else if(!host.querySelector('.community-similar-card')){
+      similarMessage(similarCopy('empty'));
+    }
     hydrateRankingAvatarRings(host);
+  }
+  async function requestSimilarFans(exclusions){
+    await Promise.resolve(window.beBackend&&window.beBackend.ready);
+    var client=window.beBackend&&window.beBackend.client;
+    if(!client||typeof client.rpc!=='function')throw new Error('similar_fans_backend_unavailable');
+    var result=await window.BETVFeatures.withTimeout(
+      client.rpc('get_similar_fans_page',{p_limit:8,p_excluded_usernames:exclusions}),10000
+    );
+    if(result&&result.error)throw result.error;
+    return result&&result.data||{};
+  }
+  async function loadMoreSimilarFans(){
+    if(state.similarLoadingMore||!state.similarHasMore||!document.body.classList.contains('community-page-active'))return;
+    state.similarLoadingMore=true;
+    var currentRequest=state.similarRequestId;
+    var host=document.getElementById('communitySimilarContent');
+    var more=host&&host.querySelector('.community-similar-load-more');
+    if(more){more.disabled=true;more.querySelector('.community-similar-more-label').textContent=similarCopy('loadingMore');}
+    try{
+      var excluded=Object.keys(state.similarSeen);
+      var payload=await requestSimilarFans(excluded);
+      if(currentRequest!==state.similarRequestId||!document.body.classList.contains('community-page-active'))return;
+      renderSimilarFans(payload,true);
+    }catch(error){
+      if(more&&more.isConnected){
+        more.disabled=false;
+        more.querySelector('.community-similar-more-label').textContent=similarCopy('retryMore');
+      }
+    }finally{
+      if(currentRequest===state.similarRequestId)state.similarLoadingMore=false;
+    }
   }
   async function refreshSimilarFans(){
     if(!document.body.classList.contains('community-page-active'))return;
     var requestId=++state.similarRequestId;
+    state.similarSeen=Object.create(null);
+    state.similarHasMore=false;
+    state.similarLoadingMore=false;
     if(!currentUser()&&window.beBackend&&window.beBackend.ready){
       try{await window.BETVFeatures.withTimeout(Promise.resolve(window.beBackend.ready),5000);}catch(_){ }
     }
@@ -884,15 +981,9 @@
     }
     similarMessage(similarCopy('loading'));
     try{
-      var result=await window.BETVFeatures.withTimeout((async function(){
-        await Promise.resolve(window.beBackend&&window.beBackend.ready);
-        var client=window.beBackend&&window.beBackend.client;
-        if(!client||typeof client.rpc!=='function')throw new Error('similar_fans_backend_unavailable');
-        return client.rpc('get_similar_fans',{p_limit:8});
-      })(),8000);
-      if(result&&result.error)throw result.error;
+      var payload=await requestSimilarFans([]);
       if(requestId!==state.similarRequestId||!document.body.classList.contains('community-page-active'))return;
-      renderSimilarFans(result&&result.data||{});
+      renderSimilarFans(payload,false);
     }catch(error){
       if(requestId!==state.similarRequestId||!document.body.classList.contains('community-page-active'))return;
       similarMessage(similarCopy('error'),similarCopy('retry'),refreshSimilarFans);
