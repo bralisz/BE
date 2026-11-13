@@ -21905,3 +21905,28 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
   .community-similar-empty{flex:0 0 calc(100% - 40px);flex-direction:column;align-items:flex-start;padding:19px}
 }
 @media(prefers-reduced-motion:reduce){.community-similar-card{transition:none}.community-similar-card:hover{transform:none}}
+/* Community mobile: let the selected banner fill the space behind the fixed header. */
+@media (max-width:760px) {
+  body.community-page-active #mobileAppBar,
+  body.community-page-active.mobile-home-layout #mobileAppBar,
+  body.community-page-active.mobile-home-scrolled #mobileAppBar {
+    background:transparent!important;
+    background-color:transparent!important;
+    background-image:none!important;
+    border:0!important;
+    box-shadow:none!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+  }
+  body.community-page-active #mobileAppBar::before,
+  body.community-page-active #mobileAppBar::after {
+    content:none!important;
+    display:none!important;
+  }
+  body.community-page-active .community-page-inner.has-community-banner .community-hero-banner {
+    margin-top:calc(-78px - env(safe-area-inset-top) - var(--community-hero-header-gap,0px))!important;
+  }
+  body.community-page-active .community-page-inner.has-community-banner .community-hero-banner-frame>img {
+    height:calc(clamp(280px,85vw,430px) + 78px + env(safe-area-inset-top) + var(--community-hero-header-gap,0px))!important;
+  }
+}
