@@ -10,7 +10,7 @@ const features=read('assets/js/features.js');
 const featuresServed=read('_static/chunks/features.js');
 const html=read('index.html');
 const rev='20261113-community-follow-discovery-v4';
-const cssRev='20261113-community-follow-style-v4';
+const cssRev='20261113-community-horizontal-fans-v1';
 
 assert.equal(community,served,'the Community chunk must mirror the source');
 assert.equal(features,featuresServed,'the loader chunk must mirror the source');
@@ -42,6 +42,9 @@ for (const css of [sourceCss,servedCss]) {
   assert(css.includes('.community-similar-follow'), 'blue follow button must be in the site CSS');
   assert(css.includes('#1687ef'), 'Follow action must use the requested blue style');
   assert(css.includes('.community-similar-load-more'), 'the plus tile needs published CSS');
+  assert(css.includes('.community-similar-list{display:flex;flex-wrap:nowrap'), 'desktop recommendations must remain in a horizontal row');
+  assert(css.includes('overflow-x:auto;overflow-y:hidden'), 'the recommendations must scroll sideways');
+  assert(css.includes('flex:0 0 clamp(245px,22vw,310px)'), 'recommendation cards must have fixed carousel widths');
 }
 assert(features.includes("community:'"+rev+"'"),'lazy-loaded chunk requires a bumped cache key');
 assert(html.includes('features.js?rev='+rev),'loader itself requires a bumped cache key');
