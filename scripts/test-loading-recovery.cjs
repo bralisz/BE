@@ -9,7 +9,7 @@ function harness({saved=null,fetcher=async()=>({ok:true,json:async()=>bundle})}=
   if(saved)storage.set('betvHomeBootstrapV6:pt-br',JSON.stringify(saved));
   const localStorage={getItem:key=>storage.get(key)||null,setItem:(key,v)=>storage.set(key,v),removeItem:key=>storage.delete(key),key:i=>Array.from(storage.keys())[i],get length(){return storage.size;}};
   const window={__beContentReady:true,setTimeout:fn=>{timers.set(++id,fn);return id;},clearTimeout:id=>timers.delete(id),requestIdleCallback:fn=>idle.push(fn),dispatchEvent:e=>events.push(e)};
-  const context={window,document:{hidden:false,body:{classList:{contains:()=>false}}},localStorage,URLSearchParams,AbortController,Date,Promise,Map,Set,CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}},activeLocaleSlug:()=> 'pt-br',backendError:(code,message)=>Object.assign(new Error(message),{code}),fetch:async url=>{calls.push(url);return fetcher(url,bundle);}};
+  const context={window,location:new URL('https://billieilishtv.site/pt-br'),document:{hidden:false,body:{classList:{contains:()=>false}}},localStorage,URLSearchParams,AbortController,Date,Promise,Map,Set,CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}},activeLocaleSlug:()=> 'pt-br',backendError:(code,message)=>Object.assign(new Error(message),{code}),fetch:async url=>{calls.push(url);return fetcher(url,bundle);}};
   vm.createContext(context);vm.runInContext(publicSource+'\nthis.api={preloadPublicHomeData,readPublicData,fetchPublicJson,validatePublicHomeDataInBackground};',context);
   return {api:context.api,window,storage,timers,idle,events,calls,bundle};
 }

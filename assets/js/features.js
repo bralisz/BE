@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revisions = {account:'20261105-session-device-v1',community:'20261101-i18n-privacy-watch-v19'};
+  const revisions = {account:'20261105-session-device-v1',community:'20261113-community-fans-navigation-v1'};
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
