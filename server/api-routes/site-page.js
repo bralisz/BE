@@ -647,7 +647,16 @@ function pageCopy(routeInfo, settings, seoRecord) {
 }
 
 function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecord, publicProfile) {
-  const graph = [];
+  const organizationId = `${origin}/#organization`;
+  const graph = [{
+    '@type': 'Organization',
+    '@id': organizationId,
+    name: 'Billie Eilish TV',
+    alternateName: 'BETV',
+    url: `${origin}/`,
+    description: copy.fanProject,
+    sameAs: ['https://www.instagram.com/billieilishtv_/']
+  }];
   graph.push({
     '@type': 'WebSite',
     '@id': `${origin}/#website`,
@@ -655,6 +664,7 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
     name: 'Billie Eilish TV',
     alternateName: 'BETV',
     description: copy.fanProject,
+    publisher: { '@id': organizationId },
     inLanguage: ['pt-BR', 'en-US', 'es', 'fr-FR', 'it-IT']
   });
 

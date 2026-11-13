@@ -76,3 +76,12 @@ um catálogo incompleto como sucesso. Coleções vazias válidas continuam aceit
 `npm run test:seo` inclui a validação de XML, imagens, idiomas, falhas e recuperação.
 
 Referência: https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps
+
+## Identidade do projeto e Instagram
+
+O JSON-LD identifica a organização de fãs Billie Eilish TV (nome alternativo
+BETV) como responsável pelo WebSite e usa `sameAs` para vincular o Instagram
+confirmado pelo proprietário: https://www.instagram.com/billieilishtv_/ .
+O endereço não inclui parâmetros de rastreamento. A artista permanece uma
+entidade separada, como assunto do conteúdo; o perfil é do projeto de fãs.
+A associação não garante posição nas buscas ou a exibição do Instagram.
