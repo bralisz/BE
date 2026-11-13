@@ -356,7 +356,7 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
 .community-similar-view{margin-top:auto;color:#e6e9f0;font-size:12px;font-weight:760}
 .community-similar-empty{grid-column:1/-1;padding:24px 22px;border:1px solid rgba(255,255,255,.10);border-radius:19px;background:#101216;display:flex;justify-content:space-between;align-items:center;gap:14px}
 .community-similar-empty p{margin:0;font-size:13px;line-height:1.5;color:rgba(255,255,255,.66)}
-.community-similar-action{flex:0 0 auto;padding:10px 15px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(255,255,255,.09);color:#fff;font:700 12px/1.2 inherit;cursor:pointer}
+.community-similar-action{flex:0 0 auto;padding:10px 15px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(255,255,255,.09);color:#fff;font-family:inherit;font-size:12px;font-weight:700;line-height:1.2;cursor:pointer}
 .community-similar-action:hover,.community-similar-action:focus-visible{background:rgba(255,255,255,.17)}
 @media(max-width:1020px) and (min-width:761px){.community-similar-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){
