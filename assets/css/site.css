@@ -21930,3 +21930,83 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
     height:calc(clamp(280px,85vw,430px) + 78px + env(safe-area-inset-top) + var(--community-hero-header-gap,0px))!important;
   }
 }
+
+/* Fan discovery actions: follow without leaving the Community, then explore more. */
+.community-similar-follow{
+  position:relative;
+  z-index:4;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:118px;
+  min-height:35px;
+  margin-top:11px;
+  padding:8px 20px;
+  border:1px solid #187fe4;
+  border-radius:999px;
+  background:#1687ef;
+  color:#fff;
+  font-family:inherit;
+  font-size:13px;
+  font-weight:800;
+  line-height:1;
+  cursor:pointer;
+  box-shadow:0 5px 18px rgba(15,112,225,.23);
+}
+.community-similar-follow:hover:not(:disabled){background:#0d75dc;border-color:#0d75dc}
+.community-similar-follow:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.community-similar-follow:disabled{opacity:.7;cursor:progress}
+.community-similar-open-profile{
+  position:absolute;
+  z-index:2;
+  inset:0;
+  display:block;
+  border-radius:inherit;
+}
+.community-similar-open-profile:focus-visible{outline:3px solid #8fbfff;outline-offset:-4px}
+.community-similar-card .community-similar-shared{padding-top:14px}
+.community-similar-load-more{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:260px;
+  gap:12px;
+  padding:24px 16px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:22px;
+  background:#111820;
+  color:#e8edf7;
+  font-family:inherit;
+  cursor:pointer;
+  transition:background .2s ease,border-color .2s ease;
+}
+.community-similar-load-more:hover:not(:disabled){background:#182335;border-color:rgba(84,160,243,.45)}
+.community-similar-load-more:focus-visible{outline:2px solid #8fbfff;outline-offset:3px}
+.community-similar-load-more:disabled{opacity:.65;cursor:progress}
+.community-similar-more-icon{
+  display:grid;
+  place-items:center;
+  width:62px;
+  height:62px;
+  border:1px solid rgba(128,183,251,.35);
+  border-radius:50%;
+  background:rgba(31,123,229,.17);
+  font-size:39px;
+  font-weight:400;
+  line-height:1;
+  color:#9bc6ff;
+}
+.community-similar-more-label{font-size:13px;font-weight:700;color:#cbd7e8}
+@media(max-width:760px){
+  .community-similar-load-more{
+    flex:0 0 min(50vw,174px);
+    min-height:260px;
+    scroll-snap-align:start;
+    align-self:stretch;
+  }
+  .community-similar-follow{min-height:35px;margin-top:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .community-similar-load-more{transition:none}
+}
