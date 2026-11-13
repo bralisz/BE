@@ -406,6 +406,34 @@
     return communityBannerPromise;
   }
 
+
+  // Align the selected artwork with the top of the viewport, underneath
+  // the fixed transparent mobile controls. Compensate the image height in
+  // CSS so the rest of the Community stays in the same vertical position.
+  function alignCommunityHeroWithMobileHeader(){
+    if(!page||!window.matchMedia)return;
+    var hero=page.querySelector('.community-hero-banner');
+    var inner=page.querySelector('.community-page-inner');
+    if(!hero||!hero.style)return;
+    if(!window.matchMedia('(max-width:760px)').matches){
+      hero.style.removeProperty('--community-hero-header-gap');
+      return;
+    }
+    if(hero.hidden||page.hidden||!inner||!inner.classList.contains('has-community-banner')||!document.body.classList.contains('community-page-active'))return;
+    var measure=function(){
+      if(hero.hidden||page.hidden||!document.body.classList.contains('community-page-active'))return;
+      hero.style.removeProperty('--community-hero-header-gap');
+      var bar=document.getElementById('mobileAppBar');
+      var barTop=bar&&typeof bar.getBoundingClientRect==='function'?bar.getBoundingClientRect().top:0;
+      var imageTop=hero.getBoundingClientRect().top;
+      var scrollTop=Math.max(0,Number(window.scrollY)||0);
+      var gap=Math.min(280,Math.max(0,Math.ceil(imageTop+scrollTop-barTop)));
+      hero.style.setProperty('--community-hero-header-gap',gap+'px');
+    };
+    if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(measure);
+    else measure();
+  }
+
   function chooseCommunityBanner(){
     var request=++communityBannerRequest;
     if(!page)return;
@@ -436,6 +464,7 @@
           image.alt='Banner da comunidade';
           inner.classList.add('has-community-banner');
           hero.hidden=false;
+          alignCommunityHeroWithMobileHeader();
         };
         image.onerror=function(){image.onload=null;image.onerror=null;tryNext();};
         image.src=mediaUrl(raw);
@@ -1071,6 +1100,7 @@
     window.addEventListener('hashchange',closeMobileAccountMenu);
     window.addEventListener('resize',function(){if(!window.matchMedia('(max-width:760px)').matches)closeMobileAccountMenu();else if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();});
     function syncMobileMenuPosition(){if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();}
+    window.addEventListener('resize',alignCommunityHeroWithMobileHeader,{passive:true});
     if(window.visualViewport)window.visualViewport.addEventListener('resize',syncMobileMenuPosition);
     new MutationObserver(syncMobileMenuPosition).observe(document.body,{attributes:true,attributeFilter:['class']});
     document.addEventListener('keydown',function(event){if(event.key==='Escape')closeMobileAccountMenu();});
