@@ -20,6 +20,38 @@ const helpers=community.slice(start,end);
 const factory=new Function('window','document','page','mediaUrl','Math',helpers+';return {chooseCommunityBanner};');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 
+const alignStart=helpers.indexOf('  function alignCommunityHeroWithMobileHeader(){');
+const alignEnd=helpers.indexOf('  function chooseCommunityBanner(){',alignStart);
+assert(alignStart>=0&&alignEnd>alignStart,'Community hero mobile alignment helper is present');
+const alignFactory=new Function('window','document','page',helpers.slice(alignStart,alignEnd)+';return alignCommunityHeroWithMobileHeader;');
+let headerGap='0px';
+const alignedHero={
+  hidden:false,
+  style:{
+    removeProperty(name){if(name==='--community-hero-header-gap')headerGap='0px';},
+    setProperty(name,value){if(name==='--community-hero-header-gap')headerGap=value;}
+  },
+  getBoundingClientRect(){return {top:133-(parseInt(headerGap,10)||0)};}
+};
+const alignedInner={classList:{contains:name=>name==='has-community-banner'}};
+const alignedPage={hidden:false,querySelector:name=>name==='.community-hero-banner'?alignedHero:name==='.community-page-inner'?alignedInner:null};
+const alignedWindow={scrollY:0,matchMedia:()=>({matches:true}),requestAnimationFrame:callback=>callback()};
+const alignedDocument={
+  body:{classList:{contains:name=>name==='community-page-active'}},
+  getElementById:name=>name==='mobileAppBar'?{getBoundingClientRect:()=>({top:0})}:null
+};
+const align=alignFactory(alignedWindow,alignedDocument,alignedPage);
+align();
+assert.equal(headerGap,'133px','banner must fill the blank space above it, behind the mobile controls');
+align();
+assert.equal(headerGap,'133px','re-measuring cannot accumulate overlapping offsets');
+alignedWindow.matchMedia=()=>({matches:false});
+align();
+assert.equal(headerGap,'0px','desktop layout must reset the mobile overlap');
+assert.match(css,/--community-hero-header-gap/,'production CSS must consume the measured header gap');
+assert.match(css,/body\.community-page-active #mobileAppBar/,'Community header must be transparent');
+
+
 function fixture(rows,sharedStorage){
   const storage=sharedStorage||new Map();
   const sessionStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,String(value))};
