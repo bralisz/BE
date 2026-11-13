@@ -108,26 +108,38 @@ async function fetchCollection(collection) {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_collection: collection, p_id: null }),
-      cache: 'no-store'
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000)
     });
     if (response.ok) {
       const payload = await response.json();
-      return (Array.isArray(payload) ? payload : []).map(unwrapRow).filter(Boolean);
+      if (!Array.isArray(payload)) throw new Error('Invalid catalog response');
+      return payload.map(unwrapRow).filter(Boolean);
     }
   } catch (_) {}
 
   const params = new URLSearchParams({ select: 'id,data,created_at,updated_at', collection: `eq.${collection}` });
-  const legacy = await fetch(`${url}/rest/v1/content_items?${params.toString()}`, { headers, cache: 'no-store' });
+  const legacy = await fetch(`${url}/rest/v1/content_items?${params.toString()}`, { headers, cache: 'no-store', signal: AbortSignal.timeout(4000) });
   if (!legacy.ok) throw new Error(`sitemap_${collection}_unavailable`);
   const payload = await legacy.json();
-  return (Array.isArray(payload) ? payload : []).map(unwrapRow).filter(Boolean);
+  if (!Array.isArray(payload)) throw new Error('Invalid catalog response');
+  return payload.map(unwrapRow).filter(Boolean);
 }
 
-function addPage(pageMap, logicalPath, lastmod = '') {
+function contentImage(data) {
+  const raw = String(data.thumbnailUrl || data.imageUrl || data.bannerUrl || '').trim();
+  if (!raw) return '';
+  try {
+    const url = new URL(raw, SITE_ORIGIN);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch (_) { return ''; }
+}
+
+function addPage(pageMap, logicalPath, lastmod = '', image = '') {
   const logical = String(logicalPath || '/').replace(/\/{2,}/g, '/').replace(/\/+$/, '') || '/';
   const existing = pageMap.get(logical);
   if (!existing || (!existing.lastmod && lastmod) || (lastmod && existing.lastmod && lastmod > existing.lastmod)) {
-    pageMap.set(logical, { logicalPath: logical, lastmod: lastmod || (existing && existing.lastmod) || '' });
+    pageMap.set(logical, { logicalPath: logical, lastmod: lastmod || (existing && existing.lastmod) || '', image });
   }
 }
 
@@ -140,6 +152,11 @@ async function collectPages() {
     fetchCollection(ALBUM_COLLECTION)
   ]);
 
+  // Never publish a partial catalog as a successful, cacheable sitemap.
+  if (results.some(result => result.status === 'rejected')) {
+    throw new Error('sitemap_catalog_unavailable');
+  }
+
   const seenContentIds = new Set();
   results.slice(0, CONTENT_COLLECTIONS.length).forEach(result => {
     if (result.status !== 'fulfilled') return;
@@ -149,7 +166,7 @@ async function collectPages() {
       const id = numericPublicId(data.publicId || row.id || data.title);
       if (!/^\d{8}$/.test(id) || seenContentIds.has(id)) return;
       seenContentIds.add(id);
-      addPage(pages, `/${id}`, row.updatedAt);
+      addPage(pages, `/${id}`, row.updatedAt, contentImage(data));
     });
   });
 
@@ -160,7 +177,7 @@ async function collectPages() {
       const id = String(row.id || '').trim();
       if (!id || seenAlbums.has(id) || !String(row.data?.title || '').trim()) return;
       seenAlbums.add(id);
-      addPage(pages, `/albuns/${encodeURIComponent(id)}`, row.updatedAt);
+      addPage(pages, `/albuns/${encodeURIComponent(id)}`, row.updatedAt, contentImage(row.data));
     });
   }
 
@@ -179,7 +196,8 @@ function alternateLinks(logicalPath) {
 function sitemapUrlEntry(page, locale) {
   const loc = absoluteUrl(localizedPath(page.logicalPath, locale.slug));
   const lastmod = page.lastmod ? `\n    <lastmod>${xml(page.lastmod)}</lastmod>` : '';
-  return `  <url>\n    <loc>${xml(loc)}</loc>${lastmod}\n${alternateLinks(page.logicalPath)}\n  </url>`;
+  const image = page.image ? `\n    <image:image><image:loc>${xml(page.image)}</image:loc></image:image>` : '';
+  return `  <url>\n    <loc>${xml(loc)}</loc>${lastmod}${image}\n${alternateLinks(page.logicalPath)}\n  </url>`;
 }
 
 module.exports = async function sitemap(req, res) {
@@ -191,7 +209,7 @@ module.exports = async function sitemap(req, res) {
   try {
     const pages = await collectPages();
     const urls = pages.flatMap(page => LOCALES.map(locale => sitemapUrlEntry(page, locale))).join('\n');
-    const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls}\n</urlset>\n`;
+    const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls}\n</urlset>\n`;
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400');
@@ -199,7 +217,10 @@ module.exports = async function sitemap(req, res) {
     if (req.method === 'HEAD') return res.status(200).end();
     return res.status(200).send(body);
   } catch (_) {
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(503).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml"></urlset>');
+    res.setHeader('Retry-After', '300');
+    if (req.method === 'HEAD') return res.status(503).end();
+    return res.status(503).send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"></urlset>');
   }
 };

@@ -90,6 +90,12 @@ function documentOf(response) {
     assert.equal(doc.title, `${name} | Billie Eilish TV`);
     assert.equal(doc.querySelector('meta[name="description"]').content, description);
     assert.equal(doc.querySelector('meta[property="og:image"]').content, 'https://example.test/interview.webp');
+    const page = JSON.parse(doc.querySelector('[data-betv-seo]').textContent)['@graph'].find(item => item['@type'] === 'ItemPage');
+    assert.equal(page.primaryImageOfPage.url, doc.querySelector('meta[property="og:image"]').content);
+    assert.equal(page.mainEntity.image, page.primaryImageOfPage.url);
+    assert.equal(page.mainEntity.url, `https://billieilishtv.site${path}`);
+    assert.equal(page.mainEntity.mainEntityOfPage['@id'], page['@id']);
+    assert.equal(page.inLanguage, doc.documentElement.lang);
     assert.equal(doc.querySelector('meta[property="og:image:width"]'), null, 'do not claim dimensions of an unrelated banner');
     assert.equal(doc.querySelector('meta[property="og:title"]').content, doc.title);
     assert.equal(doc.querySelector('meta[name="twitter:title"]').content, doc.title);
