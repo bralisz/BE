@@ -9,8 +9,8 @@ const servedCss=read('_static/styles/site.css');
 const features=read('assets/js/features.js');
 const featuresServed=read('_static/chunks/features.js');
 const html=read('index.html');
-const rev='20261113-community-transparent-header-v3';
-const cssRev='20261113-community-header-style-v3';
+const rev='20261113-community-follow-discovery-v4';
+const cssRev='20261113-community-follow-style-v4';
 
 assert.equal(community,served,'the Community chunk must mirror the source');
 assert.equal(features,featuresServed,'the loader chunk must mirror the source');
