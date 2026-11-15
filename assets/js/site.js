@@ -18893,14 +18893,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         let response=await fetch('/api/public-data?'+query.toString(),{cache:'no-store',credentials:'same-origin'});
         if(response.ok) {
           const body=await response.json();
-          records=Array.isArray(body)?body:(Array.isArray(body.items)?body.items:[]);
+          records=Array.isArray(body)?body:(Array.isArray(body?.items)?body.items:(body && typeof body==='object' && body.id ? [body] : []));
         }
         if(!records.some(matches)&&recordId) {
           query.delete('id');
           response=await fetch('/api/public-data?'+query.toString(),{cache:'no-store',credentials:'same-origin'});
           if(response.ok) {
             const body=await response.json();
-            records=Array.isArray(body)?body:(Array.isArray(body.items)?body.items:[]);
+            records=Array.isArray(body)?body:(Array.isArray(body?.items)?body.items:(body && typeof body==='object' && body.id ? [body] : []));
           }
         }
       } catch (_) {}
