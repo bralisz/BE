@@ -1135,6 +1135,8 @@
     mobileMenu.classList.toggle('is-logged-out',!loggedIn);mobileMenu.classList.toggle('is-guest-account',guestActive);
     mobileMenu.querySelector('[data-mobile-account="login"]').hidden=loggedIn;
     ['profile','settings','logout'].forEach(function(action){mobileMenu.querySelector('[data-mobile-account="'+action+'"]').hidden=!loggedIn;});
+    // Avoid a blank, separated sign-out group for visitors.
+    mobileMenu.querySelector('.mobile-account-group-session').hidden=!loggedIn;
     var install=mobileMenu.querySelector('[data-mobile-account="install"]');var running=typeof window.BETVIsAppRunning==='function'&&window.BETVIsAppRunning();var installed=typeof window.BETVIsAppInstalled==='function'&&window.BETVIsAppInstalled();
     install.hidden=running;install.querySelector('.mobile-account-label').textContent=installed&&!running?'Abrir app':'Instalar app';install.classList.toggle('is-installed',installed&&!running);
     applyI18n(mobileMenu);positionMobileAccountMenu();document.body.classList.add('mobile-account-menu-open');
