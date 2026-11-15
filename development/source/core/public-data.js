@@ -972,8 +972,27 @@
     meta.innerHTML = metaParts.join('');
     desc.textContent = description;
 
-    play.href = safeUrlValue(contentUrl);
-    if (/^https?:\/\//i.test(contentUrl)) {
+    // Resolve the series CTA before painting the detail view, avoiding a flash of
+    // the previous title or the unavailable state while episodes are fetched.
+    const hasDirectPlayback = safeUrlValue(contentUrl) !== '#';
+    const inlineEpisodes = collection === 'series' && (Array.isArray(data.episodes) ? data.episodes : (() => { try { return JSON.parse(data.episodes || '[]'); } catch (_) { return []; } })());
+    const hasPublishedEpisodes = Array.isArray(inlineEpisodes) && inlineEpisodes.some(ep => ep && ep.active !== false && ep.active !== 'false' && String(ep.title || '').trim());
+    play.dataset.itemId = itemId;
+    delete play.dataset.seriesEpisodeMode;
+    play.removeAttribute('aria-disabled');
+    if (collection === 'series' && !hasDirectPlayback) {
+      play.dataset.seriesEpisodeMode = hasPublishedEpisodes ? 'episodes' : 'loading';
+      play.removeAttribute('href');
+      play.removeAttribute('target');
+      play.removeAttribute('rel');
+      play.innerHTML = hasPublishedEpisodes
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>Ver episódios'
+        : 'Carregando episódios';
+    } else {
+      play.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir';
+      play.href = safeUrlValue(contentUrl);
+    }
+    if (hasDirectPlayback && /^https?:\/\//i.test(contentUrl)) {
       play.target = '_blank';
       play.rel = 'noopener';
     } else {
@@ -1520,7 +1539,6 @@
     activeInfo=null;activeEpisodes=[];activeDirectLink=false;
     if (root){root.hidden=true;root.replaceChildren();}
     const play=document.getElementById('contentDetailPlay');
-    if(play)delete play.dataset.seriesEpisodeMode;
     if(String(data.collection||'').toLowerCase()!=='series')return;
     const token=activeToken;
     activeInfo=data;
