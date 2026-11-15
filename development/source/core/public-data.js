@@ -1396,6 +1396,8 @@
   function host() {
     const detail = document.getElementById('contentDetailSection');
     if (!detail) return null;
+    const recommendations = document.getElementById('detailRecommendations');
+    if (!recommendations || !recommendations.parentNode) return null;
     let section = document.getElementById('seriesEpisodes');
     if (!section) {
       section = document.createElement('section');
@@ -1403,7 +1405,9 @@
       section.className = 'series-episodes';
       section.setAttribute('aria-label',t().episodes);
       section.hidden = true;
-      detail.appendChild(section);
+      recommendations.parentNode.insertBefore(section,recommendations);
+    } else if (section.nextElementSibling !== recommendations) {
+      recommendations.parentNode.insertBefore(section,recommendations);
     }
     return section;
   }
