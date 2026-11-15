@@ -919,6 +919,23 @@
       more.type='button';
       more.className='community-similar-load-more';
       more.setAttribute('aria-label',similarCopy('more'));
+      // Use an already-rendered recommended profile as a blurred preview.
+      var profileCards=host.querySelectorAll('.community-similar-card');
+      var sourceCard=profileCards.length?profileCards[profileCards.length-1]:null;
+      var sourceImage=sourceCard&&(sourceCard.querySelector('.community-similar-avatar img')||sourceCard.querySelector('.community-similar-banner img'));
+      if(sourceImage){
+        var backdrop=document.createElement('span');
+        backdrop.className='community-similar-more-backdrop';
+        backdrop.setAttribute('aria-hidden','true');
+        var backdropImage=document.createElement('img');
+        backdropImage.src=sourceImage.currentSrc||sourceImage.src;
+        backdropImage.alt='';
+        backdropImage.loading='lazy';
+        backdropImage.decoding='async';
+        backdropImage.addEventListener('error',function(){backdrop.remove();});
+        backdrop.appendChild(backdropImage);
+        more.appendChild(backdrop);
+      }
       var symbol=document.createElement('span');symbol.className='community-similar-more-icon';symbol.textContent='+';
       var label=document.createElement('span');label.className='community-similar-more-label';label.textContent=similarCopy('more');
       more.appendChild(symbol);more.appendChild(label);
