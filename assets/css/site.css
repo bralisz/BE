@@ -22172,3 +22172,7 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
  .series-episode-copy strong{font-size:15px}
 }
 
+
+/* Series detail: bring episode rail closer to the hero while retaining breathing room below the description. */
+body.detail-page-active .series-episodes:not([hidden]){position:relative;z-index:4;margin-top:-58px;padding-top:26px}
+@media(max-width:760px){body.detail-page-active .series-episodes:not([hidden]){margin-top:-28px;padding-top:22px}}
