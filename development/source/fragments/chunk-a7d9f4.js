@@ -1159,13 +1159,44 @@ body.admin-preview-open{overflow:hidden}
   }
 
 
+
+  const SERIES_LANGS=[['pt-br','Português'],['en-us','English'],['es','Español'],['fr','Français'],['it','Italiano']];
+  async function uploadSeriesSubtitle(file,locale,seriesKey,epNo){
+    if(!(file instanceof File)||!file.size)throw new Error('Escolha um arquivo de legenda.');
+    if(file.size>5242880)throw new Error('A legenda deve ter no máximo 5 MB.');
+    const ext=(String(file.name).match(/\.(srt|vtt)$/i)||[])[1]?.toLowerCase();
+    if(!ext)throw new Error('Use somente arquivos .SRT ou .VTT.');
+    const client=beBackend&&beBackend.client;
+    if(!client?.storage?.from)throw new Error('Envio de legendas indisponível.');
+    const folder=String(seriesKey||'series').replace(/[^a-zA-Z0-9_-]/g,'-').slice(0,90);
+    const nonce=Math.floor(Math.random()*1e9);
+    const path=`series/${folder}/${epNo}-${locale}-${Date.now()}-${nonce}.${ext}`;
+    const bucket=client.storage.from('movie-subtitles');
+    const {data,error}=await bucket.upload(path,file,{cacheControl:'3600',contentType:ext==='vtt'?'text/vtt':'application/x-subrip',upsert:false});
+    if(error)throw new Error(error.message||'Falha ao enviar legenda.');
+    const result=bucket.getPublicUrl(String(data?.path||path));
+    const url=String(result?.data?.publicUrl||result?.publicURL||'');
+    if(!/^https:\/\//i.test(url))throw new Error('Não foi possível obter a URL pública.');
+    return url;
+  }
+  function seriesSubtitleInputs(ep){
+    return `<div class="wide series-subtitle-uploads" style="grid-column:1/-1;display:grid;gap:10px;padding:14px;border:1px solid rgba(153,183,230,.2);border-radius:13px">
+      <strong>Arquivos de legenda deste episódio</strong><small>Envie .SRT ou .VTT (até 5 MB) em cada idioma. A seleção é automática conforme o idioma do site.</small>
+      ${SERIES_LANGS.map(([locale,label])=>{
+        const url=String(ep.subtitles?.[locale]||'');
+        let filename='';try{filename=decodeURIComponent(new URL(url,location.origin).pathname.split('/').pop()||'')}catch(_){filename='legenda'}
+        return `<div class="series-subtitle-row" style="display:grid;grid-template-columns:minmax(100px,.4fr) minmax(0,1fr) auto;gap:8px;align-items:center"><label>${label}</label><input class="a-input" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip,text/plain" data-series-subtitle-upload="${locale}" aria-label="Adicionar legenda ${label}">${url?`<button type="button" class="a-btn" data-series-subtitle-remove="${locale}">Remover</button>`:'<span></span>'}<small style="grid-column:2/-1;overflow-wrap:anywhere" aria-live="polite">${url?'Arquivo atual: '+esc(filename):'Nenhum arquivo enviado'}</small></div>`;
+      }).join('')}
+    </div>`;
+  }
+
   function seriesEpisodesEditorField(item = {}) {
     let episodes = item.episodes || [];
     if (typeof episodes === 'string') {
       try { episodes = JSON.parse(episodes); } catch (_) { episodes = []; }
     }
     const raw = JSON.stringify(Array.isArray(episodes) ? episodes : []);
-    return `<div class="field full series-episode-editor">
+    return `<div class="field full series-episode-editor" data-series-folder="${esc(String(item.id || 'draft-'+Date.now()).replace(/[^a-zA-Z0-9_-]/g,'-'))}">
       <div class="series-admin-title"><strong>Temporadas e episódios</strong><small>Cadastre cada episódio com banner, título, descrição, duração, link e legendas por idioma. Se a série não tiver link direto, Assistir desce até a lista de episódios.</small></div>
       <textarea name="episodes" id="seriesEpisodeJson" hidden>${esc(raw)}</textarea>
       <div class="series-episode-admin-list" id="seriesEpisodeAdminList"></div>
@@ -1200,36 +1231,86 @@ body.admin-preview-open{overflow:hidden}
           ${input('Duração','duration',ep.duration || '')}
           <label>Status<select class="a-select" data-episode-field="active"><option value="true" ${ep.active !== false && ep.active !== 'false' ? 'selected' : ''}>Publicado</option><option value="false" ${ep.active === false || ep.active === 'false' ? 'selected' : ''}>Oculto</option></select></label>
           ${input('Link de reprodução (opcional)','contentUrl',ep.contentUrl || ep.videoUrl || '','text',true)}
-          <div class="wide" style="display:grid;gap:9px;padding:12px;border:1px solid rgba(153,183,230,.15);border-radius:12px"><strong>Legendas deste episódio (URLs .vtt ou .srt)</strong>
-          ${[['pt-br','Português'],['en-us','English'],['es','Español'],['fr','Français'],['it','Italiano']].map(([locale,label])=>input(label,'subtitle_'+locale,(ep.subtitles && ep.subtitles[locale]) || (ep.subtitleLocale===locale ? ep.subtitleUrl : '') || '','url',true)).join('')}</div>
+          ${seriesSubtitleInputs(ep)}
           <label class="wide">Descrição<textarea class="a-textarea" data-episode-field="description" rows="3">${esc(ep.description || '')}</textarea></label>
         </div></article>`).join('') : '<p class="series-admin-empty">Nenhum episódio cadastrado. Adicione o primeiro para começar.</p>';
     };
+
     const sync = () => {
-      episodes = Array.from(list.querySelectorAll('.series-episode-admin-card')).map(card => {
-        const result = {};
-        card.querySelectorAll('[data-episode-field]').forEach(control => result[control.dataset.episodeField] = control.value);
-        result.active = result.active !== 'false';
-        result.subtitles = Object.fromEntries(['pt-br','en-us','es','fr','it'].map(locale=>[locale,result['subtitle_'+locale]||'']).filter(([,url])=>url.trim()));
-        for(const locale of ['pt-br','en-us','es','fr','it'])delete result['subtitle_'+locale];
+      const previous=episodes;
+      episodes=Array.from(list.querySelectorAll('.series-episode-admin-card')).map((card,index)=>{
+        const result={};
+        card.querySelectorAll('[data-episode-field]').forEach(control=>result[control.dataset.episodeField]=control.value);
+        result.active=result.active!=='false';
+        result.subtitles={...(previous[index]?.subtitles||{})};
         return result;
       });
-      hidden.value = JSON.stringify(episodes);
-      hidden.dispatchEvent(new Event('input', { bubbles:true }));
+      hidden.value=JSON.stringify(episodes);
+      hidden.dispatchEvent(new Event('input',{bubbles:true}));
     };
     list.addEventListener('input',sync);
     list.addEventListener('change',sync);
+
+    let uploadingSeriesSubtitles=0;
+    list.addEventListener('change',async event=>{
+      const input=event.target.closest?.('[data-series-subtitle-upload]');
+      if(!input||!input.files?.length)return;
+      const card=input.closest('.series-episode-admin-card');
+      const index=Array.from(list.querySelectorAll('.series-episode-admin-card')).indexOf(card);
+      if(index<0)return;
+      const status=input.closest('.series-subtitle-row')?.querySelector('small');
+      const file=input.files[0],locale=input.dataset.seriesSubtitleUpload;
+      uploadingSeriesSubtitles++;
+      input.disabled=true;add.disabled=true;
+      list.querySelectorAll('[data-remove-episode],[data-series-subtitle-remove]').forEach(b=>b.disabled=true);
+      if(status)status.textContent='Enviando '+file.name+'…';
+      try{
+        const key=hidden.closest('[data-series-folder]')?.dataset.seriesFolder||'series';
+        const url=await uploadSeriesSubtitle(file,locale,key,episodes[index]?.episode||index+1);
+        sync();
+        if(!episodes[index])throw new Error('O episódio mudou durante o envio.');
+        episodes[index].subtitles={...(episodes[index].subtitles||{}),[locale]:url};
+        hidden.value=JSON.stringify(episodes);
+        hidden.dispatchEvent(new Event('input',{bubbles:true}));
+        draw();
+      }catch(error){
+        if(status)status.textContent=error?.message||'Falha ao enviar legenda.';
+        input.value='';
+      }finally{
+        uploadingSeriesSubtitles--;
+        if(!uploadingSeriesSubtitles){add.disabled=false;list.querySelectorAll('[data-remove-episode],[data-series-subtitle-remove]').forEach(b=>b.disabled=false);}
+        if(input.isConnected)input.disabled=false;
+      }
+    });
+    list.addEventListener('click',event=>{
+      const remove=event.target.closest?.('[data-series-subtitle-remove]');
+      if(!remove||uploadingSeriesSubtitles)return;
+      const index=Array.from(list.querySelectorAll('.series-episode-admin-card')).indexOf(remove.closest('.series-episode-admin-card'));
+      sync();
+      if(index>=0&&episodes[index]){
+        episodes[index].subtitles={...(episodes[index].subtitles||{})};
+        delete episodes[index].subtitles[remove.dataset.seriesSubtitleRemove];
+        draw();sync();
+      }
+    });
+    hidden.closest('form')?.addEventListener('submit',event=>{
+      if(!uploadingSeriesSubtitles)return;
+      event.preventDefault();event.stopImmediatePropagation();
+      window.alert('Aguarde o envio da legenda terminar antes de salvar.');
+    },true);
+
     list.addEventListener('click',event => {
       const button = event.target.closest('[data-remove-episode]');
-      if (!button) return;
+      if (!button || uploadingSeriesSubtitles) return;
       sync();
       episodes.splice(Number(button.dataset.removeEpisode),1);
       draw();sync();
     });
     add.addEventListener('click',() => {
+      if(uploadingSeriesSubtitles)return;
       sync();
       const last = episodes[episodes.length - 1] || {};
-      episodes.push({ season:Number(last.season) || 1, episode:(Number(last.episode) || 0) + 1, order:episodes.length, title:'', description:'', imageUrl:'', duration:'', contentUrl:'', active:true });
+      episodes.push({ season:Number(last.season) || 1, episode:(Number(last.episode) || 0) + 1, order:episodes.length, title:'', description:'', imageUrl:'', duration:'', contentUrl:'', subtitles:{}, active:true });
       draw();sync();
       list.querySelector('.series-episode-admin-card:last-of-type [data-episode-field="title"]')?.focus();
     });
