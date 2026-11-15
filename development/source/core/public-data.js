@@ -1469,24 +1469,46 @@
     activeDirectLink = Boolean(safeLink(play?.dataset.contentUrl || data.contentUrl || ''));
     let episodes=parse(data.episodes);
     if (!episodes.length) {
+      const recordId=String(data.recordId || data.id || '');
+      const publicId=String(data.itemId || '');
+      const title=String(data.title || '').trim().toLocaleLowerCase();
+      const matches=row=>row && (
+        (recordId && String(row.id || '')===recordId) ||
+        (row.publicId && String(row.publicId)===publicId) ||
+        String(row.title||'').trim().toLocaleLowerCase()===title);
+      let records=[];
+      // Bypass stale Home bootstrap data: fetch the published series with its episodes.
       try {
-        await Promise.resolve(window.beBackend?.ready);
-        const records=await window.beBackend?.data?.list('series',{orderBy:'order',direction:'asc'});
-        const recordId=String(data.recordId || data.id || '');
-        const publicId=String(data.itemId || '');
-        const title=String(data.title || '').trim().toLocaleLowerCase();
-        const record=Array.isArray(records)?records.find(row =>
-          String(row.id || '')===recordId ||
-          (row.publicId && String(row.publicId)===publicId) ||
-          String(row.title||'').trim().toLocaleLowerCase()===title):null;
-        if (record) episodes=parse(record.episodes);
+        const query=new URLSearchParams({name:'series',locale:String(window.BETVLocale?.slug||document.documentElement.lang||'pt-br').toLowerCase(),episodes:'1'});
+        if(recordId)query.set('id',recordId);
+        let response=await fetch('/api/public-data?'+query.toString(),{cache:'no-store',credentials:'same-origin'});
+        if(response.ok) {
+          const body=await response.json();
+          records=Array.isArray(body)?body:(Array.isArray(body.items)?body.items:[]);
+        }
+        if(!records.some(matches)&&recordId) {
+          query.delete('id');
+          response=await fetch('/api/public-data?'+query.toString(),{cache:'no-store',credentials:'same-origin'});
+          if(response.ok) {
+            const body=await response.json();
+            records=Array.isArray(body)?body:(Array.isArray(body.items)?body.items:[]);
+          }
+        }
       } catch (_) {}
+      if(!records.some(matches)) {
+        try {
+          await Promise.resolve(window.beBackend?.ready);
+          records=await window.beBackend?.data?.list('series',{orderBy:'order',direction:'asc'}) || [];
+        } catch (_) {}
+      }
+      const record=Array.isArray(records)?records.find(matches):null;
+      if(record) episodes=parse(record.episodes);
     }
     if (token!==activeToken || !document.body.classList.contains('detail-page-active')) return;
     renderEpisodes(episodes);
     if (!activeDirectLink) setPlayLabel(episodes.length?'episodes':'soon');
   }
-  window.addEventListener('be:content-seo',event=>{
+    window.addEventListener('be:content-seo',event=>{
     const data=event.detail||{};
     const root=host();
     activeToken++;
