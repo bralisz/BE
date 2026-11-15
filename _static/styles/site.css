@@ -216,3 +216,27 @@ body.detail-page-active .series-episodes:not([hidden]){position:relative;z-index
 /* Allow mobile series episode rails to extend the detail page beyond its hero. */
 @media(max-width:760px){body.detail-page-active #contentDetailSection:has(>.series-episodes:not([hidden])){height:auto!important;min-height:690px;overflow:visible!important}body.detail-page-active #contentDetailSection>.series-episodes:not([hidden]){display:block!important;visibility:visible!important;clear:both;scroll-margin-top:76px}}
 @media(max-width:430px){body.detail-page-active #contentDetailSection:has(>.series-episodes:not([hidden])){min-height:660px}}
+
+/* Series episodes are a standalone detail section, immediately before recommendations. */
+body:not(.detail-page-active) #seriesEpisodes{display:none!important}
+body.detail-page-active > main > #seriesEpisodes[hidden]{display:none!important}
+body.detail-page-active > main > #seriesEpisodes:not([hidden]){
+  display:block!important;
+  visibility:visible!important;
+  position:relative;
+  z-index:5;
+  height:auto!important;
+  min-height:0;
+  margin:-58px 0 0;
+  padding-top:26px;
+  overflow:visible;
+  scroll-margin-top:88px;
+}
+@media(max-width:760px){
+  body.detail-page-active > main > #seriesEpisodes:not([hidden]){
+    display:block!important;
+    margin:-28px 0 0;
+    padding-top:22px;
+    scroll-margin-top:75px;
+  }
+}
