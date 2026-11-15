@@ -62,7 +62,7 @@ function checkSettingsLayout(file) {
     d.querySelector('style').textContent = css;
     const computed = selector => dom.window.getComputedStyle(d.querySelector(selector));
     assert.equal(computed('#mobileAppBar').position, 'fixed');
-    assert.equal(computed('#mobileAppBar').backgroundColor, 'rgb(5, 6, 7)', 'settings controls have an opaque header');
+    assert.equal(computed('#mobileAppBar').backgroundColor, 'rgba(0, 0, 0, 0)', 'settings retain the transparent public header');
     assert.equal(computed('#settingsPage').position, 'relative', 'settings scroll in document flow');
     assert.equal(computed('#settingsPage').overflow, 'visible');
     assert.equal(computed('.settings-header').display, 'none', 'one header instead of overlapping headers');
