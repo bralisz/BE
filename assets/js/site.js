@@ -18936,7 +18936,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(main && activeInfo && main.dataset.seriesEpisodeMode){
       event.preventDefault();event.stopImmediatePropagation();
       if(main.dataset.seriesEpisodeMode==='episodes'){
-        document.getElementById('seriesEpisodes')?.scrollIntoView({behavior:'smooth',block:'start'});
+        const section=document.getElementById('seriesEpisodes');
+        if(section && !section.hidden){
+          requestAnimationFrame(()=>section.scrollIntoView({behavior:'smooth',block:'start'}));
+        }
       }
       return;
     }
