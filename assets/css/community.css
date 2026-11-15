@@ -479,3 +479,19 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
 @media(prefers-reduced-motion:reduce){
   .community-similar-load-more{transition:none}
 }
+
+/* Mobile Community: keep the banner's negative offset inside its own layout context.
+   Otherwise the first-child margin can collapse through the page and leave a dark
+   spacer underneath the fixed transparent navigation. */
+@media(max-width:760px){
+  body.community-page-active .community-page-inner.has-community-banner{
+    display:flow-root;
+  }
+  body.community-page-active .community-page-inner.has-community-banner .community-hero-banner{
+    position:relative;
+    z-index:0;
+  }
+  body.community-page-active .community-page-inner.has-community-banner .community-hero-banner-frame{
+    border-top:0!important;
+  }
+}
