@@ -1158,6 +1158,80 @@ body.admin-preview-open{overflow:hidden}
     return copy;
   }
 
+
+  function seriesEpisodesEditorField(item = {}) {
+    let episodes = item.episodes || [];
+    if (typeof episodes === 'string') {
+      try { episodes = JSON.parse(episodes); } catch (_) { episodes = []; }
+    }
+    const raw = JSON.stringify(Array.isArray(episodes) ? episodes : []);
+    return `<div class="field full series-episode-editor">
+      <div class="series-admin-title"><strong>Temporadas e episódios</strong><small>Cadastre cada episódio com banner, título, descrição, duração e link. Se a série não tiver link direto, Assistir desce até a lista de episódios.</small></div>
+      <textarea name="episodes" id="seriesEpisodeJson" hidden>${esc(raw)}</textarea>
+      <div class="series-episode-admin-list" id="seriesEpisodeAdminList"></div>
+      <button class="a-btn series-admin-add" type="button" id="seriesAddEpisode">+ Adicionar episódio</button>
+    </div>`;
+  }
+  function setupSeriesEpisodesEditor(root) {
+    const hidden = $('#seriesEpisodeJson', root);
+    const list = $('#seriesEpisodeAdminList', root);
+    const add = $('#seriesAddEpisode', root);
+    if (!hidden || !list || !add) return;
+    if (!document.getElementById('betv-series-editor-styles')) {
+      const sheet = document.createElement('style');
+      sheet.id = 'betv-series-editor-styles';
+      sheet.textContent = '.series-episode-editor{display:block!important;min-width:0;padding:18px!important;border:1px solid rgba(153,183,230,.22);border-radius:18px;background:rgba(255,255,255,.025)}.series-admin-title strong{display:block;color:#f1f5ff;font-size:16px;margin-bottom:6px}.series-admin-title small{display:block;color:#97a6bc;line-height:1.5;margin-bottom:16px}.series-episode-admin-list{display:grid;gap:14px}.series-episode-admin-card{min-width:0;border:1px solid rgba(255,255,255,.12);background:rgba(4,8,17,.5);border-radius:15px;padding:14px}.series-episode-admin-card header{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.series-episode-admin-card header strong{color:#eef3fd}.series-admin-remove{border:0;background:rgba(235,80,90,.11);color:#ffa7ae;border-radius:9px;padding:8px 10px;cursor:pointer}.series-admin-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.series-admin-fields label{display:grid;gap:6px;color:#aebdd2;font-size:12px;font-weight:650}.series-admin-fields .wide{grid-column:1/-1}.series-admin-fields input,.series-admin-fields textarea,.series-admin-fields select{box-sizing:border-box;min-width:0;width:100%}.series-admin-add{margin-top:15px!important;min-height:44px}@media(max-width:760px){.series-episode-editor{padding:13px!important}.series-admin-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.series-episode-admin-card{padding:11px}}';
+      document.head.appendChild(sheet);
+    }
+    let episodes;
+    try { episodes = JSON.parse(hidden.value || '[]'); } catch (_) { episodes = []; }
+    if (!Array.isArray(episodes)) episodes = [];
+    const input = (label, key, val, type = 'text', wide = false) =>
+      `<label class="${wide ? 'wide' : ''}">${label}<input class="a-input" data-episode-field="${key}" type="${type}" ${type === 'number' ? 'min="0"' : ''} value="${esc(val ?? '')}" autocomplete="off"></label>`;
+    const draw = () => {
+      list.innerHTML = episodes.length ? episodes.map((ep, i) => `<article class="series-episode-admin-card">
+        <header><strong>Episódio ${i + 1}</strong><button class="series-admin-remove" type="button" data-remove-episode="${i}" aria-label="Remover episódio ${i + 1}">Remover</button></header>
+        <div class="series-admin-fields">
+          ${input('Temporada','season',ep.season ?? 1,'number')}
+          ${input('Episódio nº','episode',ep.episode ?? i + 1,'number')}
+          ${input('Ordem','order',ep.order ?? i,'number')}
+          ${input('Título *','title',ep.title || '','text',true)}
+          ${input('Banner / capa (URL)','imageUrl',ep.imageUrl || ep.bannerUrl || '','text',true)}
+          ${input('Duração','duration',ep.duration || '')}
+          <label>Status<select class="a-select" data-episode-field="active"><option value="true" ${ep.active !== false && ep.active !== 'false' ? 'selected' : ''}>Publicado</option><option value="false" ${ep.active === false || ep.active === 'false' ? 'selected' : ''}>Oculto</option></select></label>
+          ${input('Link de reprodução (opcional)','contentUrl',ep.contentUrl || ep.videoUrl || '','text',true)}
+          <label class="wide">Descrição<textarea class="a-textarea" data-episode-field="description" rows="3">${esc(ep.description || '')}</textarea></label>
+        </div></article>`).join('') : '<p class="series-admin-empty">Nenhum episódio cadastrado. Adicione o primeiro para começar.</p>';
+    };
+    const sync = () => {
+      episodes = Array.from(list.querySelectorAll('.series-episode-admin-card')).map(card => {
+        const result = {};
+        card.querySelectorAll('[data-episode-field]').forEach(control => result[control.dataset.episodeField] = control.value);
+        result.active = result.active !== 'false';
+        return result;
+      });
+      hidden.value = JSON.stringify(episodes);
+      hidden.dispatchEvent(new Event('input', { bubbles:true }));
+    };
+    list.addEventListener('input',sync);
+    list.addEventListener('change',sync);
+    list.addEventListener('click',event => {
+      const button = event.target.closest('[data-remove-episode]');
+      if (!button) return;
+      sync();
+      episodes.splice(Number(button.dataset.removeEpisode),1);
+      draw();sync();
+    });
+    add.addEventListener('click',() => {
+      sync();
+      const last = episodes[episodes.length - 1] || {};
+      episodes.push({ season:Number(last.season) || 1, episode:(Number(last.episode) || 0) + 1, order:episodes.length, title:'', description:'', imageUrl:'', duration:'', contentUrl:'', active:true });
+      draw();sync();
+      list.querySelector('.series-episode-admin-card:last-of-type [data-episode-field="title"]')?.focus();
+    });
+    draw();
+  }
+
   function modernContentEditorFields(name, item = {}, context = {}) {
     const sections = context.sections || [];
     const sectionLinked = ['videos','movies','series'].includes(name);
@@ -1186,6 +1260,7 @@ body.admin-preview-open{overflow:hidden}
           ${imageField(isVisualTitle ? 'Imagem / thumbnail *' : 'Imagem / thumbnail *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
+          ${name === 'series' ? seriesEpisodesEditorField(item) : ''}
         </div>
       </section>
 
@@ -1431,6 +1506,7 @@ body.admin-preview-open{overflow:hidden}
     setupImagePreviews(root);
     if (name === 'featured') setupFeaturedContentPicker(root, context, draft);
     if (modernEditor) draftController = setupModernContentEditor(root, name, item, draftKey, storedDraft);
+    if (name === 'series') setupSeriesEpisodesEditor(root);
 
     if (['videos','movies','series'].includes(name)) {
       const search = $('#contentSectionSearch', root);
@@ -1455,6 +1531,31 @@ body.admin-preview-open{overflow:hidden}
       try {
         const formData = new FormData(event.currentTarget);
         const data = Object.fromEntries(formData.entries());
+
+        if (name === 'series') {
+          let episodeRows;
+          try { episodeRows = JSON.parse(String(data.episodes || '[]')); }
+          catch (_) { throw new Error('Não foi possível ler os episódios cadastrados.'); }
+          if (!Array.isArray(episodeRows)) throw new Error('A lista de episódios é inválida.');
+          if (episodeRows.length > 250) throw new Error('Limite de 250 episódios por série.');
+          data.episodes = episodeRows.map((episode, index) => ({
+            season:Math.max(1,Number(episode.season) || 1),
+            episode:Math.max(1,Number(episode.episode) || index + 1),
+            order:Number.isFinite(Number(episode.order)) ? Number(episode.order) : index,
+            title:String(episode.title || '').trim().slice(0,180),
+            description:String(episode.description || '').trim().slice(0,1200),
+            imageUrl:String(episode.imageUrl || '').trim(),
+            duration:String(episode.duration || '').trim().slice(0,60),
+            contentUrl:String(episode.contentUrl || '').trim(),
+            active:episode.active !== false && episode.active !== 'false'
+          }));
+          for (const ep of data.episodes) {
+            if (!ep.title) throw new Error('Informe o título de cada episódio.');
+            if (ep.imageUrl && !validImageSource(ep.imageUrl)) throw new Error('Use uma URL de imagem válida no banner do episódio.');
+            if (ep.contentUrl && !/^(https?:\/\/|\/(?!\/))/i.test(ep.contentUrl)) throw new Error('Use um link de reprodução válido no episódio.');
+          }
+        }
+
         for (const key of ['imageUrl','bannerUrl','logoUrl']) {
           if (data[key] && !validImageSource(data[key].trim())) throw new Error(`O campo ${key} deve usar https://... ou /assets/...`);
           if (typeof data[key] === 'string') data[key] = data[key].trim();
