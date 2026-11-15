@@ -1538,11 +1538,12 @@
     event.preventDefault();
     const play=document.getElementById('contentDetailPlay');
     if(!play)return;
-    const previousSubtitle=play.dataset.subtitleUrl,previousLocale=play.dataset.subtitleLocale;
+    const previousSubtitle=play.dataset.subtitleUrl,previousLocale=play.dataset.subtitleLocale,previousEpisodePlayback=play.dataset.seriesEpisodePlayback;
     const locale=String(window.BETVLocale?.slug||document.documentElement.lang||'pt-br').toLowerCase();
     let subtitleFiles={};try{subtitleFiles=JSON.parse(card.dataset.episodeSubtitles||'{}')}catch(_){}
     play.dataset.subtitleUrl=subtitleFiles[locale]||'';
     play.dataset.subtitleLocale=subtitleFiles[locale]?locale:'';
+    play.dataset.seriesEpisodePlayback='true';
     const oldHref=play.getAttribute('href'), oldMode=play.dataset.seriesEpisodeMode, oldUrl=play.dataset.contentUrl,oldTitle=play.dataset.title,oldMedia=play.dataset.mediaPlayerTrigger,oldTarget=play.getAttribute('target'),oldDisabled=play.getAttribute('aria-disabled');
     play.dataset.seriesEpisodeMode='';
     play.dataset.contentUrl=url;
@@ -1555,6 +1556,7 @@
     play.click();
     setTimeout(()=>{
       if(previousSubtitle===undefined)delete play.dataset.subtitleUrl;else play.dataset.subtitleUrl=previousSubtitle;
+      if(previousEpisodePlayback===undefined)delete play.dataset.seriesEpisodePlayback;else play.dataset.seriesEpisodePlayback=previousEpisodePlayback;
       if(previousLocale===undefined)delete play.dataset.subtitleLocale;else play.dataset.subtitleLocale=previousLocale;
       if(oldHref===null)play.removeAttribute('href');else play.setAttribute('href',oldHref);
       if(oldMode===undefined)delete play.dataset.seriesEpisodeMode;else play.dataset.seriesEpisodeMode=oldMode;
