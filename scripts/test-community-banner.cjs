@@ -11,7 +11,7 @@ assert.doesNotMatch(community,/community-hero-banner\.webp/);
 assert(!fs.existsSync('assets/images/community/community-hero-banner.webp'));
 assert(!fs.existsSync('_static/media/community/community-hero-banner.webp'));
 assert.match(css,/community-page-inner:not\(\.has-community-banner\)/);
-assert.match(features,/community:'20261115-mobile-profile-order-v5'/);
+assert.match(features,/community:'20261115-mobile-menu-groups-v6'/);
 
 const start=community.indexOf('  // The Community hero uses the same active banner gallery');
 const end=community.indexOf('  function createPage(){',start);
@@ -50,6 +50,12 @@ align();
 assert.equal(headerGap,'0px','desktop layout must reset the mobile overlap');
 assert.match(css,/--community-hero-header-gap/,'production CSS must consume the measured header gap');
 assert.match(css,/body\.community-page-active #mobileAppBar/,'Community header must be transparent');
+
+const accountMenuTemplate=community.slice(community.indexOf('    mobileMenu.innerHTML='),community.indexOf('    document.body.appendChild(mobileMenu)'));
+const menuOrder=Array.from(accountMenuTemplate.matchAll(/item\('([^']+)'/g),m=>m[1]);
+assert.deepEqual(menuOrder,['profile','settings','login','community','fans','support','install','logout'],'mobile account menu should follow grouped account/discovery/help/session order');
+assert.match(css,/mobile-account-group-session/,'public CSS must visually isolate logout');
+
 
 
 function fixture(rows,sharedStorage){
