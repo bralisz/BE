@@ -1166,7 +1166,7 @@ body.admin-preview-open{overflow:hidden}
     }
     const raw = JSON.stringify(Array.isArray(episodes) ? episodes : []);
     return `<div class="field full series-episode-editor">
-      <div class="series-admin-title"><strong>Temporadas e episódios</strong><small>Cadastre cada episódio com banner, título, descrição, duração e link. Se a série não tiver link direto, Assistir desce até a lista de episódios.</small></div>
+      <div class="series-admin-title"><strong>Temporadas e episódios</strong><small>Cadastre cada episódio com banner, título, descrição, duração, link e legendas por idioma. Se a série não tiver link direto, Assistir desce até a lista de episódios.</small></div>
       <textarea name="episodes" id="seriesEpisodeJson" hidden>${esc(raw)}</textarea>
       <div class="series-episode-admin-list" id="seriesEpisodeAdminList"></div>
       <button class="a-btn series-admin-add" type="button" id="seriesAddEpisode">+ Adicionar episódio</button>
@@ -1200,6 +1200,8 @@ body.admin-preview-open{overflow:hidden}
           ${input('Duração','duration',ep.duration || '')}
           <label>Status<select class="a-select" data-episode-field="active"><option value="true" ${ep.active !== false && ep.active !== 'false' ? 'selected' : ''}>Publicado</option><option value="false" ${ep.active === false || ep.active === 'false' ? 'selected' : ''}>Oculto</option></select></label>
           ${input('Link de reprodução (opcional)','contentUrl',ep.contentUrl || ep.videoUrl || '','text',true)}
+          <div class="wide" style="display:grid;gap:9px;padding:12px;border:1px solid rgba(153,183,230,.15);border-radius:12px"><strong>Legendas deste episódio (URLs .vtt ou .srt)</strong>
+          ${[['pt-br','Português'],['en-us','English'],['es','Español'],['fr','Français'],['it','Italiano']].map(([locale,label])=>input(label,'subtitle_'+locale,(ep.subtitles && ep.subtitles[locale]) || (ep.subtitleLocale===locale ? ep.subtitleUrl : '') || '','url',true)).join('')}</div>
           <label class="wide">Descrição<textarea class="a-textarea" data-episode-field="description" rows="3">${esc(ep.description || '')}</textarea></label>
         </div></article>`).join('') : '<p class="series-admin-empty">Nenhum episódio cadastrado. Adicione o primeiro para começar.</p>';
     };
@@ -1208,6 +1210,8 @@ body.admin-preview-open{overflow:hidden}
         const result = {};
         card.querySelectorAll('[data-episode-field]').forEach(control => result[control.dataset.episodeField] = control.value);
         result.active = result.active !== 'false';
+        result.subtitles = Object.fromEntries(['pt-br','en-us','es','fr','it'].map(locale=>[locale,result['subtitle_'+locale]||'']).filter(([,url])=>url.trim()));
+        for(const locale of ['pt-br','en-us','es','fr','it'])delete result['subtitle_'+locale];
         return result;
       });
       hidden.value = JSON.stringify(episodes);
@@ -1547,6 +1551,7 @@ body.admin-preview-open{overflow:hidden}
             imageUrl:String(episode.imageUrl || '').trim(),
             duration:String(episode.duration || '').trim().slice(0,60),
             contentUrl:String(episode.contentUrl || '').trim(),
+            subtitles:Object.fromEntries(Object.entries(episode.subtitles || {}).filter(([locale,url])=>['pt-br','en-us','es','fr','it'].includes(locale) && typeof url==='string' && url.trim()).map(([locale,url])=>[locale,url.trim()])),
             active:episode.active !== false && episode.active !== 'false'
           }));
           for (const ep of data.episodes) {
