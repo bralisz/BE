@@ -50,16 +50,14 @@ html.profile-avatar-global-customized .detail-comment-item.is-current-user .deta
   object-fit:cover!important;
   display:block!important;
 }
-html.profile-avatar-global-customized body.billie-page-active .billie-page-avatar,
-html.profile-avatar-global-customized body.donate-page-active .donate-page-avatar{
+html.profile-avatar-global-customized body.billie-page-active .billie-page-avatar{
   box-sizing:border-box!important;
   padding:var(--betv-avatar-ring-gap)!important;
   border:var(--betv-avatar-ring-width) solid var(--betv-user-avatar-border)!important;
   background:var(--betv-avatar-ring-bg)!important;
   box-shadow:none!important;
 }
-html.profile-avatar-global-customized body.billie-page-active .billie-page-avatar>.betv-header-avatar-inner,
-html.profile-avatar-global-customized body.donate-page-active .donate-page-avatar>.betv-header-avatar-inner{
+html.profile-avatar-global-customized body.billie-page-active .billie-page-avatar>.betv-header-avatar-inner{
   border:0!important;
   background:var(--betv-avatar-ring-bg)!important;
 }

@@ -3,11 +3,11 @@ import { dirname } from 'node:path';
 
 function minifyCss(input){
   const strings=[];
-  let css=input.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,value=>{
+  let css=input.replace(/\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,value=>{
+    if(value.startsWith('/*'))return '';
     strings.push(value);
     return `___CSSSTR${strings.length-1}___`;
   });
-  css=css.replace(/\/\*[\s\S]*?\*\//g,'');
   css=css.replace(/\s+/g,' ');
   // Whitespace around + is required inside CSS math functions such as calc().
   css=css.replace(/\s*([{}:;,>~])\s*/g,'$1');

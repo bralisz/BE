@@ -520,7 +520,7 @@ const userDropdown=document.getElementById('userDropdown');
       if(!auth.currentUser)return;
       profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');
       settingsPage.hidden=false;settingsPage.removeAttribute('hidden');settingsPage.setAttribute('aria-hidden','false');
-      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','detail-page-active','section-catalog-active');
+      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','detail-page-active','section-catalog-active');
       document.body.classList.add('settings-page-active');
       if(!isConfigRoute())replacePublicRoute('/config');
     }
@@ -2940,7 +2940,7 @@ const userDropdown=document.getElementById('userDropdown');
       document.body.classList.remove('section-catalog-active');
       toggleDropdown(false);settingsPage.hidden=true;profilePage.hidden=false;
       profilePage.removeAttribute('hidden');profilePage.setAttribute('aria-hidden','false');
-      document.body.classList.remove('settings-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active','legal-page-active');document.body.classList.add('profile-page-active');
+      document.body.classList.remove('settings-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','fans-page-active','album-page-active','detail-page-active','legal-page-active');document.body.classList.add('profile-page-active');
       updateProfileActionVisibility();
       var handle=beBackend.normalizeUsername(requestedUsername||profileRouteUsername()||(currentProfile&&currentProfile.username)||'');
       if(!handle){
@@ -2983,7 +2983,7 @@ const userDropdown=document.getElementById('userDropdown');
       toggleDropdown(false);
       profilePage.hidden=true;profilePage.setAttribute('hidden','');profilePage.setAttribute('aria-hidden','true');
       settingsPage.dataset.renderReady='false';
-      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active');
+      document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','fans-page-active','album-page-active','detail-page-active');
       document.body.classList.add('settings-page-active');
       settingsPage.hidden=false;settingsPage.removeAttribute('hidden');settingsPage.setAttribute('aria-hidden','false');
       if(!settingsPageBody.childElementCount)settingsPageBody.innerHTML='<div class="settings-page-opening" aria-hidden="true"></div>';
@@ -3145,7 +3145,7 @@ const userDropdown=document.getElementById('userDropdown');
       dashboard.hidden=!isAdmin;
     });
     document.querySelectorAll('[data-public-action]').forEach(function(button){button.addEventListener('click',async function(){
-      var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()){window.BETVGuestAccess.setActive(false);localStorage.removeItem('beAuthExpected');localStorage.removeItem('beSessionUid');}syncAuthActionLabel();window.BETVPublicRoutes.go('/login');document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='fans'||action==='donate'){toggleDropdown(false);location.assign((window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs'));return;}if(action==='support'){toggleDropdown(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/suporte');else window.dispatchEvent(new CustomEvent('be:open-support'));return;}if(action==='settings'){openSettingsPage(true);return;}
+      var action=button.dataset.publicAction;if(action==='dashboard'){if(!beBackend.isAdmin(auth.currentUser)){dashboard.hidden=true;toggleDropdown(false);return;}location.hash='#/admin/dashboard';return;}if(action==='auth'){if(auth.currentUser){await auth.signOut();toggleDropdown(false);return;}if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()){window.BETVGuestAccess.setActive(false);localStorage.removeItem('beAuthExpected');localStorage.removeItem('beSessionUid');}syncAuthActionLabel();window.BETVPublicRoutes.go('/login');document.body.classList.add('login-mode');toggleDropdown(false);return;}if(action==='avatar'){openAvatarPicker();return;}if(action==='profile'){openProfile();return;}if(action==='fans'){toggleDropdown(false);location.assign((window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs'));return;}if(action==='support'){toggleDropdown(false);if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/suporte');else window.dispatchEvent(new CustomEvent('be:open-support'));return;}if(action==='settings'){openSettingsPage(true);return;}
     });});
     window.addEventListener('be:guest-access',syncAuthActionLabel);
     window.addEventListener('be:i18n-ready',syncAuthActionLabel);

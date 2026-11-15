@@ -3,13 +3,13 @@
 const DEFAULT_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const ALLOWED_COLLECTIONS = new Set([
-  'contents', 'featured', 'gallery', 'movies', 'news', 'notifications', 'ongs', 'sections', 'series', 'videos'
+  'contents', 'featured', 'gallery', 'movies', 'news', 'notifications', 'sections', 'series', 'videos'
 ]);
 const HOME_BOOTSTRAP_COLLECTIONS = Object.freeze(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
 const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'preserveTitle', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'description', 'body', 'summary', 'subtitle', 'name', 'buttonLabel', 'buttonText', 'actionLabel', 'ctaLabel', 'label', 'text', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
-  'mediaType', 'mobileAppDriveUrl', 'tvDriveUrl', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'showCardLogo', 'slug',
+  'mediaType', 'mobileAppDriveUrl', 'tvDriveUrl', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'showCardLogo', 'slug',
   'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'subtitleLocale', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
 ]);
@@ -20,7 +20,6 @@ const SITE_SETTING_FIELDS = new Set([
   'shareImage', 'siteName', 'website', 'xUrl', 'youtube',
   'updateReleaseEnabled', 'releasedDeploymentVersion'
 ]);
-const ONG_SETTING_FIELDS = new Set(['bannerUrl', 'translations']);
 const BILLIE_SETTING_FIELDS = new Set([
   'bannerUrl', 'includeReferences', 'instagram', 'kicker', 'manualBio', 'portraitUrl',
   'sourceMode', 'spotify', 'title', 'translations', 'website', 'xUrl', 'youtube'
@@ -273,16 +272,6 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
     source.showCardLogo = source.showCardLogo === true || String(source.showCardLogo || '').toLowerCase() === 'true';
   }
   source.active = source.active !== false && String(source.active).toLowerCase() !== 'false';
-  if (collection === 'ongs') {
-    const minimumDonationCents = Number(source.minimumDonationCents);
-    source.minimumDonationCents = Number.isInteger(minimumDonationCents) && minimumDonationCents >= 100 && minimumDonationCents <= 100000000
-      ? minimumDonationCents
-      : 500;
-    const minimumDonationUsdCents = Number(source.minimumDonationUsdCents);
-    source.minimumDonationUsdCents = Number.isInteger(minimumDonationUsdCents) && minimumDonationUsdCents >= 100 && minimumDonationUsdCents <= 100000000
-      ? minimumDonationUsdCents
-      : 100;
-  }
   return {
     id: safeText(row.id, 100),
     ...source,
@@ -293,7 +282,7 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
 
 function sanitizeSettings(id, raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const allowed = id === 'billie-eilish' ? BILLIE_SETTING_FIELDS : id === 'site' ? SITE_SETTING_FIELDS : id === 'ong' ? ONG_SETTING_FIELDS : null;
+  const allowed = id === 'billie-eilish' ? BILLIE_SETTING_FIELDS : id === 'site' ? SITE_SETTING_FIELDS : null;
   if (!allowed) return null;
   const source = { id };
   for (const field of allowed) {
@@ -309,9 +298,7 @@ function sanitizeSettings(id, raw) {
       .filter(([key, value]) => typeof key === 'string' && typeof value === 'string' && key.trim() && value.trim())
       .map(([key, value]) => [safeText(key, 1800), safeText(value, 2400)]));
   }
-  if (id === 'ong') {
-    source.bannerUrl = mediaReference('settings', id, 'bannerUrl', source.bannerUrl);
-  } else if (id === 'billie-eilish') {
+  if (id === 'billie-eilish') {
     source.sourceMode = source.sourceMode === 'wikipedia' ? 'wikipedia' : 'manual';
     source.includeReferences = source.includeReferences === true || String(source.includeReferences) === 'true';
     source.title = safeText(source.title, 100);
@@ -373,7 +360,7 @@ async function fetchLegacyRows(name, id) {
 
 async function fetchRowsUncached(name, id, locale) {
   if (name === 'settings') {
-    if (!id || !['site', 'billie-eilish', 'ong'].includes(id)) throw new Error('invalid_setting');
+    if (!id || !['site', 'billie-eilish'].includes(id)) throw new Error('invalid_setting');
     try {
       const payload = await callRpc('get_public_site_setting_v2', { p_id: id, p_locale: locale });
       const value = Array.isArray(payload) ? payload[0] : payload;

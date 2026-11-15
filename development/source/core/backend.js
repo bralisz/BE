@@ -417,8 +417,8 @@
 
 
 
-  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','ongs','sections','series','settings','videos']);
-  const ORIGINAL_TITLE_COLLECTIONS_BACKEND = new Set(['contents','featured','movies','series','videos','ongs','news']);
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','movies','notifications','sections','series','settings','videos']);
+  const ORIGINAL_TITLE_COLLECTIONS_BACKEND = new Set(['contents','featured','movies','series','videos','news']);
   const TRANSLATION_FUNCTION_NAME = 'translate-content-record';
   const ITALIAN_TRANSLATION_FUNCTION_NAME = 'translate-content-record-it';
 

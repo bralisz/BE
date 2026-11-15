@@ -29,7 +29,7 @@ Valide com `npm run test:admin-ui` e `npm run test:seo`.
 O dashboard inspirado nas referências visuais está em
 `source/admin/studio.js`, aplicado após a camada workspace. Ele reorganiza
 os mesmos elementos com dados reais, sem recriar formulários ou ações.
-Os painéis de doação e ajustes ficam em seções expansíveis na visão geral.
+Os ajustes ficam em uma seção expansível na visão geral.
 
 A biblioteca de imagens, os ícones SVG e a navegação mobile por menu lateral
 ficam em `source/admin/media.js`, entregue após studio somente ao admin

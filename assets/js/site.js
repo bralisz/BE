@@ -475,7 +475,6 @@
     if(name==='config')return '/config';
     if(['terms','privacy','cookies','dmca','comunidade'].indexOf(name)!==-1)return '/'+name;if(name==='community'||name==='comunidad')return '/comunidade';
     if(name==='suporte'||name==='support')return '/suporte';
-    if(['ong','ongs'].indexOf(name)!==-1)return '/fãs';
     if(['fas','fãs','fans'].indexOf(name)!==-1)return '/fãs';
     if(['albuns','álbuns','albums'].indexOf(name)!==-1)return '/albuns'+(parts[1]?'/'+encodeURIComponent(parts[1]):'');
     if(name==='billie'||name==='billie-eilish'||name==='quem-e-billie')return '/billie-eilish';
@@ -542,7 +541,7 @@
       settings.setAttribute('aria-hidden','false');
     }
     if(body){
-      body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active','section-catalog-active');
+      body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','fans-page-active','album-page-active','detail-page-active','section-catalog-active');
       body.classList.add('settings-page-active');
     }
   }
@@ -1639,7 +1638,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
 
-  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','gallery','movies','news','notifications','ongs','sections','series','settings','videos']);
+  const TRANSLATABLE_COLLECTIONS = new Set(['contents','featured','gallery','movies','news','notifications','sections','series','settings','videos']);
   const MUSIC_TITLE_SECTION_IDS_BACKEND = new Set([
     '18db9515-179c-4bad-9646-1fcda63df14a',
     '14386598-4978-403a-8548-db0ee582e291'
@@ -1939,13 +1938,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   // In Vercel previews, recover public content directly from the existing
   // anon-accessible Supabase RPC if the serverless public-data endpoint fails.
   // Production, authenticated requests and writes never use this fallback.
-  const PREVIEW_PUBLIC_COLLECTIONS = new Set(['contents','featured','gallery','movies','news','notifications','ongs','sections','series','videos']);
+  const PREVIEW_PUBLIC_COLLECTIONS = new Set(['contents','featured','gallery','movies','news','notifications','sections','series','videos']);
   const PREVIEW_HOME_COLLECTIONS = ['sections','videos','movies','series','featured','news'];
   const PREVIEW_PUBLIC_FIELDS = new Set([
     'active','preserveTitle','bannerUrl','category','contentCollection','contentId','contentUrl',
     'description','body','summary','subtitle','name','buttonLabel','buttonText','actionLabel',
     'ctaLabel','label','text','duration','imageUrl','itemLimit','itemType','link','logoUrl',
-    'mediaType','mobileAppDriveUrl','tvDriveUrl','minimumDonationCents','minimumDonationUsdCents',
+    'mediaType','mobileAppDriveUrl','tvDriveUrl',
     'order','publicId','runtime','sectionId','sectionName','showCardLogo','slug',
     'sourceCollection','streamingAvailability','streamingLinks','subtitleUrl','subtitleLocale',
     'thumbnailUrl','title','tracks','translations','type','videoDuration','videoId','videoUrl','year'
@@ -2025,7 +2024,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       bundle.__generatedAt = Date.now();
       return bundle;
     }
-    if (name === 'settings' && ['site','ong','billie-eilish'].includes(id)) {
+    if (name === 'settings' && ['site','billie-eilish'].includes(id)) {
       const raw = await fetchPreviewPublicRpc('get_public_site_setting_v2', {p_id:id,p_locale:locale});
       return Array.isArray(raw) ? (raw[0] || null) : raw;
     }
@@ -12186,9 +12185,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       lastFilterHost = host;lastFilterKey = filterKey;
       const sections = Array.from(host.querySelectorAll('.video-rail-section'));
       const billieSpotlight = host.querySelector('.billie-home-spotlight');
-      const donateSpotlight = host.querySelector('.donate-home-spotlight');
       if (billieSpotlight) billieSpotlight.hidden = currentView !== 'home' || Boolean(query);
-      if (donateSpotlight) donateSpotlight.remove();
       let visibleTotal = 0;
 
       sections.forEach(section => {
@@ -13140,7 +13137,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function syncActiveFromPublicView() {
-    const secondaryViews = ['profile-page-active','settings-page-active','notification-page-active','detail-page-active','album-page-active','support-page-active','donate-page-active','billie-page-active','fans-page-active','legal-page-active','section-catalog-active','community-page-active'];
+    const secondaryViews = ['profile-page-active','settings-page-active','notification-page-active','detail-page-active','album-page-active','support-page-active','billie-page-active','fans-page-active','legal-page-active','section-catalog-active','community-page-active'];
     const secondaryPage = isMobile() && !document.body.classList.contains('login-mode') &&
       (secondaryViews.some(name => document.body.classList.contains(name)) || (document.body.dataset.homeView || 'home') !== 'home');
     if (document.body.classList.contains('mobile-secondary-page') !== secondaryPage) {
@@ -13152,7 +13149,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setActiveDestination('community');
       return;
     }
-    const secondary = ['profile-page-active','settings-page-active','notification-page-active','detail-page-active','album-page-active','support-page-active','donate-page-active','billie-page-active','fans-page-active','legal-page-active','section-catalog-active'];
+    const secondary = ['profile-page-active','settings-page-active','notification-page-active','detail-page-active','album-page-active','support-page-active','billie-page-active','fans-page-active','legal-page-active','section-catalog-active'];
     if (secondary.some(name => document.body.classList.contains(name))) {
       setActiveDestination('');
       return;
@@ -13748,19 +13745,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }catch(_){}
   var SITE_SKELETON_MIN_MS=Number(window.__beSiteSkeletonMinimumMs||2000);
   var siteSkeletonStartedAt=Number(window.__beSiteSkeletonStartedAt||Date.now());
-  var initialSkeletonPending=true,siteSkeletonHideTimer=0,donateVisualWaitBound=false,notificationVisualWaitBound=false,siteSkeletonReleased=document.documentElement.dataset.siteLoaded==='true';
+  var initialSkeletonPending=true,siteSkeletonHideTimer=0,notificationVisualWaitBound=false,siteSkeletonReleased=document.documentElement.dataset.siteLoaded==='true';
   function setSiteLoading(active){document.documentElement.classList.toggle('site-loading-active',Boolean(active));document.body.classList.toggle('site-loading-active',Boolean(active));}
   function releaseSiteSkeleton(){if(document.documentElement.classList.contains('config-route-boot'))return;if(isLegalRoute())showLegalRoute();window.clearTimeout(siteSkeletonHideTimer);var loading=q('authLoading');if(loading)loading.hidden=true;document.documentElement.classList.remove('legal-route-boot');setSiteLoading(false);initialSkeletonPending=false;siteSkeletonHideTimer=0;siteSkeletonReleased=true;document.documentElement.dataset.siteLoaded='true';if(window.BETVSyncTabIcon)window.BETVSyncTabIcon();}
-  function donateVisualReady(){return true;}
   function notificationsVisualReady(){return !isNotificationsRoute()||window.__beNotificationsReady===true;}
-  function waitForDonateVisualBeforeReveal(){
-    if(donateVisualWaitBound)return;
-    donateVisualWaitBound=true;
-    window.addEventListener('be:donate-visual-ready',function(){
-      donateVisualWaitBound=false;
-      if(isDonateRoute())hideSiteSkeleton();
-    },{once:true});
-  }
   function waitForNotificationsVisualBeforeReveal(){
     if(notificationVisualWaitBound)return;
     notificationVisualWaitBound=true;
@@ -13771,7 +13759,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
   function hideSiteSkeleton(){
     if(isNotificationsRoute()&&!notificationsVisualReady()){waitForNotificationsVisualBeforeReveal();return;}
-    if(isDonateRoute()&&!donateVisualReady()){waitForDonateVisualBeforeReveal();return;}
     if(initialSkeletonPending){
       var remaining=Math.max(0,SITE_SKELETON_MIN_MS-(Date.now()-siteSkeletonStartedAt));
       if(remaining>0){window.clearTimeout(siteSkeletonHideTimer);siteSkeletonHideTimer=window.setTimeout(hideSiteSkeleton,remaining);return;}
@@ -13852,20 +13839,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(String(location.hash||''));}
   function isNotificationsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:atualizacoes|notificacoes)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:atualizacoes|notificacoes|updates|notifications)(?:\/|$)/i.test(hash);}
   function isSupportRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/suporte'||hash==='#suporte'||hash==='#/suporte'||hash==='#support'||hash==='#/support';}
-  function isDonateRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/ong'||hash==='#ong'||hash==='#/ong';}
   function isBillieRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/billie-eilish'||path==='/billie'||hash==='#billie-eilish'||hash==='#/billie-eilish'||hash==='#billie'||hash==='#/billie';}
   function isFansRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/fãs'||path==='/fas'||path==='/fans'||hash==='#fãs'||hash==='#/fãs'||hash==='#fas'||hash==='#/fas'||hash==='#fans'||hash==='#/fans';}
   function isAlbumsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:albuns|álbuns|albums)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:albuns|álbuns|albums)(?:\/|$)/i.test(hash);}
-  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
-  function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
-  function showDonateRoute(){replaceRoute('/fãs');showFansRoute();}
-  function showNotificationsRoute(){window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:true}}));document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
-  function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
-  function showFansRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','album-page-active');document.body.classList.add('fans-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:open-fans-page'));window.scrollTo(0,0);}
-  function showAlbumsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','donate-page-active','fans-page-active');document.body.classList.add('album-page-active');window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-album-page'));window.scrollTo(0,0);}
-  function showLogin(){if(window.BETVReleaseConfigPaint)window.BETVReleaseConfigPaint({immediate:true});var preserveVideoRoute=isVideoRoute();document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if((!isLoginRoute()||location.hash)&&!preserveVideoRoute)replaceRoute('/login');}
+  function showLegalRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','detail-page-active','support-page-active','notification-page-active','billie-page-active','fans-page-active','album-page-active');document.body.classList.add('legal-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-legal-route'));window.scrollTo(0,0);}
+  function showSupportRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','detail-page-active','notification-page-active','billie-page-active','fans-page-active','album-page-active');document.body.classList.add('support-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-support'));window.scrollTo(0,0);}
+  function showNotificationsRoute(){window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:true}}));document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','detail-page-active','section-catalog-active','billie-page-active','fans-page-active','album-page-active');document.body.classList.add('notification-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:open-notifications'));window.scrollTo(0,0);}
+  function showBillieRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','fans-page-active','album-page-active');document.body.classList.add('billie-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:open-billie-page'));window.scrollTo(0,0);}
+  function showFansRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','album-page-active');document.body.classList.add('fans-page-active');window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:open-fans-page'));window.scrollTo(0,0);}
+  function showAlbumsRoute(){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','detail-page-active','section-catalog-active','billie-page-active','fans-page-active');document.body.classList.add('album-page-active');window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-album-page'));window.scrollTo(0,0);}
+  function showLogin(){if(window.BETVReleaseConfigPaint)window.BETVReleaseConfigPaint({immediate:true});var preserveVideoRoute=isVideoRoute();document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','fans-page-active','album-page-active');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-notifications'));document.body.classList.add('login-mode');if((!isLoginRoute()||location.hash)&&!preserveVideoRoute)replaceRoute('/login');}
   function showPasswordRecovery(message,type){
-    document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');
+    document.body.classList.remove('profile-page-active','settings-page-active','legal-page-active','support-page-active','notification-page-active','billie-page-active','fans-page-active','album-page-active');
     window.dispatchEvent(new CustomEvent('be:close-album-page'));
     document.body.classList.add('login-mode');
     setMode('recovery');
@@ -13905,8 +13890,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else setStatus('');
     hideSiteSkeleton();
   }
-  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active','detail-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:Boolean(preserveRoute)}}));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
-  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','donate-page-active','fans-page-active','album-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-donate-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
+  function enterHome(preserveRoute){document.body.classList.remove('profile-page-active','settings-page-active','login-mode','legal-page-active','support-page-active','notification-page-active','billie-page-active','fans-page-active','album-page-active','detail-page-active');sessionStorage.removeItem('beOAuthDestination');if(!preserveRoute)replaceRoute('/');window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:Boolean(preserveRoute)}}));window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:home-entered'));window.scrollTo(0,0);}
+  function enterConfig(){document.body.classList.remove('profile-page-active','login-mode','support-page-active','notification-page-active','billie-page-active','fans-page-active','album-page-active');document.body.classList.add('settings-page-active');sessionStorage.removeItem('beOAuthDestination');if(!isConfigRoute())replaceRoute('/config');window.dispatchEvent(new CustomEvent('be:close-album-page'));window.dispatchEvent(new CustomEvent('be:close-fans-page'));window.dispatchEvent(new CustomEvent('be:close-support'));window.dispatchEvent(new CustomEvent('be:close-notifications'));window.dispatchEvent(new CustomEvent('be:close-billie-page'));window.dispatchEvent(new CustomEvent('be:open-config'));window.scrollTo(0,0);}
   function setMode(mode,email){
     if(mode==='email'){
       var authTitle=q('emailStepTitle');
@@ -14101,7 +14086,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var postAuthTarget=postAuthReturnTarget();
     if(postAuthTarget){try{sessionStorage.removeItem('bePostAuthReturn');}catch(_){}location.replace(postAuthTarget);return user;}
     if(isNotificationsRoute())showNotificationsRoute();
-    else if(isDonateRoute())showDonateRoute();
+
     else if(isSupportRoute())showSupportRoute();
     else if(isBillieRoute())showBillieRoute();
     else if(isFansRoute())showFansRoute();
@@ -14316,8 +14301,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           return;
         }
         if(!callbackActive&&!callbackFailure&&window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){
-          if(isDonateRoute())showDonateRoute();
-          else if(isSupportRoute())showSupportRoute();
+          if(isSupportRoute())showSupportRoute();
           else if(isBillieRoute())showBillieRoute();
           else if(isFansRoute())showFansRoute();
           else if(isAlbumsRoute())showAlbumsRoute();
@@ -14363,7 +14347,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if(isPasswordRecoveryRoute()){if(auth.currentUser)showPasswordRecovery();else showPasswordRecovery('Este link expirou ou já foi utilizado. Solicite uma nova redefinição de senha.','error');return;}
       if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));return;}
       if(isNotificationsRoute()){if(auth.currentUser)showNotificationsRoute();else showLogin();return;}
-      if(isDonateRoute()){if(auth.currentUser||guestActive)showDonateRoute();else showLogin();return;}
+
       if(isSupportRoute()){if(auth.currentUser||guestActive)showSupportRoute();else showLogin();return;}
       if(isBillieRoute()){if(auth.currentUser||guestActive)showBillieRoute();else showLogin();return;}
       if(isFansRoute()){showFansRoute();return;}
@@ -14407,7 +14391,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function startAuthentication(){
-    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){hideSiteSkeleton();if(isDonateRoute())showDonateRoute();else if(isSupportRoute())showSupportRoute();else if(isAlbumsRoute())showAlbumsRoute();else if(isBillieRoute())showBillieRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else enterHome(true);}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}(void 0);}
+    try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){hideSiteSkeleton();if(isSupportRoute())showSupportRoute();else if(isAlbumsRoute())showAlbumsRoute();else if(isBillieRoute())showBillieRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else enterHome(true);}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}(void 0);}
   }
 
   document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode(isPasswordRecoveryRoute()?'recovery':'email');startAuthentication()});
@@ -16582,956 +16566,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
                                    
-;(function(){
-  'use strict';
-  if(String(location.hash||'').startsWith('#/admin'))return;
 
-  var page=document.getElementById('donatePage');
-  var hero=document.getElementById('donateHero');
-  var list=document.getElementById('donateNgoList');
-  var status=document.getElementById('donatePageStatus');
-  var showMoreButton=document.getElementById('donateNgoShowMore');
-  var supportersSection=document.getElementById('donateSupportersSection');
-  var supportersList=document.getElementById('donateSupportersList');
-  var supportersStatus=document.getElementById('donateSupportersStatus');
-  if(!page||!hero||!list||!status)return;
-
-  var loaded=false;
-  var loading=null;
-  var supportersLoaded=false;
-  var supportersLoading=null;
-  var supporterKeys=Object.create(null);
-  var supportersOffset=0;
-  var supportersHasMore=true;
-  var supportersObserver=null;
-  var supportersSentinel=null;
-  var supportersScrollTicking=false;
-  var ngoRecordCount=0;
-  var visibleNgoCount=0;
-  var notificationItems=[];
-  var notificationLoaded=false;
-  var notificationLoading=null;
-  var NOTIFICATION_STORAGE_KEY='beNotificationsLastSeen';
-
-  var home=document.getElementById('donatePageHome');
-  var notificationButton=document.getElementById('donatePageNotifications');
-  var notificationWrap=notificationButton&&notificationButton.closest('.donate-notification-wrap');
-  var notificationPopup=document.getElementById('donateNotificationDropdown');
-  var notificationPreviewList=document.getElementById('donateNotificationPreviewList');
-  var notificationMarkAll=document.getElementById('donateNotificationMarkAll');
-  var notificationClose=document.getElementById('donateNotificationClose');
-  var notificationViewAll=document.getElementById('donateNotificationViewAll');
-  var avatar=document.getElementById('donatePageAvatar');
-
-  var CHECKOUT_FUNCTION_NAME='create-donation-checkout';
-  var PIX_FUNCTION_NAME='create-mercadopago-pix';
-  var PIX_STATUS_FUNCTION_NAME='mercadopago-payment-status';
-  var DONATION_LOCALE=String(window.BETVLocale&&window.BETVLocale.locale||navigator.language||'pt-BR');
-  var DONATION_CURRENCY=String(window.BETVRegional&&window.BETVRegional.currency||'BRL').toUpperCase()==='USD'?'USD':'BRL';
-  var DEFAULT_MINIMUM_DONATION_CENTS={BRL:500,USD:100};
-  var NGO_BATCH_SIZE=12;
-  var SUPPORTERS_INITIAL_LIMIT=48;
-  var SUPPORTERS_BATCH_SIZE=10;
-  var ngoMobileMedia=window.matchMedia?window.matchMedia('(max-width:760px)'):null;
-
-  function cleanPath(){try{return decodeURIComponent(String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/'))).replace(/\/+$/,'')||'/';}catch(_){return String(window.BETVLocalePath?window.BETVLocalePath():(location.pathname||'/')).replace(/\/+$/,'')||'/';}}
-  function isRoute(){var path=cleanPath().toLowerCase(),hash=String(location.hash||'').toLowerCase();return path==='/ong'||hash==='#ong'||hash==='#/ong';}
-  function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];});}
-  function imageUrl(value){var raw=String(value||'').trim();if(!raw)return '';var resolved=typeof window.beMediaUrl==='function'?window.beMediaUrl(raw):raw;return resolved&&resolved!=='#'?resolved:'';}
-  function active(item){return item&&item.active!==false&&String(item.active).toLowerCase()!=='false';}
-  function donationSlug(value){return String(value||'ong').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)||'ong';}
-  function i18nText(source,variables){
-    if(window.BETVI18n&&typeof window.BETVI18n.t==='function')return window.BETVI18n.t(source,variables||{});
-    return String(source||'').replace(/\{([a-zA-Z0-9_]+)\}/g,function(match,key){return variables&&Object.prototype.hasOwnProperty.call(variables,key)?String(variables[key]):match;});
-  }
-  function parseDonationCents(value){
-    var raw=String(value||'').trim().replace(/\s+/g,'').replace(/[^0-9.,]/g,'');
-    if(!raw)return NaN;
-    var comma=raw.lastIndexOf(','),dot=raw.lastIndexOf('.'),decimal=Math.max(comma,dot);
-    var normalized;
-    if(decimal>=0){
-      var integer=raw.slice(0,decimal).replace(/[.,]/g,'')||'0';
-      var fraction=raw.slice(decimal+1).replace(/[.,]/g,'').slice(0,2);
-      normalized=integer+'.'+fraction;
-    }else normalized=raw;
-    var amount=Number(normalized);
-    return Number.isFinite(amount)?Math.round(amount*100):NaN;
-  }
-  function formatDonationCents(cents,currency){
-    return new Intl.NumberFormat(DONATION_LOCALE,{style:'currency',currency:currency||DONATION_CURRENCY}).format(Number(cents||0)/100);
-  }
-  function donationCurrencySymbol(){
-    try{
-      var part=new Intl.NumberFormat(DONATION_LOCALE,{style:'currency',currency:DONATION_CURRENCY,currencyDisplay:'narrowSymbol'}).formatToParts(0).find(function(item){return item.type==='currency';});
-      return part&&part.value?part.value:(DONATION_CURRENCY==='USD'?'$':'R$');
-    }catch(_){return DONATION_CURRENCY==='USD'?'$':'R$';}
-  }
-  function minimumDonationCents(item){
-    var source=item&&typeof item==='object'?(DONATION_CURRENCY==='USD'?item.minimumDonationUsdCents:item.minimumDonationCents):item;
-    var cents=Number(source);
-    return Number.isInteger(cents)&&cents>=100&&cents<=100000000?cents:DEFAULT_MINIMUM_DONATION_CENTS[DONATION_CURRENCY];
-  }
-  function donationRequestId(){
-    if(window.crypto&&typeof window.crypto.randomUUID==='function')return window.crypto.randomUUID();
-    if(window.crypto&&typeof window.crypto.getRandomValues==='function'){
-      var bytes=new Uint8Array(16);
-      window.crypto.getRandomValues(bytes);
-      bytes[6]=(bytes[6]&15)|64;
-      bytes[8]=(bytes[8]&63)|128;
-      var hex=Array.prototype.map.call(bytes,function(value){return value.toString(16).padStart(2,'0');}).join('');
-      return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
-    }
-    throw new Error(i18nText('O navegador não conseguiu gerar uma identificação segura para o pagamento.'));
-  }
-  function checkoutErrorMessage(error,data){
-    var code=String(data&&data.code||'');
-    var responseCurrency=String(data&&data.currency||DONATION_CURRENCY).toUpperCase()==='USD'?'USD':'BRL';
-    if(code==='below_minimum')return i18nText('O valor mínimo desta ONG é {amount}.',{amount:formatDonationCents(Number(data.minimumDonationCents)||DEFAULT_MINIMUM_DONATION_CENTS[responseCurrency],responseCurrency)});
-    if(code==='rate_limited')return i18nText('Muitas tentativas seguidas. Aguarde um minuto e tente novamente.');
-    if(code==='stripe_not_configured')return i18nText('O checkout ainda não foi configurado no servidor.');
-    if(code==='ngo_not_found')return i18nText('Esta ONG não está mais disponível.');
-    return String(data&&data.error||error&&error.message||i18nText('Não foi possível abrir o checkout agora.'));
-  }
-  async function createDonationCheckout(ngoId,cents,requestId){
-    var client=window.beBackend&&window.beBackend.client;
-    if(!client||!client.functions||typeof client.functions.invoke!=='function')throw new Error(i18nText('O checkout seguro não está disponível.'));
-    var result=await client.functions.invoke(CHECKOUT_FUNCTION_NAME,{body:{ngoId:String(ngoId||''),amountCents:cents,requestId:requestId,currency:DONATION_CURRENCY,locale:DONATION_LOCALE,returnPath:String(window.BETVLocale&&window.BETVLocale.prefix||'')+'/ong'}});
-    var data=result&&result.data&&typeof result.data==='object'?result.data:null;
-    if(result&&result.error){
-      try{if(result.error.context&&typeof result.error.context.json==='function')data=await result.error.context.json();}catch(_){ }
-      var failure=new Error(checkoutErrorMessage(result.error,data));
-      failure.data=data;
-      throw failure;
-    }
-    var url=String(data&&data.url||'');
-    try{
-      var parsed=new URL(url);
-      if(parsed.protocol!=='https:'||!/(^|\.)stripe\.com$/i.test(parsed.hostname))throw new Error('invalid_checkout_url');
-    }catch(_){throw new Error(i18nText('A Stripe não retornou um checkout válido.'));}
-    return url;
-  }
-
-  async function createDonationPix(ngoId,cents,requestId){
-    var client=window.beBackend&&window.beBackend.client;
-    if(!client||!client.functions||typeof client.functions.invoke!=='function')throw new Error(i18nText('O Pix seguro não está disponível.'));
-    var result=await client.functions.invoke(PIX_FUNCTION_NAME,{body:{ngoId:String(ngoId||''),amountCents:cents,requestId:requestId}});
-    var data=result&&result.data&&typeof result.data==='object'?result.data:null;
-    if(result&&result.error){
-      try{if(result.error.context&&typeof result.error.context.json==='function')data=await result.error.context.json();}catch(_){}
-      var failure=new Error(checkoutErrorMessage(result.error,data));failure.data=data;throw failure;
-    }
-    if(!data||!data.paymentId||(!data.qrCode&&!data.qrCodeBase64))throw new Error(i18nText('Não foi possível gerar o QR Code Pix.'));
-    return data;
-  }
-
-  function closeDonationPaymentOverlays(){
-    document.querySelectorAll('.be-pay-overlay[data-be-donation-payment="true"]').forEach(function(overlay){
-      if(typeof overlay._beDonationClose==='function'){overlay._beDonationClose();return;}
-      overlay.remove();
-    });
-  }
-
-  function ensureDonationPayStyle(){
-    if(document.getElementById('beDonationPayStyle'))return;
-    var style=document.createElement('style');style.id='beDonationPayStyle';
-    style.textContent='.be-pay-overlay{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.56);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);display:grid;place-items:center;padding:18px}.be-pay-card{position:relative;width:min(420px,calc(100vw - 32px));background:rgba(20,24,35,.97);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:24px 20px 20px;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.48);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,sans-serif}.be-pay-choice-card{width:min(390px,calc(100vw - 32px));background:rgba(28,28,30,.97);padding:22px 18px 18px}.be-pay-choice-card h3{margin:8px 38px 6px;text-align:center;font-size:21px;line-height:1.2;font-weight:750;letter-spacing:-.02em}.be-pay-choice-card p{margin:0 18px 20px;text-align:center;color:#a1a1a6;font-size:14px;line-height:1.35}.be-pay-choice-card .be-pay-actions{gap:12px}.be-pay-choice-card .be-pay-btn{min-height:54px;border-radius:16px;font-size:17px;font-weight:750;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);transition:transform .14s ease,filter .14s ease}.be-pay-choice-card .be-pay-btn:active{transform:scale(.985);filter:brightness(.92)}.be-pay-choice-card .be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-choice-card .be-pay-btn.pix{background:#30d158;color:#07160b}body:not(.donate-page-active)>.be-pay-overlay[data-be-donation-payment="true"]{display:none!important}.be-pay-close{position:absolute;right:16px;top:16px;float:none;width:32px;height:32px;padding:0;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(118,118,128,.24);color:#a7a7ad;cursor:pointer;appearance:none;-webkit-appearance:none}.be-pay-close svg{display:block;width:14px;height:14px;flex:0 0 14px;pointer-events:none}.be-pay-close:hover{background:rgba(118,118,128,.34)}.be-pay-card h3{margin:4px 40px 10px;font-size:22px;font-weight:750;letter-spacing:-.02em}.be-pay-card p{margin:0 0 16px;color:#aeb8c8}.be-pay-actions{display:grid;gap:10px}.be-pay-btn{border:0;border-radius:16px;padding:14px 16px;font:inherit;font-weight:700;cursor:pointer}.be-pay-btn.primary{background:#0a84ff;color:#fff}.be-pay-btn.secondary{background:#1b2538;color:#fff}.be-pix-card{width:min(390px,calc(100vw - 32px));background:rgba(18,22,32,.98);padding:24px 20px 20px}.be-pix-card h3{text-align:left;margin:4px 40px 2px 4px}.be-pix-timer{text-align:center;color:#a1a1a6;margin:2px 0 14px;font-size:15px;font-weight:500}.be-pix-qr{width:min(228px,68vw);height:auto;aspect-ratio:1;display:block;margin:8px auto 18px;border-radius:18px;background:#fff;padding:12px}.be-pix-copy{min-height:54px;border-radius:16px}.be-pix-status{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;margin-top:14px;color:#a1a1a6;font-size:13px;font-weight:500;letter-spacing:0}.be-pix-status.is-waiting:before{content:"";width:13px;height:13px;border:1.7px solid rgba(255,255,255,.24);border-top-color:#ffd60a;border-radius:50%;animation:bePixSpin .8s linear infinite}.be-pix-status.is-paid{color:#30d158;font-weight:650}.be-pix-status.is-error{color:#ff9f0a}.be-pix-status.is-expired{color:#a1a1a6}@keyframes bePixSpin{to{transform:rotate(360deg)}}@media(max-width:520px){.be-pay-overlay{padding:14px}.be-pay-card{border-radius:26px}.be-pix-qr{width:min(220px,70vw)}}';
-    document.head.appendChild(style);
-  }
-  function openPaymentChoice(onCard,onPix){
-    if(!isRoute()||!document.body.classList.contains('donate-page-active'))return;
-    ensureDonationPayStyle();
-    var w=document.createElement('div');w.className='be-pay-overlay';w.setAttribute('data-be-donation-payment','true');
-    w.innerHTML='<div class="be-pay-card be-pay-choice-card" style="position:relative"><button class="be-pay-close" type="button" aria-label="'+esc(i18nText('Fechar'))+'"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button><h3>'+esc(i18nText('Como você quer pagar?'))+'</h3><p>'+esc(i18nText('Escolha uma forma de pagamento para continuar.'))+'</p><div class="be-pay-actions"><button class="be-pay-btn primary" data-card type="button">'+esc(i18nText('Cartão'))+'</button><button class="be-pay-btn pix" data-pix type="button">Pix</button></div></div>';
-    function close(){w._beDonationClose=null;w.remove();}
-    w._beDonationClose=close;
-    w.querySelector('.be-pay-close').onclick=close;
-    w.addEventListener('click',function(e){if(e.target===w)close();});
-    w.querySelector('[data-card]').onclick=function(){close();onCard();};
-    w.querySelector('[data-pix]').onclick=function(){close();onPix();};
-    document.body.appendChild(w);
-  }
-  function openPixModal(data,requestId){
-    if(!isRoute()||!document.body.classList.contains('donate-page-active'))return;
-    ensureDonationPayStyle();
-    var w=document.createElement('div');w.className='be-pay-overlay';w.setAttribute('data-be-donation-payment','true');
-    var qr=data.qrCodeBase64?'data:image/png;base64,'+data.qrCodeBase64:'';
-    w.innerHTML='<div class="be-pay-card be-pix-card"><button class="be-pay-close" type="button" aria-label="'+esc(i18nText('Fechar'))+'"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button><h3>Pix</h3><div class="be-pix-timer"></div>'+(qr?'<img class="be-pix-qr" alt="QR Code Pix">':'')+'<div class="be-pay-actions"><button class="be-pay-btn primary be-pix-copy" data-copy type="button">'+esc(i18nText('Copiar código Pix'))+'</button></div><div class="be-pix-status is-waiting">'+esc(i18nText('Aguardando pagamento'))+'</div></div>';
-    if(qr)w.querySelector('.be-pix-qr').src=qr;
-    var pixCode=String(data.qrCode||'');
-    var closed=false, pollTimer=null, timerId=null, started=Date.now();
-    function close(){closed=true;if(pollTimer)clearTimeout(pollTimer);if(timerId)clearInterval(timerId);w._beDonationClose=null;w.remove();}
-    w._beDonationClose=close;
-    w.querySelector('.be-pay-close').onclick=close;
-    w.addEventListener('click',function(e){if(e.target===w)close();});
-    w.querySelector('[data-copy]').onclick=async function(){
-      var button=this,original=i18nText('Copiar código Pix');
-      try{await navigator.clipboard.writeText(pixCode);}
-      catch(_){
-        var helper=document.createElement('textarea');helper.value=pixCode;helper.setAttribute('readonly','');helper.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0';document.body.appendChild(helper);helper.select();try{document.execCommand('copy');}catch(__){}helper.remove();
-      }
-      button.textContent=i18nText('Código copiado');
-      window.setTimeout(function(){if(button.isConnected)button.textContent=original;},1800);
-    };
-    var expires=new Date(data.expiresAt||Date.now()+30*60*1000).getTime();
-    function setStatus(text,state){var el=w.querySelector('.be-pix-status');if(!el)return;el.className='be-pix-status '+(state||'');el.textContent=text;}
-    function tick(){var ms=Math.max(0,expires-Date.now()),m=Math.floor(ms/60000),sec=Math.floor(ms%60000/1000);w.querySelector('.be-pix-timer').textContent=i18nText('Expira em')+' '+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');if(ms<=0){setStatus(i18nText('Pix expirado'),'is-expired');if(timerId)clearInterval(timerId);}}
-    tick();timerId=setInterval(tick,1000);
-    async function poll(){
-      if(closed||Date.now()-started>10*60*1000)return;
-      try{
-        var client=window.beBackend&&window.beBackend.client;
-        var r=await client.functions.invoke(PIX_STATUS_FUNCTION_NAME,{body:{paymentId:String(data.paymentId),requestId:String(requestId)}});
-        var st=String(r&&r.data&&r.data.status||'');
-        if(st==='paid'){setStatus(i18nText('Pagamento confirmado'),'is-paid');return;}
-        if(st==='failed'||st==='refunded'||st==='charged_back'){setStatus(i18nText('Pagamento não concluído'),'is-error');return;}
-      }catch(_){}
-      pollTimer=setTimeout(poll,Date.now()-started<60000?4000:10000);
-    }
-    pollTimer=setTimeout(poll,4000);
-    document.body.appendChild(w);
-  }
-
-  function applyPageBanner(settings){
-    var banner=imageUrl(settings&&settings.bannerUrl||'');
-    if(!banner){hero.classList.remove('has-banner');hero.style.removeProperty('--donate-hero-banner');return;}
-    var safe=banner.replace(/["\n\r]/g,'');
-    hero.style.setProperty('--donate-hero-banner','url("'+safe+'")');
-    hero.classList.add('has-banner');
-  }
-  function preloadPageBanner(settings){
-    var banner=imageUrl(settings&&settings.bannerUrl||'');
-    if(!banner)return Promise.resolve();
-    return new Promise(function(resolve){
-      var settled=false,image=new Image(),timer=window.setTimeout(done,4500);
-      function done(){if(settled)return;settled=true;window.clearTimeout(timer);resolve();}
-      image.onload=done;
-      image.onerror=done;
-      image.src=banner;
-      if(image.complete)done();
-      else if(typeof image.decode==='function')image.decode().then(done).catch(function(){});
-    });
-  }
-  function signalDonateVisualReady(){
-    if(page.dataset.visualReady==='true')return;
-    page.dataset.visualReady='true';
-    window.requestAnimationFrame(function(){
-      window.requestAnimationFrame(function(){window.dispatchEvent(new CustomEvent('be:donate-visual-ready'));});
-    });
-  }
-
-  var donateAvatarSyncVersion=0;
-  function applyDonateAvatar(url){
-    var image=document.getElementById('donatePageAvatarImage');
-    var fallback=document.getElementById('donatePageAvatarFallback');
-    if(!image||!fallback)return;
-    if(window.BETVApplyAvatar)window.BETVApplyAvatar(image,url);else{image.src=url||window.BETV_DEFAULT_AVATAR;image.hidden=false;}
-    fallback.hidden=true;
-  }
-  function syncAvatar(event){
-    var version=++donateAvatarSyncVersion;
-    var immediate=window.BETVReadSelectedAvatar?window.BETVReadSelectedAvatar(event):'';
-    applyDonateAvatar(immediate);
-    if(!window.BETVLoadSelectedAvatar)return;
-    Promise.resolve(window.BETVLoadSelectedAvatar(event)).then(function(url){
-      if(version!==donateAvatarSyncVersion||!isRoute())return;
-      applyDonateAvatar(url);
-    }).catch(function(){});
-  }
-
-  function syncUnread(){
-    var source=document.getElementById('notificationUnreadDot');
-    var dot=document.getElementById('donatePageUnreadDot');
-    if(dot)dot.hidden=!source||source.hidden;
-  }
-
-  function isMobileNgoCarousel(){
-    return ngoMobileMedia?ngoMobileMedia.matches:window.innerWidth<=760;
-  }
-
-  function updateShowMoreButton(){
-    if(!showMoreButton)return;
-    var hasMore=!isMobileNgoCarousel()&&visibleNgoCount<ngoRecordCount;
-    showMoreButton.hidden=!hasMore;
-    showMoreButton.setAttribute('aria-hidden',String(!hasMore));
-  }
-
-  function syncNgoVisibility(){
-    var showAll=isMobileNgoCarousel();
-    list.querySelectorAll('[data-ngo-card]').forEach(function(card,index){
-      card.hidden=!showAll&&index>=visibleNgoCount;
-    });
-    updateShowMoreButton();
-  }
-
-  function showNextNgoBatch(){
-    if(isMobileNgoCarousel()||visibleNgoCount>=ngoRecordCount)return;
-    visibleNgoCount=Math.min(visibleNgoCount+NGO_BATCH_SIZE,ngoRecordCount);
-    syncNgoVisibility();
-  }
-
-  function render(items){
-    var records=(Array.isArray(items)?items:[]).filter(active).sort(function(a,b){return (Number(a.order)||0)-(Number(b.order)||0);});
-    ngoRecordCount=records.length;
-    visibleNgoCount=Math.min(NGO_BATCH_SIZE,ngoRecordCount);
-    if(!records.length){list.innerHTML='';status.hidden=false;status.textContent=i18nText('Nenhuma ONG foi publicada ainda.');updateShowMoreButton();return;}
-    status.hidden=true;
-    list.innerHTML=records.map(function(item,index){
-      var title=String(item.title||item.name||'ONG').trim();
-      var description=String(item.description||i18nText('Conheça a atuação desta organização e escolha apoiar esta causa.')).trim();
-      var image=imageUrl(item.imageUrl||item.bannerUrl||item.thumbnailUrl||'');
-      var id='donate-ngo-'+String(item.id||index).replace(/[^a-z0-9_-]/gi,'-');
-      var amountId=id+'-amount',hintId=id+'-amount-hint',errorId=id+'-amount-error';
-      var ngoReference=String(item.id||donationSlug(title));
-      var minimumCents=minimumDonationCents(item);
-      var minimumLabel=formatDonationCents(minimumCents);
-      var currencySymbol=donationCurrencySymbol();
-      var amountPlaceholder=(minimumCents/100).toLocaleString(DONATION_LOCALE,{minimumFractionDigits:2,maximumFractionDigits:2});
-      return '<article class="donate-ngo-card" data-ngo-card>'+ 
-        '<button class="donate-ngo-toggle" data-i18n-ignore type="button" aria-expanded="false" aria-controls="'+esc(id)+'" aria-label="'+esc(i18nText('Conhecer {name}',{name:title}))+'" data-ngo-title="'+esc(title)+'">'+
-          (image?'<img decoding="async" src="'+esc(image)+'" alt="'+esc(i18nText('Banner da {name}',{name:title}))+'">':'<span class="donate-ngo-placeholder" aria-hidden="true">'+esc(title.slice(0,2).toUpperCase())+'</span>')+
-        '</button>'+ 
-        '<div class="donate-ngo-details" id="'+esc(id)+'"><div class="donate-ngo-details-inner"><div class="donate-ngo-details-content"><h3 class="donate-ngo-name notranslate" translate="no">'+esc(title)+'</h3><div class="donate-ngo-description">'+esc(description)+'</div>'+ 
-          '<div class="donate-ngo-donation" data-donation-box data-ngo-reference="'+esc(ngoReference)+'" data-minimum-donation-cents="'+esc(minimumCents)+'" data-currency="'+esc(DONATION_CURRENCY)+'">'+
-            '<label class="donate-ngo-amount-label" for="'+esc(amountId)+'">'+esc(i18nText('Qual valor você deseja doar?'))+'</label>'+
-            '<div class="donate-ngo-amount-field" data-donation-field><span aria-hidden="true">'+esc(currencySymbol)+'</span><input class="donate-ngo-amount-input" id="'+esc(amountId)+'" type="text" inputmode="decimal" autocomplete="off" placeholder="'+esc(amountPlaceholder)+'" aria-describedby="'+esc(hintId)+' '+esc(errorId)+'"></div>'+
-            '<div class="donate-ngo-amount-meta"><small id="'+esc(hintId)+'">'+esc(i18nText('Valor mínimo: {amount}',{amount:minimumLabel}))+'</small><small class="donate-ngo-amount-error" id="'+esc(errorId)+'" role="alert" hidden></small></div>'+
-            '<button class="donate-ngo-support-button" type="button" data-stripe-donation aria-disabled="true" disabled>'+esc(i18nText('Doar'))+'</button>'+
-          '</div>'+
-        '</div></div></div></article>';
-    }).join('');
-    syncNgoVisibility();
-
-    list.querySelectorAll('.donate-ngo-toggle img').forEach(function(image){
-      image.addEventListener('error',function(){
-        var button=image.closest('.donate-ngo-toggle');
-        if(!button)return;
-        var title=button.getAttribute('data-ngo-title')||'ONG';
-        var placeholder=document.createElement('span');
-        placeholder.className='donate-ngo-placeholder';
-        placeholder.setAttribute('aria-hidden','true');
-        placeholder.textContent=String(title).trim().slice(0,2).toUpperCase();
-        image.replaceWith(placeholder);
-      },{once:true});
-    });
-
-    list.querySelectorAll('[data-ngo-card]').forEach(function(card){
-      var button=card.querySelector('.donate-ngo-toggle');
-      button.addEventListener('click',function(){
-        var opening=!card.classList.contains('is-open');
-        list.querySelectorAll('[data-ngo-card].is-open').forEach(function(other){
-          if(other!==card){
-            other.classList.remove('is-open');
-            var otherButton=other.querySelector('.donate-ngo-toggle');
-            if(otherButton)otherButton.setAttribute('aria-expanded','false');
-          }
-        });
-        card.classList.toggle('is-open',opening);
-        button.setAttribute('aria-expanded',String(opening));
-      });
-
-      var donationBox=card.querySelector('[data-donation-box]');
-      var amountInput=donationBox&&donationBox.querySelector('.donate-ngo-amount-input');
-      var amountField=donationBox&&donationBox.querySelector('[data-donation-field]');
-      var amountError=donationBox&&donationBox.querySelector('.donate-ngo-amount-error');
-      var donationLink=donationBox&&donationBox.querySelector('[data-stripe-donation]');
-      if(!donationBox||!amountInput||!amountField||!amountError||!donationLink)return;
-
-      var minimumCents=minimumDonationCents(donationBox.getAttribute('data-minimum-donation-cents'));
-      var checkoutBusy=false;
-
-      function setCheckoutBusy(busy){
-        checkoutBusy=busy;
-        donationLink.classList.toggle('is-loading',busy);
-        donationLink.setAttribute('aria-busy',String(busy));
-        donationLink.disabled=busy||donationLink.getAttribute('aria-disabled')==='true';
-        if(busy)donationLink.textContent=i18nText('Abrindo checkout…');
-      }
-
-      function updateDonationButton(showError){
-        var value=amountInput.value.trim();
-        var cents=parseDonationCents(value);
-        var valid=Number.isFinite(cents)&&Number.isInteger(cents)&&cents>=minimumCents&&cents<=100000000;
-        var tooLow=value!==''&&Number.isFinite(cents)&&cents<minimumCents;
-        var tooHigh=value!==''&&Number.isFinite(cents)&&cents>100000000;
-        var invalid=value!==''&&!Number.isFinite(cents);
-        var hasError=showError&&(tooLow||tooHigh||invalid);
-        amountField.classList.toggle('is-invalid',hasError);
-        amountInput.setAttribute('aria-invalid',String(hasError));
-        amountError.hidden=!hasError;
-        amountError.textContent=tooLow?i18nText('O valor mínimo desta ONG é {amount}.',{amount:formatDonationCents(minimumCents)}):(tooHigh?i18nText('O valor informado é muito alto.'):(invalid?i18nText('Digite um valor válido.'):''));
-        donationLink.setAttribute('aria-disabled',valid?'false':'true');
-        donationLink.disabled=!valid||checkoutBusy;
-        if(!checkoutBusy)donationLink.textContent=valid?i18nText('Doar {amount}',{amount:formatDonationCents(cents)}):i18nText('Doar');
-        return valid?cents:false;
-      }
-
-      amountInput.addEventListener('input',function(){updateDonationButton(true);});
-      amountInput.addEventListener('blur',function(){
-        var cents=parseDonationCents(amountInput.value);
-        if(Number.isFinite(cents))amountInput.value=(cents/100).toLocaleString(DONATION_LOCALE,{minimumFractionDigits:2,maximumFractionDigits:2});
-        updateDonationButton(true);
-      });
-      amountInput.addEventListener('keydown',function(event){
-        if(event.key==='Enter'){
-          event.preventDefault();
-          if(updateDonationButton(true))donationLink.click();
-        }
-      });
-      donationLink.addEventListener('click',async function(event){
-        if(event){
-          event.preventDefault();
-          event.stopPropagation();
-          if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
-        }
-        var cents=updateDonationButton(true);
-        if(!cents||checkoutBusy){if(!cents)amountInput.focus();return;}
-        amountError.hidden=true;
-        var ngoRef=donationBox.getAttribute('data-ngo-reference');
-        async function payCard(){
-          setCheckoutBusy(true);
-          try{var requestId=donationRequestId();var checkoutUrl=await createDonationCheckout(ngoRef,cents,requestId);location.assign(checkoutUrl);}
-          catch(error){amountField.classList.add('is-invalid');amountError.hidden=false;amountError.textContent=checkoutErrorMessage(error,error&&error.data);setCheckoutBusy(false);updateDonationButton(false);}
-        }
-        async function payPix(){
-          setCheckoutBusy(true);
-          try{var requestId=donationRequestId();var pix=await createDonationPix(ngoRef,cents,requestId);setCheckoutBusy(false);updateDonationButton(false);openPixModal(pix,requestId);}
-          catch(error){amountField.classList.add('is-invalid');amountError.hidden=false;amountError.textContent=checkoutErrorMessage(error,error&&error.data);setCheckoutBusy(false);updateDonationButton(false);}
-        }
-        if(DONATION_CURRENCY==='BRL'){
-          window.requestAnimationFrame(function(){openPaymentChoice(payCard,payPix);});
-        }else payCard();
-      });
-      updateDonationButton(false);
-    });
-  }
-
-                                                                               
-                                                                                                 
-  if(!window.beDonationWindowCaptureBound){
-    window.beDonationWindowCaptureBound=true;
-    window.addEventListener('click',function(event){
-      var donationButton=event.target&&event.target.closest?event.target.closest('[data-stripe-donation]'):null;
-      if(!donationButton||!isRoute()||!document.body.classList.contains('donate-page-active'))return;
-      var donationBox=donationButton.closest('[data-donation-box]');
-      if(!donationBox)return;
-      event.preventDefault();
-      event.stopPropagation();
-      if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
-
-      var amountInput=donationBox.querySelector('.donate-ngo-amount-input');
-      var amountField=donationBox.querySelector('[data-donation-field]');
-      var amountError=donationBox.querySelector('.donate-ngo-amount-error');
-      if(!amountInput||!amountField||!amountError)return;
-      var minimumCents=minimumDonationCents(donationBox.getAttribute('data-minimum-donation-cents'));
-      var cents=parseDonationCents(amountInput.value.trim());
-      var valid=Number.isFinite(cents)&&Number.isInteger(cents)&&cents>=minimumCents&&cents<=100000000;
-      if(!valid){
-        amountField.classList.add('is-invalid');
-        amountInput.setAttribute('aria-invalid','true');
-        amountError.hidden=false;
-        amountError.textContent=Number.isFinite(cents)&&cents<minimumCents
-          ? i18nText('O valor mínimo desta ONG é {amount}.',{amount:formatDonationCents(minimumCents)})
-          : i18nText('Digite um valor válido.');
-        amountInput.focus();
-        return;
-      }
-      amountField.classList.remove('is-invalid');
-      amountInput.setAttribute('aria-invalid','false');
-      amountError.hidden=true;
-      var ngoRef=donationBox.getAttribute('data-ngo-reference');
-      var originalText=donationButton.textContent;
-      var busy=false;
-      function setBusy(value){
-        busy=value;
-        donationButton.classList.toggle('is-loading',value);
-        donationButton.setAttribute('aria-busy',String(value));
-        donationButton.disabled=value;
-        donationButton.textContent=value?i18nText('Abrindo checkout…'):originalText;
-      }
-      async function payCard(){
-        if(busy)return;
-        setBusy(true);
-        try{
-          var requestId=donationRequestId();
-          var checkoutUrl=await createDonationCheckout(ngoRef,cents,requestId);
-          if(!isRoute()||!document.body.classList.contains('donate-page-active')){setBusy(false);return;}
-          location.assign(checkoutUrl);
-        }catch(error){
-          amountField.classList.add('is-invalid');
-          amountError.hidden=false;
-          amountError.textContent=checkoutErrorMessage(error,error&&error.data);
-          setBusy(false);
-        }
-      }
-      async function payPix(){
-        if(busy)return;
-        setBusy(true);
-        try{
-          var requestId=donationRequestId();
-          var pix=await createDonationPix(ngoRef,cents,requestId);
-          if(!isRoute()||!document.body.classList.contains('donate-page-active')){setBusy(false);return;}
-          setBusy(false);
-          openPixModal(pix,requestId);
-        }catch(error){
-          amountField.classList.add('is-invalid');
-          amountError.hidden=false;
-          amountError.textContent=checkoutErrorMessage(error,error&&error.data);
-          setBusy(false);
-        }
-      }
-      if(DONATION_CURRENCY==='BRL')openPaymentChoice(payCard,payPix);
-      else payCard();
-    },true);
-  }
-
-  function supporterInitials(value){
-    var parts=String(value||'Apoiador').trim().split(/\s+/).filter(Boolean);
-    return (parts.slice(0,2).map(function(part){return part.charAt(0);}).join('')||'A').toUpperCase();
-  }
-
-  function supporterKey(item){
-    var id=String(item&&(item.user_id||item.userId)||'').trim();
-    if(id)return 'id:'+id;
-    var username=String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim().toLowerCase();
-    return username?'username:'+username:'';
-  }
-
-  function supporterTime(item){
-    var value=new Date(item&&(item.supported_at||item.supportedAt)||0).getTime();
-    return Number.isFinite(value)?value:0;
-  }
-
-  function supporterMarkup(item){
-    var displayName=String(item.display_name||item.displayName||item.user_display_name||i18nText('Apoiador')).trim()||i18nText('Apoiador');
-    var username=String(item.username||item.user_username||'').replace(/^@/,'').trim();
-    var banner=imageUrl(item.banner_url||item.bannerUrl||'');
-    var avatarUrl=imageUrl(item.avatar_url||item.avatarUrl||window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png');
-    var initials=supporterInitials(displayName);
-    var route='/@'+encodeURIComponent(username);
-    return '<a class="donate-supporter-card" href="'+esc(route)+'" data-supporter-profile aria-label="'+esc(i18nText('Abrir perfil de {name}',{name:displayName}))+'">'+
-      '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
-      '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
-      '<span class="donate-supporter-content">'+
-        '<span class="donate-supporter-avatar" data-initials="'+esc(initials)+'"><img class="donate-supporter-avatar-image" decoding="async" src="'+esc(avatarUrl||window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png')+'" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="'+esc(i18nText('Avatar de {name}',{name:displayName}))+'"></span>'+ 
-        '<span class="donate-supporter-copy notranslate" translate="no"><strong>'+esc(displayName)+'</strong><small>@'+esc(username)+'</small></span>'+ 
-      '</span>'+ 
-    '</a>';
-  }
-
-  function bindSupporterImageFallbacks(){
-    if(!supportersList)return;
-    supportersList.querySelectorAll('.donate-supporter-banner-image:not([data-error-bound])').forEach(function(image){
-      image.setAttribute('data-error-bound','true');
-      image.addEventListener('error',function(){image.remove();},{once:true});
-    });
-    supportersList.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){
-      image.setAttribute('data-error-bound','true');
-      image.addEventListener('error',function(){
-        if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png')){
-          image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png');
-        }
-      });
-    });
-  }
-
-  function ensureSupportersSentinel(){
-    if(!supportersSection||!supportersList)return null;
-    if(supportersSentinel&&supportersSentinel.isConnected)return supportersSentinel;
-    supportersSentinel=document.createElement('div');
-    supportersSentinel.className='donate-supporters-sentinel';
-    supportersSentinel.setAttribute('role','status');
-    supportersSentinel.setAttribute('aria-live','polite');
-    supportersSentinel.hidden=false;
-    supportersList.insertAdjacentElement('afterend',supportersSentinel);
-    return supportersSentinel;
-  }
-
-  function setSupportersLoader(message,visible){
-    var sentinel=ensureSupportersSentinel();
-    if(!sentinel)return;
-    sentinel.textContent=visible?String(message||'Carregando mais apoiadores…'):'';
-    sentinel.hidden=!visible&&!supportersHasMore;
-    sentinel.classList.toggle('is-loading',Boolean(visible));
-  }
-
-  function disconnectSupportersObserver(){
-    if(supportersObserver){supportersObserver.disconnect();supportersObserver=null;}
-  }
-
-  function resetSupportersPagination(clearList){
-    disconnectSupportersObserver();
-    supporterKeys=Object.create(null);
-    supportersOffset=0;
-    supportersHasMore=true;
-    if(clearList&&supportersList)supportersList.innerHTML='';
-    setSupportersLoader('',false);
-  }
-
-  function renderSupporters(items,append){
-    if(!supportersSection||!supportersList||!supportersStatus)return 0;
-    var records=(Array.isArray(items)?items:[]).filter(function(item){
-      return String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim();
-    }).sort(function(a,b){
-      var timeDifference=supporterTime(b)-supporterTime(a);
-      if(timeDifference)return timeDifference;
-      return supporterKey(a).localeCompare(supporterKey(b));
-    });
-
-    supportersSection.hidden=false;
-    if(!append){
-      supporterKeys=Object.create(null);
-      supportersList.innerHTML='';
-    }
-
-    var fresh=records.filter(function(item){
-      var key=supporterKey(item);
-      if(!key||supporterKeys[key])return false;
-      supporterKeys[key]=true;
-      return true;
-    });
-
-    if(!fresh.length&&!append){
-      supportersStatus.hidden=false;
-      supportersStatus.textContent='Nenhum apoiador para exibir ainda.';
-      return 0;
-    }
-
-    if(fresh.length){
-      supportersStatus.hidden=true;
-      supportersList.insertAdjacentHTML('beforeend',fresh.map(supporterMarkup).join(''));
-      bindSupporterImageFallbacks();
-    }
-    return fresh.length;
-  }
-
-  async function fetchSupporters(limit,offset){
-    var client=window.beBackend&&window.beBackend.client;
-    if(!client||typeof client.rpc!=='function')throw new Error('supporters_rpc_unavailable');
-    var result=await client.rpc('get_public_donation_supporters',{
-      p_limit:limit,
-      p_offset:offset
-    });
-    if(result&&result.error)throw result.error;
-    return Array.isArray(result&&result.data)?result.data:[];
-  }
-
-  function observeSupportersEnd(){
-    if(!supportersLoaded||!supportersHasMore||!isRoute()||page.hidden)return;
-    var sentinel=ensureSupportersSentinel();
-    if(!sentinel)return;
-    sentinel.hidden=false;
-    if('IntersectionObserver' in window){
-      if(!supportersObserver){
-        supportersObserver=new IntersectionObserver(function(entries){
-          if(entries.some(function(entry){return entry.isIntersecting;}))loadMoreSupporters();
-        },{root:null,rootMargin:'520px 0px',threshold:0});
-      }
-      supportersObserver.observe(sentinel);
-    }else handleSupportersScroll();
-  }
-
-  function handleSupportersScroll(){
-    if('IntersectionObserver' in window||supportersScrollTicking||!supportersLoaded||!supportersHasMore||supportersLoading||!isRoute()||page.hidden)return;
-    supportersScrollTicking=true;
-    window.requestAnimationFrame(function(){
-      supportersScrollTicking=false;
-      var sentinel=ensureSupportersSentinel();
-      if(!sentinel)return;
-      if(sentinel.getBoundingClientRect().top<=window.innerHeight+520)loadMoreSupporters();
-    });
-  }
-
-  async function loadSupporters(force){
-    if(!supportersSection||!supportersList||!supportersStatus)return [];
-    if(supportersLoaded&&!force){observeSupportersEnd();return [];}
-    if(supportersLoading)return supportersLoading;
-    if(force){supportersLoaded=false;resetSupportersPagination(true);}
-    supportersSection.hidden=false;
-    supportersStatus.hidden=false;
-    supportersStatus.textContent='Carregando apoiadores…';
-    supportersLoading=(async function(){
-      try{
-        var records=await fetchSupporters(SUPPORTERS_INITIAL_LIMIT,0);
-        renderSupporters(records,false);
-        supportersOffset=records.length;
-        supportersHasMore=records.length===SUPPORTERS_INITIAL_LIMIT;
-        supportersLoaded=true;
-        setSupportersLoader('',false);
-        if(supportersHasMore)observeSupportersEnd();
-        return records;
-      }catch(error){
-        (void 0);
-        supportersSection.hidden=true;
-        return [];
-      }finally{
-        supportersLoading=null;
-      }
-    })();
-    return supportersLoading;
-  }
-
-  async function loadMoreSupporters(){
-    if(!supportersLoaded||!supportersHasMore||supportersLoading||!isRoute()||page.hidden)return [];
-    setSupportersLoader('Carregando mais apoiadores…',true);
-    supportersLoading=(async function(){
-      try{
-        var records=await fetchSupporters(SUPPORTERS_BATCH_SIZE,supportersOffset);
-        supportersOffset+=records.length;
-        renderSupporters(records,true);
-        supportersHasMore=records.length===SUPPORTERS_BATCH_SIZE;
-        if(!supportersHasMore)disconnectSupportersObserver();
-        return records;
-      }catch(error){
-        (void 0);
-        return [];
-      }finally{
-        setSupportersLoader('',false);
-        supportersLoading=null;
-      }
-    })();
-    return supportersLoading;
-  }
-
-  function notificationTime(item){
-    var value=item&&(item.updatedAt||item.updated_at||item.createdAt||item.created_at||item.date)||'';
-    var time=new Date(value).getTime();
-    return Number.isFinite(time)?time:0;
-  }
-
-  function notificationPlainText(value){
-    var source=String(value||'');
-    if(window.beMarkdownPlainText)return window.beMarkdownPlainText(source);
-    return source
-      .replace(/!\[[^\]]*\]\([^)]*\)/g,' ')
-      .replace(/\[([^\]]+)\]\([^)]*\)/g,'$1')
-      .replace(/[*_~`>#-]/g,' ')
-      .replace(/\s+/g,' ')
-      .trim();
-  }
-
-  function trimNotification(value,max){
-    var text=notificationPlainText(value);
-    return text.length>max?text.slice(0,max-1).trim()+'…':text;
-  }
-
-  function renderNotificationPreview(){
-    if(!notificationPreviewList)return;
-    var inbox=window.BETVNotificationsInbox;
-    var visibleItems=notificationItems.filter(function(item){return !(inbox&&typeof inbox.isRead==='function'&&inbox.isRead(item));});
-    if(!visibleItems.length){
-      notificationPreviewList.innerHTML='<div class="notification-preview-empty"><strong>Nenhuma atualização</strong></div>';
-      return;
-    }
-    notificationPreviewList.innerHTML=visibleItems.slice(0,3).map(function(item){
-      return '<button class="notification-preview-item" type="button" data-donate-notification-id="'+esc(item.id)+'">'+
-        '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+ 
-        '<span class="notification-preview-copy"'+(item.translations&&item.translations[String(window.BETVLocale&&window.BETVLocale.slug||'pt-br')]?' data-i18n-ignore translate="no"':'')+'><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimNotification(item.description,100)||'Confira esta atualização.')+'</span></span>'+
-        '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+ 
-      '</button>';
-    }).join('');
-  }
-
-  async function loadNotificationPreview(force){
-    if(notificationLoaded&&!force)return notificationItems;
-    if(notificationLoading)return notificationLoading;
-    if(notificationPreviewList)notificationPreviewList.innerHTML='<div class="notification-preview-empty">Carregando…</div>';
-    notificationLoading=(async function(){
-      try{
-        if(!window.beBackend)throw new Error('backend');
-        await window.beBackend.ready;
-        var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
-        notificationItems=(Array.isArray(items)?items:[])
-          .filter(function(item){return active(item)&&String(item.title||'').trim();})
-          .sort(function(a,b){return notificationTime(b)-notificationTime(a);});
-        notificationLoaded=true;
-        renderNotificationPreview();
-      }catch(error){
-        (void 0);
-        notificationItems=[];
-        notificationLoaded=true;
-        if(notificationPreviewList)notificationPreviewList.innerHTML='<div class="notification-preview-empty"><strong>Não foi possível carregar</strong></div>';
-      }finally{
-        notificationLoading=null;
-      }
-      return notificationItems;
-    })();
-    return notificationLoading;
-  }
-
-  function closeNotificationPopup(){
-    if(notificationPopup)notificationPopup.classList.remove('open');
-    if(notificationButton)notificationButton.setAttribute('aria-expanded','false');
-  }
-
-  function toggleNotificationPopup(event){
-    if(event){event.preventDefault();event.stopPropagation();}
-    if(!notificationPopup||!notificationButton)return;
-    var opening=!notificationPopup.classList.contains('open');
-    notificationPopup.classList.toggle('open',opening);
-    notificationButton.setAttribute('aria-expanded',String(opening));
-    if(opening){
-      window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
-      loadNotificationPreview(false);
-    }
-  }
-
-  function markNotificationsRead(){
-    var inbox=window.BETVNotificationsInbox;
-    if(inbox&&typeof inbox.markAllRead==='function')inbox.markAllRead();
-    else try{localStorage.setItem(NOTIFICATION_STORAGE_KEY,String(Date.now()));}catch(_){ }
-    renderNotificationPreview();
-    var sourceDot=document.getElementById('notificationUnreadDot');
-    var pageDot=document.getElementById('donatePageUnreadDot');
-    if(sourceDot)sourceDot.hidden=true;
-    if(pageDot)pageDot.hidden=true;
-  }
-
-  function openNotificationPage(id){
-    closeNotificationPopup();
-    var route='/atualizacoes'+(id?'/'+encodeURIComponent(id):'');
-    if(window.BETVPublicRoutes)window.BETVPublicRoutes.go(route);
-    else location.href=window.BETVLocaleURL?window.BETVLocaleURL(route):route;
-  }
-
-  async function load(force){
-    if(loaded&&!force)return;
-    if(loading)return loading;
-    status.hidden=false;status.textContent='Carregando ONGs…';
-    loading=(async function(){
-      try{
-        if(!window.beBackend)throw new Error('backend');
-        await window.beBackend.ready;
-        var results=await Promise.all([
-          window.beBackend.data.list('ongs',{orderBy:'order',direction:'asc'}),
-          window.beBackend.data.get('settings','ong').catch(function(){return null;})
-        ]);
-        await preloadPageBanner(results[1]);
-        applyPageBanner(results[1]);
-        render(results[0]);
-        loaded=true;
-        loadSupporters(force);
-        signalDonateVisualReady();
-      }catch(error){
-        (void 0);
-        list.innerHTML='';
-        status.hidden=false;
-        status.textContent='Não foi possível carregar as ONGs agora. Tente novamente em instantes.';
-        signalDonateVisualReady();
-      }finally{
-        loading=null;
-      }
-    })();
-    return loading;
-  }
-
-  function open(){
-    document.body.classList.add('donate-page-active');
-    page.hidden=false;
-    page.setAttribute('aria-hidden','false');
-    syncAvatar();
-    syncUnread();
-    if(loaded)signalDonateVisualReady();else load(false);
-    if(supportersLoaded)observeSupportersEnd();
-    document.title=window.BETVPageTitle?window.BETVPageTitle():'Billie Eilish TV';
-  }
-
-  function close(){
-    closeDonationPaymentOverlays();
-    closeNotificationPopup();
-    disconnectSupportersObserver();
-    document.body.classList.remove('donate-page-active');
-    page.hidden=true;
-    page.setAttribute('aria-hidden','true');
-    document.title=window.BETVPageTitle?window.BETVPageTitle():'Billie Eilish TV';
-  }
-
-  document.addEventListener('click',function(event){
-    var link=event.target&&event.target.closest?event.target.closest('[data-open-donate="true"]'):null;
-    if(!link)return;
-    event.preventDefault();
-    location.assign((window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs'));
-  });
-
-  if(home)home.addEventListener('click',function(){
-    closeNotificationPopup();
-    if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/');
-    else location.href=window.BETVLocaleURL?window.BETVLocaleURL('/'):'/';
-  });
-
-  if(showMoreButton)showMoreButton.addEventListener('click',showNextNgoBatch);
-  if(ngoMobileMedia){
-    if(typeof ngoMobileMedia.addEventListener==='function')ngoMobileMedia.addEventListener('change',syncNgoVisibility);
-    else if(typeof ngoMobileMedia.addListener==='function')ngoMobileMedia.addListener(syncNgoVisibility);
-  }
-  if(supportersList)supportersList.addEventListener('click',function(event){
-    var link=event.target&&event.target.closest?event.target.closest('[data-supporter-profile]'):null;
-    if(!link||!window.BETVPublicRoutes)return;
-    event.preventDefault();
-    window.BETVPublicRoutes.go(link.getAttribute('href')||'/');
-  });
-  if(notificationButton)notificationButton.addEventListener('click',toggleNotificationPopup);
-  if(notificationClose)notificationClose.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();closeNotificationPopup();});
-  if(notificationMarkAll)notificationMarkAll.addEventListener('click',function(event){event.preventDefault();event.stopPropagation();markNotificationsRead();});
-  if(notificationViewAll)notificationViewAll.addEventListener('click',function(){openNotificationPage('');});
-  if(notificationPreviewList)notificationPreviewList.addEventListener('click',function(event){
-    var button=event.target&&event.target.closest?event.target.closest('[data-donate-notification-id]'):null;
-    if(button){
-      var id=button.getAttribute('data-donate-notification-id')||'';
-      var inbox=window.BETVNotificationsInbox;
-      if(inbox&&typeof inbox.markRead==='function')inbox.markRead(id);
-      renderNotificationPreview();
-      openNotificationPage(id);
-    }
-  });
-  window.addEventListener('be:notification-read-state-changed',renderNotificationPreview);
-  if(notificationPopup)notificationPopup.addEventListener('click',function(event){event.stopPropagation();});
-
-  if(avatar)avatar.addEventListener('click',function(){
-    closeNotificationPopup();
-    var account=window.beBackend&&window.beBackend.auth?window.beBackend.auth.currentUser:null;
-    if(!account){
-      if(window.BETVPublicRoutes)window.BETVPublicRoutes.go('/login');
-      else location.href=window.BETVLocaleURL?window.BETVLocaleURL('/login'):'/login';
-      return;
-    }
-    close();
-    window.setTimeout(function(){
-      var profileAction=document.querySelector('#userDropdown [data-public-action="profile"]');
-      if(profileAction){profileAction.click();return;}
-      window.dispatchEvent(new CustomEvent('be:open-profile-route'));
-    },0);
-  });
-
-  document.addEventListener('click',function(event){
-    if(notificationPopup&&notificationPopup.classList.contains('open')&&notificationWrap&&!notificationWrap.contains(event.target))closeNotificationPopup();
-  });
-  document.addEventListener('keydown',function(event){if(event.key==='Escape')closeNotificationPopup();});
-
-  var originalDot=document.getElementById('notificationUnreadDot');
-  if(originalDot&&window.MutationObserver)new MutationObserver(syncUnread).observe(originalDot,{attributes:true,attributeFilter:['hidden','class']});
-  var originalAvatar=document.getElementById('publicUserPhoto');
-  if(originalAvatar&&window.MutationObserver)new MutationObserver(syncAvatar).observe(originalAvatar,{attributes:true,attributeFilter:['src','hidden']});
-
-  if(!('IntersectionObserver' in window))window.addEventListener('scroll',handleSupportersScroll,false);
-  window.addEventListener('be:open-donate-page',function(){open();});
-  window.addEventListener('be:close-donate-page',function(){close();});
-  window.addEventListener('be:profile-avatar-changed',syncAvatar);
-  window.addEventListener('be:profile-device-synced',syncAvatar);
-  if(window.beBackend&&window.beBackend.auth&&typeof window.beBackend.auth.onChange==='function')window.beBackend.auth.onChange(function(){if(isRoute())syncAvatar();});
-  window.addEventListener('be:content-ready',function(){
-    notificationLoaded=false;
-    supportersLoaded=false;
-    resetSupportersPagination(true);
-    if(isRoute()){
-      load(true);
-      if(notificationPopup&&notificationPopup.classList.contains('open'))loadNotificationPreview(true);
-    }
-  });
-  window.addEventListener('pageshow',function(){if(isRoute())open();});
-  window.addEventListener('popstate',function(){if(isRoute())open();else if(document.body.classList.contains('donate-page-active'))close();});
-  window.addEventListener('hashchange',function(){if(isRoute())open();else if(document.body.classList.contains('donate-page-active'))close();});
-  if(isRoute())open();
-})();
 
 
                                                               
@@ -17627,7 +16662,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var label=partner?t('Abrir comunidade {name}',{name:displayName}):t('Abrir perfil de {name}',{name:displayName});
     var avatarAlt=partner?t('Ícone de {name}',{name:displayName}):t('Avatar de {name}',{name:displayName});
     var attributes=partner?' target="_blank" rel="noopener noreferrer" data-fans-community':' data-fans-profile data-profile-route="'+esc(route)+'"';
-    var avatarMarkup=avatar?'<img class="donate-supporter-avatar-image" decoding="async" src="'+esc(avatar)+'"'+(partner?'':' data-avatar-fallback="/_static/media/profile/default-avatar.png"')+' alt="'+esc(avatarAlt)+'">':'<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(initials(displayName))+'</span>';
+    var avatarMarkup=avatar?'<img class="fans-supporter-avatar-image" decoding="async" src="'+esc(avatar)+'"'+(partner?'':' data-avatar-fallback="/_static/media/profile/default-avatar.png"')+' alt="'+esc(avatarAlt)+'">':'<span class="fans-supporter-avatar-fallback" aria-hidden="true">'+esc(initials(displayName))+'</span>';
     var locale=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
     var tag='';
     if(community){
@@ -17635,18 +16670,18 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }else if(creator){
       tag=locale==='en-us'?'Content Creator':(locale==='es'?'Creador de contenido':(locale==='fr'?'Créateur de contenu':(locale==='it'?'Content creator':'Criador de conteúdo')));
     }
-    return '<a class="donate-supporter-card '+(creator?'is-creator':(community?'is-community':'is-user'))+'" href="'+esc(href)+'"'+attributes+' aria-label="'+esc(label)+'">'+
-      '<span class="donate-supporter-banner">'+(banner?'<img class="donate-supporter-banner-image" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+ 
-      '<span class="donate-supporter-shade" aria-hidden="true"></span>'+ 
-      '<span class="donate-supporter-content">'+
-        '<span class="donate-supporter-avatar" data-initials="'+esc(initials(displayName))+'">'+avatarMarkup+'</span>'+ 
-        '<span class="donate-supporter-copy"><strong class="notranslate" translate="no">'+esc(displayName)+'</strong>'+(partner?'<span class="donate-supporter-tags"><small class="donate-supporter-tag '+(creator?'is-creator-tag':'is-community-tag')+'">'+esc(tag)+'</small></span>':'<small class="notranslate" translate="no">@'+esc(username)+'</small>')+'</span>'+ 
-      '</span>'+ 
+    return '<a class="fans-supporter-card '+(creator?'is-creator':(community?'is-community':'is-user'))+'" href="'+esc(href)+'"'+attributes+' aria-label="'+esc(label)+'">'+
+      '<span class="fans-supporter-banner">'+(banner?'<img class="fans-supporter-banner-image" decoding="async" src="'+esc(banner)+'" alt="">':'')+'</span>'+
+      '<span class="fans-supporter-shade" aria-hidden="true"></span>'+
+      '<span class="fans-supporter-content">'+
+        '<span class="fans-supporter-avatar" data-initials="'+esc(initials(displayName))+'">'+avatarMarkup+'</span>'+
+        '<span class="fans-supporter-copy"><strong class="notranslate" translate="no">'+esc(displayName)+'</strong>'+(partner?'<span class="fans-supporter-tags"><small class="fans-supporter-tag '+(creator?'is-creator-tag':'is-community-tag')+'">'+esc(tag)+'</small></span>':'<small class="notranslate" translate="no">@'+esc(username)+'</small>')+'</span>'+
+      '</span>'+
     '</a>';
   }
   function bindImages(){
-    list.querySelectorAll('.donate-supporter-banner-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){image.remove();},{once:true});});
-    list.querySelectorAll('.donate-supporter-avatar-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){var card=image.closest('.donate-supporter-card');if(card&&(card.classList.contains('is-community')||card.classList.contains('is-creator'))){var avatar=image.closest('.donate-supporter-avatar');if(avatar)avatar.innerHTML='<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(avatar.getAttribute('data-initials')||'C')+'</span>';return;}if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png'))image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png');});});
+    list.querySelectorAll('.fans-supporter-banner-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){image.remove();},{once:true});});
+    list.querySelectorAll('.fans-supporter-avatar-image:not([data-error-bound])').forEach(function(image){image.setAttribute('data-error-bound','true');image.addEventListener('error',function(){var card=image.closest('.fans-supporter-card');if(card&&(card.classList.contains('is-community')||card.classList.contains('is-creator'))){var avatar=image.closest('.fans-supporter-avatar');if(avatar)avatar.innerHTML='<span class="fans-supporter-avatar-fallback" aria-hidden="true">'+esc(avatar.getAttribute('data-initials')||'C')+'</span>';return;}if(image.getAttribute('src')!==(window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png'))image.setAttribute('src',window.BETV_DEFAULT_AVATAR||'/_static/media/profile/default-avatar.png');});});
   }
   function render(items,append){
     var records=(Array.isArray(items)?items:[]).filter(function(item){return typeOf(item)==='community'||typeOf(item)==='creator'||String(item&&(item.username||item.user_username)||'').replace(/^@/,'').trim();}).sort(function(a,b){return Number(b.sort_order||b.sortOrder||0)-Number(a.sort_order||a.sortOrder||0)||time(b)-time(a)||key(a).localeCompare(key(b));});
@@ -18716,7 +17751,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 /* Keep the mobile home treatment scoped to the actual catalog home. */
 ;(function(){
   'use strict';
-  var blocked=['login-mode','admin-mode','profile-page-active','settings-page-active','detail-page-active','community-page-active','section-catalog-active','notification-page-active','support-page-active','legal-page-active','billie-page-active','donate-page-active','album-page-active','fans-page-active'];
+  var blocked=['login-mode','admin-mode','profile-page-active','settings-page-active','detail-page-active','community-page-active','section-catalog-active','notification-page-active','support-page-active','legal-page-active','billie-page-active','album-page-active','fans-page-active'];
   function sync(){
     var body=document.body;if(!body)return;
     var home=(!body.dataset.homeView||body.dataset.homeView==='home')&&!blocked.some(function(name){return body.classList.contains(name);});

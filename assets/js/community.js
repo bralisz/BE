@@ -350,27 +350,6 @@
     },Math.max(250,Number(delay)||900));
   }
 
-  async function loadCommunityOngBanner(){
-    var spotlight=document.getElementById('communityOngSpotlight');
-    var image=document.getElementById('communityOngSpotlightImage');
-    if(!spotlight||!image)return;
-    try{
-      await Promise.resolve(window.beBackend&&window.beBackend.ready);
-      var dataApi=window.beBackend&&window.beBackend.data;
-      if(!dataApi||typeof dataApi.get!=='function')return;
-      var settings=await dataApi.get('settings','ong');
-      var raw=String(settings&&settings.bannerUrl||'').trim();
-      if(!raw)return;
-      var banner=mediaUrl(raw);
-      if(!banner||banner==='#')return;
-      image.src=banner;
-      image.addEventListener('load',function(){spotlight.hidden=false;},{once:true});
-      image.addEventListener('error',function(){spotlight.hidden=true;image.removeAttribute('src');},{once:true});
-      if(image.complete&&image.naturalWidth>0)spotlight.hidden=false;
-    }catch(_){spotlight.hidden=true;}
-  }
-
-
   // The Community hero uses the same active banner gallery as the profile banner picker.
   var communityBannerPool=null;
   var communityBannerPromise=null;
@@ -504,13 +483,11 @@
       +    '<section class="community-section" id="communitySimilarSection" aria-labelledby="communitySimilarTitle"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2 id="communitySimilarTitle">'+similarCopy('title')+'</h2><p class="community-section-subtitle">'+similarCopy('subtitle')+'</p></div></div><div id="communitySimilarContent" class="community-similar-list" role="status" aria-live="polite"></div></section>'
       +    '<section class="community-section"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2>Perfis em destaque</h2><p class="community-section-subtitle">Compartilhe seu perfil para receber curtidas e aparecer no ranking.</p></div><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado notranslate" data-i18n-ignore translate="no">Avocado</span></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash notranslate" data-i18n-ignore translate="no">Eyelash</span></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh notranslate" data-i18n-ignore translate="no">Blohsh</span></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
       +    '<div class="community-supporters-cta-wrap"><button class="community-supporters-cta" id="communitySupportersButton" type="button">Ver fãs que apoiam o site</button></div>'
-      +    '<section class="community-ong-spotlight" id="communityOngSpotlight" hidden aria-label="Apoie uma ONG"><div class="community-ong-spotlight-frame"><img id="communityOngSpotlightImage" alt="Apoie uma ONG" loading="lazy" decoding="async" fetchpriority="low"><div class="community-ong-spotlight-overlay" aria-hidden="true"></div><a class="community-ong-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a></div></section>'
       +  '</div>'
       +'</div>';
     main.appendChild(page);
     bindBoafListenLinks(page);
     page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);location.assign((window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs'));});
-    var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
     var rulesDetails=page.querySelector('.community-rules-details');
     var rulesButton=page.querySelector('.community-rules-button');
     if(rulesDetails&&rulesButton)rulesButton.addEventListener('click',function(event){
@@ -530,7 +507,6 @@
       page.hidden=false;
       setHomeTab('community');
     });
-    loadCommunityOngBanner();
     applyI18n(page);
     return page;
   }
@@ -615,7 +591,7 @@
 
   function establishCatalogBase(){
     if(document.body.classList.contains('community-page-active'))return;
-    var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('donate-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active');
+    var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active');
     if(!dedicated)return;
     var logo=document.getElementById('logoBtn');
     if(logo){logo.dataset.beHistoryMode='none';logo.click();delete logo.dataset.beHistoryMode;}
@@ -627,7 +603,7 @@
     window.requestAnimationFrame(function(){
       // A pending utility callback must not reopen Community after Home is chosen.
       if(!document.body.classList.contains('community-page-active')&&document.body.dataset.homeView!=='community')return;
-      var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('legal-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('donate-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active');
+      var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('legal-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active');
       if(dedicated)return;
       createPage();
       if(!page)return;
@@ -646,12 +622,10 @@
     // so their route handlers cannot reopen the previous page over Community.
     var route=String(window.BETVLocalePath?window.BETVLocalePath():location.pathname||'/').replace(/\/+$/,'').toLowerCase()||'/';
     try{route=decodeURIComponent(route);}catch(_){ }
-    if(['/ong','/fãs','/fas','/fans'].includes(route)&&window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/');
+    if(['/fãs','/fas','/fans'].includes(route)&&window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/');
     establishCatalogBase();
-    window.dispatchEvent(new CustomEvent('be:close-donate-page'));
-    document.body.classList.remove('donate-page-active');
-    var donationPage=document.getElementById('donatePage');
-    if(donationPage){donationPage.hidden=true;donationPage.setAttribute('aria-hidden','true');}
+
+
     createPage();
     if(!page)return;
     if(!document.body.classList.contains('community-page-active'))rememberCatalogHomeView();
@@ -672,7 +646,7 @@
 
 
   window.addEventListener('be:restore-community-surface',function(){preserveCommunitySurfaceForHeaderUtility();});
-  ['be:open-profile-route','be:open-config','be:open-notifications','be:open-support','be:open-donate-page','be:open-fans-page','be:open-billie-page','be:open-album-page','be:open-legal-route'].forEach(function(name){window.addEventListener(name,function(){state.detailReturnToCommunity=false;closeCommunity(false);});});
+  ['be:open-profile-route','be:open-config','be:open-notifications','be:open-support','be:open-fans-page','be:open-billie-page','be:open-album-page','be:open-legal-route'].forEach(function(name){window.addEventListener(name,function(){state.detailReturnToCommunity=false;closeCommunity(false);});});
   window.addEventListener('be:home-entered',function(){state.detailReturnToCommunity=false;closeCommunity(true,'home');});
 
   function catalogData(row){
@@ -1170,7 +1144,7 @@
       if(profileRoute&&document.body.classList.contains('community-page-active'))closeCommunity(false);
       var notificationHome=event.target&&event.target.closest?event.target.closest('#notificationPageClose,#notificationPageHome'):null;
       if(notificationHome)setHomeTab('home');
-      var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;
+      var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"]'):null;
       if(nav&&!nav.matches('[data-community-tab]')){var target='home';if(nav.dataset&&nav.dataset.homeView)target=nav.dataset.homeView;else if(nav.matches('[data-public-action="support"]'))target='support';closeCommunity(false,target);}
     },true);
 
@@ -1187,7 +1161,7 @@
     },true);
     window.addEventListener('be:toggle-mobile-account-menu',toggleMobileAccountMenu);
     window.addEventListener('be:close-notification-menus',closeMobileAccountMenu);
-    window.addEventListener('popstate',function(){closeMobileAccountMenu();if(document.body.classList.contains('community-page-active'))closeCommunity(true);window.setTimeout(function(){if(state.detailReturnToCommunity&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')){state.detailReturnToCommunity=false;openCommunity();return;}if(!document.body.classList.contains('community-page-active')&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')&&!document.body.classList.contains('support-page-active')&&!document.body.classList.contains('legal-page-active')&&!document.body.classList.contains('billie-page-active')&&!document.body.classList.contains('donate-page-active')&&!document.body.classList.contains('fans-page-active')&&!document.body.classList.contains('album-page-active'))setHomeTab(catalogTabForView(state.catalogHomeView));},0);});
+    window.addEventListener('popstate',function(){closeMobileAccountMenu();if(document.body.classList.contains('community-page-active'))closeCommunity(true);window.setTimeout(function(){if(state.detailReturnToCommunity&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')){state.detailReturnToCommunity=false;openCommunity();return;}if(!document.body.classList.contains('community-page-active')&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')&&!document.body.classList.contains('support-page-active')&&!document.body.classList.contains('legal-page-active')&&!document.body.classList.contains('billie-page-active')&&!document.body.classList.contains('fans-page-active')&&!document.body.classList.contains('album-page-active'))setHomeTab(catalogTabForView(state.catalogHomeView));},0);});
     window.addEventListener('hashchange',closeMobileAccountMenu);
     window.addEventListener('resize',function(){if(!window.matchMedia('(max-width:760px)').matches)closeMobileAccountMenu();else if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();});
     function syncMobileMenuPosition(){if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();}

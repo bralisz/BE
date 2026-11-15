@@ -121,6 +121,11 @@ function documentOf(response) {
   assert.equal(documentOf(await render('/es/23456789')).title, 'WILDFLOWER | Billie Eilish TV', 'original music names stay intact');
   assert.equal(documentOf(await render('/pt-br/34567890')).title, "Título $& $' $$ | Billie Eilish TV", 'replacement tokens must remain literal title text');
   assert(requestedCollections.every(name => name === 'videos'), 'video metadata does not wait for unrelated collections');
+  for (const locale of ['pt-br','en-us','es','fr','it']) {
+    const removed = await render(`/${locale}/ong`);
+    assert.equal(removed.code, 404, 'retired page must not return successful HTML');
+    assert.match(removed.headers['x-robots-tag'], /noindex/);
+  }
   const missing = await render('/es/99999999');
   assert.equal(missing.code, 404);
   assert.match(missing.headers['cache-control'], /no-store/);

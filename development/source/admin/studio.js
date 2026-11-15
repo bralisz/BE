@@ -22,7 +22,7 @@ html.admin-workspace.admin-studio body.admin-mode .workspace-site {background:#7
 html.admin-workspace.admin-studio body.admin-mode :is(.a-btn,.a-btn.primary) {border-radius:24px!important}
 html.admin-workspace.admin-studio body.admin-mode .a-btn.primary {background:#7657e8!important;color:#ffffff!important;border-color:#7657e8!important}
 html.admin-workspace.admin-studio body.admin-mode :is(.a-input,.a-select,.a-textarea) {background:#1a2336!important;border-color:#3c4a66!important;color:#edf2ff!important;border-radius:12px!important}
-html.admin-workspace.admin-studio body.admin-mode :is(.a-card,.stat,.content-sidebar,.content-manager-main,.donation-insight-card) {background:#252f43!important;border-color:#3a4965!important;border-radius:22px!important}
+html.admin-workspace.admin-studio body.admin-mode :is(.a-card,.stat,.content-sidebar,.content-manager-main) {background:#252f43!important;border-color:#3a4965!important;border-radius:22px!important}
 html.admin-workspace.admin-studio body.admin-mode :is(button,a,input,select,textarea,summary):focus-visible {outline:2px solid #c6b2ff!important;outline-offset:4px!important}
 html.admin-workspace.admin-studio body.admin-mode .admin-subnav {padding:0 28px 20px!important}
 html.admin-workspace.admin-studio body.admin-mode .admin-subnav button {background:#263147!important;border-color:#40516f!important;border-radius:22px!important}
@@ -36,7 +36,7 @@ html.admin-workspace.admin-studio body.admin-mode .studio-top {display:grid;grid
 .studio-eyebrow {margin:0 0 12px;font-size:11px;color:#b3bfda;letter-spacing:.05em}
 html.admin-workspace.admin-studio body.admin-mode .studio-welcome h1 {margin:0 0 12px!important;font-size:clamp(28px,3vw,42px)!important;font-weight:500!important;line-height:1.08!important;letter-spacing:-.045em!important;color:#f3f6ff!important}
 .studio-welcome p {font-size:12px;line-height:1.6;color:#aebdd9;max-width:29ch;margin:0}
-html.admin-workspace.admin-studio body.admin-mode .studio-primary-metrics {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;min-width:0}
+html.admin-workspace.admin-studio body.admin-mode .studio-primary-metrics {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0}
 html.admin-workspace.admin-studio body.admin-mode .studio-primary-metrics .dashboard-metric-card {display:flex!important;flex-direction:column!important;min-height:184px!important;padding:18px!important;border-radius:24px!important;background:#252f43!important;border:1px solid #3a4965!important;box-shadow:none!important;width:auto!important;min-width:0!important}
 html.admin-workspace.admin-studio body.admin-mode .studio-primary-metrics .dashboard-metric-card.primary-metric {background:#7657e8!important;border-color:#7657e8!important;color:#ffffff!important}
 html.admin-workspace.admin-studio body.admin-mode .studio-primary-metrics .primary-metric :is(.dashboard-metric-label,.dashboard-metric-big-number,small) {color:#ffffff!important}
@@ -165,15 +165,14 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     const weekly = content.querySelector('.dashboard-weekly-users');
     const library = content.querySelector('.dashboard-side');
     const activity = content.querySelector('.activity-log');
-    const donations = content.querySelector('.donation-dashboard-panel');
     const settings = content.querySelector('.dashboard-site-settings');
-    if (!hero || !workspace || cards.length !== 5 || !weekly || !library || !activity || !donations || !settings) return;
+    if (!hero || !workspace || cards.length !== 4 || !weekly || !library || !activity || !settings) return;
     const top = make('section', 'studio-top'); top.setAttribute('aria-label', 'Resumo do painel');
     const welcome = make('div', 'studio-welcome');
     welcome.append(make('span', 'studio-eyebrow', 'Seu espaço na BETV'), make('h1', '', 'Conteúdo que conecta.'), make('p', '', 'Acompanhe sua comunidade, publique novidades e cuide do seu site.'));
     const primary = make('div', 'studio-primary-metrics');
-    // Existing order: new users, most saved, most viewed, most commented, donations.
-    primary.append(cards[0], cards[2], cards[4]); top.append(welcome, primary);
+    // Existing order: new users, most saved, most viewed, most commented.
+    primary.append(cards[0], cards[2]); top.append(welcome, primary);
     const tools = make('div', 'studio-tools-row');
     tools.append(make('span', 'studio-overview-label', 'Visão geral'));
     const release = hero.querySelector('.dashboard-update-notice'); if (release) tools.append(release);
@@ -190,7 +189,7 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     const more = make('div', 'studio-disclosures');
     // Move rather than recreate: search, checkboxes, new content and settings
     // keep their original event listeners and current form values.
-    more.append(disclosure('Apoios a ONGs', 'Histórico de doações e indicadores', donations), disclosure('Ajustes do site', 'Cores e links das redes sociais', settings));
+    more.append(disclosure('Ajustes do site', 'Cores e links das redes sociais', settings));
     hero.remove(); workspace.remove();
     content.classList.add('studio-dashboard'); content.append(top, tools, grid, more);
   }

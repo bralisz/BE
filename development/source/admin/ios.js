@@ -28,7 +28,7 @@ function installAdminIOSTheme() {
 @scope :is(.field small,.editor-group-heading p,.billie-admin-source small,.preview-help p,.image-validation:not(.ok):not(.err)) {color:#aeaeb2!important}
 @scope .billie-admin-source {background:#252527!important;border-color:#38383a!important;border-radius:18px!important}
 @scope .admin-title-row {border-color:#2c2c2e!important}
-@scope :is(.a-card,.stat,.dashboard-panel,.dashboard-side,.activity-log,.content-sidebar,.content-manager-main,.donation-insight-card,.studio-disclosure,.dashboard-site-settings,.admin-notification-form-card,.admin-notification-list-card,.gallery-category-panel,.gallery-avatar-card,.gallery-admin-toolbar,.gallery-create-card,.content-section-folder,.content-category-card,.users-mobile-card) {
+@scope :is(.a-card,.stat,.dashboard-panel,.dashboard-side,.activity-log,.content-sidebar,.content-manager-main,.studio-disclosure,.dashboard-site-settings,.admin-notification-form-card,.admin-notification-list-card,.gallery-category-panel,.gallery-avatar-card,.gallery-admin-toolbar,.gallery-create-card,.content-section-folder,.content-category-card,.users-mobile-card) {
   background:#1c1c1e!important;border:1px solid #303033!important;border-radius:22px!important;
   box-shadow:0 1px 0 #ffffff04 inset!important;backdrop-filter:none!important;
 }
@@ -109,9 +109,9 @@ function installAdminIOSTheme() {
 @scope .studio-disclosure[open] summary::after {transform:rotate(-90deg)}
 @scope .studio-disclosure :is(.dashboard-panel,.dashboard-site-settings) {background:transparent!important;border-top-color:#38383a!important}
 @scope .table-wrap {border:1px solid #38383a!important;border-radius:18px!important;background:#1c1c1e!important}
-@scope :is(.a-table,.donation-table) th {background:#252527!important;color:#aeaeb2!important;font-size:12px!important;text-transform:none;letter-spacing:.01em}
-@scope :is(.a-table,.donation-table) td {background:transparent!important;color:#f5f5f7!important;border-color:#38383a!important}
-@scope :is(.a-table,.donation-table) tbody tr:hover {background:#2c2c2e!important}
+@scope :is(.a-table) th {background:#252527!important;color:#aeaeb2!important;font-size:12px!important;text-transform:none;letter-spacing:.01em}
+@scope :is(.a-table) td {background:transparent!important;color:#f5f5f7!important;border-color:#38383a!important}
+@scope :is(.a-table) tbody tr:hover {background:#2c2c2e!important}
 @scope .status.on {background:#30d1581c!important;color:#6ae58a!important}
 @scope .status.off {background:#3a3a3c!important;color:#c7c7cc!important}
 @scope :is(.content-editor-modal,.content-editor-fields,.content-editor-inline-shell,.content-editor-step,.editor-form-section,.content-editor-section,.editor-preview-surface,.category-picker button,.content-category-link,.admin-notification-switch) {

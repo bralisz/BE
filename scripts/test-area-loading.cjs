@@ -68,7 +68,7 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(2
   }
   if(scenario==='community'){
     let fail=true,calls=0;
-    Object.defineProperty(w.beBackend,'client',{get:()=>({rpc:async()=>{calls++;if(fail)throw new Error('offline');return {data:{}};}})});
+    Object.defineProperty(w.beBackend,'client',{get:()=>({rpc:async(name)=>{if(name!=='get_community_overview')return {data:[]};calls++;if(fail)throw new Error('offline');return {data:{}};}})});
     w.dispatchEvent(new w.CustomEvent('be:open-community'));
     await until(()=>w.document.getElementById('communityLoadError'));
     fail=false;w.document.getElementById('communityLoadError').click();

@@ -354,7 +354,7 @@ body.admin-preview-open{overflow:hidden}
   'use strict';
 
   const COLLECTIONS = ['featured','sections','contents','videos','movies','series','shows','news','gallery','users','notifications'];
-  const LABELS = {dashboard:'Visão geral',notifications:'Notificações',contentHub:'Conteúdo',siteHub:'Site',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',unlinked:'Vídeos sem seção',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',ongs:'Apoie uma ONG',users:'Usuários',settings:'Comunidade'};
+  const LABELS = {dashboard:'Visão geral',notifications:'Notificações',contentHub:'Conteúdo',siteHub:'Site',billie:'Billie Eilish',featured:'Destaque',sections:'Seções do site',contents:'Conteúdos',videos:'Vídeos',unlinked:'Vídeos sem seção',movies:'Filmes',series:'Séries',shows:'Shows',news:'Álbuns',gallery:'Galeria',users:'Usuários',settings:'Comunidade'};
   const LOCAL_ADMIN_EMAIL = 'admin@local.invalid';
   const ADMIN_CONTENT_ICONS = {
     videos: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"></rect><path d="m10 9 5 3-5 3Z"></path></svg>',
@@ -368,7 +368,6 @@ body.admin-preview-open{overflow:hidden}
     saved: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path></svg>',
     viewed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
     commented: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"></path><path d="M8 9h8M8 13h5"></path></svg>',
-    donations: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"></path><path d="m9.5 12 1.7 1.7 3.6-4"></path></svg>',
     update: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path></svg>'
   };
 
@@ -526,7 +525,7 @@ body.admin-preview-open{overflow:hidden}
     if (queryDestination === 'admin') return true;
     try { return sessionStorage.getItem('beOAuthDestination') === 'admin'; } catch (_) { return false; }
   };
-  const route = () => {const key=adminHashRoute() ? (location.hash.replace(/^#\/admin\/?/, '') || 'dashboard') : 'dashboard';return key==='ongs'?'dashboard':key;};
+  const route = () => {const key=adminHashRoute() ? (location.hash.replace(/^#\/admin\/?/, '') || 'dashboard') : 'dashboard';return COLLECTIONS.includes(key)||['dashboard','contentHub','siteHub','billie','settings'].includes(key)||key.startsWith('contents/')?key:'dashboard';};
   const go = value => { location.hash = '#/admin/' + value; };
   const adminRoute = () => adminHashRoute() || adminCallback();
   const now = () => beBackend.now();
@@ -968,17 +967,6 @@ body.admin-preview-open{overflow:hidden}
 
     const names = ['featured','sections','videos','movies','series','news'];
     const counts = {};
-    const loadDonationOverview = async (searchValue = null) => {
-      const client = beBackend && beBackend.client;
-      if (!client || typeof client.rpc !== 'function') return {};
-      const { data, error } = await client.rpc('get_admin_donation_overview', {
-        p_search: searchValue ? String(searchValue).trim() : null,
-        p_limit: 250
-      });
-      if (error) throw error;
-      return data && typeof data === 'object' ? data : {};
-    };
-
     const loadDashboardMetrics = async () => {
       const client = beBackend && beBackend.client;
       if (!client || typeof client.rpc !== 'function') return {};
@@ -999,9 +987,8 @@ body.admin-preview-open{overflow:hidden}
       return String(payload && payload.version || '').trim();
     };
 
-    const [recent, donationOverview, siteSettings, dashboardMetrics, deploymentVersion] = await Promise.all([
+    const [recent, siteSettings, dashboardMetrics, deploymentVersion] = await Promise.all([
       db.list('admin_logs', { orderBy: 'createdAt', direction: 'desc', limit: 8 }).catch(() => []),
-      Promise.resolve({}),
       db.get('settings', 'site').catch(() => ({})),
       loadDashboardMetrics().catch(error => {
         console.warn('Não foi possível carregar os insights do dashboard:', error?.message || error);
@@ -1016,55 +1003,9 @@ body.admin-preview-open{overflow:hidden}
       counts[name] = await countCollection(name).catch(() => 0);
     }));
 
-    let rows = Array.isArray(donationOverview.rows) ? donationOverview.rows : [];
-    const insights = donationOverview.insights && typeof donationOverview.insights === 'object'
-      ? donationOverview.insights
-      : {};
-
-    const numberOr = (value, fallback = 0) => {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : fallback;
-    };
-    const money = (cents, currency = 'BRL') => (numberOr(cents, 0) / 100).toLocaleString(currency === 'USD' ? 'en-US' : 'pt-BR', {
-      style: 'currency',
-      currency: String(currency || 'BRL').toUpperCase() === 'USD' ? 'USD' : 'BRL'
-    });
-    const statusText = status => ({
-      checkout_created: 'Criado',
-      paid: 'Pago',
-      canceled: 'Cancelado',
-      expired: 'Cancelado',
-      payment_failed: 'Cancelado'
-    }[String(status || '')] || 'Criado');
-    const statusClass = status => {
-      const normalized = String(status || 'checkout_created').replace(/[^a-z_]/g, '');
-      return normalized || 'checkout_created';
-    };
-    const normalizeSearch = value => String(value || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-
     const logHtml = recent.length
       ? recent.map(item => `<div class="activity-item"><span></span><div><strong>${esc(item.summary || item.action || 'Atividade registrada')}</strong><small>${formatDateTime(item.createdAt)}</small></div></div>`).join('')
       : '<div class="empty">Nenhuma atividade registrada.</div>';
-
-    const topNgo = insights.topNgo && typeof insights.topNgo === 'object' ? insights.topNgo : null;
-    const highestDonation = insights.highestDonation && typeof insights.highestDonation === 'object'
-      ? insights.highestDonation
-      : null;
-    const currencyInsights = insights.byCurrency && typeof insights.byCurrency === 'object' ? insights.byCurrency : {};
-    const brlInsights = currencyInsights.BRL && typeof currencyInsights.BRL === 'object' ? currencyInsights.BRL : {};
-    const usdInsights = currencyInsights.USD && typeof currencyInsights.USD === 'object' ? currencyInsights.USD : {};
-    const dualMoney = field => `${money(brlInsights[field], 'BRL')} · ${money(usdInsights[field], 'USD')}`;
-
-    const insightCard = (label, value, detail, icon) => `
-      <article class="donation-insight-card">
-        <div class="donation-insight-label"><i>${icon}</i><span>${esc(label)}</span></div>
-        <strong>${esc(value)}</strong>
-        <small>${esc(detail)}</small>
-      </article>`;
 
     const overallMetric = key => {
       const item = dashboardMetrics && dashboardMetrics[key] && typeof dashboardMetrics[key] === 'object'
@@ -1185,63 +1126,6 @@ body.admin-preview-open{overflow:hidden}
           </section>
         </div>
       </section>`;
-
-    const renderDonationRows = filterValue => {
-      const needle = normalizeSearch(filterValue);
-      const filtered = needle
-        ? rows.filter(row => normalizeSearch([
-            row.userDisplayName,
-            row.username && `@${row.username}`,
-            row.ngoTitle,
-            money(row.amountCents, row.currency),
-            money(row.minimumCents, row.currency),
-            statusText(row.status)
-          ].join(' ')).includes(needle))
-        : rows;
-
-      const body = $('#donationLogBody');
-      const count = $('#donationLogCount');
-      if (count) count.textContent = `${filtered.length.toLocaleString('pt-BR')} registro${filtered.length === 1 ? '' : 's'}`;
-      if (!body) return;
-
-      if (!filtered.length) {
-        body.innerHTML = `<tr><td colspan="6"><div class="donation-empty">${needle ? 'Nenhum registro corresponde à pesquisa.' : 'Nenhum checkout de doação foi criado ainda.'}</div></td></tr>`;
-        return;
-      }
-
-      body.innerHTML = filtered.map(row => {
-        const displayName = row.userDisplayName || (row.username ? `@${row.username}` : `Usuário ${String(row.userId || '').slice(0, 8)}`);
-        const handle = row.username ? `@${row.username}` : '';
-        return `<tr>
-          <td><div class="donation-user-cell"><strong>${esc(displayName)}</strong>${handle && displayName !== handle ? `<small>${esc(handle)}</small>` : ''}</div></td>
-          <td><strong class="donation-ngo-cell">${esc(row.ngoTitle || 'ONG removida')}</strong></td>
-          <td><strong class="donation-money">${esc(money(row.amountCents, row.currency))}</strong></td>
-          <td>${esc(money(row.minimumCents, row.currency))}</td>
-          <td><span class="donation-status ${esc(statusClass(row.status))}">${esc(statusText(row.status))}</span></td>
-          <td><time datetime="${esc(row.createdAt || '')}">${esc(formatDateTime(row.createdAt))}</time></td>
-        </tr>`;
-      }).join('');
-    };
-
-    renderDonationRows('');
-    const search = $('#donationLogSearch');
-    if (search) {
-      let searchTimer = 0;
-      search.addEventListener('input', () => {
-        const query = search.value;
-        renderDonationRows(query);
-        window.clearTimeout(searchTimer);
-        searchTimer = window.setTimeout(async () => {
-          try {
-            const remote = await loadDonationOverview(query);
-            rows = Array.isArray(remote.rows) ? remote.rows : [];
-            if (search.value === query) renderDonationRows(query);
-          } catch (error) {
-            console.warn('Não foi possível pesquisar o histórico de doações:', error?.message || error);
-          }
-        }, 280);
-      });
-    }
 
     const dashboardReleaseUpdate = $('#dashboardReleaseUpdate');
     if (dashboardReleaseUpdate) {
@@ -2128,39 +2012,11 @@ body.admin-preview-open{overflow:hidden}
   async function collectionPage(name) {
     const content = $('#adminContent');
     const label = LABELS[name] || name;
-    const ongSettings = name === 'ongs' ? (await db.get('settings', 'ong') || {}) : {};
-    const ongBannerPanel = name === 'ongs'
-      ? `<div class="a-card" style="margin-bottom:18px"><form id="ongPageSettingsForm"><div class="settings-section-heading"><strong>Banner principal da página /ong</strong><small>Nenhuma imagem padrão será usada. Enquanto este campo estiver vazio, a página exibirá apenas o fundo escuro.</small></div><div class="form-grid" style="margin-top:18px">${imageField('Banner principal', 'bannerUrl', ongSettings.bannerUrl || '')}</div><div class="modal-actions"><button class="a-btn primary" type="submit">Salvar banner da página</button></div></form></div>`
-      : '';
-    const pageDescription = name === 'ongs'
-      ? 'Defina o banner principal da página e cadastre as organizações que poderão ser apoiadas.'
-      : 'Crie, edite, publique e organize os itens.';
-    const addLabel = name === 'ongs' ? '+ Adicionar ONG' : '+ Adicionar';
-    const collectionToolbar = name === 'ongs'
-      ? '<div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por nome da ONG…"></div>'
-      : '<div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por título…"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div>';
-    content.innerHTML = `<div class="admin-title-row"><div><h1>${esc(label)}</h1><p>${esc(pageDescription)}</p></div>${name === 'users' ? '' : `<button class="a-btn primary" id="newItem">${addLabel}</button>`}</div>${ongBannerPanel}<div class="a-card">${collectionToolbar}<div id="list"><div class="empty">Carregando…</div></div></div>`;
+    const pageDescription = 'Crie, edite, publique e organize os itens.';
+    const addLabel = '+ Adicionar';
+    const collectionToolbar = '<div class="toolbar"><input class="a-input" id="search" placeholder="Buscar por título…"><select class="a-select" id="statusFilter" style="max-width:180px"><option value="">Todos os status</option><option value="true">Ativos</option><option value="false">Ocultos</option></select></div>';
+    content.innerHTML = `<div class="admin-title-row"><div><h1>${esc(label)}</h1><p>${esc(pageDescription)}</p></div>${name === 'users' ? '' : `<button class="a-btn primary" id="newItem">${addLabel}</button>`}</div><div class="a-card">${collectionToolbar}<div id="list"><div class="empty">Carregando…</div></div></div>`;
     if ($('#newItem')) $('#newItem').onclick = () => openEditor(name);
-    if (name === 'ongs') {
-      setupImagePreviews(content);
-      const form = $('#ongPageSettingsForm');
-      form.onsubmit = async event => {
-        event.preventDefault();
-        const button = event.submitter;
-        if (button) { button.disabled = true; button.textContent = 'Salvando…'; }
-        try {
-          const bannerUrl = String(new FormData(event.currentTarget).get('bannerUrl') || '').trim();
-          if (bannerUrl && !(/^https:\/\//i.test(bannerUrl) || /^\/?assets\//i.test(bannerUrl))) throw new Error('Use uma URL https:// ou um caminho /assets/... para o banner.');
-          await db.set('settings', 'ong', { bannerUrl, updatedAt: now(), updatedBy: user.uid || '' }, { merge: true });
-          await logAction('ong_page_banner_updated', 'settings', 'ong', bannerUrl ? 'Banner da página /ong atualizado' : 'Banner da página /ong removido');
-          toast(bannerUrl ? 'Banner da página salvo.' : 'Banner removido. A página ficará sem imagem principal.');
-        } catch (error) {
-          toast(error.message, 'err');
-        } finally {
-          if (button) { button.disabled = false; button.textContent = 'Salvar banner da página'; }
-        }
-      };
-    }
     const items = await db.list(name, { orderBy: 'order', direction: 'asc' });
     const draw = () => {
       const search = String($('#search')?.value || '').toLowerCase();
@@ -2169,8 +2025,6 @@ body.admin-preview-open{overflow:hidden}
       const rows = items.filter(item => (!search || String(item.title || item.name || item.displayName || item.email || '').toLowerCase().includes(search)) && (!status || String(item.active) === status));
       if (!rows.length) {
         $('#list').innerHTML = '<div class="empty">Nenhum item encontrado.</div>';
-      } else if (name === 'ongs') {
-        $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>ONG</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => { const minimum = Number.isInteger(Number(item.minimumDonationCents)) && Number(item.minimumDonationCents) >= 100 ? Number(item.minimumDonationCents) : 500; const minimumUsd = Number.isInteger(Number(item.minimumDonationUsdCents)) && Number(item.minimumDonationUsdCents) >= 100 ? Number(item.minimumDonationUsdCents) : 100; return `<tr><td><strong>${esc(item.title || item.name || item.id)}</strong><br><small style="color:var(--a-muted)">Mínimos: ${esc(new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(minimum/100))} · ${esc(new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(minimumUsd/100))} · ${esc(item.id)}</small></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></td></tr>`; }).join('')}</tbody></table></div>`;
       } else {
         $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.displayName || item.email || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}${name === 'videos' ? `<br>Link: /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id))}` : ''}</small></td><td>${esc(item.type || name)}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions">${name === 'users' ? '' : `<button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button>`}</div></td></tr>`).join('')}</tbody></table></div>`;
       }
@@ -2326,17 +2180,6 @@ body.admin-preview-open{overflow:hidden}
   });
 
   function editorFields(name, item = {}, context = {}) {
-    if (name === 'ongs') {
-      const minimumDonationCents = Number.isInteger(Number(item.minimumDonationCents)) && Number(item.minimumDonationCents) >= 100
-        ? Number(item.minimumDonationCents)
-        : 500;
-      const minimumDonationReais = (minimumDonationCents / 100).toFixed(2);
-      const minimumDonationUsdCents = Number.isInteger(Number(item.minimumDonationUsdCents)) && Number(item.minimumDonationUsdCents) >= 100
-        ? Number(item.minimumDonationUsdCents)
-        : 100;
-      const minimumDonationDollars = (minimumDonationUsdCents / 100).toFixed(2);
-      return `<div class="form-grid"><div class="field full"><label>Nome da ONG *</label><input class="a-input" name="title" required maxlength="120" value="${esc(item.title || '')}" placeholder="Ex.: UNICEF"></div><div class="field full"><label>Descrição da ONG *</label><textarea class="a-textarea" rows="7" maxlength="4000" name="description" required placeholder="Explique a causa, o trabalho realizado e como o apoio ajuda.">${esc(item.description || '')}</textarea></div><div class="field"><label>Valor mínimo no Brasil (R$) *</label><input class="a-input" type="number" min="1" max="1000000" step="0.01" inputmode="decimal" name="minimumDonation" required value="${esc(minimumDonationReais)}" placeholder="5,00"></div><div class="field"><label>Valor mínimo internacional (US$) *</label><input class="a-input" type="number" min="1" max="1000000" step="0.01" inputmode="decimal" name="minimumDonationUsd" required value="${esc(minimumDonationDollars)}" placeholder="1.00"></div><div class="field full"><small>O site escolhe BRL para dispositivos da região Brasil e USD para as demais regiões. Os dois mínimos são validados novamente no servidor.</small></div>${imageField('Banner da ONG *', 'imageUrl', item.imageUrl || item.bannerUrl || '')}</div>`;
-    }
     const showMedia = !['sections','users'].includes(name);
     const sections = context.sections || [];
     const sectionLinkedContent = ['videos','movies','series'].includes(name);
@@ -3238,30 +3081,6 @@ body.admin-preview-open{overflow:hidden}
           delete data.tracksJson;
           delete data.link;
         }
-        if (name === 'ongs') {
-          data.title = String(data.title || '').trim();
-          data.description = String(data.description || '').trim();
-          const minimumDonation = Number(String(data.minimumDonation || '').replace(',', '.'));
-          const minimumDonationUsd = Number(String(data.minimumDonationUsd || '').replace(',', '.'));
-          if (!data.title || !data.description) throw new Error('Preencha o nome e a descrição da ONG.');
-          if (!String(data.imageUrl || '').trim()) throw new Error('Adicione o banner da ONG.');
-          if (!Number.isFinite(minimumDonation) || minimumDonation < 1 || minimumDonation > 1000000) {
-            throw new Error('Informe um valor mínimo entre R$ 1,00 e R$ 1.000.000,00.');
-          }
-          if (!Number.isFinite(minimumDonationUsd) || minimumDonationUsd < 1 || minimumDonationUsd > 1000000) {
-            throw new Error('Informe um valor mínimo entre US$ 1.00 e US$ 1,000,000.00.');
-          }
-          data.minimumDonationCents = Math.round(minimumDonation * 100);
-          data.minimumDonationUsdCents = Math.round(minimumDonationUsd * 100);
-          delete data.minimumDonation;
-          delete data.minimumDonationUsd;
-          data.type = 'ong';
-          data.bannerUrl = String(data.imageUrl || '').trim();
-          data.active = 'true';
-          data.order = Number(item?.order) || 0;
-          delete data.contentUrl;
-          delete data.link;
-        }
         if (name === 'movies') {
           // O segundo link do editor é exclusivo da TV. Mantemos também a
           // chave legada mobileAppDriveUrl para não quebrar filmes antigos,
@@ -4121,53 +3940,7 @@ body.admin-preview-open{overflow:hidden}
 })();
 
 /* Painel de histórico e insights de doações. */
-(()=>{
-  'use strict';
-  if(document.getElementById('be-admin-donation-overview-style')) return;
-  const style=document.createElement('style');
-  style.id='be-admin-donation-overview-style';
-  style.textContent=`
-    .donation-dashboard-panel{display:grid;gap:20px}
-    .donation-log-toolbar{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:2px 0 0}
-    .donation-search-field{display:grid;gap:8px;width:min(520px,100%)}
-    .donation-search-field>span{color:var(--a-muted);font-size:12px;font-weight:750}
-    .donation-search-field .a-input{max-width:none}
-    .donation-log-toolbar>small{padding-bottom:12px;color:var(--a-muted);white-space:nowrap}
-    .donation-table-wrap{overflow:auto;border:1px solid var(--a-line);border-radius:18px;background:rgba(2,8,19,.36)}
-    .donation-table{width:100%;min-width:900px;border-collapse:collapse}
-    .donation-table th,.donation-table td{padding:14px 16px;border-bottom:1px solid var(--a-line);text-align:left;vertical-align:middle;font-size:13px}
-    .donation-table th{position:sticky;top:0;z-index:1;color:var(--a-muted);font-size:11px;letter-spacing:.035em;text-transform:uppercase;background:#0b1526}
-    .donation-table tbody tr:last-child td{border-bottom:0}
-    .donation-table tbody tr:hover{background:rgba(61,140,255,.045)}
-    .donation-user-cell{display:grid;gap:4px;min-width:150px}
-    .donation-user-cell strong,.donation-ngo-cell{color:#f5f8ff}
-    .donation-user-cell small{color:#6fa9ff}
-    .donation-money{color:#8ee6bd;font-size:14px}
-    .donation-status{display:inline-flex;align-items:center;min-height:26px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:850;white-space:nowrap;background:rgba(91,154,255,.12);color:#9fc4ff}
-    .donation-status.paid{background:rgba(67,209,158,.14);color:#8be7c3}
-    .donation-status.canceled,.donation-status.expired{background:rgba(255,255,255,.07);color:#aab6c6}
-    .donation-status.payment_failed{background:rgba(255,107,122,.13);color:#ffadb6}
-    .donation-empty{padding:46px 18px;text-align:center;color:var(--a-muted)}
-    .donation-log-note{margin:-7px 0 0;color:var(--a-muted);font-size:11px;line-height:1.55}
-    .donation-insights-heading{display:flex;align-items:end;justify-content:space-between;gap:18px;padding-top:8px;border-top:1px solid var(--a-line)}
-    .donation-insights-heading h3{margin:18px 0 4px;font-size:18px}
-    .donation-insights-heading p{margin:0;color:var(--a-muted);font-size:12px}
-    .donation-insights-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-    .donation-insight-card{min-width:0;min-height:146px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;border:1px solid var(--a-line);border-radius:18px;background:linear-gradient(145deg,rgba(17,31,53,.85),rgba(7,15,29,.72))}
-    .donation-insight-label{display:flex;align-items:center;gap:9px;color:var(--a-muted);font-size:11px}
-    .donation-insight-label i{width:30px;height:30px;display:grid;place-items:center;border-radius:10px;background:rgba(61,140,255,.10);color:#79afff;font-style:normal;font-weight:850}
-    .donation-insight-card>strong{display:block;overflow:hidden;color:#f4f8ff;font-size:clamp(22px,2.2vw,30px);line-height:1.12;text-overflow:ellipsis;white-space:nowrap}
-    .donation-insight-card>small{color:var(--a-muted);line-height:1.45}
-    @media(max-width:1100px){.donation-insights-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:700px){
-      .donation-log-toolbar{align-items:stretch;flex-direction:column}
-      .donation-log-toolbar>small{padding:0}
-      .donation-insights-grid{grid-template-columns:1fr}
-      .donation-insight-card{min-height:126px}
-    }
-  `;
-  document.head.appendChild(style);
-})();
+
 
 
 /* Comunidade e fãs — administração */
@@ -4784,10 +4557,7 @@ body.admin-mode .weekly-user-bar-item>small{color:var(--a-muted);font-size:11px;
       padding:16px!important;
     }
 
-    body.admin-mode .dashboard-metrics-grid-four .primary-metric,
-    body.admin-mode .dashboard-metrics-grid-four .donation-approved-card{
-      justify-content:flex-start!important;
-    }
+    body.admin-mode .dashboard-metrics-grid-four .primary-metric{justify-content:flex-start!important;}
 
     body.admin-mode .dashboard-metric-big-number{
       margin-top:auto!important;

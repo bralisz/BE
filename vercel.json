@@ -503,14 +503,6 @@
       "destination": "/api?route=site-page"
     },
     {
-      "source": "/ong",
-      "destination": "/api?route=site-page"
-    },
-    {
-      "source": "/ong/",
-      "destination": "/api?route=site-page"
-    },
-    {
       "source": "/albuns",
       "destination": "/api?route=site-page"
     },

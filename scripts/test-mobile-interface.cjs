@@ -79,6 +79,23 @@ function checkSettingsLayout(file) {
   parser.window.close();
 }
 
+function checkLoginNote(file) {
+  const parser = new JSDOM('<style></style>', {virtualConsole:quiet});
+  parser.window.document.querySelector('style').textContent = fs.readFileSync(file,'utf8');
+  for (const width of [1024,1366,1920]) {
+    const css = activeRules(parser.window.document.styleSheets[0].cssRules,width,text => /login-trust-note/.test(text)).join('\n');
+    const dom = new JSDOM('<style></style><div class="auth-column"><div class="login-trust-note">Feito por fãs</div></div>', {virtualConsole:quiet});
+    dom.window.document.querySelector('style').textContent = css;
+    const note = dom.window.getComputedStyle(dom.window.document.querySelector('.login-trust-note'));
+    assert.equal(note.alignSelf,'center','desktop disclaimer centers on the form');
+    assert.equal(note.marginLeft,'0px');
+    assert.equal(note.marginRight,'0px');
+    assert.equal(note.textAlign,'center');
+    dom.window.close();
+  }
+  parser.window.close();
+}
+
 function checkHomeVisibility() {
   const source = fs.readFileSync('assets/js/site.js','utf8');
   const start = source.indexOf('  function syncActiveFromPublicView() {');
@@ -90,7 +107,7 @@ function checkHomeVisibility() {
   const d = dom.window.document, button = d.getElementById('mobileHomeButton');
   dom.window.syncHome();
   assert(button.hidden);
-  for (const route of ['profile','settings','notification','detail','album','support','donate','billie','fans','legal','community']) {
+  for (const route of ['profile','settings','notification','detail','album','support','billie','fans','legal','community']) {
     d.body.className=route+'-page-active';
     dom.window.syncHome();
     assert.equal(button.hidden,false,route+' has Home');
@@ -188,6 +205,8 @@ async function checkProtectedRuntime() {
   checkPublicHeader('_static/styles/site.css');
   checkSettingsLayout('assets/css/site.css');
   checkSettingsLayout('_static/styles/site.css');
+  checkLoginNote('assets/css/site.css');
+  checkLoginNote('_static/styles/site.css');
   checkHomeVisibility();
   await checkAdminDOM();
   await checkProtectedRuntime();

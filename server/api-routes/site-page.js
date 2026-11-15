@@ -430,7 +430,7 @@ function xDefaultRouteUrl(origin, logicalPath) {
 function isNoindexRoute(routeInfo) {
   const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
   return routeInfo.contentUnavailable === 404 || process.env.VERCEL_ENV === 'preview' ||
-    !(/^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|ong$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
+    !(/^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
     logical === '/login' ||
     logical === '/reset-password' ||
     logical === '/config' ||
@@ -448,8 +448,6 @@ function pageCopy(routeInfo, settings, seoRecord) {
       billieDescription: 'Conheça Billie Eilish, sua trajetória, informações e redes sociais reunidas pela Billie Eilish TV, um projeto de fãs.',
       albumsTitle: `Álbuns e singles de Billie Eilish | ${siteTitle}`,
       albumsDescription: 'Explore álbuns, singles e faixas de Billie Eilish reunidos pela Billie Eilish TV.',
-      ongTitle: `Apoie ONGs | ${siteTitle}`,
-      ongDescription: 'Conheça as ONGs apresentadas pela Billie Eilish TV e veja formas de apoiar iniciativas selecionadas no site.',
       supportTitle: `Suporte | ${siteTitle}`,
       supportDescription: 'Central de suporte da Billie Eilish TV com respostas para dúvidas frequentes e formas de contato.',
       updatesTitle: `Atualizações | ${siteTitle}`,
@@ -471,8 +469,6 @@ function pageCopy(routeInfo, settings, seoRecord) {
       billieDescription: 'Learn about Billie Eilish, her journey, information and social links gathered by Billie Eilish TV, a fan-made project.',
       albumsTitle: `Billie Eilish albums and singles | ${siteTitle}`,
       albumsDescription: 'Explore Billie Eilish albums, singles and tracks gathered by Billie Eilish TV.',
-      ongTitle: `Support nonprofits | ${siteTitle}`,
-      ongDescription: 'Discover nonprofits featured by Billie Eilish TV and ways to support initiatives selected on the site.',
       supportTitle: `Support | ${siteTitle}`,
       supportDescription: 'Billie Eilish TV support center with answers to common questions and contact options.',
       updatesTitle: `Updates | ${siteTitle}`,
@@ -494,8 +490,6 @@ function pageCopy(routeInfo, settings, seoRecord) {
       billieDescription: 'Découvre Billie Eilish, son parcours, ses informations et ses réseaux sociaux réunis par Billie Eilish TV, un projet de fans.',
       albumsTitle: `Albums et singles de Billie Eilish | ${siteTitle}`,
       albumsDescription: 'Explore les albums, singles et titres de Billie Eilish réunis par Billie Eilish TV.',
-      ongTitle: `Soutenir des associations | ${siteTitle}`,
-      ongDescription: 'Découvre les associations présentées par Billie Eilish TV et les moyens de soutenir les initiatives sélectionnées sur le site.',
       supportTitle: `Assistance | ${siteTitle}`,
       supportDescription: 'Centre d’assistance de Billie Eilish TV avec des réponses aux questions fréquentes et des moyens de contact.',
       updatesTitle: `Mises à jour | ${siteTitle}`,
@@ -517,8 +511,6 @@ function pageCopy(routeInfo, settings, seoRecord) {
       billieDescription: 'Conoce a Billie Eilish, su trayectoria, información y redes sociales reunidas por Billie Eilish TV, un proyecto de fans.',
       albumsTitle: `Álbumes y singles de Billie Eilish | ${siteTitle}`,
       albumsDescription: 'Explora álbumes, singles y canciones de Billie Eilish reunidos por Billie Eilish TV.',
-      ongTitle: `Apoya a una ONG | ${siteTitle}`,
-      ongDescription: 'Conoce las ONG presentadas por Billie Eilish TV y formas de apoyar iniciativas seleccionadas en el sitio.',
       supportTitle: `Soporte | ${siteTitle}`,
       supportDescription: 'Centro de soporte de Billie Eilish TV con respuestas a preguntas frecuentes y opciones de contacto.',
       updatesTitle: `Actualizaciones | ${siteTitle}`,
@@ -540,8 +532,6 @@ function pageCopy(routeInfo, settings, seoRecord) {
       billieDescription: 'Scopri Billie Eilish, il suo percorso, le informazioni e i social raccolti da Billie Eilish TV, un progetto creato dai fan.',
       albumsTitle: `Album e singoli di Billie Eilish | ${siteTitle}`,
       albumsDescription: 'Esplora album, singoli e brani di Billie Eilish raccolti da Billie Eilish TV.',
-      ongTitle: `Sostieni le organizzazioni | ${siteTitle}`,
-      ongDescription: 'Scopri le organizzazioni presentate da Billie Eilish TV e i modi per sostenere le iniziative selezionate sul sito.',
       supportTitle: `Assistenza | ${siteTitle}`,
       supportDescription: 'Centro assistenza di Billie Eilish TV con risposte alle domande frequenti e opzioni di contatto.',
       updatesTitle: `Aggiornamenti | ${siteTitle}`,
@@ -578,10 +568,6 @@ function pageCopy(routeInfo, settings, seoRecord) {
   } else if (/^\/(?:albuns|álbuns|albums)(?:\/|$)/i.test(logical)) {
     title = copy.albumsTitle;
     description = copy.albumsDescription;
-    pageType = 'CollectionPage';
-  } else if (logical === '/ong') {
-    title = copy.fansTitle;
-    description = copy.fansDescription;
     pageType = 'CollectionPage';
   } else if (logical === '/suporte') {
     title = copy.supportTitle;
@@ -883,7 +869,7 @@ module.exports = async function sitePage(req, res) {
       needsSeoCatalog ? loadSeoCatalog(routeInfo) : Promise.resolve({ records: [], complete: true })
     ]);
     const seoRecord = needsSeoCatalog ? seoRecordFromRoute(routeInfo, seoCatalog.records) : null;
-    const responseStatus = needsSeoCatalog && !seoRecord ? (seoCatalog.complete ? 404 : 503) : 200;
+    const responseStatus = /^\/ongs?$/.test(routeInfo.logicalPath) ? 404 : needsSeoCatalog && !seoRecord ? (seoCatalog.complete ? 404 : 503) : 200;
     if (responseStatus !== 200) routeInfo.contentUnavailable = responseStatus;
     let publicProfile = null;
     if (profileUsername) {

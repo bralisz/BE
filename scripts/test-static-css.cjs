@@ -16,3 +16,8 @@ assert(output.includes('.card + .card'));
 assert(output.includes('"one + two"'));
 assert(!output.includes('/*'));
 console.log('PASS static CSS: math spacing, adjacent selectors and quoted content');
+
+const comments = minifyCss(`/* The user's layout */ .first { color: red; } /* user's next rule */ .last { color: blue; }`);
+assert(comments.includes('.first{color:red}'));
+assert(comments.includes('.last{color:blue}'));
+assert.equal(minifyCss('.label::before { content: "/* literal */"; }'), '.label::before{content:"/* literal */"}');

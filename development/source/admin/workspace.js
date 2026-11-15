@@ -40,9 +40,9 @@ html.admin-workspace body.admin-mode :is(.a-input,.a-select,.a-textarea) {backgr
 html.admin-workspace body.admin-mode :is(button,a,input,select,textarea):focus-visible {outline:2px solid #9bbcff!important;outline-offset:3px!important}
 html.admin-workspace body.admin-mode .toolbar {gap:12px!important;align-items:center!important}
 html.admin-workspace body.admin-mode .table-wrap {border-color:#282d36!important;border-radius:14px!important}
-html.admin-workspace body.admin-mode :is(.a-table,.donation-table) th {background:#1b1f27!important;color:#a0a8b5!important;font-size:11px!important;letter-spacing:.04em}
-html.admin-workspace body.admin-mode :is(.a-table,.donation-table) td {border-color:#282d36!important;padding:16px!important}
-html.admin-workspace body.admin-mode :is(.a-table,.donation-table) tbody tr:hover {background:#1b1f27!important}
+html.admin-workspace body.admin-mode :is(.a-table) th {background:#1b1f27!important;color:#a0a8b5!important;font-size:11px!important;letter-spacing:.04em}
+html.admin-workspace body.admin-mode :is(.a-table) td {border-color:#282d36!important;padding:16px!important}
+html.admin-workspace body.admin-mode :is(.a-table) tbody tr:hover {background:#1b1f27!important}
 html.admin-workspace body.admin-mode .row-actions {flex-wrap:wrap!important;gap:8px!important}
 html.admin-workspace body.admin-mode .dashboard-hero {display:block!important;background:none!important;border:0!important;padding:0!important;margin-bottom:28px!important;box-shadow:none!important}
 html.admin-workspace body.admin-mode .dashboard-copy {width:100%!important;max-width:none!important}
@@ -73,10 +73,7 @@ html.admin-workspace body.admin-mode .admin-subnav {position:static!important;ma
 html.admin-workspace body.admin-mode .admin-subnav[hidden] {display:none!important}
 html.admin-workspace body.admin-mode .admin-subnav button {border:1px solid #343b47!important;border-radius:9px!important;background:#14171d!important;padding:10px 14px!important;color:#adb6c4!important;white-space:nowrap}
 html.admin-workspace body.admin-mode .admin-subnav button.active {background:#25334d!important;border-color:#435d88!important;color:#d8e5ff!important}
-html.admin-workspace body.admin-mode .donation-insight-card {background:#14171d!important;border:1px solid #282d36!important;border-radius:14px!important;box-shadow:none!important}
-html.admin-workspace body.admin-mode .donation-insight-card strong {font-size:clamp(18px,1.6vw,24px)!important;white-space:normal!important;overflow-wrap:anywhere!important;overflow:visible!important;text-overflow:clip!important;line-height:1.35!important}
 html.admin-workspace body.admin-mode .weekly-user-chart .empty {grid-column:1/-1!important;align-self:center!important}
-html.admin-workspace body.admin-mode .donation-table .empty {text-align:left!important}
 html.admin-workspace body.admin-mode .editor-sidebar-actions {display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
 html.admin-workspace body.admin-mode .content-editor-modal.inline:has(.editor-sidebar-actions) .content-editor-actions {display:none!important}
 .workspace-brand,.workspace-nav-caption,.workspace-account-label {display:none}
