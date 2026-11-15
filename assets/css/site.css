@@ -5190,7 +5190,7 @@ body.settings-page-active #mobileNotificationPopover{
 }
 
 body.section-catalog-active footer{display:none!important}
-body.section-catalog-active main>section:not(#contentDetailSection){display:none!important}
+body.section-catalog-active main>section:not(#contentDetailSection):not(#seriesEpisodes){display:none!important}
 #dynamicSections.section-view-mode{
   min-height:100vh;
   padding-top:128px!important;
@@ -14851,7 +14851,7 @@ html.performance-lite body:not(.login-mode):not(.admin-mode) .home-topbar.search
     overflow:visible!important;
   }
 
-  body.detail-page-active > main > section:not(#contentDetailSection):not(#detailRecommendations){
+  body.detail-page-active > main > section:not(#contentDetailSection):not(#detailRecommendations):not(#seriesEpisodes){
     display:none!important;
   }
 
