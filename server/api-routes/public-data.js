@@ -8,7 +8,7 @@ const ALLOWED_COLLECTIONS = new Set([
 const HOME_BOOTSTRAP_COLLECTIONS = Object.freeze(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
 const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'preserveTitle', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
-  'description', 'body', 'summary', 'subtitle', 'name', 'buttonLabel', 'buttonText', 'actionLabel', 'ctaLabel', 'label', 'text', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
+  'episodes', 'description', 'body', 'summary', 'subtitle', 'name', 'buttonLabel', 'buttonText', 'actionLabel', 'ctaLabel', 'label', 'text', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
   'mediaType', 'mobileAppDriveUrl', 'tvDriveUrl', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'showCardLogo', 'slug',
   'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'subtitleLocale', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
   'videoUrl', 'year'
@@ -83,6 +83,7 @@ function upstreamTtl(name, id) {
   if (name === 'notifications') return 0;
   if (name === 'featured') return 0;
   if (name === 'movies') return 30 * 60 * 1000;
+  if (name === 'series') return 60 * 1000;
   return 30 * 60 * 1000;
 }
 
@@ -257,6 +258,26 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
       .filter(([serviceId]) => allowedStreamingServices.has(String(serviceId || '').trim().toLowerCase()))
       .map(([serviceId, value]) => [String(serviceId).trim().toLowerCase(), safeLink(value, false)])
       .filter(([, value]) => Boolean(value)));
+  }
+
+  // Expose only published series episodes, with the same media/link rules as the parent.
+  if (Object.prototype.hasOwnProperty.call(source, 'episodes')) {
+    let incoming = source.episodes;
+    if (typeof incoming === 'string') {
+      try { incoming = JSON.parse(incoming); } catch (_) { incoming = []; }
+    }
+    source.episodes = (Array.isArray(incoming) ? incoming : []).slice(0,250)
+      .filter(episode => episode && typeof episode === 'object' && episode.active !== false && episode.active !== 'false')
+      .map((episode, index) => ({
+        season:Math.max(1,Number(episode.season) || 1),
+        episode:Math.max(1,Number(episode.episode) || index + 1),
+        order:Number.isFinite(Number(episode.order)) ? Number(episode.order) : index,
+        title:safeText(episode.title || '',180).trim(),
+        description:safeText(episode.description || '',1200),
+        duration:safeText(episode.duration || '',60),
+        imageUrl:mediaReference(collection, row.id, 'imageUrl', episode.imageUrl || episode.bannerUrl || ''),
+        contentUrl:safeLink(episode.contentUrl || episode.videoUrl || episode.link || '', true)
+      })).filter(episode => episode.title);
   }
   if (Object.prototype.hasOwnProperty.call(source, 'tracks')) {
     source.tracks = (Array.isArray(source.tracks) ? source.tracks : [])
@@ -538,6 +559,11 @@ function setPublicCacheHeaders(res, name, id, hasData, options = {}) {
     browserSeconds = 600;
     edgeSeconds = 3600;
     staleSeconds = 21600;
+  }
+  else if (name === 'series') {
+    browserSeconds = 60;
+    edgeSeconds = 60;
+    staleSeconds = 120;
   }
 
   if (name === 'featured' || name === 'home-bootstrap') {
