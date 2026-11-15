@@ -18792,6 +18792,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         imageUrl:validArtwork(row.imageUrl || row.bannerUrl || row.thumbnailUrl || ''),
         duration:String(row.duration || '').trim(),
         contentUrl:safeLink(row.contentUrl || row.videoUrl || row.link || ''),
+        subtitles:Object.fromEntries(Object.entries(row.subtitles && typeof row.subtitles==='object' ? row.subtitles : {}).filter(([locale])=>['pt-br','en-us','es','fr','it'].includes(locale)).map(([locale,url])=>[locale,safeLink(url)]).filter(([,url])=>Boolean(url))),
         season:Math.max(1,Number(row.season) || 1),
         episode:Math.max(1,Number(row.episode) || index + 1),
         order:Number.isFinite(Number(row.order)) ? Number(row.order) : index
@@ -18855,7 +18856,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const pic=ep.imageUrl ? '<img src="'+esc(ep.imageUrl)+'" alt="'+esc(ep.title)+'" loading="lazy" decoding="async">' : '<span class="series-episode-placeholder"></span>';
     const image='<div class="series-episode-art">'+pic+(ep.duration?'<span class="series-episode-duration">'+esc(ep.duration)+'</span>':'')+(ep.contentUrl?'<span class="series-episode-play-icon" aria-hidden="true">▶</span>':'')+'</div>';
     const text='<div class="series-episode-copy"><small>'+esc(subtitle)+'</small><strong>'+esc(ep.title)+'</strong>'+(ep.description?'<p>'+esc(ep.description)+'</p>':'')+(!ep.contentUrl?'<em>'+esc(words.soon)+'</em>':'')+'</div>';
-    return ep.contentUrl ? '<a class="series-episode-card" href="'+esc(ep.contentUrl)+'" data-series-episode-play="true" data-episode-title="'+esc(ep.title)+'" data-episode-url="'+esc(ep.contentUrl)+'">'+image+text+'</a>' : '<article class="series-episode-card is-soon">'+image+text+'</article>';
+    return ep.contentUrl ? '<a class="series-episode-card" href="'+esc(ep.contentUrl)+'" data-series-episode-play="true" data-episode-title="'+esc(ep.title)+'" data-episode-url="'+esc(ep.contentUrl)+'" data-episode-subtitles="'+esc(JSON.stringify(ep.subtitles))+'">'+image+text+'</a>' : '<article class="series-episode-card is-soon">'+image+text+'</article>';
   }
   function renderEpisodes(episodes) {
     const root=host();
@@ -18946,6 +18947,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     event.preventDefault();
     const play=document.getElementById('contentDetailPlay');
     if(!play)return;
+    const previousSubtitle=play.dataset.subtitleUrl,previousLocale=play.dataset.subtitleLocale;
+    const locale=String(window.BETVLocale?.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    let subtitleFiles={};try{subtitleFiles=JSON.parse(card.dataset.episodeSubtitles||'{}')}catch(_){}
+    play.dataset.subtitleUrl=subtitleFiles[locale]||'';
+    play.dataset.subtitleLocale=subtitleFiles[locale]?locale:'';
     const oldHref=play.getAttribute('href'), oldMode=play.dataset.seriesEpisodeMode, oldUrl=play.dataset.contentUrl,oldTitle=play.dataset.title,oldMedia=play.dataset.mediaPlayerTrigger,oldTarget=play.getAttribute('target'),oldDisabled=play.getAttribute('aria-disabled');
     play.dataset.seriesEpisodeMode='';
     play.dataset.contentUrl=url;
@@ -18957,6 +18963,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else play.removeAttribute('target');
     play.click();
     setTimeout(()=>{
+      if(previousSubtitle===undefined)delete play.dataset.subtitleUrl;else play.dataset.subtitleUrl=previousSubtitle;
+      if(previousLocale===undefined)delete play.dataset.subtitleLocale;else play.dataset.subtitleLocale=previousLocale;
       if(oldHref===null)play.removeAttribute('href');else play.setAttribute('href',oldHref);
       if(oldMode===undefined)delete play.dataset.seriesEpisodeMode;else play.dataset.seriesEpisodeMode=oldMode;
       if(oldUrl===undefined)delete play.dataset.contentUrl;else play.dataset.contentUrl=oldUrl;
