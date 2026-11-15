@@ -22083,3 +22083,44 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
     padding-top:calc(110px + env(safe-area-inset-top))!important;
   }
 }
+/* Mobile avatar menu: group related destinations and isolate session controls. */
+@media(max-width:760px){
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover{
+    box-sizing:border-box;
+    padding:8px!important;
+    border-radius:22px!important;
+  }
+  #mobileAccountPopover .mobile-account-group{
+    padding:2px 0!important;
+    margin:0!important;
+    border:0!important;
+    background:transparent!important;
+  }
+  #mobileAccountPopover .mobile-account-group+.mobile-account-group{
+    margin-top:7px!important;
+    padding-top:8px!important;
+    border-top:1px solid rgba(255,255,255,.12)!important;
+  }
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover .mobile-account-group button{
+    box-sizing:border-box;
+    min-height:46px;
+    width:100%;
+    margin:0!important;
+    padding:11px 14px!important;
+    border:0!important;
+    border-radius:13px!important;
+    font-size:14px!important;
+    font-weight:600!important;
+    line-height:1.3!important;
+    text-align:left;
+    white-space:normal;
+  }
+  #mobileAccountPopover .mobile-account-group-session{
+    margin-top:8px!important;
+  }
+  body:not(.login-mode):not(.admin-mode) #mobileAccountPopover .mobile-account-group-session button[data-mobile-account="logout"]{
+    margin:0!important;
+    min-height:46px;
+    font-weight:750!important;
+  }
+}
