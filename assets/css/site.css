@@ -22214,3 +22214,7 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
     scroll-margin-top:75px;
   }
 }
+
+/* Keep the series episode play symbol optically centered on mobile without emoji rendering. */
+.series-episode-play-icon svg{display:block;width:18px;height:18px;fill:currentColor;transform:translateX(1px);flex:none}
+@media(max-width:760px){.series-episode-play-icon{display:flex!important;align-items:center!important;justify-content:center!important;line-height:1!important}}
