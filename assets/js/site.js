@@ -18858,7 +18858,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const words=t();
     const subtitle=words.episode+' '+ep.episode;
     const pic=ep.imageUrl ? '<img src="'+esc(ep.imageUrl)+'" alt="'+esc(ep.title)+'" loading="lazy" decoding="async">' : '<span class="series-episode-placeholder"></span>';
-    const image='<div class="series-episode-art">'+pic+(ep.duration?'<span class="series-episode-duration">'+esc(ep.duration)+'</span>':'')+(ep.contentUrl?'<span class="series-episode-play-icon" aria-hidden="true">▶</span>':'')+'</div>';
+    const image='<div class="series-episode-art">'+pic+(ep.duration?'<span class="series-episode-duration">'+esc(ep.duration)+'</span>':'')+(ep.contentUrl?'<span class="series-episode-play-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M8 5v14l11-7-11-7Z"/></svg></span>':'')+'</div>';
     const text='<div class="series-episode-copy"><small>'+esc(subtitle)+'</small><strong>'+esc(ep.title)+'</strong>'+(ep.description?'<p>'+esc(ep.description)+'</p>':'')+(!ep.contentUrl?'<em>'+esc(words.soon)+'</em>':'')+'</div>';
     return ep.contentUrl ? '<a class="series-episode-card" href="'+esc(ep.contentUrl)+'" data-series-episode-play="true" data-episode-title="'+esc(ep.title)+'" data-episode-url="'+esc(ep.contentUrl)+'" data-episode-subtitles="'+esc(JSON.stringify(ep.subtitles))+'">'+image+text+'</a>' : '<article class="series-episode-card is-soon">'+image+text+'</article>';
   }
