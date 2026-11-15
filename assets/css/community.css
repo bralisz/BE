@@ -495,3 +495,13 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
     border-top:0!important;
   }
 }
+
+/* Blurred fan portrait preview on the load-more tile, desktop and mobile. */
+.community-similar-load-more{position:relative;isolation:isolate;overflow:hidden}
+.community-similar-more-backdrop{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.community-similar-more-backdrop img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;filter:blur(17px) brightness(.62) saturate(.85);transform:scale(1.18);opacity:.76}
+.community-similar-more-backdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(9,16,27,.24),rgba(9,16,27,.62))}
+.community-similar-load-more:has(.community-similar-more-backdrop):hover:not(:disabled){background:#121a28}
+.community-similar-load-more>.community-similar-more-icon,.community-similar-load-more>.community-similar-more-label{position:relative;z-index:1}
+.community-similar-load-more>.community-similar-more-label{color:#f0f5ff;text-shadow:0 2px 8px rgba(0,0,0,.65)}
+@media(max-width:760px){.community-similar-more-backdrop img{filter:blur(15px) brightness(.62) saturate(.85);transform:scale(1.22)}}
