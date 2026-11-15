@@ -276,7 +276,8 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
         description:safeText(episode.description || '',1200),
         duration:safeText(episode.duration || '',60),
         imageUrl:mediaReference(collection, row.id, 'imageUrl', episode.imageUrl || episode.bannerUrl || ''),
-        contentUrl:safeLink(episode.contentUrl || episode.videoUrl || episode.link || '', true)
+        contentUrl:safeLink(episode.contentUrl || episode.videoUrl || episode.link || '', true),
+        subtitles:Object.fromEntries(Object.entries(episode.subtitles && typeof episode.subtitles==='object' && !Array.isArray(episode.subtitles) ? episode.subtitles : {}).filter(([locale])=>['pt-br','en-us','es','fr','it'].includes(locale)).map(([locale,url])=>[locale,safeLink(url,true)]).filter(([,url])=>Boolean(url)))
       })).filter(episode => episode.title);
   }
   if (Object.prototype.hasOwnProperty.call(source, 'tracks')) {
