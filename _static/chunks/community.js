@@ -1082,9 +1082,16 @@
     var icons={home:'<path d="m3 10 9-7 9 7v10h-6v-7H9v7H3Z"/>',films:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4"/>',videos:'<rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 10 4-2v8l-4-2Z"/>',people:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M15 15a5 5 0 0 1 6 5"/>',search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',settings:'<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/>',heart:'<path d="M20.8 5.6a5.4 5.4 0 0 0-8.8 1 5.4 5.4 0 0 0-8.8 6L12 21l8.8-8.4a5.4 5.4 0 0 0 0-7Z"/>',support:'<path d="M4 13a8 8 0 0 1 16 0v6h-4v-7h4M4 12h4v7H4ZM16 19c0 2-2 3-4 3"/>',install:'<path d="M12 3v11m-4-4 4 4 4-4M5 18v3h14v-3"/>',logout:'<path d="M10 5H4v14h6m5-11 4 4-4 4M19 12H9"/>'};
     var item=mobileAccountItem;
     mobileMenu=document.createElement('div');mobileMenu.className='mobile-account-popover';mobileMenu.id='mobileAccountPopover';mobileMenu.setAttribute('role','menu');mobileMenu.setAttribute('aria-label','Menu');
-    mobileMenu.innerHTML='<div class="mobile-account-group" role="none">'+item('profile','Perfil',icons.user)+item('community','Comunidade',icons.people)+item('settings','Configurações',icons.settings)+'</div>'+
-      '<div class="mobile-account-group" role="none">'+item('support','Suporte',icons.support)+item('fans','Fãs que apoiam o site',icons.people)+'</div>'+
-      '<div class="mobile-account-group" role="none">'+item('login','Entrar',icons.user)+item('install','Instalar app',icons.install)+item('logout','Sair',icons.logout,' class="danger"')+'</div>';
+    // Keep the same stable top-to-bottom order as the mobile account panel reference.
+    mobileMenu.innerHTML='<div class="mobile-account-group" role="none">'+
+      item('profile','Perfil',icons.user)+
+      item('community','Comunidade',icons.people)+
+      item('settings','Configurações',icons.settings)+
+      item('support','Suporte',icons.support)+
+      item('fans','Fãs que apoiam o site',icons.people)+
+      item('login','Entrar',icons.user)+
+      item('install','Instalar app',icons.install)+
+      item('logout','Sair',icons.logout,' class="danger"')+'</div>';
     document.body.appendChild(mobileMenu);applyI18n(mobileMenu);if(typeof window.BETVSyncInstallUi==='function')window.BETVSyncInstallUi();
     mobileMenu.addEventListener('click',function(event){
       var button=event.target.closest('[data-mobile-account]');if(!button)return;
