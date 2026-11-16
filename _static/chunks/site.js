@@ -18009,8 +18009,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     meta.textContent=[String(album.year||''),trackCountLabel(albumTracks.length)].filter(Boolean).join(' • ');
     if(leadTrack){
       var singleTrackName=albumTracks.length===1?String(albumTracks[0]&&albumTracks[0].title||'').trim():'';
-      leadTrack.textContent=singleTrackName;
-      leadTrack.hidden=!singleTrackName;
+      // A single's track often has exactly the album title: do not repeat it below the metadata.
+      var repeatedTitle=Boolean(singleTrackName)&&normalize(singleTrackName)===normalize(albumTitle);
+      leadTrack.textContent=repeatedTitle?'':singleTrackName;
+      leadTrack.hidden=!singleTrackName||repeatedTitle;
       detail.classList.toggle('is-single-track',Boolean(singleTrackName));
     }
     cover.src=albumImage||'/_static/media/profile/default-avatar.png';
