@@ -26,6 +26,8 @@ async function clearBetvCaches() {
   await Promise.all(keys
     .filter(key => BETV_CACHE_PREFIXES.some(prefix => key.startsWith(prefix)))
     .map(key => caches.delete(key)));
+  openedCaches.clear();
+  writesSinceTrim.clear();
 }
 
 async function trimCache(cacheName, maxEntries) {
