@@ -185,7 +185,9 @@
   window.addEventListener('be:watch-party-gift-status',refreshShortcut);
   window.addEventListener('be:community-tag-updated',refreshShortcut);
   window.addEventListener('be:i18n-ready',refreshShortcut);
-  window.setInterval(refreshShortcut,1400);
+  // DOM/status events update immediately; the periodic fallback runs only while visible.
+  window.setInterval(()=>{if(!document.hidden)refreshShortcut();},6000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshShortcut();});
  }
  window.BETVWatchPartyGift=Object.freeze({open});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
