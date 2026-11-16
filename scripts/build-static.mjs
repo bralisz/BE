@@ -35,6 +35,7 @@ const copies=[
   ['assets/js/tv-controller.js',`${out}/chunks/tv.js`],
   ['assets/js/tv-session-widget.js',`${out}/chunks/session.js`],
   ['assets/js/lazy-loading.js',`${out}/chunks/lazy.js`],
+  ['assets/js/mobile-bottom-nav.js',`${out}/chunks/mobile-bottom-nav.js`],
 ];
 for(const [src,dest] of copies){await mkdir(dirname(dest),{recursive:true});await cp(src,dest);}
 await mkdir(`${out}/styles`,{recursive:true});
