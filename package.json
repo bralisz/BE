@@ -19,7 +19,8 @@
     "test:community-banner": "node scripts/test-community-banner.cjs",
     "test:watch-party": "node scripts/test-watch-party-profile.cjs",
     "test:watch-party:invites": "node scripts/test-watch-party-invites.cjs",
-    "test:community-discovery": "node scripts/test-community-discovery.cjs"
+    "test:community-discovery": "node scripts/test-community-discovery.cjs",
+    "test:performance": "node scripts/test-performance-safety.cjs"
   },
   "devDependencies": {
     "jsdom": "^30.1.2"
