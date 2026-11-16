@@ -13,6 +13,23 @@ const STATIC_CACHE = `betv-static-${BUILD_TOKEN}`;
 const MEDIA_CACHE = 'betv-media-v1';
 const BETV_CACHE_PREFIXES = ['betv-static-', 'betv-media-'];
 
+// Remove the discontinued mobile launch wallpaper from PWA media caches
+// without clearing users' cached covers, avatars, or other content.
+async function purgeLegacyLaunchWallpaper() {
+  const legacyPath = '/_static/media/pwa/betv-launch-fullres-20261116.webp';
+  const names = await caches.keys();
+  await Promise.all(names.filter(name => name.startsWith('betv-media-')).map(async name => {
+    try {
+      const cache = await caches.open(name);
+      const entries = await cache.keys();
+      await Promise.all(entries.filter(request => {
+        try { return new URL(request.url).pathname === legacyPath; }
+        catch (_) { return false; }
+      }).map(request => cache.delete(request)));
+    } catch (_) {}
+  }));
+}
+
 async function deleteOldStaticCaches() {
   const keys = await caches.keys();
   await Promise.all(keys.map(key => {
@@ -100,6 +117,7 @@ self.addEventListener('install', () => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     await deleteOldStaticCaches();
+    await purgeLegacyLaunchWallpaper();
     await self.clients.claim();
   })());
 });
