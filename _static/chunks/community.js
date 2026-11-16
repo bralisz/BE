@@ -1180,6 +1180,16 @@
   function bind(){
     createPage();createMobileAccountMenu();scheduleBoafStreamNotice(1000);window.setTimeout(retryPendingBoafClaim,900);
     var tab=document.querySelector('[data-community-tab]');if(tab)tab.addEventListener('click',function(event){event.preventDefault();openCommunity();});
+    // Login footer uses a dedicated catalog deep link, not the legal /comunidade route.
+    // Open the actual fan community after the home route has initialized.
+    if(new URLSearchParams(location.search).get('betvCommunity')==='1'){
+      var openRequestedCommunity=function(){
+        if(window.BETVCommunity&&typeof window.BETVCommunity.open==='function')window.BETVCommunity.open();
+      };
+      if(document.readyState==='complete')window.requestAnimationFrame(openRequestedCommunity);
+      else window.addEventListener('load',openRequestedCommunity,{once:true});
+    }
+
     var play=document.getElementById('contentDetailPlay');
     if(play&&play.dataset.communityRecentBound!=='true'){
       play.dataset.communityRecentBound='true';
