@@ -344,3 +344,11 @@ body.detail-page-active #contentDetail #contentDetailShare svg{fill:none!importa
  body.detail-page-active #contentDetail #contentDetailPlay{height:50px!important;min-height:50px!important}
  body.detail-page-active #contentDetail .detail-desc{margin-top:6px!important;font-size:15px!important}
 }
+
+/* Center detail content lower in the hero, allowing long descriptions to grow. */
+body.detail-page-active #contentDetail{height:auto!important;min-height:clamp(650px,100svh,900px)!important}
+body.detail-page-active #contentDetail .detail-inner{box-sizing:border-box!important;height:auto!important;min-height:inherit!important;justify-content:center!important;padding-top:clamp(156px,20svh,200px)!important;padding-bottom:80px!important}
+@media(max-width:760px){
+ body.detail-page-active #contentDetail{min-height: max(660px,90svh)!important}
+ body.detail-page-active #contentDetail .detail-inner{padding-top:clamp(156px,24svh,196px)!important;padding-bottom:72px!important}
+}
