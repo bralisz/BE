@@ -8137,10 +8137,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     const configureExternalSubtitles = (value, localeHint = '') => {
       resetExternalSubtitles();
-                                                                                  
-                                                                                
       activeSubtitleUrl = activeProvider === 'vk' ? subtitleFileForCurrentLocale(value, localeHint) : '';
-      subtitleButton.hidden = !activeSubtitleUrl;
+      const italianRoute = normalizeSubtitleLocale(activeLocaleSlug()) === 'it';
+      subtitleButton.hidden = activeProvider !== 'vk' || (!activeSubtitleUrl && !italianRoute);
+      subtitleButton.disabled = !activeSubtitleUrl;
+      if (!activeSubtitleUrl && italianRoute && activeProvider === 'vk') {
+        subtitleButton.title = 'Sottotitoli in italiano non disponibili';
+        subtitleButton.setAttribute('aria-label', 'Sottotitoli in italiano non disponibili');
+      }
     };
 
     const readVkPaused = () => {
@@ -8778,18 +8782,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       activeSubtitleUrl = subtitleFileForCurrentLocale(value, localeHint);
       const parsedOffset = Number(offsetSeconds);
       activeSubtitleOffset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
-      subtitleButton.hidden = !activeSubtitleUrl;
+      const italianRoute = normalizeSubtitleLocale(activeLocaleSlug()) === 'it';
+      subtitleButton.hidden = !activeSubtitleUrl && !italianRoute;
+      subtitleButton.disabled = !activeSubtitleUrl;
+      if (!activeSubtitleUrl && italianRoute) {
+        subtitleButton.title = 'Sottotitoli in italiano non disponibili';
+        subtitleButton.setAttribute('aria-label', 'Sottotitoli in italiano non disponibili');
+      }
       subtitleButton.style.removeProperty('display');
     };
 
     const syncFrameSubtitleButton = () => {
-      if (frameMode && activeSubtitleUrl) {
-        subtitleButton.hidden = false;
+      const showCc = !!activeSubtitleUrl || normalizeSubtitleLocale(activeLocaleSlug()) === 'it';
+      subtitleButton.hidden = !showCc;
+      subtitleButton.disabled = !activeSubtitleUrl;
+      if (frameMode && showCc) {
         subtitleButton.style.setProperty('display', 'grid', 'important');
         return;
       }
       subtitleButton.style.removeProperty('display');
-      subtitleButton.hidden = !activeSubtitleUrl;
     };
 
     const syncState = () => {
