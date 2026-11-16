@@ -12,7 +12,7 @@ const config = JSON.parse(read('vercel.json'));
 const runtime = config.rewrites.find(item => item.source === '/api/runtime');
 assert.equal(runtime.destination, 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.js', 'SDK URL must target the actual UMD artifact');
 assert.match(html, /<script defer src="\/api\/runtime\?v=2\.112\.0-validated-restore-v18"/, 'restore deterministic SDK-before-app order');
-assert.match(html, /site\.js\?rev=20261116-browser-restore-v18/, 'invalidate previous startup chunks');
+assert.match(html, /site\.js\?rev=20261116-early-data-v19/, 'invalidate previous startup chunks');
 assert.doesNotMatch(html, /__BETVSupabaseReady/, 'remove speculative dynamic auth boot that followed the app update');
 const site = read('assets/js/site.js');
 assert.match(site, /window\.supabase &&\s*typeof window\.supabase\.createClient === 'function'/, 'restore original startup mode detection');

@@ -499,10 +499,11 @@ async function fetchHomeBootstrapUncached(locale) {
   } catch (_) {
   }
 
-  const entries = await Promise.all(HOME_BOOTSTRAP_COLLECTIONS.map(async name => [name, await fetchRows(name, '', locale)]));
-  const settingsRows = await fetchRows('settings', 'site', locale);
-  let versions = {};
-  try { versions = await fetchHomeVersions(); } catch (_) {}
+  const [entries, settingsRows, versions] = await Promise.all([
+    Promise.all(HOME_BOOTSTRAP_COLLECTIONS.map(async name => [name, await fetchRows(name, '', locale)])),
+    fetchRows('settings', 'site', locale),
+    fetchHomeVersions().catch(() => ({}))
+  ]);
   return {
     ...Object.fromEntries(entries),
     settings: { site: settingsRows[0] || null },

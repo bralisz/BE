@@ -3999,6 +3999,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     isAdmin(user) { return Boolean(user && user.role === 'admin'); },
     get client() { return supabaseClient; }
   };
+  // Start the shared public request while the remaining deferred UI scripts load.
+  // preloadPublicHomeData already reuses warm storage and in-flight requests.
+  if (MODE === 'supabase' && !location.hash.startsWith('#/admin')) {
+    preloadPublicHomeData().catch(() => {});
+  }
 })();
 
 ;

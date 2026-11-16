@@ -228,7 +228,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
 <script defer src="/api/runtime?v=2.112.0-validated-restore-v18"></script>
 <script defer src="/_static/chunks/performance.js?rev=20261009-visitor-menu-v15"></script>
 <script defer src="/_static/chunks/features.js?rev=20261116-unlimited-saves-v8"></script>
-<script defer src="/_static/chunks/site.js?rev=20261116-browser-restore-v18"></script>
+<script defer src="/_static/chunks/site.js?rev=20261116-early-data-v19"></script>
 <link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1"></noscript>
 <script defer src="/_static/chunks/watch-party.js?rev=20261116-idle-poll-v1"></script>
@@ -244,17 +244,21 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
 
 <script>
 (function(){
-  window.si=window.si||function(){(window.siq=window.siq||[]).push(arguments);};
+  window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};
   function loadVercelAnalytics(){
     if(window.__betvVercelAnalyticsLoaded)return;
     window.__betvVercelAnalyticsLoaded=true;
     var script=document.createElement('script');
-    script.defer=true;
+    script.async=true;
     script.src='/_vercel/insights/script.js';
     document.head.appendChild(script);
   }
-  if(document.readyState==='complete')loadVercelAnalytics();
-  else window.addEventListener('load',loadVercelAnalytics,{once:true});
+  function scheduleVercelAnalytics(){
+    if(window.requestIdleCallback)window.requestIdleCallback(loadVercelAnalytics,{timeout:2000});
+    else window.setTimeout(loadVercelAnalytics,0);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleVercelAnalytics,{once:true});
+  else scheduleVercelAnalytics();
 })();
 </script>
 <script>
