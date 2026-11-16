@@ -331,7 +331,7 @@
   "Discord conectado": "Discord conectado",
   "Discord já está conectado.": "Discord ya está conectado.",
   "Disponível em": "Disponible en",
-  "Disponível em Breve": "Disponible próximamente",
+  "Disponível em Breve": "Próximamente",
   "disponível sob a": "disponible bajo la",
   "Dispositivo móvel": "Dispositivo móvil",
   "Dispositivos": "Dispositivos",
@@ -908,5 +908,18 @@
   "YouTube de Billie Eilish": "Billie Eilish en YouTube",
   "Informe um usuário válido do Letterboxd, como letterboxd.com/usuario.": "Introduce un usuario válido de Letterboxd, como letterboxd.com/usuario.",
   "Letterboxd": "Letterboxd",
-  "Abrir Letterboxd": "Abrir Letterboxd"
+  "Abrir Letterboxd": "Abrir Letterboxd",
+  "Ver episódios": "Ver episodios",
+  "Em breve": "Próximamente",
+  "Assistiu por último": "Visto por última vez",
+  "Filme": "Película",
+  "Série": "Serie",
+  "Vídeo": "Video",
+  "Transmitir para a TV": "Transmitir a la TV",
+  "Episódios": "Episodios",
+  "Temporada": "Temporada",
+  "Episódio": "Episodio",
+  "Carregando episódios": "Cargando episodios",
+  "Episódios anteriores": "Episodios anteriores",
+  "Mais episódios": "Más episodios"
 }

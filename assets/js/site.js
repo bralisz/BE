@@ -33,8 +33,8 @@
   ]);
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v17-reviewed-ui';
-  var STATIC_REV='20261116-reviewed-ui-v19';
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v18-detail-blocks';
+  var STATIC_REV='20261116-detail-blocks-v20';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -154,12 +154,25 @@
     missingTexts.add(key);
     scheduleMissingTranslation();
   }
+  function translateDetailDuration(value){
+    var units={
+      'en-us':['hour','hours','minute','minutes'],
+      es:['hora','horas','minuto','minutos'],
+      fr:['heure','heures','minute','minutes'],
+      it:['ora','ore','minuto','minuti']
+    }[slug];
+    if(!units)return value;
+    return String(value).replace(/(\d+)\s*(horas?|minutos?)\b/gi,function(_,amount,unit){
+      var offset=/^hora/i.test(unit)?0:2;
+      return amount+' '+units[offset+(Number(amount)===1?0:1)];
+    });
+  }
   function translateTextNode(node){
     if(!node||node.nodeType!==3||parentSkipped(node))return;
     var raw=node.nodeValue||'';
     var key=normalize(raw);
     if(!eligibleText(key))return;
-    var translated=map[key];
+    var translated=node.parentElement&&node.parentElement.closest('.detail-duration')?translateDetailDuration(key):map[key];
     if(translated&&translated!==key)node.nodeValue=preserveWhitespace(raw,translated);
     else rememberMissing(key);
   }
