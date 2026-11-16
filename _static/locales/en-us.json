@@ -921,5 +921,19 @@
   "Episódio": "Episode",
   "Carregando episódios": "Loading episodes",
   "Episódios anteriores": "Previous episodes",
-  "Mais episódios": "More episodes"
+  "Mais episódios": "More episodes",
+  "Como acesso a comunidade Avocados?": "How do I access the Avocados community?",
+  "Clique em Comunidade na tela de login ou abra /avocados. A página de diretrizes e termos continua em /comunidade.": "Click Community on the login screen or visit /avocados. The guidelines and terms remain available at /community.",
+  "Como encontro e sigo outros fãs da Billie?": "How can I find and follow other Billie fans?",
+  "Em Avocados, abra a seção Encontre outros fãs da Billie. Explore os perfis recomendados e use Seguir após entrar na sua conta.": "In Avocados, open Find other Billie fans. Explore suggested profiles and select Follow once you are signed in.",
+  "Como ganho a tag Fã da Billie?": "How do I get the Billie Fan badge?",
+  "Entre na sua conta, abra Avocados e use o botão azul Compartilhar no cartão abaixo de Encontre outros fãs da Billie. A tag é concedida após o compartilhamento ser concluído.": "Sign in, open Avocados and use the blue Share button below Find other Billie fans. The badge is granted when sharing is completed.",
+  "Por que meu Assistiu por último está vazio?": "Why is my Last watched section empty?",
+  "O histórico pertence à conta conectada e é atualizado quando você inicia a reprodução. Confira se entrou na conta correta, abra um conteúdo e atualize o perfil caso a mudança demore a aparecer.": "Your history belongs to your signed-in account and updates when playback begins. Check your account, start a video and refresh your profile if it takes a while to appear.",
+  "Onde encontro os episódios de uma série?": "Where can I find episodes of a series?",
+  "Abra a página da série e selecione Assistir ou Ver episódios. Quando houver episódios cadastrados, eles aparecem abaixo com capa e duração; caso contrário, o site poderá mostrar Em breve.": "Open the series page and select Watch or View episodes. Available episodes appear below with artwork and duration; otherwise, the page may say Coming soon.",
+  "Como escolho as legendas de cada episódio?": "How do I choose subtitles for each episode?",
+  "Durante a reprodução, abra o ícone de legendas no player e selecione um idioma disponível. As legendas são cadastradas por episódio, então nem todos terão as mesmas opções.": "During playback, select the subtitles icon and choose an available language. Tracks are added separately to each episode, so options can differ.",
+  "Como oculto meu perfil dos rankings da comunidade?": "How can I hide my profile from community rankings?",
+  "Em Configurações, abra a seção de dados e procure Rankings da Comunidade. Desative a participação pública para não aparecer nas classificações; isso não exclui sua conta.": "In Settings, open the data section and find Community Rankings. Disable public participation to stay off the rankings; your account will not be deleted."
 }
