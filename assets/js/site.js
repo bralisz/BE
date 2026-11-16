@@ -14429,6 +14429,29 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   async function startAuthentication(){
+    // Never let an unresolved backend/session handshake trap the public UI behind the loading overlay.
+    // Do not clear stored credentials: a late auth callback can still restore the signed-in view.
+    window.setTimeout(function(){
+      var root=document.documentElement;
+      if(root.dataset.siteLoaded==='true'||!root.classList.contains('site-loading-active'))return;
+      if(root.classList.contains('admin-route-boot')||root.classList.contains('config-route-boot'))return;
+      if(isLegalRoute())showLegalRoute();
+      else if(isFansRoute())showFansRoute();
+      else if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){
+        if(isDonateRoute())showDonateRoute();
+        else if(isSupportRoute())showSupportRoute();
+        else if(isBillieRoute())showBillieRoute();
+        else if(isAlbumsRoute())showAlbumsRoute();
+        else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}
+        else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}
+        else enterHome(true);
+      }else{
+        showLogin();
+        setMode('email');
+        setStatus('A conexão está demorando. Verifique sua rede e tente novamente.','error');
+      }
+      releaseSiteSkeleton();
+    },9000);
     try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){hideSiteSkeleton();if(isDonateRoute())showDonateRoute();else if(isSupportRoute())showSupportRoute();else if(isAlbumsRoute())showAlbumsRoute();else if(isBillieRoute())showBillieRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else enterHome(true);}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}(void 0);}
   }
 
