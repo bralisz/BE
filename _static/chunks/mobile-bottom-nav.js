@@ -84,7 +84,9 @@
     sync();
   }
   function concealSaved() {
-    document.body.classList.remove('betv-app-saved-active');
+    // sync observes body.class: a no-op remove still emits a mutation and
+    // would recursively run sync forever in every non-installed browser.
+    if (isSavedPage()) document.body.classList.remove('betv-app-saved-active');
     page.hidden = true;
   }
   function savedItems() {
