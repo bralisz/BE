@@ -326,3 +326,21 @@ body.detail-page-active #contentDetail .detail-actions [hidden]{display:none!imp
 body.detail-page-active #contentDetail #contentDetailList{display:none!important}
 
 body.detail-page-active #contentDetail #contentDetailCast[hidden]{display:none!important}
+
+/* Keep a real primary row and a real three-action row for every content type. */
+body.detail-page-active #contentDetail .detail-actions{display:flex!important;flex-direction:column!important;gap:10px!important}
+body.detail-page-active #contentDetail .detail-primary-actions{display:block!important;width:100%!important;max-width:none!important}
+body.detail-page-active #contentDetail .detail-secondary-actions{display:grid!important;grid-template-columns:1.08fr 1fr 1.08fr!important;width:100%!important;gap:8px!important;margin:0!important;align-items:stretch!important}
+body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailCast,#contentDetailShare){grid-row:1!important;white-space:nowrap!important;transform:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(44,44,44,.88)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important}
+body.detail-page-active #contentDetail .detail-meta{margin:0 0 0!important}
+body.detail-page-active #contentDetail .detail-desc{margin:10px 0 0!important;line-height:1.45!important}
+body.detail-page-active #contentDetail .detail-desc>p:first-child{margin-top:0!important}
+body.detail-page-active #contentDetail .detail-desc>p:last-child{margin-bottom:0!important}
+body.detail-page-active #contentDetail #contentDetailShare svg{fill:none!important;stroke:currentColor!important;stroke-width:1.8!important}
+@media(max-width:760px){
+ body.detail-page-active #contentDetail .detail-inner{gap:18px!important}
+ body.detail-page-active #contentDetail .detail-secondary-actions{gap:6px!important}
+ body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailCast,#contentDetailShare){height:40px!important;min-height:40px!important;padding:8px 4px!important;font-size:clamp(9px,2.85vw,13px)!important;font-weight:600!important;gap:4px!important}
+ body.detail-page-active #contentDetail #contentDetailPlay{height:50px!important;min-height:50px!important}
+ body.detail-page-active #contentDetail .detail-desc{margin-top:6px!important;font-size:15px!important}
+}

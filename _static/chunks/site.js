@@ -10795,7 +10795,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function queueDetailTvCast() {
     const play = document.getElementById('contentDetailPlay');
-    if (!play || play.getAttribute('aria-disabled') === 'true') return;
+    if (!play) return;
+    if (play.getAttribute('aria-disabled') === 'true' || !play.getAttribute('href') || play.getAttribute('href') === '#') {
+      location.assign('/connect-tv/?lang=' + encodeURIComponent(activeLocaleSlug()));
+      return;
+    }
     let data = contentDataFromElement(play);
     data = await refreshMovieTvSource(data);
                                                                               
@@ -10807,7 +10811,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const contentUrl = movieHasDashboardDrive
       ? dashboardTvDrive
       : String(data.contentUrl || '').trim();
-    if (!contentUrl || contentUrl === '#') return;
+    if (!contentUrl || contentUrl === '#') {
+      location.assign('/connect-tv/?lang=' + encodeURIComponent(activeLocaleSlug()));
+      return;
+    }
 
     const payload = {
       itemId: String(data.itemId || ''),
@@ -11076,7 +11083,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const playableUrl = safeUrlValue(contentUrl);
     const hasContentLink = playableUrl !== '#';
     const castableCollection = ['videos', 'movies', 'series'].includes(collection || 'videos');
-    cast.hidden = !(hasContentLink && castableCollection);
+    cast.hidden = !castableCollection;
     if (!cast.hidden) cast.removeAttribute('hidden'); else cast.setAttribute('hidden', '');
     play.innerHTML = hasContentLink
       ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7-11-7Z"/></svg>Assistir'
