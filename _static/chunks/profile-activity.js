@@ -27,12 +27,12 @@
   const left=viewport?.offsetLeft||0,top=viewport?.offsetTop||0;
   const width=viewport?.width||window.innerWidth,height=viewport?.height||window.innerHeight;
   const margin=12,gap=10,anchor=trigger.getBoundingClientRect();
-  card.style.width=Math.min(width<=760?320:440,width-margin*2)+'px';
+  const availableLeft=Math.max(0,anchor.left-left-margin-gap);
+  card.style.width=Math.min(width<=760?320:440,availableLeft)+'px';
   card.style.maxHeight=Math.max(0,height-margin*2)+'px';
   const bounds=card.getBoundingClientRect();
-  const x=Math.max(left+margin,Math.min(anchor.right-bounds.width,left+width-bounds.width-margin));
-  const below=anchor.bottom+gap;
-  const preferred=below+bounds.height<=top+height-margin?below:anchor.top-bounds.height-gap;
+  const x=Math.max(left+margin,anchor.left-gap-bounds.width);
+  const preferred=(anchor.top+anchor.bottom-bounds.height)/2;
   const y=Math.max(top+margin,Math.min(preferred,top+height-bounds.height-margin));
   card.style.left=x+'px';card.style.top=y+'px';
  }
