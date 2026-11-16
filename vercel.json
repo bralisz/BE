@@ -535,6 +535,54 @@
       "destination": "/api?route=site-page"
     },
     {
+      "source": "/avocados",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/avocados/",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/pt-br/avocados",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/pt-br/avocados/",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/en-us/avocados",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/en-us/avocados/",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/es/avocados",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/es/avocados/",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/fr/avocados",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/fr/avocados/",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/it/avocados",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/it/avocados/",
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/comunidade",
       "destination": "/api?route=site-page"
     },
