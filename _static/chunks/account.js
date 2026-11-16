@@ -1825,7 +1825,8 @@ const userDropdown=document.getElementById('userDropdown');
         profilePageLikesReceived.textContent=count===1?localizedProfileText('1 curtida recebida'):localizedProfileText('{count} curtidas recebidas',{count:count});
       }
       if(profilePageLike){
-        var canLike=ready&&!guest&&!own;
+        var desktop=window.matchMedia('(min-width:761px)').matches;
+        var canLike=ready&&!own&&(!guest||desktop);
         profilePageLike.hidden=!canLike;
         profilePageLike.setAttribute('aria-hidden',canLike?'false':'true');
         profilePageLike.classList.toggle('is-liked',liked);

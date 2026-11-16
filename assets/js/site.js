@@ -18677,16 +18677,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         visible(share,true);visible(home,true);visible(more,true);
         order(share,1);order(home,2);order(more,3);
       }else if(guest){
-        visible(follow,false);visible(like,false);visible(more,false);
+        visible(follow,false);visible(like,true);visible(more,false);
         visible(share,true);visible(home,true);
-        order(share,1);order(home,2);
+        order(like,1);order(share,2);order(home,3);
       }else{
-        visible(follow,true);visible(like,true);visible(share,true);visible(home,true);visible(more,false);
-        order(follow,1);order(like,2);order(share,3);order(home,4);
+        visible(follow,false);visible(like,true);visible(share,true);visible(home,true);visible(more,false);
+        order(like,1);order(share,2);order(home,3);
       }
 
       if(likes){
-        var count=own?3:(guest?2:4);
+        var count=3;
         important(likes,'position','absolute');
         important(likes,'top','auto');
         important(likes,'right','clamp(24px,3vw,46px)');

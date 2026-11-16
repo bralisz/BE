@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revisions = {account:'20261116-unlimited-saves-v3',community:'20261115-mobile-menu-groups-v6'};
+  const revisions = {account:'20261116-desktop-heart-v4',community:'20261115-mobile-menu-groups-v6'};
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
