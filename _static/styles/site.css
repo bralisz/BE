@@ -1404,3 +1404,14 @@ html.betv-installed-app body.profile-page-active.profile-color-customized > foot
   color:var(--profile-mobile-muted,rgba(255,255,255,.78))!important;
   -webkit-text-fill-color:var(--profile-mobile-muted,rgba(255,255,255,.78))!important;
 }
+
+/* Album navigation must not animate or restore a previous catalog scroll offset. */
+html.album-route-active{
+  scroll-behavior:auto!important;
+  overflow-anchor:none!important;
+}
+body.album-page-active,
+body.album-page-active #albumPage{
+  scroll-behavior:auto!important;
+  overflow-anchor:none!important;
+}

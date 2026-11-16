@@ -18058,8 +18058,55 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     return loading;
   }
 
-  function open(){document.body.classList.add('album-page-active');page.hidden=false;page.setAttribute('aria-hidden','false');document.title=window.BETVPageTitle?window.BETVPageTitle():'Billie Eilish TV';setSearchContext(true);var field=document.getElementById('homeSearchInput');activeSearch=field?String(field.value||''):'';load(false);}
-  function close(){document.body.classList.remove('album-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title=window.BETVPageTitle?window.BETVPageTitle():'Billie Eilish TV';activeSearch='';currentAlbum=null;setSearchContext(false);}
+  // The site uses smooth scrolling globally. On album routes that can keep the
+  // previous catalog position (or restore it during an async cover render).
+  var albumViewportRequest=0;
+  function scrollAlbumToTop(){
+    if(page.hidden||!isRoute()||!document.body.classList.contains('album-page-active'))return;
+    var scrollRoot=document.scrollingElement||document.documentElement;
+    if(scrollRoot)scrollRoot.scrollTop=0;
+    document.body.scrollTop=0;
+    try{window.scrollTo({top:0,left:0,behavior:'instant'});}
+    catch(_){window.scrollTo(0,0);}
+  }
+  function keepAlbumAtTop(){
+    var request=++albumViewportRequest;
+    scrollAlbumToTop();
+    if(typeof window.requestAnimationFrame!=='function')return;
+    window.requestAnimationFrame(function(){
+      if(request!==albumViewportRequest)return;
+      scrollAlbumToTop();
+      window.requestAnimationFrame(function(){
+        if(request===albumViewportRequest)scrollAlbumToTop();
+      });
+    });
+  }
+  function open(){
+    document.documentElement.classList.add('album-route-active');
+    document.body.classList.add('album-page-active');
+    page.hidden=false;
+    page.setAttribute('aria-hidden','false');
+    document.title=window.BETVPageTitle?window.BETVPageTitle():'Billie Eilish TV';
+    setSearchContext(true);
+    var field=document.getElementById('homeSearchInput');
+    activeSearch=field?String(field.value||''):'';
+    // Reset immediately and once more after the selected album has rendered.
+    keepAlbumAtTop();
+    Promise.resolve(load(false)).then(function(){
+      if(!page.hidden&&isRoute())keepAlbumAtTop();
+    }).catch(function(){});
+  }
+  function close(){
+    ++albumViewportRequest;
+    document.documentElement.classList.remove('album-route-active');
+    document.body.classList.remove('album-page-active');
+    page.hidden=true;
+    page.setAttribute('aria-hidden','true');
+    document.title=window.BETVPageTitle?window.BETVPageTitle():'Billie Eilish TV';
+    activeSearch='';
+    currentAlbum=null;
+    setSearchContext(false);
+  }
 
   if(back)back.addEventListener('click',function(){navigate('/',false);});
   // Separate from the notification button: opening notifications still works elsewhere.
