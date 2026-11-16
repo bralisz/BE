@@ -45,8 +45,9 @@ function subtitleLocaleFromUrl(value) {
   try {
     const url = new URL(raw, 'https://billieilishtv.site');
     const file = decodeURIComponent(String(url.pathname || '').split('/').pop() || '').toLowerCase();
-    const match = file.match(/^(pt(?:-br)?|en(?:-us)?|es|fr|it)(?:[-_.])/i);
-    return match ? normalizeLocale(match[1]) : '';
+    const prefix = file.match(/^(pt(?:-br)?|en(?:-us)?|es|fr|it)(?:[-_.])/i);
+    const suffix = file.match(/(?:^|[-_.])(pt(?:-br)?|en(?:-us)?|es|fr|it)\.(?:srt|vtt)$/i);
+    return prefix || suffix ? normalizeLocale((prefix || suffix)[1]) : '';
   } catch (_) {
     return '';
   }
@@ -61,14 +62,16 @@ function enforceSubtitleLocale(source, requestedLocale, localizedPayload) {
     return source;
   }
   const requested = normalizeLocale(requestedLocale);
-  if (!localizedPayload && requested !== 'pt-br') {
+  const explicit = source.subtitleLocale ? normalizeLocale(source.subtitleLocale) : '';
+  const inferred = subtitleLocaleFromUrl(subtitleUrl);
+  const actual = explicit || inferred;
+  // Unlocalized legacy records are only safe for non-Portuguese viewers when
+  // the uploaded file or metadata explicitly identifies the requested language.
+  if (!localizedPayload && requested !== 'pt-br' && actual !== requested) {
     delete source.subtitleUrl;
     delete source.subtitleLocale;
     return source;
   }
-  const explicit = source.subtitleLocale ? normalizeLocale(source.subtitleLocale) : '';
-  const inferred = subtitleLocaleFromUrl(subtitleUrl);
-  const actual = explicit || inferred;
   if (actual && actual !== requested) {
     delete source.subtitleUrl;
     delete source.subtitleLocale;
@@ -222,6 +225,24 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
   for (const field of PUBLIC_ITEM_FIELDS) {
     if (!Object.prototype.hasOwnProperty.call(raw, field)) continue;
     source[field] = raw[field];
+  }
+  // Some existing movies store all subtitle uploads in a per-language map.
+  // Select the matching track before filtering the public response.
+  const subtitleAliases = requestedLocale === 'pt-br' ? ['pt-br', 'pt'] : requestedLocale === 'en-us' ? ['en-us', 'en'] : [requestedLocale];
+  for (const map of [raw.subtitleTracks, raw.subtitleUrls, raw.subtitles]) {
+    if (!map || typeof map !== 'object' || Array.isArray(map)) continue;
+    let selected = '';
+    for (const locale of subtitleAliases) {
+      const candidate = map[locale];
+      selected = typeof candidate === 'string' ? candidate : (candidate && typeof candidate === 'object' ? (candidate.url || candidate.subtitleUrl || '') : '');
+      if (typeof selected === 'string' && selected.trim()) break;
+      selected = '';
+    }
+    if (selected) {
+      source.subtitleUrl = selected.trim();
+      source.subtitleLocale = requestedLocale;
+      break;
+    }
   }
   for (const field of MEDIA_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(source, field)) {
