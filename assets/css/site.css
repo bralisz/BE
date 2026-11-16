@@ -22275,3 +22275,56 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
   }
   .community-similar-load-more > .community-similar-more-label{font-size:12px}
 }
+
+/* Bottom tab bar is exclusive to the installed BETV app on a phone. */
+#betvMobileBottomNav{display:none!important}
+@media(max-width:760px){
+  html.betv-installed-app body:not(.login-mode):not(.admin-mode):not(.player-open):not(.drive-player-open):not(.profile-onboarding-active):not(.profile-favorites-picker-active):not(.avatar-picker-active):not(.banner-picker-active) > #betvMobileBottomNav:not([hidden]){
+    display:flex!important;
+    position:fixed!important;
+    inset:auto 0 0!important;
+    z-index:10200!important;
+    box-sizing:border-box;
+    width:100%;
+    height:calc(68px + env(safe-area-inset-bottom,0px));
+    align-items:flex-start;
+    justify-content:space-around;
+    gap:4px;
+    padding:8px max(18px,env(safe-area-inset-left,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-right,0px));
+    border-top:1px solid rgba(255,255,255,.065);
+    background:linear-gradient(180deg,rgba(25,26,28,.98),rgba(16,17,19,.99));
+    box-shadow:0 -9px 24px rgba(0,0,0,.2);
+    -webkit-tap-highlight-color:transparent;
+    contain:layout style;
+  }
+  #betvMobileBottomNav > button{
+    display:grid;
+    flex:1 1 0;
+    place-items:center;
+    align-content:center;
+    height:50px;
+    min-width:0;
+    min-height:50px;
+    padding:7px;
+    border:0;
+    border-radius:13px;
+    background:transparent;
+    color:rgba(232,234,238,.57);
+    cursor:pointer;
+    touch-action:manipulation;
+    -webkit-appearance:none;
+    appearance:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #betvMobileBottomNav > button.active{color:#fff}
+  #betvMobileBottomNav > button:active{background:rgba(255,255,255,.055)}
+  #betvMobileBottomNav > button:focus-visible{outline:2px solid #fff;outline-offset:-3px}
+  #betvMobileBottomNav svg{display:block;width:30px;height:30px;overflow:visible;stroke:currentColor}
+  #betvMobileBottomNav [data-app-tab="saved"] svg{width:31px;height:31px}
+  html.betv-installed-app body:not(.login-mode):not(.admin-mode):not(.player-open):not(.drive-player-open) > main,
+  html.betv-installed-app body.profile-page-active > #profilePage,
+  html.betv-installed-app body.community-page-active > main{
+    padding-bottom:max(100px,calc(82px + env(safe-area-inset-bottom,0px)))!important;
+  }
+  html.betv-installed-app #profileSavedSection{scroll-margin-top:100px}
+}
