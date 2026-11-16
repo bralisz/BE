@@ -781,6 +781,11 @@
     document.querySelectorAll('.home-nav-link.active,#logoBtn.active').forEach(function(button){if(!button.matches('[data-community-tab]')){button.classList.remove('active');button.removeAttribute('aria-current');button.setAttribute('aria-pressed','false');}});
     setCommunityNavActive(true);
     renderSharePromotion();
+    // Prepare the profile URL after critical community requests, before the user reaches the card.
+    var shareUser=currentUser();
+    if(shareUser)window.setTimeout(function(){
+      if(document.body.classList.contains('community-page-active')&&String(currentUser()&&currentUser().uid||'')===String(shareUser.uid))loadShareProfile(shareUser);
+    },1400);
     try{window.dispatchEvent(new CustomEvent('be:close-public-search'));window.dispatchEvent(new CustomEvent('be:close-mobile-search'));}catch(_){ }
     if(!state.detailReturnToCommunity)window.scrollTo({top:0,left:0,behavior:'auto'});
     chooseCommunityBanner();
@@ -1201,6 +1206,7 @@
     if(force!==true&&state.lastPayload&&state.lastPayloadAt&&state.lastPayloadUserId===uid&&Date.now()-state.lastPayloadAt<75000)return;
     var requestId=++state.requestId;
     state.loading=true;
+    state.loadingForUserId=uid;
     document.getElementById("communityLoadError")?.remove();
     var profileLimit=15;
     try{
@@ -1211,7 +1217,7 @@
         return client.rpc('get_community_overview',{p_profile_limit:profileLimit});
       })(),8000);
       if(result&&result.error)throw result.error;
-      if(requestId!==state.requestId||!document.body.classList.contains('community-page-active'))return;
+      if(requestId!==state.requestId||!document.body.classList.contains('community-page-active')||String(currentUser()&&currentUser().uid||'')!==uid)return;
       renderPayload(result&&result.data&&typeof result.data==='object'?result.data:{});
       state.lastPayloadAt=Date.now();state.lastPayloadUserId=uid;
     }catch(error){
@@ -1221,7 +1227,7 @@
       renderRail('communityContinueContent' ,[],currentUser()?t('Não foi possível carregar seu histórico agora.'):t('Entre na sua conta para ver os vídeos assistidos recentemente.'));
       renderRail('communityFavoritesContent',[],t('Não foi possível carregar os favoritos da comunidade agora.'));
       renderProfileRanking([]);renderOwnRanking('communityOwnProfile',null,readRankingPreference(currentUser()&&currentUser().uid),false);
-    }finally{if(requestId===state.requestId)state.loading=false;}
+    }finally{if(requestId===state.requestId){state.loading=false;state.loadingForUserId='';}}
   }
 
   async function recordWatchFromPlay(play){
@@ -1385,7 +1391,7 @@
     window.addEventListener('be:open-config',function(){setTimeout(injectPrivacySettings,0);});
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
     window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});
-    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(user){setTimeout(injectPrivacySettings,50);var uid=String(user&&user.uid||'');if(uid!==state.lastPayloadUserId)state.lastPayloadAt=0;if(uid!==state.similarLoadedUserId)state.similarLoadedAt=0;if(uid!==state.shareProfileUserId){state.shareProfile=null;state.shareProfilePending=null;state.shareProfileUserId='';}renderSharePromotion();if(document.body.classList.contains('community-page-active')){refreshCommunity(true);scheduleSimilarFans();}var active=user&&user.uid?user:currentUser();if(!active||!active.uid){boafNoticeOpenedForUser='';if(boafNoticeTimer){window.clearTimeout(boafNoticeTimer);boafNoticeTimer=0;}hideBoafStreamPanelWithoutDismiss();return;}window.setTimeout(function(){scheduleBoafStreamNotice(350);retryPendingBoafClaim();},450);});
+    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(user){setTimeout(injectPrivacySettings,50);var uid=String(user&&user.uid||'');if(uid!==state.lastPayloadUserId){state.lastPayloadAt=0;state.lastPayload=null;}if(state.loading&&uid!==state.loadingForUserId){state.requestId+=1;state.loading=false;state.loadingForUserId='';}if(uid!==state.similarLoadedUserId){state.similarLoadedAt=0;state.similarRequestId+=1;var similarHost=page&&page.querySelector('#communitySimilarContent');if(similarHost)similarHost.replaceChildren();}if(uid!==state.shareProfileUserId){state.shareProfile=null;state.shareProfilePending=null;state.shareProfileUserId='';}renderSharePromotion();if(document.body.classList.contains('community-page-active')){refreshCommunity(true);scheduleSimilarFans();}var active=user&&user.uid?user:currentUser();if(!active||!active.uid){boafNoticeOpenedForUser='';if(boafNoticeTimer){window.clearTimeout(boafNoticeTimer);boafNoticeTimer=0;}hideBoafStreamPanelWithoutDismiss();return;}window.setTimeout(function(){scheduleBoafStreamNotice(350);retryPendingBoafClaim();},450);});
     window.addEventListener('be:profile-share-campaign-complete',function(){scheduleBoafStreamNotice(300);});
     window.addEventListener('be:profile-favorites-changed',function(){scheduleBoafStreamNotice(300);});
   }
