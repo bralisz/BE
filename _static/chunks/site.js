@@ -5916,8 +5916,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
 
   function videoCommentKey(data) {
-    const collection = String(data?.collection || 'videos').trim().toLowerCase();
-    if (!['videos', 'movies', 'series'].includes(collection)) return '';
+    const rawCollection = String(data?.collection || 'videos').trim().toLowerCase();
+    const collection = rawCollection === 'films' ? 'movies' : rawCollection === 'content' ? 'contents' : rawCollection;
+    // Legacy videos stored in "contents" can use the same public commenting system.
+    if (!['videos', 'movies', 'series', 'contents'].includes(collection)) return '';
     const stableId = String(data?.recordId || data?.id || data?.itemId || '').trim();
     return stableId ? `${collection}:${stableId}` : '';
   }
@@ -10928,6 +10930,30 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const section = document.getElementById('contentDetailSection');
     const back = document.getElementById('detailBackButton');
     const share = document.getElementById('contentDetailShare');
+    const commentsJump = document.getElementById('detailCommentsJump');
+    if (commentsJump && commentsJump.dataset.bound !== 'true') {
+      commentsJump.dataset.bound = 'true';
+      commentsJump.addEventListener('click', () => {
+        if (!document.body.classList.contains('detail-page-active')) return;
+        const playButton = document.getElementById('contentDetailPlay');
+        const commentData = {
+          collection: playButton?.dataset.collection || 'videos',
+          recordId: playButton?.dataset.recordId || '',
+          itemId: playButton?.dataset.itemId || ''
+        };
+        const key = videoCommentKey(commentData);
+        if (!key) return;
+        const group = document.getElementById('detailCommentsGroup');
+        const recommendations = document.getElementById('detailRecommendations');
+        if (!group || !recommendations) return;
+        if (recommendations.hidden) {
+          recommendations.hidden = false;
+          recommendations.removeAttribute('hidden');
+        }
+        if (group.hidden || activeDetailCommentsKey !== key) openVideoComments(commentData);
+        window.requestAnimationFrame(() => group.scrollIntoView({ behavior:'smooth', block:'start' }));
+      });
+    }
     const cast = document.getElementById('contentDetailCast');
     const streamingStore = document.getElementById('detailStreamingStore');
     const streamingButton = document.getElementById('detailStreamingButton');
@@ -11173,6 +11199,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         const current = contentDataFromElement(play);
         if (current.contentUrl && current.contentUrl !== '#') trackContentInteraction(current, 'click');
       });
+    }
+
+    const commentsJump = document.getElementById('detailCommentsJump');
+    if (commentsJump) {
+      const commentsAvailable = Boolean(videoCommentKey({ ...data, collection: collection || 'videos', recordId, itemId }));
+      commentsJump.hidden = !commentsAvailable;
+      commentsJump.setAttribute('aria-label', localizedUiText('Comentários'));
+      commentsJump.setAttribute('title', localizedUiText('Comentários'));
     }
 
     share.dataset.itemId = itemId;
@@ -13011,6 +13045,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bar.id = 'mobileAppBar';
     bar.innerHTML = `
       <a class="mobile-home-button" id="mobileHomeButton" href="/" aria-label="Voltar para a página inicial" hidden>${icon('home')}</a>
+      <span class="mobile-album-heading" id="mobileAlbumHeading" role="heading" aria-level="1">Álbuns &amp; Singles</span>
       <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar"><img loading="eager" decoding="async" src="/_static/media/profile/default-avatar.png" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="Avatar"></span></button>
       <div class="mobile-header-actions">
         <button class="mobile-album-back" id="mobileAlbumBackButton" type="button" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -17957,6 +17992,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function setSearchContext(active){
+    if(active){
+      var mobileAlbumHeading=document.getElementById('mobileAlbumHeading');
+      if(mobileAlbumHeading)mobileAlbumHeading.textContent=t('Álbuns & Singles');
+    }
     var desktop=document.getElementById('homeSearchInput');
     var mobileInput=document.getElementById('mobileSearchInput');
     var placeholder=active?t('Pesquisar álbuns'):t('Pesquisar filmes, vídeos, shows e @usuários');
