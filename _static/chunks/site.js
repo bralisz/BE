@@ -2576,7 +2576,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           avatarBorderColor: normalizePublicProfileColor(preferenceData.profileAvatarBorderColor),
           favorites: Array.isArray(preferenceData.profileTopFavorites) ? clone(preferenceData.profileTopFavorites).slice(0, 4) : [],
           lovedAlbums: Array.isArray(preferenceData.profileLovedAlbums) ? clone(preferenceData.profileLovedAlbums).slice(0, 4) : [],
-          savedContents: Array.isArray(preferenceData.savedContents) ? clone(preferenceData.savedContents).slice(0, 20) : [],
+          savedContents: Array.isArray(preferenceData.savedContents) ? clone(preferenceData.savedContents) : [],
           likesReceived: 0
         };
       }
@@ -11672,7 +11672,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   const SAVED_CONTENTS_KEY = 'beSavedContents';
-  const SAVED_CONTENTS_LIMIT = 20;
+  const SAVED_CONTENTS_LIMIT = Number.POSITIVE_INFINITY; // No arbitrary count limit: render the saved library in batches.
   let savedContentLimitToastTimer = 0;
 
   function showSavedContentLimitNotice() {
@@ -11683,7 +11683,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       toast.className = 'saved-content-limit-toast';
       toast.setAttribute('role', 'status');
       toast.setAttribute('aria-live', 'polite');
-      toast.textContent = 'Você pode salvar até 20 conteúdos.';
+      toast.textContent = 'Não foi possível salvar este conteúdo neste dispositivo.';
       document.body.appendChild(toast);
     }
     clearTimeout(savedContentLimitToastTimer);
@@ -11779,7 +11779,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let records = readJsonArray(SAVED_CONTENTS_KEY).map(normalizeSavedContent);
     records = records.filter(record => !savedContentMatches(record, normalized));
     if (active && (normalized.itemId || normalized.favoriteId || normalized.recordId)) records.unshift({ ...normalized, savedAt:new Date().toISOString() });
-    localStorage.setItem(SAVED_CONTENTS_KEY, JSON.stringify(records.slice(0, SAVED_CONTENTS_LIMIT)));
+    localStorage.setItem(SAVED_CONTENTS_KEY, JSON.stringify(records));
   }
 
   function domCatalogCandidates() {
