@@ -13010,7 +13010,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bar.className = 'mobile-app-bar';
     bar.id = 'mobileAppBar';
     bar.innerHTML = `
-      <button class="mobile-home-button" id="mobileHomeButton" type="button" aria-label="Voltar para a página inicial" hidden>${icon('home')}</button>
+      <a class="mobile-home-button" id="mobileHomeButton" href="/" aria-label="Voltar para a página inicial" hidden>${icon('home')}</a>
       <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar"><img loading="eager" decoding="async" src="/_static/media/profile/default-avatar.png" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="Avatar"></span></button>
       <div class="mobile-header-actions">
         <button class="mobile-notification-button" id="mobileNotificationButton" type="button" aria-label="Abrir notificações" aria-expanded="false">${icon('bell')}<span class="notification-unread-dot" id="mobileNotificationUnreadDot" hidden></span></button>
@@ -13078,29 +13078,40 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const searchButton = document.getElementById('mobileSearchButton');
     const searchInput = document.getElementById('mobileSearchInput');
 
-    bindActivation(document.getElementById('mobileHomeButton'), () => {
-      closeMobileAccountPopover();
-      window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
-      openDrawer(false);
-      openMobileSearch(false);
-      // A dedicated profile/content route can have several overlapping page
-      // controllers. Use the canonical localized Home URL instead of relying
-      // on synthetic clicks of controls hidden on mobile.
-      const path = window.BETVLocalePath ? window.BETVLocalePath() : location.pathname;
-      const dedicatedPage = path !== '/' || [
-        'profile-page-active','settings-page-active','notification-page-active',
-        'community-page-active','detail-page-active','support-page-active',
-        'billie-page-active','fans-page-active','donate-page-active',
-        'legal-page-active','album-page-active','section-catalog-active'
-      ].some(name => document.body.classList.contains(name));
-      if (dedicatedPage) {
-        const homeUrl = window.BETVLocaleURL ? window.BETVLocaleURL('/') : '/';
-        window.location.assign(homeUrl);
-        return;
-      }
-      selectView('home', 'push');
-      window.scrollTo({top:0,left:0,behavior:'auto'});
-    });
+    // Keep Home as a real link so it still works on the public profile even
+    // if lazy-loaded account code or a route controller fails to initialize.
+    const mobileHomeLink = document.getElementById('mobileHomeButton');
+    if (mobileHomeLink && mobileHomeLink.dataset.mobileBound !== 'true') {
+      mobileHomeLink.dataset.mobileBound = 'true';
+      mobileHomeLink.addEventListener('click', event => {
+        if (!isMobile()) return;
+        // On profiles, let the browser follow the locale-aware anchor directly.
+        // No preventDefault: avoid SPA route races that left the user on /@name.
+        if (document.body.classList.contains('profile-page-active')) {
+          event.stopPropagation();
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        closeMobileAccountPopover();
+        window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
+        openDrawer(false);
+        openMobileSearch(false);
+        const dedicatedPage = [
+          'settings-page-active','notification-page-active',
+          'community-page-active','detail-page-active','support-page-active',
+          'billie-page-active','fans-page-active','donate-page-active',
+          'legal-page-active','album-page-active','section-catalog-active'
+        ].some(name => document.body.classList.contains(name));
+        if (dedicatedPage && window.BETVPublicRoutes) {
+          window.BETVPublicRoutes.go('/');
+          selectView('home', 'none');
+        } else {
+          selectView('home', 'push');
+        }
+        window.scrollTo({top:0,left:0,behavior:'auto'});
+      });
+    }
 
     bindActivation(searchButton, () => {
       openMobileSearch(!document.body.classList.contains('mobile-search-open'));
@@ -13215,7 +13226,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       document.body.classList.toggle('mobile-secondary-page', secondaryPage);
     }
     const homeButton = document.getElementById('mobileHomeButton');
-    if (homeButton && homeButton.hidden === secondaryPage) homeButton.hidden = !secondaryPage;
+    if (homeButton) {
+      const destination = window.BETVLocaleURL ? window.BETVLocaleURL('/') : '/';
+      if (homeButton.getAttribute('href') !== destination) homeButton.setAttribute('href', destination);
+      if (homeButton.hidden === secondaryPage) homeButton.hidden = !secondaryPage;
+    }
     if (document.body.classList.contains('community-page-active')) {
       setActiveDestination('community');
       return;

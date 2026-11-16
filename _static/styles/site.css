@@ -594,3 +594,31 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
 @media(max-width:760px){
   .detail-reco-arrow{display:none!important}
 }
+
+/* Profile Home: preserve the transparent header but provide a real hit area. */
+@media(max-width:760px){
+  body.profile-page-active:not(.login-mode):not(.admin-mode) #mobileAppBar{
+    height:calc(78px + env(safe-area-inset-top))!important;
+    min-height:calc(78px + env(safe-area-inset-top))!important;
+    overflow:visible!important;
+    z-index:10100!important;
+    pointer-events:none!important;
+  }
+  body.profile-page-active:not(.login-mode):not(.admin-mode) #mobileAppBar #mobileHomeButton:not([hidden]){
+    position:absolute!important;
+    top:var(--profile-mobile-action-top,calc(16px + env(safe-area-inset-top)))!important;
+    left:var(--profile-mobile-action-edge,14px)!important;
+    right:auto!important;
+    bottom:auto!important;
+    margin:0!important;
+    width:var(--profile-mobile-action-size,46px)!important;
+    height:var(--profile-mobile-action-size,46px)!important;
+    min-width:var(--profile-mobile-action-size,46px)!important;
+    min-height:var(--profile-mobile-action-size,46px)!important;
+    z-index:10101!important;
+    pointer-events:auto!important;
+    touch-action:manipulation!important;
+    text-decoration:none!important;
+    -webkit-tap-highlight-color:transparent;
+  }
+}

@@ -54,6 +54,15 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(2
     assert.equal(w.document.getElementById('profilePage').hidden,false);
     assert.equal(w.location.pathname,'/@bralis');
     assert.equal(loaded.filter(x=>x==='account').length,scenario==='chunk-retry'?2:1);
+    if(scenario==='mobile-profile'){
+      const home=w.document.getElementById('mobileHomeButton');
+      await until(()=>home&&!home.hidden);
+      assert.equal(home.tagName,'A','mobile profile Home must be a native navigation link');
+      assert.equal(home.getAttribute('href'),w.BETVLocaleURL('/'),'Home must keep the selected language');
+      const click=new w.MouseEvent('click',{bubbles:true,cancelable:true});
+      home.dispatchEvent(click);
+      assert.equal(click.defaultPrevented,false,'the profile Home link cannot rely only on SPA handlers');
+    }
     let mutations=0;const observer=new w.MutationObserver(records=>{mutations+=records.length;});observer.observe(w.document.body,{attributes:true,attributeFilter:['class']});
     await delay(180);assert(mutations<30,'profile must not continuously mutate body classes');observer.disconnect();
     if(scenario==='history'){
