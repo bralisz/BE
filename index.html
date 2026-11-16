@@ -223,8 +223,8 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   body:not(.login-mode) .home-notification-menu{position:fixed!important;top:21px!important;right:88px!important;left:auto!important;z-index:10025!important}
 }
 </style>
-<link rel="preload" href="/_static/styles/site.css?rev=20261116-album-overflow-v12" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261116-album-overflow-v12"></noscript>
+<link rel="preload" href="/_static/styles/site.css?rev=20261116-album-horizontal-v13" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261116-album-horizontal-v13"></noscript>
 <script defer src="/api/runtime?v=2.112.0-validated-restore-v18"></script>
 <script defer src="/_static/chunks/performance.js?rev=20261009-visitor-menu-v15"></script>
 <script defer src="/_static/chunks/features.js?rev=20261116-episode-community-profile-perf-v2"></script>
@@ -1357,6 +1357,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   </main>
 </section>
 <section class="album-page-shell" id="albumPage" hidden aria-label="Álbuns e singles" aria-hidden="true">
+<img class="album-detail-backdrop" id="albumDetailBackdrop" alt="" aria-hidden="true" decoding="async" hidden>
   <div class="album-page-inner">
     <header class="album-page-heading">
       <h1>Álbuns &amp; Singles</h1>
@@ -1367,7 +1368,6 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
     <div class="album-page-cover-rail" id="albumPageRail" aria-label="Escolha um álbum" hidden></div>
     <div class="album-page-status" id="albumPageStatus" role="status" aria-live="polite" hidden></div>
     <article class="album-page-detail" id="albumPageDetail" hidden>
-      <img class="album-detail-backdrop" id="albumDetailBackdrop" alt="" aria-hidden="true" decoding="async" hidden>
       <header class="album-detail-hero">
         <div class="album-detail-cover-wrap">
           <img class="album-detail-cover" id="albumDetailCover" src="" alt="" loading="eager" decoding="async">
