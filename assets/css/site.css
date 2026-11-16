@@ -22485,7 +22485,7 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
 @media(max-width:760px){
   /* This dedicated page scrolls beneath the fixed mobile navigation; keep
      its controls readable instead of showing article text through them. */
-  body.notification-page-active #mobileAppBar{
+  html body.notification-page-active:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.drive-player-open):not(.player-open) #mobileAppBar{
     background:#050607!important;
     background-color:#050607!important;
     background-image:none!important;
