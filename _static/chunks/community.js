@@ -734,6 +734,11 @@
       if(page)page.hidden=true;
     }
     if(page)page.hidden=true;
+    // If the user leaves Avocados using the Home/Films/Videos header, update the URL too.
+    var nextTab=String(tabAfter||'').toLowerCase();
+    if(nextTab&&nextTab!=='community'&&String(window.BETVLocalePath?window.BETVLocalePath():location.pathname).replace(/\/+$/,'').toLowerCase()==='/avocados'){
+      try{history.pushState({beRoute:'catalog',homeView:nextTab},'',window.BETVLocaleURL?window.BETVLocaleURL('/'):'/');}catch(_){}
+    }
     setCommunityNavActive(false);
     if(resetView!==false&&document.body.dataset.homeView==='community')document.body.dataset.homeView=state.catalogHomeView||'home';
     if(tabAfter)setHomeTab(tabAfter);
@@ -775,6 +780,12 @@
     try{route=decodeURIComponent(route);}catch(_){ }
     if(['/ong','/fãs','/fas','/fans'].includes(route)&&window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/');
     establishCatalogBase();
+    // The Community tab also gets a real, shareable URL while the slug stays unchanged in every language.
+    var current=String(window.BETVLocalePath?window.BETVLocalePath():location.pathname).replace(/\/+$/,'').toLowerCase();
+    if(current!=='/avocados'){
+      var destination=window.BETVLocaleURL?window.BETVLocaleURL('/avocados'):'/avocados';
+      history.pushState({...(history.state||{}),beRoute:'avocados'},'',destination);
+    }
     window.dispatchEvent(new CustomEvent('be:close-donate-page'));
     document.body.classList.remove('donate-page-active');
     var donationPage=document.getElementById('donatePage');
@@ -1343,9 +1354,8 @@
   function bind(){
     createPage();createMobileAccountMenu();scheduleBoafStreamNotice(1000);window.setTimeout(retryPendingBoafClaim,900);
     var tab=document.querySelector('[data-community-tab]');if(tab)tab.addEventListener('click',function(event){event.preventDefault();openCommunity();});
-    // Login footer uses a dedicated catalog deep link, not the legal /comunidade route.
-    // Open the actual fan community after the home route has initialized.
-    if(new URLSearchParams(location.search).get('betvCommunity')==='1'){
+    // Direct links must show the fan community, never the legal /comunidade page.
+    if(String(window.BETVLocalePath?window.BETVLocalePath():location.pathname).replace(/\/+$/,'').toLowerCase()==='/avocados'){
       var openRequestedCommunity=function(){
         if(window.BETVCommunity&&typeof window.BETVCommunity.open==='function')window.BETVCommunity.open();
       };
@@ -1390,7 +1400,7 @@
     },true);
     window.addEventListener('be:toggle-mobile-account-menu',toggleMobileAccountMenu);
     window.addEventListener('be:close-notification-menus',closeMobileAccountMenu);
-    window.addEventListener('popstate',function(){closeMobileAccountMenu();if(document.body.classList.contains('community-page-active'))closeCommunity(true);window.setTimeout(function(){if(state.detailReturnToCommunity&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')){state.detailReturnToCommunity=false;state.restoreCommunityScrollOnNextOpen=true;openCommunity();return;}if(!document.body.classList.contains('community-page-active')&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')&&!document.body.classList.contains('support-page-active')&&!document.body.classList.contains('legal-page-active')&&!document.body.classList.contains('billie-page-active')&&!document.body.classList.contains('donate-page-active')&&!document.body.classList.contains('fans-page-active')&&!document.body.classList.contains('album-page-active'))setHomeTab(catalogTabForView(state.catalogHomeView));},0);});
+    window.addEventListener('popstate',function(){closeMobileAccountMenu();if(String(window.BETVLocalePath?window.BETVLocalePath():location.pathname).replace(/\/+$/,'').toLowerCase()==='/avocados'){if(!document.body.classList.contains('community-page-active'))openCommunity();return;}if(document.body.classList.contains('community-page-active'))closeCommunity(true);window.setTimeout(function(){if(state.detailReturnToCommunity&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')){state.detailReturnToCommunity=false;state.restoreCommunityScrollOnNextOpen=true;openCommunity();return;}if(!document.body.classList.contains('community-page-active')&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')&&!document.body.classList.contains('support-page-active')&&!document.body.classList.contains('legal-page-active')&&!document.body.classList.contains('billie-page-active')&&!document.body.classList.contains('donate-page-active')&&!document.body.classList.contains('fans-page-active')&&!document.body.classList.contains('album-page-active'))setHomeTab(catalogTabForView(state.catalogHomeView));},0);});
     window.addEventListener('hashchange',closeMobileAccountMenu);
     window.addEventListener('resize',function(){if(!window.matchMedia('(max-width:760px)').matches)closeMobileAccountMenu();else if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();});
     function syncMobileMenuPosition(){if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();}
