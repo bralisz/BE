@@ -22694,32 +22694,57 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
 }
 
 
-/* Center episode and recommendation controls on the 16:9 artwork, not the text below. */
+/* Carousel arrows: align to the middle of 16:9 artwork and center the glyph optically. */
 @media (min-width:761px){
-  .series-episode-arrow,
-  .detail-reco-arrow{
-    top:clamp(67.6875px,calc(6.75vw + 3px),93px);
-    font-size:0;
-    line-height:0;
-    color:transparent;
+  .detail-reco-arrow,
+  .series-episode-arrow{
+    /* Half the 16:9 image height + the rail's 3px top padding. */
+    top:clamp(67.6875px,calc(6.75vw + 3px),93px)!important;
+    transform:translateY(-50%)!important;
+    width:46px!important;
+    height:46px!important;
+    box-sizing:border-box!important;
+    display:grid!important;
+    place-items:center!important;
+    padding:0!important;
+    border:1px solid rgba(255,255,255,.22)!important;
+    border-radius:50%;
+    background:rgba(10,12,16,.92)!important;
+    box-shadow:0 10px 24px rgba(0,0,0,.34)!important;
+    font-size:0!important;
+    line-height:0!important;
+    color:transparent!important;
+    cursor:pointer;
   }
-  .series-episode-arrow::after,
-  .detail-reco-arrow::after{
+  .detail-reco-arrow.prev,
+  .series-episode-arrow.prev{left:-23px!important}
+  .detail-reco-arrow.next,
+  .series-episode-arrow.next{right:-23px!important}
+  .detail-reco-arrow::after,
+  .series-episode-arrow::after{
     content:"";
     position:absolute;
     top:50%;
     left:50%;
-    width:13px;
-    height:13px;
+    width:12px;
+    height:12px;
     box-sizing:border-box;
-    border-top:3px solid #fff;
-    border-right:3px solid #fff;
+    border-top:2.5px solid #fff;
+    border-right:2.5px solid #fff;
     border-radius:1px;
-    transform:translate(-50%,-50%) rotate(45deg);
     pointer-events:none;
   }
-  .series-episode-arrow.prev::after,
-  .detail-reco-arrow.prev::after{
-    transform:translate(-50%,-50%) rotate(-135deg);
+  .detail-reco-arrow.prev::after,
+  .series-episode-arrow.prev::after{
+    transform:translate(-44%,-50%) rotate(-135deg)!important;
+  }
+  .detail-reco-arrow.next::after,
+  .series-episode-arrow.next::after{
+    transform:translate(-56%,-50%) rotate(45deg)!important;
+  }
+  .detail-reco-arrow:hover,
+  .series-episode-arrow:hover{
+    background:rgba(20,24,31,.98)!important;
+    border-color:rgba(255,255,255,.34)!important;
   }
 }
