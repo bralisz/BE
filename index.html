@@ -223,12 +223,12 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   body:not(.login-mode) .home-notification-menu{position:fixed!important;top:21px!important;right:88px!important;left:auto!important;z-index:10025!important}
 }
 </style>
-<link rel="preload" href="/_static/styles/site.css?rev=20261116-music-art-header-v3" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261116-music-art-header-v3"></noscript>
+<link rel="preload" href="/_static/styles/site.css?rev=20261116-music-header-comments-v4" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261116-music-header-comments-v4"></noscript>
 <script defer src="/api/runtime?v=2.112.0-validated-restore-v18"></script>
 <script defer src="/_static/chunks/performance.js?rev=20261009-visitor-menu-v15"></script>
 <script defer src="/_static/chunks/features.js?rev=20261116-episode-community-profile-perf-v2"></script>
-<script defer src="/_static/chunks/site.js?rev=20261116-music-art-header-v3"></script>
+<script defer src="/_static/chunks/site.js?rev=20261116-music-header-comments-v4"></script>
 <link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1"></noscript>
 <script defer src="/_static/chunks/watch-party.js?rev=20261116-idle-poll-v1"></script>
@@ -723,6 +723,10 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
             </button>
           </div>
           <div class="detail-secondary-actions">
+            <button class="detail-comments-jump" id="detailCommentsJump" type="button" aria-label="Comentários" title="Comentários" aria-controls="detailCommentsGroup" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-8 8 9.3 9.3 0 0 1-3.4-.7L4 20l1.3-4.4A8.5 8.5 0 1 1 20 11.5Z"/></svg>
+              <span>Comentários</span>
+            </button>
           <button class="detail-watch-party" id="contentDetailWatchParty" type="button" aria-label="Assistir junto" aria-controls="watchPartyPanel" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="7" r="4"/><path d="M7 21v-2a8 8 0 0 1 16 0v2ZM5 7v8M1 11h8"/></svg><span>Assistir junto</span></button>
 
             <div class="detail-streaming-store" id="detailStreamingStore" hidden>
