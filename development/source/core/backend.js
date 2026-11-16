@@ -37,9 +37,9 @@
 
   function hasSupabaseConfig() {
     const config = window.BE_SUPABASE_CONFIG || {};
-    // Detect configuration independently of SDK timing: asynchronous CDN scripts
-    // must not silently switch production auth to a local-only backend.
     return Boolean(
+      window.supabase &&
+      typeof window.supabase.createClient === 'function' &&
       /^https:\/\//i.test(String(config.url || '')) &&
       String(config.publishableKey || '').trim()
     );
@@ -1724,14 +1724,6 @@
 
   async function initialize() {
     if (MODE === 'supabase') {
-      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-        const sdkReady = window.__BETVSupabaseReady
-          ? await window.__BETVSupabaseReady
-          : false;
-        if (!sdkReady || !window.supabase || typeof window.supabase.createClient !== 'function') {
-          throw backendError('backend/sdk-unavailable', 'Não foi possível iniciar a conexão. Recarregue a página para tentar novamente.');
-        }
-      }
       // Corrige callbacks antigos no formato #/admin/dashboard#access_token=...
       // antes de o Supabase tentar detectar a sessão na URL.
       normalizeLegacyAuthHash();
@@ -1849,25 +1841,7 @@
     notify();
   }
 
-  // Recover from stalled refresh-token/session locks without clearing saved login.
-  // initialize() keeps running; late auth events restore the account normally.
-  const initialization = initialize();
-  const ready = (async () => {
-    let startupTimer;
-    try {
-      await Promise.race([
-        initialization,
-        new Promise((resolve, reject) => {
-          startupTimer = window.setTimeout(() => {
-            if (supabaseClient) resolve();
-            else reject(backendError('backend/startup-timeout', 'A conexão demorou demais para iniciar. Recarregue o site.'));
-          }, 7500);
-        })
-      ]);
-    } finally {
-      window.clearTimeout(startupTimer);
-    }
-  })().catch(error => {
+  const ready = initialize().catch(error => {
     console.error('Falha ao inicializar o backend:', error);
     throw error;
   });
