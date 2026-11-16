@@ -15,6 +15,9 @@
  };
  const t=i=>(words[locale()]||words['pt-br'])[i];
  let card=null,displayed=null,request=0,queued=false,settingsRequest=0,displayedKey='',renderedKey='';
+ const cache=new Map(),TTL=90000;
+ const cacheKey=state=>state.key;
+ function remember(key,value){cache.delete(key);cache.set(key,{value,time:Date.now()});if(cache.size>80)cache.delete(cache.keys().next().value);}
  const cleanUrl=value=>{try{const url=new URL(String(value||''),location.origin);return url.protocol==='https:'&&url.origin===location.origin||url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch(_){return '';}};
  function close(){if(card)card.hidden=true;}
  function attach(){
@@ -26,6 +29,7 @@
    favorites.before(card);
   }
   card.setAttribute('aria-label',t(0));
+  if(card.nextElementSibling!==favorites)favorites.before(card);
  }
  function renderCard(item){
   if(!card)return;
@@ -62,10 +66,12 @@
  async function refreshProfile(){
   attach();
   const state=profileState(),serial=++request;
-  if(state.key!==displayedKey){displayedKey=state.key;displayed=null;renderedKey='';close();}
+  if(state.key!==displayedKey){displayedKey=state.key;displayed=cache.get(cacheKey(state))?.value||null;renderedKey='';if(!displayed)close();}
   if(!state.active){close();return;}
   // Keep the current profile visible while revalidating, including Back navigation.
   if(displayed&&card){renderCard(displayed);card.hidden=false;}
+  const saved=cache.get(cacheKey(state));
+  if(saved&&Date.now()-saved.time<TTL)return;
   try{
    await Promise.resolve(window.beBackend?.ready);
    if(serial!==request||profileState().key!==state.key)return;
@@ -79,6 +85,7 @@
    if(!result||result.error)return;
    const value=Array.isArray(result.data)?result.data[0]:result.data;
    displayed=value?.watched_at&&value?.title?value:null;
+   remember(cacheKey(state),displayed);
    if(displayed&&card){renderCard(displayed);card.hidden=false;}
    else{renderedKey='';close();}
   }catch(_){/* Retain only the current profile's previously loaded activity. */}
@@ -113,7 +120,7 @@
     const {data,error}=await client().rpc('set_profile_watch_visibility',{p_visible:enabled});
     if(error||data!==true)throw Error('privacy_save_failed');
     notice.textContent=t(5);
-    scheduleRefresh();
+    cache.delete(profileState().key);scheduleRefresh();
    }catch(_){input.checked=!enabled;notice.textContent=t(6);}
    finally{input.disabled=false;}
   });
@@ -132,7 +139,7 @@
     p_content_id:contentId.slice(0,128),p_title:title.slice(0,180),
     p_collection:String(d.collection||'videos'),p_image_url:img
    });
-   if(!error)scheduleRefresh();
+   if(!error){cache.delete(profileState().key);scheduleRefresh();}
   }).catch(()=>{});
  }
  function boot(){
@@ -140,7 +147,7 @@
   document.addEventListener('click',recordFromPlay,true);
   window.addEventListener('be:open-profile-route',scheduleRefresh);
   window.addEventListener('be:route-change',scheduleRefresh);
-  window.addEventListener('be:profile-refreshed',scheduleRefresh);
+  window.addEventListener('be:profile-refreshed',()=>{cache.delete(profileState().key);scheduleRefresh();});
   window.addEventListener('be:i18n-ready',()=>{attach();if(displayed)renderCard(displayed);injectSettings();});
   const handle=$('profilePageHandle');if(handle)new MutationObserver(scheduleRefresh).observe(handle,{childList:true,characterData:true,subtree:true});
   new MutationObserver(()=>{injectSettings();}).observe($('settingsPageBody')||document.body,{childList:true,subtree:false});
@@ -154,7 +161,7 @@
   const profile=$('profilePage');
   if(profile)new MutationObserver(refreshWhenProfileChanges).observe(profile,{attributes:true,attributeFilter:['hidden']});
   window.addEventListener('pageshow',scheduleRefresh);
-  window.beBackend?.auth?.onChange?.(()=>{settingsRequest++;scheduleRefresh();injectSettings();});
+  window.beBackend?.auth?.onChange?.(()=>{settingsRequest++;cache.clear();scheduleRefresh();injectSettings();});
   scheduleRefresh();
  }
  window.BETVProfileActivity=Object.freeze({refresh:scheduleRefresh});
