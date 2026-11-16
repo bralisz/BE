@@ -31,3 +31,27 @@ body.profile-page-active #profileRecentWatchCard{position:relative;inset:auto;z-
  body.profile-page-active #mobileHomeButton::before,body.profile-page-active #mobileHomeButton::after{content:none!important;display:none!important}
  body.profile-page-active #mobileHomeButton{box-shadow:none!important;filter:none!important}
 }
+
+/* Compact last-watch preview inside the profile banner, desktop only. */
+@media (min-width:761px){
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard{
+  position:absolute!important;top:auto!important;bottom:17px!important;
+  right:calc(clamp(24px,3vw,46px) + 174px)!important;left:auto!important;
+  z-index:3!important;box-sizing:border-box!important;
+  width:198px!important;max-width:198px!important;height:58px!important;min-height:0!important;
+  margin:0!important;padding:6px!important;border-radius:10px!important;
+  overflow:hidden!important;box-shadow:0 8px 20px rgba(0,0,0,.25)!important;
+ }
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-body{
+  display:grid;grid-template-columns:66px minmax(0,1fr);align-items:center;gap:8px;height:100%;
+ }
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-media{
+  width:66px;height:44px;aspect-ratio:auto;border-radius:6px;
+ }
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-info{gap:2px;overflow:hidden}
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-head{font-size:9px;line-height:1.2}
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-title{
+  font-size:12px;line-height:1.15;-webkit-line-clamp:1;max-width:100%;
+ }
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-tag{font-size:9px;line-height:1.2}
+}
