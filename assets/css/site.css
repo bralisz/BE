@@ -3500,7 +3500,7 @@
   #legalPage[hidden],
   #legalPage .legal-article[hidden]{display:none!important}
   body.legal-page-active{overflow-x:hidden!important}
-  body.legal-page-active > :not(#legalPage):not(#authLoading):not(.betv-update-popup):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
+  body.legal-page-active > :not(#legalPage):not(#authLoading):not(.betv-update-popup):not(#betvAppSavedPage):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
   body.legal-page-active > #legalPage{display:block!important;width:100%;min-height:100vh}
 .user-chip,
 .avatar,
@@ -4215,7 +4215,7 @@ body.notification-page-active{
   background:#050607!important;
   color:#f5f5f7;
 }
-body.notification-page-active > :not(#notificationPage):not(#authLoading):not(.betv-update-popup):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
+body.notification-page-active > :not(#notificationPage):not(#authLoading):not(.betv-update-popup):not(#betvAppSavedPage):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
 body.notification-page-active > #notificationPage{
   display:block!important;
   width:100%;
@@ -4684,7 +4684,7 @@ body.settings-page-active #settingsPageBody>.settings-grid.settings-grid-aligned
   height:9px;
 }
 
-body.support-page-active > :not(#betvMobileBottomNav):not(.topbar-wrap):not(.mobile-app-bar):not(.support-page-shell):not(footer):not(.mobile-footer-support-cta):not(.mobile-footer-fans-cta):not(.mobile-drawer):not(.mobile-drawer-backdrop):not(.betv-update-popup):not(script):not(style){
+body.support-page-active > :not(#betvAppSavedPage):not(#betvMobileBottomNav):not(.topbar-wrap):not(.mobile-app-bar):not(.support-page-shell):not(footer):not(.mobile-footer-support-cta):not(.mobile-footer-fans-cta):not(.mobile-drawer):not(.mobile-drawer-backdrop):not(.betv-update-popup):not(script):not(style){
   display:none!important;
 }
 body.support-page-active > .support-page-shell{
@@ -6620,7 +6620,7 @@ body.section-catalog-active #dynamicSections.section-view-mode > .film-library-s
 
 
 body.settings-page-active{background:#050607!important;overflow:hidden!important}
-body.settings-page-active > :not(#settingsPage):not(#authLoading):not(#avatarPicker):not(#bannerPicker):not(#settingsSaveConfirm):not(#settingsSaveToast):not(#accountBanToast):not(.betv-update-popup):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
+body.settings-page-active > :not(#settingsPage):not(#authLoading):not(#avatarPicker):not(#bannerPicker):not(#settingsSaveConfirm):not(#settingsSaveToast):not(#accountBanToast):not(.betv-update-popup):not(#betvAppSavedPage):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
 body.settings-page-active > #settingsPage:not([hidden]){display:block!important;width:100%;height:100dvh;min-height:100vh;overflow-y:auto!important;overflow-x:hidden!important;background:#050607!important;color:#f7f8fa;position:fixed!important;inset:0!important;z-index:500!important;padding:0!important}
 #settingsPage[hidden],body.settings-page-active #settingsPage[hidden]{display:none!important}
 body.settings-page-active #profilePage{display:none!important}
@@ -9147,7 +9147,7 @@ body.billie-page-active{
   overflow-x:hidden!important;
   background:#05070b!important;
 }
-body.billie-page-active > :not(#billiePage):not(footer):not(.cookie-notice):not(.betv-update-popup):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
+body.billie-page-active > :not(#billiePage):not(footer):not(.cookie-notice):not(.betv-update-popup):not(#betvAppSavedPage):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
 body.billie-page-active > #billiePage{display:block!important}
 body.billie-page-active > footer{
   display:block!important;
@@ -9682,7 +9682,7 @@ body.donate-page-active{
   overflow-x:hidden;
   background:#070809;
 }
-body.donate-page-active > :not(#donatePage):not(#authLoading):not(footer):not(.ios-ban-toast):not(.betv-update-popup):not(.be-pay-overlay):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
+body.donate-page-active > :not(#donatePage):not(#authLoading):not(footer):not(.ios-ban-toast):not(.betv-update-popup):not(.be-pay-overlay):not(#betvAppSavedPage):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
 body.donate-page-active #donatePage{display:block!important}
 body.donate-page-active > footer{
   display:block!important;
@@ -11046,7 +11046,7 @@ body.fans-page-active{
   overflow-x:hidden!important;
   background:#050607!important;
 }
-body.fans-page-active > :not(#fansPage):not(footer):not(.mobile-footer-support-cta):not(.mobile-footer-fans-cta):not(.betv-update-popup):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
+body.fans-page-active > :not(#fansPage):not(footer):not(.mobile-footer-support-cta):not(.mobile-footer-fans-cta):not(.betv-update-popup):not(#betvAppSavedPage):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
 body.fans-page-active > #fansPage{display:block!important}
 body.fans-page-active > footer{
   display:block!important;
@@ -22327,4 +22327,115 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
     padding-bottom:max(100px,calc(82px + env(safe-area-inset-bottom,0px)))!important;
   }
   html.betv-installed-app #profileSavedSection{scroll-margin-top:100px}
+}
+
+/* Installed BETV app: standalone library, detail back icon and neutral legal footer. */
+#betvAppSavedPage{display:none!important}
+#betvMobileBottomNav .app-tab-back-icon{display:none}
+@media(max-width:760px){
+ html.betv-installed-app body.detail-page-active #betvMobileBottomNav .app-tab-home-icon{display:none}
+ html.betv-installed-app body.detail-page-active #betvMobileBottomNav .app-tab-back-icon{display:block}
+ html.betv-installed-app body.detail-page-active #mobileHomeButton > svg,
+ html.betv-installed-app body.detail-page-active #detailHomeLink .detail-home-icon > svg{display:none!important}
+ html.betv-installed-app body.detail-page-active #mobileHomeButton::after,
+ html.betv-installed-app body.detail-page-active #detailHomeLink .detail-home-icon::after{
+   content:"";display:block;width:26px;height:26px;
+   background:center / 26px 26px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m14.5 5-7 7 7 7'/%3E%3Cpath d='M8 12h13'/%3E%3C/svg%3E");
+ }
+ html.betv-installed-app body.betv-app-saved-active{overflow:hidden!important}
+ html.betv-installed-app body.betv-app-saved-active > #betvAppSavedPage:not([hidden]){
+   display:block!important;position:fixed!important;
+   inset:0 0 calc(68px + env(safe-area-inset-bottom,0px))!important;
+   z-index:10140!important;box-sizing:border-box!important;
+   overflow-y:auto!important;overflow-x:hidden!important;
+   overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+   width:100vw!important;min-height:0!important;max-height:none!important;
+   padding:calc(32px + env(safe-area-inset-top,0px)) 18px 38px!important;
+   background:#090b0f!important;background-image:none!important;color:#f6f7fa!important;
+   isolation:isolate;scrollbar-width:thin;
+ }
+ html.betv-installed-app #betvAppSavedPage .betv-app-saved-heading{
+   display:flex;justify-content:space-between;align-items:flex-end;gap:12px;
+   padding:0 2px 20px;margin:0 0 20px;border-bottom:1px solid rgba(255,255,255,.095);
+ }
+ html.betv-installed-app #betvAppSavedPage .betv-app-saved-eyebrow{
+   display:block;margin:0 0 8px;color:#7e91ad;font-size:10px;font-weight:750;letter-spacing:.115em;
+ }
+ html.betv-installed-app #betvAppSavedPage h1{
+   margin:0!important;color:#fff!important;font-size:clamp(27px,7vw,34px)!important;
+   font-weight:770!important;line-height:1.15!important;letter-spacing:-.04em;
+ }
+ html.betv-installed-app #betvAppSavedPage .betv-app-saved-heading p{
+   margin:8px 0 0;color:rgba(244,246,249,.56);font-size:13px;line-height:1.5;
+ }
+ html.betv-installed-app #betvAppSavedCount{
+   flex:none;padding-bottom:3px;color:rgba(244,246,249,.64);font-size:11px;font-weight:550;white-space:nowrap;
+ }
+ html.betv-installed-app #betvAppSavedGrid{
+   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 13px;padding:0 0 18px;
+ }
+ html.betv-installed-app #betvAppSavedGrid .betv-app-saved-card{
+   display:flex;flex-direction:column;text-align:left;min-width:0;gap:6px;padding:0;
+   border:0;background:transparent;box-shadow:none;font-family:inherit;color:#f5f6f8;
+   cursor:pointer;touch-action:manipulation;
+ }
+ html.betv-installed-app #betvAppSavedGrid .betv-app-saved-cover{
+   display:block;position:relative;overflow:hidden;width:100%;aspect-ratio:16 / 10;
+   border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#1a1c22;box-shadow:none;
+ }
+ html.betv-installed-app #betvAppSavedGrid img{display:block;width:100%;height:100%;object-fit:cover}
+ html.betv-installed-app #betvAppSavedGrid .betv-app-saved-name{
+   overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+   color:#f6f7fb;font-size:13px;font-weight:650;line-height:1.35;
+ }
+ html.betv-installed-app #betvAppSavedGrid .betv-app-saved-meta{
+   color:rgba(236,238,244,.48);font-size:11px;font-weight:500;line-height:1.3;
+ }
+ html.betv-installed-app #betvAppSavedGrid .betv-app-saved-heart{
+   position:absolute;top:8px;right:8px;display:grid;place-items:center;
+   width:29px;height:29px;border-radius:50%;background:rgba(7,10,15,.58);
+   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+ }
+ html.betv-installed-app #betvAppSavedGrid .betv-app-saved-heart svg{
+   width:17px;height:17px;display:block;stroke:#55a8ff;stroke-width:1.5;fill:#2b85de;
+ }
+ html.betv-installed-app #betvAppSavedPage .betv-app-saved-more,
+ html.betv-installed-app #betvAppSavedPage .betv-app-saved-empty button{
+   display:block;min-height:43px;margin:10px auto 22px;padding:9px 22px;
+   border:1px solid rgba(255,255,255,.18);border-radius:24px;
+   background:#202329;color:#eff1f6;font:600 13px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;cursor:pointer;
+ }
+ html.betv-installed-app #betvAppSavedPage .betv-app-saved-more[hidden]{display:none!important}
+ html.betv-installed-app #betvAppSavedPage .betv-app-saved-empty{
+   grid-column:1 / -1;padding:65px 18px;text-align:center;
+   border:1px solid rgba(255,255,255,.08);border-radius:16px;background:#12151b;
+ }
+ html.betv-installed-app #betvAppSavedPage .betv-app-saved-empty strong{display:block;color:#f6f7fa;font-size:17px}
+ html.betv-installed-app #betvAppSavedPage .betv-app-saved-empty p{color:#9ea3ae;font-size:13px;line-height:1.5}
+ /* Keep legal content readable even on profiles with bright custom theme colors. */
+ html.betv-installed-app body:not(.admin-mode)>footer,
+ html.betv-installed-app body:not(.admin-mode)>footer>.footer-card,
+ html.betv-installed-app body.profile-page-active.profile-color-customized>footer,
+ html.betv-installed-app body.profile-page-active.profile-color-customized>footer>.footer-card{
+   background:#0c0e12!important;background-image:none!important;color:#e8ebf0!important;
+   border:0!important;box-shadow:none!important;
+ }
+ html.betv-installed-app body>footer>.footer-card{
+   width:100%!important;max-width:none!important;margin:0!important;
+   padding:26px 20px calc(94px + env(safe-area-inset-bottom,0px))!important;
+   border-top:1px solid rgba(255,255,255,.075)!important;border-radius:0!important;
+ }
+ html.betv-installed-app body>footer .footer-line,
+ html.betv-installed-app body>footer .footer-brand{
+   color:#a6abb5!important;font-size:12px!important;line-height:1.55!important;
+ }
+ html.betv-installed-app body>footer .footer-legal-links{
+   display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+   align-items:start!important;gap:13px 15px!important;width:100%!important;margin-top:22px!important;
+ }
+ html.betv-installed-app body>footer .footer-legal-links a{
+   padding:2px 0!important;color:#b5bdca!important;font-size:12px!important;
+   font-weight:500!important;line-height:1.5!important;text-decoration:none!important;overflow-wrap:anywhere;
+ }
+ html.betv-installed-app body>footer .footer-side{margin-top:17px!important}
 }
