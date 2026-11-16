@@ -23003,3 +23003,14 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{
   body.album-page-active .album-page-heading h1{font-size:27px}
   body.album-page-active .album-detail-copy h2{font-size:29px}
 }
+
+
+/* Music / album detail: no Home icon at the upper left; preserve the page Back arrow. */
+@media (max-width:760px){
+  body.album-page-active:not(.login-mode):not(.admin-mode) #mobileAppBar #mobileHomeButton,
+  body.album-page-active:not(.login-mode):not(.admin-mode) #mobileAppBar #mobileHomeButton:not([hidden]){
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+}
