@@ -8,38 +8,19 @@ const html = read('index.html');
 const css = read('assets/css/site.css');
 const worker = read('sw.js');
 
-const siteBundle = read('assets/js/site.js');
-const runtimeScript = html.match(/<script>[\s\S]*?__BETVSupabaseReady[\s\S]*?<\/script>/);
-assert.ok(runtimeScript, 'SDK loader must be independent from deferred scripts');
-assert.match(runtimeScript[0], /unpkg\.com/, 'SDK loader must have a second host');
-assert.match(runtimeScript[0], /6500/, 'SDK loader must have a finite timeout');
-assert.doesNotMatch(html, /<script defer src="\/api\/runtime/, 'blocking deferred SDK dependency must be removed');
-assert.match(html, /site\.js\?rev=20261116-browser-startup-v17/, 'old browser scripts must be cache-busted');
-assert.match(siteBundle, /await window\.__BETVSupabaseReady/, 'backend must await SDK before creating client');
-assert.match(siteBundle, /Promise\.race\(\[\s*initialization/, 'initial auth must not permanently block the UI');
-assert.match(siteBundle, /7500/, 'initial auth has a finite soft deadline');
-
-assert.match(siteBundle, /if\(document\.readyState==='loading'\)document\.addEventListener\('DOMContentLoaded',startPublicInterface/, 'only use DOMContentLoaded while markup is still parsing');
-assert.match(siteBundle, /else startPublicInterface\(\);/, 'start immediately when deferred main script executes');
-assert.match(html, /__betv_update/, 'recovery forces fresh HTML from server');
-const sitePage = read('server/api-routes/site-page.js');
-assert.match(sitePage, /res\.setHeader\('Vercel-CDN-Cache-Control', 'no-store'\)/, 'dynamic HTML must not be stale');
-assert.match(sitePage, /private, no-store, max-age=0, must-revalidate/, 'HTML response must be fresh');
-
-
-const vercelConfig = JSON.parse(read('vercel.json'));
-const runtime = vercelConfig.rewrites.find(rule => rule.source === '/api/runtime');
-assert.ok(runtime, 'the Supabase browser SDK must have a route');
-assert.equal(
-  runtime.destination,
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.js',
-  'load the real UMD artifact, not nonexistent supabase.min.js'
-);
-const runtimeCache = vercelConfig.headers.find(rule => rule.source === '/api/runtime');
-assert.ok(runtimeCache, 'Supabase runtime must have a caching policy');
-assert.doesNotMatch(JSON.stringify(runtimeCache), /max-age=31536000|immutable/, 'avoid pinning a broken SDK URL for one year');
-assert.match(html, /\/api\/runtime\?v=2\.112\.0-umd-fix1/, 'bust cached responses for the fixed SDK URL');
-assert.match(html, /betvBootRecovery/, 'show a usable retry screen if a deferred dependency stalls');
+const config = JSON.parse(read('vercel.json'));
+const runtime = config.rewrites.find(item => item.source === '/api/runtime');
+assert.equal(runtime.destination, 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.js', 'SDK URL must target the actual UMD artifact');
+assert.match(html, /<script defer src="\/api\/runtime\?v=2\.112\.0-validated-restore-v18"/, 'restore deterministic SDK-before-app order');
+assert.match(html, /site\.js\?rev=20261116-browser-restore-v18/, 'invalidate previous startup chunks');
+assert.doesNotMatch(html, /__BETVSupabaseReady/, 'remove speculative dynamic auth boot that followed the app update');
+const site = read('assets/js/site.js');
+assert.match(site, /window\.supabase &&\s*typeof window\.supabase\.createClient === 'function'/, 'restore original startup mode detection');
+assert.match(site, /function releaseSiteSkeleton\(/, 'restore original skeleton release function');
+assert.match(site, /setStatus\('A conexão está demorando\./, 'retain login fallback when authentication stalls');
+assert.match(html, /__betv_update/, 'browser retry must request fresh HTML');
+const htmlHandler = read('server/api-routes/site-page.js');
+assert.match(htmlHandler, /res\.setHeader\('Cache-Control', 'private, no-store, max-age=0, must-revalidate'\)/, 'HTML must not pin a stale loader');
 
 
 for (const [source, served] of [
