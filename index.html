@@ -96,22 +96,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Billie Eilish TV">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<script>
-(function(){
-  var host=String(location.hostname||'').toLowerCase();
-  if(host==='localhost'||host==='127.0.0.1'||host==='::1')return;
-  var c=window.console;
-  if(c){
-    var noop=function(){};
-    ['log','info','warn','error','debug','trace','table','dir','group','groupCollapsed','groupEnd','time','timeEnd','timeLog','assert'].forEach(function(name){
-      try{c[name]=noop;}catch(_){ }
-    });
-  }
-  window.addEventListener('unhandledrejection',function(event){event.preventDefault();});
-  window.addEventListener('error',function(event){try{event.preventDefault();}catch(_){ }},true);
-  try{window.onerror=function(){return true;};}catch(_){ }
-})( );
-</script>
+<!-- Preserve native browser errors for performance and loading diagnostics. -->
 <script defer src="/_static/chunks/locale.js?rev=20261027-content-seo-v3"></script>
 <script defer src="/_static/chunks/seo.js?rev=20261027-content-seo-v3"></script>
 <script>
@@ -244,12 +229,15 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
 <script defer src="/_static/chunks/performance.js?rev=20261009-visitor-menu-v15"></script>
 <script defer src="/_static/chunks/features.js?rev=20261116-unlimited-saves-v8"></script>
 <script defer src="/_static/chunks/site.js?rev=20261116-loading-recovery-v15"></script>
-<link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261101-i18n-privacy-watch-v19">
-<script defer src="/_static/chunks/watch-party.js?rev=20261105-friend-invites-v1"></script>
-<link rel="stylesheet" href="/_static/styles/watch-party-paywall.css?rev=20261115-detail-save-heart-v28">
+<link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1"></noscript>
+<script defer src="/_static/chunks/watch-party.js?rev=20261116-idle-poll-v1"></script>
+<link rel="stylesheet" href="/_static/styles/watch-party-paywall.css?rev=20261116-perf-styles-v1" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/_static/styles/watch-party-paywall.css?rev=20261116-perf-styles-v1"></noscript>
 <script defer src="/_static/chunks/watch-party-paywall.js?rev=20261115-detail-buttons-fixed-v26"></script>
-<script defer src="/_static/chunks/watch-party-gift.js?rev=20261101-i18n-privacy-watch-v19"></script>
-<link rel="stylesheet" href="/_static/styles/profile-activity.css?rev=20261116-profile-banner-compact-v10">
+<script defer src="/_static/chunks/watch-party-gift.js?rev=20261116-idle-poll-v1"></script>
+<link rel="stylesheet" href="/_static/styles/profile-activity.css?rev=20261116-perf-styles-v1" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/_static/styles/profile-activity.css?rev=20261116-perf-styles-v1"></noscript>
 <script defer src="/_static/chunks/profile-activity.js?rev=20261116-profile-banner-compact-v10"></script>
 <script defer src="/_static/chunks/lazy.js?rev=20261027-unified-lazy-v1"></script>
 <script defer src="/_static/chunks/mobile-bottom-nav.js?rev=20261116-saved-library-v4"></script>
@@ -278,7 +266,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
     var cleanup=window.__BETV_UPDATE_CACHE_CLEANUP__;
     Promise.resolve(cleanup).catch(function(){}).then(function(){
       return navigator.serviceWorker.getRegistration('/').then(function(existing){
-        if(existing)return existing;
+        if(existing){existing.update().catch(function(){});return existing;}
         return navigator.serviceWorker.register('/sw.js?build='+encodeURIComponent(build),{scope:'/',updateViaCache:'none'});
       });
     }).catch(function(error){
