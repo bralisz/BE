@@ -51,16 +51,29 @@
   card.replaceChildren();
   const top=document.createElement('div');top.className='profile-recent-watch-head';
   const eyebrow=document.createElement('span');eyebrow.textContent=t(10);
-  const tag=document.createElement('span');tag.textContent=item.collection==='movies'?t(7):item.collection==='series'?t(8):t(9);
-  top.append(eyebrow,tag);card.append(top);
+  top.append(eyebrow);card.append(top);
+  const body=document.createElement('div');body.className='profile-recent-watch-body';
+  const id=String(item.content_id||'').trim();
+  const media=document.createElement(id?'a':'div');media.className='profile-recent-watch-media';
+  if(id){
+   media.href=/^\d{6,12}$/.test(id)?'/'+locale()+'/'+encodeURIComponent(id):'/'+locale()+'/#/video/'+encodeURIComponent(id);
+   media.setAttribute('aria-label',String(item.title||'').slice(0,180));
+  }
   const image=cleanUrl(item.image_url);
   if(image){
    const cover=document.createElement('img');cover.className='profile-recent-watch-cover';
    cover.src=image;cover.loading='lazy';cover.alt='';cover.referrerPolicy='no-referrer';
-   card.append(cover);
+   media.append(cover);
   }
+  if(id){
+   const play=document.createElement('span');play.className='profile-recent-watch-play';play.setAttribute('aria-hidden','true');
+   play.innerHTML='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></svg>';
+   media.append(play);
+  }
+  const info=document.createElement('div');info.className='profile-recent-watch-info';
   const title=document.createElement('strong');title.className='profile-recent-watch-title notranslate';title.setAttribute('translate','no');title.textContent=String(item.title||'').slice(0,180);
-  card.append(title);
+  const tag=document.createElement('span');tag.className='profile-recent-watch-tag';tag.textContent=item.collection==='movies'?t(7):item.collection==='series'?t(8):t(9);
+  info.append(title,tag);body.append(media,info);card.append(body);
  }
  async function refreshProfile(){
   attach();
