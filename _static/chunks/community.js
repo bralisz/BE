@@ -3,7 +3,7 @@
   if(window.BETVCommunity)return;
   if(String(location.hash||'').startsWith('#/admin')) return;
 
-  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),similarRequestId:0,similarSeen:Object.create(null),similarHasMore:false,similarLoadingMore:false,lastPayloadAt:0,lastPayloadUserId:'',similarLoadedAt:0,similarLoadedUserId:'',similarObserver:null,shareProfileUserId:'',shareProfile:null,shareProfilePending:null};
+  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),similarRequestId:0,similarSeen:Object.create(null),similarHasMore:false,similarLoadingMore:false,lastPayloadAt:0,lastPayloadUserId:'',similarLoadedAt:0,similarLoadedUserId:'',similarObserver:null,shareProfileUserId:'',shareProfile:null,shareProfilePending:null,communityScrollY:0,restoreCommunityScrollOnNextOpen:false};
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
@@ -110,10 +110,14 @@
         }else throw error;
       }
       if(!shared){sharePromotionStatus('error');return;}
-      var client=window.beBackend&&window.beBackend.client;
-      if(!client||typeof client.rpc!=='function')throw new Error('community_tag_backend_unavailable');
-      var result=await client.rpc('claim_billie_fan_tag');
-      if(result&&result.error)throw result.error;
+      var ownedTag=String(profile&&((profile.communityTag||profile.community_tag))||'').toLowerCase()==='billie_fan'
+        ||(Array.isArray(profile&&(profile.communityTags||profile.community_tags))&&(profile.communityTags||profile.community_tags).some(function(tag){return String(tag).toLowerCase()==='billie_fan';}));
+      if(!ownedTag){
+        var client=window.beBackend&&window.beBackend.client;
+        if(!client||typeof client.rpc!=='function')throw new Error('community_tag_backend_unavailable');
+        var result=await client.rpc('claim_billie_fan_tag');
+        if(result&&result.error)throw result.error;
+      }
       try{localStorage.setItem('beCommunityTag:'+String(user.uid),'billie_fan');}catch(_){}
       window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(user.uid),tag:'billie_fan'}}));
       if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.get==='function'){
@@ -722,6 +726,7 @@
 
   function closeCommunity(resetView,tabAfter){
     if(state.similarObserver){state.similarObserver.disconnect();state.similarObserver=null;}
+    if(document.body.classList.contains('community-page-active'))state.communityScrollY=Math.max(0,Number(window.scrollY)||0);
     communityBannerRequest+=1; // Ignore late image loads after leaving this page.
     if(document.body.classList.contains('community-page-active')){
       document.body.classList.remove('community-page-active');
@@ -790,7 +795,11 @@
       if(document.body.classList.contains('community-page-active')&&String(currentUser()&&currentUser().uid||'')===String(shareUser.uid))loadShareProfile(shareUser);
     },1400);
     try{window.dispatchEvent(new CustomEvent('be:close-public-search'));window.dispatchEvent(new CustomEvent('be:close-mobile-search'));}catch(_){ }
-    if(!state.detailReturnToCommunity)window.scrollTo({top:0,left:0,behavior:'auto'});
+    var restoreCommunityScroll=state.restoreCommunityScrollOnNextOpen===true;
+    state.restoreCommunityScrollOnNextOpen=false;
+    if(restoreCommunityScroll){
+      window.requestAnimationFrame(function(){window.scrollTo({top:state.communityScrollY,left:0,behavior:'auto'});});
+    }else window.scrollTo({top:0,left:0,behavior:'auto'});
     chooseCommunityBanner();
     refreshCommunity();
     scheduleSimilarFans();
@@ -1381,7 +1390,7 @@
     },true);
     window.addEventListener('be:toggle-mobile-account-menu',toggleMobileAccountMenu);
     window.addEventListener('be:close-notification-menus',closeMobileAccountMenu);
-    window.addEventListener('popstate',function(){closeMobileAccountMenu();if(document.body.classList.contains('community-page-active'))closeCommunity(true);window.setTimeout(function(){if(state.detailReturnToCommunity&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')){state.detailReturnToCommunity=false;openCommunity();return;}if(!document.body.classList.contains('community-page-active')&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')&&!document.body.classList.contains('support-page-active')&&!document.body.classList.contains('legal-page-active')&&!document.body.classList.contains('billie-page-active')&&!document.body.classList.contains('donate-page-active')&&!document.body.classList.contains('fans-page-active')&&!document.body.classList.contains('album-page-active'))setHomeTab(catalogTabForView(state.catalogHomeView));},0);});
+    window.addEventListener('popstate',function(){closeMobileAccountMenu();if(document.body.classList.contains('community-page-active'))closeCommunity(true);window.setTimeout(function(){if(state.detailReturnToCommunity&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')){state.detailReturnToCommunity=false;state.restoreCommunityScrollOnNextOpen=true;openCommunity();return;}if(!document.body.classList.contains('community-page-active')&&!document.body.classList.contains('detail-page-active')&&!document.body.classList.contains('notification-page-active')&&!document.body.classList.contains('profile-page-active')&&!document.body.classList.contains('settings-page-active')&&!document.body.classList.contains('support-page-active')&&!document.body.classList.contains('legal-page-active')&&!document.body.classList.contains('billie-page-active')&&!document.body.classList.contains('donate-page-active')&&!document.body.classList.contains('fans-page-active')&&!document.body.classList.contains('album-page-active'))setHomeTab(catalogTabForView(state.catalogHomeView));},0);});
     window.addEventListener('hashchange',closeMobileAccountMenu);
     window.addEventListener('resize',function(){if(!window.matchMedia('(max-width:760px)').matches)closeMobileAccountMenu();else if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();});
     function syncMobileMenuPosition(){if(document.body.classList.contains('mobile-account-menu-open'))positionMobileAccountMenu();}
