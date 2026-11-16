@@ -7,66 +7,32 @@
  const user=()=>window.beBackend?.auth?.currentUser;
  const locale=()=>String(window.BETVLocale?.slug||'pt-br').toLowerCase();
  const words={
-  'pt-br':['Último conteúdo assistido','Privacidade','Mostrar meu último filme ou vídeo assistido','Outras pessoas poderão abrir um card discreto no seu perfil. Desative para manter isso privado.','Salvando…','Preferência salva.','Não foi possível salvar sua preferência.','Filme','Série','Vídeo','Assistiu por último'],
-  'en-us':['Last watched','Privacy','Show my last watched movie or video','Others can open a small card on your profile. Turn this off to keep it private.','Saving…','Preference saved.','Could not save your preference.','Movie','Series','Video','Last watched'],
-  es:['Último contenido visto','Privacidad','Mostrar mi última película o vídeo visto','Otras personas podrán abrir una tarjeta discreta en tu perfil. Desactívalo para mantenerlo privado.','Guardando…','Preferencia guardada.','No se pudo guardar.','Película','Serie','Vídeo','Visto por última vez'],
-  fr:['Dernier contenu regardé','Confidentialité','Afficher mon dernier film ou ma dernière vidéo','Les autres peuvent ouvrir une petite carte sur votre profil. Désactivez pour garder cette activité privée.','Enregistrement…','Préférence enregistrée.','Enregistrement impossible.','Film','Série','Vidéo','Dernier visionnage'],
-  it:['Ultimo contenuto visto','Privacy','Mostra il mio ultimo film o video visto','Gli altri possono aprire una scheda sul tuo profilo. Disattiva per mantenere privata l’attività.','Salvataggio…','Preferenza salvata.','Impossibile salvare.','Film','Serie','Video','Ultima visualizzazione']
+  'pt-br':['Último conteúdo assistido','Privacidade','Mostrar meu último filme ou vídeo assistido','Outras pessoas poderão ver seu último conteúdo assistido no perfil. Desative para manter isso privado.','Salvando…','Preferência salva.','Não foi possível salvar sua preferência.','Filme','Série','Vídeo','Assistiu por último'],
+  'en-us':['Last watched','Privacy','Show my last watched movie or video','Others can see your last watched content on your profile. Turn this off to keep it private.','Saving…','Preference saved.','Could not save your preference.','Movie','Series','Video','Last watched'],
+  es:['Último contenido visto','Privacidad','Mostrar mi última película o vídeo visto','Otras personas podrán ver el último contenido que viste en tu perfil. Desactívalo para mantenerlo privado.','Guardando…','Preferencia guardada.','No se pudo guardar.','Película','Serie','Vídeo','Visto por última vez'],
+  fr:['Dernier contenu regardé','Confidentialité','Afficher mon dernier film ou ma dernière vidéo','Les autres peuvent voir le dernier contenu regardé sur votre profil. Désactivez pour garder cette activité privée.','Enregistrement…','Préférence enregistrée.','Enregistrement impossible.','Film','Série','Vidéo','Dernier visionnage'],
+  it:['Ultimo contenuto visto','Privacy','Mostra il mio ultimo film o video visto','Gli altri possono vedere il tuo ultimo contenuto visto sul profilo. Disattiva per mantenere privata l’attività.','Salvataggio…','Preferenza salvata.','Impossibile salvare.','Film','Serie','Video','Ultima visualizzazione']
  };
  const t=i=>(words[locale()]||words['pt-br'])[i];
- let trigger=null,card=null,displayed=null,request=0,queued=false,settingsRequest=0;
+ let card=null,displayed=null,request=0,queued=false,settingsRequest=0;
  const cleanUrl=value=>{try{const url=new URL(String(value||''),location.origin);return url.protocol==='https:'&&url.origin===location.origin||url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch(_){return '';}};
- function close(){
-  if(!card)return;
-  card.hidden=true;
-  if(trigger)trigger.setAttribute('aria-expanded','false');
- }
- function positionCard(){
-  if(!card||!trigger||card.hidden)return;
-  const viewport=window.visualViewport;
-  const left=viewport?.offsetLeft||0,top=viewport?.offsetTop||0;
-  const width=viewport?.width||window.innerWidth,height=viewport?.height||window.innerHeight;
-  const margin=12,gap=10,anchor=trigger.getBoundingClientRect();
-  const availableLeft=Math.max(0,anchor.left-left-margin-gap);
-  card.style.width=Math.min(width<=760?320:440,availableLeft)+'px';
-  card.style.maxHeight=Math.max(0,height-margin*2)+'px';
-  const bounds=card.getBoundingClientRect();
-  const x=Math.max(left+margin,anchor.left-gap-bounds.width);
-  const preferred=(anchor.top+anchor.bottom-bounds.height)/2;
-  const y=Math.max(top+margin,Math.min(preferred,top+height-bounds.height-margin));
-  card.style.left=x+'px';card.style.top=y+'px';
- }
+ function close(){if(card)card.hidden=true;}
  function attach(){
-  const row=document.querySelector('#profilePage .profile-page-follow-stats');
-  if(!row)return;
-  if(!trigger||!row.contains(trigger)){
-   trigger=document.createElement('button');
-   trigger.type='button';trigger.id='profileRecentWatchButton';trigger.className='profile-recent-watch-trigger';
-   trigger.hidden=true;trigger.setAttribute('aria-expanded','false');
-   trigger.setAttribute('aria-label',t(0));trigger.setAttribute('title',t(0));
-   trigger.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>';
-   row.append(trigger);
-   trigger.addEventListener('click',event=>{
-    event.stopPropagation();
-    if(!displayed)return;
-    const willOpen=card.hidden;
-    close();
-    if(willOpen){renderCard(displayed);card.hidden=false;positionCard();trigger.setAttribute('aria-expanded','true');}
-   });
-  }
+  const favorites=$('profileFavoritesSection');
+  if(!favorites)return;
   if(!card||!card.isConnected){
-   card=document.createElement('div');card.id='profileRecentWatchCard';card.className='profile-recent-watch-card';
-   card.hidden=true;card.setAttribute('role','group');document.body.append(card);
-   trigger.setAttribute('aria-controls',card.id);
+   card=document.createElement('section');card.id='profileRecentWatchCard';card.className='profile-recent-watch-card';
+   card.hidden=true;card.setAttribute('aria-label',t(0));
+   favorites.before(card);
   }
-  trigger.setAttribute('aria-label',t(0));trigger.title=t(0);
+  card.setAttribute('aria-label',t(0));
  }
  function renderCard(item){
   if(!card)return;
   card.replaceChildren();
   const top=document.createElement('div');top.className='profile-recent-watch-head';
   const eyebrow=document.createElement('span');eyebrow.textContent=t(10);
-  top.append(eyebrow);card.append(top);
+  top.append(eyebrow);
   const body=document.createElement('div');body.className='profile-recent-watch-body';
   const id=String(item.content_id||'').trim();
   const media=document.createElement(id?'a':'div');media.className='profile-recent-watch-media';
@@ -83,16 +49,16 @@
   const info=document.createElement('div');info.className='profile-recent-watch-info';
   const title=document.createElement('strong');title.className='profile-recent-watch-title notranslate';title.setAttribute('translate','no');title.textContent=String(item.title||'').slice(0,180);
   const tag=document.createElement('span');tag.className='profile-recent-watch-tag';tag.textContent=item.collection==='movies'?t(7):item.collection==='series'?t(8):t(9);
-  info.append(title,tag);body.append(media,info);card.append(body);
+  info.append(top,title,tag);body.append(media,info);card.append(body);
  }
  async function refreshProfile(){
   attach();
   const handle=String($('profilePageHandle')?.textContent||'').trim().replace(/^@/,'');
   const active=document.body.classList.contains('profile-page-active')&&handle&&$('profilePage')?.hidden===false;
   const serial=++request;
-  if(!active){displayed=null;if(trigger)trigger.hidden=true;close();return;}
+  if(!active){displayed=null;close();return;}
   close();
-  if(trigger)trigger.hidden=true;
+
   try{
    await Promise.resolve(window.beBackend?.ready);
    const owner=user(),own=Boolean(owner&&String(owner.username||'').toLowerCase()===handle.toLowerCase());
@@ -102,8 +68,8 @@
    const value=Array.isArray(result?.data)?result.data[0]:result?.data;
    if(serial!==request||String($('profilePageHandle')?.textContent||'').trim().replace(/^@/,'')!==handle)return;
    displayed=!result?.error&&value?.watched_at&&value?.title?value:null;
-   if(trigger)trigger.hidden=!displayed;
-  }catch(_){if(serial===request){displayed=null;if(trigger)trigger.hidden=true;}}
+   if(displayed&&card){renderCard(displayed);card.hidden=false;}
+  }catch(_){if(serial===request){displayed=null;}}
  }
  function scheduleRefresh(){
   if(queued)return;queued=true;
@@ -160,15 +126,10 @@
  function boot(){
   attach();injectSettings();
   document.addEventListener('click',recordFromPlay,true);
-  document.addEventListener('pointerdown',event=>{if(card&&!card.hidden&&!event.target.closest?.('#profileRecentWatchButton,#profileRecentWatchCard'))close();},true);
-  window.addEventListener('scroll',event=>{if(!card?.contains(event.target))close();},true);
-  window.addEventListener('resize',close);
-  window.visualViewport?.addEventListener('resize',close);
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
   window.addEventListener('be:open-profile-route',scheduleRefresh);
   window.addEventListener('be:route-change',scheduleRefresh);
   window.addEventListener('be:profile-refreshed',scheduleRefresh);
-  window.addEventListener('be:i18n-ready',()=>{attach();injectSettings();});
+  window.addEventListener('be:i18n-ready',()=>{attach();if(displayed)renderCard(displayed);injectSettings();});
   const handle=$('profilePageHandle');if(handle)new MutationObserver(scheduleRefresh).observe(handle,{childList:true,characterData:true,subtree:true});
   new MutationObserver(()=>{injectSettings();}).observe($('settingsPageBody')||document.body,{childList:true,subtree:false});
   new MutationObserver(scheduleRefresh).observe(document.body,{attributes:true,attributeFilter:['class']});
