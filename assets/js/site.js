@@ -14481,7 +14481,17 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){hideSiteSkeleton();if(isDonateRoute())showDonateRoute();else if(isSupportRoute())showSupportRoute();else if(isAlbumsRoute())showAlbumsRoute();else if(isBillieRoute())showBillieRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else enterHome(true);}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}(void 0);}
   }
 
-  document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode(isPasswordRecoveryRoute()?'recovery':'email');startAuthentication()});
+  function startPublicInterface(){
+    if(window.__BETVPublicInterfaceStarted)return;
+    window.__BETVPublicInterfaceStarted=true;
+    initBackgrounds();
+    setMode(isPasswordRecoveryRoute()?'recovery':'email');
+    startAuthentication();
+  }
+  // This bundle is deferred, so the DOM is already parsed at readyState=interactive.
+  // Start now: optional deferred modules must not postpone auth or its timeout.
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startPublicInterface,{once:true});
+  else startPublicInterface();
 })();
 
 ;
