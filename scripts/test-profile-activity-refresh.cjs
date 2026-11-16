@@ -6,7 +6,8 @@ const source=fs.readFileSync('assets/js/profile-activity.js','utf8');
 const item={title:'Swarm',content_id:'12345678',watched_at:'2026-11-15'};
 let state={handle:'miguel',active:true,key:'miguel|guest'},resolve;
 const card={hidden:false};
-const context={card,displayed:item,displayedKey:state.key,renderedKey:'loaded',request:0,
+const cache=new Map();
+const context={cache,TTL:0,cacheKey:state=>state.key,remember:(key,value)=>cache.set(key,{value,time:Date.now()}),watchWrites:Promise.resolve(),card,displayed:item,displayedKey:state.key,renderedKey:'loaded',request:0,
  attach(){},close(){card.hidden=true;},renderCard(){},profileState:()=>state,user:()=>null,
  client:()=>({rpc:()=>new Promise(r=>{resolve=r;})}),window:{beBackend:{ready:Promise.resolve()}}};
 vm.createContext(context);

@@ -16,6 +16,7 @@
  const t=i=>(words[locale()]||words['pt-br'])[i];
  let card=null,displayed=null,request=0,queued=false,settingsRequest=0,displayedKey='',renderedKey='';
  const cache=new Map(),TTL=90000;
+ let watchWrites=Promise.resolve();
  const cacheKey=state=>state.key;
  function remember(key,value){cache.delete(key);cache.set(key,{value,time:Date.now()});if(cache.size>80)cache.delete(cache.keys().next().value);}
  const cleanUrl=value=>{try{const url=new URL(String(value||''),location.origin);return url.protocol==='https:'&&url.origin===location.origin||url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch(_){return '';}};
@@ -83,7 +84,11 @@
    if(serial!==request||profileState().key!==state.key)return;
    const owner=user(),own=Boolean(owner&&String(owner.username||'').toLowerCase()===state.handle.toLowerCase());
    let result;
-   if(own){result=await client()?.from('profile_watch_activity').select('content_id,title,collection,image_url,watched_at').eq('user_id',owner.uid).maybeSingle();}
+   if(own){
+    await watchWrites;
+    if(serial!==request||user()?.uid!==owner.uid)return;
+    result=await client()?.from('profile_watch_activity').select('content_id,title,collection,image_url,watched_at').eq('user_id',owner.uid).maybeSingle();
+   }
    else result=await client()?.rpc('get_public_last_watch',{p_username:state.handle});
    const current=profileState();
    if(serial!==request||current.key!==state.key||!current.active)return;
@@ -134,18 +139,30 @@
  function recordFromPlay(event){
   const play=event.target?.closest?.('#contentDetailPlay');
   if(!play||!user()?.uid||play.getAttribute('aria-disabled')==='true'||!play.getAttribute('href'))return;
-  const d=play.dataset;
+  // Snapshot the clicked content: episode playback temporarily changes this dataset.
+  const d={...play.dataset};
+  const href=String(play.getAttribute('href')||'').trim();
+  if(d.seriesEpisodeMode||!href||href.startsWith('#'))return;
+  try{if(!['http:','https:'].includes(new URL(href,location.origin).protocol))return;}catch(_){return;}
   const title=String(d.title||'').trim(),contentId=String(d.itemId||d.recordId||'').trim();
   if(!title||!contentId)return;
   const img=cleanUrl(d.imageUrl||d.bannerUrl||'');
   const current=user()?.uid;
-  Promise.resolve(window.beBackend?.ready).then(async()=>{
+  // Preserve playback order even when an earlier network write is slow.
+  watchWrites=watchWrites.catch(()=>{}).then(async()=>{
+   await Promise.resolve(window.beBackend?.ready);
    if(!client()||user()?.uid!==current)return;
-   const {error}=await client().rpc('record_profile_watch',{
+   const {data,error}=await client().rpc('record_profile_watch',{
     p_content_id:contentId.slice(0,128),p_title:title.slice(0,180),
     p_collection:String(d.collection||'videos'),p_image_url:img
    });
-   if(!error){cache.delete(profileState().key);scheduleRefresh();}
+   if(!error&&data===true&&user()?.uid===current){
+    const ownerHandle=String(user()?.username||'').toLowerCase();
+    for(const key of cache.keys())if(key.startsWith(ownerHandle+'|'))cache.delete(key);
+    // Ignore a profile read started before this newer playback was saved.
+    request++;
+    scheduleRefresh();
+   }
   }).catch(()=>{});
  }
  function boot(){
