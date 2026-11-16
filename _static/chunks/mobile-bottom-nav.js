@@ -32,8 +32,7 @@
   page.setAttribute('aria-label', 'Vídeos salvos');
   page.innerHTML = `
     <header class="betv-app-saved-heading">
-      <div><span class="betv-app-saved-eyebrow">SUA BIBLIOTECA</span>
-      <h1 id="betvAppSavedTitle">Vídeos salvos</h1>
+      <div><h1 id="betvAppSavedTitle">Vídeos salvos</h1>
       <p id="betvAppSavedSubtitle">Conteúdos que você marcou com o coração.</p></div>
       <span id="betvAppSavedCount" aria-live="polite"></span>
     </header>
@@ -66,7 +65,6 @@
       button.setAttribute('aria-label', names[i]);
       button.title = names[i];
     });
-    page.querySelector('.betv-app-saved-eyebrow').textContent = words[4];
     page.querySelector('#betvAppSavedTitle').textContent = words[5];
     page.querySelector('#betvAppSavedSubtitle').textContent = words[6];
     more().textContent = words[9];
