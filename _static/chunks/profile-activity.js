@@ -22,14 +22,20 @@
  function close(){if(card)card.hidden=true;}
  function attach(){
   const favorites=$('profileFavoritesSection');
+  const hero=document.querySelector('#profilePage .profile-page-hero');
   if(!favorites)return;
+  const desktop=window.matchMedia('(min-width:761px)').matches&&Boolean(hero);
+  const parent=desktop?hero:favorites.parentElement;
   if(!card||!card.isConnected){
    card=document.createElement('section');card.id='profileRecentWatchCard';card.className='profile-recent-watch-card';
    card.hidden=true;renderedKey='';card.setAttribute('aria-label',t(0));
-   favorites.before(card);
   }
   card.setAttribute('aria-label',t(0));
-  if(card.nextElementSibling!==favorites)favorites.before(card);
+  if(desktop){
+   if(card.parentElement!==parent)parent.appendChild(card);
+  }else if(card.nextElementSibling!==favorites||card.parentElement!==parent){
+   favorites.before(card);
+  }
  }
  function renderCard(item){
   if(!card)return;
@@ -161,6 +167,7 @@
   const profile=$('profilePage');
   if(profile)new MutationObserver(refreshWhenProfileChanges).observe(profile,{attributes:true,attributeFilter:['hidden']});
   window.addEventListener('pageshow',scheduleRefresh);
+  window.addEventListener('resize',scheduleRefresh);
   window.beBackend?.auth?.onChange?.(()=>{settingsRequest++;cache.clear();scheduleRefresh();injectSettings();});
   scheduleRefresh();
  }
