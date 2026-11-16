@@ -8,6 +8,8 @@ const output = minifyCss(`
   .popover { top: calc(78px + env(safe-area-inset-top)); }
   .tabs { padding: calc(7px + env(safe-area-inset-bottom)); }
   .rail > .card + .card { color: white; }
+  #detail :is(#watch, #cast, #share) { color: white; }
+  .actions :not([hidden]) { display: flex; }
   .caption::before { content: "one + two"; }
 `);
 assert(output.includes('calc(78px + env(safe-area-inset-top))'));
@@ -16,3 +18,8 @@ assert(output.includes('.card + .card'));
 assert(output.includes('"one + two"'));
 assert(!output.includes('/*'));
 console.log('PASS static CSS: math spacing, adjacent selectors and quoted content');
+
+assert(output.includes('#detail :is(#watch,#cast,#share)'));
+assert(output.includes('.actions :not([hidden])'));
+assert(!output.includes('#detail:is('));
+console.log('PASS descendant pseudo-class selectors survive minification');

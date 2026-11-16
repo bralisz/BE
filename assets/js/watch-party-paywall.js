@@ -332,8 +332,8 @@
     }
     const button=$('contentDetailWatchParty');
     if(button){
-      const play=$('contentDetailPlay');
-      if(play&&play.nextElementSibling!==button)play.insertAdjacentElement('afterend',button);
+      const actions=document.querySelector('#contentDetail .detail-secondary-actions');
+      if(actions&&actions.firstElementChild!==button)actions.prepend(button);
       button.classList.add('watch-party-main-cta');
       button.dataset.watchPartyUnlock=unlocked?'true':'false';
       const actionLabel=({'pt-br':'Assistir junto','en-us':'Watch together',es:'Ver juntos',fr:'Regarder ensemble',it:'Guarda insieme'})[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||'Assistir junto';
