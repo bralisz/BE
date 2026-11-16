@@ -921,5 +921,19 @@
   "Episódio": "Épisode",
   "Carregando episódios": "Chargement des épisodes",
   "Episódios anteriores": "Épisodes précédents",
-  "Mais episódios": "Autres épisodes"
+  "Mais episódios": "Autres épisodes",
+  "Como acesso a comunidade Avocados?": "Comment accéder à la communauté Avocados ?",
+  "Clique em Comunidade na tela de login ou abra /avocados. A página de diretrizes e termos continua em /comunidade.": "Cliquez sur Communauté sur la page de connexion ou ouvrez /avocados. Les règles et conditions restent disponibles sur /communaute.",
+  "Como encontro e sigo outros fãs da Billie?": "Comment trouver et suivre d’autres fans de Billie ?",
+  "Em Avocados, abra a seção Encontre outros fãs da Billie. Explore os perfis recomendados e use Seguir após entrar na sua conta.": "Dans Avocados, ouvrez Trouvez d’autres fans de Billie. Parcourez les profils suggérés et choisissez Suivre après connexion.",
+  "Como ganho a tag Fã da Billie?": "Comment obtenir le badge Fan de Billie ?",
+  "Entre na sua conta, abra Avocados e use o botão azul Compartilhar no cartão abaixo de Encontre outros fãs da Billie. A tag é concedida após o compartilhamento ser concluído.": "Connectez-vous, ouvrez Avocados et utilisez le bouton bleu Partager sous Trouvez d’autres fans de Billie. Le badge est attribué une fois le partage terminé.",
+  "Por que meu Assistiu por último está vazio?": "Pourquoi ma section Dernier visionnage est-elle vide ?",
+  "O histórico pertence à conta conectada e é atualizado quando você inicia a reprodução. Confira se entrou na conta correta, abra um conteúdo e atualize o perfil caso a mudança demore a aparecer.": "L’historique est associé au compte connecté et se met à jour au démarrage de la lecture. Vérifiez votre compte, lancez une vidéo et actualisez votre profil si nécessaire.",
+  "Onde encontro os episódios de uma série?": "Où trouver les épisodes d’une série ?",
+  "Abra a página da série e selecione Assistir ou Ver episódios. Quando houver episódios cadastrados, eles aparecem abaixo com capa e duração; caso contrário, o site poderá mostrar Em breve.": "Ouvrez la page de la série et choisissez Regarder ou Voir les épisodes. Les épisodes disponibles apparaissent plus bas avec leur image et leur durée, sinon la page peut indiquer Bientôt disponible.",
+  "Como escolho as legendas de cada episódio?": "Comment choisir les sous-titres de chaque épisode ?",
+  "Durante a reprodução, abra o ícone de legendas no player e selecione um idioma disponível. As legendas são cadastradas por episódio, então nem todos terão as mesmas opções.": "Pendant la lecture, ouvrez l’icône des sous-titres et choisissez une langue disponible. Chaque épisode dispose de ses propres pistes.",
+  "Como oculto meu perfil dos rankings da comunidade?": "Comment masquer mon profil des classements de la communauté ?",
+  "Em Configurações, abra a seção de dados e procure Rankings da Comunidade. Desative a participação pública para não aparecer nas classificações; isso não exclui sua conta.": "Dans Paramètres, ouvrez la section des données puis Classements de la communauté. Désactivez la participation publique sans supprimer votre compte."
 }
