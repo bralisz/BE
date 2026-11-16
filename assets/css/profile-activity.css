@@ -55,3 +55,11 @@ body.profile-page-active #profileRecentWatchCard{position:relative;inset:auto;z-
  }
  body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-tag{font-size:9px;line-height:1.2}
 }
+
+/* Localized section label above the preview, without shrinking its cover. */
+body.profile-page-active #profileRecentWatchCard{margin-top:48px;overflow:visible}
+.profile-recent-watch-heading{position:absolute;left:0;bottom:calc(100% + 10px);margin:0;font-size:16px;line-height:1.35;font-weight:650;color:inherit}
+@media(min-width:761px){
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard{overflow:visible!important}
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-heading{font-size:12px;bottom:calc(100% + 8px)}
+}

@@ -9,9 +9,9 @@
  const words={
   'pt-br':['Último conteúdo assistido','Privacidade','Mostrar meu último filme ou vídeo assistido','Outras pessoas poderão ver seu último conteúdo assistido no perfil. Desative para manter isso privado.','Salvando…','Preferência salva.','Não foi possível salvar sua preferência.','Filme','Série','Vídeo','Assistiu por último'],
   'en-us':['Last watched','Privacy','Show my last watched movie or video','Others can see your last watched content on your profile. Turn this off to keep it private.','Saving…','Preference saved.','Could not save your preference.','Movie','Series','Video','Last watched'],
-  es:['Último contenido visto','Privacidad','Mostrar mi última película o vídeo visto','Otras personas podrán ver el último contenido que viste en tu perfil. Desactívalo para mantenerlo privado.','Guardando…','Preferencia guardada.','No se pudo guardar.','Película','Serie','Vídeo','Visto por última vez'],
+  es:['Último contenido visto','Privacidad','Mostrar mi última película o vídeo visto','Otras personas podrán ver el último contenido que viste en tu perfil. Desactívalo para mantenerlo privado.','Guardando…','Preferencia guardada.','No se pudo guardar.','Película','Serie','Vídeo','Último contenido visto'],
   fr:['Dernier contenu regardé','Confidentialité','Afficher mon dernier film ou ma dernière vidéo','Les autres peuvent voir le dernier contenu regardé sur votre profil. Désactivez pour garder cette activité privée.','Enregistrement…','Préférence enregistrée.','Enregistrement impossible.','Film','Série','Vidéo','Dernier visionnage'],
-  it:['Ultimo contenuto visto','Privacy','Mostra il mio ultimo film o video visto','Gli altri possono vedere il tuo ultimo contenuto visto sul profilo. Disattiva per mantenere privata l’attività.','Salvataggio…','Preferenza salvata.','Impossibile salvare.','Film','Serie','Video','Ultima visualizzazione']
+  it:['Ultimo contenuto visto','Privacy','Mostra il mio ultimo film o video visto','Gli altri possono vedere il tuo ultimo contenuto visto sul profilo. Disattiva per mantenere privata l’attività.','Salvataggio…','Preferenza salvata.','Impossibile salvare.','Film','Serie','Video','Ultimo contenuto visto']
  };
  const t=i=>(words[locale()]||words['pt-br'])[i];
  let card=null,displayed=null,request=0,queued=false,settingsRequest=0,displayedKey='',renderedKey='';
@@ -45,6 +45,7 @@
   if(renderedKey===signature)return;
   renderedKey=signature;
   card.replaceChildren();
+  const heading=document.createElement('h2');heading.className='profile-recent-watch-heading';heading.textContent=t(10);
   const body=document.createElement('div');body.className='profile-recent-watch-body';
   const id=String(item.content_id||'').trim();
   const media=document.createElement(id?'a':'div');media.className='profile-recent-watch-media';
@@ -61,7 +62,7 @@
   const info=document.createElement('div');info.className='profile-recent-watch-info';
   const title=document.createElement('strong');title.className='profile-recent-watch-title notranslate';title.setAttribute('translate','no');title.textContent=String(item.title||'').slice(0,180);
   const tag=document.createElement('span');tag.className='profile-recent-watch-tag';tag.textContent=item.collection==='movies'?t(7):item.collection==='series'?t(8):t(9);
-  info.append(title,tag);body.append(media,info);card.append(body);
+  info.append(title,tag);body.append(media,info);card.append(heading,body);
  }
  function profileState(){
   const handle=String($('profilePageHandle')?.textContent||'').trim().replace(/^@/,'');

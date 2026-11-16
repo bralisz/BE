@@ -26,6 +26,11 @@ const source=fs.readFileSync('assets/js/profile-activity.js','utf8');
   assert.equal(card.querySelector('.profile-recent-watch-title').textContent,'New film','update before server resolves');
   assert.equal(card.querySelector('.profile-recent-watch-tag').textContent,'Filme');
   assert(card.querySelector('img'));assert(!card.querySelector('.profile-recent-watch-head'));
+  for(const [slug,label] of [['pt-br','Assistiu por último'],['en-us','Last watched'],['es','Último contenido visto'],['fr','Dernier visionnage'],['it','Ultimo contenuto visto']]){
+   w.BETVLocale={slug};w.dispatchEvent(new w.Event('be:i18n-ready'));
+   assert.equal(card.firstElementChild.textContent,label);
+   assert.equal(card.firstElementChild.tagName,'H2');
+  }
   complete({data:true});await new Promise(setImmediate);
   w.BETVProfileActivity.refresh();await new Promise(setImmediate);
   assert.equal(reads,initialReads,'confirmed entry should stay cached');
