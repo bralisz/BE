@@ -5850,6 +5850,31 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   window.addEventListener('be:catalog-ready', queueDetailRecommendationCatalogBuild);
 
+  function setupDetailRecommendationCarousel(panel) {
+    const rail = panel.querySelector('#detailMoreRail');
+    const prev = panel.querySelector('.detail-reco-arrow.prev');
+    const next = panel.querySelector('.detail-reco-arrow.next');
+    if (!rail || !prev || !next) return;
+    if (!rail.__betvRecommendationArrows) {
+      const update = () => {
+        const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
+        prev.hidden = max < 8 || rail.scrollLeft < 5;
+        next.hidden = max < 8 || rail.scrollLeft >= max - 5;
+      };
+      const advance = direction => {
+        const distance = Math.max(260, rail.clientWidth * .85);
+        rail.scrollBy({left:direction * distance,behavior:'smooth'});
+      };
+      prev.addEventListener('click', () => advance(-1));
+      next.addEventListener('click', () => advance(1));
+      rail.addEventListener('scroll', update, {passive:true});
+      if ('ResizeObserver' in window) new ResizeObserver(update).observe(rail);
+      else window.addEventListener('resize', update, {passive:true});
+      rail.__betvRecommendationArrows = update;
+    }
+    window.requestAnimationFrame(rail.__betvRecommendationArrows);
+  }
+
   function renderDetailRecommendations(current) {
     const panel = document.getElementById('detailRecommendations');
     const moreRail = document.getElementById('detailMoreRail');
@@ -5868,6 +5893,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     panel.hidden = false;
     panel.removeAttribute('hidden');
     panel.setAttribute('aria-hidden', 'false');
+    setupDetailRecommendationCarousel(panel);
   }
 
 
@@ -13055,24 +13081,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bindActivation(document.getElementById('mobileHomeButton'), () => {
       closeMobileAccountPopover();
       window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
-      // The mobile header Home and the Home icon in profile actions must use
-      // the same exit path.  Avoid competing route transitions on profile pages.
-      if (document.body.classList.contains('profile-page-active')) {
-        const profileHome = document.getElementById('profilePageHome');
-        if (profileHome) {
-          profileHome.click();
-          return;
-        }
-      }
+      openDrawer(false);
+      openMobileSearch(false);
+      // A dedicated profile/content route can have several overlapping page
+      // controllers. Use the canonical localized Home URL instead of relying
+      // on synthetic clicks of controls hidden on mobile.
       const path = window.BETVLocalePath ? window.BETVLocalePath() : location.pathname;
       const dedicatedPage = path !== '/' || [
-        'settings-page-active','notification-page-active','community-page-active',
-        'detail-page-active','support-page-active','billie-page-active',
-        'fans-page-active','donate-page-active','legal-page-active',
-        'album-page-active','section-catalog-active'
+        'profile-page-active','settings-page-active','notification-page-active',
+        'community-page-active','detail-page-active','support-page-active',
+        'billie-page-active','fans-page-active','donate-page-active',
+        'legal-page-active','album-page-active','section-catalog-active'
       ].some(name => document.body.classList.contains(name));
-      if (dedicatedPage && window.BETVPublicRoutes) window.BETVPublicRoutes.go('/');
-      selectView('home', dedicatedPage ? 'none' : 'push');
+      if (dedicatedPage) {
+        const homeUrl = window.BETVLocaleURL ? window.BETVLocaleURL('/') : '/';
+        window.location.assign(homeUrl);
+        return;
+      }
+      selectView('home', 'push');
+      window.scrollTo({top:0,left:0,behavior:'auto'});
     });
 
     bindActivation(searchButton, () => {

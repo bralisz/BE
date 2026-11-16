@@ -22537,3 +22537,69 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
   .community-share-tag{font-size:9.5px}
   .community-share-action{min-width:82px;padding:0 12px;font-size:13px}
 }
+
+/* Profile saved content uses the same adaptive ink as the last-watched label. */
+@media(max-width:760px){
+  body.profile-page-active.profile-color-customized .profile-saved-card .profile-saved-copy strong{
+    color:var(--profile-mobile-ink,#fff)!important;
+    -webkit-text-fill-color:var(--profile-mobile-ink,#fff)!important;
+  }
+  body.profile-page-active.profile-color-customized .profile-saved-card .profile-saved-copy small{
+    color:var(--profile-mobile-muted,rgba(255,255,255,.78))!important;
+    -webkit-text-fill-color:var(--profile-mobile-muted,rgba(255,255,255,.78))!important;
+  }
+  body.profile-page-active.profile-color-customized .profile-saved-empty{
+    color:var(--profile-mobile-muted,rgba(255,255,255,.78))!important;
+  }
+}
+/* Recommendations: the desktop shelf follows the same horizontal rail as Home. */
+.detail-reco-shell{position:relative;min-width:0}
+.detail-reco-arrow[hidden]{display:none!important}
+@media(min-width:761px){
+  .detail-recommendations .detail-reco-rail{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    gap:16px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    overscroll-behavior-inline:contain;
+    scroll-snap-type:x proximity;
+    scroll-behavior:smooth;
+    scrollbar-width:none;
+    padding:3px 0 13px!important;
+    min-width:0;
+  }
+  .detail-reco-rail::-webkit-scrollbar{display:none}
+  .detail-recommendations .detail-reco-card{
+    display:block;
+    flex:0 0 clamp(230px,24vw,320px)!important;
+    width:clamp(230px,24vw,320px);
+    max-width:340px;
+    scroll-snap-align:start;
+  }
+  .detail-reco-arrow{
+    position:absolute;
+    top:clamp(65px,6.75vw,90px);
+    transform:translateY(-50%);
+    z-index:6;
+    display:grid;
+    place-items:center;
+    padding:0;
+    width:44px;
+    height:44px;
+    border:1px solid rgba(255,255,255,.26);
+    border-radius:50%;
+    background:rgba(12,14,18,.9);
+    color:#fff;
+    font:400 32px/1 system-ui;
+    cursor:pointer;
+    box-shadow:0 10px 26px rgba(0,0,0,.34);
+  }
+  .detail-reco-arrow.prev{left:-20px}
+  .detail-reco-arrow.next{right:-20px}
+  .detail-reco-arrow:hover{background:rgba(34,39,49,.98);border-color:rgba(255,255,255,.55)}
+  .detail-reco-arrow:focus-visible{outline:2px solid #8cbfff;outline-offset:3px}
+}
+@media(max-width:760px){
+  .detail-reco-arrow{display:none!important}
+}

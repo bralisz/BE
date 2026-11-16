@@ -10,7 +10,7 @@ const features=read('assets/js/features.js');
 const featuresServed=read('_static/chunks/features.js');
 const html=read('index.html');
 const rev='20261116-episode-community-profile-perf-v1';
-const cssRev='20261116-episode-community-profile-perf-v1';
+const cssRev='20261116-saved-ink-home-reco-v1';
 
 assert.equal(community,served,'the Community chunk must mirror the source');
 assert.equal(features,featuresServed,'the loader chunk must mirror the source');
