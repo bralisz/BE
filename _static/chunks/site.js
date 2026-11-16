@@ -13226,10 +13226,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       document.body.classList.toggle('mobile-secondary-page', secondaryPage);
     }
     const homeButton = document.getElementById('mobileHomeButton');
+    const profileHomeLink = document.getElementById('profilePageMobileHomeLink');
+    const destination = window.BETVLocaleURL ? window.BETVLocaleURL('/') : '/';
     if (homeButton) {
-      const destination = window.BETVLocaleURL ? window.BETVLocaleURL('/') : '/';
       if (homeButton.getAttribute('href') !== destination) homeButton.setAttribute('href', destination);
       if (homeButton.hidden === secondaryPage) homeButton.hidden = !secondaryPage;
+    }
+    // The browser profile header has its own native link so a failed SPA
+    // transition or an overlaid shared header cannot trap the user in a profile.
+    if (profileHomeLink && profileHomeLink.getAttribute('href') !== destination) {
+      profileHomeLink.setAttribute('href', destination);
     }
     if (document.body.classList.contains('community-page-active')) {
       setActiveDestination('community');

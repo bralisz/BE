@@ -223,12 +223,12 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   body:not(.login-mode) .home-notification-menu{position:fixed!important;top:21px!important;right:88px!important;left:auto!important;z-index:10025!important}
 }
 </style>
-<link rel="preload" href="/_static/styles/site.css?rev=20261116-profile-home-hitbox-v2" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261116-profile-home-hitbox-v2"></noscript>
+<link rel="preload" href="/_static/styles/site.css?rev=20261116-profile-home-native-hero-v3" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261116-profile-home-native-hero-v3"></noscript>
 <script defer src="/api/runtime?v=2.112.0-validated-restore-v18"></script>
 <script defer src="/_static/chunks/performance.js?rev=20261009-visitor-menu-v15"></script>
 <script defer src="/_static/chunks/features.js?rev=20261116-episode-community-profile-perf-v2"></script>
-<script defer src="/_static/chunks/site.js?rev=20261116-profile-home-hitbox-v2"></script>
+<script defer src="/_static/chunks/site.js?rev=20261116-profile-home-native-hero-v3"></script>
 <link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1"></noscript>
 <script defer src="/_static/chunks/watch-party.js?rev=20261116-idle-poll-v1"></script>
@@ -828,6 +828,9 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
 </div>
 <section class="profile-page-shell" id="profilePage" hidden aria-label="Perfil público">
   <div class="profile-page-hero">
+    <a id="profilePageMobileHomeLink" href="/" aria-label="Voltar para a Home" title="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"></path></svg>
+    </a>
     <div class="profile-page-banner" id="profilePageBanner" hidden><img loading="eager" fetchpriority="high" decoding="async" id="profilePageBannerImg" alt="Banner do perfil"></div>
     <div class="profile-page-banner-fallback" id="profilePageBannerFallback"></div>
     <div class="profile-page-actions-row" id="profilePageActionsRow" aria-label="Ações do perfil">

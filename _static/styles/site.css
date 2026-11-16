@@ -622,3 +622,64 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
     -webkit-tap-highlight-color:transparent;
   }
 }
+
+
+/* Profile number artwork uses the same light/dark ink as Last Watched. */
+@media(max-width:760px){
+  body.profile-page-active.profile-color-customized .profile-favorite-rank-svg stop{
+    stop-color:var(--profile-mobile-ink,#fff)!important;
+  }
+  body.profile-page-active.profile-color-customized .profile-favorite-rank-svg stop:not(:last-child){
+    stop-opacity:.55!important;
+  }
+  body.profile-page-active.profile-color-customized .profile-favorite-rank-svg stop:last-child{
+    stop-opacity:0!important;
+  }
+}
+
+/* Browser mobile profile: its own native Home link, above banner overlays. */
+#profilePageMobileHomeLink{display:none!important}
+@media(max-width:760px){
+  html:not(.betv-installed-app) body.profile-page-active:not(.login-mode):not(.admin-mode) #profilePageMobileHomeLink{
+    position:absolute!important;
+    top:var(--profile-mobile-action-top,calc(16px + env(safe-area-inset-top)))!important;
+    left:var(--profile-mobile-action-edge,14px)!important;
+    right:auto!important;
+    bottom:auto!important;
+    z-index:10200!important;
+    display:grid!important;
+    place-items:center!important;
+    box-sizing:border-box;
+    width:var(--profile-mobile-action-size,46px)!important;
+    height:var(--profile-mobile-action-size,46px)!important;
+    min-width:var(--profile-mobile-action-size,46px)!important;
+    min-height:var(--profile-mobile-action-size,46px)!important;
+    padding:0!important;
+    margin:0!important;
+    border:1px solid rgba(255,255,255,.12)!important;
+    border-radius:50%!important;
+    background:#17191c!important;
+    color:#fff!important;
+    box-shadow:none!important;
+    text-decoration:none!important;
+    cursor:pointer!important;
+    pointer-events:auto!important;
+    touch-action:manipulation!important;
+    -webkit-tap-highlight-color:transparent;
+  }
+  html:not(.betv-installed-app) body.profile-page-active #profilePageMobileHomeLink svg{
+    width:22px;
+    height:22px;
+    display:block;
+    pointer-events:none!important;
+  }
+  html:not(.betv-installed-app) body.profile-page-active #profilePageMobileHomeLink:focus-visible{
+    outline:2px solid #8ec5ff;
+    outline-offset:3px;
+  }
+  body.profile-page-active #mobileAppBar #mobileHomeButton{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+}

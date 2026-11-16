@@ -55,13 +55,19 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(2
     assert.equal(w.location.pathname,'/@bralis');
     assert.equal(loaded.filter(x=>x==='account').length,scenario==='chunk-retry'?2:1);
     if(scenario==='mobile-profile'){
-      const home=w.document.getElementById('mobileHomeButton');
-      await until(()=>home&&!home.hidden);
+      const sharedHome=w.document.getElementById('mobileHomeButton');
+      await until(()=>sharedHome&&!sharedHome.hidden);
+      const home=w.document.getElementById('profilePageMobileHomeLink');
+      assert(home,'profile must have its own Home link outside the shared header');
       assert.equal(home.tagName,'A','mobile profile Home must be a native navigation link');
       assert.equal(home.getAttribute('href'),w.BETVLocaleURL('/'),'Home must keep the selected language');
       const click=new w.MouseEvent('click',{bubbles:true,cancelable:true});
       home.dispatchEvent(click);
       assert.equal(click.defaultPrevented,false,'the profile Home link cannot rely only on SPA handlers');
+      const css=fs.readFileSync('assets/css/site.css','utf8');
+      assert(css.includes('body.profile-page-active #mobileAppBar #mobileHomeButton{'),'old shared header Home must be hidden on profiles');
+      assert(css.includes('body.profile-page-active.profile-color-customized .profile-favorite-rank-svg stop{'),'favorite and album numbers must use adaptive profile ink');
+      assert(css.includes('stop-color:var(--profile-mobile-ink,#fff)!important'),'numbers must switch black/white with profile theme');
     }
     let mutations=0;const observer=new w.MutationObserver(records=>{mutations+=records.length;});observer.observe(w.document.body,{attributes:true,attributeFilter:['class']});
     await delay(180);assert(mutations<30,'profile must not continuously mutate body classes');observer.disconnect();
