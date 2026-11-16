@@ -23424,3 +23424,28 @@ body.album-page-active #albumPage{
   scroll-behavior:auto!important;
   overflow-anchor:none!important;
 }
+
+/* Desktop album/single detail: let the cover color flow behind the site navigation.
+   The dedicated album title/back row is redundant with the desktop topbar. */
+@media (min-width:761px){
+  body.album-page-active:not(.login-mode):not(.admin-mode) .album-page-heading{
+    display:none!important;
+  }
+  body.album-page-active:not(.login-mode):not(.admin-mode) .album-page-shell{
+    background:
+      linear-gradient(180deg,
+        rgba(var(--album-accent-rgb,42,52,78),.38) 0,
+        rgba(var(--album-accent-rgb,42,52,78),.28) 180px,
+        rgba(var(--album-accent-rgb,42,52,78),.12) 430px,
+        rgba(9,10,11,0) 720px),
+      #090a0b!important;
+  }
+  body.album-page-active:not(.login-mode):not(.admin-mode) .topbar-wrap{
+    background:transparent!important;
+    background-image:none!important;
+    box-shadow:none!important;
+  }
+  body.album-page-active:not(.login-mode):not(.admin-mode) .album-page-detail::before{
+    display:none!important;
+  }
+}
