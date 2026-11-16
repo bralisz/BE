@@ -35,5 +35,12 @@ function click(title,extra={},href='https://video.example/watch'){
  assert(!cache.has('miguel|u1'),'failed recording must not stay cached as confirmed');
  click('Next video');await flush();pending.shift()({data:true,error:null});await context.watchWrites;
  assert.equal(calls.at(-1).p_title,'Next video','queue recovers after failed recording');
+ click('Happier Than Ever',{itemId:'album:album-123',collection:'albums',imageUrl:'https://example.org/album.jpg'});
+ await flush();pending.shift()({data:true});await context.watchWrites;
+ assert.equal(calls.at(-1).p_content_id,'album:album-123');
+ assert.equal(calls.at(-1).p_collection,'albums','album is not mistaken for video');
+ click('Guess featuring Billie Eilish',{itemId:'album:single-456',collection:'singles'});
+ await flush();pending.shift()({data:true});await context.watchWrites;
+ assert.equal(calls.at(-1).p_collection,'singles');
  console.log('PASS last watched: playback filtering, episode snapshots, ordered saves, owner cache and failures');
 })().catch(error=>{console.error(error);process.exitCode=1});

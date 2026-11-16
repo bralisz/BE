@@ -18019,6 +18019,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     cover.alt=albumTitle;
     cover.referrerPolicy='no-referrer';
     applyAlbumPalette(albumImage);
+    // Stable album route and cover for last-watched; only a Play click records.
+    player.dataset.title=albumTitle;
+    player.dataset.itemId='album:'+String(album.id||'').trim();
+    player.dataset.collection=String(album.type||'').toLowerCase()==='single'?'singles':'albums';
+    player.dataset.imageUrl=albumImage;
     player.href=playerUrl||'#';
     player.hidden=!playerUrl;
     player.setAttribute('aria-label',t('Ouvir álbum'));
