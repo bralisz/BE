@@ -43,3 +43,6 @@
 body.profile-page-active #profilePage .profile-page-follow-stats{position:relative!important;box-sizing:border-box!important;min-height:52px;padding-right:52px!important}
 body.profile-page-active #profilePage .profile-page-follow-stats #profileRecentWatchButton{position:absolute;right:0;top:8px;width:38px;height:38px;margin:0}
 body.profile-page-active #profilePage .profile-page-follow-stats #profileRecentWatchCard{left:auto;right:0;top:calc(100% + 10px);max-width:100%}
+
+/* Body-level popover escapes the profile hero's clipping and stacking context. */
+#profileRecentWatchCard{position:fixed;right:auto;bottom:auto;z-index:10050;max-width:calc(100vw - 24px);overflow-y:auto;overscroll-behavior:contain}

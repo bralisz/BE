@@ -352,3 +352,16 @@ body.detail-page-active #contentDetail .detail-inner{box-sizing:border-box!impor
  body.detail-page-active #contentDetail{min-height: max(660px,90svh)!important}
  body.detail-page-active #contentDetail .detail-inner{padding-top:clamp(156px,24svh,196px)!important;padding-bottom:72px!important}
 }
+
+/* Save control shares the main play row and uses the existing saved-content state. */
+body.detail-page-active #contentDetail .detail-primary-actions{display:grid!important;grid-template-columns:minmax(0,1fr) 56px!important;gap:10px!important;align-items:center!important}
+body.detail-page-active #contentDetail #contentDetailPlay{grid-column:1!important;grid-row:1!important}
+body.detail-page-active #contentDetail #contentDetailList{display:grid!important;place-items:center!important;grid-column:2!important;grid-row:1!important;width:56px!important;min-width:56px!important;height:56px!important;padding:0!important;margin:0!important;border-radius:50%!important;border:1px solid rgba(255,255,255,.25)!important;background:rgba(44,44,44,.75)!important;color:#fff!important;box-sizing:border-box!important}
+body.detail-page-active #contentDetail #contentDetailList::after{content:none!important}
+body.detail-page-active #contentDetail #contentDetailList svg{width:25px!important;height:25px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.8!important}
+body.detail-page-active #contentDetail #contentDetailList[aria-pressed="true"]{color:#409cff!important;border-color:#409cff!important;background:rgba(28,60,100,.8)!important}
+body.detail-page-active #contentDetail #contentDetailList[aria-pressed="true"] svg{fill:currentColor!important}
+@media(max-width:760px){
+ body.detail-page-active #contentDetail .detail-primary-actions{grid-template-columns:minmax(0,1fr) 50px!important;gap:10px!important}
+ body.detail-page-active #contentDetail #contentDetailList{width:50px!important;min-width:50px!important;height:50px!important}
+}

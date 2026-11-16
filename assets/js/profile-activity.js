@@ -21,6 +21,21 @@
   card.hidden=true;
   if(trigger)trigger.setAttribute('aria-expanded','false');
  }
+ function positionCard(){
+  if(!card||!trigger||card.hidden)return;
+  const viewport=window.visualViewport;
+  const left=viewport?.offsetLeft||0,top=viewport?.offsetTop||0;
+  const width=viewport?.width||window.innerWidth,height=viewport?.height||window.innerHeight;
+  const margin=12,gap=10,anchor=trigger.getBoundingClientRect();
+  card.style.width=Math.min(width<=760?320:440,width-margin*2)+'px';
+  card.style.maxHeight=Math.max(0,height-margin*2)+'px';
+  const bounds=card.getBoundingClientRect();
+  const x=Math.max(left+margin,Math.min(anchor.right-bounds.width,left+width-bounds.width-margin));
+  const below=anchor.bottom+gap;
+  const preferred=below+bounds.height<=top+height-margin?below:anchor.top-bounds.height-gap;
+  const y=Math.max(top+margin,Math.min(preferred,top+height-bounds.height-margin));
+  card.style.left=x+'px';card.style.top=y+'px';
+ }
  function attach(){
   const row=document.querySelector('#profilePage .profile-page-follow-stats');
   if(!row)return;
@@ -36,12 +51,12 @@
     if(!displayed)return;
     const willOpen=card.hidden;
     close();
-    if(willOpen){renderCard(displayed);card.hidden=false;trigger.setAttribute('aria-expanded','true');}
+    if(willOpen){renderCard(displayed);card.hidden=false;positionCard();trigger.setAttribute('aria-expanded','true');}
    });
   }
-  if(!card||!row.contains(card)){
+  if(!card||!card.isConnected){
    card=document.createElement('div');card.id='profileRecentWatchCard';card.className='profile-recent-watch-card';
-   card.hidden=true;card.setAttribute('role','group');row.append(card);
+   card.hidden=true;card.setAttribute('role','group');document.body.append(card);
    trigger.setAttribute('aria-controls',card.id);
   }
   trigger.setAttribute('aria-label',t(0));trigger.title=t(0);
@@ -146,7 +161,9 @@
   attach();injectSettings();
   document.addEventListener('click',recordFromPlay,true);
   document.addEventListener('pointerdown',event=>{if(card&&!card.hidden&&!event.target.closest?.('#profileRecentWatchButton,#profileRecentWatchCard'))close();},true);
-  window.addEventListener('scroll',close,true);
+  window.addEventListener('scroll',event=>{if(!card?.contains(event.target))close();},true);
+  window.addEventListener('resize',close);
+  window.visualViewport?.addEventListener('resize',close);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
   window.addEventListener('be:open-profile-route',scheduleRefresh);
   window.addEventListener('be:route-change',scheduleRefresh);
