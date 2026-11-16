@@ -539,18 +539,21 @@
   }
 
   function chooseCommunityBanner(){
-    if(page){var oldHero=page.querySelector('.community-hero-banner');var oldImage=oldHero&&oldHero.querySelector('img');if(oldHero&&!oldHero.hidden&&oldImage&&oldImage.complete&&oldImage.naturalWidth>0)return;}
     var request=++communityBannerRequest;
     if(!page)return;
     var hero=page.querySelector('.community-hero-banner');
     var image=hero&&hero.querySelector('img');
     var inner=page.querySelector('.community-page-inner');
     if(!hero||!image||!inner)return;
+    var hadBanner=!hero.hidden&&image.complete&&image.naturalWidth>0;
     image.onload=null;
     image.onerror=null;
-    image.removeAttribute('src');
-    hero.hidden=true;
-    inner.classList.remove('has-community-banner');
+    // Keep the old hero visible while the next random banner downloads.
+    if(!hadBanner){
+      image.removeAttribute('src');
+      hero.hidden=true;
+      inner.classList.remove('has-community-banner');
+    }
     loadCommunityBannerPool().then(function(items){
       if(request!==communityBannerRequest||page.hidden||!document.body.classList.contains('community-page-active'))return;
       var options=items.slice();
