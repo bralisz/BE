@@ -303,18 +303,13 @@ body.detail-page-active #contentDetail .detail-primary-actions,
 body.detail-page-active #contentDetail .detail-secondary-actions{display:contents!important}
 body.detail-page-active #contentDetail #contentDetailPlay{grid-column:1/-1;grid-row:1;display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;height:56px!important;min-height:56px!important;padding:0 20px!important;margin:0!important;box-sizing:border-box!important;border:0!important;border-radius:999px!important;background:#fff!important;color:#080808!important;gap:10px!important;font-size:20px!important;font-weight:700!important;line-height:1.2!important;box-shadow:none!important}
 body.detail-page-active #contentDetail #contentDetailPlay svg{width:21px!important;height:21px!important;fill:currentColor!important;flex:none}
-body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailList,#contentDetailShare){display:flex!important;align-items:center!important;justify-content:center!important;grid-row:2;width:100%!important;min-width:0!important;height:auto!important;min-height:48px!important;padding:10px 8px!important;margin:0!important;box-sizing:border-box!important;border:1px solid rgba(255,255,255,.18)!important;border-radius:999px!important;background:rgba(48,48,48,.8)!important;color:#fff!important;gap:7px!important;font-size:15px!important;font-weight:600!important;line-height:1.2!important;white-space:normal!important;text-align:center!important;box-shadow:none!important}
+body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailCast,#contentDetailShare){display:flex!important;align-items:center!important;justify-content:center!important;grid-row:2;width:100%!important;min-width:0!important;height:auto!important;min-height:48px!important;padding:10px 8px!important;margin:0!important;box-sizing:border-box!important;border:1px solid rgba(255,255,255,.18)!important;border-radius:999px!important;background:rgba(48,48,48,.8)!important;color:#fff!important;gap:7px!important;font-size:15px!important;font-weight:600!important;line-height:1.2!important;white-space:normal!important;text-align:center!important;box-shadow:none!important}
 body.detail-page-active #contentDetail #contentDetailWatchParty{grid-column:1}
-body.detail-page-active #contentDetail #contentDetailList{grid-column:2}
+body.detail-page-active #contentDetail #contentDetailCast{grid-column:2}
 body.detail-page-active #contentDetail #contentDetailShare{grid-column:3}
-body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailList,#contentDetailShare) svg{display:block;width:22px!important;height:22px!important;flex:none}
+body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailCast,#contentDetailShare) svg{display:block;width:22px!important;height:22px!important;flex:none}
 body.detail-page-active #contentDetail #contentDetailWatchParty svg{fill:currentColor;stroke:currentColor;stroke-width:1.5}
-body.detail-page-active #contentDetail #contentDetailList svg{fill:currentColor!important}
-body.detail-page-active #contentDetail #contentDetailList::after{content:"Minha Lista"}
-html:lang(en) body.detail-page-active #contentDetail #contentDetailList::after{content:"My List"}
-html:lang(es) body.detail-page-active #contentDetail #contentDetailList::after{content:"Mi lista"}
-html:lang(fr) body.detail-page-active #contentDetail #contentDetailList::after{content:"Ma liste"}
-html:lang(it) body.detail-page-active #contentDetail #contentDetailList::after{content:"La mia lista"}
+body.detail-page-active #contentDetail #contentDetailCast svg{fill:none!important;stroke:currentColor!important;stroke-width:1.8!important}
 body.detail-page-active #contentDetail #contentDetailShare::after{content:attr(aria-label)}
 body.detail-page-active #contentDetail .detail-meta{display:flex!important;align-items:center!important;gap:10px!important;line-height:1.3!important;margin-bottom:4px!important}
 body.detail-page-active #contentDetail :is(.detail-year,.detail-duration){color:#dedede!important;line-height:1.3!important;font-weight:500!important;vertical-align:middle}
@@ -324,7 +319,10 @@ body.detail-page-active #contentDetail .detail-actions [hidden]{display:none!imp
  body.detail-page-active #contentDetail .detail-inner{gap:18px!important}
  body.detail-page-active #contentDetail .detail-actions{gap:10px 6px!important}
  body.detail-page-active #contentDetail #contentDetailPlay{height:48px!important;min-height:48px!important;font-size:18px!important}
- body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailList,#contentDetailShare){min-height:44px!important;padding:9px 5px!important;font-size:clamp(10px,2.85vw,13px)!important;gap:4px!important}
- body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailList,#contentDetailShare) svg{width:17px!important;height:17px!important}
+ body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailCast,#contentDetailShare){min-height:44px!important;padding:9px 5px!important;font-size:clamp(10px,2.85vw,13px)!important;gap:4px!important}
+ body.detail-page-active #contentDetail :is(#contentDetailWatchParty,#contentDetailCast,#contentDetailShare) svg{width:17px!important;height:17px!important}
  body.detail-page-active #contentDetail .detail-desc{font-size:15px!important;margin-top:4px!important}
 }
+body.detail-page-active #contentDetail #contentDetailList{display:none!important}
+
+body.detail-page-active #contentDetail #contentDetailCast[hidden]{display:none!important}
