@@ -1027,7 +1027,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
       </button>
       <button class="billie-page-avatar" id="billiePageAvatar" type="button" aria-label="Abrir perfil" title="Perfil">
         <span class="betv-header-avatar-inner" aria-hidden="true">
-          <img id="billiePageAvatarImage" src="/_static/media/profile/default-avatar.png" alt="Foto do usuário" data-avatar-fallback="/_static/media/profile/default-avatar.png">
+          <img id="billiePageAvatarImage" loading="lazy" decoding="async" fetchpriority="low" src="/_static/media/profile/default-avatar.png" alt="Foto do usuário" data-avatar-fallback="/_static/media/profile/default-avatar.png">
           <svg id="billiePageAvatarFallback" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7.5" r="4"/></svg>
         </span>
       </button>
@@ -1278,7 +1278,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
   <header class="notification-page-header">
     <div class="notification-page-leading">
       <button class="notification-page-avatar" id="notificationPageAvatar" type="button" aria-label="Abrir perfil">
-        <img loading="eager" decoding="async" id="notificationPageAvatarImage" src="/_static/media/profile/default-avatar.png" alt="Avatar do usuário" data-avatar-fallback="/_static/media/profile/default-avatar.png">
+        <img loading="lazy" decoding="async" fetchpriority="low" id="notificationPageAvatarImage" src="/_static/media/profile/default-avatar.png" alt="Avatar do usuário" data-avatar-fallback="/_static/media/profile/default-avatar.png">
         <span id="notificationPageAvatarFallback" aria-hidden="true" hidden>M</span>
       </button>
       <button class="notification-page-home" id="notificationPageHome" type="button" aria-label="Voltar para a página inicial"><img loading="eager" decoding="async" src="/_static/media/brand/logo.webp?v=20260809-performance-v1" alt="BETV"></button>
@@ -1300,7 +1300,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
     <div class="fans-page-header-actions">
       <button class="fans-page-account is-login" id="fansPageAccount" type="button" aria-label="Entrar na plataforma" title="Entrar">
         <span class="fans-page-avatar-frame" id="fansPageAvatarFrame" hidden aria-hidden="true">
-          <img id="fansPageAvatarImage" src="/_static/media/profile/default-avatar.png" alt="Foto do usuário" data-avatar-fallback="/_static/media/profile/default-avatar.png">
+          <img id="fansPageAvatarImage" loading="lazy" decoding="async" fetchpriority="low" src="/_static/media/profile/default-avatar.png" alt="Foto do usuário" data-avatar-fallback="/_static/media/profile/default-avatar.png">
         </span>
         <span class="fans-page-login-label" id="fansPageLoginLabel">Entrar</span>
       </button>
