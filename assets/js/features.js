@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revisions = {account:'20261116-episode-community-profile-perf-v1',community:'20261116-episode-community-profile-perf-v1'};
+  const revisions = {account:'20261116-episode-community-profile-perf-v2',community:'20261116-episode-community-profile-perf-v1'};
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;

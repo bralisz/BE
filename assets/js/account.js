@@ -394,19 +394,24 @@ const userDropdown=document.getElementById('userDropdown');
     var publicProfileCache=new Map();
     var publicProfilePending=new Map();
     var PUBLIC_PROFILE_CACHE_MS=60000;
+    function publicProfileCacheKey(handle){
+      // Keep viewer-specific profile responses isolated across sign-out/sign-in.
+      return String(auth.currentUser&&auth.currentUser.uid||'guest')+':'+handle;
+    }
     function getPublicProfileFast(handle){
-      var cached=publicProfileCache.get(handle);
+      var key=publicProfileCacheKey(handle);
+      var cached=publicProfileCache.get(key);
       if(cached&&Date.now()-cached.at<PUBLIC_PROFILE_CACHE_MS)return Promise.resolve(cached.profile);
-      if(publicProfilePending.has(handle))return publicProfilePending.get(handle);
+      if(publicProfilePending.has(key))return publicProfilePending.get(key);
       var request=Promise.resolve().then(function(){return beBackend.profiles.getPublic(handle);}).then(function(profile){
         if(profile){
-          publicProfileCache.delete(handle);
-          publicProfileCache.set(handle,{profile:profile,at:Date.now()});
+          publicProfileCache.delete(key);
+          publicProfileCache.set(key,{profile:profile,at:Date.now()});
           if(publicProfileCache.size>24)publicProfileCache.delete(publicProfileCache.keys().next().value);
         }
         return profile;
-      }).finally(function(){publicProfilePending.delete(handle);});
-      publicProfilePending.set(handle,request);
+      }).finally(function(){publicProfilePending.delete(key);});
+      publicProfilePending.set(key,request);
       return request;
     }
     var profileLikeRequest=0;
@@ -3000,7 +3005,7 @@ const userDropdown=document.getElementById('userDropdown');
         if(typeof window.BETVRunAfterInteractionPaint==='function')window.BETVRunAfterInteractionPaint(renderOwnProfile);else window.setTimeout(renderOwnProfile,0);
         return;
       }
-      var cachedPublic=publicProfileCache.get(handle);
+      var cachedPublic=publicProfileCache.get(publicProfileCacheKey(handle));
       if(cachedPublic&&Date.now()-cachedPublic.at<PUBLIC_PROFILE_CACHE_MS){
         viewedProfile=cachedPublic.profile;viewedProfileStatus='ready';renderProfilePage();
         window.scrollTo({top:0,behavior:'auto'});

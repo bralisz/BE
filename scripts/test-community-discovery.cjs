@@ -79,7 +79,7 @@ for (const css of [sourceCss,servedCss]) {
   assert(css.includes('flex:0 0 clamp(245px,22vw,310px)'), 'recommendation cards must have fixed carousel widths');
 }
 assert(features.includes("community:'"+rev+"'"),'lazy-loaded chunk requires a bumped cache key');
-assert(html.includes('features.js?rev=20261116-episode-community-profile-perf-v1'),'loader itself requires a bumped cache key');
+assert(html.includes('features.js?rev=20261116-episode-community-profile-perf-v2'),'loader itself requires a bumped cache key');
 assert(html.includes('site.css?rev='+cssRev),'main CSS requires a bumped cache key');
 
 // Isolate the real Follow handler with a mocked, authenticated RPC.
