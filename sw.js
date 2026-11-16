@@ -41,15 +41,54 @@ function cacheableResponse(response) {
   return Boolean(response && response.ok && response.type === 'basic');
 }
 
-async function cacheFirst(request, cacheName, maxEntries) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-  const response = await fetch(request);
-  if (cacheableResponse(response)) {
-    cache.put(request, response.clone()).then(() => trimCache(cacheName, maxEntries)).catch(() => {});
+// Keep a single CacheStorage open promise and coalesce overlapping uncached requests.
+const openedCaches = new Map();
+const inFlightRequests = new Map();
+const writesSinceTrim = new Map();
+function openCache(name) {
+  if (!openedCaches.has(name)) {
+    openedCaches.set(name, caches.open(name).catch(error => {
+      openedCaches.delete(name);
+      throw error;
+    }));
   }
-  return response;
+  return openedCaches.get(name);
+}
+
+async function cacheFirst(request, cacheName, maxEntries, event) {
+  let cache;
+  try {
+    cache = await openCache(cacheName);
+    const cached = await cache.match(request);
+    if (cached) return cached;
+  } catch (_) {
+    // Storage quota or private browsing must never break the live request.
+    return fetch(request);
+  }
+
+  const key = cacheName + ':' + request.url;
+  if (inFlightRequests.has(key)) {
+    return (await inFlightRequests.get(key)).clone();
+  }
+  const download = fetch(request);
+  inFlightRequests.set(key, download);
+  try {
+    const response = await download;
+    if (cacheableResponse(response)) {
+      const persist = cache.put(request, response.clone()).then(() => {
+        const count = (writesSinceTrim.get(cacheName) || 0) + 1;
+        writesSinceTrim.set(cacheName, count);
+        if (count >= 24) {
+          writesSinceTrim.set(cacheName, 0);
+          return trimCache(cacheName, maxEntries);
+        }
+      }).catch(() => {});
+      event.waitUntil(persist);
+    }
+    return response;
+  } finally {
+    inFlightRequests.delete(key);
+  }
 }
 
 self.addEventListener('install', () => {
@@ -73,11 +112,11 @@ self.addEventListener('fetch', event => {
 
   const path = url.pathname;
   if (path.startsWith('/_static/media/')) {
-    event.respondWith(cacheFirst(request, MEDIA_CACHE, 500));
+    event.respondWith(cacheFirst(request, MEDIA_CACHE, 300, event));
     return;
   }
   if (path.startsWith('/_static/chunks/') || path.startsWith('/_static/styles/') || path.startsWith('/_static/locales/')) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE, 100));
+    event.respondWith(cacheFirst(request, STATIC_CACHE, 100, event));
   }
 });
 
