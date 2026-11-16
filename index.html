@@ -38,7 +38,7 @@
         var splashPreload=document.createElement('link');
         splashPreload.rel='preload';
         splashPreload.as='image';
-        splashPreload.href='/_static/media/pwa/betv-launch-20261116.svg';
+        splashPreload.href='/_static/media/pwa/betv-launch-fullres-20261116.png?v=20261116-original';
         splashPreload.setAttribute('fetchpriority','high');
         document.head.appendChild(splashPreload);
       }
@@ -297,7 +297,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
 </head>
 <body class="site-loading-active">
 <div class="auth-loading" id="authLoading" role="status" aria-label="Carregando o site">
-  <div class="betv-pwa-launch-art" aria-hidden="true"><img src="/_static/media/pwa/betv-launch-20261116.svg" alt="" fetchpriority="high" decoding="async" onload="document.documentElement.classList.add('betv-pwa-launch-ready')" onerror="document.documentElement.classList.remove('betv-pwa-launch-ready')"></div>
+  <div class="betv-pwa-launch-art" aria-hidden="true"><img src="/_static/media/pwa/betv-launch-fullres-20261116.png?v=20261116-original" alt="" fetchpriority="high" decoding="async" onload="document.documentElement.classList.add('betv-pwa-launch-ready')" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='/_static/media/pwa/betv-launch-20261116.svg';return}document.documentElement.classList.remove('betv-pwa-launch-ready')"></div>
   <div class="site-loading-skeleton" aria-hidden="true">
     <div class="site-skeleton-top">
       <span class="site-skeleton-avatar site-skeleton-avatar-left skeleton-shimmer"></span>
