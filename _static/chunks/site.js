@@ -13013,6 +13013,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       <a class="mobile-home-button" id="mobileHomeButton" href="/" aria-label="Voltar para a página inicial" hidden>${icon('home')}</a>
       <button class="mobile-profile-button" id="mobileProfileButton" type="button" aria-label="Abrir perfil"><span id="mobileHeaderAvatar"><img loading="eager" decoding="async" src="/_static/media/profile/default-avatar.png" data-avatar-fallback="/_static/media/profile/default-avatar.png" alt="Avatar"></span></button>
       <div class="mobile-header-actions">
+        <button class="mobile-album-back" id="mobileAlbumBackButton" type="button" aria-label="Voltar" title="Voltar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <button class="mobile-notification-button" id="mobileNotificationButton" type="button" aria-label="Abrir notificações" aria-expanded="false">${icon('bell')}<span class="notification-unread-dot" id="mobileNotificationUnreadDot" hidden></span></button>
         <div class="mobile-search-control" id="mobileSearchControl">
           <label class="sr-only" for="mobileSearchInput">Pesquisar conteúdos</label>
@@ -17858,6 +17859,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var detail=document.getElementById('albumPageDetail');
   var status=document.getElementById('albumPageStatus');
   var cover=document.getElementById('albumDetailCover');
+  var backdrop=document.getElementById('albumDetailBackdrop');
   var title=document.getElementById('albumDetailTitle');
   var type=document.getElementById('albumDetailType');
   var meta=document.getElementById('albumDetailMeta');
@@ -17873,6 +17875,47 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var loading=null;
   var activeSearch='';
   var currentAlbum=null;
+  var paletteRequest=0;
+  function applyAlbumPalette(albumImage){
+    var request=++paletteRequest;
+    page.style.setProperty('--album-accent-rgb','42,52,78');
+    if(backdrop){
+      backdrop.hidden=!albumImage;
+      if(albumImage)backdrop.src=albumImage;
+      else backdrop.removeAttribute('src');
+    }
+    if(!albumImage)return;
+    // Sample an inexpensive thumbnail when cross-origin image permissions allow it.
+    // If blocked, the actual artwork still colors the blurred backdrop.
+    var sample=new Image();
+    sample.crossOrigin='anonymous';
+    sample.referrerPolicy='no-referrer';
+    sample.onload=function(){
+      if(request!==paletteRequest)return;
+      try{
+        var canvas=document.createElement('canvas');
+        canvas.width=16;canvas.height=16;
+        var context=canvas.getContext('2d',{willReadFrequently:true});
+        if(!context)return;
+        context.drawImage(sample,0,0,16,16);
+        var rgba=context.getImageData(0,0,16,16).data;
+        var sums=[0,0,0],weights=0;
+        for(var i=0;i<rgba.length;i+=4){
+          if(rgba[i+3]<128)continue;
+          var red=rgba[i],green=rgba[i+1],blue=rgba[i+2];
+          var brightness=(red*0.2126+green*0.7152+blue*0.0722);
+          if(brightness<10||brightness>245)continue;
+          var saturation=Math.max(red,green,blue)-Math.min(red,green,blue);
+          var weight=1+Math.min(saturation/65,1.5);
+          sums[0]+=red*weight;sums[1]+=green*weight;sums[2]+=blue*weight;
+          weights+=weight;
+        }
+        if(weights)page.style.setProperty('--album-accent-rgb',sums.map(function(sum){return Math.round(Math.min(210,sum/weights));}).join(','));
+      }catch(_){/* Cross-origin artwork keeps the CSS image-based fallback. */}
+    };
+    sample.onerror=function(){/* CSS artwork backdrop is the fallback. */};
+    sample.src=albumImage;
+  }
   function esc(value){return String(value==null?'':value).replace(/[&<>\"']/g,function(char){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[char];});}
   function t(value,vars){return window.BETVI18n&&typeof window.BETVI18n.t==='function'?window.BETVI18n.t(value,vars):String(value||'').replace(/\{(\w+)\}/g,function(_,key){return vars&&vars[key]!=null?vars[key]:_;});}
   function localized(path){return window.BETVLocaleURL?window.BETVLocaleURL(path):path;}
@@ -17950,6 +17993,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     cover.src=albumImage||'/_static/media/profile/default-avatar.png';
     cover.alt=albumTitle;
     cover.referrerPolicy='no-referrer';
+    applyAlbumPalette(albumImage);
     player.href=playerUrl||'#';
     player.hidden=!playerUrl;
     player.setAttribute('aria-label',t('Ouvir álbum'));
@@ -17993,6 +18037,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function close(){document.body.classList.remove('album-page-active');page.hidden=true;page.setAttribute('aria-hidden','true');document.title=window.BETVPageTitle?window.BETVPageTitle():'Billie Eilish TV';activeSearch='';currentAlbum=null;setSearchContext(false);}
 
   if(back)back.addEventListener('click',function(){navigate('/',false);});
+  // Separate from the notification button: opening notifications still works elsewhere.
+  document.addEventListener('click',function(event){
+    var button=event.target&&event.target.closest&&event.target.closest('#mobileAlbumBackButton');
+    if(!button||page.hidden)return;
+    event.preventDefault();
+    event.stopPropagation();
+    navigate('/',false);
+  });
   favorite.addEventListener('click',function(){
     if(!currentAlbum||typeof window.beIsSavedContent!=='function'||typeof window.beSetSavedContent!=='function')return;
     var record=albumSavedRecord(currentAlbum);
