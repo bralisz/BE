@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revisions = {account:'20261116-profile-home-v5',community:'20261115-mobile-menu-groups-v6'};
+  const revisions = {account:'20261116-profile-home-v5',community:'20261116-share-community-v7'};
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
@@ -64,6 +64,14 @@
     event.preventDefault();event.stopImmediatePropagation();
     run(names, () => target.isConnected && target.click());
   }, true);
+  // Download the Community module on navigation intent, never on every page load.
+  function warmCommunityFromIntent(event){
+    if(!event.target||!event.target.closest||!event.target.closest('[data-community-tab]'))return;
+    if(ready.has('community')||pending.has('community'))return;
+    ensure('community').catch(()=>{});
+  }
+  document.addEventListener('pointerover',warmCommunityFromIntent,{passive:true});
+  document.addEventListener('focusin',warmCommunityFromIntent);
   window.addEventListener('popstate', () => { actionVersion++; dismiss(); });
   window.addEventListener('hashchange', () => { actionVersion++; dismiss(); });
   // Keep history recording available even before Community has been opened.
