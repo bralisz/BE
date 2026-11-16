@@ -9,8 +9,8 @@ const servedCss=read('_static/styles/site.css');
 const features=read('assets/js/features.js');
 const featuresServed=read('_static/chunks/features.js');
 const html=read('index.html');
-const rev='20261113-community-follow-discovery-v4';
-const cssRev='20261113-community-horizontal-fans-v1';
+const rev='20261116-share-community-v7';
+const cssRev='20261116-share-community-layout-v6';
 
 assert.equal(community,served,'the Community chunk must mirror the source');
 assert.equal(features,featuresServed,'the loader chunk must mirror the source');
@@ -18,6 +18,14 @@ assert(community.includes("title:'Encontre outros fãs da Billie'"));
 const discovery=community.indexOf('id="communitySimilarSection"');
 const ranking=community.indexOf('<h2>Perfis em destaque</h2>');
 assert(discovery>=0&&ranking>discovery,'Fan discovery must appear before profile ranking');
+const share=community.indexOf('id="communityShareSection"');
+assert(share>discovery&&share<ranking,'Share-to-earn campaign must follow fan discovery and precede ranking');
+assert(community.includes("communityShareTranslations"),'both auth and guest promo copy must be localized');
+assert(community.includes("client.rpc('claim_billie_fan_tag')"),'tag awarded through authenticated RPC only after sharing');
+assert(community.includes("if(!user||!user.uid)"),'visitors must be sent to registration instead of sharing a profile');
+assert(community.includes("if(document.body.classList.contains('community-page-active')&&page&&!page.hidden)"),'repeated Community clicks preserve scroll position');
+assert(community.includes("state.lastPayloadAt=Date.now()"),'Community overview must be cached briefly');
+assert(community.includes("scheduleSimilarFans()"),'fan recommendations should be deferred until nearby');
 assert(community.includes("bannerImg.src=bannerUrl"),'show the fan banner');
 assert(community.includes("body.appendChild(avatar)"),'show a profile avatar');
 assert(community.includes("name.textContent=displayName"),'show name below avatar');
@@ -37,6 +45,8 @@ assert(community.includes("client.rpc('get_similar_fans_page'"),'paginated backe
 
 for (const css of [sourceCss,servedCss]) {
   assert(css.includes('.community-similar-card'), 'card styles must be included in the actual site CSS');
+  assert(css.includes('.community-share-section'), 'new card must use the same Instagram container sizing');
+  assert(css.includes('.community-share-action'), 'share and register buttons must have blue styling');
   assert(css.includes('.community-similar-banner'), 'banner styles must be included in the site CSS');
   assert(css.includes('.community-similar-thumb'), 'thumbnail overlap styles must be included in the site CSS');
   assert(css.includes('.community-similar-follow'), 'blue follow button must be in the site CSS');
@@ -47,7 +57,7 @@ for (const css of [sourceCss,servedCss]) {
   assert(css.includes('flex:0 0 clamp(245px,22vw,310px)'), 'recommendation cards must have fixed carousel widths');
 }
 assert(features.includes("community:'"+rev+"'"),'lazy-loaded chunk requires a bumped cache key');
-assert(html.includes('features.js?rev='+rev),'loader itself requires a bumped cache key');
+assert(html.includes('features.js?rev=20261116-share-community-loader-v11'),'loader itself requires a bumped cache key');
 assert(html.includes('site.css?rev='+cssRev),'main CSS requires a bumped cache key');
 
 // Isolate the real Follow handler with a mocked, authenticated RPC.
