@@ -77,3 +77,10 @@ body.profile-page-active #profileRecentWatchCard{margin-top:48px;overflow:visibl
   display:none!important;
  }
 }
+
+/* Match the last-watched label to each profile's custom mobile background. */
+@media(max-width:760px){
+ body.profile-page-active #profileRecentWatchCard .profile-recent-watch-heading{
+  color:var(--profile-mobile-ink,#fff)!important;
+ }
+}
