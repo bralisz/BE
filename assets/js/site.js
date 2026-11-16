@@ -13055,8 +13055,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     bindActivation(document.getElementById('mobileHomeButton'), () => {
       closeMobileAccountPopover();
       window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
+      // The mobile header Home and the Home icon in profile actions must use
+      // the same exit path.  Avoid competing route transitions on profile pages.
+      if (document.body.classList.contains('profile-page-active')) {
+        const profileHome = document.getElementById('profilePageHome');
+        if (profileHome) {
+          profileHome.click();
+          return;
+        }
+      }
       const path = window.BETVLocalePath ? window.BETVLocalePath() : location.pathname;
-      const dedicatedPage = path !== '/' || document.body.classList.contains('community-page-active');
+      const dedicatedPage = path !== '/' || [
+        'settings-page-active','notification-page-active','community-page-active',
+        'detail-page-active','support-page-active','billie-page-active',
+        'fans-page-active','donate-page-active','legal-page-active',
+        'album-page-active','section-catalog-active'
+      ].some(name => document.body.classList.contains(name));
       if (dedicatedPage && window.BETVPublicRoutes) window.BETVPublicRoutes.go('/');
       selectView('home', dedicatedPage ? 'none' : 'push');
     });
