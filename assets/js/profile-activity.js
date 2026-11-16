@@ -14,7 +14,7 @@
   it:['Ultimo contenuto visto','Privacy','Mostra il mio ultimo film o video visto','Gli altri possono vedere il tuo ultimo contenuto visto sul profilo. Disattiva per mantenere privata l’attività.','Salvataggio…','Preferenza salvata.','Impossibile salvare.','Film','Serie','Video','Ultima visualizzazione']
  };
  const t=i=>(words[locale()]||words['pt-br'])[i];
- let card=null,displayed=null,request=0,queued=false,settingsRequest=0;
+ let card=null,displayed=null,request=0,queued=false,settingsRequest=0,displayedKey='',renderedKey='';
  const cleanUrl=value=>{try{const url=new URL(String(value||''),location.origin);return url.protocol==='https:'&&url.origin===location.origin||url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch(_){return '';}};
  function close(){if(card)card.hidden=true;}
  function attach(){
@@ -22,13 +22,16 @@
   if(!favorites)return;
   if(!card||!card.isConnected){
    card=document.createElement('section');card.id='profileRecentWatchCard';card.className='profile-recent-watch-card';
-   card.hidden=true;card.setAttribute('aria-label',t(0));
+   card.hidden=true;renderedKey='';card.setAttribute('aria-label',t(0));
    favorites.before(card);
   }
   card.setAttribute('aria-label',t(0));
  }
  function renderCard(item){
   if(!card)return;
+  const signature=JSON.stringify([locale(),item.content_id,item.title,item.collection,item.image_url]);
+  if(renderedKey===signature)return;
+  renderedKey=signature;
   card.replaceChildren();
   const top=document.createElement('div');top.className='profile-recent-watch-head';
   const eyebrow=document.createElement('span');eyebrow.textContent=t(10);
@@ -51,25 +54,34 @@
   const tag=document.createElement('span');tag.className='profile-recent-watch-tag';tag.textContent=item.collection==='movies'?t(7):item.collection==='series'?t(8):t(9);
   info.append(top,title,tag);body.append(media,info);card.append(body);
  }
+ function profileState(){
+  const handle=String($('profilePageHandle')?.textContent||'').trim().replace(/^@/,'');
+  const active=Boolean(document.body.classList.contains('profile-page-active')&&handle&&$('profilePage')?.hidden===false);
+  return {handle,active,key:handle.toLowerCase()+'|'+String(user()?.uid||'guest')};
+ }
  async function refreshProfile(){
   attach();
-  const handle=String($('profilePageHandle')?.textContent||'').trim().replace(/^@/,'');
-  const active=document.body.classList.contains('profile-page-active')&&handle&&$('profilePage')?.hidden===false;
-  const serial=++request;
-  if(!active){displayed=null;close();return;}
-  close();
-
+  const state=profileState(),serial=++request;
+  if(state.key!==displayedKey){displayedKey=state.key;displayed=null;renderedKey='';close();}
+  if(!state.active){close();return;}
+  // Keep the current profile visible while revalidating, including Back navigation.
+  if(displayed&&card){renderCard(displayed);card.hidden=false;}
   try{
    await Promise.resolve(window.beBackend?.ready);
-   const owner=user(),own=Boolean(owner&&String(owner.username||'').toLowerCase()===handle.toLowerCase());
+   if(serial!==request||profileState().key!==state.key)return;
+   const owner=user(),own=Boolean(owner&&String(owner.username||'').toLowerCase()===state.handle.toLowerCase());
    let result;
    if(own){result=await client()?.from('profile_watch_activity').select('content_id,title,collection,image_url,watched_at').eq('user_id',owner.uid).maybeSingle();}
-   else result=await client()?.rpc('get_public_last_watch',{p_username:handle});
-   const value=Array.isArray(result?.data)?result.data[0]:result?.data;
-   if(serial!==request||String($('profilePageHandle')?.textContent||'').trim().replace(/^@/,'')!==handle)return;
-   displayed=!result?.error&&value?.watched_at&&value?.title?value:null;
+   else result=await client()?.rpc('get_public_last_watch',{p_username:state.handle});
+   const current=profileState();
+   if(serial!==request||current.key!==state.key||!current.active)return;
+   // A transient network error must not collapse an already loaded card.
+   if(!result||result.error)return;
+   const value=Array.isArray(result.data)?result.data[0]:result.data;
+   displayed=value?.watched_at&&value?.title?value:null;
    if(displayed&&card){renderCard(displayed);card.hidden=false;}
-  }catch(_){if(serial===request){displayed=null;}}
+   else{renderedKey='';close();}
+  }catch(_){/* Retain only the current profile's previously loaded activity. */}
  }
  function scheduleRefresh(){
   if(queued)return;queued=true;
@@ -132,7 +144,16 @@
   window.addEventListener('be:i18n-ready',()=>{attach();if(displayed)renderCard(displayed);injectSettings();});
   const handle=$('profilePageHandle');if(handle)new MutationObserver(scheduleRefresh).observe(handle,{childList:true,characterData:true,subtree:true});
   new MutationObserver(()=>{injectSettings();}).observe($('settingsPageBody')||document.body,{childList:true,subtree:false});
-  new MutationObserver(scheduleRefresh).observe(document.body,{attributes:true,attributeFilter:['class']});
+  let previousState=JSON.stringify(profileState());
+  const refreshWhenProfileChanges=()=>{
+   const nextState=JSON.stringify(profileState());
+   if(nextState===previousState)return;
+   previousState=nextState;scheduleRefresh();
+  };
+  new MutationObserver(refreshWhenProfileChanges).observe(document.body,{attributes:true,attributeFilter:['class']});
+  const profile=$('profilePage');
+  if(profile)new MutationObserver(refreshWhenProfileChanges).observe(profile,{attributes:true,attributeFilter:['hidden']});
+  window.addEventListener('pageshow',scheduleRefresh);
   window.beBackend?.auth?.onChange?.(()=>{settingsRequest++;scheduleRefresh();injectSettings();});
   scheduleRefresh();
  }
