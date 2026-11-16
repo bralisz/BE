@@ -17,6 +17,7 @@
  let card=null,displayed=null,request=0,queued=false,settingsRequest=0,displayedKey='',renderedKey='';
  const cache=new Map(),TTL=90000;
  let watchWrites=Promise.resolve();
+ let lastPlay=null;
  const cacheKey=state=>state.key;
  function remember(key,value){cache.delete(key);cache.set(key,{value,time:Date.now()});if(cache.size>80)cache.delete(cache.keys().next().value);}
  const cleanUrl=value=>{try{const url=new URL(String(value||''),location.origin);return url.protocol==='https:'&&url.origin===location.origin||url.protocol==='https:'&&!url.username&&!url.password?url.href:'';}catch(_){return '';}};
@@ -44,9 +45,6 @@
   if(renderedKey===signature)return;
   renderedKey=signature;
   card.replaceChildren();
-  const top=document.createElement('div');top.className='profile-recent-watch-head';
-  const eyebrow=document.createElement('span');eyebrow.textContent=t(10);
-  top.append(eyebrow);
   const body=document.createElement('div');body.className='profile-recent-watch-body';
   const id=String(item.content_id||'').trim();
   const media=document.createElement(id?'a':'div');media.className='profile-recent-watch-media';
@@ -63,7 +61,7 @@
   const info=document.createElement('div');info.className='profile-recent-watch-info';
   const title=document.createElement('strong');title.className='profile-recent-watch-title notranslate';title.setAttribute('translate','no');title.textContent=String(item.title||'').slice(0,180);
   const tag=document.createElement('span');tag.className='profile-recent-watch-tag';tag.textContent=item.collection==='movies'?t(7):item.collection==='series'?t(8):t(9);
-  info.append(top,title,tag);body.append(media,info);card.append(body);
+  info.append(title,tag);body.append(media,info);card.append(body);
  }
  function profileState(){
   const handle=String($('profilePageHandle')?.textContent||'').trim().replace(/^@/,'');
@@ -148,6 +146,17 @@
   if(!title||!contentId)return;
   const img=cleanUrl(d.imageUrl||d.bannerUrl||'');
   const current=user()?.uid;
+  const ownerKey=String(user()?.username||'').toLowerCase()+'|'+current;
+  const now=Date.now();
+  const signature=JSON.stringify([current,contentId,title,d.collection,href]);
+  if(lastPlay?.signature===signature&&now-lastPlay.time<1500)return;
+  const activity={content_id:contentId,title,collection:String(d.collection||'videos'),image_url:img,watched_at:new Date(now).toISOString()};
+  lastPlay={signature,time:now};
+  // Update the owner's card immediately without reading the database again.
+  remember(ownerKey,activity);
+  request++;
+  if(profileState().key===ownerKey){displayed=activity;displayedKey=ownerKey;}
+  scheduleRefresh();
   // Preserve playback order even when an earlier network write is slow.
   watchWrites=watchWrites.catch(()=>{}).then(async()=>{
    await Promise.resolve(window.beBackend?.ready);
@@ -156,18 +165,16 @@
     p_content_id:contentId.slice(0,128),p_title:title.slice(0,180),
     p_collection:String(d.collection||'videos'),p_image_url:img
    });
-   if(!error&&data===true&&user()?.uid===current){
-    const ownerHandle=String(user()?.username||'').toLowerCase();
-    for(const key of cache.keys())if(key.startsWith(ownerHandle+'|'))cache.delete(key);
-    // Ignore a profile read started before this newer playback was saved.
-    request++;
-    scheduleRefresh();
-   }
-  }).catch(()=>{});
+   if(error||data!==true)throw Error('watch_save_failed');
+  }).catch(()=>{
+   // Do not treat an unsaved optimistic entry as a confirmed server result.
+   if(cache.get(ownerKey)?.value===activity)cache.delete(ownerKey);
+  });
  }
  function boot(){
   attach();injectSettings();
-  document.addEventListener('click',recordFromPlay,true);
+  // Window capture runs before document player handlers stop propagation.
+  window.addEventListener('click',recordFromPlay,true);
   window.addEventListener('be:open-profile-route',scheduleRefresh);
   window.addEventListener('be:route-change',scheduleRefresh);
   window.addEventListener('be:profile-refreshed',()=>{cache.delete(profileState().key);scheduleRefresh();});
@@ -185,7 +192,7 @@
   if(profile)new MutationObserver(refreshWhenProfileChanges).observe(profile,{attributes:true,attributeFilter:['hidden']});
   window.addEventListener('pageshow',scheduleRefresh);
   window.addEventListener('resize',scheduleRefresh);
-  window.beBackend?.auth?.onChange?.(()=>{settingsRequest++;cache.clear();scheduleRefresh();injectSettings();});
+  window.beBackend?.auth?.onChange?.(()=>{settingsRequest++;lastPlay=null;cache.clear();scheduleRefresh();injectSettings();});
   scheduleRefresh();
  }
  window.BETVProfileActivity=Object.freeze({refresh:scheduleRefresh});

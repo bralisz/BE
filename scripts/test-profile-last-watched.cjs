@@ -6,7 +6,7 @@ const source=fs.readFileSync('assets/js/profile-activity.js','utf8');
 let owner={uid:'u1',username:'miguel'},calls=[],pending=[],refreshes=0;
 const cache=new Map([['miguel|u1',{}],['other|u1',{}]]);
 const context={URL,location:{origin:'https://billieilishtv.site'},user:()=>owner,cleanUrl:v=>v,
- window:{beBackend:{ready:Promise.resolve()}},cache,request:0,watchWrites:Promise.resolve(),
+ lastPlay:null,profileState:()=>({key:'other|u1'}),remember:(key,value)=>cache.set(key,{value,time:Date.now()}),window:{beBackend:{ready:Promise.resolve()}},cache,request:0,watchWrites:Promise.resolve(),
  client:()=>({rpc:(name,args)=>{calls.push(args);return new Promise(resolve=>pending.push(resolve));}}),
  scheduleRefresh:()=>refreshes++};
 vm.createContext(context);
@@ -29,10 +29,10 @@ function click(title,extra={},href='https://video.example/watch'){
  pending.shift()({data:true,error:null});await flush();
  assert.equal(calls.length,2);assert.equal(calls[1].p_title,'Latest video');
  pending.shift()({data:true,error:null});await context.watchWrites;
- assert(!cache.has('miguel|u1'),'invalidate owner activity even while viewing another profile');
+ assert.equal(cache.get('miguel|u1').value.title,'Latest video','update owner activity even while viewing another profile');
  assert(cache.has('other|u1'),'retain unrelated profile cache');assert.equal(refreshes,2);
  click('Failed video');await flush();pending.shift()({data:false,error:null});await context.watchWrites;
- assert.equal(refreshes,2,'rejected recording must not be presented as saved');
+ assert(!cache.has('miguel|u1'),'failed recording must not stay cached as confirmed');
  click('Next video');await flush();pending.shift()({data:true,error:null});await context.watchWrites;
  assert.equal(calls.at(-1).p_title,'Next video','queue recovers after failed recording');
  console.log('PASS last watched: playback filtering, episode snapshots, ordered saves, owner cache and failures');

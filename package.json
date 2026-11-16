@@ -20,7 +20,7 @@
     "test:watch-party": "node scripts/test-watch-party-profile.cjs",
     "test:watch-party:invites": "node scripts/test-watch-party-invites.cjs",
     "test:community-discovery": "node scripts/test-community-discovery.cjs",
-    "test:profile-activity": "node scripts/test-profile-activity-refresh.cjs && node scripts/test-profile-last-watched.cjs",
+    "test:profile-activity": "node scripts/test-profile-activity-refresh.cjs && node scripts/test-profile-last-watched.cjs && node scripts/test-profile-watch-click.cjs",
     "test:performance": "node scripts/test-performance-safety.cjs && node scripts/test-mobile-nav-loading.cjs"
   },
   "devDependencies": {
