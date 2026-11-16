@@ -232,9 +232,9 @@
   function backFromDetail() {
     if (!detail()) return;
     if (returnToSaved) {
-      window.dispatchEvent(new CustomEvent('be:detail-close'));
       returnToSaved = false;
-      revealSaved();
+      window.dispatchEvent(new CustomEvent('be:detail-close'));
+      requestAnimationFrame(() => revealSaved());
       return;
     }
     const back = document.getElementById('detailHomeLink');
