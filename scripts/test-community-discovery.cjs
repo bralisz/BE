@@ -9,8 +9,8 @@ const servedCss=read('_static/styles/site.css');
 const features=read('assets/js/features.js');
 const featuresServed=read('_static/chunks/features.js');
 const html=read('index.html');
-const rev='20261116-avocados-route-v8';
-const cssRev='20261116-share-community-layout-v6';
+const rev='20261116-episode-community-profile-perf-v1';
+const cssRev='20261116-episode-community-profile-perf-v1';
 
 assert.equal(community,served,'the Community chunk must mirror the source');
 assert.equal(features,featuresServed,'the loader chunk must mirror the source');
@@ -79,7 +79,7 @@ for (const css of [sourceCss,servedCss]) {
   assert(css.includes('flex:0 0 clamp(245px,22vw,310px)'), 'recommendation cards must have fixed carousel widths');
 }
 assert(features.includes("community:'"+rev+"'"),'lazy-loaded chunk requires a bumped cache key');
-assert(html.includes('features.js?rev=20261116-avocados-route-loader-v12'),'loader itself requires a bumped cache key');
+assert(html.includes('features.js?rev=20261116-episode-community-profile-perf-v1'),'loader itself requires a bumped cache key');
 assert(html.includes('site.css?rev='+cssRev),'main CSS requires a bumped cache key');
 
 // Isolate the real Follow handler with a mocked, authenticated RPC.

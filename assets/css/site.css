@@ -22155,7 +22155,7 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
 .series-episode-copy p{font-size:13px;line-height:1.45;color:rgba(255,255,255,.64);margin:1px 0 0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 .series-episode-copy em{font-style:normal;color:rgba(255,255,255,.58);font-size:12px}
 .series-episode-card.is-soon .series-episode-art{opacity:.7}
-.series-episode-arrow{position:absolute;top:calc((min(24vw,320px) * 9 / 16)/2);transform:translateY(-50%);z-index:5;width:42px;height:42px;border:1px solid rgba(255,255,255,.25);border-radius:50%;background:rgba(12,14,18,.88);color:white;font:400 32px/1 system-ui;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.series-episode-arrow{position:absolute;top:clamp(67.6875px,calc(6.75vw + 3px),93px);transform:translateY(-50%);z-index:5;display:grid;place-items:center;padding:0;width:42px;height:42px;border:1px solid rgba(255,255,255,.25);border-radius:50%;background:rgba(12,14,18,.88);color:white;font:400 32px/1 system-ui;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 .series-episode-arrow.prev{left:-20px}
 .series-episode-arrow.next{right:-20px}
 .series-episode-arrow[hidden]{display:none!important}

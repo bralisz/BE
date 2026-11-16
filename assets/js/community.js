@@ -3,7 +3,7 @@
   if(window.BETVCommunity)return;
   if(String(location.hash||'').startsWith('#/admin')) return;
 
-  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),similarRequestId:0,similarSeen:Object.create(null),similarHasMore:false,similarLoadingMore:false,lastPayloadAt:0,lastPayloadUserId:'',similarLoadedAt:0,similarLoadedUserId:'',similarObserver:null,shareProfileUserId:'',shareProfile:null,shareProfilePending:null,communityScrollY:0,restoreCommunityScrollOnNextOpen:false};
+  var state={loading:false,loadingForUserId:'',lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),similarRequestId:0,similarSeen:Object.create(null),similarHasMore:false,similarLoadingMore:false,lastPayloadAt:0,lastPayloadUserId:'',similarLoadedAt:0,similarLoadedUserId:'',similarObserver:null,shareProfileUserId:'',shareProfile:null,shareProfilePending:null,communityScrollY:0,restoreCommunityScrollOnNextOpen:false};
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
@@ -874,18 +874,30 @@
     if(normalizedUsername)avatar.dataset.ringUsername=normalizedUsername;
     var ring=normalizeProfileAvatarRing(borderColor);
     if(ring){avatar.classList.add('has-custom-ring');avatar.style.setProperty('--community-avatar-ring',ring);}
-    var img=document.createElement('img');img.decoding='async';img.alt='';img.src=window.BETVResolveAvatar?window.BETVResolveAvatar(url):mediaUrl(url||'/_static/media/profile/default-avatar.png');avatar.appendChild(img);return avatar;
+    var img=document.createElement('img');img.decoding='async';img.loading='lazy';img.fetchPriority='low';img.alt='';img.src=window.BETVResolveAvatar?window.BETVResolveAvatar(url):mediaUrl(url||'/_static/media/profile/default-avatar.png');avatar.appendChild(img);return avatar;
   }
 
   function hydrateRankingAvatarRings(root){
     if(!root||typeof window.BETVGetPublicAvatarRing!=='function')return;
-    Array.prototype.forEach.call(root.querySelectorAll('.community-rank-avatar:not(.has-custom-ring)[data-ring-username]'),function(avatar){
+    var avatars=Array.prototype.slice.call(root.querySelectorAll('.community-rank-avatar:not(.has-custom-ring)[data-ring-username]'));
+    if(!avatars.length)return;
+    var loadRing=function(avatar){
       var username=String(avatar.dataset.ringUsername||'').trim();if(!username)return;
       Promise.resolve(window.BETVGetPublicAvatarRing(username)).then(function(color){
         var ring=normalizeProfileAvatarRing(color);if(!ring||!avatar.isConnected)return;
         avatar.classList.add('has-custom-ring');avatar.style.setProperty('--community-avatar-ring',ring);
       }).catch(function(){});
-    });
+    };
+    // Only request extra avatar colors when a ranking row is close to view.
+    if(typeof window.IntersectionObserver!=='function'){avatars.forEach(loadRing);return;}
+    var observer=new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(!entry.isIntersecting)return;
+        observer.unobserve(entry.target);
+        loadRing(entry.target);
+      });
+    },{rootMargin:'300px 0px'});
+    avatars.forEach(function(avatar){observer.observe(avatar);});
   }
 
   function isCurrentProfilePerson(person){
@@ -1219,13 +1231,23 @@
     renderProfileRanking(profileRows);
     renderOwnRanking('communityOwnProfile',payload.myProfilePosition,payload.rankingVisibility!==false,rankingContainsUser(profileRows,payload.myProfilePosition));
     if(user&&payload.rankingVisibility!==null&&payload.rankingVisibility!==undefined)writeRankingPreference(user.uid,payload.rankingVisibility!==false);
-    applyI18n(page);
+    ['communityContinueContent','communityFavoritesContent','communityProfileRanking','communityOwnProfile'].forEach(function(id){
+      var updated=document.getElementById(id);if(updated)applyI18n(updated);
+    });
   }
 
   async function refreshCommunity(force){
     if(!document.body.classList.contains('community-page-active'))return;
-    if(state.loading)return;
     var uid=String(currentUser()&&currentUser().uid||'');
+    // A pending request from another session must not block the current user.
+    if(state.loading&&state.loadingForUserId===uid)return;
+    if(state.lastPayload&&state.lastPayloadUserId!==uid){
+      state.lastPayload=null;state.lastPayloadAt=0;
+      renderRail('communityContinueContent',[],t('Carregando…'));
+      renderRail('communityFavoritesContent',[],t('Carregando…'));
+      renderProfileRanking([]);
+      renderOwnRanking('communityOwnProfile',null,readRankingPreference(uid),false);
+    }
     if(force!==true&&state.lastPayload&&state.lastPayloadAt&&state.lastPayloadUserId===uid&&Date.now()-state.lastPayloadAt<75000)return;
     var requestId=++state.requestId;
     state.loading=true;
@@ -1245,7 +1267,7 @@
       state.lastPayloadAt=Date.now();state.lastPayloadUserId=uid;
     }catch(error){
       if(requestId!==state.requestId||!document.body.classList.contains('community-page-active'))return;
-      var retry=document.createElement('button');retry.id='communityLoadError';retry.type='button';retry.className='profile-btn';retry.textContent=t('Tentar novamente');retry.onclick=refreshCommunity;if(page)page.prepend(retry);
+      var retry=document.createElement('button');retry.id='communityLoadError';retry.type='button';retry.className='profile-btn';retry.textContent=t('Tentar novamente');retry.onclick=function(){refreshCommunity(true);};if(page)page.prepend(retry);
       if(state.lastPayload)return;
       renderRail('communityContinueContent' ,[],currentUser()?t('Não foi possível carregar seu histórico agora.'):t('Entre na sua conta para ver os vídeos assistidos recentemente.'));
       renderRail('communityFavoritesContent',[],t('Não foi possível carregar os favoritos da comunidade agora.'));

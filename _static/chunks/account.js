@@ -390,6 +390,25 @@ const userDropdown=document.getElementById('userDropdown');
     var viewedProfile=null;
     var viewedProfileStatus='idle';
     var viewedProfileRequest=0;
+    // Recently visited public profiles can render without another network round-trip.
+    var publicProfileCache=new Map();
+    var publicProfilePending=new Map();
+    var PUBLIC_PROFILE_CACHE_MS=60000;
+    function getPublicProfileFast(handle){
+      var cached=publicProfileCache.get(handle);
+      if(cached&&Date.now()-cached.at<PUBLIC_PROFILE_CACHE_MS)return Promise.resolve(cached.profile);
+      if(publicProfilePending.has(handle))return publicProfilePending.get(handle);
+      var request=Promise.resolve().then(function(){return beBackend.profiles.getPublic(handle);}).then(function(profile){
+        if(profile){
+          publicProfileCache.delete(handle);
+          publicProfileCache.set(handle,{profile:profile,at:Date.now()});
+          if(publicProfileCache.size>24)publicProfileCache.delete(publicProfileCache.keys().next().value);
+        }
+        return profile;
+      }).finally(function(){publicProfilePending.delete(handle);});
+      publicProfilePending.set(handle,request);
+      return request;
+    }
     var profileLikeRequest=0;
     var profileLikeState={username:'',liked:false,count:0,loading:false};
     var onboardingShownFor='';
@@ -2981,9 +3000,16 @@ const userDropdown=document.getElementById('userDropdown');
         if(typeof window.BETVRunAfterInteractionPaint==='function')window.BETVRunAfterInteractionPaint(renderOwnProfile);else window.setTimeout(renderOwnProfile,0);
         return;
       }
+      var cachedPublic=publicProfileCache.get(handle);
+      if(cachedPublic&&Date.now()-cachedPublic.at<PUBLIC_PROFILE_CACHE_MS){
+        viewedProfile=cachedPublic.profile;viewedProfileStatus='ready';renderProfilePage();
+        window.scrollTo({top:0,behavior:'auto'});
+        refreshProfileLikeState();refreshProfileFollowState(false);
+        return;
+      }
       viewedProfile=null;viewedProfileStatus='loading';renderProfilePage();window.scrollTo({top:0,behavior:'auto'});
       try{
-        var profile=await beBackend.profiles.getPublic(handle);
+        var profile=await getPublicProfileFast(handle);
         if(requestId!==viewedProfileRequest||(!isProfileRoute()&&!document.body.classList.contains('profile-page-active')))return;
         viewedProfile=profile;viewedProfileStatus=profile?'ready':'missing';renderProfilePage();if(profile){refreshProfileLikeState();refreshProfileFollowState(false);}
       }catch(error){
