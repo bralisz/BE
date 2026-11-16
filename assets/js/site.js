@@ -11205,8 +11205,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (commentsJump) {
       const commentsAvailable = Boolean(videoCommentKey({ ...data, collection: collection || 'videos', recordId, itemId }));
       commentsJump.hidden = !commentsAvailable;
-      commentsJump.setAttribute('aria-label', localizedUiText('Comentários'));
-      commentsJump.setAttribute('title', localizedUiText('Comentários'));
+      const commentLabel = localizedUiText('Comentários');
+      commentsJump.setAttribute('aria-label', commentLabel);
+      commentsJump.setAttribute('title', commentLabel);
+      const caption = commentsJump.querySelector('span');
+      if (caption) caption.textContent = commentLabel;
     }
 
     share.dataset.itemId = itemId;
