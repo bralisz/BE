@@ -9,37 +9,6 @@
 })();
 </script>
 <script>
-(function () {
-  // The rest of BETV is deferred: this watchdog must run even if a dependency stalls.
-  window.setTimeout(function () {
-    if (!document.documentElement.classList.contains('site-loading-active')) return;
-    var overlay = document.getElementById('authLoading');
-    if (!overlay || overlay.hidden || document.getElementById('betvBootRecovery')) return;
-    var panel = document.createElement('div');
-    panel.id = 'betvBootRecovery';
-    panel.setAttribute('role', 'alert');
-    panel.style.cssText = 'position:absolute;inset:auto 20px 50%;transform:translateY(50%);margin:auto;max-width:420px;padding:28px 24px;background:#14171b;color:#f7f8fa;border:1px solid #30343b;border-radius:16px;text-align:center;z-index:5;font:500 15px/1.6 system-ui,sans-serif;box-shadow:0 16px 50px #0008';
-    var message = document.createElement('p');
-    message.textContent = 'O BETV demorou para iniciar. Verifique sua conexão e tente recarregar.';
-    message.style.cssText = 'margin:0 0 18px';
-    var retry = document.createElement('button');
-    retry.type = 'button';
-    retry.textContent = 'Tentar novamente';
-    retry.style.cssText = 'border:0;border-radius:10px;background:#2563eb;color:#fff;padding:11px 20px;font:600 14px system-ui,sans-serif;cursor:pointer';
-    retry.addEventListener('click', function () {
-      retry.disabled = true;
-      retry.textContent = 'Recarregando…';
-      var url = new URL(location.href);
-      url.searchParams.set('__betv_retry', Date.now().toString(36));
-      location.replace(url.href);
-    });
-    panel.appendChild(message);
-    panel.appendChild(retry);
-    overlay.appendChild(panel);
-  }, 12000);
-})();
-</script>
-<script>
 (function(){
   try{
     var query=new URLSearchParams(location.search||'');
@@ -256,51 +225,10 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
 </style>
 <link rel="preload" href="/_static/styles/site.css?rev=20261116-mobile-profile-footer-v4" as="style" fetchpriority="high" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="/_static/styles/site.css?rev=20261116-mobile-profile-footer-v4"></noscript>
-<script>
-(function () {
-  // Keep the public application independent from a stalled CDN/edge rewrite.
-  // This promise always settles, so authentication can expose a retry state.
-  window.__BETVSupabaseReady = new Promise(function (resolve) {
-    var finished = false;
-    var fallbackStarted = false;
-    var fallbackTimer = 0;
-    var deadline = 0;
-    function available() {
-      return !!(window.supabase && typeof window.supabase.createClient === 'function');
-    }
-    function complete(ok) {
-      if (finished) return;
-      finished = true;
-      window.clearTimeout(fallbackTimer);
-      window.clearTimeout(deadline);
-      resolve(Boolean(ok && available()));
-    }
-    function load(url, fallback) {
-      var sdk = document.createElement('script');
-      sdk.async = true;
-      sdk.src = url;
-      sdk.onload = function () {
-        if (available()) complete(true);
-        else if (!fallback) startFallback();
-      };
-      sdk.onerror = function () { if (!fallback) startFallback(); };
-      document.head.appendChild(sdk);
-    }
-    function startFallback() {
-      if (finished || fallbackStarted) return;
-      fallbackStarted = true;
-      load('https://unpkg.com/@supabase/supabase-js@2.112.0/dist/umd/supabase.js', true);
-    }
-    if (available()) { complete(true); return; }
-    load('/api/runtime?v=2.112.0-browser-recovery-v2', false);
-    fallbackTimer = window.setTimeout(startFallback, 2200);
-    deadline = window.setTimeout(function () { complete(available()); }, 6500);
-  });
-})();
-</script>
+<script defer src="/api/runtime?v=2.112.0-validated-restore-v18"></script>
 <script defer src="/_static/chunks/performance.js?rev=20261009-visitor-menu-v15"></script>
 <script defer src="/_static/chunks/features.js?rev=20261116-unlimited-saves-v8"></script>
-<script defer src="/_static/chunks/site.js?rev=20261116-browser-startup-v17"></script>
+<script defer src="/_static/chunks/site.js?rev=20261116-browser-restore-v18"></script>
 <link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1"></noscript>
 <script defer src="/_static/chunks/watch-party.js?rev=20261116-idle-poll-v1"></script>
