@@ -75,6 +75,8 @@
   function isSavedPage() { return document.body.classList.contains('betv-app-saved-active'); }
   function revealSaved() {
     if (!app() || !signedIn()) return;
+    // Keep the library independent from any video detail left underneath it.
+    if (detail()) window.dispatchEvent(new CustomEvent('be:detail-close'));
     returnToSaved = false;
     current = 'saved';
     document.body.classList.add('betv-app-saved-active');
