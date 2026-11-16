@@ -22439,3 +22439,43 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
  }
  html.betv-installed-app body>footer .footer-side{margin-top:17px!important}
 }
+
+/* Installed mobile app: one back control (bottom nav), and profile-colored legal footer. */
+@media (max-width:760px){
+  html.betv-installed-app body:not(.login-mode):not(.admin-mode) #mobileAppBar #mobileHomeButton,
+  html.betv-installed-app body.detail-page-active #detailHomeLink{
+    display:none!important;visibility:hidden!important;pointer-events:none!important;
+  }
+  html.betv-installed-app body.profile-page-active > footer{
+    display:block!important;visibility:visible!important;position:relative!important;
+    width:100%!important;max-width:none!important;margin:0!important;
+    padding:8px 0 0!important;
+  }
+  html.betv-installed-app body.profile-page-active > footer,
+  html.betv-installed-app body.profile-page-active > footer > .footer-card{
+    background:#090a0c!important;background-image:none!important;
+    border:0!important;box-shadow:none!important;
+  }
+  html.betv-installed-app body.profile-page-active.profile-color-customized > footer,
+  html.betv-installed-app body.profile-page-active.profile-color-customized > footer > .footer-card{
+    background:var(--profile-theme-color)!important;background-image:none!important;
+    color:var(--profile-mobile-ink,#fff)!important;
+  }
+  html.betv-installed-app body.profile-page-active > footer > .footer-card{
+    min-height:0!important;
+    padding:14px 20px calc(90px + env(safe-area-inset-bottom,0px))!important;
+    border-top:0!important;gap:0!important;
+  }
+  html.betv-installed-app body.profile-page-active > footer .footer-legal-links{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:18px!important;margin-top:22px!important;
+  }
+  html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-line,
+  html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-brand,
+  html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-legal-links a{
+    color:var(--profile-mobile-muted,rgba(255,255,255,.78))!important;
+  }
+  html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-social-link{
+    color:var(--profile-mobile-ink,#fff)!important;
+  }
+}
