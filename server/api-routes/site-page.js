@@ -14,13 +14,14 @@ const SEO_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 const SEO_CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents', 'news']);
 const I18N_REV = '20260810-original-titles-v3';
 const LOCALIZED_ROUTE_SLUGS = Object.freeze({
-  'pt-br': Object.freeze({ '/comunidade': '/comunidade', '/fãs': '/fãs' }),
-  'en-us': Object.freeze({ '/comunidade': '/community', '/fãs': '/fans' }),
-  es: Object.freeze({ '/comunidade': '/comunidad', '/fãs': '/fans' }),
-  fr: Object.freeze({ '/comunidade': '/communaute', '/fãs': '/fans' }),
-  it: Object.freeze({ '/comunidade': '/comunita', '/fãs': '/fans' })
+  'pt-br': Object.freeze({ '/avocados': '/avocados', '/comunidade': '/comunidade', '/fãs': '/fãs' }),
+  'en-us': Object.freeze({ '/avocados': '/avocados', '/comunidade': '/community', '/fãs': '/fans' }),
+  es: Object.freeze({ '/avocados': '/avocados', '/comunidade': '/comunidad', '/fãs': '/fans' }),
+  fr: Object.freeze({ '/avocados': '/avocados', '/comunidade': '/communaute', '/fãs': '/fans' }),
+  it: Object.freeze({ '/avocados': '/avocados', '/comunidade': '/comunita', '/fãs': '/fans' })
 });
 const LOCALIZED_ROUTE_ALIASES = Object.freeze({
+  '/avocados': '/avocados',
   '/comunidade': '/comunidade', '/community': '/comunidade', '/comunidad': '/comunidade', '/communaute': '/comunidade', '/communauté': '/comunidade', '/comunita': '/comunidade', '/comunità': '/comunidade',
   '/fãs': '/fãs', '/fas': '/fãs', '/fans': '/fãs',
   '/billie': '/billie-eilish', '/álbuns': '/albuns', '/albums': '/albuns'
