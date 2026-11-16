@@ -1362,7 +1362,7 @@ const userDropdown=document.getElementById('userDropdown');
         version:1,
         detailFavorites:uniqueSyncStrings(source.detailFavorites),
         featuredFavorites:uniqueSyncStrings(source.featuredFavorites),
-        savedContents:uniqueSyncRecords(source.savedContents,20),
+        savedContents:uniqueSyncRecords(source.savedContents),
         profileTopFavorites:uniqueSyncRecords(source.profileTopFavorites,4),
         profileLovedAlbums:uniqueSyncRecords(source.profileLovedAlbums,4),
         profileSocialLinks:normalizeProfileSocialLinks(source.profileSocialLinks),
@@ -2413,7 +2413,7 @@ const userDropdown=document.getElementById('userDropdown');
       if(!publicReady){profileSavedItems=[];profileSavedGrid.innerHTML='';if(profileSavedCount)profileSavedCount.textContent='';return;}
       if(ownProfile){
         try{profileSavedItems=typeof window.beGetSavedContents==='function'?window.beGetSavedContents():[];}catch(error){(void 0);profileSavedItems=[];}
-      }else profileSavedItems=Array.isArray(viewedProfile.savedContents)?viewedProfile.savedContents.map(normalizeProfileFavorite).slice(0,20):[];
+      }else profileSavedItems=Array.isArray(viewedProfile.savedContents)?viewedProfile.savedContents.map(normalizeProfileFavorite):[];
       profileSavedItems=profileSavedItems.map(function(item){return normalizeProfileFavorite(trustedProfileContent(item));});
       if(profileSavedCount)profileSavedCount.textContent=profileSavedItems.length?(profileSavedItems.length+' '+(profileSavedItems.length===1?'salvo':'salvos')):'';
       if(!profileSavedItems.length){
