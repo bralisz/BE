@@ -113,7 +113,8 @@ function sanitizeSocialLinks(value) {
   return {
     x: safeText(source.x || source.twitter, 80),
     instagram: safeText(source.instagram, 100),
-    tiktok: safeText(source.tiktok, 80)
+    tiktok: safeText(source.tiktok, 80),
+    letterboxd: safeText(source.letterboxd, 100)
   };
 }
 
@@ -276,3 +277,4 @@ module.exports.fetchFollowStats = fetchFollowStats;
 module.exports.fetchRelationshipList = fetchRelationshipList;
 module.exports.normalizeUsername = normalizeUsername;
 module.exports.validUsername = validUsername;
+

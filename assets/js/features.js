@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revisions = {account:'20261105-session-device-v1',community:'20261115-mobile-menu-groups-v6'};
+  const revisions = {account:'20261116-letterboxd-v2',community:'20261115-mobile-menu-groups-v6'};
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
@@ -118,3 +118,4 @@
   });
   ['pointerdown','wheel','touchstart','keydown'].forEach(type => window.addEventListener(type,()=>{restoreVersion++;},{passive:true}));
 })();
+

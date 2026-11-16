@@ -437,6 +437,19 @@ const userDropdown=document.getElementById('userDropdown');
       var kind=String(network||'').toLowerCase();
       var raw=String(value||'').trim();
       if(!raw)return '';
+      if(kind==='letterboxd'){
+        var handle=raw;
+        if(/^https?:\/\//i.test(raw)||/^(?:www\.)?letterboxd\.com\//i.test(raw)){
+          try{
+            var url=new URL(/^https?:\/\//i.test(raw)?raw:'https://'+raw);
+            if(url.username||url.password||!['letterboxd.com','www.letterboxd.com'].includes(url.hostname.toLowerCase()))return '';
+            if(!/^\/[^/]+\/?$/.test(url.pathname))return '';
+            handle=url.pathname.replace(/^\/|\/$/g,'');
+          }catch(_){return '';}
+        }
+        handle=handle.replace(/^@/,'');
+        return /^[A-Za-z0-9_]{2,15}$/.test(handle)?handle:'';
+      }
       if(kind==='x'||kind==='instagram'||kind==='tiktok'){
         var expectedHosts=kind==='x'?['x.com','twitter.com']:(kind==='instagram'?['instagram.com']:['tiktok.com']);
         var candidate=raw;
@@ -460,10 +473,11 @@ const userDropdown=document.getElementById('userDropdown');
       return {
         x:normalizeProfileSocialValue('x',source.x||source.twitter||''),
         instagram:normalizeProfileSocialValue('instagram',source.instagram||''),
-        tiktok:normalizeProfileSocialValue('tiktok',source.tiktok||'')
+        tiktok:normalizeProfileSocialValue('tiktok',source.tiktok||''),
+        letterboxd:normalizeProfileSocialValue('letterboxd',source.letterboxd||'')
       };
     }
-    function hasProfileSocialLinks(value){var links=normalizeProfileSocialLinks(value);return Boolean(links.x||links.instagram||links.tiktok);}
+    function hasProfileSocialLinks(value){var links=normalizeProfileSocialLinks(value);return Boolean(links.x||links.instagram||links.tiktok||links.letterboxd);}
     function profileSocialStorageKey(userId){return 'beProfileSocialLinks:'+String(userId||'guest');}
     function readProfileSocialLinks(userId){
       try{return normalizeProfileSocialLinks(JSON.parse(localStorage.getItem(profileSocialStorageKey(userId))||'{}'));}
@@ -477,12 +491,14 @@ const userDropdown=document.getElementById('userDropdown');
     function profileSocialHref(network,value){
       var normalized=normalizeProfileSocialValue(network,value);
       if(!normalized)return '';
+      if(network==='letterboxd')return 'https://letterboxd.com/'+encodeURIComponent(normalized)+'/';
       if(network==='x')return 'https://x.com/'+encodeURIComponent(normalized);
       if(network==='instagram')return 'https://www.instagram.com/'+encodeURIComponent(normalized)+'/';
       if(network==='tiktok')return 'https://www.tiktok.com/@'+encodeURIComponent(normalized);
       return '';
     }
     function profileSocialIcon(network){
+      if(network==='letterboxd')return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="4.5" fill="#ff8000" stroke="none"></circle><circle cx="12" cy="12" r="4.5" fill="#00e054" stroke="none"></circle><circle cx="19" cy="12" r="4.5" fill="#40bcf4" stroke="none"></circle></svg>';
       if(network==='x')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.4L6.47 22H3.36l7.26-8.3L2.97 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.84h1.72L8.43 4.05H6.58L17.8 19.84Z"></path></svg>';
       if(network==='instagram')return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><path d="M17.5 6.5h.01"></path></svg>';
       if(network==='tiktok')return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.35 2.4h3.08c.22 1.2.7 2.2 1.45 3.03A6.1 6.1 0 0 0 22 7.2v3.13a9.02 9.02 0 0 1-4.47-1.47v6.2a6.66 6.66 0 1 1-5.75-6.6v3.2a3.5 3.5 0 1 0 2.57 3.37V2.4Z"></path></svg>';
@@ -496,8 +512,8 @@ const userDropdown=document.getElementById('userDropdown');
         var localLinks=readProfileSocialLinks(auth.currentUser.uid);
         if(hasProfileSocialLinks(localLinks)||!hasProfileSocialLinks(links))links=localLinks;
       }
-      var labels={x:'X',instagram:'Instagram',tiktok:'TikTok'};
-      var order=['x','instagram','tiktok'];
+      var labels={x:'X',instagram:'Instagram',tiktok:'TikTok',letterboxd:'Letterboxd'};
+      var order=['x','instagram','tiktok','letterboxd'];
       var markup=order.map(function(network){
         var value=links[network];if(!value)return '';
         var href=profileSocialHref(network,value);
@@ -2613,7 +2629,7 @@ const userDropdown=document.getElementById('userDropdown');
         +  '</nav>'
         +  '<main class="settings-page-content">'
         +    '<section class="settings-section-panel settings-profile-panel" data-settings-panel="profile"'+(settingsActiveTab==='profile'?'':' hidden')+'><h1>Perfil</h1><p class="settings-panel-lead">Escolha o banner, o avatar e as cores do seu perfil.</p><div class="settings-panel-card"><div class="settings-banner-preview">'+(banner?'<img loading="eager" fetchpriority="high" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(banner):banner)+'" alt="Banner atual">':'')+'<span>'+(banner?'Banner selecionado':'Nenhum banner selecionado')+'</span></div><div class="settings-avatar-row"><div class="settings-avatar-preview'+(avatarBorderColor?' has-custom-ring':'')+'"'+(avatarBorderColor?' style="--settings-avatar-ring:'+avatarBorderColor+'"':'')+'>'+(avatar?'<img loading="eager" decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(avatar):avatar)+'" alt="Avatar atual">':profileFallbackAvatar())+'</div><div><strong class="settings-avatar-title">Avatar atual</strong><span class="settings-muted">Atualize sua imagem principal do perfil.</span></div></div><div class="settings-btn-row settings-profile-actions"><button class="settings-button primary" id="settingsChooseBanner" type="button">Escolher banner</button><button class="settings-button" id="settingsChooseAvatar" type="button">Trocar avatar</button></div><div class="settings-status" id="settingsAppearanceStatus"></div>'+profileColorControls+'</div></section>'
-        +    '<section class="settings-section-panel settings-connections-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões e Redes Sociais</h1><p class="settings-panel-lead">Gerencie sua conexão de conta e as redes exibidas no perfil público.</p><div class="settings-panel-card"><div class="settings-social-heading"><h2>Conexões conectadas</h2><p>Gerencie os serviços vinculados à sua conta.</p></div><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div><div class="settings-panel-card settings-social-card"><div class="settings-social-heading"><h2>Redes sociais</h2><p>Adicione as redes que devem aparecer ao lado do seu nome no perfil público.</p></div><form id="settingsSocialForm"><div class="settings-social-fields"><div class="settings-social-field"><label for="settingsSocialX"><span class="settings-social-brand is-x">'+profileSocialIcon('x')+'</span><span>X</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">x.com/</span><input id="settingsSocialX" name="x" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.x||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialInstagram"><span class="settings-social-brand is-instagram">'+profileSocialIcon('instagram')+'</span><span>Instagram</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">instagram.com/</span><input id="settingsSocialInstagram" name="instagram" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.instagram||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialTikTok"><span class="settings-social-brand is-tiktok">'+profileSocialIcon('tiktok')+'</span><span>TikTok</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">tiktok.com/@</span><input id="settingsSocialTikTok" name="tiktok" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.tiktok||'')+'" placeholder="usuario"></div></div></div><div class="settings-status" id="settingsSocialStatus"></div><div class="settings-btn-row settings-social-actions"><button class="settings-button primary" type="submit">Salvar redes sociais</button></div></form></div></section>'
+        +    '<section class="settings-section-panel settings-connections-panel" data-settings-panel="connections"'+(settingsActiveTab==='connections'?'':' hidden')+'><h1>Conexões e Redes Sociais</h1><p class="settings-panel-lead">Gerencie sua conexão de conta e as redes exibidas no perfil público.</p><div class="settings-panel-card"><div class="settings-social-heading"><h2>Conexões conectadas</h2><p>Gerencie os serviços vinculados à sua conta.</p></div><div class="settings-connection"><div><strong>Discord</strong><span class="settings-muted">'+(discordConnected?'Sua conta Discord está conectada.':'Use sua identidade do Discord na plataforma.')+'</span></div><button class="settings-button" id="settingsConnectDiscord" type="button" '+(discordConnected?'disabled':'')+'><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.54 5.34A16.4 16.4 0 0 0 15.44 4l-.5 1.04a15.1 15.1 0 0 0-5.87 0L8.56 4a16.6 16.6 0 0 0-4.11 1.35C1.85 9.2 1.15 12.96 1.5 16.66a16.6 16.6 0 0 0 5.04 2.55l1.23-1.67c-.68-.26-1.33-.58-1.94-.96l.47-.36c3.72 1.72 7.76 1.72 11.44 0l.48.36c-.62.38-1.27.7-1.95.96l1.23 1.67a16.5 16.5 0 0 0 5.03-2.55c.42-4.29-.72-8.01-2.99-11.32ZM8.68 14.5c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.9 2.3-2.04 2.3Zm6.64 0c-1.12 0-2.04-1.03-2.04-2.3 0-1.27.9-2.3 2.04-2.3 1.15 0 2.06 1.04 2.04 2.3 0 1.27-.89 2.3-2.04 2.3Z"/></svg><span>'+(discordConnected?'Discord conectado':'Conectar Discord')+'</span></button></div><div class="settings-status" id="settingsDiscordStatus"></div></div><div class="settings-panel-card settings-social-card"><div class="settings-social-heading"><h2>Redes sociais</h2><p>Adicione as redes que devem aparecer ao lado do seu nome no perfil público.</p></div><form id="settingsSocialForm"><div class="settings-social-fields"><div class="settings-social-field"><label for="settingsSocialX"><span class="settings-social-brand is-x">'+profileSocialIcon('x')+'</span><span>X</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">x.com/</span><input id="settingsSocialX" name="x" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.x||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialInstagram"><span class="settings-social-brand is-instagram">'+profileSocialIcon('instagram')+'</span><span>Instagram</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">instagram.com/</span><input id="settingsSocialInstagram" name="instagram" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.instagram||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialTikTok"><span class="settings-social-brand is-tiktok">'+profileSocialIcon('tiktok')+'</span><span>TikTok</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">tiktok.com/@</span><input id="settingsSocialTikTok" name="tiktok" type="text" maxlength="80" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.tiktok||'')+'" placeholder="usuario"></div></div><div class="settings-social-field"><label for="settingsSocialLetterboxd"><span class="settings-social-brand is-letterboxd">'+profileSocialIcon('letterboxd')+'</span><span translate="no">Letterboxd</span></label><div class="settings-social-input-wrap"><span class="settings-social-prefix">letterboxd.com/</span><input id="settingsSocialLetterboxd" name="letterboxd" type="text" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" value="'+escapePublic(socialLinks.letterboxd||'')+'" placeholder="usuario"></div></div></div><div class="settings-status" id="settingsSocialStatus"></div><div class="settings-btn-row settings-social-actions"><button class="settings-button primary" type="submit">Salvar redes sociais</button></div></form></div></section>'
         +    '<section class="settings-section-panel settings-devices-panel" data-settings-panel="devices"'+(settingsActiveTab==='devices'?'':' hidden')+'><h1>Meus Dispositivos</h1><p class="settings-panel-lead">Apenas dispositivos ativos vinculados à sua conta aparecem aqui.</p><div class="settings-devices-list" id="settingsDevicesList"><div class="settings-devices-loading">Carregando dispositivos…</div></div></section>'
         +    '<section class="settings-section-panel settings-data-panel" data-settings-panel="data"'+(settingsActiveTab==='data'?'':' hidden')+'><h1>Meus Dados e Privacidade</h1><p class="settings-panel-lead">Baixe uma cópia das informações essenciais da sua conta e do seu perfil.</p><div class="settings-data-actions settings-data-actions-outside"><button class="settings-button settings-export-button" id="settingsExportData" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Exportar meus dados</span></button><a class="settings-data-privacy-button" href="/privacy">Ver Termos de Privacidade</a></div><div class="settings-status settings-data-status" id="settingsExportStatus"></div></section>'
         +    '<section class="settings-section-panel settings-language-panel" data-settings-panel="language"'+(settingsActiveTab==='language'?'':' hidden')+'><h1>Idioma</h1><p class="settings-panel-lead">Escolha o idioma usado em todas as áreas públicas do site.</p><div class="settings-panel-card"><div class="settings-language-options" role="radiogroup" aria-label="Idioma do site"><button class="settings-language-option" type="button" data-settings-language="pt-br" role="radio"><strong class="notranslate" translate="no">'+escapePublic(settingsLanguageDisplay('pt-BR'))+'</strong><span class="notranslate" translate="no">Português</span></button><button class="settings-language-option" type="button" data-settings-language="en-us" role="radio"><strong class="notranslate" translate="no">'+escapePublic(settingsLanguageDisplay('en-US'))+'</strong><span class="notranslate" translate="no">English</span></button><button class="settings-language-option" type="button" data-settings-language="es" role="radio"><strong class="notranslate" translate="no">'+escapePublic(settingsLanguageDisplay('es-ES'))+'</strong><span class="notranslate" translate="no">Español</span></button><button class="settings-language-option" type="button" data-settings-language="fr" role="radio"><strong class="notranslate" translate="no">'+escapePublic(settingsLanguageDisplay('fr-FR'))+'</strong><span class="notranslate" translate="no">Français</span></button><button class="settings-language-option" type="button" data-settings-language="it" role="radio"><strong class="notranslate" translate="no">'+escapePublic(settingsLanguageDisplay('it-IT'))+'</strong><span class="notranslate" translate="no">Italiano</span></button></div><p class="settings-muted settings-language-note">A página será recarregada no idioma escolhido e sua preferência ficará salva neste dispositivo.</p></div></section>'
@@ -2693,6 +2709,9 @@ const userDropdown=document.getElementById('userDropdown');
         var rawX=String(form.x.value||'').trim();
         var rawInstagram=String(form.instagram.value||'').trim();
         var rawTikTok=String(form.tiktok.value||'').trim();
+        var rawLetterboxd=String(form.letterboxd.value||'').trim();
+        var letterboxd=normalizeProfileSocialValue('letterboxd',rawLetterboxd);
+        if(rawLetterboxd&&!letterboxd){msg.textContent=localizedProfileText('Informe um usuário válido do Letterboxd, como letterboxd.com/usuario.');msg.className='settings-status err';return;}
         var x=normalizeProfileSocialValue('x',rawX);
         var instagram=normalizeProfileSocialValue('instagram',rawInstagram);
         var tiktok=normalizeProfileSocialValue('tiktok',rawTikTok);
@@ -2700,10 +2719,10 @@ const userDropdown=document.getElementById('userDropdown');
         if(rawInstagram&&!instagram){msg.textContent='Informe um usuário válido do Instagram, como instagram.com/usuario.';msg.className='settings-status err';return;}
         if(rawTikTok&&!tiktok){msg.textContent='Informe um usuário válido do TikTok, como tiktok.com/@usuario.';msg.className='settings-status err';return;}
         submit.disabled=true;msg.textContent='Salvando redes sociais…';msg.className='settings-status';
-        var links=writeProfileSocialLinks(user.uid,{x:x,instagram:instagram,tiktok:tiktok});
+        var links=writeProfileSocialLinks(user.uid,{x:x,instagram:instagram,tiktok:tiktok,letterboxd:letterboxd});
         currentProfile={...(currentProfile||{}),socialLinks:links};
         if(viewedProfile&&isOwnProfileView())viewedProfile={...viewedProfile,socialLinks:links};
-        form.x.value=links.x;form.instagram.value=links.instagram;form.tiktok.value=links.tiktok;
+        form.x.value=links.x;form.instagram.value=links.instagram;form.tiktok.value=links.tiktok;form.letterboxd.value=links.letterboxd;
         try{
           await persistCrossDeviceData('profile-socials');
           if(settingsSyncState==='error'){msg.textContent='Redes sociais salvas neste aparelho. A sincronização será tentada novamente.';msg.className='settings-status err';}
@@ -3183,3 +3202,4 @@ const userDropdown=document.getElementById('userDropdown');
 
 window.BETVAccountReady=setupPublicAccount();
 })();
+

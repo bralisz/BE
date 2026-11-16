@@ -21,7 +21,7 @@
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
   var PROTECTED_EXACT=new Set([
-    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Avocado','Eyelash','Blohsh','Discord','Google','Instagram','TikTok','Twitter / X','Spotify','YouTube',
+    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Avocado','Eyelash','Blohsh','Discord','Google','Instagram','TikTok','Letterboxd','Twitter / X','Spotify','YouTube',
     'Apple TV','Prime Video','Paramount+','Disney+','Stripe','Supabase','CC BY-SA 4.0','LGPD','DMCA','HTTPS','BRL','USD',
     'WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','HIT ME HARD AND SOFT','Happier Than Ever','dont smile at me','Guitar Songs',
     'all the good girls go to hell','bad guy','Bellyache','BIRDS OF A FEATHER','Bored','bury a friend','CHIHIRO','everything i wanted',
@@ -33,8 +33,8 @@
   ]);
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
-  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v16-reliable-translations';
-  var STATIC_REV='20261101-privacy-fans-i18n-v18';
+  var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v17-reviewed-ui';
+  var STATIC_REV='20261116-reviewed-ui-v19';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
@@ -80,8 +80,10 @@
     translatedTokens.forEach(function(token,index){out=out.replace(token,sourceTokens[index]);});
     return out;
   }
+  var REVIEWED_ITALIAN_UI={"Fechar aviso":"Chiudi avviso","Atualizar página":"Aggiorna pagina","Todos os tempos":"Di sempre","Redes sociais do perfil":"Social del profilo","Escolha um banner":"Scegli un banner","Escolha seu banner":"Scegli il tuo banner","Escolher banner":"Scegli un banner","Alterar banner":"Cambia banner","Conta":"Account","Conta conectada":"Account collegato","Conectar conta":"Collega account","Conta não encontrada.":"Account non trovato.","Ativar conta":"Attiva account","Desativar conta":"Disattiva account","Salvos":"Salvati","Recentes":"Recenti","Mais recentes":"Più recenti","Mais antigos":"Più vecchi","Exportar":"Esporta","Atualização":"Aggiornamento","De fã para fã.":"Da fan a fan.","Voltar para a Home":"Torna alla home","Escolha seu @ de usuário":"Scegli il tuo nome utente","Navegação das políticas":"Navigazione delle informative","Wikipédia em português":"Wikipedia in portoghese"};
   function normalizeImportedTranslation(source,translated){
     var out=repairPlaceholders(source,translated);
+    if(slug==='it'&&Object.prototype.hasOwnProperty.call(REVIEWED_ITALIAN_UI,normalize(source)))return REVIEWED_ITALIAN_UI[normalize(source)];
     if(slug==='it'){
       if(String(source||'').indexOf('Discord')>=0)out=out.replace(/Discordia/g,'Discord');
       if(String(source||'').indexOf('YouTube')>=0)out=out.replace(/Billie EilishYouTube/g,'YouTube di Billie Eilish');
@@ -18984,4 +18986,5 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },0);
   },true);
 })();
+
 

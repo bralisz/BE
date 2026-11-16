@@ -621,7 +621,8 @@ as $$
       when jsonb_typeof(sp.preferences -> 'profileSocialLinks') = 'object' then jsonb_build_object(
         'x', left(coalesce(sp.preferences #>> '{profileSocialLinks,x}', ''), 80),
         'instagram', left(coalesce(sp.preferences #>> '{profileSocialLinks,instagram}', ''), 100),
-        'tiktok', left(coalesce(sp.preferences #>> '{profileSocialLinks,tiktok}', ''), 80)
+        'tiktok', left(coalesce(sp.preferences #>> '{profileSocialLinks,tiktok}', ''), 80),
+        'letterboxd', left(coalesce(sp.preferences #>> '{profileSocialLinks,letterboxd}', ''), 100)
       )
       else '{}'::jsonb
     end as social_links,
@@ -2689,3 +2690,4 @@ revoke execute on function public.toggle_profile_follow(text) from public, anon,
 revoke execute on function public.sync_legacy_following_users() from public, anon, authenticated;
 revoke execute on function public.sync_legacy_following_users_delete() from public, anon, authenticated;
 revoke execute on function public.sync_profile_follow_legacy() from public, anon, authenticated;
+
