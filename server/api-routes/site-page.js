@@ -921,18 +921,11 @@ module.exports = async function sitePage(req, res) {
       catch (_) { return false; }
     });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader(
-      'Cache-Control',
-      (recoveryRequest || updateRequest)
-        ? 'private, no-store, max-age=0, must-revalidate'
-        : legalRequest
-          ? 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400'
-          : profileUsername
-            ? 'public, max-age=60, s-maxage=120, stale-while-revalidate=600'
-            : seoRecord
-              ? 'public, max-age=60, s-maxage=300, stale-while-revalidate=3600'
-              : 'public, max-age=60, s-maxage=300, stale-while-revalidate=1800'
-    );
+    // The HTML boot graph changes with every release. Do not serve stale
+    // HTML with old SDK or app chunk references after a deployment.
+    // Static media and versioned JS/CSS retain their independent edge caches.
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+    res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
     if (updateRequest) {
       res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
       res.setHeader('Pragma', 'no-cache');
