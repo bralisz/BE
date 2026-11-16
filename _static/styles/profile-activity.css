@@ -29,3 +29,17 @@ body.profile-page-active #profileRecentWatchCard{margin-top:48px;overflow:visibl
  body.profile-page-active .profile-page-hero #profileRecentWatchCard{overflow:visible!important}
  body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-heading{font-size:12px;bottom:calc(100% + 8px)}
 }
+
+/* Desktop profile: keep the existing anchors and share one vertical center. */
+@media(min-width:761px){
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard{
+  bottom:23px!important;
+ }
+ body.profile-page-active .profile-page-hero #profileRecentWatchCard .profile-recent-watch-heading{
+  width:100%;text-align:center;
+ }
+ /* The visited profile row is Last watched, Like, Share, Home. */
+ body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-actions-row > .profile-page-follow{
+  display:none!important;
+ }
+}
