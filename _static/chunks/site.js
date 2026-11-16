@@ -6711,6 +6711,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return;
     }
 
+    // The comment composer must be available even when this video has zero comments.
+    const recommendations = group.closest('#detailRecommendations');
+    if (recommendations?.hidden) {
+      recommendations.hidden = false;
+      recommendations.removeAttribute('hidden');
+      recommendations.setAttribute('aria-hidden', 'false');
+    }
     const requestToken = ++detailCommentsRequestToken;
     activeDetailCommentsKey = videoKey;
     group.hidden = false;
@@ -10930,30 +10937,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const section = document.getElementById('contentDetailSection');
     const back = document.getElementById('detailBackButton');
     const share = document.getElementById('contentDetailShare');
-    const commentsJump = document.getElementById('detailCommentsJump');
-    if (commentsJump && commentsJump.dataset.bound !== 'true') {
-      commentsJump.dataset.bound = 'true';
-      commentsJump.addEventListener('click', () => {
-        if (!document.body.classList.contains('detail-page-active')) return;
-        const playButton = document.getElementById('contentDetailPlay');
-        const commentData = {
-          collection: playButton?.dataset.collection || 'videos',
-          recordId: playButton?.dataset.recordId || '',
-          itemId: playButton?.dataset.itemId || ''
-        };
-        const key = videoCommentKey(commentData);
-        if (!key) return;
-        const group = document.getElementById('detailCommentsGroup');
-        const recommendations = document.getElementById('detailRecommendations');
-        if (!group || !recommendations) return;
-        if (recommendations.hidden) {
-          recommendations.hidden = false;
-          recommendations.removeAttribute('hidden');
-        }
-        if (group.hidden || activeDetailCommentsKey !== key) openVideoComments(commentData);
-        window.requestAnimationFrame(() => group.scrollIntoView({ behavior:'smooth', block:'start' }));
-      });
-    }
     const cast = document.getElementById('contentDetailCast');
     const streamingStore = document.getElementById('detailStreamingStore');
     const streamingButton = document.getElementById('detailStreamingButton');
@@ -11201,17 +11184,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       });
     }
 
-    const commentsJump = document.getElementById('detailCommentsJump');
-    if (commentsJump) {
-      const commentsAvailable = Boolean(videoCommentKey({ ...data, collection: collection || 'videos', recordId, itemId }));
-      commentsJump.hidden = !commentsAvailable;
-      const commentLabel = localizedUiText('Comentários');
-      commentsJump.setAttribute('aria-label', commentLabel);
-      commentsJump.setAttribute('title', commentLabel);
-      const caption = commentsJump.querySelector('span');
-      if (caption) caption.textContent = commentLabel;
-    }
-
     share.dataset.itemId = itemId;
     share.dataset.title = title;
     share.dataset.defaultTitle = 'Compartilhar';
@@ -11253,7 +11225,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     runAfterInteractionPaint(() => {
       if (!document.body.classList.contains('detail-page-active')) return;
       if (String(document.getElementById('contentDetailPlay')?.dataset.itemId || '') !== enrichmentRouteId) return;
-      renderDetailRecommendations(data);
+      // Comments are an independent final section: a recommendations error must not hide them.
+      try {
+        renderDetailRecommendations(data);
+      } catch (_) {
+        const recommendations = document.getElementById('detailRecommendations');
+        if (recommendations) {
+          recommendations.hidden = false;
+          recommendations.removeAttribute('hidden');
+        }
+      }
       openVideoComments({ ...data, recordId, itemId, collection: collection || 'videos' });
       runWhenMainThreadIsIdle(() => {
         if (!document.body.classList.contains('detail-page-active')) return;

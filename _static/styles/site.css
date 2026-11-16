@@ -1150,42 +1150,110 @@ body.album-page-active .album-detail-backdrop[hidden]{display:none!important}
   body.album-page-active .album-page-detail{padding-top:0!important}
 }
 
-/* Comment entry point for videos without prior comments, preserving the existing composer. */
-.detail-comments-jump{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  flex:0 0 auto;
-  gap:8px;
-  width:auto;
-  min-width:0;
-  height:46px;
-  padding:0 15px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.21);
-  background:rgba(255,255,255,.1);
-  color:#fff;
-  font:650 13px/1 var(--font-sans,system-ui,sans-serif);
-  white-space:nowrap;
-  cursor:pointer;
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-}
-.detail-comments-jump[hidden]{display:none!important}
-.detail-comments-jump svg{
-  display:block;
-  flex:0 0 19px;
-  width:19px;
-  height:19px;
-}
-.detail-comments-jump:hover{
-  background:rgba(255,255,255,.18);
-  border-color:rgba(255,255,255,.35);
-}
-.detail-comments-jump:focus-visible{outline:2px solid #8dbfff;outline-offset:3px}
+/* Comments remain the final content section. No separate button is needed. */
 #detailCommentsGroup{scroll-margin-top:100px}
 @media(max-width:760px){
-  .detail-comments-jump{height:43px;padding:0 13px;gap:7px;font-size:12px}
-  .detail-comments-jump svg{width:18px;height:18px;flex-basis:18px}
   #detailCommentsGroup{scroll-margin-top:85px}
+
+  /* Compact and readable legal footer on the installed mobile app. */
+  html.betv-installed-app body:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.legal-page-active):not(.fans-page-active):not(.support-page-active):not(.donate-page-active) > footer{
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:0 20px!important;
+    box-sizing:border-box!important;
+    background:#0c0e12!important;
+    content-visibility:visible!important;
+    contain-intrinsic-size:auto!important;
+  }
+  html.betv-installed-app body:not(.login-mode):not(.admin-mode):not(.profile-page-active):not(.legal-page-active):not(.fans-page-active):not(.support-page-active):not(.donate-page-active) > footer > .footer-card{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    min-height:0!important;
+    width:100%!important;
+    padding:26px 0 18px!important;
+    margin:0!important;
+    gap:0!important;
+    border:0!important;
+    border-top:1px solid rgba(255,255,255,.09)!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    background:transparent!important;
+    content-visibility:visible!important;
+    contain-intrinsic-size:auto!important;
+  }
+  html.betv-installed-app body:not(.profile-page-active) > footer .footer-copy{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    width:100%!important;
+    min-width:0!important;
+    gap:0!important;
+  }
+  html.betv-installed-app body:not(.profile-page-active) > footer .footer-line{
+    margin:0!important;
+    font-size:12px!important;
+    line-height:1.65!important;
+  }
+  html.betv-installed-app body:not(.profile-page-active) > footer .footer-brand{
+    margin:12px 0 0!important;
+    font-size:12px!important;
+    line-height:1.5!important;
+  }
+  html.betv-installed-app body:not(.profile-page-active) > footer .footer-legal-links{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    align-items:start!important;
+    width:100%!important;
+    gap:14px 16px!important;
+    margin:22px 0 0!important;
+  }
+  html.betv-installed-app body:not(.profile-page-active) > footer .footer-legal-links a{
+    display:block!important;
+    min-width:0!important;
+    padding:0!important;
+    color:#b8bec9!important;
+    font-size:12px!important;
+    line-height:1.5!important;
+    overflow-wrap:break-word;
+  }
+  html.betv-installed-app body:not(.profile-page-active) > footer .footer-side{display:contents!important}
+  html.betv-installed-app body:not(.profile-page-active) > footer .footer-socials{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    width:100%!important;
+    gap:16px!important;
+    margin:24px 0 0!important;
+    padding:18px 0 0!important;
+    border-top:1px solid rgba(255,255,255,.07);
+  }
+  html.betv-installed-app body:not(.profile-page-active) > footer .footer-social-link{
+    display:grid;
+    flex:0 0 40px;
+    place-items:center;
+    width:40px!important;
+    height:40px!important;
+  }
+  html.betv-installed-app body:not(.profile-page-active) > footer .footer-social-link[hidden]{display:none!important}
+
+  /* The external fans CTA follows the footer and must clear the fixed app tabs. */
+  html.betv-installed-app body:not(.login-mode):not(.admin-mode) > .mobile-footer-fans-cta:not([hidden]){
+    width:calc(100% - 40px)!important;
+    max-width:none!important;
+    margin:14px 20px calc(108px + env(safe-area-inset-bottom,0px))!important;
+    min-height:52px!important;
+    box-sizing:border-box!important;
+    padding:12px 18px!important;
+    font-size:14px!important;
+    line-height:1.3!important;
+    border-radius:16px!important;
+  }
+  /* Pages without a fans CTA also need breathing room above the tabs. */
+  html.betv-installed-app body.profile-page-active > footer{
+    content-visibility:visible!important;
+    contain-intrinsic-size:auto!important;
+  }
 }
