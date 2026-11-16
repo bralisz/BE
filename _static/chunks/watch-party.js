@@ -620,14 +620,23 @@
     window.addEventListener('be:notifications-ready',renderInbox);
     window.addEventListener('be:watch-party-gift-status',updateUi);
     document.addEventListener('click',event=>{if(event.target?.closest?.('#contentDetailPlay')){const card=$('watchPartyPanel');if(card&&!card.hidden)card.classList.add('is-compact');}},true);
+    // Avoid expensive UI reconciliation on every page when no room is open.
     window.setInterval(()=>{
-      tryJoinFromUrl();setupPlayerButtons();ensurePlacement();
+      if(document.hidden)return;
       if(myId()!==inboxUser)subscribeInbox();
-      if (joined && currentVideo()?.id && currentVideo().id!==videoId) {leaveRoom();hidePanel();}
+      if(!joined&&!document.body.classList.contains('detail-page-active')&&!location.search.includes('watchParty'))return;
+      tryJoinFromUrl();setupPlayerButtons();ensurePlacement();
+      if(joined && currentVideo()?.id && currentVideo().id!==videoId) {leaveRoom();hidePanel();}
       if(joined && !activePlayer() && !document.body.classList.contains('detail-page-active')){leaveRoom();hidePanel();}
       if(pendingInvites.length)renderInbox();
-    },2400);
-    pollTimer=setInterval(()=>pollInbox(),14000);
+    },4000);
+    pollTimer=setInterval(()=>{if(!document.hidden)pollInbox();},14000);
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden)return;
+      if(myId()!==inboxUser)subscribeInbox();
+      pollInbox(true);
+      if(joined||document.body.classList.contains('detail-page-active')){setupPlayerButtons();ensurePlacement();}
+    },{passive:true});
     if(window.beBackend?.auth?.onChange)window.beBackend.auth.onChange(()=>subscribeInbox());
     Promise.resolve(window.beBackend?.ready).then(()=>subscribeInbox()).catch(()=>{});
     setupPlayerButtons();tryJoinFromUrl();updateUi();
