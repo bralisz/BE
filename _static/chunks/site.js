@@ -17861,6 +17861,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var title=document.getElementById('albumDetailTitle');
   var type=document.getElementById('albumDetailType');
   var meta=document.getElementById('albumDetailMeta');
+  var leadTrack=document.getElementById('albumDetailLeadTrack');
   var player=document.getElementById('albumDetailPlayer');
   var favorite=document.getElementById('albumDetailFavorite');
   var tracks=document.getElementById('albumTrackList');
@@ -17940,6 +17941,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     type.textContent=albumTypeLabel(album.type);
     title.textContent=albumTitle;
     meta.textContent=[String(album.year||''),trackCountLabel(albumTracks.length)].filter(Boolean).join(' • ');
+    if(leadTrack){
+      var singleTrackName=albumTracks.length===1?String(albumTracks[0]&&albumTracks[0].title||'').trim():'';
+      leadTrack.textContent=singleTrackName;
+      leadTrack.hidden=!singleTrackName;
+      detail.classList.toggle('is-single-track',Boolean(singleTrackName));
+    }
     cover.src=albumImage||'/_static/media/profile/default-avatar.png';
     cover.alt=albumTitle;
     cover.referrerPolicy='no-referrer';
