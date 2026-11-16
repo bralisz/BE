@@ -461,6 +461,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       dmcaTitle: `DMCA e direitos autorais | ${siteTitle}`,
       communityTitle: `Diretrizes da Comunidade | ${siteTitle}`,
       communityDescription: 'Confira as diretrizes da página de fãs da Billie Eilish TV, como perfis e comunidades podem aparecer, quais informações públicas podem ser exibidas e como solicitar remoção.',
+      avocadosTitle: `Avocados | ${siteTitle}`,
+      avocadosDescription: "Participe da comunidade Avocados no Billie Eilish TV. Encontre fãs da Billie, descubra perfis e compartilhe o seu.",
       fansTitle: `Fãs que ajudaram o site | ${siteTitle}`,
       fansDescription: 'Conheça fãs e comunidades que ajudam a Billie Eilish TV divulgando e apoiando o projeto.',
       fanProject: 'Projeto de fãs não oficial dedicado a organizar conteúdo e informações sobre Billie Eilish.'
@@ -484,6 +486,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       dmcaTitle: `DMCA and copyright | ${siteTitle}`,
       communityTitle: `Community Guidelines | ${siteTitle}`,
       communityDescription: 'Read the Billie Eilish TV fan page guidelines, including how profiles and communities may be featured, what public information may be shown, and how to request removal.',
+      avocadosTitle: `Avocados | ${siteTitle}`,
+      avocadosDescription: "Join Avocados on Billie Eilish TV. Meet other Billie fans, discover profiles and share yours.",
       fansTitle: `Fans who helped the site | ${siteTitle}`,
       fansDescription: 'Meet fans and communities that help Billie Eilish TV by sharing and supporting the project.',
       fanProject: 'Unofficial fan-made project dedicated to organizing content and information about Billie Eilish.'
@@ -507,6 +511,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       dmcaTitle: `DMCA et droits d’auteur | ${siteTitle}`,
       communityTitle: `Règles de la communauté | ${siteTitle}`,
       communityDescription: 'Consulte les règles de la page des fans de Billie Eilish TV, la manière dont les profils et communautés peuvent apparaître, les informations publiques qui peuvent être affichées et la procédure de retrait.',
+      avocadosTitle: `Avocados | ${siteTitle}`,
+      avocadosDescription: "Rejoins Avocados sur Billie Eilish TV. Rencontre d'autres fans de Billie, découvre des profils et partage le tien.",
       fansTitle: `Fans qui ont aidé le site | ${siteTitle}`,
       fansDescription: 'Découvre les fans et communautés qui aident Billie Eilish TV en partageant et en soutenant le projet.',
       fanProject: 'Projet non officiel créé par des fans pour organiser du contenu et des informations sur Billie Eilish.'
@@ -530,6 +536,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       dmcaTitle: `DMCA y derechos de autor | ${siteTitle}`,
       communityTitle: `Directrices de la comunidad | ${siteTitle}`,
       communityDescription: 'Consulta las directrices de la página de fans de Billie Eilish TV, cómo pueden aparecer perfiles y comunidades, qué información pública puede mostrarse y cómo solicitar su eliminación.',
+      avocadosTitle: `Avocados | ${siteTitle}`,
+      avocadosDescription: "Únete a Avocados en Billie Eilish TV. Conoce a otros fans de Billie, descubre perfiles y comparte el tuyo.",
       fansTitle: `Fans que ayudaron al sitio | ${siteTitle}`,
       fansDescription: 'Conoce a fans y comunidades que ayudan a Billie Eilish TV compartiendo y apoyando el proyecto.',
       fanProject: 'Proyecto no oficial creado por fans para organizar contenido e información sobre Billie Eilish.'
@@ -553,6 +561,8 @@ function pageCopy(routeInfo, settings, seoRecord) {
       dmcaTitle: `DMCA e diritti d’autore | ${siteTitle}`,
       communityTitle: `Linee guida della community | ${siteTitle}`,
       communityDescription: 'Consulta le linee guida della pagina fan di Billie Eilish TV, come possono apparire profili e community, quali informazioni pubbliche possono essere mostrate e come richiedere la rimozione.',
+      avocadosTitle: `Avocados | ${siteTitle}`,
+      avocadosDescription: "Unisciti ad Avocados su Billie Eilish TV. Incontra altri fan di Billie, scopri i profili e condividi il tuo.",
       fansTitle: `Fan che hanno aiutato il sito | ${siteTitle}`,
       fansDescription: 'Scopri i fan e le community che aiutano Billie Eilish TV condividendo e sostenendo il progetto.',
       fanProject: 'Progetto non ufficiale creato dai fan per organizzare contenuti e informazioni su Billie Eilish.'
@@ -606,6 +616,10 @@ function pageCopy(routeInfo, settings, seoRecord) {
   } else if (logical === '/comunidade') {
     title = copy.communityTitle;
     description = copy.communityDescription;
+  } else if (logical === '/avocados') {
+    title = copy.avocadosTitle;
+    description = copy.avocadosDescription;
+    pageType = 'CollectionPage';
   } else if (/^\/(?:fãs|fas|fans)$/i.test(logical)) {
     title = copy.fansTitle;
     description = copy.fansDescription;
