@@ -9,11 +9,33 @@ const servedCss=read('_static/styles/site.css');
 const features=read('assets/js/features.js');
 const featuresServed=read('_static/chunks/features.js');
 const html=read('index.html');
-const rev='20261116-share-community-v7';
+const rev='20261116-avocados-route-v8';
 const cssRev='20261116-share-community-layout-v6';
 
 assert.equal(community,served,'the Community chunk must mirror the source');
 assert.equal(features,featuresServed,'the loader chunk must mirror the source');
+
+const localizedRouting=read('_static/chunks/locale.js');
+const servedSite=read('_static/chunks/site.js');
+const sourceSite=read('assets/js/site.js');
+const vercel=JSON.parse(read('vercel.json'));
+const seo=read('server/api-routes/site-page.js');
+assert.equal(sourceSite,servedSite,'the main site bundle must mirror its source');
+assert(html.includes('id="loginCommunityLink" href="/avocados"'),'login Community link must open Avocados');
+assert(html.includes('data-legal-link="comunidade"'),'existing community guidelines must remain accessible');
+assert(servedSite.includes("function isAvocadosRoute()"),'Avocados must be a public route in the auth controller');
+assert(servedSite.includes("function showAvocadosRoute()"),'Avocados navigation must open the social area');
+assert(community.includes("beRoute:'avocados'"),'the tab must create a shareable route');
+assert(community.includes("if(current!=='/avocados')"),'the direct route must not create redundant history entries');
+assert(features.includes("if(isAvocadosPath())ensure('community')"),'direct visits must load Community without a click');
+assert(seo.includes("logical === '/comunidade'")&&seo.includes("logical === '/avocados'"),'guidelines and social Community must have separate SEO');
+for(const lang of ['pt-br','en-us','es','fr','it']){
+  assert(localizedRouting.includes("'"+lang+"':{'/avocados':'/avocados'"),'Avocados must keep its slug in '+lang);
+  assert(vercel.rewrites.some(route=>route.source==='/'+lang+'/avocados'),'the locale deep link must be rewritable for '+lang);
+}
+assert(vercel.rewrites.some(route=>route.source==='/avocados'),'the public route must be served directly');
+assert((html.match(/data-support-new="avocados-2026"/g)||[]).length===7,'seven new FAQs must be visible');
+
 assert(community.includes("title:'Encontre outros fãs da Billie'"));
 const discovery=community.indexOf('id="communitySimilarSection"');
 const ranking=community.indexOf('<h2>Perfis em destaque</h2>');
@@ -57,7 +79,7 @@ for (const css of [sourceCss,servedCss]) {
   assert(css.includes('flex:0 0 clamp(245px,22vw,310px)'), 'recommendation cards must have fixed carousel widths');
 }
 assert(features.includes("community:'"+rev+"'"),'lazy-loaded chunk requires a bumped cache key');
-assert(html.includes('features.js?rev=20261116-share-community-loader-v11'),'loader itself requires a bumped cache key');
+assert(html.includes('features.js?rev=20261116-avocados-route-loader-v12'),'loader itself requires a bumped cache key');
 assert(html.includes('site.css?rev='+cssRev),'main CSS requires a bumped cache key');
 
 // Isolate the real Follow handler with a mocked, authenticated RPC.
