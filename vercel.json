@@ -182,7 +182,7 @@
     },
     {
       "source": "/api/runtime",
-      "destination": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.min.js"
+      "destination": "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.js"
     },
     {
       "source": "/pt-br/@:username",
@@ -1163,7 +1163,7 @@
         },
         {
           "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
+          "value": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400"
         },
         {
           "key": "CDN-Cache-Control",
