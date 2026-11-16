@@ -300,7 +300,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
 </script>
 <script defer src="/_static/chunks/performance.js?rev=20261009-visitor-menu-v15"></script>
 <script defer src="/_static/chunks/features.js?rev=20261116-unlimited-saves-v8"></script>
-<script defer src="/_static/chunks/site.js?rev=20261116-browser-startup-v16"></script>
+<script defer src="/_static/chunks/site.js?rev=20261116-browser-startup-v17"></script>
 <link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="/_static/styles/watch-party.css?rev=20261116-perf-styles-v1"></noscript>
 <script defer src="/_static/chunks/watch-party.js?rev=20261116-idle-poll-v1"></script>
@@ -381,7 +381,7 @@ body.site-loading-active>:not(#authLoading):not(script):not(style){display:none!
 (function(){
   var panel=document.getElementById('siteLoadingRecovery');
   if(panel)panel.style.display='none';
-  document.getElementById('siteLoadingRetry').addEventListener('click',function(){location.reload();});
+  document.getElementById('siteLoadingRetry').addEventListener('click',function(){var next=new URL(location.href);next.searchParams.set('__betv_update',String(Date.now()));location.replace(next.toString());});
   window.setTimeout(function(){
     if(!panel||!document.documentElement.classList.contains('site-loading-active')||location.hash.startsWith('#/admin'))return;
     var loading=document.getElementById('authLoading');
