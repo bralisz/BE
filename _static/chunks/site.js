@@ -7376,8 +7376,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try {
       const url = new URL(linked, location.origin);
       const file = decodeURIComponent(String(url.pathname || '').split('/').pop() || '').toLowerCase();
-      const match = file.match(/^(pt(?:-br)?|en(?:-us)?|es|fr|it)(?:[-_.])/i);
-      return normalizeSubtitleLocale(match ? match[1] : '');
+      const prefix = file.match(/^(pt(?:-br)?|en(?:-us)?|es|fr|it)(?:[-_.])/i);
+      const suffix = file.match(/(?:^|[-_.])(pt(?:-br)?|en(?:-us)?|es|fr|it)\.(?:srt|vtt)$/i);
+      return normalizeSubtitleLocale(prefix?.[1] || suffix?.[1] || '');
     } catch (_) {
       return '';
     }
@@ -7392,6 +7393,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const inferred = subtitleLocaleFromFileUrl(linked);
     if (inferred && inferred !== current) return '';
     return linked;
+  }
+
+  // The /it route should display the uploaded Italian captions on playback.
+  // Keep the ordinary CC button available so viewers can turn them off.
+  function autoEnableItalianSubtitles(button, url) {
+    if (url && normalizeSubtitleLocale(activeLocaleSlug()) === 'it') button.click();
   }
 
   function subtitleTimeSeconds(value) {
@@ -8267,6 +8274,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeButton.setAttribute('aria-label', `Fechar ${providerLabel}`);
       overlay.dataset.provider = normalizedProvider;
       overlay.classList.add('is-open', normalizedProvider === 'vk' ? 'is-vk' : 'is-youtube');
+      autoEnableItalianSubtitles(subtitleButton, activeSubtitleUrl);
       if (normalizedProvider === 'youtube' && isInstagramMobileBrowser()) {
         frame.addEventListener('load', () => { instagramMobileFrameLoaded = true; }, { once: true });
       }
@@ -9058,6 +9066,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
       overlay.className = 'drive-video-player-overlay is-open is-paused is-source-syncing';
+      autoEnableItalianSubtitles(subtitleButton, activeSubtitleUrl);
       document.body.classList.add('drive-video-player-open');
       setInteractive(false);
       setLoading('Carregando vídeo do Google Drive...');
