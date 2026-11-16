@@ -24,3 +24,7 @@ jobs:
       - run: node scripts/test-static-css.cjs
       - run: node scripts/test-album-layout.cjs
       - run: node scripts/test-profile-watch-click.cjs
+      - run: node scripts/test-section-navigation.cjs
+      - run: node scripts/test-profile-desktop-heart.cjs
+      - run: node scripts/test-profile-follow.cjs
+      - run: node scripts/test-mobile-nav-loading.cjs

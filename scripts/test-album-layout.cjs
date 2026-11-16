@@ -61,5 +61,27 @@ const header = runtime.slice(runtime.indexOf("bar.id = 'mobileAppBar'"))
       }
     }
     console.log('PASS album layout: browser/app, single/album, 320–1440px, source and shipped CSS');
+    const profile = index.match(/<section class="profile-page-shell"[\s\S]*?<\/section>/)[0];
+    const actionStart = runtime.indexOf('  var scheduled=false;',runtime.indexOf('/* BETV profile actions v13'));
+    const actionCode = runtime.slice(actionStart,runtime.indexOf('\n  function schedule(){',actionStart));
+    for (const width of [1024,1440]) {
+      await page.setViewportSize({width,height:900});
+      await page.setContent(`<style>${fs.readFileSync('_static/styles/site.css','utf8')}\n${fs.readFileSync('_static/styles/profile-activity.css','utf8')}</style><body class="profile-page-active">${profile}</body>`);
+      await page.evaluate(() => {
+        document.getElementById('profilePage').hidden=false;
+        document.getElementById('profilePageFollow').hidden=false;
+        document.querySelector('.profile-page-hero').insertAdjacentHTML('beforeend','<section id="profileRecentWatchCard"><span>Assistiu por último</span></section>');
+      });
+      await page.addScriptTag({content:actionCode+'\napply();'});
+      const controls=await page.evaluate(() => ['profileRecentWatchCard','profilePageFollow','profilePageLike','profilePageShare','profilePageHome'].map(id=>{
+        const el=document.getElementById(id),r=el.getBoundingClientRect();return {id,left:r.left,right:r.right,center:r.top+r.height/2,display:getComputedStyle(el).display};
+      }));
+      for(let i=1;i<controls.length;i++){
+        assert.notEqual(controls[i].display,'none',JSON.stringify(controls));
+        assert(controls[i-1].right < controls[i].left,`Desktop profile order/overlap: ${JSON.stringify(controls)}`);
+        assert(Math.abs(controls[i-1].center-controls[i].center)<1,`Profile vertical alignment: ${JSON.stringify(controls)}`);
+      }
+    }
+    console.log('PASS desktop profile: Last watched → Follow → Like → Share → Home');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

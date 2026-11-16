@@ -5497,7 +5497,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function closeSectionView(scrollHome = false) {
     sectionViewRenderToken += 1;
     const host = document.getElementById('dynamicSections');
-    if (!host || !host.classList.contains('section-view-mode')) return;
+    document.body.classList.remove('section-catalog-active', 'featured-section-catalog-active');
+    if (!host) { activeSectionView = null; activeSectionReturnState = null; return; }
     const active = activeSectionView || host.querySelector('.section-view-active');
     const activeRail = active?.querySelector?.('.video-rail');
     if (activeRail && typeof activeRail._beHomeMarkup === 'string') {
@@ -5506,8 +5507,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setupContentDetailInteractions(activeRail);
     }
     host.classList.remove('section-view-mode');
-    document.body.classList.remove('section-catalog-active', 'featured-section-catalog-active');
-    host.querySelectorAll('.video-rail-section').forEach(section => {
+    host.querySelectorAll('.video-rail-section,.film-library-section').forEach(section => {
       section.classList.remove('section-view-active');
       if (section.dataset.sectionViewPreviousHidden !== undefined) {
         section.hidden = section.dataset.sectionViewPreviousHidden === 'true';
@@ -5521,6 +5521,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   window.addEventListener('be:close-section-view', () => closeSectionView(false));
+  // Dedicated pages must not inherit the section CSS that hides main.
+  ['be:open-community','be:open-profile-route','be:open-config','be:open-support','be:open-notifications','be:open-album-page','be:open-legal-route','be:open-billie-page','be:open-donate-page','be:open-fans-page'].forEach(type => {
+    window.addEventListener(type, () => closeSectionView(false), true);
+  });
 
   function openSectionView(section, options = {}) {
     const host = section?.closest?.('#dynamicSections');
@@ -5749,6 +5753,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           ? event.state
           : fallback;
         closeSectionView(false);
+        if (event.state?.beRoute && event.state.beRoute !== 'catalog') return;
         restoreCatalogView(destination.homeView || fallback.homeView || 'home',
           destination.scrollY ?? fallback.scrollY ?? 0);
       });
@@ -18887,12 +18892,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         visible(share,true);visible(home,true);
         order(like,1);order(share,2);order(home,3);
       }else{
-        visible(follow,false);visible(like,true);visible(share,true);visible(home,true);visible(more,false);
-        order(like,1);order(share,2);order(home,3);
+        visible(follow,true);visible(like,true);visible(share,true);visible(home,true);visible(more,false);
+        order(follow,0);order(like,1);order(share,2);order(home,3);
       }
 
       if(likes){
-        var count=3;
+        var count=(!own&&!guest)?4:3;
         important(likes,'position','absolute');
         important(likes,'top','auto');
         important(likes,'right','clamp(24px,3vw,46px)');

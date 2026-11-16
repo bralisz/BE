@@ -13,7 +13,8 @@ for(const [guest,own,mobile] of [[true,false,false],[false,false,false],[false,t
  assert.equal(like.style.display,!own&&!mobile?'grid':'none');
  if(!own&&!mobile){
   assert.equal(like.style.order,'1');assert.equal(w.document.getElementById('profilePageShare').style.order,'2');assert.equal(w.document.getElementById('profilePageHome').style.order,'3');
-  assert.equal(w.document.getElementById('profilePageFollow').style.display,'none');
+  assert.equal(w.document.getElementById('profilePageFollow').style.display,guest?'none':'grid');
+  if(!guest)assert.equal(w.document.getElementById('profilePageFollow').style.order,'0');
  }
  const state={window:{matchMedia:()=>({matches:!mobile})},auth:{currentUser:guest?null:{}},isOwnProfileView:()=>own,viewedProfileStatus:'ready',viewedProfile:{likesReceived:3},currentViewedProfileHandle:()=> 'profile',profileLikeState:{username:'profile',count:3,liked:false,loading:false},profileLikeCount:Number,profilePageLike:like,profilePageLikesReceived:null};
  vm.createContext(state);vm.runInContext(account.slice(account.indexOf('    function renderProfileLikeUi(){'),account.indexOf('    function updateProfileActionVisibility(){'))+'\nrenderProfileLikeUi();',state);

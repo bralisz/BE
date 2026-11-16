@@ -50,3 +50,10 @@ body.profile-page-active #profileRecentWatchCard{margin-top:48px;overflow:visibl
   color:var(--profile-mobile-ink,#fff)!important;
  }
 }
+
+/* Leave space for Follow between the last-watch card and the heart. */
+@media(min-width:761px){
+ body.profile-page-active:not(.profile-view-own):not(.profile-viewer-guest) .profile-page-hero #profileRecentWatchCard{
+  right:calc(clamp(24px,3vw,46px) + 232px)!important;
+ }
+}

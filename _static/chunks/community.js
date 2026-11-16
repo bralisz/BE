@@ -745,8 +745,9 @@
   }
 
   function establishCatalogBase(){
+    window.dispatchEvent(new CustomEvent('be:close-section-view'));
     if(document.body.classList.contains('community-page-active'))return;
-    var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('donate-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active');
+    var dedicated=document.body.classList.contains('profile-page-active')||document.body.classList.contains('settings-page-active')||document.body.classList.contains('support-page-active')||document.body.classList.contains('notification-page-active')||document.body.classList.contains('billie-page-active')||document.body.classList.contains('donate-page-active')||document.body.classList.contains('fans-page-active')||document.body.classList.contains('album-page-active')||document.body.classList.contains('detail-page-active')||document.body.classList.contains('legal-page-active');
     if(!dedicated)return;
     var logo=document.getElementById('logoBtn');
     if(logo){logo.dataset.beHistoryMode='none';logo.click();delete logo.dataset.beHistoryMode;}
@@ -772,6 +773,7 @@
   }
 
   function openCommunity(){
+    window.dispatchEvent(new CustomEvent('be:close-section-view'));
     closeMobileAccountMenu();
     if(document.body.classList.contains('community-page-active')&&page&&!page.hidden){setCommunityNavActive(true);return;}
     // Community uses the catalog surface. Leave standalone listing routes first
