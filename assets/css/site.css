@@ -18213,8 +18213,8 @@ body.profile-page-active .profile-page-name{
   bottom:calc(150px + max(8px,env(safe-area-inset-bottom)));
   z-index:12;
 }
-.drive-video-player-overlay.is-frame-mode .drive-video-player-subtitle,
-.drive-video-player-overlay.is-frame-mode .drive-video-player-subtitle-overlay{display:none!important}
+/* Google Drive iframe fallback also supports the BETV CC button and subtitle overlay.
+   Missing tracks remain hidden by the dedicated [hidden] selectors above. */
 
 @media(max-width:700px){
   .player-subtitle-sync-notice{
