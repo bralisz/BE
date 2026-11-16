@@ -683,3 +683,34 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
     pointer-events:none!important;
   }
 }
+
+
+/* Center episode and recommendation controls on the 16:9 artwork, not the text below. */
+@media (min-width:761px){
+  .series-episode-arrow,
+  .detail-reco-arrow{
+    top:clamp(67.6875px,calc(6.75vw + 3px),93px);
+    font-size:0;
+    line-height:0;
+    color:transparent;
+  }
+  .series-episode-arrow::after,
+  .detail-reco-arrow::after{
+    content:"";
+    position:absolute;
+    top:50%;
+    left:50%;
+    width:13px;
+    height:13px;
+    box-sizing:border-box;
+    border-top:3px solid #fff;
+    border-right:3px solid #fff;
+    border-radius:1px;
+    transform:translate(-50%,-50%) rotate(45deg);
+    pointer-events:none;
+  }
+  .series-episode-arrow.prev::after,
+  .detail-reco-arrow.prev::after{
+    transform:translate(-50%,-50%) rotate(-135deg);
+  }
+}
