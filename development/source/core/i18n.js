@@ -18,7 +18,7 @@
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
   var PROTECTED_EXACT=new Set([
-    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Avocado','Eyelash','Blohsh','Discord','Google','Instagram','TikTok','Letterboxd','Twitter / X','Spotify','YouTube',
+    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Avocado','Avocados','Eyelash','Blohsh','Discord','Google','Instagram','TikTok','Letterboxd','Twitter / X','Spotify','YouTube',
     'Apple TV','Prime Video','Paramount+','Disney+','Stripe','Supabase','CC BY-SA 4.0','LGPD','DMCA','HTTPS','BRL','USD',
     'WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','HIT ME HARD AND SOFT','Happier Than Ever','dont smile at me','Guitar Songs',
     'all the good girls go to hell','bad guy','Bellyache','BIRDS OF A FEATHER','Bored','bury a friend','CHIHIRO','everything i wanted',
