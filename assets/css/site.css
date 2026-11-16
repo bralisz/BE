@@ -22517,3 +22517,23 @@ body.detail-page-active > main > #seriesEpisodes:not([hidden]){
   }
 }
 
+/* Share your BETV profile: identical footprint to the Community Instagram strip. */
+.community-share-section{margin-top:-7px}
+.community-share-card{min-height:77px}
+.community-share-icon{color:#7baeff}
+.community-share-icon svg{width:30px;height:30px}
+.community-share-content h2{max-width:600px}
+.community-share-tag{margin-top:3px;min-height:20px;padding:0 9px;font-size:10px;font-weight:800;line-height:1.3}
+.community-share-action{background:#1687ef!important;color:#fff!important;-webkit-text-fill-color:#fff!important;box-shadow:none!important}
+.community-share-action:hover{background:#0878dc!important;filter:none}
+.community-share-action:disabled{opacity:.57;cursor:wait;transform:none}
+.community-share-status{margin:5px 0 0!important;color:#8ed5ad!important;font-size:12px!important}
+.community-share-status[data-status="error"]{color:#ffacac!important}
+.community-share-status[hidden]{display:none!important}
+@media(max-width:760px){
+  .community-share-card{min-height:73px}
+  .community-share-icon svg{width:27px;height:27px}
+  .community-share-content h2{font-size:15px}
+  .community-share-tag{font-size:9.5px}
+  .community-share-action{min-width:82px;padding:0 12px;font-size:13px}
+}
