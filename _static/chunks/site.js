@@ -21,7 +21,7 @@
   var TRANSLATABLE_ATTRIBUTES=['aria-label','placeholder','title','alt','value'];
   var SKIP_SELECTOR='script,style,code,pre,textarea,[data-i18n-ignore],[translate="no"],.notranslate,#adminRoot,.admin-shell,.admin-page';
   var PROTECTED_EXACT=new Set([
-    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Avocado','Eyelash','Blohsh','Discord','Google','Instagram','TikTok','Letterboxd','Twitter / X','Spotify','YouTube',
+    'BE','BETV','Billie Eilish','Billie Eilish TV','FINNEAS','Avocado','Avocados','Eyelash','Blohsh','Discord','Google','Instagram','TikTok','Letterboxd','Twitter / X','Spotify','YouTube',
     'Apple TV','Prime Video','Paramount+','Disney+','Stripe','Supabase','CC BY-SA 4.0','LGPD','DMCA','HTTPS','BRL','USD',
     'WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?','HIT ME HARD AND SOFT','Happier Than Ever','dont smile at me','Guitar Songs',
     'all the good girls go to hell','bad guy','Bellyache','BIRDS OF A FEATHER','Bored','bury a friend','CHIHIRO','everything i wanted',
@@ -34,7 +34,7 @@
   var MUSIC_TITLE_SECTION_IDS=new Set(['18db9515-179c-4bad-9646-1fcda63df14a','14386598-4978-403a-8548-db0ee582e291']);
   var MUSIC_TITLE_SECTION_NAMES=new Set(['videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv']);
   var DYNAMIC_CACHE_KEY='betvDynamicI18n:'+slug+':v18-detail-blocks';
-  var STATIC_REV='20261116-detail-blocks-v20';
+  var STATIC_REV='20261116-avocados-faq-v21';
   var BUILD_REV=String(window.__BETV_DEPLOYMENT_VERSION__||STATIC_REV);
 
   function isAdmin(){return String(location.hash||'').startsWith('#/admin');}
