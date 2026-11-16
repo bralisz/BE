@@ -136,12 +136,26 @@
     button.addEventListener('click', () => {
       if (!app()) return;
       concealSaved();
-      returnToSaved = true;
-      try {
-        if (typeof window.beOpenSavedContent === 'function') window.beOpenSavedContent(item);
-        else returnToSaved = false;
-      } catch (_) { returnToSaved = false; revealSaved(); }
-      sync();
+      returnToSaved = false;
+      const openItem = () => {
+        if (!app()) return;
+        try {
+          if (typeof window.beOpenSavedContent !== 'function') { revealSaved(); return; }
+          window.beOpenSavedContent(item);
+          returnToSaved = detail();
+          if (!returnToSaved) revealSaved();
+        } catch (_) { returnToSaved = false; revealSaved(); }
+        sync();
+      };
+      // Dedicated profile, community and legal pages hide the main detail view.
+      // Exit them through the site's router before opening the selected video.
+      const onDedicatedPage = ['profile-page-active','settings-page-active','community-page-active',
+        'support-page-active','notification-page-active','album-page-active','billie-page-active',
+        'fans-page-active','legal-page-active','donate-page-active'].some(cls => document.body.classList.contains(cls));
+      if (onDedicatedPage && typeof window.BETVPublicRoutes?.go === 'function') {
+        window.BETVPublicRoutes.go('/');
+        requestAnimationFrame(openItem);
+      } else openItem();
     });
     return button;
   }
