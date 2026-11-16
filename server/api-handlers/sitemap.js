@@ -20,6 +20,7 @@ const STATIC_PATHS = Object.freeze([
   '/albuns',
   '/suporte',
   '/atualizacoes',
+  '/avocados',
   '/comunidade',
   '/fãs',
   '/terms',
