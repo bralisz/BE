@@ -11,13 +11,14 @@
   };
   var SUPPORTED=['pt-br','en-us','es','fr','it'];
   var ROUTE_SLUGS={
-    'pt-br':{'/comunidade':'/comunidade','/fãs':'/fãs'},
-    'en-us':{'/comunidade':'/community','/fãs':'/fans'},
-    'es':{'/comunidade':'/comunidad','/fãs':'/fans'},
-    'fr':{'/comunidade':'/communaute','/fãs':'/fans'},
-    'it':{'/comunidade':'/comunita','/fãs':'/fans'}
+    'pt-br':{'/avocados':'/avocados','/comunidade':'/comunidade','/fãs':'/fãs'},
+    'en-us':{'/avocados':'/avocados','/comunidade':'/community','/fãs':'/fans'},
+    'es':{'/avocados':'/avocados','/comunidade':'/comunidad','/fãs':'/fans'},
+    'fr':{'/avocados':'/avocados','/comunidade':'/communaute','/fãs':'/fans'},
+    'it':{'/avocados':'/avocados','/comunidade':'/comunita','/fãs':'/fans'}
   };
   var ROUTE_ALIASES={
+    '/avocados':'/avocados',
     '/comunidade':'/comunidade','/community':'/comunidade','/comunidad':'/comunidade','/communaute':'/comunidade','/comunita':'/comunidade','/comunità':'/comunidade',
     '/fãs':'/fãs','/fas':'/fãs','/fans':'/fãs'
   };
