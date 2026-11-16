@@ -1491,3 +1491,24 @@ body.album-page-active #albumPage{
   body.section-catalog-active .section-view-active .video-rail{column-gap:10px!important;row-gap:12px!important}
   body.section-catalog-active .section-view-active .video-card{aspect-ratio:16/11.15!important;border-radius:12px!important}
 }
+
+/* Keep the decorative album glow inside the page, not in the scrollable viewport. */
+body.album-page-active .album-page-shell{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  overflow-x:clip;
+}
+body.album-page-active .album-detail-backdrop{
+  width:100%;
+  max-width:100%;
+}
+@media(max-width:760px){
+  body.album-page-active .album-detail-backdrop{width:100%;max-width:100%}
+  body.album-page-active:not(.login-mode):not(.admin-mode):not(.drive-player-open):not(.player-open) #mobileAppBar{
+    width:100%!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+}
