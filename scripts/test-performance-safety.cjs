@@ -7,6 +7,20 @@ const read = path => fs.readFileSync(path, 'utf8');
 const html = read('index.html');
 const css = read('assets/css/site.css');
 const worker = read('sw.js');
+const vercelConfig = JSON.parse(read('vercel.json'));
+const runtime = vercelConfig.rewrites.find(rule => rule.source === '/api/runtime');
+assert.ok(runtime, 'the Supabase browser SDK must have a route');
+assert.equal(
+  runtime.destination,
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.0/dist/umd/supabase.js',
+  'load the real UMD artifact, not nonexistent supabase.min.js'
+);
+const runtimeCache = vercelConfig.headers.find(rule => rule.source === '/api/runtime');
+assert.ok(runtimeCache, 'Supabase runtime must have a caching policy');
+assert.doesNotMatch(JSON.stringify(runtimeCache), /max-age=31536000|immutable/, 'avoid pinning a broken SDK URL for one year');
+assert.match(html, /\/api\/runtime\?v=2\.112\.0-umd-fix1/, 'bust cached responses for the fixed SDK URL');
+assert.match(html, /betvBootRecovery/, 'show a usable retry screen if a deferred dependency stalls');
+
 
 for (const [source, served] of [
   ['assets/js/site.js', '_static/chunks/site.js'],
