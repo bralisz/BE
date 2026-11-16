@@ -935,9 +935,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function hasSupabaseConfig() {
     const config = window.BE_SUPABASE_CONFIG || {};
-    // Detect configuration independently of SDK timing: asynchronous CDN scripts
-    // must not silently switch production auth to a local-only backend.
     return Boolean(
+      window.supabase &&
+      typeof window.supabase.createClient === 'function' &&
       /^https:\/\//i.test(String(config.url || '')) &&
       String(config.publishableKey || '').trim()
     );
@@ -3808,14 +3808,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function initialize() {
     if (MODE === 'supabase') {
-      if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-        const sdkReady = window.__BETVSupabaseReady
-          ? await window.__BETVSupabaseReady
-          : false;
-        if (!sdkReady || !window.supabase || typeof window.supabase.createClient !== 'function') {
-          throw backendError('backend/sdk-unavailable', 'Não foi possível iniciar a conexão. Recarregue a página para tentar novamente.');
-        }
-      }
                                                                                 
                                                              
       normalizeLegacyAuthHash();
@@ -3988,25 +3980,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     notify();
   }
 
-  // Recover from stalled refresh-token/session locks without clearing saved login.
-  // initialize() keeps running; late auth events restore the account normally.
-  const initialization = initialize();
-  const ready = (async () => {
-    let startupTimer;
-    try {
-      await Promise.race([
-        initialization,
-        new Promise((resolve, reject) => {
-          startupTimer = window.setTimeout(() => {
-            if (supabaseClient) resolve();
-            else reject(backendError('backend/startup-timeout', 'A conexão demorou demais para iniciar. Recarregue o site.'));
-          }, 7500);
-        })
-      ]);
-    } finally {
-      window.clearTimeout(startupTimer);
-    }
-  })().catch(error => {
+  const ready = initialize().catch(error => {
     (void 0);
     throw error;
   });
@@ -14481,17 +14455,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try{if(!window.beBackend)throw new Error('O adaptador de autenticação não foi carregado.');await window.beBackend.ready;await boot();}catch(error){if(isLegalRoute()){showLegalRoute();hideSiteSkeleton();}else if(isFansRoute()){showFansRoute();hideSiteSkeleton();}else if(window.BETVGuestAccess&&window.BETVGuestAccess.isActive()&&!isLoginRoute()){hideSiteSkeleton();if(isDonateRoute())showDonateRoute();else if(isSupportRoute())showSupportRoute();else if(isAlbumsRoute())showAlbumsRoute();else if(isBillieRoute())showBillieRoute();else if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else if(isVideoRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-video-route'));}else enterHome(true);}else{hideSiteSkeleton();if(isProfileRoute()){enterHome(true);window.dispatchEvent(new CustomEvent('be:open-profile-route'));}else{showLogin();setStatus('Não foi possível iniciar a autenticação. Detalhes: '+friendly(error),'error');}}(void 0);}
   }
 
-  function startPublicInterface(){
-    if(window.__BETVPublicInterfaceStarted)return;
-    window.__BETVPublicInterfaceStarted=true;
-    initBackgrounds();
-    setMode(isPasswordRecoveryRoute()?'recovery':'email');
-    startAuthentication();
-  }
-  // This bundle is deferred, so the DOM is already parsed at readyState=interactive.
-  // Start now: optional deferred modules must not postpone auth or its timeout.
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startPublicInterface,{once:true});
-  else startPublicInterface();
+  document.addEventListener('DOMContentLoaded',function(){initBackgrounds();setMode(isPasswordRecoveryRoute()?'recovery':'email');startAuthentication()});
 })();
 
 ;
