@@ -3,7 +3,7 @@
   if(window.BETVCommunity)return;
   if(String(location.hash||'').startsWith('#/admin')) return;
 
-  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),similarRequestId:0,similarSeen:Object.create(null),similarHasMore:false,similarLoadingMore:false};
+  var state={loading:false,lastPayload:null,requestId:0,detailReturnToCommunity:false,catalogHomeView:'home',watchedContentIds:Object.create(null),similarRequestId:0,similarSeen:Object.create(null),similarHasMore:false,similarLoadingMore:false,lastPayloadAt:0,lastPayloadUserId:'',similarLoadedAt:0,similarLoadedUserId:'',similarObserver:null,shareProfileUserId:'',shareProfile:null,shareProfilePending:null};
   var page=null;
   var mobileMenu=null;
   var preferenceRequest=0;
@@ -20,6 +20,110 @@
     var slug=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
     var message=(similarFanTranslations[slug]||similarFanTranslations['pt-br'])[key]||key;
     return message.replace('{count}',String(count||0));
+  }
+
+
+  var communityShareTranslations={
+    'pt-br':{member:'Compartilhe seu perfil com seus amigos e ganhe uma tag',guest:'Compartilhe o site e crie uma conta para ganhar uma tag',tag:'Fã da Billie',share:'Compartilhar',signup:'Criar conta',missing:'Conclua seu perfil para compartilhar.',copied:'Link do perfil copiado e tag recebida!',success:'Sua tag Fã da Billie foi adicionada ao perfil!',error:'Não foi possível compartilhar agora. Tente novamente.',awardError:'Link compartilhado, mas não foi possível liberar a tag. Tente novamente.'},
+    'en-us':{member:'Share your profile with friends and earn a badge',guest:'Share the site and create an account to earn a badge',tag:'Billie Fan',share:'Share',signup:'Create account',missing:'Complete your profile to share it.',copied:'Profile link copied and badge earned!',success:'Your Billie Fan badge has been added to your profile!',error:'Could not share right now. Please try again.',awardError:'Profile shared, but the badge could not be unlocked. Please try again.'},
+    es:{member:'Comparte tu perfil con tus amigos y gana una insignia',guest:'Comparte el sitio y crea una cuenta para ganar una insignia',tag:'Fan de Billie',share:'Compartir',signup:'Crear cuenta',missing:'Completa tu perfil para compartirlo.',copied:'¡Enlace del perfil copiado e insignia obtenida!',success:'¡Tu insignia Fan de Billie se añadió a tu perfil!',error:'No se pudo compartir. Inténtalo de nuevo.',awardError:'Perfil compartido, pero no se pudo desbloquear la insignia. Inténtalo de nuevo.'},
+    fr:{member:'Partagez votre profil avec vos amis et gagnez un badge',guest:'Partagez le site et créez un compte pour gagner un badge',tag:'Fan de Billie',share:'Partager',signup:'Créer un compte',missing:'Complétez votre profil pour le partager.',copied:'Lien du profil copié et badge obtenu !',success:'Votre badge Fan de Billie a été ajouté à votre profil !',error:'Impossible de partager pour le moment. Réessayez.',awardError:'Profil partagé, mais le badge n’a pas pu être attribué. Réessayez.'},
+    it:{member:'Condividi il tuo profilo con gli amici e ottieni un badge',guest:'Condividi il sito e crea un account per ottenere un badge',tag:'Fan di Billie',share:'Condividi',signup:'Crea account',missing:'Completa il profilo per condividerlo.',copied:'Link del profilo copiato e badge ottenuto!',success:'Il badge Fan di Billie è stato aggiunto al tuo profilo!',error:'Impossibile condividere ora. Riprova.',awardError:'Profilo condiviso, ma non è stato possibile sbloccare il badge. Riprova.'}
+  };
+  function shareCopy(key){
+    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    var lang=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
+    return (communityShareTranslations[lang]||communityShareTranslations['pt-br'])[key]||key;
+  }
+  function renderSharePromotion(){
+    if(!page)return;
+    var section=page.querySelector('#communityShareSection');
+    var title=page.querySelector('#communityShareTitle');
+    var tag=page.querySelector('#communityShareTag');
+    var action=page.querySelector('#communityShareAction');
+    if(!section||!title||!tag||!action)return;
+    var signedIn=Boolean(currentUser()&&currentUser().uid);
+    title.textContent=shareCopy(signedIn?'member':'guest');
+    tag.textContent=shareCopy('tag');
+    action.textContent=shareCopy(signedIn?'share':'signup');
+    action.setAttribute('aria-label',action.textContent);
+    section.dataset.signedIn=signedIn?'true':'false';
+  }
+  function sharePromotionStatus(key){
+    var status=page&&page.querySelector('#communityShareStatus');
+    if(!status)return;
+    status.hidden=!key;
+    status.textContent=key?shareCopy(key):'';
+    status.dataset.status=key&&key.indexOf('Error')>=0||key==='error'||key==='missing'?'error':'success';
+  }
+  async function loadShareProfile(user){
+    var uid=user&&String(user.uid||'');
+    if(!uid)return null;
+    if(state.shareProfileUserId===uid&&state.shareProfile)return state.shareProfile;
+    if(state.shareProfileUserId===uid&&state.shareProfilePending)return state.shareProfilePending;
+    state.shareProfileUserId=uid;state.shareProfile=null;
+    var backend=window.beBackend;
+    state.shareProfilePending=Promise.resolve(backend&&backend.ready).then(function(){
+      return backend&&backend.profiles&&typeof backend.profiles.get==='function'?backend.profiles.get(uid):null;
+    }).then(function(profile){
+      if(state.shareProfileUserId===uid)state.shareProfile=profile;
+      return profile;
+    }).catch(function(){return null;}).finally(function(){
+      if(state.shareProfileUserId===uid)state.shareProfilePending=null;
+    });
+    return state.shareProfilePending;
+  }
+  async function shareFromCommunity(){
+    var action=page&&page.querySelector('#communityShareAction');
+    if(!action||action.disabled)return;
+    var user=currentUser();
+    if(!user||!user.uid){
+      closeCommunity(false);
+      if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go('/login');
+      else location.assign(window.BETVLocaleURL?window.BETVLocaleURL('/login'):'/login');
+      return;
+    }
+    action.disabled=true;
+    sharePromotionStatus('');
+    var shared=false,usedClipboard=false;
+    try{
+      var profile=await loadShareProfile(user);
+      var username=String(profile&&profile.username||user.username||'').trim().replace(/^@/,'');
+      if(!username){sharePromotionStatus('missing');return;}
+      var path='/@'+encodeURIComponent(username);
+      var url=new URL(window.BETVLocaleURL?window.BETVLocaleURL(path):path,location.origin).href;
+      try{
+        if(navigator.share){
+          await navigator.share({title:String(profile&&profile.displayName||user.displayName||'Billie Eilish TV'),url:url});
+          shared=true;
+        }else if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+          await navigator.clipboard.writeText(url);shared=true;usedClipboard=true;
+        }else{
+          var field=document.createElement('textarea');
+          field.value=url;field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);
+          field.select();shared=document.execCommand('copy');field.remove();usedClipboard=shared;
+        }
+      }catch(error){
+        if(error&&error.name==='AbortError')return;
+        if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+          await navigator.clipboard.writeText(url);shared=true;usedClipboard=true;
+        }else throw error;
+      }
+      if(!shared){sharePromotionStatus('error');return;}
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')throw new Error('community_tag_backend_unavailable');
+      var result=await client.rpc('claim_billie_fan_tag');
+      if(result&&result.error)throw result.error;
+      try{localStorage.setItem('beCommunityTag:'+String(user.uid),'billie_fan');}catch(_){}
+      window.dispatchEvent(new CustomEvent('be:community-tag-updated',{detail:{userId:String(user.uid),tag:'billie_fan'}}));
+      if(window.beBackend&&window.beBackend.profiles&&typeof window.beBackend.profiles.get==='function'){
+        Promise.resolve(window.beBackend.profiles.get(user.uid,{force:true})).then(function(refreshed){
+          if(refreshed)window.dispatchEvent(new CustomEvent('be:profile-refreshed',{detail:{profile:refreshed}}));
+        }).catch(function(){});
+      }
+      sharePromotionStatus(usedClipboard?'copied':'success');
+    }catch(error){sharePromotionStatus(shared?'awardError':'error');}
+    finally{action.disabled=false;}
   }
 
   function t(source,vars){
@@ -435,6 +539,7 @@
   }
 
   function chooseCommunityBanner(){
+    if(page){var oldHero=page.querySelector('.community-hero-banner');var oldImage=oldHero&&oldHero.querySelector('img');if(oldHero&&!oldHero.hidden&&oldImage&&oldImage.complete&&oldImage.naturalWidth>0)return;}
     var request=++communityBannerRequest;
     if(!page)return;
     var hero=page.querySelector('.community-hero-banner');
@@ -502,12 +607,24 @@
       +    '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
 
       +    '<section class="community-section" id="communitySimilarSection" aria-labelledby="communitySimilarTitle"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2 id="communitySimilarTitle">'+similarCopy('title')+'</h2><p class="community-section-subtitle">'+similarCopy('subtitle')+'</p></div></div><div id="communitySimilarContent" class="community-similar-list" role="status" aria-live="polite"></div></section>'
+      +    '<section class="community-instagram-section community-share-section" id="communityShareSection" aria-labelledby="communityShareTitle">'
+      +      '<div class="community-instagram-card community-share-card">'
+      +        '<span class="community-instagram-icon community-share-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 14.8 7l4.4.5-1.8 4 1.1 4.5L12 20l-6.5-4 1.1-4.5-1.8-4L9.2 7 12 3.5Z"/><path d="m9.5 12 1.7 1.8 3.4-3.6"/></svg></span>'
+      +        '<div class="community-instagram-content community-share-content"><h2 id="communityShareTitle" class="notranslate" data-i18n-ignore translate="no"></h2><span id="communityShareTag" class="community-award-tag is-billie-fan community-share-tag notranslate" data-i18n-ignore translate="no">Fã da Billie</span><p id="communityShareStatus" class="community-share-status notranslate" role="status" aria-live="polite" data-i18n-ignore translate="no" hidden></p></div>'
+      +        '<button class="community-instagram-follow community-share-action notranslate" id="communityShareAction" data-i18n-ignore translate="no" type="button"></button>'
+      +      '</div>'
+      +    '</section>'
       +    '<section class="community-section"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2>Perfis em destaque</h2><p class="community-section-subtitle">Compartilhe seu perfil para receber curtidas e aparecer no ranking.</p></div><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado notranslate" data-i18n-ignore translate="no">Avocado</span></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash notranslate" data-i18n-ignore translate="no">Eyelash</span></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh notranslate" data-i18n-ignore translate="no">Blohsh</span></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
       +    '<div class="community-supporters-cta-wrap"><button class="community-supporters-cta" id="communitySupportersButton" type="button">Ver fãs que apoiam o site</button></div>'
       +    '<section class="community-ong-spotlight" id="communityOngSpotlight" hidden aria-label="Apoie uma ONG"><div class="community-ong-spotlight-frame"><img id="communityOngSpotlightImage" alt="Apoie uma ONG" loading="lazy" decoding="async" fetchpriority="low"><div class="community-ong-spotlight-overlay" aria-hidden="true"></div><a class="community-ong-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a></div></section>'
       +  '</div>'
       +'</div>';
     main.appendChild(page);
+    renderSharePromotion();
+    page.querySelector('#communityShareAction').addEventListener('click',shareFromCommunity);
+    var shareAction=page.querySelector('#communityShareAction');
+    shareAction.addEventListener('pointerenter',function(){var user=currentUser();if(user)loadShareProfile(user);},{passive:true});
+    shareAction.addEventListener('focus',function(){var user=currentUser();if(user)loadShareProfile(user);});
     bindBoafListenLinks(page);
     page.querySelector('#communitySupportersButton').addEventListener('click',function(){closeCommunity(false);location.assign((window.BETVLocaleURL?window.BETVLocaleURL('/fãs'):'/fãs'));});
     var ongButton=page.querySelector('.community-ong-spotlight-button');if(ongButton)ongButton.addEventListener('click',function(){closeCommunity(false);});
@@ -601,6 +718,7 @@
   }
 
   function closeCommunity(resetView,tabAfter){
+    if(state.similarObserver){state.similarObserver.disconnect();state.similarObserver=null;}
     communityBannerRequest+=1; // Ignore late image loads after leaving this page.
     if(document.body.classList.contains('community-page-active')){
       document.body.classList.remove('community-page-active');
@@ -642,6 +760,7 @@
 
   function openCommunity(){
     closeMobileAccountMenu();
+    if(document.body.classList.contains('community-page-active')&&page&&!page.hidden){setCommunityNavActive(true);return;}
     // Community uses the catalog surface. Leave standalone listing routes first
     // so their route handlers cannot reopen the previous page over Community.
     var route=String(window.BETVLocalePath?window.BETVLocalePath():location.pathname||'/').replace(/\/+$/,'').toLowerCase()||'/';
@@ -661,11 +780,12 @@
     toggleCatalogVisibility(true);
     document.querySelectorAll('.home-nav-link.active,#logoBtn.active').forEach(function(button){if(!button.matches('[data-community-tab]')){button.classList.remove('active');button.removeAttribute('aria-current');button.setAttribute('aria-pressed','false');}});
     setCommunityNavActive(true);
+    renderSharePromotion();
     try{window.dispatchEvent(new CustomEvent('be:close-public-search'));window.dispatchEvent(new CustomEvent('be:close-mobile-search'));}catch(_){ }
-    window.scrollTo({top:0,left:0,behavior:'auto'});
+    if(!state.detailReturnToCommunity)window.scrollTo({top:0,left:0,behavior:'auto'});
     chooseCommunityBanner();
     refreshCommunity();
-    refreshSimilarFans();
+    scheduleSimilarFans();
   }
   window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity,record:recordRecentFromPlay};
   window.addEventListener('be:open-community',openCommunity);
@@ -977,8 +1097,28 @@
       if(currentRequest===state.similarRequestId)state.similarLoadingMore=false;
     }
   }
-  async function refreshSimilarFans(){
+  function scheduleSimilarFans(){
+    if(state.similarObserver){state.similarObserver.disconnect();state.similarObserver=null;}
+    var section=page&&page.querySelector('#communitySimilarSection');
+    if(!section||!document.body.classList.contains('community-page-active'))return;
+    var user=currentUser(),uid=String(user&&user.uid||'');
+    var host=page.querySelector('#communitySimilarContent');
+    if(state.similarLoadedAt&&state.similarLoadedUserId===uid&&Date.now()-state.similarLoadedAt<90000&&host&&host.childElementCount)return;
+    if(host&&!host.childElementCount)similarMessage(similarCopy('loading'));
+    if(typeof window.IntersectionObserver==='function'){
+      state.similarObserver=new IntersectionObserver(function(entries){
+        if(entries.some(function(entry){return entry.isIntersecting;})){
+          state.similarObserver.disconnect();state.similarObserver=null;refreshSimilarFans();
+        }
+      },{rootMargin:'850px 0px'});
+      state.similarObserver.observe(section);
+    }else window.setTimeout(refreshSimilarFans,50);
+  }
+  async function refreshSimilarFans(force){
     if(!document.body.classList.contains('community-page-active'))return;
+    var user=currentUser(),uid=String(user&&user.uid||'');
+    var host=page&&page.querySelector('#communitySimilarContent');
+    if(force!==true&&state.similarLoadedAt&&state.similarLoadedUserId===uid&&Date.now()-state.similarLoadedAt<90000&&host&&host.childElementCount)return;
     var requestId=++state.similarRequestId;
     state.similarSeen=Object.create(null);
     state.similarHasMore=false;
@@ -988,6 +1128,7 @@
     }
     if(requestId!==state.similarRequestId||!document.body.classList.contains('community-page-active'))return;
     if(!currentUser()){
+      state.similarLoadedUserId='';state.similarLoadedAt=Date.now();
       similarMessage(similarCopy('login'),similarCopy('loginAction'),function(){
         closeCommunity(false);
         var button=document.getElementById('publicAuthAction');
@@ -1001,6 +1142,7 @@
       var payload=await requestSimilarFans([]);
       if(requestId!==state.similarRequestId||!document.body.classList.contains('community-page-active'))return;
       renderSimilarFans(payload,false);
+      state.similarLoadedUserId=uid;state.similarLoadedAt=Date.now();
     }catch(error){
       if(requestId!==state.similarRequestId||!document.body.classList.contains('community-page-active'))return;
       similarMessage(similarCopy('error'),similarCopy('retry'),refreshSimilarFans);
@@ -1052,9 +1194,11 @@
     applyI18n(page);
   }
 
-  async function refreshCommunity(){
+  async function refreshCommunity(force){
     if(!document.body.classList.contains('community-page-active'))return;
     if(state.loading)return;
+    var uid=String(currentUser()&&currentUser().uid||'');
+    if(force!==true&&state.lastPayload&&state.lastPayloadAt&&state.lastPayloadUserId===uid&&Date.now()-state.lastPayloadAt<75000)return;
     var requestId=++state.requestId;
     state.loading=true;
     document.getElementById("communityLoadError")?.remove();
@@ -1069,6 +1213,7 @@
       if(result&&result.error)throw result.error;
       if(requestId!==state.requestId||!document.body.classList.contains('community-page-active'))return;
       renderPayload(result&&result.data&&typeof result.data==='object'?result.data:{});
+      state.lastPayloadAt=Date.now();state.lastPayloadUserId=uid;
     }catch(error){
       if(requestId!==state.requestId||!document.body.classList.contains('community-page-active'))return;
       var retry=document.createElement('button');retry.id='communityLoadError';retry.type='button';retry.className='profile-btn';retry.textContent=t('Tentar novamente');retry.onclick=refreshCommunity;if(page)page.prepend(retry);
@@ -1082,7 +1227,7 @@
   async function recordWatchFromPlay(play){
     var user=currentUser();if(!user||!play)return false;
     var recordId=String(play.dataset.recordId||'');if(!validUuid(recordId))return false;
-    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;state.lastPayload=null;return result&&result.data!==false;}catch(error){(void 0);return false;}
+    try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var client=window.beBackend&&window.beBackend.client;if(!client||typeof client.rpc!=='function')return false;var result=await client.rpc('record_community_watch',{p_content_id:recordId});if(result&&result.error)throw result.error;state.lastPayload=null;state.lastPayloadAt=0;return result&&result.data!==false;}catch(error){(void 0);return false;}
   }
 
   function recordRecentFromPlay(play){
@@ -1174,7 +1319,7 @@
     card.innerHTML='<div class="community-privacy-copy"><h2>Rankings da Comunidade</h2><p>Controle sua participação nas classificações públicas da BETV.</p></div><label class="community-privacy-toggle" for="communityRankingVisibility"><span>Participar do ranking público da Comunidade</span><span class="community-privacy-switch"><input id="communityRankingVisibility" type="checkbox"><i aria-hidden="true"></i></span></label><div class="community-privacy-status" id="communityRankingVisibilityStatus" aria-live="polite"></div>';
     panel.appendChild(card);applyI18n(card);
     var input=card.querySelector('#communityRankingVisibility');var status=card.querySelector('#communityRankingVisibilityStatus');loadRankingPreference(input,status,user);
-    input.addEventListener('change',async function(){var enabled=input.checked;writeRankingPreference(user.uid,enabled);status.textContent=t('Salvando…');status.className='community-privacy-status';input.disabled=true;try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var pref=window.beBackend&&window.beBackend.preferences;if(!pref||typeof pref.get!=='function'||typeof pref.save!=='function')throw new Error('preferences_unavailable');var current=await pref.get(user.uid,{force:true});var payload=Object.assign({},current&&current.data||{}, {communityRankingsPublic:enabled,updatedAt:new Date().toISOString()});await pref.save(user.uid,payload);if(typeof window.beScheduleUserDataSync==='function')window.beScheduleUserDataSync('community-ranking-privacy');status.textContent=t('Preferência salva.');status.className='community-privacy-status ok';window.dispatchEvent(new CustomEvent('be:community-ranking-visibility',{detail:{enabled:enabled}}));if(document.body.classList.contains('community-page-active'))refreshCommunity();}catch(error){input.checked=!enabled;writeRankingPreference(user.uid,!enabled);status.textContent=t('Não foi possível salvar agora.');status.className='community-privacy-status err';}finally{input.disabled=false;}});
+    input.addEventListener('change',async function(){var enabled=input.checked;writeRankingPreference(user.uid,enabled);status.textContent=t('Salvando…');status.className='community-privacy-status';input.disabled=true;try{await Promise.resolve(window.beBackend&&window.beBackend.ready);var pref=window.beBackend&&window.beBackend.preferences;if(!pref||typeof pref.get!=='function'||typeof pref.save!=='function')throw new Error('preferences_unavailable');var current=await pref.get(user.uid,{force:true});var payload=Object.assign({},current&&current.data||{}, {communityRankingsPublic:enabled,updatedAt:new Date().toISOString()});await pref.save(user.uid,payload);if(typeof window.beScheduleUserDataSync==='function')window.beScheduleUserDataSync('community-ranking-privacy');status.textContent=t('Preferência salva.');status.className='community-privacy-status ok';window.dispatchEvent(new CustomEvent('be:community-ranking-visibility',{detail:{enabled:enabled}}));if(document.body.classList.contains('community-page-active'))refreshCommunity(true);}catch(error){input.checked=!enabled;writeRankingPreference(user.uid,!enabled);status.textContent=t('Não foi possível salvar agora.');status.className='community-privacy-status err';}finally{input.disabled=false;}});
   }
 
   function bind(){
@@ -1240,7 +1385,7 @@
     window.addEventListener('be:open-config',function(){setTimeout(injectPrivacySettings,0);});
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
     window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});
-    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(user){setTimeout(injectPrivacySettings,50);if(document.body.classList.contains('community-page-active')){refreshCommunity();refreshSimilarFans();}var active=user&&user.uid?user:currentUser();if(!active||!active.uid){boafNoticeOpenedForUser='';if(boafNoticeTimer){window.clearTimeout(boafNoticeTimer);boafNoticeTimer=0;}hideBoafStreamPanelWithoutDismiss();return;}window.setTimeout(function(){scheduleBoafStreamNotice(350);retryPendingBoafClaim();},450);});
+    window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(user){setTimeout(injectPrivacySettings,50);var uid=String(user&&user.uid||'');if(uid!==state.lastPayloadUserId)state.lastPayloadAt=0;if(uid!==state.similarLoadedUserId)state.similarLoadedAt=0;if(uid!==state.shareProfileUserId){state.shareProfile=null;state.shareProfilePending=null;state.shareProfileUserId='';}renderSharePromotion();if(document.body.classList.contains('community-page-active')){refreshCommunity(true);scheduleSimilarFans();}var active=user&&user.uid?user:currentUser();if(!active||!active.uid){boafNoticeOpenedForUser='';if(boafNoticeTimer){window.clearTimeout(boafNoticeTimer);boafNoticeTimer=0;}hideBoafStreamPanelWithoutDismiss();return;}window.setTimeout(function(){scheduleBoafStreamNotice(350);retryPendingBoafClaim();},450);});
     window.addEventListener('be:profile-share-campaign-complete',function(){scheduleBoafStreamNotice(300);});
     window.addEventListener('be:profile-favorites-changed',function(){scheduleBoafStreamNotice(300);});
   }
