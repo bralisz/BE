@@ -22,7 +22,7 @@
   if(trigger)trigger.setAttribute('aria-expanded','false');
  }
  function attach(){
-  const row=$('profilePageName')?.closest('.profile-page-name-row');
+  const row=document.querySelector('#profilePage .profile-page-follow-stats');
   if(!row)return;
   if(!trigger||!row.contains(trigger)){
    trigger=document.createElement('button');

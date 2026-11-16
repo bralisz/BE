@@ -18691,8 +18691,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     // Actions align with the avatar below the cover; Home stays on the cover.
     [follow,like,share,more].forEach(function(button){important(button,'top','var(--profile-mobile-cover-height)');});
 
-    /* Home is always isolated on the upper-left on mobile. */
-    visible(home,true);
+    /* The shared mobile header already supplies Home; hide the legacy duplicate. */
+    visible(home,false);
     important(home,'position','absolute');
     important(home,'top','0');
     important(home,'left','0');
