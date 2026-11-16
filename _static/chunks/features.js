@@ -1,7 +1,7 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revisions = {account:'20261116-profile-home-v5',community:'20261116-share-community-v7'};
+  const revisions = {account:'20261116-profile-home-v5',community:'20261116-avocados-route-v8'};
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
@@ -74,6 +74,12 @@
   document.addEventListener('focusin',warmCommunityFromIntent);
   window.addEventListener('popstate', () => { actionVersion++; dismiss(); });
   window.addEventListener('hashchange', () => { actionVersion++; dismiss(); });
+  // On direct /avocados requests the social module is needed before a user clicks anything.
+  function isAvocadosPath(){
+    const path=window.BETVLocalePath?window.BETVLocalePath():location.pathname.replace(/^\/(?:pt-br|en-us|es|fr|it)(?=\/|$)/i,'');
+    return String(path||'').replace(/\/+$/,'').toLowerCase()==='/avocados';
+  }
+  if(isAvocadosPath())ensure('community').catch(()=>{});
   // Keep history recording available even before Community has been opened.
   function recordPlay(event) {
     const play = event.target.closest?.('#contentDetailPlay');
