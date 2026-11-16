@@ -23374,3 +23374,42 @@ body.album-page-active .album-detail-backdrop[hidden]{display:none!important}
     display:none!important;
   }
 }
+
+
+/* Profile footer icons follow the same light/dark ink as Last Watched and Saved. */
+/* --profile-mobile-ink is calculated from the user's chosen color in account.js. */
+body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link,
+html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link {
+  color:var(--profile-mobile-ink,#fff)!important;
+  -webkit-text-fill-color:var(--profile-mobile-ink,#fff)!important;
+  opacity:1!important;
+}
+body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link:hover,
+body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link:focus-visible,
+html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link:hover,
+html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link:focus-visible {
+  color:var(--profile-mobile-ink,#fff)!important;
+  background:transparent!important;
+}
+body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link svg,
+html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link svg {
+  color:inherit!important;
+  stroke:currentColor!important;
+  fill:none!important;
+  opacity:1!important;
+}
+body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link:is(.is-x,.is-discord) svg,
+html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-socials .footer-social-link:is(.is-x,.is-discord) svg {
+  fill:currentColor!important;
+  stroke:none!important;
+}
+/* Footer copy and legal links share the same readable contrast on custom profile themes. */
+body.profile-page-active.profile-color-customized > footer .footer-line,
+body.profile-page-active.profile-color-customized > footer .footer-brand,
+body.profile-page-active.profile-color-customized > footer .footer-legal-links a,
+html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-line,
+html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-brand,
+html.betv-installed-app body.profile-page-active.profile-color-customized > footer .footer-legal-links a {
+  color:var(--profile-mobile-muted,rgba(255,255,255,.78))!important;
+  -webkit-text-fill-color:var(--profile-mobile-muted,rgba(255,255,255,.78))!important;
+}
