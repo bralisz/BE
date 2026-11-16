@@ -1167,7 +1167,7 @@
         },
         {
           "key": "CDN-Cache-Control",
-          "value": "max-age=31536000"
+          "value": "max-age=3600"
         },
         {
           "key": "X-Content-Type-Options",
