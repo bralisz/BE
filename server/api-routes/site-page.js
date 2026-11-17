@@ -439,6 +439,45 @@ function isNoindexRoute(routeInfo) {
     logical.startsWith('/oauth/consent');
 }
 
+// Use only the recorded content and category to describe searchable videos.
+// Never guess a show, venue, date or performance type from an unrelated record.
+function seoVideoKind(record) {
+  if (!record || record.collection !== 'videos') return '';
+  const data = record.data || {};
+  const context = [
+    data.title, data.sectionName, data.sourceSectionTitle,
+    data.categoryName, data.videoType, data.itemType, data.type
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (/(?:entrevist|interview|entretien|intervista)/i.test(context)) return 'interview';
+  if (/(?:live performance|ao vivo|apresenta[cç][aã]o|concert|concerto|show ao vivo|esibizione dal vivo|spectacle en direct)/i.test(context)) return 'performance';
+  return '';
+}
+
+function seoVideoTitle(recordTitle, kind, slug) {
+  const base = recordTitle + ' | Billie Eilish TV';
+  if (!kind || recordTitle.length > 48 || /billie\s+eilish/i.test(recordTitle)) return base;
+  const context = {
+    'pt-br': { interview: 'Entrevista com Billie Eilish', performance: 'Billie Eilish ao vivo' },
+    'en-us': { interview: 'Billie Eilish interview', performance: 'Billie Eilish live' },
+    es: { interview: 'Entrevista con Billie Eilish', performance: 'Billie Eilish en vivo' },
+    fr: { interview: 'Interview de Billie Eilish', performance: 'Billie Eilish en concert' },
+    it: { interview: 'Intervista a Billie Eilish', performance: 'Billie Eilish dal vivo' }
+  }[slug] || {};
+  return context[kind] ? recordTitle + ' — ' + context[kind] + ' | Billie Eilish TV' : base;
+}
+
+function seoVideoDescription(recordTitle, kind, slug) {
+  const messages = {
+    'pt-br': { interview: 'Assista à entrevista {title} com Billie Eilish na Billie Eilish TV.', performance: 'Assista à apresentação {title} de Billie Eilish ao vivo na Billie Eilish TV.' },
+    'en-us': { interview: 'Watch the {title} interview with Billie Eilish on Billie Eilish TV.', performance: 'Watch Billie Eilish perform {title} live on Billie Eilish TV.' },
+    es: { interview: 'Mira la entrevista {title} con Billie Eilish en Billie Eilish TV.', performance: 'Mira la presentación en vivo {title} de Billie Eilish en Billie Eilish TV.' },
+    fr: { interview: 'Regardez l’entretien {title} avec Billie Eilish sur Billie Eilish TV.', performance: 'Regardez la prestation en direct {title} de Billie Eilish sur Billie Eilish TV.' },
+    it: { interview: 'Guarda l’intervista {title} con Billie Eilish su Billie Eilish TV.', performance: 'Guarda l’esibizione dal vivo {title} di Billie Eilish su Billie Eilish TV.' }
+  };
+  const template = (messages[slug] || messages['pt-br'])[kind];
+  return template ? template.replace('{title}', recordTitle) : '';
+}
+
 function pageCopy(routeInfo, settings, seoRecord) {
   const siteTitle = 'Billie Eilish TV';
   const copies = {
@@ -632,10 +671,11 @@ function pageCopy(routeInfo, settings, seoRecord) {
     const recordTitle = String(data.title || data.name || '').trim();
     const recordDescription = plainDescription(data.description);
     const contentLabel = { 'pt-br': 'Conteúdo', 'en-us': 'Content', es: 'Contenido', fr: 'Contenu', it: 'Contenuto' }[routeInfo.slug] || 'Content';
-    title = `${recordTitle || contentLabel} | ${siteTitle}`;
+    const videoKind = seoVideoKind(seoRecord);
+    title = seoVideoTitle(recordTitle || contentLabel, videoKind, routeInfo.slug);
     if (recordDescription) description = recordDescription.slice(0, 300);
     else if (recordTitle) {
-      description = routeInfo.slug === 'en-us'
+      description = seoVideoDescription(recordTitle, videoKind, routeInfo.slug) || (routeInfo.slug === 'en-us'
         ? `Explore ${recordTitle} and more Billie Eilish content on Billie Eilish TV.`
         : routeInfo.slug === 'es'
           ? `Explora ${recordTitle} y más contenido de Billie Eilish en Billie Eilish TV.`
@@ -643,7 +683,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
             ? `Explore ${recordTitle} et d’autres contenus sur Billie Eilish sur Billie Eilish TV.`
             : routeInfo.slug === 'it'
               ? `Esplora ${recordTitle} e altri contenuti su Billie Eilish su Billie Eilish TV.`
-              : `Explore ${recordTitle} e outros conteúdos de Billie Eilish na Billie Eilish TV.`;
+              : `Explore ${recordTitle} e outros conteúdos de Billie Eilish na Billie Eilish TV.`);
     }
     pageType = 'ItemPage';
   }
@@ -706,6 +746,8 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
       about: { '@type': 'Person', name: 'Billie Eilish' }
     };
     if (String(data.description || '').trim()) mainEntity.description = plainDescription(data.description).slice(0, 1000);
+    const videoKind = seoVideoKind(seoRecord);
+    if (videoKind) mainEntity.genre = videoKind === 'interview' ? 'Interview' : 'Live performance';
     if (String(data.year || '').trim()) mainEntity.datePublished = String(data.year).trim();
     const image = absoluteHttpUrl(data.thumbnailUrl || data.imageUrl || data.bannerUrl, origin);
     if (image) {
