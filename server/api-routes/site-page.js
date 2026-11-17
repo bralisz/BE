@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const LEGAL_TRANSLATIONS = require('../config/legal-translations');
 const PUBLIC_PROFILE_API = require('./public-profile');
 const CONTENT_PAGE = require('../content-public-page');
+const CONTENT_DETAILS = require('../content-public-details');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
@@ -790,6 +791,23 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
   return html.replace('</head>', `${script}\n</head>`);
 }
 
+function injectContentFacts(html, record, locale) {
+  if (!record || record.collection === 'news') return html;
+  const localized = localizedRecord(record, locale).data;
+  const body = CONTENT_DETAILS.renderFacts(record, localized, locale);
+  if (!body) return html;
+  html = html.replace('<section class="detail-seo-facts" id="detailSeoFacts" hidden></section>',
+    '<section class="detail-seo-facts" id="detailSeoFacts">' + body + '</section>');
+  const title = CONTENT_DETAILS.plain(localized.title || record.data.title);
+  if (title) html = html.replace('id="contentDetailLogo">Selecione um vídeo',
+    'id="contentDetailLogo">' + CONTENT_DETAILS.escapeHtml(title.slice(0, 240)));
+  const description = CONTENT_DETAILS.plain(localized.description || localized.synopsis || localized.summary);
+  if (description) html = html.replace('id="contentDetailDesc"></p>',
+    'id="contentDetailDesc">' + CONTENT_DETAILS.escapeHtml(description.slice(0, 2000)) + '</p>');
+  // Server-rendered content must be visible even when client JS is unavailable.
+  return html.replace('id="contentDetailSection" hidden', 'id="contentDetailSection"');
+}
+
 function profileShareVersion(profile) {
   if (!profile) return '';
   const source = JSON.stringify({
@@ -921,9 +939,11 @@ function extractPageMetadata(html) {
     return rel === 'canonical' || (rel === 'alternate' && hreflang) ? [{ rel, href: attribute(tag, 'href'), hreflang }] : [];
   });
   const structured = (html.match(/<script[^>]+data-betv-seo=["']true["'][^>]*>([\s\S]*?)<\/script>/i) || [])[1];
+  const facts = (html.match(/<section class="detail-seo-facts" id="detailSeoFacts">([\s\S]*?)<\/section>/i) || [])[1] || '';
   return {
     title: decodeHtmlText((html.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || ''),
-    meta, links, structuredData: structured ? JSON.parse(structured) : null
+    meta, links, structuredData: structured ? JSON.parse(structured) : null,
+    publicFactsHtml: facts
   };
 }
 
@@ -971,7 +991,7 @@ module.exports = async function sitePage(req, res) {
     const html = injectDeploymentVersion(
       injectLocalePreload(
         localizeStaticText(
-          injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo, publicProfile, seoRecord),
+          injectContentFacts(injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo, publicProfile, seoRecord), seoRecord, routeInfo.slug),
           routeInfo
         ),
         routeInfo
