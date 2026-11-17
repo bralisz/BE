@@ -452,6 +452,11 @@ function isNoindexRoute(routeInfo) {
 function seoVideoKind(record) {
   if (!record || record.collection !== 'videos') return '';
   const data = record.data || {};
+  const routeKind = CONTENT_PAGE.contentType(record);
+  if (routeKind === 'podcast') return 'podcast';
+  if (routeKind === 'videoclipe') return 'musicvideo';
+  if (routeKind === 'show') return 'performance';
+  if (routeKind === 'entrevista') return 'interview';
   const context = [
     data.title, data.sectionName, data.sourceSectionTitle,
     data.categoryName, data.videoType, data.itemType, data.type
@@ -471,7 +476,15 @@ function seoVideoTitle(recordTitle, kind, slug) {
     fr: { interview: 'Interview de Billie Eilish', performance: 'Billie Eilish en concert' },
     it: { interview: 'Intervista a Billie Eilish', performance: 'Billie Eilish dal vivo' }
   }[slug] || {};
-  return context[kind] ? recordTitle + ' — ' + context[kind] + ' | Billie Eilish TV' : base;
+  const special = {
+    'pt-br': { podcast:'Podcast com Billie Eilish', musicvideo:'Videoclipe de Billie Eilish' },
+    'en-us': { podcast:'Billie Eilish podcast', musicvideo:'Billie Eilish music video' },
+    es: { podcast:'Podcast de Billie Eilish', musicvideo:'Videoclip de Billie Eilish' },
+    fr: { podcast:'Podcast Billie Eilish', musicvideo:'Clip de Billie Eilish' },
+    it: { podcast:'Podcast di Billie Eilish', musicvideo:'Video musicale di Billie Eilish' }
+  }[slug] || {};
+  const prefix = context[kind] || special[kind];
+  return prefix ? recordTitle + ' — ' + prefix + ' | Billie Eilish TV' : base;
 }
 
 function seoVideoDescription(recordTitle, kind, slug) {
@@ -482,7 +495,14 @@ function seoVideoDescription(recordTitle, kind, slug) {
     fr: { interview: 'Regardez l’entretien {title} avec Billie Eilish sur Billie Eilish TV.', performance: 'Regardez la prestation en direct {title} de Billie Eilish sur Billie Eilish TV.' },
     it: { interview: 'Guarda l’intervista {title} con Billie Eilish su Billie Eilish TV.', performance: 'Guarda l’esibizione dal vivo {title} di Billie Eilish su Billie Eilish TV.' }
   };
-  const template = (messages[slug] || messages['pt-br'])[kind];
+  const additional = {
+    'pt-br': { podcast:'Ouça ou assista ao podcast {title} sobre Billie Eilish na Billie Eilish TV.', musicvideo:'Assista ao videoclipe {title} de Billie Eilish na Billie Eilish TV.' },
+    'en-us': { podcast:'Watch or listen to the {title} podcast about Billie Eilish on Billie Eilish TV.', musicvideo:'Watch the {title} Billie Eilish music video on Billie Eilish TV.' },
+    es: { podcast:'Mira o escucha el podcast {title} sobre Billie Eilish en Billie Eilish TV.', musicvideo:'Mira el videoclip {title} de Billie Eilish en Billie Eilish TV.' },
+    fr: { podcast:'Écoutez ou regardez le podcast {title} consacré à Billie Eilish sur Billie Eilish TV.', musicvideo:'Regardez le clip {title} de Billie Eilish sur Billie Eilish TV.' },
+    it: { podcast:'Ascolta o guarda il podcast {title} su Billie Eilish su Billie Eilish TV.', musicvideo:'Guarda il video musicale {title} di Billie Eilish su Billie Eilish TV.' }
+  }[slug] || {};
+  const template = (messages[slug] || messages['pt-br'])[kind] || additional[kind];
   return template ? template.replace('{title}', recordTitle) : '';
 }
 
@@ -755,7 +775,7 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
     };
     if (String(data.description || '').trim()) mainEntity.description = plainDescription(data.description).slice(0, 1000);
     const videoKind = seoVideoKind(seoRecord);
-    if (videoKind) mainEntity.genre = videoKind === 'interview' ? 'Interview' : 'Live performance';
+    if (videoKind) mainEntity.genre = ({ interview:'Interview', performance:'Live performance', podcast:'Podcast', musicvideo:'Music video' })[videoKind] || 'Video';
     if (String(data.year || '').trim()) mainEntity.datePublished = String(data.year).trim();
     const image = absoluteHttpUrl(data.thumbnailUrl || data.imageUrl || data.bannerUrl, origin);
     if (image) {
