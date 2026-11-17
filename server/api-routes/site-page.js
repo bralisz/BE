@@ -420,6 +420,7 @@ function localizedRecord(record, slug) {
 
 function canonicalPathForRoute(routeInfo, seoRecord) {
   const logical = seoRecord && seoRecord.collection !== 'news' ? CONTENT_PAGE.contentPath(seoRecord) : (String(routeInfo.logicalPath || '/').replace(/\/+$/, '') || '/');
+  if (seoRecord && seoRecord.collection !== 'news') return `/${routeInfo.slug}${logical}`;
   if (routeInfo.hasPrefix) return routeInfo.publicPath === '/' ? `/${routeInfo.slug}` : routeInfo.publicPath;
   return `/${routeInfo.slug}${logical === '/' ? '' : logical}`;
 }
