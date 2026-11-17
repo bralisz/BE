@@ -815,10 +815,9 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
 function injectContentFacts(html, record, locale) {
   if (!record || record.collection === 'news') return html;
   const localized = localizedRecord(record, locale).data;
-  const body = CONTENT_DETAILS.renderFacts(record, localized, locale);
-  if (!body) return html;
-  html = html.replace('<section class="detail-seo-facts" id="detailSeoFacts" hidden></section>',
-    '<section class="detail-seo-facts" id="detailSeoFacts">' + body + '</section>');
+  // The normal detail view already shows the title and description.
+  // SEO metadata and structured data remain in the document head without
+  // an extra visible synopsis, technical sheet or setlist panel.
   const title = CONTENT_DETAILS.plain(localized.title || record.data.title);
   if (title) html = html.replace('id="contentDetailLogo">Selecione um vídeo',
     'id="contentDetailLogo">' + CONTENT_DETAILS.escapeHtml(title.slice(0, 240)));
@@ -826,7 +825,7 @@ function injectContentFacts(html, record, locale) {
   if (description) html = html.replace('id="contentDetailDesc"></p>',
     'id="contentDetailDesc">' + CONTENT_DETAILS.escapeHtml(description.slice(0, 2000)) + '</p>');
   // Server-rendered content must be visible even when client JS is unavailable.
-  return html.replace('class="content-detail-wrap" id="contentDetailSection" hidden', 'class="content-detail-wrap has-public-facts" id="contentDetailSection"');
+  return html.replace('class="content-detail-wrap" id="contentDetailSection" hidden', 'class="content-detail-wrap" id="contentDetailSection"');
 }
 
 function profileShareVersion(profile) {
