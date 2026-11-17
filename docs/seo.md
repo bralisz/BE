@@ -2,8 +2,8 @@
 
 As páginas públicas passam por `server/api-routes/site-page.js`, que entrega
 título, descrição, canonical, hreflang e JSON-LD no HTML inicial. A descoberta do catálogo continua pelo sitemap e pelos componentes
-existentes do site. Não há um segundo catálogo ou lista textual inserida pelo
-renderizador no layout público.
+existentes do site. O renderizador acrescenta detalhes textuais somente na página do conteúdo correspondente,
+sem inserir catálogos duplicados na página inicial.
 
 Aliases de biografia e álbuns apontam para o canonical correspondente. Rotas
 de conta, notificações pessoais, administração, caminhos desconhecidos e
@@ -104,3 +104,32 @@ Os dados estruturados recebem `genre` somente quando a categoria do vídeo
 
 O comportamento foi coberto por verificações de convidado e por exemplos
 de entrevistas e apresentações em pt-BR, en-US, es, fr e it.
+
+## Páginas individuais indexáveis e ficha técnica
+
+Vídeos, apresentações, entrevistas, podcasts e videoclipes recebem um endereço
+amigável e estável com a categoria, um slug derivado do título original e o ID
+público ao final para evitar colisões. Exemplo:
+`/pt-br/show/coachella-2023-legendado-12345678`.
+As cinco versões de idioma preservam a mesma identificação do item e declaram
+`canonical` e `hreflang` corretamente. Os endereços numéricos anteriores
+continuam funcionando; agora apontam pelo canonical para o novo endereço.
+Slugs abreviados, quando únicos, redirecionam para a URL completa.
+
+O HTML entregue pelo servidor inclui título, sinopse quando cadastrada,
+ficha técnica com dados disponíveis e setlist ordenada em texto sem depender
+do JavaScript do usuário. São usados apenas dados públicos realmente
+registrados: não preenche nomes de músicas, locais, datas nem participantes
+com informação inventada. O JSON-LD de vídeos usa `VideoObject`, e os shows
+com setlist usam `ItemList` com faixas em ordem.
+
+O editor autenticado de vídeos exibe campos opcionais para local, cidade, país,
+direção, produção, apresentação, convidados e setlist (uma música por linha).
+Itens antigos não precisam ser editados para continuar funcionando; ficam
+sem essas seções se os dados não estiverem disponíveis.
+
+O sitemap publica os novos caminhos amigáveis e os alternates em cinco
+idiomas, com a imagem cadastrada. O código de navegação SPA atualiza o URL,
+a URL compartilhada, o canonical e o texto da página ao abrir outro vídeo.
+`npm run test:seo` agora também valida rotas amigáveis, sanitização de HTML,
+setlists, conteúdo visível e redirecionamentos.
