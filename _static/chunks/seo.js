@@ -44,6 +44,7 @@
     if (facts && Object.prototype.hasOwnProperty.call(data, 'publicFactsHtml')) {
       facts.innerHTML = String(data.publicFactsHtml || '');
       facts.hidden = !data.publicFactsHtml;
+      document.getElementById('contentDetailSection')?.classList.toggle('has-public-facts',Boolean(data.publicFactsHtml));
     }
     var title = document.querySelector('title');
     if (title) { title.setAttribute('translate', 'no'); title.setAttribute('data-i18n-ignore', ''); }
