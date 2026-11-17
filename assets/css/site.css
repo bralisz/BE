@@ -23548,3 +23548,34 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
   body.album-page-active .album-track-heading,
   body.album-page-active .album-track-list{max-width:none}
 }
+
+/* Keep pointer focus/touch hover distinct from an enabled player control. */
+:is(.external-native-player-overlay,.drive-video-player-overlay) button:is(.external-native-player-action,.drive-video-player-action){
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  -webkit-tap-highlight-color:transparent;
+}
+:is(.external-native-player-overlay,.drive-video-player-overlay) button:is(.external-native-player-action,.drive-video-player-action):focus-visible{
+  outline:2px solid rgba(255,255,255,.85)!important;
+  outline-offset:2px!important;
+}
+@media(hover:hover) and (pointer:fine){
+  :is(.external-native-player-overlay,.drive-video-player-overlay) button:is(.external-native-player-action,.drive-video-player-action):hover{
+    background:rgba(255,255,255,.08)!important;
+  }
+}
+:is(.external-native-player-overlay,.drive-video-player-overlay) button:is(.external-native-player-subtitle,.drive-video-player-subtitle)[aria-pressed="true"]{
+  background:rgba(255,255,255,.16)!important;
+  color:#fff!important;
+}
+/* These SVGs use open strokes, not filled silhouettes. */
+:is(.external-native-player-overlay,.drive-video-player-overlay,.drive-player-overlay) .is-streaming-fullscreen-icon svg path{
+  fill:none!important;
+  stroke:currentColor!important;
+}
+/* Mobile must follow the actual fullscreen state, too. */
+.drive-video-player-overlay.is-browser-fullscreen .drive-video-player-fullscreen .fullscreen-enter,
+.drive-player-overlay.is-browser-fullscreen .drive-player-fullscreen .fullscreen-enter{display:none!important}
+.drive-video-player-overlay.is-browser-fullscreen .drive-video-player-fullscreen .fullscreen-exit,
+.drive-player-overlay.is-browser-fullscreen .drive-player-fullscreen .fullscreen-exit{display:block!important}
