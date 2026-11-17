@@ -806,7 +806,7 @@ function injectContentFacts(html, record, locale) {
   if (description) html = html.replace('id="contentDetailDesc"></p>',
     'id="contentDetailDesc">' + CONTENT_DETAILS.escapeHtml(description.slice(0, 2000)) + '</p>');
   // Server-rendered content must be visible even when client JS is unavailable.
-  return html.replace('id="contentDetailSection" hidden', 'id="contentDetailSection"');
+  return html.replace('class="content-detail-wrap" id="contentDetailSection" hidden', 'class="content-detail-wrap has-public-facts" id="contentDetailSection"');
 }
 
 function profileShareVersion(profile) {
