@@ -937,9 +937,11 @@ body.admin-preview-open{overflow:hidden}
         accountAvatarElement.innerHTML = `<span>${esc((user.displayName || 'B').charAt(0).toUpperCase())}</span>`;
       }, { once: true });
     }
+    const pageContent = $('#adminContent');
     loadPage().catch(error => {
+      if (!pageContent.isConnected || pageContent !== $('#adminContent')) return;
       console.error(error);
-      $('#adminContent').innerHTML = `<div class="a-card"><h2>Erro ao carregar</h2><p>${esc(error.message)}</p></div>`;
+      pageContent.innerHTML = `<div class="a-card"><h2>Erro ao carregar</h2><p>${esc(error.message)}</p></div>`;
     });
   }
 
@@ -3425,6 +3427,8 @@ body.admin-preview-open{overflow:hidden}
     content.innerHTML = '<div class="admin-loader" style="min-height:300px">Carregando notificações…</div>';
 
     let items = await db.list('notifications', { orderBy: 'createdAt', direction: 'desc' }).catch(() => []);
+    // A session refresh or navigation may have replaced this shell while loading.
+    if (!content.isConnected || content !== $('#adminContent')) return;
     // Convites de compartilhamento são campanhas internas e não entram no histórico comum.
     items = items.filter(item => String(item?.type || '') !== 'profile-share-campaign');
     items = items.sort((a, b) => {
@@ -3437,10 +3441,10 @@ body.admin-preview-open{overflow:hidden}
 
     content.innerHTML = `<div class="admin-title-row"><div><span class="dashboard-kicker">Comunicação</span><h1>Notificações</h1><p>Publique mensagens que aparecem no sino do site e no log de atualizações. A mais recente fica sempre em primeiro.</p></div><div class="admin-title-actions"><button type="button" class="a-btn primary" id="profileShareCampaignTrigger">Compartilhar perfil · Enviar</button></div></div><section class="admin-notification-layout"><article class="a-card admin-notification-form-card"><h2 id="notificationFormTitle">Nova notificação</h2><p>O título e a descrição serão exibidos no menu de notificações e na página de atualizações.</p><form class="admin-notification-form" id="notificationAdminForm"><input type="hidden" name="id"><label class="field"><span>Título</span><input class="a-input" name="title" maxlength="120" required placeholder="Ex.: Nova seção de filmes"></label><label class="field"><span>Descrição / atualização</span><textarea class="a-textarea" name="description" maxlength="5000" required placeholder="Escreva todos os detalhes da atualização…"></textarea><small>Imagens do Discord: cole o link direto de um arquivo .png, .jpg ou .jpeg. Links de cdn.discordapp.com e media.discordapp.net são exibidos automaticamente.</small></label><label class="admin-notification-switch"><span><strong>Publicar no site</strong><small>Desative para salvar sem exibir aos usuários.</small></span><input type="checkbox" name="active" checked></label><div class="admin-notification-form-actions"><button type="button" class="a-btn" id="notificationCancelEdit" hidden>Cancelar edição</button><button type="submit" class="a-btn primary" id="notificationSaveButton">Publicar notificação</button></div></form></article><article class="a-card admin-notification-list-card"><h2>Histórico de atualizações</h2><p>${items.length} ${items.length === 1 ? 'mensagem cadastrada' : 'mensagens cadastradas'}, em ordem da mais recente para a mais antiga.</p><div class="admin-notification-items">${itemHtml}</div></article></section>`;
 
-    const form = $('#notificationAdminForm');
-    const formTitle = $('#notificationFormTitle');
-    const saveButton = $('#notificationSaveButton');
-    const cancelButton = $('#notificationCancelEdit');
+    const form = $('#notificationAdminForm', content);
+    const formTitle = $('#notificationFormTitle', content);
+    const saveButton = $('#notificationSaveButton', content);
+    const cancelButton = $('#notificationCancelEdit', content);
 
     const resetForm = () => {
       form.reset();
@@ -3453,7 +3457,7 @@ body.admin-preview-open{overflow:hidden}
 
     cancelButton.onclick = resetForm;
 
-    const campaignButton = $('#profileShareCampaignTrigger');
+    const campaignButton = $('#profileShareCampaignTrigger', content);
     if (campaignButton) campaignButton.onclick = async () => {
       if (campaignButton.disabled) return;
       campaignButton.disabled = true;
