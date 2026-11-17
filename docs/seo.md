@@ -116,12 +116,12 @@ As cinco versões de idioma preservam a mesma identificação do item e declaram
 continuam funcionando; agora apontam pelo canonical para o novo endereço.
 Slugs abreviados, quando únicos, redirecionam para a URL completa.
 
-O HTML entregue pelo servidor inclui título, sinopse quando cadastrada,
-ficha técnica com dados disponíveis e setlist ordenada em texto sem depender
-do JavaScript do usuário. São usados apenas dados públicos realmente
-registrados: não preenche nomes de músicas, locais, datas nem participantes
-com informação inventada. O JSON-LD de vídeos usa `VideoObject`, e os shows
-com setlist usam `ItemList` com faixas em ordem.
+O HTML entregue pelo servidor preenche o título e a descrição na área
+normal de detalhes do vídeo, sem duplicar a sinopse ou mostrar um bloco
+adicional de ficha técnica e setlist. Essas informações cadastradas continuam
+sendo usadas nos metadados e dados estruturados de SEO, sem inventar nomes de
+músicas, locais, datas ou participantes. O JSON-LD de vídeos usa
+`VideoObject`, e os shows com setlist usam `ItemList` com faixas em ordem.
 
 O editor autenticado de vídeos exibe campos opcionais para local, cidade, país,
 direção, produção, apresentação, convidados e setlist (uma música por linha).
