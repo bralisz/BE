@@ -17,6 +17,8 @@ const collections = {
       fr: { title: 'Entretien avec Billie Eilish', description: 'Entretien en français.' },
       it: { title: 'Intervista con Billie Eilish', description: 'Intervista in italiano.' }
     } } },
+    { id: 'interview-without-description', data: { publicId: '87654322', title: 'Zane Lowe 2024', sectionName: 'Entrevistas' } },
+    { id: 'performance-without-description', data: { publicId: '87654323', title: 'Coachella 2024', sectionName: 'Apresentações ao vivo' } },
     { id: 'song', data: { publicId: '23456789', title: 'WILDFLOWER', sectionName: 'Music videos', translations: { es: { title: 'Título que não deve substituir o nome da música', description: 'Una actuación musical.' } } } },
     { id: 'literal-title', data: { publicId: '34567890', title: "Título $& $' $$", description: 'Descrição do vídeo correto.' } },
     { id: 'private', data: { title: 'Unpublished video', active: false } }
@@ -117,6 +119,18 @@ function documentOf(response) {
     assert.equal(metadata.links.find(item => item.rel === 'canonical').href, `https://billieilishtv.site${path}`);
     assert.equal(metadata.links.filter(item => item.rel === 'alternate').length, 6);
     assert.equal(metadata.structuredData['@graph'].find(item => item['@type'] === 'ItemPage').mainEntity.name, name);
+  }
+  for (const slug of ['pt-br','en-us','es','fr','it']) {
+    const interviewDoc = documentOf(await render('/' + slug + '/87654322'));
+    assert.match(interviewDoc.title, /Zane Lowe 2024.*Billie Eilish/);
+    assert.match(interviewDoc.querySelector('meta[name="description"]').content, /Zane Lowe 2024/);
+    const interviewGraph = JSON.parse(interviewDoc.querySelector('[data-betv-seo]').textContent)['@graph'];
+    assert.equal(interviewGraph.find(item => item['@type'] === 'ItemPage').mainEntity.genre, 'Interview');
+    const performanceDoc = documentOf(await render('/' + slug + '/87654323'));
+    assert.match(performanceDoc.title, /Coachella 2024.*Billie Eilish/);
+    assert.match(performanceDoc.querySelector('meta[name="description"]').content, /Coachella 2024/);
+    const performanceGraph = JSON.parse(performanceDoc.querySelector('[data-betv-seo]').textContent)['@graph'];
+    assert.equal(performanceGraph.find(item => item['@type'] === 'ItemPage').mainEntity.genre, 'Live performance');
   }
   assert.equal(documentOf(await render('/es/23456789')).title, 'WILDFLOWER | Billie Eilish TV', 'original music names stay intact');
   assert.equal(documentOf(await render('/pt-br/34567890')).title, "Título $& $' $$ | Billie Eilish TV", 'replacement tokens must remain literal title text');
