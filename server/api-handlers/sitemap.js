@@ -3,6 +3,7 @@
 const SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
 const DEFAULT_SUPABASE_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
+const CONTENT_PAGE = require('../content-public-page');
 
 const LOCALES = Object.freeze([
   Object.freeze({ slug: 'pt-br', hreflang: 'pt-BR' }),
@@ -159,7 +160,7 @@ async function collectPages() {
   }
 
   const seenContentIds = new Set();
-  results.slice(0, CONTENT_COLLECTIONS.length).forEach(result => {
+  results.slice(0, CONTENT_COLLECTIONS.length).forEach((result, collectionIndex) => {
     if (result.status !== 'fulfilled') return;
     result.value.forEach(row => {
       const data = row.data || {};
@@ -167,7 +168,8 @@ async function collectPages() {
       const id = numericPublicId(data.publicId || row.id || data.title);
       if (!/^\d{8}$/.test(id) || seenContentIds.has(id)) return;
       seenContentIds.add(id);
-      addPage(pages, `/${id}`, row.updatedAt, contentImage(data));
+      const record = { collection: CONTENT_COLLECTIONS[collectionIndex], id: row.id, data };
+      addPage(pages, CONTENT_PAGE.contentPath(record), row.updatedAt, contentImage(data));
     });
   });
 
