@@ -2,6 +2,7 @@
 
 const DEFAULT_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
+const CONTENT_PAGE = require('../content-public-page');
 const ALLOWED_COLLECTIONS = new Set([
   'contents', 'featured', 'gallery', 'movies', 'news', 'notifications', 'ongs', 'sections', 'series', 'videos'
 ]);
@@ -10,7 +11,8 @@ const PUBLIC_ITEM_FIELDS = new Set([
   'active', 'preserveTitle', 'bannerUrl', 'category', 'contentCollection', 'contentId', 'contentUrl',
   'episodes', 'description', 'body', 'summary', 'subtitle', 'name', 'buttonLabel', 'buttonText', 'actionLabel', 'ctaLabel', 'label', 'text', 'duration', 'imageUrl', 'itemLimit', 'itemType', 'link', 'logoUrl',
   'mediaType', 'mobileAppDriveUrl', 'tvDriveUrl', 'minimumDonationCents', 'minimumDonationUsdCents', 'order', 'publicId', 'runtime', 'sectionId', 'sectionName', 'showCardLogo', 'slug',
-  'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'subtitleLocale', 'thumbnailUrl', 'title', 'tracks', 'translations', 'type', 'videoDuration', 'videoId',
+  'sourceCollection', 'streamingAvailability', 'streamingLinks', 'subtitleUrl', 'subtitleLocale', 'thumbnailUrl', 'title', 'tracks', 'setlist', 'translations', 'type', 'videoDuration', 'videoId',
+  'venue', 'location', 'city', 'country', 'director', 'producer', 'presenter', 'host', 'guests', 'synopsis',
   'videoUrl', 'year'
 ]);
 const MEDIA_FIELDS = new Set(['imageUrl', 'thumbnailUrl', 'bannerUrl', 'logoUrl']);
@@ -210,6 +212,7 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
   if (!wrapped || typeof wrapped !== 'object') return null;
   row = wrapped;
   let raw = row.data && typeof row.data === 'object' ? row.data : {};
+  const stableSeoPath = CONTENT_PAGE.contentPath({ collection, id:row.id, data:raw });
   if (!localizedPayload && requestedLocale !== 'pt-br') {
     const translated = raw.translations && (raw.translations[requestedLocale] || raw.translations[requestedLocale === 'en-us' ? 'en' : requestedLocale]);
     if (translated && typeof translated === 'object') {
@@ -221,7 +224,7 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
       if (keepTitle) { raw.title = originalTitle; raw.name = originalName; }
     }
   }
-  const source = {};
+  const source = { seoPath: stableSeoPath };
   for (const field of PUBLIC_ITEM_FIELDS) {
     if (!Object.prototype.hasOwnProperty.call(raw, field)) continue;
     source[field] = raw[field];
@@ -258,7 +261,7 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
     else delete source.subtitleLocale;
   }
   enforceSubtitleLocale(source, requestedLocale, localizedPayload);
-  for (const field of ['title', 'type', 'category', 'description', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug']) {
+  for (const field of ['title', 'type', 'category', 'description', 'synopsis', 'duration', 'runtime', 'videoDuration', 'year', 'sectionName', 'slug', 'venue', 'location', 'city', 'country', 'director', 'producer', 'presenter', 'host', 'guests']) {
     if (Object.prototype.hasOwnProperty.call(source, field)) source[field] = safeText(source[field], field === 'description' ? (collection === 'notifications' ? 20000 : 8000) : 500);
   }
   if (Object.prototype.hasOwnProperty.call(source, 'streamingAvailability')) {
@@ -301,6 +304,7 @@ function sanitizeItem(collection, row, requestedLocale = 'pt-br', localizedPaylo
         subtitles:Object.fromEntries(Object.entries(episode.subtitles && typeof episode.subtitles==='object' && !Array.isArray(episode.subtitles) ? episode.subtitles : {}).filter(([locale])=>['pt-br','en-us','es','fr','it'].includes(locale)).map(([locale,url])=>[locale,safeLink(url,true)]).filter(([,url])=>Boolean(url)))
       })).filter(episode => episode.title);
   }
+  if (Object.prototype.hasOwnProperty.call(source, 'setlist')) source.setlist = CONTENT_PAGE.mediaSetlist({setlist: source.setlist});
   if (Object.prototype.hasOwnProperty.call(source, 'tracks')) {
     source.tracks = (Array.isArray(source.tracks) ? source.tracks : [])
       .slice(0, 100)
