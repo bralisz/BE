@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const LEGAL_TRANSLATIONS = require('../config/legal-translations');
 const PUBLIC_PROFILE_API = require('./public-profile');
+const CONTENT_PAGE = require('../content-public-page');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
@@ -360,7 +361,7 @@ async function loadSeoCatalog(routeInfo) {
 
 function seoRecordFromRoute(routeInfo, catalog) {
   const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
-  const contentMatch = logical.match(/^\/(\d{6,12})$/);
+  const contentMatch = logical.match(/^\/(\d{6,12})$/) || (CONTENT_PAGE.contentRouteId(logical) ? [logical, CONTENT_PAGE.contentRouteId(logical)] : null);
   if (contentMatch) {
     const itemId = contentMatch[1];
     return (catalog || []).find(record => {
@@ -371,6 +372,11 @@ function seoRecordFromRoute(routeInfo, catalog) {
     }) || null;
   }
 
+  if (CONTENT_PAGE.friendlyContentRoute(logical) && !CONTENT_PAGE.contentRouteId(logical)) {
+    const matching = (catalog || []).filter(record => record.collection !== 'news' &&
+      CONTENT_PAGE.contentPath(record).replace(/-\d{8}$/, '') === logical);
+    return matching.length === 1 ? matching[0] : null;
+  }
   const albumMatch = logical.match(/^\/(?:albuns|álbuns|albums)\/([^/]+)$/i);
   if (albumMatch) {
     let albumId = albumMatch[1];
@@ -411,8 +417,8 @@ function localizedRecord(record, slug) {
   return { ...record, data };
 }
 
-function canonicalPathForRoute(routeInfo) {
-  const logical = String(routeInfo.logicalPath || '/').replace(/\/+$/, '') || '/';
+function canonicalPathForRoute(routeInfo, seoRecord) {
+  const logical = seoRecord && seoRecord.collection !== 'news' ? CONTENT_PAGE.contentPath(seoRecord) : (String(routeInfo.logicalPath || '/').replace(/\/+$/, '') || '/');
   if (routeInfo.hasPrefix) return routeInfo.publicPath === '/' ? `/${routeInfo.slug}` : routeInfo.publicPath;
   return `/${routeInfo.slug}${logical === '/' ? '' : logical}`;
 }
@@ -431,7 +437,7 @@ function xDefaultRouteUrl(origin, logicalPath) {
 function isNoindexRoute(routeInfo) {
   const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
   return routeInfo.contentUnavailable === 404 || process.env.VERCEL_ENV === 'preview' ||
-    !(/^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|ong$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
+    !(CONTENT_PAGE.friendlyContentRoute(logical) || /^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|ong$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
     logical === '/login' ||
     logical === '/reset-password' ||
     logical === '/config' ||
@@ -738,7 +744,7 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
     const localized = localizedRecord(seoRecord, routeInfo.slug);
     const data = localized.data || {};
     const mainEntity = {
-      '@type': 'CreativeWork',
+      '@type': seoRecord.collection === 'videos' ? 'VideoObject' : 'CreativeWork',
       '@id': `${canonical}#content`,
       url: canonical,
       mainEntityOfPage: { '@id': page['@id'] },
@@ -752,7 +758,12 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
     const image = absoluteHttpUrl(data.thumbnailUrl || data.imageUrl || data.bannerUrl, origin);
     if (image) {
       mainEntity.image = image;
+      if (seoRecord.collection === 'videos') mainEntity.thumbnailUrl = image;
       page.primaryImageOfPage = { '@type': 'ImageObject', url: image };
+    }
+    const songs = CONTENT_PAGE.mediaSetlist(data);
+    if (songs.length && CONTENT_PAGE.contentType(seoRecord) === 'show') {
+      mainEntity.hasPart = { '@type': 'ItemList', name: 'Setlist', itemListElement: songs.map((name, index) => ({ '@type': 'ListItem', position: index + 1, name })) };
     }
     page.mainEntity = mainEntity;
   } else if (routeInfo.logicalPath === '/billie-eilish') {
@@ -823,7 +834,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   }[routeInfo.slug] || (name => `Perfil de ${name}`);
 
   const copy = pageCopy(routeInfo, settings, seoRecord);
-  const canonicalPath = canonicalPathForRoute(routeInfo);
+  const canonicalPath = canonicalPathForRoute(routeInfo, seoRecord);
   const canonical = `${origin}${canonicalPath}`;
   const noindex = isNoindexRoute(routeInfo);
 
@@ -859,7 +870,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     .replace(/\s*<meta\s+name=["']robots["'][^>]*>/gi, '')
     .replace(/\s*<script\s+type=["']application\/ld\+json["'][^>]*data-betv-seo=["']true["'][^>]*>[\s\S]*?<\/script>/gi, '');
 
-  const logical = routeInfo.logicalPath || '/';
+  const logical = seoRecord && seoRecord.collection !== 'news' ? CONTENT_PAGE.contentPath(seoRecord) : (routeInfo.logicalPath || '/');
   const alternates = [
     `<link rel="alternate" hreflang="pt-BR" href="${attr(localizedRouteUrl(origin, 'pt-br', logical))}">`,
     `<link rel="alternate" hreflang="en-US" href="${attr(localizedRouteUrl(origin, 'en-us', logical))}">`,
@@ -934,7 +945,7 @@ module.exports = async function sitePage(req, res) {
     const profileUsername = profileUsernameFromRoute(routeInfo);
     const legalRequest = isLegalRouteInfo(routeInfo);
     const recoveryRequest = routeInfo.logicalPath === '/reset-password' || routeInfo.logicalPath === '/reset-password/';
-    const needsSeoCatalog = /^\/\d{6,12}$/.test(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
+    const needsSeoCatalog = /^\/\d{6,12}$/.test(routeInfo.logicalPath) || CONTENT_PAGE.friendlyContentRoute(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
     const [settings, seoCatalog] = await Promise.all([
       (legalRequest || recoveryRequest || profileUsername || needsSeoCatalog) ? Promise.resolve(settingsCache.value || {}) : loadSettings(),
       needsSeoCatalog ? loadSeoCatalog(routeInfo) : Promise.resolve({ records: [], complete: true })
@@ -942,6 +953,15 @@ module.exports = async function sitePage(req, res) {
     const seoRecord = needsSeoCatalog ? seoRecordFromRoute(routeInfo, seoCatalog.records) : null;
     const responseStatus = needsSeoCatalog && !seoRecord ? (seoCatalog.complete ? 404 : 503) : 200;
     if (responseStatus !== 200) routeInfo.contentUnavailable = responseStatus;
+    if (!metadataOnly && responseStatus === 200 && seoRecord && CONTENT_PAGE.friendlyContentRoute(routeInfo.logicalPath)) {
+      const friendly = CONTENT_PAGE.contentPath(seoRecord);
+      if (routeInfo.logicalPath !== friendly) {
+        const destination = localizedRouteUrl(origin, routeInfo.slug, friendly);
+        res.setHeader('Location', destination);
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        return res.status(308).end();
+      }
+    }
     let publicProfile = null;
     if (profileUsername) {
       try {
