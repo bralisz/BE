@@ -23594,3 +23594,10 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
 .detail-seo-facts ol{margin:0;padding-left:25px;columns:2;column-gap:36px;line-height:1.85;color:#d8e0ed}
 .detail-seo-facts li{break-inside:avoid;padding-right:10px}
 @media(max-width:760px){.detail-seo-facts{margin-top:24px;padding:18px;border-radius:13px;gap:18px}.detail-seo-facts dl{grid-template-columns:1fr 1fr;column-gap:12px}.detail-seo-facts ol{columns:1}}
+
+
+/* Expand only indexed media pages; legacy detail layouts retain their sizes. */
+#contentDetailSection.has-public-facts .content-detail{height:auto;min-height:clamp(650px,100svh,900px);overflow:visible}
+#contentDetailSection.has-public-facts .detail-inner{width:min(100%,1080px);max-width:1080px;height:auto;min-height:clamp(650px,100svh,900px);padding:clamp(130px,17vh,195px) clamp(24px,4vw,68px) 70px;justify-content:flex-start}
+#contentDetailSection.has-public-facts .detail-seo-facts{width:100%;max-width:950px;box-sizing:border-box}
+@media(max-width:760px){#contentDetailSection.has-public-facts .detail-inner{width:100%;padding:118px 20px 58px;min-height:660px}}
