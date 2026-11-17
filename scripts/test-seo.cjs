@@ -20,6 +20,8 @@ const collections = {
     } } },
     { id: 'interview-without-description', data: { publicId: '87654322', title: 'Zane Lowe 2024', sectionName: 'Entrevistas' } },
     { id: 'performance-without-description', data: { publicId: '87654323', title: 'Coachella 2024', sectionName: 'Apresentações ao vivo', venue: 'Empire Polo Club', duration: '01:22:00', setlist: ['BIRDS OF A FEATHER', 'bad guy', '<script>alert(1)</script>'] } },
+    { id: 'podcast-one', data: { publicId: '87654324', title: 'Conversa de estúdio', sectionName: 'Podcasts' } },
+    { id: 'clip-one', data: { publicId: '87654325', title: 'Ocean Eyes', sectionName: 'Videoclipes' } },
     { id: 'song', data: { publicId: '23456789', title: 'WILDFLOWER', sectionName: 'Music videos', translations: { es: { title: 'Título que não deve substituir o nome da música', description: 'Una actuación musical.' } } } },
     { id: 'literal-title', data: { publicId: '34567890', title: "Título $& $' $$", description: 'Descrição do vídeo correto.' } },
     { id: 'private', data: { title: 'Unpublished video', active: false } }
@@ -154,6 +156,18 @@ function documentOf(response) {
     const alias = await render('/' + slug + friendly.replace(/-\d{8}$/, ''));
     assert.equal(alias.code, 308);
     assert.equal(alias.headers.location, 'https://billieilishtv.site/' + slug + friendly);
+  }
+  for (const slug of ['pt-br','en-us','es','fr','it']) {
+    for (const [id,kind,genre] of [['87654324','podcast','Podcast'],['87654325','musicvideo','Music video']]) {
+      const doc = documentOf(await render('/' + slug + '/' + id));
+      assert.match(doc.title, /Billie Eilish/);
+      const graph = JSON.parse(doc.querySelector('[data-betv-seo]').textContent)['@graph'];
+      assert.equal(graph.find(item => item['@type'] === 'ItemPage').mainEntity.genre, genre);
+      const media = collections.videos.find(item => item.data.publicId === id);
+      const friendly = CONTENT_PAGE.contentPath({collection:'videos',id:media.id,data:media.data});
+      assert.equal(doc.querySelector('link[rel="canonical"]').href,'https://billieilishtv.site/' + slug + friendly);
+      assert(doc.querySelector('meta[name="description"]').content.length > 30);
+    }
   }
   assert.equal(documentOf(await render('/es/23456789')).title, 'WILDFLOWER | Billie Eilish TV', 'original music names stay intact');
   assert.equal(documentOf(await render('/pt-br/34567890')).title, "Título $& $' $$ | Billie Eilish TV", 'replacement tokens must remain literal title text');
