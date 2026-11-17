@@ -5,6 +5,8 @@ const path = require('path');
 const crypto = require('crypto');
 const LEGAL_TRANSLATIONS = require('../config/legal-translations');
 const PUBLIC_PROFILE_API = require('./public-profile');
+const CONTENT_PAGE = require('../content-public-page');
+const CONTENT_DETAILS = require('../content-public-details');
 
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const FIXED_SHARE_IMAGE_URL = 'https://i.imgur.com/tnBMpHr.png';
@@ -360,7 +362,7 @@ async function loadSeoCatalog(routeInfo) {
 
 function seoRecordFromRoute(routeInfo, catalog) {
   const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
-  const contentMatch = logical.match(/^\/(\d{6,12})$/);
+  const contentMatch = logical.match(/^\/(\d{6,12})$/) || (CONTENT_PAGE.contentRouteId(logical) ? [logical, CONTENT_PAGE.contentRouteId(logical)] : null);
   if (contentMatch) {
     const itemId = contentMatch[1];
     return (catalog || []).find(record => {
@@ -371,6 +373,11 @@ function seoRecordFromRoute(routeInfo, catalog) {
     }) || null;
   }
 
+  if (CONTENT_PAGE.friendlyContentRoute(logical) && !CONTENT_PAGE.contentRouteId(logical)) {
+    const matching = (catalog || []).filter(record => record.collection !== 'news' &&
+      CONTENT_PAGE.contentPath(record).replace(/-\d{8}$/, '') === logical);
+    return matching.length === 1 ? matching[0] : null;
+  }
   const albumMatch = logical.match(/^\/(?:albuns|álbuns|albums)\/([^/]+)$/i);
   if (albumMatch) {
     let albumId = albumMatch[1];
@@ -411,8 +418,9 @@ function localizedRecord(record, slug) {
   return { ...record, data };
 }
 
-function canonicalPathForRoute(routeInfo) {
-  const logical = String(routeInfo.logicalPath || '/').replace(/\/+$/, '') || '/';
+function canonicalPathForRoute(routeInfo, seoRecord) {
+  const logical = seoRecord && seoRecord.collection !== 'news' ? CONTENT_PAGE.contentPath(seoRecord) : (String(routeInfo.logicalPath || '/').replace(/\/+$/, '') || '/');
+  if (seoRecord && seoRecord.collection !== 'news') return `/${routeInfo.slug}${logical}`;
   if (routeInfo.hasPrefix) return routeInfo.publicPath === '/' ? `/${routeInfo.slug}` : routeInfo.publicPath;
   return `/${routeInfo.slug}${logical === '/' ? '' : logical}`;
 }
@@ -431,7 +439,7 @@ function xDefaultRouteUrl(origin, logicalPath) {
 function isNoindexRoute(routeInfo) {
   const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
   return routeInfo.contentUnavailable === 404 || process.env.VERCEL_ENV === 'preview' ||
-    !(/^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|ong$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
+    !(CONTENT_PAGE.friendlyContentRoute(logical) || /^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|ong$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
     logical === '/login' ||
     logical === '/reset-password' ||
     logical === '/config' ||
@@ -444,6 +452,11 @@ function isNoindexRoute(routeInfo) {
 function seoVideoKind(record) {
   if (!record || record.collection !== 'videos') return '';
   const data = record.data || {};
+  const routeKind = CONTENT_PAGE.contentType(record);
+  if (routeKind === 'podcast') return 'podcast';
+  if (routeKind === 'videoclipe') return 'musicvideo';
+  if (routeKind === 'show') return 'performance';
+  if (routeKind === 'entrevista') return 'interview';
   const context = [
     data.title, data.sectionName, data.sourceSectionTitle,
     data.categoryName, data.videoType, data.itemType, data.type
@@ -463,7 +476,15 @@ function seoVideoTitle(recordTitle, kind, slug) {
     fr: { interview: 'Interview de Billie Eilish', performance: 'Billie Eilish en concert' },
     it: { interview: 'Intervista a Billie Eilish', performance: 'Billie Eilish dal vivo' }
   }[slug] || {};
-  return context[kind] ? recordTitle + ' — ' + context[kind] + ' | Billie Eilish TV' : base;
+  const special = {
+    'pt-br': { podcast:'Podcast com Billie Eilish', musicvideo:'Videoclipe de Billie Eilish' },
+    'en-us': { podcast:'Billie Eilish podcast', musicvideo:'Billie Eilish music video' },
+    es: { podcast:'Podcast de Billie Eilish', musicvideo:'Videoclip de Billie Eilish' },
+    fr: { podcast:'Podcast Billie Eilish', musicvideo:'Clip de Billie Eilish' },
+    it: { podcast:'Podcast di Billie Eilish', musicvideo:'Video musicale di Billie Eilish' }
+  }[slug] || {};
+  const prefix = context[kind] || special[kind];
+  return prefix ? recordTitle + ' — ' + prefix + ' | Billie Eilish TV' : base;
 }
 
 function seoVideoDescription(recordTitle, kind, slug) {
@@ -474,7 +495,14 @@ function seoVideoDescription(recordTitle, kind, slug) {
     fr: { interview: 'Regardez l’entretien {title} avec Billie Eilish sur Billie Eilish TV.', performance: 'Regardez la prestation en direct {title} de Billie Eilish sur Billie Eilish TV.' },
     it: { interview: 'Guarda l’intervista {title} con Billie Eilish su Billie Eilish TV.', performance: 'Guarda l’esibizione dal vivo {title} di Billie Eilish su Billie Eilish TV.' }
   };
-  const template = (messages[slug] || messages['pt-br'])[kind];
+  const additional = {
+    'pt-br': { podcast:'Ouça ou assista ao podcast {title} sobre Billie Eilish na Billie Eilish TV.', musicvideo:'Assista ao videoclipe {title} de Billie Eilish na Billie Eilish TV.' },
+    'en-us': { podcast:'Watch or listen to the {title} podcast about Billie Eilish on Billie Eilish TV.', musicvideo:'Watch the {title} Billie Eilish music video on Billie Eilish TV.' },
+    es: { podcast:'Mira o escucha el podcast {title} sobre Billie Eilish en Billie Eilish TV.', musicvideo:'Mira el videoclip {title} de Billie Eilish en Billie Eilish TV.' },
+    fr: { podcast:'Écoutez ou regardez le podcast {title} consacré à Billie Eilish sur Billie Eilish TV.', musicvideo:'Regardez le clip {title} de Billie Eilish sur Billie Eilish TV.' },
+    it: { podcast:'Ascolta o guarda il podcast {title} su Billie Eilish su Billie Eilish TV.', musicvideo:'Guarda il video musicale {title} di Billie Eilish su Billie Eilish TV.' }
+  }[slug] || {};
+  const template = (messages[slug] || messages['pt-br'])[kind] || additional[kind];
   return template ? template.replace('{title}', recordTitle) : '';
 }
 
@@ -738,7 +766,7 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
     const localized = localizedRecord(seoRecord, routeInfo.slug);
     const data = localized.data || {};
     const mainEntity = {
-      '@type': 'CreativeWork',
+      '@type': seoRecord.collection === 'videos' ? 'VideoObject' : 'CreativeWork',
       '@id': `${canonical}#content`,
       url: canonical,
       mainEntityOfPage: { '@id': page['@id'] },
@@ -747,12 +775,17 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
     };
     if (String(data.description || '').trim()) mainEntity.description = plainDescription(data.description).slice(0, 1000);
     const videoKind = seoVideoKind(seoRecord);
-    if (videoKind) mainEntity.genre = videoKind === 'interview' ? 'Interview' : 'Live performance';
+    if (videoKind) mainEntity.genre = ({ interview:'Interview', performance:'Live performance', podcast:'Podcast', musicvideo:'Music video' })[videoKind] || 'Video';
     if (String(data.year || '').trim()) mainEntity.datePublished = String(data.year).trim();
     const image = absoluteHttpUrl(data.thumbnailUrl || data.imageUrl || data.bannerUrl, origin);
     if (image) {
       mainEntity.image = image;
+      if (seoRecord.collection === 'videos') mainEntity.thumbnailUrl = image;
       page.primaryImageOfPage = { '@type': 'ImageObject', url: image };
+    }
+    const songs = CONTENT_PAGE.mediaSetlist(data);
+    if (songs.length && CONTENT_PAGE.contentType(seoRecord) === 'show') {
+      mainEntity.hasPart = { '@type': 'ItemList', name: 'Setlist', itemListElement: songs.map((name, index) => ({ '@type': 'ListItem', position: index + 1, name })) };
     }
     page.mainEntity = mainEntity;
   } else if (routeInfo.logicalPath === '/billie-eilish') {
@@ -777,6 +810,23 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
   const payload = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
   const script = `<script type="application/ld+json" data-betv-seo="true">${payload}<\/script>`;
   return html.replace('</head>', `${script}\n</head>`);
+}
+
+function injectContentFacts(html, record, locale) {
+  if (!record || record.collection === 'news') return html;
+  const localized = localizedRecord(record, locale).data;
+  const body = CONTENT_DETAILS.renderFacts(record, localized, locale);
+  if (!body) return html;
+  html = html.replace('<section class="detail-seo-facts" id="detailSeoFacts" hidden></section>',
+    '<section class="detail-seo-facts" id="detailSeoFacts">' + body + '</section>');
+  const title = CONTENT_DETAILS.plain(localized.title || record.data.title);
+  if (title) html = html.replace('id="contentDetailLogo">Selecione um vídeo',
+    'id="contentDetailLogo">' + CONTENT_DETAILS.escapeHtml(title.slice(0, 240)));
+  const description = CONTENT_DETAILS.plain(localized.description || localized.synopsis || localized.summary);
+  if (description) html = html.replace('id="contentDetailDesc"></p>',
+    'id="contentDetailDesc">' + CONTENT_DETAILS.escapeHtml(description.slice(0, 2000)) + '</p>');
+  // Server-rendered content must be visible even when client JS is unavailable.
+  return html.replace('class="content-detail-wrap" id="contentDetailSection" hidden', 'class="content-detail-wrap has-public-facts" id="contentDetailSection"');
 }
 
 function profileShareVersion(profile) {
@@ -823,7 +873,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
   }[routeInfo.slug] || (name => `Perfil de ${name}`);
 
   const copy = pageCopy(routeInfo, settings, seoRecord);
-  const canonicalPath = canonicalPathForRoute(routeInfo);
+  const canonicalPath = canonicalPathForRoute(routeInfo, seoRecord);
   const canonical = `${origin}${canonicalPath}`;
   const noindex = isNoindexRoute(routeInfo);
 
@@ -859,7 +909,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     .replace(/\s*<meta\s+name=["']robots["'][^>]*>/gi, '')
     .replace(/\s*<script\s+type=["']application\/ld\+json["'][^>]*data-betv-seo=["']true["'][^>]*>[\s\S]*?<\/script>/gi, '');
 
-  const logical = routeInfo.logicalPath || '/';
+  const logical = seoRecord && seoRecord.collection !== 'news' ? CONTENT_PAGE.contentPath(seoRecord) : (routeInfo.logicalPath || '/');
   const alternates = [
     `<link rel="alternate" hreflang="pt-BR" href="${attr(localizedRouteUrl(origin, 'pt-br', logical))}">`,
     `<link rel="alternate" hreflang="en-US" href="${attr(localizedRouteUrl(origin, 'en-us', logical))}">`,
@@ -910,9 +960,11 @@ function extractPageMetadata(html) {
     return rel === 'canonical' || (rel === 'alternate' && hreflang) ? [{ rel, href: attribute(tag, 'href'), hreflang }] : [];
   });
   const structured = (html.match(/<script[^>]+data-betv-seo=["']true["'][^>]*>([\s\S]*?)<\/script>/i) || [])[1];
+  const facts = (html.match(/<section class="detail-seo-facts" id="detailSeoFacts">([\s\S]*?)<\/section>/i) || [])[1] || '';
   return {
     title: decodeHtmlText((html.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || ''),
-    meta, links, structuredData: structured ? JSON.parse(structured) : null
+    meta, links, structuredData: structured ? JSON.parse(structured) : null,
+    publicFactsHtml: facts
   };
 }
 
@@ -934,7 +986,7 @@ module.exports = async function sitePage(req, res) {
     const profileUsername = profileUsernameFromRoute(routeInfo);
     const legalRequest = isLegalRouteInfo(routeInfo);
     const recoveryRequest = routeInfo.logicalPath === '/reset-password' || routeInfo.logicalPath === '/reset-password/';
-    const needsSeoCatalog = /^\/\d{6,12}$/.test(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
+    const needsSeoCatalog = /^\/\d{6,12}$/.test(routeInfo.logicalPath) || CONTENT_PAGE.friendlyContentRoute(routeInfo.logicalPath) || /^\/(?:albuns|álbuns|albums)\/[^/]+$/i.test(routeInfo.logicalPath);
     const [settings, seoCatalog] = await Promise.all([
       (legalRequest || recoveryRequest || profileUsername || needsSeoCatalog) ? Promise.resolve(settingsCache.value || {}) : loadSettings(),
       needsSeoCatalog ? loadSeoCatalog(routeInfo) : Promise.resolve({ records: [], complete: true })
@@ -942,6 +994,15 @@ module.exports = async function sitePage(req, res) {
     const seoRecord = needsSeoCatalog ? seoRecordFromRoute(routeInfo, seoCatalog.records) : null;
     const responseStatus = needsSeoCatalog && !seoRecord ? (seoCatalog.complete ? 404 : 503) : 200;
     if (responseStatus !== 200) routeInfo.contentUnavailable = responseStatus;
+    if (!metadataOnly && responseStatus === 200 && seoRecord && CONTENT_PAGE.friendlyContentRoute(routeInfo.logicalPath)) {
+      const friendly = CONTENT_PAGE.contentPath(seoRecord);
+      if (routeInfo.logicalPath !== friendly) {
+        const destination = localizedRouteUrl(origin, routeInfo.slug, friendly);
+        res.setHeader('Location', destination);
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        return res.status(308).end();
+      }
+    }
     let publicProfile = null;
     if (profileUsername) {
       try {
@@ -951,7 +1012,7 @@ module.exports = async function sitePage(req, res) {
     const html = injectDeploymentVersion(
       injectLocalePreload(
         localizeStaticText(
-          injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo, publicProfile, seoRecord),
+          injectContentFacts(injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo, publicProfile, seoRecord), seoRecord, routeInfo.slug),
           routeInfo
         ),
         routeInfo

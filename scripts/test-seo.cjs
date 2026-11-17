@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { JSDOM } = require('jsdom');
 const config = require('../vercel.json');
+const CONTENT_PAGE = require('../server/content-public-page');
 const handlerPath = require.resolve('../server/api-routes/site-page');
 const originalFetch = global.fetch;
 const originalEnv = process.env.VERCEL_ENV;
@@ -18,7 +19,9 @@ const collections = {
       it: { title: 'Intervista con Billie Eilish', description: 'Intervista in italiano.' }
     } } },
     { id: 'interview-without-description', data: { publicId: '87654322', title: 'Zane Lowe 2024', sectionName: 'Entrevistas' } },
-    { id: 'performance-without-description', data: { publicId: '87654323', title: 'Coachella 2024', sectionName: 'Apresentações ao vivo' } },
+    { id: 'performance-without-description', data: { publicId: '87654323', title: 'Coachella 2024', sectionName: 'Apresentações ao vivo', venue: 'Empire Polo Club', duration: '01:22:00', setlist: ['BIRDS OF A FEATHER', 'bad guy', '<script>alert(1)</script>'] } },
+    { id: 'podcast-one', data: { publicId: '87654324', title: 'Conversa de estúdio', sectionName: 'Podcasts' } },
+    { id: 'clip-one', data: { publicId: '87654325', title: 'Ocean Eyes', sectionName: 'Videoclipes' } },
     { id: 'song', data: { publicId: '23456789', title: 'WILDFLOWER', sectionName: 'Music videos', translations: { es: { title: 'Título que não deve substituir o nome da música', description: 'Una actuación musical.' } } } },
     { id: 'literal-title', data: { publicId: '34567890', title: "Título $& $' $$", description: 'Descrição do vídeo correto.' } },
     { id: 'private', data: { title: 'Unpublished video', active: false } }
@@ -84,7 +87,9 @@ function documentOf(response) {
   assert.equal(videoDoc.querySelector('#catalogOverview'), null);
   const graph = JSON.parse(videoDoc.querySelector('[data-betv-seo]').textContent)['@graph'];
   assert.equal(graph.find(item => item['@type'] === 'ItemPage').mainEntity.name, title);
-  assert.equal(graph.find(item => item['@type'] === 'BreadcrumbList').itemListElement[1].item, 'https://billieilishtv.site/es/12345678');
+  const videoCanonical = 'https://billieilishtv.site/es' + CONTENT_PAGE.contentPath({collection:'videos',id:'video-one',data:collections.videos[0].data});
+  assert.equal(graph.find(item => item['@type'] === 'BreadcrumbList').itemListElement[1].item, videoCanonical);
+  assert.equal(videoDoc.querySelector('link[rel="canonical"]').href, videoCanonical);
   assert.equal(videoDoc.querySelectorAll('script').length, documentOf(await render('/es')).querySelectorAll('script').length, 'record text cannot inject scripts');
 
   const expected = {
@@ -103,7 +108,8 @@ function documentOf(response) {
     const page = JSON.parse(doc.querySelector('[data-betv-seo]').textContent)['@graph'].find(item => item['@type'] === 'ItemPage');
     assert.equal(page.primaryImageOfPage.url, doc.querySelector('meta[property="og:image"]').content);
     assert.equal(page.mainEntity.image, page.primaryImageOfPage.url);
-    assert.equal(page.mainEntity.url, `https://billieilishtv.site${path}`);
+    const contentUrl = 'https://billieilishtv.site/' + slug + CONTENT_PAGE.contentPath({collection:'videos',id:'interview',data:collections.videos[1].data});
+    assert.equal(page.mainEntity.url, contentUrl);
     assert.equal(page.mainEntity.mainEntityOfPage['@id'], page['@id']);
     assert.equal(page.inLanguage, doc.documentElement.lang);
     assert.equal(doc.querySelector('meta[property="og:image:width"]'), null, 'do not claim dimensions of an unrelated banner');
@@ -116,7 +122,7 @@ function documentOf(response) {
     const metadata = JSON.parse(response.body);
     assert.equal(metadata.title, doc.title, 'SPA and direct visits use the same content/locale');
     assert.equal(metadata.meta.find(item => item.key === 'description').content, description);
-    assert.equal(metadata.links.find(item => item.rel === 'canonical').href, `https://billieilishtv.site${path}`);
+    assert.equal(metadata.links.find(item => item.rel === 'canonical').href, contentUrl);
     assert.equal(metadata.links.filter(item => item.rel === 'alternate').length, 6);
     assert.equal(metadata.structuredData['@graph'].find(item => item['@type'] === 'ItemPage').mainEntity.name, name);
   }
@@ -130,7 +136,38 @@ function documentOf(response) {
     assert.match(performanceDoc.title, /Coachella 2024.*Billie Eilish/);
     assert.match(performanceDoc.querySelector('meta[name="description"]').content, /Coachella 2024/);
     const performanceGraph = JSON.parse(performanceDoc.querySelector('[data-betv-seo]').textContent)['@graph'];
-    assert.equal(performanceGraph.find(item => item['@type'] === 'ItemPage').mainEntity.genre, 'Live performance');
+    const performanceEntity = performanceGraph.find(item => item['@type'] === 'ItemPage').mainEntity;
+    assert.equal(performanceEntity.genre, 'Live performance');
+    assert.equal(performanceEntity['@type'], 'VideoObject');
+    assert.deepEqual(performanceEntity.hasPart.itemListElement.slice(0, 2).map(item => item.name), ['BIRDS OF A FEATHER','bad guy']);
+    const facts = performanceDoc.querySelector('#detailSeoFacts');
+    assert.equal(facts.hidden, false);
+    assert.equal(facts.querySelectorAll('ol li').length, 3);
+    assert.match(facts.textContent, /Empire Polo Club/);
+    assert.equal(facts.querySelector('script'), null, 'setlist must be HTML escaped');
+    assert.equal(performanceDoc.querySelector('#contentDetailSection').hidden, false, 'media details must be visible without JS');
+    const friendly = CONTENT_PAGE.contentPath({collection:'videos',id:'performance-without-description',data:collections.videos[3].data});
+    assert.equal(performanceDoc.querySelector('link[rel="canonical"]').href, 'https://billieilishtv.site/' + slug + friendly);
+    const seoResponse = await render('/api/site-page', 'GET', {}, { format:'seo', path:'/' + slug + friendly });
+    assert.equal(seoResponse.code, 200);
+    assert.match(JSON.parse(seoResponse.body).publicFactsHtml, /Empire Polo Club/);
+    const canonicalDoc = documentOf(await render('/' + slug + friendly));
+    assert.equal(canonicalDoc.querySelector('link[rel="canonical"]').href, 'https://billieilishtv.site/' + slug + friendly);
+    const alias = await render('/' + slug + friendly.replace(/-\d{8}$/, ''));
+    assert.equal(alias.code, 308);
+    assert.equal(alias.headers.location, 'https://billieilishtv.site/' + slug + friendly);
+  }
+  for (const slug of ['pt-br','en-us','es','fr','it']) {
+    for (const [id,kind,genre] of [['87654324','podcast','Podcast'],['87654325','musicvideo','Music video']]) {
+      const doc = documentOf(await render('/' + slug + '/' + id));
+      assert.match(doc.title, /Billie Eilish/);
+      const graph = JSON.parse(doc.querySelector('[data-betv-seo]').textContent)['@graph'];
+      assert.equal(graph.find(item => item['@type'] === 'ItemPage').mainEntity.genre, genre);
+      const media = collections.videos.find(item => item.data.publicId === id);
+      const friendly = CONTENT_PAGE.contentPath({collection:'videos',id:media.id,data:media.data});
+      assert.equal(doc.querySelector('link[rel="canonical"]').href,'https://billieilishtv.site/' + slug + friendly);
+      assert(doc.querySelector('meta[name="description"]').content.length > 30);
+    }
   }
   assert.equal(documentOf(await render('/es/23456789')).title, 'WILDFLOWER | Billie Eilish TV', 'original music names stay intact');
   assert.equal(documentOf(await render('/pt-br/34567890')).title, "Título $& $' $$ | Billie Eilish TV", 'replacement tokens must remain literal title text');

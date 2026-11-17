@@ -5296,12 +5296,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const showCardLogo = logo && logo !== '#' && (String(collection).toLowerCase() !== 'videos' || video.showCardLogo === true || String(video.showCardLogo || '').toLowerCase() === 'true');
     const recordId = video.id || video.videoId || title;
     const itemId = numericPublicId(video.publicId || recordId);
-    const routeHref = detailRoutePath(itemId);
+    const routeHref = detailRoutePath(itemId, { ...video, collection, title });
     const preserveTitle = preservesOriginalMusicTitle({ ...video, collection });
     const searchText = buildContentSearchIndex({ ...video, collection, title, description, year, duration, category });
     return `<a class="video-card${preserveTitle ? ' notranslate' : ''}" ${preserveTitle ? 'translate="no"' : ''} href="${safeUrl(routeHref)}" aria-label="${escapeHtml(title)}"
       data-item-id="${escapeHtml(String(itemId))}"
       data-record-id="${escapeHtml(String(recordId))}"
+      data-seo-path="${escapeHtml(String(video.seoPath || routeHref))}"
       data-open-detail="true"
       data-title="${escapeHtml(title)}"
       data-description="${escapeHtml(description)}"
@@ -5335,20 +5336,36 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function detailRouteId() {
-    const pathMatch = cleanPathname().match(/^\/(\d{6,12})$/);
+    const pathMatch = cleanPathname().match(/^\/(\d{6,12})$/) ||
+      cleanPathname().match(/^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\/[a-z0-9-]*-(\d{8})$/i);
     if (pathMatch) return pathMatch[1];
     const legacyMatch = String(location.hash || '').match(/^#\/video\/([^/?#]+)/i);
     if (!legacyMatch) return '';
     try { return decodeURIComponent(legacyMatch[1]); } catch (_) { return legacyMatch[1]; }
   }
 
-  function detailRoutePath(itemId) {
-    return '/' + encodeURIComponent(String(itemId || '').trim());
+  function detailRoutePath(itemId, data = {}) {
+    const id = String(itemId || '').trim();
+    if (!id) return '/';
+    const stored = String(data.seoPath || '').trim();
+    if (/^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\/[a-z0-9-]+-\d{8}$/i.test(stored) && stored.endsWith('-' + id)) return stored;
+    if (!/^\d{8}$/.test(id) || !String(data.title || '').trim()) return '/' + encodeURIComponent(id);
+    const collection = String(data.collection || 'videos').toLowerCase();
+    const category = [data.sectionName,data.sourceSectionTitle,data.category,data.type,data.itemType,data.videoType].filter(Boolean)
+      .join(' ').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const kind = collection === 'movies' ? 'filme' : collection === 'series' ? 'serie'
+      : /podcast/.test(category) ? 'podcast'
+      : /entrevist|interview|entretien|intervista/.test(category) ? 'entrevista'
+      : /videoclip|video clip|music video|video musical|musical video/.test(category) ? 'videoclipe'
+      : /\bshow\b|concert|live performance|ao vivo|apresentac|performance|festival/.test(category) ? 'show' : 'video';
+    const slug = String(data.slug || data.title).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 88).replace(/-+$/,'') || 'conteudo';
+    return '/' + kind + '/' + slug + '-' + id;
   }
 
-  function setDetailRoute(itemId, replace = false) {
+  function setDetailRoute(itemId, replace = false, data = {}) {
     if (!itemId) return;
-    const path = detailRoutePath(itemId);
+    const path = detailRoutePath(itemId, data);
     if (cleanPathname() === path && !location.hash) return;
     const url = path + (location.search || '');
     const returnView = currentCatalogView();
@@ -5415,6 +5432,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         openContentDetail({
           itemId: numericPublicId(item.publicId || item.id || itemId),
           recordId: item.id || '',
+          seoPath: item.seoPath || '',
           title: item.title || 'Conteúdo',
           description: item.description || '',
           year: item.year || '',
@@ -5802,11 +5820,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const image = data.imageUrl || data.thumbnailUrl || data.bannerUrl || '';
     const title = data.title || 'Conteúdo';
     const contentHref = data.contentUrl || '#';
-    const routeHref = detailRoutePath(data.itemId || numericPublicId(data.recordId || title));
+    const routeHref = detailRoutePath(data.itemId || numericPublicId(data.recordId || title), data);
     const preserveTitle = data.preserveTitle === true || String(data.preserveTitle || '').toLowerCase() === 'true' || preservesOriginalMusicTitle(data);
     return `<a class="detail-reco-card${preserveTitle ? ' notranslate' : ''}" ${preserveTitle ? 'translate="no"' : ''} href="${safeUrl(routeHref)}" data-open-detail="true"
       data-item-id="${escapeHtml(String(data.itemId || numericPublicId(data.recordId || title)))}"
       data-record-id="${escapeHtml(String(data.recordId || ''))}"
+      data-seo-path="${escapeHtml(String(data.seoPath || routeHref))}"
       data-title="${escapeHtml(title)}"
       data-description="${escapeHtml(data.description || '')}"
       data-year="${escapeHtml(data.year || '')}"
@@ -10784,8 +10803,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     setPlayerInteractive(false);
   }
 
-  function detailShareUrl(itemId) {
-    const route = detailRoutePath(itemId);
+  function detailShareUrl(itemId, data = {}) {
+    const route = detailRoutePath(itemId, data);
     const localizedRoute = window.BETVLocaleURL ? window.BETVLocaleURL(route) : route;
     try { return new URL(localizedRoute, location.origin).href; }
     catch (_) { return location.origin + route; }
@@ -10835,7 +10854,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const itemId = String(button.dataset.itemId || detailRouteId() || '').trim();
     if (!itemId) return;
     const title = String(button.dataset.title || 'Billie Eilish TV').trim() || 'Billie Eilish TV';
-    const url = detailShareUrl(itemId);
+    const url = detailShareUrl(itemId, button.dataset);
     try {
       if (navigator.share) {
         await navigator.share({ title, url });
@@ -11144,7 +11163,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const itemId = String(data.itemId || title);
     const recordId = String(data.recordId || data.id || '');
     const canonicalFavoriteId = String(data.favoriteId || (recordId ? `${collection || 'videos'}:${recordId}` : itemId));
-    if (options.updateRoute !== false) setDetailRoute(itemId, Boolean(options.replaceRoute));
+    if (options.updateRoute !== false) setDetailRoute(itemId, Boolean(options.replaceRoute), data);
     window.dispatchEvent(new CustomEvent('be:content-seo', { detail: { ...data, itemId, title, description: data.description || '', thumbnailUrl } }));
 
     bg.innerHTML = bannerUrl && bannerUrl !== '#'
@@ -11224,6 +11243,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
 
     share.dataset.itemId = itemId;
+    share.dataset.seoPath = detailRoutePath(itemId, data);
     share.dataset.title = title;
     share.dataset.defaultTitle = 'Compartilhar';
     share.classList.remove('is-copied');
@@ -13996,7 +14016,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isLoginRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/login'||hash==='#login'||hash==='#/login';}
   function isPasswordRecoveryRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/reset-password'||hash==='#reset-password'||hash==='#/reset-password'||sessionStorage.getItem('bePasswordRecoveryActive')==='1';}
   function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
-  function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
+  function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\/[a-z0-9-]*-\d{8}$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
   function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(String(location.hash||''));}
   function isAvocadosRoute(){var path=cleanPathname().toLowerCase();return path==='/avocados'||/^#\/?avocados$/i.test(String(location.hash||''));}
   function isNotificationsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:atualizacoes|notificacoes)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:atualizacoes|notificacoes|updates|notifications)(?:\/|$)/i.test(hash);}

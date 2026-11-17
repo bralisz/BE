@@ -22,7 +22,8 @@
       links: Array.from(document.head.querySelectorAll('link[rel="canonical"],link[rel="alternate"][hreflang]')).map(function (node) {
         return {rel:node.rel,href:node.href,hreflang:node.hreflang || ''};
       }),
-      structuredData: structured
+      structuredData: structured,
+      publicFactsHtml: document.getElementById('detailSeoFacts')?.innerHTML || ''
     };
   }
   function remember(path, value) {
@@ -39,6 +40,12 @@
   function apply(data) {
     if (!data || typeof data.title !== 'string' || !Array.isArray(data.meta) || !Array.isArray(data.links)) return;
     document.title = data.title;
+    const facts = document.getElementById('detailSeoFacts');
+    if (facts && Object.prototype.hasOwnProperty.call(data, 'publicFactsHtml')) {
+      facts.innerHTML = String(data.publicFactsHtml || '');
+      facts.hidden = !data.publicFactsHtml;
+      document.getElementById('contentDetailSection')?.classList.toggle('has-public-facts',Boolean(data.publicFactsHtml));
+    }
     var title = document.querySelector('title');
     if (title) { title.setAttribute('translate', 'no'); title.setAttribute('data-i18n-ignore', ''); }
     document.head.querySelectorAll('meta[name="description"],meta[name="robots"],meta[property^="og:"],meta[name^="twitter:"],link[rel="canonical"],link[rel="alternate"][hreflang],script[data-betv-seo]').forEach(function (node) {node.remove();});
@@ -70,6 +77,9 @@
       data.title, data.sectionName, data.sourceSectionTitle,
       data.categoryName, data.videoType, data.itemType, data.type
     ].filter(Boolean).join(' ').toLowerCase();
+    if (/podcast/i.test(context)) return 'podcast';
+    if (/(?:videoclip|video clip|music video|video musical|musical video)/i.test(context)) return 'musicvideo';
+    if (/(?:festival|festivais|festivals|\bshows\b)/i.test(context)) return 'performance';
     if (/(?:entrevist|interview|entretien|intervista)/i.test(context)) return 'interview';
     if (/(?:live performance|ao vivo|apresenta[cç][aã]o|concert|concerto|show ao vivo|esibizione dal vivo|spectacle en direct)/i.test(context)) return 'performance';
     return '';
@@ -83,7 +93,15 @@
       fr: {interview:'Interview de Billie Eilish',performance:'Billie Eilish en concert'},
       it: {interview:'Intervista a Billie Eilish',performance:'Billie Eilish dal vivo'}
     }[slug] || {};
-    return context[kind] ? title + ' — ' + context[kind] + ' | Billie Eilish TV' : title + ' | Billie Eilish TV';
+    var special = {
+      'pt-br':{podcast:'Podcast com Billie Eilish',musicvideo:'Videoclipe de Billie Eilish'},
+      'en-us':{podcast:'Billie Eilish podcast',musicvideo:'Billie Eilish music video'},
+      es:{podcast:'Podcast de Billie Eilish',musicvideo:'Videoclip de Billie Eilish'},
+      fr:{podcast:'Podcast Billie Eilish',musicvideo:'Clip de Billie Eilish'},
+      it:{podcast:'Podcast di Billie Eilish',musicvideo:'Video musicale di Billie Eilish'}
+    }[slug]||{};
+    var label=context[kind]||special[kind];
+    return label ? title + ' — ' + label + ' | Billie Eilish TV' : title + ' | Billie Eilish TV';
   }
   function videoDescription(title,kind,slug) {
     var messages = {
@@ -93,7 +111,14 @@
       fr: {interview:'Regardez l’entretien {title} avec Billie Eilish sur Billie Eilish TV.',performance:'Regardez la prestation en direct {title} de Billie Eilish sur Billie Eilish TV.'},
       it: {interview:'Guarda l’intervista {title} con Billie Eilish su Billie Eilish TV.',performance:'Guarda l’esibizione dal vivo {title} di Billie Eilish su Billie Eilish TV.'}
     };
-    var template=(messages[slug]||messages['pt-br'])[kind];
+    var additional = {
+      'pt-br':{podcast:'Ouça ou assista ao podcast {title} sobre Billie Eilish na Billie Eilish TV.',musicvideo:'Assista ao videoclipe {title} de Billie Eilish na Billie Eilish TV.'},
+      'en-us':{podcast:'Watch or listen to the {title} podcast about Billie Eilish on Billie Eilish TV.',musicvideo:'Watch the {title} Billie Eilish music video on Billie Eilish TV.'},
+      es:{podcast:'Mira o escucha el podcast {title} sobre Billie Eilish en Billie Eilish TV.',musicvideo:'Mira el videoclip {title} de Billie Eilish en Billie Eilish TV.'},
+      fr:{podcast:'Écoutez ou regardez le podcast {title} consacré à Billie Eilish sur Billie Eilish TV.',musicvideo:'Regardez le clip {title} de Billie Eilish sur Billie Eilish TV.'},
+      it:{podcast:'Ascolta o guarda il podcast {title} su Billie Eilish su Billie Eilish TV.',musicvideo:'Guarda il video musicale {title} di Billie Eilish su Billie Eilish TV.'}
+    }[slug]||{};
+    var template=(messages[slug]||messages['pt-br'])[kind]||additional[kind];
     return template ? template.replace('{title}',title) : '';
   }
   function contentMetadata(data) {
@@ -119,7 +144,7 @@
     var links = [{rel:'canonical',href:canonical}];
     [['pt-br','pt-BR'],['en-us','en-US'],['es','es'],['fr','fr'],['it','it']].forEach(function (item) {links.push({rel:'alternate',hreflang:item[1],href:origin + '/' + item[0] + logical});});
     links.push({rel:'alternate',hreflang:'x-default',href:origin + logical});
-    return {title:name,meta:values.map(function (item) {return {kind:item[0],key:item[1],content:item[2]};}),links:links,structuredData:null};
+    return {title:name,meta:values.map(function (item) {return {kind:item[0],key:item[1],content:item[2]};}),links:links,structuredData:null,publicFactsHtml:''};
   }
   async function refresh(path, requestVersion) {
     try {
@@ -144,7 +169,7 @@
     if (metadata) apply(metadata);
     else {
       // A new URL must never keep the previous video's title or JSON-LD.
-      apply({title:'Billie Eilish TV',meta:[],links:[],structuredData:null});
+      apply({title:'Billie Eilish TV',meta:[],links:[],structuredData:null,publicFactsHtml:''});
     }
     var requestVersion = version;
     timer = setTimeout(function () {refresh(path,requestVersion);},25);
@@ -158,8 +183,16 @@
   window.addEventListener('be:content-seo',function (event) {
     if (!publicRoute()) return;
     var data = event.detail || {};
-    if (logicalPath() !== '/' + String(data.itemId || '')) return;
+    var id = String(data.itemId || '');
+    var route = logicalPath();
+    if (route !== '/' + id && !(id && route.endsWith('-' + id) && /^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\//i.test(route))) return;
     var metadata = contentMetadata(data);
-    if (metadata) {remember(location.pathname,metadata);apply(metadata);}
+    if (metadata) {
+      remember(location.pathname,metadata); apply(metadata);
+      version += 1;
+      if (controller) controller.abort();
+      clearTimeout(timer);
+      refresh(location.pathname,version);
+    }
   });
 })();
