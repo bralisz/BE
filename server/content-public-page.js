@@ -26,7 +26,7 @@ function contentType(record) {
   if (collection === 'series') return 'serie';
   const data = record && record.data || {};
   const context = [
-    data.sectionName, data.sourceSectionTitle, data.category, data.categoryName,
+    data.sectionName, data.sectionSearch, data.sourceSectionTitle, data.category, data.categoryName,
     data.type, data.itemType, data.videoType, data.mediaType
   ].filter(Boolean).join(' ').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   if (/podcast|podcast interview|podcast episode/.test(context)) return 'podcast';
