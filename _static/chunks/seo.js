@@ -77,6 +77,9 @@
       data.title, data.sectionName, data.sourceSectionTitle,
       data.categoryName, data.videoType, data.itemType, data.type
     ].filter(Boolean).join(' ').toLowerCase();
+    if (/podcast/i.test(context)) return 'podcast';
+    if (/(?:videoclip|video clip|music video|video musical|musical video)/i.test(context)) return 'musicvideo';
+    if (/(?:festival|festivais|festivals|\bshows\b)/i.test(context)) return 'performance';
     if (/(?:entrevist|interview|entretien|intervista)/i.test(context)) return 'interview';
     if (/(?:live performance|ao vivo|apresenta[cç][aã]o|concert|concerto|show ao vivo|esibizione dal vivo|spectacle en direct)/i.test(context)) return 'performance';
     return '';
@@ -90,7 +93,15 @@
       fr: {interview:'Interview de Billie Eilish',performance:'Billie Eilish en concert'},
       it: {interview:'Intervista a Billie Eilish',performance:'Billie Eilish dal vivo'}
     }[slug] || {};
-    return context[kind] ? title + ' — ' + context[kind] + ' | Billie Eilish TV' : title + ' | Billie Eilish TV';
+    var special = {
+      'pt-br':{podcast:'Podcast com Billie Eilish',musicvideo:'Videoclipe de Billie Eilish'},
+      'en-us':{podcast:'Billie Eilish podcast',musicvideo:'Billie Eilish music video'},
+      es:{podcast:'Podcast de Billie Eilish',musicvideo:'Videoclip de Billie Eilish'},
+      fr:{podcast:'Podcast Billie Eilish',musicvideo:'Clip de Billie Eilish'},
+      it:{podcast:'Podcast di Billie Eilish',musicvideo:'Video musicale di Billie Eilish'}
+    }[slug]||{};
+    var label=context[kind]||special[kind];
+    return label ? title + ' — ' + label + ' | Billie Eilish TV' : title + ' | Billie Eilish TV';
   }
   function videoDescription(title,kind,slug) {
     var messages = {
@@ -100,7 +111,14 @@
       fr: {interview:'Regardez l’entretien {title} avec Billie Eilish sur Billie Eilish TV.',performance:'Regardez la prestation en direct {title} de Billie Eilish sur Billie Eilish TV.'},
       it: {interview:'Guarda l’intervista {title} con Billie Eilish su Billie Eilish TV.',performance:'Guarda l’esibizione dal vivo {title} di Billie Eilish su Billie Eilish TV.'}
     };
-    var template=(messages[slug]||messages['pt-br'])[kind];
+    var additional = {
+      'pt-br':{podcast:'Ouça ou assista ao podcast {title} sobre Billie Eilish na Billie Eilish TV.',musicvideo:'Assista ao videoclipe {title} de Billie Eilish na Billie Eilish TV.'},
+      'en-us':{podcast:'Watch or listen to the {title} podcast about Billie Eilish on Billie Eilish TV.',musicvideo:'Watch the {title} Billie Eilish music video on Billie Eilish TV.'},
+      es:{podcast:'Mira o escucha el podcast {title} sobre Billie Eilish en Billie Eilish TV.',musicvideo:'Mira el videoclip {title} de Billie Eilish en Billie Eilish TV.'},
+      fr:{podcast:'Écoutez ou regardez le podcast {title} consacré à Billie Eilish sur Billie Eilish TV.',musicvideo:'Regardez le clip {title} de Billie Eilish sur Billie Eilish TV.'},
+      it:{podcast:'Ascolta o guarda il podcast {title} su Billie Eilish su Billie Eilish TV.',musicvideo:'Guarda il video musicale {title} di Billie Eilish su Billie Eilish TV.'}
+    }[slug]||{};
+    var template=(messages[slug]||messages['pt-br'])[kind]||additional[kind];
     return template ? template.replace('{title}',title) : '';
   }
   function contentMetadata(data) {
