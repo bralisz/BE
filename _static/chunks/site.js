@@ -471,8 +471,21 @@
   'use strict';
   window.BETVGuestAccess=window.BETVGuestAccess||{
     key:'beGuestAccess',
-    isActive:function(){try{return localStorage.getItem(this.key)==='1';}catch(_){return false;}},
-    setActive:function(active){try{if(active)localStorage.setItem(this.key,'1');else localStorage.removeItem(this.key);}catch(_){ }return Boolean(active);}
+    // Public browsing is the default. Authentication is required only for
+    // account-specific actions; an explicit /login route always shows login.
+    isActive:function(){
+      var signedIn=Boolean(window.beBackend&&window.beBackend.auth&&window.beBackend.auth.currentUser);
+      if(signedIn)return false;
+      try{
+        // Wait for a remembered session to be restored before presenting
+        // the visitor view; stale markers are cleared by the auth boot.
+        return !(localStorage.getItem('beAuthExpected')==='1'&&localStorage.getItem('beSessionUid'));
+      }catch(_){return true;}
+    },
+    setActive:function(active){
+      try{if(active)localStorage.setItem(this.key,'1');else localStorage.removeItem(this.key);}catch(_){ }
+      return Boolean(active);
+    }
   };
   function cleanPath(value){
     try{return decodeURIComponent(String(value||'/')).replace(/\/+$/,'')||'/';}

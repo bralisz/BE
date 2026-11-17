@@ -64,6 +64,38 @@
     var decoder = document.createElement('textarea'); decoder.innerHTML = source.replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return decoder.value.replace(/!?\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[*_`#]/g,'').replace(/\s+/g,' ').trim();
   }
+  function contentKind(data) {
+    if (String(data.collection || 'videos').toLowerCase() !== 'videos') return '';
+    var context = [
+      data.title, data.sectionName, data.sourceSectionTitle,
+      data.categoryName, data.videoType, data.itemType, data.type
+    ].filter(Boolean).join(' ').toLowerCase();
+    if (/(?:entrevist|interview|entretien|intervista)/i.test(context)) return 'interview';
+    if (/(?:live performance|ao vivo|apresenta[cç][aã]o|concert|concerto|show ao vivo|esibizione dal vivo|spectacle en direct)/i.test(context)) return 'performance';
+    return '';
+  }
+  function videoTitle(title,kind,slug) {
+    if (!kind || title.length > 48 || /billie\s+eilish/i.test(title)) return title + ' | Billie Eilish TV';
+    var context = {
+      'pt-br': {interview:'Entrevista com Billie Eilish',performance:'Billie Eilish ao vivo'},
+      'en-us': {interview:'Billie Eilish interview',performance:'Billie Eilish live'},
+      es: {interview:'Entrevista con Billie Eilish',performance:'Billie Eilish en vivo'},
+      fr: {interview:'Interview de Billie Eilish',performance:'Billie Eilish en concert'},
+      it: {interview:'Intervista a Billie Eilish',performance:'Billie Eilish dal vivo'}
+    }[slug] || {};
+    return context[kind] ? title + ' — ' + context[kind] + ' | Billie Eilish TV' : title + ' | Billie Eilish TV';
+  }
+  function videoDescription(title,kind,slug) {
+    var messages = {
+      'pt-br': {interview:'Assista à entrevista {title} com Billie Eilish na Billie Eilish TV.',performance:'Assista à apresentação {title} de Billie Eilish ao vivo na Billie Eilish TV.'},
+      'en-us': {interview:'Watch the {title} interview with Billie Eilish on Billie Eilish TV.',performance:'Watch Billie Eilish perform {title} live on Billie Eilish TV.'},
+      es: {interview:'Mira la entrevista {title} con Billie Eilish en Billie Eilish TV.',performance:'Mira la presentación en vivo {title} de Billie Eilish en Billie Eilish TV.'},
+      fr: {interview:'Regardez l’entretien {title} avec Billie Eilish sur Billie Eilish TV.',performance:'Regardez la prestation en direct {title} de Billie Eilish sur Billie Eilish TV.'},
+      it: {interview:'Guarda l’intervista {title} con Billie Eilish su Billie Eilish TV.',performance:'Guarda l’esibizione dal vivo {title} di Billie Eilish su Billie Eilish TV.'}
+    };
+    var template=(messages[slug]||messages['pt-br'])[kind];
+    return template ? template.replace('{title}',title) : '';
+  }
   function contentMetadata(data) {
     var title = String(data.title || '').trim();
     if (!title) return null;
@@ -72,11 +104,12 @@
       'pt-br': 'Explore {title} na Billie Eilish TV.', 'en-us': 'Explore {title} on Billie Eilish TV.',
       es: 'Explora {title} en Billie Eilish TV.', fr: 'Découvrez {title} sur Billie Eilish TV.', it: 'Scopri {title} su Billie Eilish TV.'
     };
-    var description = plain(data.description) || (descriptions[slug] || descriptions['pt-br']).replace('{title}',title);
+    var kind = contentKind(data);
+    var description = plain(data.description) || videoDescription(title,kind,slug) || (descriptions[slug] || descriptions['pt-br']).replace('{title}',title);
     var canonical = origin + '/' + slug + logical;
     var image = fallbackImage;
     try { var candidate = new URL(data.thumbnailUrl || data.imageUrl || data.bannerUrl || '',origin); if (/^https?:$/.test(candidate.protocol) && (data.thumbnailUrl || data.imageUrl || data.bannerUrl)) image = candidate.href; } catch (_) {}
-    var name = title + ' | Billie Eilish TV';
+    var name = videoTitle(title,kind,slug);
     var values = [
       ['name','description',description.slice(0,300)], ['name','robots','index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'],
       ['property','og:type','website'], ['property','og:site_name','Billie Eilish TV'], ['property','og:locale',({'pt-br':'pt_BR','en-us':'en_US',es:'es_ES',fr:'fr_FR',it:'it_IT'})[slug]],

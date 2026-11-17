@@ -85,3 +85,22 @@ confirmado pelo proprietário: https://www.instagram.com/billieilishtv_/ .
 O endereço não inclui parâmetros de rastreamento. A artista permanece uma
 entidade separada, como assunto do conteúdo; o perfil é do projeto de fãs.
 A associação não garante posição nas buscas ou a exibição do Instagram.
+
+## Acesso público e metadados de vídeos (novembro de 2026)
+
+Visitantes sem sessão podem abrir o catálogo e as rotas de vídeo diretamente,
+inclusive por links compartilhados nas redes sociais, sem escolher antes
+"Acessar como convidado". Entrar e Criar conta continuam direcionando para
+`/login`. Configurações, operações pessoais e dados da conta permanecem
+sujeitos às verificações existentes de autenticação.
+
+Se um vídeo de entrevista ou apresentação tiver a categoria correspondente
+mas não uma descrição cadastrada, o SEO utiliza uma descrição contextual no
+idioma da página. Títulos curtos que não mencionem a artista recebem um
+contexto específico para entrevistas ou shows, preservando o título original
+do registro no início. Quando existe descrição cadastrada, ela prevalece.
+Os dados estruturados recebem `genre` somente quando a categoria do vídeo
+é reconhecível; não são inventados datas, URLs de reprodução ou locais.
+
+O comportamento foi coberto por verificações de convidado e por exemplos
+de entrevistas e apresentações em pt-BR, en-US, es, fr e it.
