@@ -7435,7 +7435,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!source) return [];
 
     const cues = [];
-    source.split(/\n{2,}/).forEach(block => {
+    // Subtitle editors may leave spaces or tabs on otherwise blank cue separators.
+    source.split(/\n(?:[ \t]*\n)+/).forEach(block => {
       const lines = block.split('\n').map(line => line.trimEnd());
       const timeIndex = lines.findIndex(line => line.includes('-->'));
       if (timeIndex < 0) return;
