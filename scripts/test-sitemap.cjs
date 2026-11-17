@@ -1,5 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict');
+const CONTENT_PAGE = require('../server/content-public-page');
 const { JSDOM } = require('jsdom');
 const handler = require('../server/api-handlers/sitemap');
 const originalFetch = global.fetch;
@@ -8,7 +9,7 @@ let malformed = false;
 let useLegacy = false;
 const rows = {
   videos: [
-    { id: 'one', updated_at: '2026-10-20T12:00:00Z', data: { publicId: '12345678', title: 'Video & title', thumbnailUrl: 'https://example.test/a.jpg?a=1&b=2' } },
+    { id: 'one', updated_at: '2026-10-20T12:00:00Z', data: { publicId: '12345678', title: 'Video & title', sectionName: 'Apresentações ao vivo', thumbnailUrl: 'https://example.test/a.jpg?a=1&b=2' } },
     { id: 'hidden', data: { publicId: '11111111', active: false } },
     { id: 'bad-image', data: { publicId: '22222222', thumbnailUrl: 'javascript:alert(1)' } }
   ],
@@ -39,7 +40,9 @@ async function request(method = 'GET') {
   assert.equal(result.code, 200);
   const doc = new JSDOM(result.body, { contentType: 'application/xml' }).window.document;
   const entries = [...doc.getElementsByTagName('url')];
-  const videoEntries = entries.filter(el => el.querySelector('loc').textContent.endsWith('/12345678'));
+  const friendly = CONTENT_PAGE.contentPath({collection:'videos',id:'one',data:rows.videos[0].data});
+  const videoEntries = entries.filter(el => el.querySelector('loc').textContent.endsWith(friendly));
+  assert.equal(friendly, '/show/video-title-12345678');
   assert.equal(videoEntries.length, 5, 'One canonical URL per supported language, no duplicate IDs');
   for (const entry of videoEntries) {
     assert.equal(entry.getElementsByTagNameNS('http://www.google.com/schemas/sitemap-image/1.1', 'loc')[0].textContent, 'https://example.test/a.jpg?a=1&b=2');
