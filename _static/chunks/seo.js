@@ -22,7 +22,8 @@
       links: Array.from(document.head.querySelectorAll('link[rel="canonical"],link[rel="alternate"][hreflang]')).map(function (node) {
         return {rel:node.rel,href:node.href,hreflang:node.hreflang || ''};
       }),
-      structuredData: structured
+      structuredData: structured,
+      publicFactsHtml: document.getElementById('detailSeoFacts')?.innerHTML || ''
     };
   }
   function remember(path, value) {
@@ -39,6 +40,11 @@
   function apply(data) {
     if (!data || typeof data.title !== 'string' || !Array.isArray(data.meta) || !Array.isArray(data.links)) return;
     document.title = data.title;
+    const facts = document.getElementById('detailSeoFacts');
+    if (facts && Object.prototype.hasOwnProperty.call(data, 'publicFactsHtml')) {
+      facts.innerHTML = String(data.publicFactsHtml || '');
+      facts.hidden = !data.publicFactsHtml;
+    }
     var title = document.querySelector('title');
     if (title) { title.setAttribute('translate', 'no'); title.setAttribute('data-i18n-ignore', ''); }
     document.head.querySelectorAll('meta[name="description"],meta[name="robots"],meta[property^="og:"],meta[name^="twitter:"],link[rel="canonical"],link[rel="alternate"][hreflang],script[data-betv-seo]').forEach(function (node) {node.remove();});
@@ -119,7 +125,7 @@
     var links = [{rel:'canonical',href:canonical}];
     [['pt-br','pt-BR'],['en-us','en-US'],['es','es'],['fr','fr'],['it','it']].forEach(function (item) {links.push({rel:'alternate',hreflang:item[1],href:origin + '/' + item[0] + logical});});
     links.push({rel:'alternate',hreflang:'x-default',href:origin + logical});
-    return {title:name,meta:values.map(function (item) {return {kind:item[0],key:item[1],content:item[2]};}),links:links,structuredData:null};
+    return {title:name,meta:values.map(function (item) {return {kind:item[0],key:item[1],content:item[2]};}),links:links,structuredData:null,publicFactsHtml:''};
   }
   async function refresh(path, requestVersion) {
     try {
@@ -144,7 +150,7 @@
     if (metadata) apply(metadata);
     else {
       // A new URL must never keep the previous video's title or JSON-LD.
-      apply({title:'Billie Eilish TV',meta:[],links:[],structuredData:null});
+      apply({title:'Billie Eilish TV',meta:[],links:[],structuredData:null,publicFactsHtml:''});
     }
     var requestVersion = version;
     timer = setTimeout(function () {refresh(path,requestVersion);},25);
@@ -158,8 +164,16 @@
   window.addEventListener('be:content-seo',function (event) {
     if (!publicRoute()) return;
     var data = event.detail || {};
-    if (logicalPath() !== '/' + String(data.itemId || '')) return;
+    var id = String(data.itemId || '');
+    var route = logicalPath();
+    if (route !== '/' + id && !(id && route.endsWith('-' + id) && /^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\//i.test(route))) return;
     var metadata = contentMetadata(data);
-    if (metadata) {remember(location.pathname,metadata);apply(metadata);}
+    if (metadata) {
+      remember(location.pathname,metadata); apply(metadata);
+      version += 1;
+      if (controller) controller.abort();
+      clearTimeout(timer);
+      refresh(location.pathname,version);
+    }
   });
 })();
