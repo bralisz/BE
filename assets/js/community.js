@@ -609,7 +609,11 @@
       +        '<div class="community-instagram-content"><h2 id="communityInstagramTitle">'+similarCopy('instagramTitle')+'</h2><p class="notranslate" translate="no">@billieilishtv_</p></div>'
       +        '<a class="community-instagram-follow" href="https://www.instagram.com/billieilishtv_/" target="_blank" rel="noopener noreferrer" aria-label="'+t('Seguir no Instagram')+' @billieilishtv_"><span>'+t('Seguir')+'</span></a>'
       +      '</div>'
-      +      '<div id="communityLatestReel" style="display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity"></div>'
+      +      '<div class="video-rail-shell community-instagram-rail-shell">'
+      +        '<button class="video-rail-arrow prev" type="button" aria-label="Ver posts anteriores" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>'
+      +        '<div id="communityLatestReel" class="community-instagram-rail" tabindex="0" role="region" aria-label="Posts recentes do Instagram"></div>'
+      +        '<button class="video-rail-arrow next" type="button" aria-label="Ver mais posts" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>'
+      +      '</div>'
       +    '</section>'
       +    '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
@@ -776,6 +780,28 @@
 
   var reelRequest = 0;
   var reelTimer;
+  // Same SVG/buttons and scroll controls used by the Home video rails.
+  function setupInstagramPostRail(rail){
+    var shell = rail && rail.closest('.community-instagram-rail-shell');
+    var prev = shell && shell.querySelector('.video-rail-arrow.prev');
+    var next = shell && shell.querySelector('.video-rail-arrow.next');
+    if (!rail || !prev || !next) return;
+    if (!rail.__betvInstagramArrowUpdate) {
+      var update = function(){
+        var max = Math.max(0, rail.scrollWidth - rail.clientWidth);
+        prev.hidden = max <= 4 || rail.scrollLeft <= 4;
+        next.hidden = max <= 4 || rail.scrollLeft >= max - 4;
+      };
+      var amount = function(){ return Math.max(rail.clientWidth * 0.82, 320); };
+      prev.addEventListener('click', function(){ rail.scrollBy({left:-amount(),behavior:'smooth'}); });
+      next.addEventListener('click', function(){ rail.scrollBy({left:amount(),behavior:'smooth'}); });
+      rail.addEventListener('scroll', update, {passive:true});
+      if ('ResizeObserver' in window) new ResizeObserver(update).observe(rail);
+      else window.addEventListener('resize', update, {passive:true});
+      rail.__betvInstagramArrowUpdate = update;
+    }
+    window.requestAnimationFrame(rail.__betvInstagramArrowUpdate);
+  }
   async function refreshInstagramReel(){
     var request = ++reelRequest;
     var card = page && page.querySelector('#communityLatestReel');
@@ -833,7 +859,7 @@
       img.decoding = 'async';
       img.width = 216;
       img.height = 384;
-      img.onerror = function(){ link.remove(); };
+      img.onerror = function(){ link.remove(); if (card.__betvInstagramArrowUpdate) card.__betvInstagramArrowUpdate(); };
       var action = document.createElement('span');
       action.className = 'community-instagram-post-cta';
       action.textContent = 'Confira agora';
@@ -842,6 +868,7 @@
       cards.append(link);
     });
     card.replaceChildren(cards);
+    setupInstagramPostRail(card);
   }
 
   function openCommunity(){
