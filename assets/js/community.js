@@ -609,7 +609,7 @@
       +        '<div class="community-instagram-content"><h2 id="communityInstagramTitle">'+similarCopy('instagramTitle')+'</h2><p class="notranslate" translate="no">@billieilishtv_</p></div>'
       +        '<a class="community-instagram-follow" href="https://www.instagram.com/billieilishtv_/" target="_blank" rel="noopener noreferrer" aria-label="'+t('Seguir no Instagram')+' @billieilishtv_"><span>'+t('Seguir')+'</span></a>'
       +      '</div>'
-      +      '<a id="communityLatestReel" hidden target="_blank" rel="noopener noreferrer"><img width="216" height="384" alt="Instagram Reel · @billieilishtv_" decoding="async" style="display:block;width:min(100%,216px);height:auto;aspect-ratio:9/16;object-fit:cover;border-radius:16px;margin-top:12px"></a>'
+      +      '<div id="communityLatestReel" style="display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity"></div>'
       +    '</section>'
       +    '<section class="community-section" id="communityContinueSection"><div class="community-section-head"><h2>Continue assistindo</h2></div><div id="communityContinueContent"></div></section>'
       +    '<section class="community-section"><div class="community-section-head"><h2>Favoritos dos fãs</h2></div><div id="communityFavoritesContent"></div></section>'
@@ -782,17 +782,28 @@
     try {
       var response = await fetch('/api?route=instagram-reel');
       if (!response.ok) return;
-      var reel = (await response.json()).reel;
+      var payload = await response.json();
       if (request !== reelRequest) return;
-      if (!reel) { card.hidden = true; return; }
-      var cover = new Image();
-      cover.onload = function(){
-        if (request !== reelRequest) return;
-        card.firstElementChild.src = reel.thumbnail;
-        card.href = reel.permalink;
-        card.hidden = false;
-      };
-      cover.src = reel.thumbnail;
+      var posts = payload.posts || (payload.reel ? [payload.reel] : []);
+      var cards = document.createDocumentFragment();
+      posts.forEach(function(post){
+        var link = document.createElement('a');
+        link.href = post.permalink;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.cssText = 'flex:0 0 min(48vw,216px);scroll-snap-align:start;margin-top:12px';
+        var img = document.createElement('img');
+        img.src = post.thumbnail;
+        img.alt = 'Instagram · @billieilishtv_ · ' + post.permalink.split('/').filter(Boolean).pop();
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.width = 216;
+        img.height = 384;
+        img.style.cssText = 'display:block;width:100%;height:auto;aspect-ratio:9/16;object-fit:cover;border-radius:16px';
+        link.append(img);
+        cards.append(link);
+      });
+      card.replaceChildren(cards);
     } catch (_) { /* Keep the follow button available while Instagram is offline. */ }
   }
 
