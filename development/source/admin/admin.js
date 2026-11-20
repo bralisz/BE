@@ -948,7 +948,28 @@ body.admin-preview-open{overflow:hidden}
 
   async function loadPage() {
     const current = route();
-    if (current === 'dashboard') return dashboard();
+    if (current === 'dashboard' || current === 'statistics') {
+      return window.BETVRenderOverview({
+        host: $('#adminContent'), user, client: beBackend.client, db,
+        avatar: selectedProfileAvatar(user.profile) || user.photoURL || '',
+        create: chooseContentCategory, edit: openEditor, logout,
+        publish: async (name, item) => {
+          const hasDraft = Boolean(readContentDraft(name, item));
+          await openEditor(name, item);
+          const form = $('#editorForm');
+          if (!form || location.hash !== '#/admin/contents/' + name) return;
+          if (hasDraft) { toast('Revise o rascunho restaurado antes de publicar.'); return; }
+          const status = form.elements.namedItem('active');
+          const submit = form.querySelector('[data-editor-submit]') || document.querySelector('[data-editor-submit][form="editorForm"]');
+          if (status && submit) {
+            status.value = 'true';
+            form.requestSubmit(submit);
+          }
+        },
+        resume: maybeResumePendingContentEditor, statsPage: current === 'statistics'
+      });
+    }
+    if (current === 'operations') return dashboard();
     if (current === 'support') { go('notifications'); return; }
     if (current === 'notifications') return notificationsPage();
     if (current === 'billie') return billieSettingsPage();
@@ -1321,7 +1342,34 @@ body.admin-preview-open{overflow:hidden}
     $('#dashboardNewContent').onclick = chooseContentCategory;
     renderAdminSubnav();
     document.querySelectorAll('[data-route]').forEach(button => button.onclick = () => go(button.dataset.route));
-    await maybeResumePendingContentEditor();
+    // Keep the existing forms and event handlers on the internal operations page.
+    if (route() === 'operations') {
+      const title = document.createElement('h1');
+      title.textContent = 'Configurações e operações';
+      const nodes = [title];
+      const community = document.createElement('a');
+      community.href = '#/admin/settings';
+      community.className = 'a-btn';
+      community.textContent = 'Configurações da Comunidade';
+      nodes.push(community);
+      for (const [selector, label] of [
+        ['.dashboard-site-settings', 'Site e redes sociais'],
+        ['.dashboard-update-notice', 'Aviso de atualização'],
+        ['.activity-log', 'Log de atividade'],
+        ['.donation-dashboard-panel', 'Apoios a ONGs']
+      ]) {
+        const panel = content.querySelector(selector);
+        if (!panel) continue;
+        panel.querySelector('.dashboard-weekly-users')?.remove();
+        const details = document.createElement('details');
+        details.className = 'a-card';
+        const summary = document.createElement('summary');
+        summary.textContent = label;
+        details.append(summary, panel);
+        nodes.push(details);
+      }
+      content.replaceChildren(...nodes);
+    }
   }
 
   function chooseContentCategory() {
