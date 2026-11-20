@@ -1,6 +1,6 @@
 'use strict';
 
-const { fetchPrivateSettingWithServiceRole } = require('./public-data');
+const { fetchPrivateSettingWithServiceRole, listInstagramPostSettings } = require('./public-data');
 
 const ACCOUNT = 'billieilishtv_';
 
@@ -33,17 +33,28 @@ async function latestReel(accountId, token) {
 module.exports = async function instagramReel(req, res) {
   if (req.method !== 'GET') return res.status(405).setHeader('Allow', 'GET').end();
   try {
-    const saved = await fetchPrivateSettingWithServiceRole('community-instagram-reel');
-    if (/^https:\/\/www\.instagram\.com\/(?:reels?|p)\/[\w-]+\/$/.test(saved?.permalink) &&
-        /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(saved?.thumbnail)) {
+    const coverId = req.query?.cover;
+    if (coverId !== undefined) {
+      if (typeof coverId !== 'string' || !/^(?:ig-post-[\w-]+|community-instagram-reel)$/.test(coverId)) return res.status(404).end();
+      const saved = await fetchPrivateSettingWithServiceRole(coverId);
+      const image = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+=*)$/.exec(saved?.thumbnail);
+      if (!image) return res.status(404).end();
+      res.setHeader('Content-Type', 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
+      return res.status(200).send(Buffer.from(image[1], 'base64'));
+    }
+    const rows = await listInstagramPostSettings();
+    const posts = rows.filter(row => /^https:\/\/www\.instagram\.com\/(?:reels?|p)\/[\w-]+\/$/.test(row.permalink))
+      .map(row => ({ permalink: row.permalink, thumbnail: '/api?route=instagram-reel&cover=' + encodeURIComponent(row.id) + '&v=' + encodeURIComponent(row.updated_at) }));
+    if (posts.length) {
       res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30');
-      return res.status(200).json({ reel: { permalink: saved.permalink, thumbnail: saved.thumbnail } });
+      return res.status(200).json({ posts, reel: posts[0] });
     }
     const id = process.env.INSTAGRAM_USER_ID;
     const token = process.env.INSTAGRAM_ACCESS_TOKEN;
     const reel = token && /^\d+$/.test(id || '') ? await latestReel(id, token) : null;
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30');
-    return res.status(200).json({ reel });
+    return res.status(200).json({ posts: reel ? [reel] : [], reel });
   } catch {
     res.setHeader('Cache-Control', 'no-store');
     return res.status(502).end();
