@@ -23675,3 +23675,60 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
   #communityLatestReel .community-instagram-post-cta{transition:none}
 }
 
+
+
+/* Compact Instagram thumbnails with the same desktop arrows as the Home video rails. */
+#communityInstagramSection{
+  width:min(calc(100% - 40px),760px);
+}
+#communityInstagramSection .community-instagram-rail-shell{
+  position:relative;
+  min-width:0;
+  margin-top:16px;
+}
+#communityInstagramSection .community-instagram-rail{
+  display:flex;
+  gap:14px;
+  padding:2px 2px 14px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scroll-behavior:smooth;
+  scroll-snap-type:x proximity;
+  scroll-padding-inline:2px;
+  overscroll-behavior-inline:contain;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+#communityInstagramSection .community-instagram-rail::-webkit-scrollbar{display:none}
+#communityInstagramSection .community-instagram-post{
+  flex:0 0 190px;
+  margin-top:0;
+}
+#communityInstagramSection .community-instagram-rail-shell>.video-rail-arrow{
+  z-index:5;
+}
+@media(max-width:760px){
+  #communityInstagramSection{
+    width:calc(100% - 32px);
+    margin-bottom:30px;
+  }
+  #communityInstagramSection .community-instagram-rail-shell{
+    margin-top:12px;
+  }
+  #communityInstagramSection .community-instagram-rail{
+    gap:11px;
+    padding:2px 1px 12px;
+  }
+  #communityInstagramSection .community-instagram-post{
+    flex:0 0 clamp(138px,40vw,164px);
+  }
+  #communityInstagramSection .community-instagram-rail-shell>.video-rail-arrow{
+    display:none!important;
+  }
+  #communityInstagramSection .community-instagram-post-cta{
+    min-height:40px;
+    bottom:11px;
+    font-size:13px;
+  }
+}
+
