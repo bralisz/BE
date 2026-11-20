@@ -778,33 +778,65 @@
   var reelTimer;
   async function refreshInstagramReel(){
     var request = ++reelRequest;
-    var card = page.querySelector('#communityLatestReel');
+    var card = page && page.querySelector('#communityLatestReel');
+    if (!card) return;
+    var posts = [];
     try {
-      var response = await fetch('/api?route=instagram-reel');
-      if (!response.ok) return;
-      var payload = await response.json();
-      if (request !== reelRequest) return;
-      var posts = payload.posts || (payload.reel ? [payload.reel] : []);
-      var cards = document.createDocumentFragment();
-      posts.forEach(function(post){
-        var link = document.createElement('a');
-        link.href = post.permalink;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.style.cssText = 'flex:0 0 min(48vw,216px);scroll-snap-align:start;margin-top:12px';
-        var img = document.createElement('img');
-        img.src = post.thumbnail;
-        img.alt = 'Instagram · @billieilishtv_ · ' + post.permalink.split('/').filter(Boolean).pop();
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        img.width = 216;
-        img.height = 384;
-        img.style.cssText = 'display:block;width:100%;height:auto;aspect-ratio:9/16;object-fit:cover;border-radius:16px';
-        link.append(img);
-        cards.append(link);
-      });
-      card.replaceChildren(cards);
-    } catch (_) { /* Keep the follow button available while Instagram is offline. */ }
+      var response = await fetch('/api?route=instagram-reel', {cache:'no-store'});
+      if (response.ok) {
+        var payload = await response.json();
+        posts = Array.isArray(payload.posts) ? payload.posts : (payload.reel ? [payload.reel] : []);
+      }
+    } catch (_) { /* The database projection remains a read-only fallback. */ }
+
+    // A missing/stale serverless route must not make correctly saved posts disappear.
+    if (!posts.length) {
+      var client = window.beBackend && window.beBackend.client;
+      if (client && typeof client.rpc === 'function') {
+        try {
+          var listing = await client.rpc('get_community_instagram_posts', {p_cover:null});
+          if (listing.error) throw listing.error;
+          var valid = (Array.isArray(listing.data) ? listing.data : []).filter(function(row){
+            return row && /^https:\/\/www\.instagram\.com\/(?:reels?|p)\/[\w-]+\/$/.test(row.permalink || '')
+              && /^(?:ig-post-[\w-]+|community-instagram-reel)$/.test(row.id || '');
+          }).slice(0,8);
+          posts = (await Promise.all(valid.map(async function(row){
+            try {
+              var cover = await client.rpc('get_community_instagram_posts', {p_cover:row.id});
+              var thumbnail = !cover.error && Array.isArray(cover.data) && cover.data[0] && cover.data[0].thumbnail;
+              return /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(thumbnail || '')
+                ? {permalink:row.permalink,thumbnail:thumbnail} : null;
+            } catch (_) { return null; }
+          }))).filter(Boolean);
+        } catch (_) { /* Leave the Instagram follow link available. */ }
+      }
+    }
+    if (request !== reelRequest) return;
+    var cards = document.createDocumentFragment();
+    posts.filter(function(post){
+      return post && /^https:\/\/www\.instagram\.com\/(?:reels?|p)\/[\w-]+\/$/.test(post.permalink || '')
+        && (/^\/api\?route=instagram-reel&cover=/.test(post.thumbnail || '')
+          || /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(post.thumbnail || '')
+          || /^https:\/\//.test(post.thumbnail || ''));
+    }).forEach(function(post){
+      var link = document.createElement('a');
+      link.href = post.permalink;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.style.cssText = 'flex:0 0 min(48vw,216px);scroll-snap-align:start;margin-top:12px';
+      var img = document.createElement('img');
+      img.src = post.thumbnail;
+      img.alt = 'Instagram · @billieilishtv_ · ' + post.permalink.split('/').filter(Boolean).pop();
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.width = 216;
+      img.height = 384;
+      img.style.cssText = 'display:block;width:100%;height:auto;aspect-ratio:9/16;object-fit:cover;border-radius:16px';
+      img.onerror = function(){ link.remove(); };
+      link.append(img);
+      cards.append(link);
+    });
+    card.replaceChildren(cards);
   }
 
   function openCommunity(){
