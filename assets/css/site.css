@@ -23601,3 +23601,77 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
 #contentDetailSection.has-public-facts .detail-inner{width:min(100%,1080px);max-width:1080px;height:auto;min-height:clamp(650px,100svh,900px);padding:clamp(130px,17vh,195px) clamp(24px,4vw,68px) 70px;justify-content:flex-start}
 #contentDetailSection.has-public-facts .detail-seo-facts{width:100%;max-width:950px;box-sizing:border-box}
 @media(max-width:760px){#contentDetailSection.has-public-facts .detail-inner{width:100%;padding:118px 20px 58px;min-height:660px}}
+
+
+/* Instagram post previews: centered glassmorphism action on the image. */
+#communityLatestReel .community-instagram-post{
+  position:relative;
+  display:block;
+  flex:0 0 min(48vw,216px);
+  min-width:0;
+  margin-top:12px;
+  aspect-ratio:9/16;
+  overflow:hidden;
+  border-radius:16px;
+  scroll-snap-align:start;
+  isolation:isolate;
+  text-decoration:none;
+  -webkit-tap-highlight-color:transparent;
+}
+#communityLatestReel .community-instagram-post-cover{
+  display:block;
+  width:100%;
+  height:100%;
+  aspect-ratio:9/16;
+  object-fit:cover;
+  border-radius:inherit;
+}
+#communityLatestReel .community-instagram-post-cta{
+  position:absolute;
+  bottom:clamp(12px,6%,22px);
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:calc(100% - 34px);
+  max-width:240px;
+  min-height:48px;
+  padding:10px 14px;
+  box-sizing:border-box;
+  border:1px solid rgba(255,255,255,.32);
+  border-radius:18px;
+  background:rgba(39,43,49,.34);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:0 8px 24px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.12);
+  color:#fff;
+  font:700 15px/1.25 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  letter-spacing:-.015em;
+  text-align:center;
+  white-space:nowrap;
+  text-shadow:0 1px 3px rgba(0,0,0,.4);
+  pointer-events:none;
+  transition:background .18s ease,border-color .18s ease;
+}
+#communityLatestReel .community-instagram-post:hover .community-instagram-post-cta,
+#communityLatestReel .community-instagram-post:focus-visible .community-instagram-post-cta{
+  background:rgba(53,57,66,.48);
+  border-color:rgba(255,255,255,.6);
+}
+#communityLatestReel .community-instagram-post:focus-visible{
+  outline:2px solid #fff;
+  outline-offset:3px;
+}
+@media(max-width:760px){
+  #communityLatestReel .community-instagram-post-cta{
+    width:calc(100% - 24px);
+    min-height:44px;
+    font-size:14px;
+    border-radius:16px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #communityLatestReel .community-instagram-post-cta{transition:none}
+}
+
