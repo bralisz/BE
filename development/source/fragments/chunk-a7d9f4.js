@@ -1198,7 +1198,7 @@ body.admin-preview-open{overflow:hidden}
   }
 
   function seriesDirectSubtitleEditorField(item = {}) {
-    const subtitles = readSeriesSubtitleMap(item.subtitles);
+    const subtitles = { ...readSeriesSubtitleMap(item.subtitles), ...readSeriesSubtitleMap(item.subtitleTracks) };
     const folder = String(item.id || 'draft-' + Date.now()).replace(/[^a-zA-Z0-9_-]/g, '-');
     return `<div class="field full series-direct-subtitle-editor" id="seriesDirectSubtitleEditor" data-series-folder="${esc(folder)}" style="display:none;min-width:0">
       ${seriesSubtitleInputs({ subtitles }, true)}
@@ -1706,6 +1706,7 @@ body.admin-preview-open{overflow:hidden}
           data.subtitles = Object.fromEntries(Object.entries(directSubtitles)
             .filter(([locale, url]) => SERIES_LANGS.some(([key]) => key === locale) && typeof url === 'string' && /^https:\/\//i.test(url.trim()))
             .map(([locale, url]) => [locale, url.trim()]));
+          data.subtitleTracks = { ...data.subtitles };
           let episodeRows;
           try { episodeRows = JSON.parse(String(data.episodes || '[]')); }
           catch (_) { throw new Error('Não foi possível ler os episódios cadastrados.'); }
