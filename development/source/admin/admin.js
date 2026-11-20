@@ -857,7 +857,7 @@ body.admin-preview-open{overflow:hidden}
 
   function navButton(key) {
     const current = route();
-    const contentRoutes = ['billie','featured','contents','gallery'];
+    const contentRoutes = ['billie','featured','contents','gallery','posts'];
     const siteRoutes = ['sections','settings'];
     const isContentRoute = contentRoutes.includes(current) || current.startsWith('contents/');
     const isSiteRoute = siteRoutes.includes(current);
@@ -883,7 +883,7 @@ body.admin-preview-open{overflow:hidden}
     if (!host) return;
 
     const current = route();
-    const contentActive = ['billie','featured','contents','gallery'].includes(current) || current.startsWith('contents/');
+    const contentActive = ['billie','featured','contents','gallery','posts'].includes(current) || current.startsWith('contents/');
     const siteActive = ['sections','settings'].includes(current);
 
     let tabs = [];
@@ -891,7 +891,8 @@ body.admin-preview-open{overflow:hidden}
       tabs = [
         ['billie', 'Billie Eilish', current === 'billie'],
         ['contents', 'Conteúdos', current === 'featured' || current === 'contents' || current.startsWith('contents/')],
-        ['gallery', 'Galeria', current === 'gallery']
+        ['gallery', 'Galeria', current === 'gallery'],
+        ['posts', 'Posts', current === 'posts']
       ];
     } else if (siteActive) {
       tabs = [
@@ -953,6 +954,10 @@ body.admin-preview-open{overflow:hidden}
     if (current === 'billie') return billieSettingsPage();
     if (current === 'settings') return settingsPage();
     if (current === 'gallery') return galleryPage();
+    if (current === 'posts') {
+      $('#adminContent').innerHTML = '<div class="admin-title-row"><h1>Posts</h1></div><section class="a-card" id="instagramPostsEditor"></section>';
+      return;
+    }
     if (current === 'users') return usersPage();
     if (current === 'featured') return contentsPage('featured');
     if (current === 'contents' || current.startsWith('contents/')) return contentsPage(current.split('/')[1] || 'videos');

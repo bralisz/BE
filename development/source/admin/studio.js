@@ -195,6 +195,126 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     content.classList.add('studio-dashboard'); content.append(top, tools, grid, more);
   }
 
+
+  function attachReelEditor(settings) {
+    if (!settings || settings.querySelector('#communityReelForm') || !window.beBackend?.data) return;
+    const db = window.beBackend.data;
+    const form = document.createElement('form');
+    form.id = 'communityReelForm';
+    form.className = 'dashboard-settings-form';
+    form.innerHTML = `<h3>Adicionar post</h3>
+      <fieldset class="form-grid" disabled>
+        <label class="field full">Link do post no Instagram<input class="a-input" name="permalink" type="url" required placeholder="https://www.instagram.com/reel/…"></label>
+        <label class="field full">Foto de capa<input class="a-input" name="cover" type="file" accept="image/*"></label>
+        <img hidden alt="Prévia da capa do Reel" width="108" height="192" style="object-fit:cover;border-radius:10px">
+        <div class="modal-actions"><button class="a-btn primary" type="submit">Adicionar post</button>
+</div>
+      </fieldset><p role="status" aria-live="polite"></p>`;
+    settings.append(form);
+    const fields = form.querySelector('fieldset');
+    const link = form.elements.permalink;
+    const file = form.elements.cover;
+    const preview = form.querySelector('img');
+    const status = form.querySelector('[role=status]');
+    let thumbnail = '';
+    function showCover(value) {
+      thumbnail = value || '';
+      preview.hidden = !thumbnail;
+      if (thumbnail) preview.src = thumbnail;
+      else preview.removeAttribute('src');
+    }
+    const heading = make('h3', '', 'Posts recentes');
+    const list = make('div', 'form-grid');
+    settings.append(heading, list);
+    async function load() {
+      const {data, error} = await window.beBackend.client.from('site_settings')
+        .select('id,permalink:data->>permalink,updated_at')
+        .or('id.like.ig-post-*,id.eq.community-instagram-reel')
+        .order('created_at', {ascending:false});
+      if (error) throw error;
+      list.replaceChildren();
+      for (const row of data) {
+        if (!row.permalink) continue;
+        const item = make('article', 'field');
+        const img = document.createElement('img');
+        img.src = '/api?route=instagram-reel&cover=' + encodeURIComponent(row.id) + '&v=' + encodeURIComponent(row.updated_at);
+        img.width = 108; img.height = 192; img.loading = 'lazy'; img.alt = 'Capa do post';
+        const anchor = make('a', '', 'Abrir no Instagram');
+        anchor.href = row.permalink; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer';
+        const remove = make('button', 'a-btn', 'Remover');
+        remove.type = 'button';
+        remove.onclick = async () => {
+          remove.disabled = true;
+          try {
+            await db.remove('settings', row.id);
+            item.remove();
+            status.textContent = 'Post removido.';
+          } catch {
+            status.textContent = 'Não foi possível remover o post.';
+            remove.disabled = false;
+          }
+        };
+        item.append(img, anchor, remove);
+        list.append(item);
+      }
+    }
+    file.onchange = async () => {
+      const image = file.files[0];
+      if (!image) return;
+      fields.disabled = true;
+      status.textContent = 'Preparando a capa…';
+      const source = URL.createObjectURL(image);
+      try {
+        const photo = new Image();
+        photo.src = source;
+        await photo.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = 540;
+        canvas.height = 960;
+        const scale = Math.max(canvas.width / photo.width, canvas.height / photo.height);
+        const w = photo.width * scale, h = photo.height * scale;
+        canvas.getContext('2d').drawImage(photo, (540-w)/2, (960-h)/2, w, h);
+        showCover(canvas.toDataURL('image/jpeg', 0.82));
+        status.textContent = '';
+      } catch {
+        file.value = '';
+        status.textContent = 'Não foi possível abrir essa foto. Escolha outra imagem.';
+      } finally {
+        URL.revokeObjectURL(source);
+        fields.disabled = false;
+      }
+    };
+    async function save(value) {
+      fields.disabled = true;
+      try {
+        await db.set('settings', 'ig-post-' + value.permalink.split('/')[4], value, {merge:false});
+        link.value = '';
+        file.value = '';
+        showCover('');
+        status.textContent = 'Post salvo na Comunidade.';
+        await refreshList();
+      } catch {
+        status.textContent = 'Falha ao salvar o post. Tente novamente.';
+      } finally {
+        fields.disabled = false;
+      }
+    }
+    form.onsubmit = event => {
+      event.preventDefault();
+      const match = /^https:\/\/(?:www\.)?instagram\.com\/(reels?|p)\/([\w-]+)\/?(?:[?#].*)?$/i.exec(link.value.trim());
+      if (!match || !thumbnail) {
+        status.textContent = !match ? 'Cole o link direto do post no Instagram.' : 'Escolha a foto de capa.';
+        return;
+      }
+      save({permalink:'https://www.instagram.com/' + match[1] + '/' + match[2] + '/', thumbnail});
+    };
+    async function refreshList() {
+      try { await load(); } catch { status.textContent = 'Não foi possível carregar a lista de posts.'; }
+    }
+    fields.disabled = false;
+    refreshList();
+  }
+
   function enhance() {
     const shell = document.querySelector('.admin-shell'); if (!shell) return;
     const header = shell.querySelector('.admin-topbar');
@@ -217,6 +337,7 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     const content = shell.querySelector('#adminContent');
     if (content?.classList.contains('studio-dashboard') && !content.querySelector('.studio-top')) content.classList.remove('studio-dashboard');
     recomposeDashboard(content);
+    attachReelEditor(content?.querySelector('#instagramPostsEditor'));
   }
   let queued = false;
   const observer = new MutationObserver(() => {
