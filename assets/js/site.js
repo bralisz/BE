@@ -6862,7 +6862,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (!raw) return null;
     try {
       const url = new URL(raw, location.origin);
-      const host = String(url.hostname || '').toLowerCase().replace(/^www\./, '');
+      const host = String(url.hostname || '').toLowerCase().replace(/^(?:(?:www|m)\.)+/, '');
+      // Links do VK copiados no celular usam m.vkvideo.ru ou m.vk.com.
+      // Todos devem abrir o mesmo player integrado usado nos filmes.
       if (host !== 'vkvideo.ru' && host !== 'vk.com') return null;
 
       let ownerId = '';
@@ -19282,7 +19284,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     play.dataset.mediaPlayerTrigger='true';
     play.removeAttribute('aria-disabled');
     play.href=url;
-    if(/^https?:\/\//.test(url) && !/(youtube\.com|youtu\.be|drive\.google\.com|vk\.com)/i.test(url))play.target='_blank';
+    if(/^https?:\/\//.test(url) && !/(youtube\.com|youtu\.be|drive\.google\.com|vk\.com|vkvideo\.ru)/i.test(url))play.target='_blank';
     else play.removeAttribute('target');
     play.click();
     setTimeout(()=>{
