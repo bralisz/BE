@@ -1,6 +1,6 @@
 'use strict';
 
-const { fetchPrivateSettingWithServiceRole, listInstagramPostSettings } = require('./public-data');
+const { listInstagramPostSettings } = require('./public-data');
 
 const ACCOUNT = 'billieilishtv_';
 
@@ -36,7 +36,7 @@ module.exports = async function instagramReel(req, res) {
     const coverId = req.query?.cover;
     if (coverId !== undefined) {
       if (typeof coverId !== 'string' || !/^(?:ig-post-[\w-]+|community-instagram-reel)$/.test(coverId)) return res.status(404).end();
-      const saved = await fetchPrivateSettingWithServiceRole(coverId);
+      const [saved] = await listInstagramPostSettings(coverId);
       const image = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+=*)$/.exec(saved?.thumbnail);
       if (!image) return res.status(404).end();
       res.setHeader('Content-Type', 'image/jpeg');
