@@ -676,3 +676,5 @@ module.exports = async function publicData(req, res) {
     return res.status(404).end();
   }
 };
+
+module.exports.fetchPrivateSettingWithServiceRole = fetchPrivateSettingWithServiceRole;
