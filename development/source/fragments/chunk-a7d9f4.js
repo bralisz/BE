@@ -1179,15 +1179,99 @@ body.admin-preview-open{overflow:hidden}
     if(!/^https:\/\//i.test(url))throw new Error('Não foi possível obter a URL pública.');
     return url;
   }
-  function seriesSubtitleInputs(ep){
+  function seriesSubtitleInputs(ep, direct = false){
     return `<div class="wide series-subtitle-uploads" style="grid-column:1/-1;display:grid;gap:10px;padding:14px;border:1px solid rgba(153,183,230,.2);border-radius:13px">
-      <strong>Arquivos de legenda deste episódio</strong><small>Envie .SRT ou .VTT (até 5 MB) em cada idioma. A seleção é automática conforme o idioma do site.</small>
+      <strong>${direct ? 'Legendas da série (link direto)' : 'Arquivos de legenda deste episódio'}</strong><small>Envie .SRT ou .VTT (até 5 MB) em cada idioma. A seleção é automática conforme o idioma do site.</small>
       ${SERIES_LANGS.map(([locale,label])=>{
         const url=String(ep.subtitles?.[locale]||'');
         let filename='';try{filename=decodeURIComponent(new URL(url,location.origin).pathname.split('/').pop()||'')}catch(_){filename='legenda'}
         return `<div class="series-subtitle-row" style="display:grid;grid-template-columns:minmax(100px,.4fr) minmax(0,1fr) auto;gap:8px;align-items:center"><label>${label}</label><input class="a-input" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip,text/plain" data-series-subtitle-upload="${locale}" aria-label="Adicionar legenda ${label}">${url?`<button type="button" class="a-btn" data-series-subtitle-remove="${locale}">Remover</button>`:'<span></span>'}<small style="grid-column:2/-1;overflow-wrap:anywhere" aria-live="polite">${url?'Arquivo atual: '+esc(filename):'Nenhum arquivo enviado'}</small></div>`;
       }).join('')}
     </div>`;
+  }
+
+  function readSeriesSubtitleMap(raw) {
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw); } catch (_) { raw = {}; }
+    }
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  }
+
+  function seriesDirectSubtitleEditorField(item = {}) {
+    const subtitles = readSeriesSubtitleMap(item.subtitles);
+    const folder = String(item.id || 'draft-' + Date.now()).replace(/[^a-zA-Z0-9_-]/g, '-');
+    return `<div class="field full series-direct-subtitle-editor" id="seriesDirectSubtitleEditor" data-series-folder="${esc(folder)}" style="display:none;min-width:0">
+      ${seriesSubtitleInputs({ subtitles }, true)}
+      <textarea name="subtitles" id="seriesDirectSubtitleJson" hidden>${esc(JSON.stringify(subtitles))}</textarea>
+    </div>`;
+  }
+
+  function setupSeriesDirectSubtitlesEditor(root) {
+    const editor = $('#seriesDirectSubtitleEditor', root);
+    const hidden = $('#seriesDirectSubtitleJson', root);
+    const form = $('#editorForm', root);
+    const link = form?.querySelector('[name="contentUrl"]');
+    if (!editor || !hidden || !form || !link) return;
+    let subtitles = readSeriesSubtitleMap(hidden.value);
+    let uploading = 0;
+    const buttons = Array.from(form.querySelectorAll('button[type="submit"]'));
+    const syncVisibility = () => {
+      const visible = Boolean(String(link.value || '').trim());
+      editor.hidden = !visible;
+      editor.style.display = visible ? '' : 'none';
+    };
+    const sync = () => {
+      hidden.value = JSON.stringify(subtitles);
+      hidden.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const draw = () => {
+      const previous = editor.querySelector('.series-subtitle-uploads');
+      if (previous) previous.outerHTML = seriesSubtitleInputs({ subtitles }, true);
+    };
+    link.addEventListener('input', syncVisibility);
+    link.addEventListener('change', syncVisibility);
+    syncVisibility();
+    editor.addEventListener('change', async event => {
+      const input = event.target.closest?.('[data-series-subtitle-upload]');
+      if (!input || !input.files?.length) return;
+      const locale = input.dataset.seriesSubtitleUpload;
+      if (!SERIES_LANGS.some(([key]) => key === locale)) return;
+      const file = input.files[0];
+      const status = input.closest('.series-subtitle-row')?.querySelector('small');
+      uploading++;
+      input.disabled = true;
+      buttons.forEach(button => button.disabled = true);
+      if (status) status.textContent = 'Enviando ' + file.name + '…';
+      try {
+        const url = await uploadSeriesSubtitle(file, locale, editor.dataset.seriesFolder || 'series', 'direct');
+        subtitles = { ...subtitles, [locale]: url };
+        sync();
+        draw();
+      } catch (error) {
+        if (status) status.textContent = error?.message || 'Falha ao enviar a legenda.';
+        input.value = '';
+      } finally {
+        uploading--;
+        if (!uploading) buttons.forEach(button => button.disabled = false);
+        if (input.isConnected) input.disabled = false;
+      }
+    });
+    editor.addEventListener('click', event => {
+      const remove = event.target.closest?.('[data-series-subtitle-remove]');
+      if (!remove || uploading) return;
+      const locale = remove.dataset.seriesSubtitleRemove;
+      if (!SERIES_LANGS.some(([key]) => key === locale)) return;
+      subtitles = { ...subtitles };
+      delete subtitles[locale];
+      sync();
+      draw();
+    });
+    form.addEventListener('submit', event => {
+      if (!uploading) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.alert('Aguarde o envio da legenda terminar antes de salvar.');
+    }, true);
   }
 
   function seriesEpisodesEditorField(item = {}) {
@@ -1345,7 +1429,7 @@ body.admin-preview-open{overflow:hidden}
           ${imageField(isVisualTitle ? 'Imagem / thumbnail *' : 'Imagem / thumbnail *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '')}
           ${isVisualTitle ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : ''}
           <div class="field full"><label>${name === 'videos' ? 'URL do vídeo' : 'Link do conteúdo'}</label><input class="a-input" name="${name === 'videos' ? 'videoUrl' : 'contentUrl'}" value="${esc(name === 'videos' ? (item.videoUrl || item.contentUrl || item.link || '') : (item.contentUrl || item.link || ''))}" placeholder="https://..."></div>
-          ${name === 'series' ? seriesEpisodesEditorField(item) : ''}
+          ${name === 'series' ? seriesDirectSubtitleEditorField(item) + seriesEpisodesEditorField(item) : ''}
         </div>
       </section>
 
@@ -1591,7 +1675,7 @@ body.admin-preview-open{overflow:hidden}
     setupImagePreviews(root);
     if (name === 'featured') setupFeaturedContentPicker(root, context, draft);
     if (modernEditor) draftController = setupModernContentEditor(root, name, item, draftKey, storedDraft);
-    if (name === 'series') setupSeriesEpisodesEditor(root);
+    if (name === 'series') { setupSeriesEpisodesEditor(root); setupSeriesDirectSubtitlesEditor(root); }
 
     if (['videos','movies','series'].includes(name)) {
       const search = $('#contentSectionSearch', root);
@@ -1618,6 +1702,10 @@ body.admin-preview-open{overflow:hidden}
         const data = Object.fromEntries(formData.entries());
 
         if (name === 'series') {
+          const directSubtitles = readSeriesSubtitleMap(data.subtitles);
+          data.subtitles = Object.fromEntries(Object.entries(directSubtitles)
+            .filter(([locale, url]) => SERIES_LANGS.some(([key]) => key === locale) && typeof url === 'string' && /^https:\/\//i.test(url.trim()))
+            .map(([locale, url]) => [locale, url.trim()]));
           let episodeRows;
           try { episodeRows = JSON.parse(String(data.episodes || '[]')); }
           catch (_) { throw new Error('Não foi possível ler os episódios cadastrados.'); }
