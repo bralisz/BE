@@ -35,6 +35,19 @@
     var lang=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
     return (communityShareTranslations[lang]||communityShareTranslations['pt-br'])[key]||key;
   }
+  function ownsBillieFanTag(profile){
+    if(!profile||typeof profile!=='object')return false;
+    var active=String(profile.communityTag||profile.community_tag||'').trim().toLowerCase();
+    if(active==='billie_fan')return true;
+    var owned=profile.communityTags||profile.community_tags;
+    return Array.isArray(owned)&&owned.some(function(tag){
+      return String(tag||'').trim().toLowerCase()==='billie_fan';
+    });
+  }
+  function hasClaimedBillieFanTagLocally(uid){
+    try{return localStorage.getItem('beCommunityTag:'+uid)==='billie_fan';}
+    catch(_){return false;}
+  }
   function renderSharePromotion(){
     if(!page)return;
     var section=page.querySelector('#communityShareSection');
@@ -42,12 +55,36 @@
     var tag=page.querySelector('#communityShareTag');
     var action=page.querySelector('#communityShareAction');
     if(!section||!title||!tag||!action)return;
-    var signedIn=Boolean(currentUser()&&currentUser().uid);
+    var user=currentUser();
+    var uid=String(user&&user.uid||'');
+    var signedIn=Boolean(uid);
     title.textContent=shareCopy(signedIn?'member':'guest');
     tag.textContent=shareCopy('tag');
     action.textContent=shareCopy(signedIn?'share':'signup');
     action.setAttribute('aria-label',action.textContent);
     section.dataset.signedIn=signedIn?'true':'false';
+    if(!signedIn){
+      section.hidden=false;
+      return;
+    }
+    // Do not flash a reward promotion before the user's existing badges load.
+    if(hasClaimedBillieFanTagLocally(uid)){
+      section.hidden=true;
+      return;
+    }
+    if(state.shareProfileUserId===uid&&state.shareProfile){
+      section.hidden=ownsBillieFanTag(state.shareProfile);
+      return;
+    }
+    section.hidden=true;
+    loadShareProfile(user).then(function(profile){
+      if(!page||page.querySelector('#communityShareSection')!==section
+        ||String(currentUser()&&currentUser().uid||'')!==uid)return;
+      section.hidden=ownsBillieFanTag(profile)||hasClaimedBillieFanTagLocally(uid);
+    }).catch(function(){
+      if(page&&page.querySelector('#communityShareSection')===section
+        &&String(currentUser()&&currentUser().uid||'')===uid)section.hidden=false;
+    });
   }
   function sharePromotionStatus(key){
     var status=page&&page.querySelector('#communityShareStatus');
@@ -64,7 +101,7 @@
     state.shareProfileUserId=uid;state.shareProfile=null;
     var backend=window.beBackend;
     state.shareProfilePending=Promise.resolve(backend&&backend.ready).then(function(){
-      return backend&&backend.profiles&&typeof backend.profiles.get==='function'?backend.profiles.get(uid):null;
+      return backend&&backend.profiles&&typeof backend.profiles.get==='function'?backend.profiles.get(uid,{force:true}):null;
     }).then(function(profile){
       if(state.shareProfileUserId===uid)state.shareProfile=profile;
       return profile;
@@ -1542,6 +1579,25 @@
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
     window.addEventListener('be:community-ranking-visibility',function(event){var user=currentUser();if(user)writeRankingPreference(user.uid,!(event&&event.detail&&event.detail.enabled===false));});
     window.beBackend&&window.beBackend.auth&&window.beBackend.auth.onChange&&window.beBackend.auth.onChange(function(user){setTimeout(injectPrivacySettings,50);var uid=String(user&&user.uid||'');if(uid!==state.lastPayloadUserId){state.lastPayloadAt=0;state.lastPayload=null;}if(state.loading&&uid!==state.loadingForUserId){state.requestId+=1;state.loading=false;state.loadingForUserId='';}if(uid!==state.similarLoadedUserId){state.similarLoadedAt=0;state.similarRequestId+=1;var similarHost=page&&page.querySelector('#communitySimilarContent');if(similarHost)similarHost.replaceChildren();}if(uid!==state.shareProfileUserId){state.shareProfile=null;state.shareProfilePending=null;state.shareProfileUserId='';}renderSharePromotion();if(document.body.classList.contains('community-page-active')){refreshCommunity(true);scheduleSimilarFans();}var active=user&&user.uid?user:currentUser();if(!active||!active.uid){boafNoticeOpenedForUser='';if(boafNoticeTimer){window.clearTimeout(boafNoticeTimer);boafNoticeTimer=0;}hideBoafStreamPanelWithoutDismiss();return;}window.setTimeout(function(){scheduleBoafStreamNotice(350);retryPendingBoafClaim();},450);});
+    window.addEventListener('be:community-tag-updated',function(event){
+      var detail=event&&event.detail||{};
+      var uid=String(currentUser()&&currentUser().uid||'');
+      if(uid&&String(detail.userId||'')===uid&&String(detail.tag||'').toLowerCase()==='billie_fan'){
+        try{localStorage.setItem('beCommunityTag:'+uid,'billie_fan');}catch(_){}
+        renderSharePromotion();
+      }
+    });
+    window.addEventListener('be:profile-refreshed',function(event){
+      var profile=event&&event.detail&&event.detail.profile;
+      var uid=String(currentUser()&&currentUser().uid||'');
+      if(!uid||!profile||String(profile.uid||profile.id||'')!==uid)return;
+      state.shareProfileUserId=uid;
+      state.shareProfile=profile;
+      if(ownsBillieFanTag(profile)){
+        try{localStorage.setItem('beCommunityTag:'+uid,'billie_fan');}catch(_){}
+      }
+      renderSharePromotion();
+    });
     window.addEventListener('be:profile-share-campaign-complete',function(){scheduleBoafStreamNotice(300);});
     window.addEventListener('be:profile-favorites-changed',function(){scheduleBoafStreamNotice(300);});
   }
