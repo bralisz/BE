@@ -1576,7 +1576,7 @@
     play.dataset.mediaPlayerTrigger='true';
     play.removeAttribute('aria-disabled');
     play.href=url;
-    if(/^https?:\/\//.test(url) && !/(youtube\.com|youtu\.be|drive\.google\.com|vk\.com)/i.test(url))play.target='_blank';
+    if(/^https?:\/\//.test(url) && !/(youtube\.com|youtu\.be|drive\.google\.com|vk\.com|vkvideo\.ru)/i.test(url))play.target='_blank';
     else play.removeAttribute('target');
     play.click();
     setTimeout(()=>{
