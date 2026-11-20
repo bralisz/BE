@@ -142,6 +142,25 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
   html.admin-workspace.admin-studio body.admin-mode .studio-highlights .dashboard-metric-card {min-height:230px!important;padding:16px!important;border-radius:20px!important}
   html.admin-workspace.admin-studio body.admin-mode .admin-subnav {padding:0 16px 20px!important}
 }
+
+#instagramPostsEditor {display:grid!important;gap:16px!important;min-width:0}
+#communityReelForm {min-width:0}
+#communityReelForm fieldset {border:0;margin:0;padding:0;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+#communityReelForm .field,#communityReelForm .a-input {min-width:0;max-width:100%}
+#communityReelForm .modal-actions {margin:0;display:block;width:100%}
+#communityReelForm .modal-actions .a-btn {width:100%;min-height:46px}
+#communityReelForm [role="status"] {display:block;min-height:22px;margin-top:10px;line-height:1.5}
+#instagramPostsEditor .studio-post-list {display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:12px;min-width:0}
+#instagramPostsEditor .studio-post-card {display:flex;align-items:stretch;gap:14px;min-width:0;padding:14px;border:1px solid #3c4a66;border-radius:18px;background:#1a2336}
+#instagramPostsEditor .studio-post-card img {flex:0 0 92px;display:block;width:92px;height:164px;object-fit:cover;border-radius:12px;background:#252d3d;color:#c1cce0;font-size:12px}
+#instagramPostsEditor .studio-post-details {display:flex;flex-direction:column;justify-content:space-between;gap:10px;flex:1;min-width:0}
+#instagramPostsEditor .studio-post-details a {color:#dde7ff;overflow-wrap:anywhere;font-size:13px}
+#instagramPostsEditor .studio-post-details .a-btn {width:100%;min-height:40px}
+@media(max-width:500px){
+  #instagramPostsEditor .studio-post-list {grid-template-columns:minmax(0,1fr)}
+  #instagramPostsEditor .studio-post-card {padding:12px}
+}
+
 `;
   document.head.appendChild(style);
   const make = (tag, className, text) => {
@@ -224,20 +243,20 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
       else preview.removeAttribute('src');
     }
     const heading = make('h3', '', 'Posts recentes');
-    const list = make('div', 'form-grid');
+    const list = make('div', 'studio-post-list');
     settings.append(heading, list);
     async function load() {
       const {data, error} = await window.beBackend.client.from('site_settings')
-        .select('id,permalink:data->>permalink,updated_at')
+        .select('id,permalink:data->>permalink,thumbnail:data->>thumbnail,updated_at')
         .or('id.like.ig-post-*,id.eq.community-instagram-reel')
-        .order('created_at', {ascending:false});
+        .order('created_at', {ascending:false}).limit(30);
       if (error) throw error;
       list.replaceChildren();
       for (const row of data) {
         if (!row.permalink) continue;
-        const item = make('article', 'field');
+        const item = make('article', 'studio-post-card');
         const img = document.createElement('img');
-        img.src = '/api?route=instagram-reel&cover=' + encodeURIComponent(row.id) + '&v=' + encodeURIComponent(row.updated_at);
+        img.src = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(row.thumbnail || '')\n          ? row.thumbnail\n          : '/api?route=instagram-reel&cover=' + encodeURIComponent(row.id) + '&v=' + encodeURIComponent(row.updated_at);\n        img.onerror = () => { img.removeAttribute('src'); img.alt = 'Capa indisponível'; };
         img.width = 108; img.height = 192; img.loading = 'lazy'; img.alt = 'Capa do post';
         const anchor = make('a', '', 'Abrir no Instagram');
         anchor.href = row.permalink; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer';
@@ -254,7 +273,7 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
             remove.disabled = false;
           }
         };
-        item.append(img, anchor, remove);
+        const details = make('div', 'studio-post-details');\n        details.append(anchor, remove);\n        item.append(img, details);
         list.append(item);
       }
     }
