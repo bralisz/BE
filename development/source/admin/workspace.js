@@ -173,7 +173,7 @@ html.admin-workspace body.admin-mode .workspace-command[hidden] {display:none!im
   document.head.appendChild(style);
 
   const destinations = [
-    ['dashboard', 'Visão geral', 'Painel'], ['notifications', 'Notificações', 'Comunicação'],
+    ['dashboard', 'Visão geral', 'Painel'], ['statistics', 'Estatísticas', 'Painel'], ['operations', 'Configurações e operações', 'Site'], ['notifications', 'Notificações', 'Comunicação'],
     ['contents/videos', 'Vídeos', 'Conteúdo'], ['contents/movies', 'Filmes', 'Conteúdo'],
     ['contents/series', 'Séries', 'Conteúdo'], ['contents/news', 'Álbuns', 'Conteúdo'],
     ['gallery', 'Galeria', 'Conteúdo'], ['posts', 'Posts', 'Conteúdo'], ['billie', 'Billie Eilish', 'Conteúdo'],
