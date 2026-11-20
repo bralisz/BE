@@ -21,7 +21,8 @@
     "test:watch-party:invites": "node scripts/test-watch-party-invites.cjs",
     "test:community-discovery": "node scripts/test-community-discovery.cjs",
     "test:profile-activity": "node scripts/test-profile-activity-refresh.cjs && node scripts/test-profile-last-watched.cjs && node scripts/test-profile-watch-click.cjs",
-    "test:performance": "node scripts/test-performance-safety.cjs && node scripts/test-mobile-nav-loading.cjs && node scripts/test-data-analytics.cjs"
+    "test:performance": "node scripts/test-performance-safety.cjs && node scripts/test-mobile-nav-loading.cjs && node scripts/test-data-analytics.cjs",
+    "test:scale": "node scripts/test-scaling-cache.cjs"
   },
   "devDependencies": {
     "jsdom": "^30.1.2"

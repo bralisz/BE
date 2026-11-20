@@ -28,3 +28,4 @@ jobs:
       - run: node scripts/test-profile-desktop-heart.cjs
       - run: node scripts/test-profile-follow.cjs
       - run: node scripts/test-mobile-nav-loading.cjs
+      - run: npm run test:scale
