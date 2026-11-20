@@ -677,20 +677,5 @@ module.exports = async function publicData(req, res) {
   }
 };
 
-module.exports.fetchPrivateSettingWithServiceRole = fetchPrivateSettingWithServiceRole;
-
-module.exports.listInstagramPostSettings = async function () {
-  const key = serviceRoleKey();
-  if (!key) return [];
-  const params = new URLSearchParams({
-    select: 'id,permalink:data->>permalink,updated_at',
-    or: '(id.like.ig-post-*,id.eq.community-instagram-reel)',
-    order: 'created_at.desc,id.desc',
-    limit: '30'
-  });
-  const response = await fetch(config().url + '/rest/v1/site_settings?' + params, {
-    headers: { apikey: key, Authorization: 'Bearer ' + key }, cache: 'no-store'
-  });
-  if (!response.ok) throw new Error('Posts unavailable');
-  return response.json();
-};
+module.exports.listInstagramPostSettings = (coverId = null) =>
+  callRpc('get_community_instagram_posts', { p_cover: coverId });
