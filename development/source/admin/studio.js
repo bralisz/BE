@@ -336,7 +336,7 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     });
     const content = shell.querySelector('#adminContent');
     if (content?.classList.contains('studio-dashboard') && !content.querySelector('.studio-top')) content.classList.remove('studio-dashboard');
-    recomposeDashboard(content);
+    if (location.hash !== '#/admin/operations') recomposeDashboard(content);
     attachReelEditor(content?.querySelector('#instagramPostsEditor'));
   }
   let queued = false;
@@ -348,4 +348,4 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
   enhance();
 }
 
-module.exports = '(' + installAdminStudio.toString() + ')();';
+module.exports = require('./overview') + '(' + installAdminStudio.toString() + ')();';
