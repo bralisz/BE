@@ -1,5 +1,7 @@
 'use strict';
 
+const { fetchPrivateSettingWithServiceRole } = require('./public-data');
+
 const ACCOUNT = 'billieilishtv_';
 
 async function latestReel(accountId, token) {
@@ -30,15 +32,17 @@ async function latestReel(accountId, token) {
 
 module.exports = async function instagramReel(req, res) {
   if (req.method !== 'GET') return res.status(405).setHeader('Allow', 'GET').end();
-  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const id = process.env.INSTAGRAM_USER_ID;
-  if (!token || !/^\d+$/.test(id || '')) {
-    res.setHeader('Cache-Control', 'no-store');
-    return res.status(503).end();
-  }
   try {
-    const reel = await latestReel(id, token);
-    res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=300');
+    const saved = await fetchPrivateSettingWithServiceRole('community-instagram-reel');
+    if (/^https:\/\/www\.instagram\.com\/(?:reels?|p)\/[\w-]+\/$/.test(saved?.permalink) &&
+        /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(saved?.thumbnail)) {
+      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30');
+      return res.status(200).json({ reel: { permalink: saved.permalink, thumbnail: saved.thumbnail } });
+    }
+    const id = process.env.INSTAGRAM_USER_ID;
+    const token = process.env.INSTAGRAM_ACCESS_TOKEN;
+    const reel = token && /^\d+$/.test(id || '') ? await latestReel(id, token) : null;
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30');
     return res.status(200).json({ reel });
   } catch {
     res.setHeader('Cache-Control', 'no-store');
