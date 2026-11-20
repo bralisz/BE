@@ -29,6 +29,8 @@ const BILLIE_SETTING_FIELDS = new Set([
 ]);
 
 const upstreamResponseCache = new Map();
+const MAX_UPSTREAM_CACHE_ENTRIES = 128;
+
 const FEATURED_CACHE_TAG = 'betv-featured';
 const NOTIFICATIONS_CACHE_TAG = 'betv-notifications';
 
@@ -92,16 +94,40 @@ function upstreamTtl(name, id) {
   return 30 * 60 * 1000;
 }
 
+// Bound warm instances: versioned catalog URLs must not grow the map indefinitely.
+function trimUpstreamCache(now = Date.now()) {
+  for (const [key, entry] of upstreamResponseCache) {
+    if (!entry.pending && entry.expiresAt <= now) upstreamResponseCache.delete(key);
+  }
+  while (upstreamResponseCache.size > MAX_UPSTREAM_CACHE_ENTRIES) {
+    upstreamResponseCache.delete(upstreamResponseCache.keys().next().value);
+  }
+}
+
 async function cachedUpstream(key, ttl, loader) {
   const now = Date.now();
   const cached = upstreamResponseCache.get(key);
-  if (cached && cached.expiresAt > now) return cached.promise;
-  const promise = Promise.resolve().then(loader).catch(error => {
+  // A zero-TTL request must still share an in-flight query with other visitors.
+  if (cached && (cached.pending || cached.expiresAt > now)) {
     upstreamResponseCache.delete(key);
+    upstreamResponseCache.set(key, cached);
+    return cached.promise;
+  }
+  upstreamResponseCache.delete(key);
+  const entry = { pending: true, expiresAt: now + Math.max(0, Number(ttl) || 0), promise: null };
+  entry.promise = Promise.resolve().then(loader).then(value => {
+    entry.pending = false;
+    if (entry.expiresAt <= Date.now() && upstreamResponseCache.get(key) === entry) {
+      upstreamResponseCache.delete(key);
+    }
+    return value;
+  }, error => {
+    if (upstreamResponseCache.get(key) === entry) upstreamResponseCache.delete(key);
     throw error;
   });
-  upstreamResponseCache.set(key, { promise, expiresAt: now + ttl });
-  return promise;
+  upstreamResponseCache.set(key, entry);
+  trimUpstreamCache(now);
+  return entry.promise;
 }
 
 function config() {
