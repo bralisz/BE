@@ -256,7 +256,10 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
         if (!row.permalink) continue;
         const item = make('article', 'studio-post-card');
         const img = document.createElement('img');
-        img.src = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(row.thumbnail || '')\n          ? row.thumbnail\n          : '/api?route=instagram-reel&cover=' + encodeURIComponent(row.id) + '&v=' + encodeURIComponent(row.updated_at);\n        img.onerror = () => { img.removeAttribute('src'); img.alt = 'Capa indisponível'; };
+        img.src = /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(row.thumbnail || '')
+          ? row.thumbnail
+          : '/api?route=instagram-reel&cover=' + encodeURIComponent(row.id) + '&v=' + encodeURIComponent(row.updated_at);
+        img.onerror = () => { img.removeAttribute('src'); img.alt = 'Capa indisponível'; };
         img.width = 108; img.height = 192; img.loading = 'lazy'; img.alt = 'Capa do post';
         const anchor = make('a', '', 'Abrir no Instagram');
         anchor.href = row.permalink; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer';
@@ -273,7 +276,9 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
             remove.disabled = false;
           }
         };
-        const details = make('div', 'studio-post-details');\n        details.append(anchor, remove);\n        item.append(img, details);
+        const details = make('div', 'studio-post-details');
+        details.append(anchor, remove);
+        item.append(img, details);
         list.append(item);
       }
     }
