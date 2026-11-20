@@ -23732,3 +23732,8 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
   }
 }
 
+
+
+/* Once the Billie Fan badge is earned, remove the entire share promotion. */
+#communityShareSection[hidden]{display:none!important}
+
