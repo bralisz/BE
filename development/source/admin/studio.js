@@ -202,13 +202,13 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     const form = document.createElement('form');
     form.id = 'communityReelForm';
     form.className = 'dashboard-settings-form';
-    form.innerHTML = `<h3>Reel da Comunidade</h3>
+    form.innerHTML = `<h3>Adicionar post</h3>
       <fieldset class="form-grid" disabled>
-        <label class="field full">Link do Reel<input class="a-input" name="permalink" type="url" required placeholder="https://www.instagram.com/reel/…"></label>
+        <label class="field full">Link do post no Instagram<input class="a-input" name="permalink" type="url" required placeholder="https://www.instagram.com/reel/…"></label>
         <label class="field full">Foto de capa<input class="a-input" name="cover" type="file" accept="image/*"></label>
         <img hidden alt="Prévia da capa do Reel" width="108" height="192" style="object-fit:cover;border-radius:10px">
-        <div class="modal-actions"><button class="a-btn primary" type="submit">Salvar Reel</button>
-        <button class="a-btn" type="button" data-remove>Remover destaque manual</button></div>
+        <div class="modal-actions"><button class="a-btn primary" type="submit">Adicionar post</button>
+</div>
       </fieldset><p role="status" aria-live="polite"></p>`;
     settings.append(form);
     const fields = form.querySelector('fieldset');
@@ -223,14 +223,39 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
       if (thumbnail) preview.src = thumbnail;
       else preview.removeAttribute('src');
     }
+    const heading = make('h3', '', 'Posts recentes');
+    const list = make('div', 'form-grid');
+    settings.append(heading, list);
     async function load() {
-      try {
-        const saved = await db.get('settings', 'community-instagram-reel');
-        link.value = saved?.permalink || '';
-        showCover(saved?.thumbnail);
-        fields.disabled = false;
-      } catch {
-        status.textContent = 'Não foi possível carregar o Reel. Reabra a página para tentar novamente.';
+      const {data, error} = await window.beBackend.client.from('site_settings')
+        .select('id,permalink:data->>permalink,updated_at')
+        .or('id.like.ig-post-*,id.eq.community-instagram-reel')
+        .order('created_at', {ascending:false});
+      if (error) throw error;
+      list.replaceChildren();
+      for (const row of data) {
+        if (!row.permalink) continue;
+        const item = make('article', 'field');
+        const img = document.createElement('img');
+        img.src = '/api?route=instagram-reel&cover=' + encodeURIComponent(row.id) + '&v=' + encodeURIComponent(row.updated_at);
+        img.width = 108; img.height = 192; img.loading = 'lazy'; img.alt = 'Capa do post';
+        const anchor = make('a', '', 'Abrir no Instagram');
+        anchor.href = row.permalink; anchor.target = '_blank'; anchor.rel = 'noopener noreferrer';
+        const remove = make('button', 'a-btn', 'Remover');
+        remove.type = 'button';
+        remove.onclick = async () => {
+          remove.disabled = true;
+          try {
+            await db.remove('settings', row.id);
+            item.remove();
+            status.textContent = 'Post removido.';
+          } catch {
+            status.textContent = 'Não foi possível remover o post.';
+            remove.disabled = false;
+          }
+        };
+        item.append(img, anchor, remove);
+        list.append(item);
       }
     }
     file.onchange = async () => {
@@ -262,13 +287,14 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     async function save(value) {
       fields.disabled = true;
       try {
-        await db.set('settings', 'community-instagram-reel', value, {merge:false});
-        link.value = value.permalink;
+        await db.set('settings', 'ig-post-' + value.permalink.split('/')[4], value, {merge:false});
+        link.value = '';
         file.value = '';
-        showCover(value.thumbnail);
-        status.textContent = value.permalink ? 'Reel salvo na Comunidade.' : 'Destaque manual removido.';
+        showCover('');
+        status.textContent = 'Post salvo na Comunidade.';
+        await refreshList();
       } catch {
-        status.textContent = 'Falha ao salvar o Reel. Tente novamente.';
+        status.textContent = 'Falha ao salvar o post. Tente novamente.';
       } finally {
         fields.disabled = false;
       }
@@ -277,13 +303,16 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
       event.preventDefault();
       const match = /^https:\/\/(?:www\.)?instagram\.com\/(reels?|p)\/([\w-]+)\/?(?:[?#].*)?$/i.exec(link.value.trim());
       if (!match || !thumbnail) {
-        status.textContent = !match ? 'Cole o link direto do Reel no Instagram.' : 'Escolha a foto de capa.';
+        status.textContent = !match ? 'Cole o link direto do post no Instagram.' : 'Escolha a foto de capa.';
         return;
       }
       save({permalink:'https://www.instagram.com/' + match[1] + '/' + match[2] + '/', thumbnail});
     };
-    form.querySelector('[data-remove]').onclick = () => save({permalink:'', thumbnail:''});
-    load();
+    async function refreshList() {
+      try { await load(); } catch { status.textContent = 'Não foi possível carregar a lista de posts.'; }
+    }
+    fields.disabled = false;
+    refreshList();
   }
 
   function enhance() {
@@ -308,7 +337,7 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     const content = shell.querySelector('#adminContent');
     if (content?.classList.contains('studio-dashboard') && !content.querySelector('.studio-top')) content.classList.remove('studio-dashboard');
     recomposeDashboard(content);
-    attachReelEditor(content?.querySelector('.dashboard-site-settings'));
+    attachReelEditor(content?.querySelector('#instagramPostsEditor'));
   }
   let queued = false;
   const observer = new MutationObserver(() => {
