@@ -176,7 +176,7 @@ html.admin-workspace body.admin-mode .workspace-command[hidden] {display:none!im
     ['dashboard', 'Visão geral', 'Painel'], ['notifications', 'Notificações', 'Comunicação'],
     ['contents/videos', 'Vídeos', 'Conteúdo'], ['contents/movies', 'Filmes', 'Conteúdo'],
     ['contents/series', 'Séries', 'Conteúdo'], ['contents/news', 'Álbuns', 'Conteúdo'],
-    ['gallery', 'Galeria', 'Conteúdo'], ['billie', 'Billie Eilish', 'Conteúdo'],
+    ['gallery', 'Galeria', 'Conteúdo'], ['posts', 'Posts', 'Conteúdo'], ['billie', 'Billie Eilish', 'Conteúdo'],
     ['sections', 'Seções do site', 'Site'], ['settings', 'Comunidade', 'Site'],
     ['users', 'Usuários', 'Pessoas']
   ];
