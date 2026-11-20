@@ -3,6 +3,7 @@
 const loaders = Object.freeze({
   account: () => require('../server/api-routes/account'),
   admin: () => require('../server/api-routes/admin'),
+  'instagram-reel': () => require('../server/api-routes/instagram-reel'),
   media: () => require('../server/api-routes/media'),
   meta: () => require('../server/api-routes/meta'),
   'profile-share-image': () => require('../server/api-routes/profile-share-image'),
