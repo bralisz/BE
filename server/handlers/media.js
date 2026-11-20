@@ -256,7 +256,15 @@ module.exports = async function mediaProxy(req, res) {
       outputType = 'image/webp';
     }
     res.setHeader('Content-Type', outputType);
-    res.setHeader('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable');
+    // Raw URL tokens identify a stable image source; record lookups can change in admin.
+    // Never pin an editable banner/avatar to the visitor's browser for a full year.
+    if (token) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800');
+      res.setHeader('Vercel-CDN-Cache-Control', 'public, max-age=604800, stale-while-revalidate=604800, stale-if-error=86400');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=120, s-maxage=600, stale-while-revalidate=3600');
+      res.setHeader('Vercel-CDN-Cache-Control', 'public, max-age=600, stale-while-revalidate=3600, stale-if-error=86400');
+    }
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     res.setHeader('Vary', 'Accept');
