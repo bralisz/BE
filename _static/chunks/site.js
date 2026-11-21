@@ -1692,15 +1692,25 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
     const raw = String(value || '').trim();
+    if (!raw) return raw;
     const slug = String(requestedSlug || 'pt-br').toLowerCase();
-    if (!raw || slug === 'pt-br') return raw;
     const normalized = raw.toLowerCase().replace(/,/g, ' ');
-    const hoursMatch = normalized.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i);
-    const minutesMatch = normalized.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);
+    const hoursMatch = normalized.match(/(\d+)\s*(?:hours?|hrs?|horas?|heures?|ore|ora|h)(?=\s|\d|$)/i);
+    const minutesMatch = normalized.match(/(\d+)\s*(?:minutes?|minutos?|minuti|mins?|m)(?=\s|$)/i);
     if (!hoursMatch && !minutesMatch) return raw;
+    const units = {
+      'pt-br': ['minuto', 'minutos'],
+      'en-us': ['minute', 'minutes'],
+      es: ['minuto', 'minutos'],
+      fr: ['minute', 'minutes'],
+      it: ['minuto', 'minuti']
+    }[slug] || ['minuto', 'minutos'];
     const parts = [];
     if (hoursMatch) parts.push(slug === 'en-us' ? `${Number(hoursMatch[1])} hr` : `${Number(hoursMatch[1])} h`);
-    if (minutesMatch) parts.push(`${Number(minutesMatch[1])} min`);
+    if (minutesMatch) {
+      const minutes = Number(minutesMatch[1]);
+      parts.push(hoursMatch ? `${minutes} min` : `${minutes} ${units[minutes === 1 ? 0 : 1]}`);
+    }
     return parts.join(' ');
   }
 
@@ -1728,7 +1738,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function localizeContentRecord(record, collection = '') {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
-    if (slug === 'pt-br') return record;
+    if (slug === 'pt-br') {
+      const result = { ...record };
+      ['duration','runtime','videoDuration'].forEach(field => {
+        if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
+      });
+      return result;
+    }
     const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
@@ -4000,6 +4016,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   window.beBackend = {
     ADMIN_EMAIL,
+    formatDuration: localizeDurationLabel,
     mode: MODE,
     ready,
     now,
@@ -4509,7 +4526,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const duration = item.duration || item.videoDuration || item.runtime || '';
       const year = item.year || '';
       const meta = [
-        duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
+        duration ? `<span class="f-duration">${escapeHtml(window.beBackend && window.beBackend.formatDuration ? window.beBackend.formatDuration(duration) : duration)}</span>` : '',
         duration && year ? '<span class="f-dot-sep"></span>' : '',
         year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
       ].join('');
@@ -4697,7 +4714,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const contentUrl = item.videoUrl || item.contentUrl || item.link || '#';
       const publicId = numericPublicId(item.publicId || item.id || title);
       const meta = [
-        duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
+        duration ? `<span class="f-duration">${escapeHtml(window.beBackend && window.beBackend.formatDuration ? window.beBackend.formatDuration(duration) : duration)}</span>` : '',
         duration && year ? '<span class="f-dot-sep"></span>' : '',
         year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
       ].join('');
@@ -11193,7 +11210,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const metaParts = [];
     if (year) metaParts.push(`<span class="detail-year">${escapeHtml(year)}</span>`);
     if (year && duration) metaParts.push('<span class="detail-dot"></span>');
-    if (duration) metaParts.push(`<span class="detail-duration">${escapeHtml(duration)}</span>`);
+    if (duration) metaParts.push(`<span class="detail-duration">${escapeHtml(window.beBackend && window.beBackend.formatDuration ? window.beBackend.formatDuration(duration) : duration)}</span>`);
     meta.innerHTML = metaParts.join('');
     desc.classList.add('be-markdown');
     desc.innerHTML = markdownToHtml(description);
@@ -19187,7 +19204,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         title:String(row.title || '').trim(),
         description:String(row.description || '').trim(),
         imageUrl:validArtwork(row.imageUrl || row.bannerUrl || row.thumbnailUrl || ''),
-        duration:String(row.duration || '').trim(),
+        duration:(window.beBackend && typeof window.beBackend.formatDuration === 'function' ? window.beBackend.formatDuration(row.duration || '') : String(row.duration || '').trim()),
         contentUrl:safeLink(row.contentUrl || row.videoUrl || row.link || ''),
         subtitles:Object.fromEntries(Object.entries(row.subtitles && typeof row.subtitles==='object' ? row.subtitles : {}).filter(([locale])=>['pt-br','en-us','es','fr','it'].includes(locale)).map(([locale,url])=>[locale,safeLink(url)]).filter(([,url])=>Boolean(url))),
         season:Math.max(1,Number(row.season) || 1),
