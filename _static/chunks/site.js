@@ -15315,11 +15315,159 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     },50);
   }
 
-  function readState(){
+
+  // Notification history is account-scoped: local cache keeps the UI fast,
+  // while Supabase holds the durable read receipts shared between devices.
+  var readServerState=Object.create(null);
+  var readServerUser='';
+  var readSyncedAt=0;
+  var readSyncPromise=null;
+  var readSyncPromiseUser='';
+  var readSyncGeneration=0;
+  var READ_SYNC_TTL_MS=90*1000;
+  var READ_LEGACY_OWNER_KEY='beNotificationsLegacyReadOwnerV1';
+  var READ_LEGACY_IMPORTED_KEY='beNotificationsLegacyReadImportedV1';
+
+  function notificationUserId(){
+    var user=window.beBackend&&window.beBackend.auth&&window.beBackend.auth.currentUser;
+    return String(user&&(user.uid||user.id)||'');
+  }
+
+  function readStateStorageKey(uid){
+    return uid?READ_STATE_KEY+':'+uid:READ_STATE_KEY;
+  }
+
+  function storedReadState(key){
     try{
-      var parsed=JSON.parse(localStorage.getItem(READ_STATE_KEY)||'{}');
+      var parsed=JSON.parse(localStorage.getItem(key)||'{}');
       return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};
     }catch(_){return {};}
+  }
+
+  function writeReadState(uid,state){
+    try{localStorage.setItem(readStateStorageKey(uid),JSON.stringify(state));}catch(_){ }
+  }
+
+  function readState(){
+    var uid=notificationUserId();
+    var local=storedReadState(readStateStorageKey(uid));
+    if(uid&&readServerUser===uid){
+      Object.keys(readServerState).forEach(function(id){
+        var value=Number(readServerState[id]||0);
+        if(value>Number(local[id]||0))local[id]=value;
+      });
+    }
+    return local;
+  }
+
+  function migrateLegacyReadState(uid){
+    if(!uid)return;
+    try{
+      var owner=String(localStorage.getItem(READ_LEGACY_OWNER_KEY)||'');
+      if(owner&&owner!==uid)return;
+      if(localStorage.getItem(READ_LEGACY_IMPORTED_KEY)===uid)return;
+      var legacy=storedReadState(READ_STATE_KEY);
+      var lastSeen=Number(localStorage.getItem(STORAGE_KEY)||0);
+      if(!Object.keys(legacy).length&&!lastSeen)return;
+      // Legacy storage did not identify an account. Import it only for the
+      // first signed-in account on this browser, never for subsequent accounts.
+      if(!owner)localStorage.setItem(READ_LEGACY_OWNER_KEY,uid);
+      var state=storedReadState(readStateStorageKey(uid));
+      Object.keys(legacy).forEach(function(id){
+        var stamp=Number(legacy[id]||0);
+        if(/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)&&Number.isFinite(stamp)&&stamp>Number(state[id]||0))state[id]=stamp;
+      });
+      if(Number.isFinite(lastSeen)&&lastSeen>0){
+        notifications.forEach(function(item){
+          var stamp=itemTimestamp(item),id=String(item&&item.id||'');
+          if(id&&stamp&&stamp<=lastSeen)state[id]=Math.max(Number(state[id]||0),stamp);
+        });
+      }
+      writeReadState(uid,state);
+      localStorage.setItem(READ_LEGACY_IMPORTED_KEY,uid);
+    }catch(_){ }
+  }
+
+  async function writeRemoteReads(uid,receipts){
+    if(!uid||!Array.isArray(receipts)||!receipts.length||notificationUserId()!==uid)return;
+    var client=window.beBackend&&window.beBackend.client;
+    if(!client||typeof client.rpc!=='function')return;
+    for(var offset=0;offset<receipts.length;offset+=80){
+      if(notificationUserId()!==uid)return;
+      var batch=receipts.slice(offset,offset+80);
+      var result=await client.rpc('mark_my_notifications_read',{
+        p_expected_user_id:uid,p_receipts:batch
+      });
+      if(result&&result.error)throw result.error;
+      if(readServerUser===uid){
+        batch.forEach(function(row){
+          var stamp=Number(row.through||0);
+          if(stamp>Number(readServerState[row.id]||0))readServerState[row.id]=stamp;
+        });
+      }
+    }
+  }
+
+  function queueRemoteReads(receipts){
+    var uid=notificationUserId();
+    if(!uid||!receipts.length)return;
+    writeRemoteReads(uid,receipts).catch(function(){
+      // The local account cache remains available offline, and is retried
+      // when the account next syncs or the tab becomes active.
+      if(notificationUserId()===uid)readSyncedAt=0;
+    });
+  }
+
+  async function syncNotificationReads(force){
+    var uid=notificationUserId();
+    if(!uid){
+      readServerUser='';
+      readServerState=Object.create(null);
+      readSyncedAt=0;
+      return;
+    }
+    if(readSyncPromise&&readSyncPromiseUser===uid)return readSyncPromise;
+    if(!force&&readServerUser===uid&&Date.now()-readSyncedAt<READ_SYNC_TTL_MS)return;
+    var generation=++readSyncGeneration;
+    readSyncPromiseUser=uid;
+    var task=(async function(){
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.from!=='function')return;
+      var result=await client.from('notification_reads')
+        .select('notification_id,read_through')
+        .eq('user_id',uid)
+        .limit(1000);
+      if(result&&result.error)throw result.error;
+      if(notificationUserId()!==uid||generation!==readSyncGeneration)return;
+      var incoming=Object.create(null);
+      (Array.isArray(result&&result.data)?result.data:[]).forEach(function(row){
+        var id=String(row&&row.notification_id||''),stamp=Number(row&&row.read_through||0);
+        if(id&&Number.isFinite(stamp)&&stamp>0)incoming[id]=Math.max(Number(incoming[id]||0),stamp);
+      });
+      var local=storedReadState(readStateStorageKey(uid));
+      var missing=[];
+      Object.keys(local).forEach(function(id){
+        var stamp=Number(local[id]||0);
+        if(/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)&&Number.isFinite(stamp)&&stamp>Number(incoming[id]||0))missing.push({id:id,through:stamp});
+      });
+      Object.keys(incoming).forEach(function(id){
+        if(incoming[id]>Number(local[id]||0))local[id]=incoming[id];
+      });
+      readServerUser=uid;
+      readServerState=incoming;
+      readSyncedAt=Date.now();
+      writeReadState(uid,local);
+      renderPreviews();
+      notifyReadStateChanged();
+      if(missing.length)await writeRemoteReads(uid,missing);
+    })().catch(function(){
+      if(notificationUserId()===uid)readSyncedAt=0;
+    }).finally(function(){
+      if(readSyncPromise===task){readSyncPromise=null;readSyncPromiseUser='';}
+    });
+    readSyncPromise=task;
+    return task;
   }
 
   function itemTimestamp(item){
@@ -15334,6 +15482,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var state=readState();
     var itemSeen=id?Number(state[id]||0):0;
     if(itemSeen&&(timestamp?itemSeen>=timestamp:true))return true;
+    // The old browser-wide marker must never hide another account's updates.
+    if(notificationUserId())return false;
     var legacySeen=Number(localStorage.getItem(STORAGE_KEY)||0);
     return Boolean(legacySeen&&timestamp&&timestamp<=legacySeen);
   }
@@ -15355,7 +15505,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var timestamp=itemTimestamp(item)||Date.now();
     if(Number(state[id]||0)>=timestamp)return;
     state[id]=timestamp;
-    try{localStorage.setItem(READ_STATE_KEY,JSON.stringify(state));}catch(_){ }
+    writeReadState(notificationUserId(),state);
+    queueRemoteReads([{id:id,through:timestamp}]);
     renderPreviews();
     notifyReadStateChanged();
   }
@@ -15368,15 +15519,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function markAllRead(){
-    var state=readState();
+    var uid=notificationUserId(),state=readState(),changed=[];
     notifications.forEach(function(item){
       var id=String(item&&item.id||'');
       if(!id)return;
-      state[id]=itemTimestamp(item)||Date.now();
+      var stamp=itemTimestamp(item)||Date.now();
+      if(stamp>Number(state[id]||0)){
+        state[id]=stamp;
+        changed.push({id:id,through:stamp});
+      }
     });
-    try{localStorage.setItem(READ_STATE_KEY,JSON.stringify(state));}catch(_){ }
-    var latest=notifications.length&&dateValue(notifications[0]);
-    try{localStorage.setItem(STORAGE_KEY,String(latest?latest.getTime():Date.now()));}catch(_){ }
+    writeReadState(uid,state);
+    if(!uid){
+      var latest=notifications.length&&dateValue(notifications[0]);
+      try{localStorage.setItem(STORAGE_KEY,String(latest?latest.getTime():Date.now()));}catch(_){ }
+    }
+    queueRemoteReads(changed);
     renderPreviews();
     notifyReadStateChanged();
   }
@@ -15447,7 +15605,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function loadNotifications(force){
     if(loadingPromise)return loadingPromise;
-    if(loaded&&!force&&Date.now()-notificationsLoadedAt<NOTIFICATIONS_CLIENT_TTL_MS)return notifications;
+    if(loaded&&!force&&Date.now()-notificationsLoadedAt<NOTIFICATIONS_CLIENT_TTL_MS){
+      await syncNotificationReads(false);
+      return notifications;
+    }
     loadingPromise=(async function(){
       try{
         if(!window.beBackend)throw new Error('Backend indisponível.');
@@ -15455,6 +15616,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         var items=await window.beBackend.data.list('notifications',{orderBy:'createdAt',direction:'desc'});
         items=await ensureNotificationTranslations(items);
         notifications=(Array.isArray(items)?items:[]).filter(function(item){return item&&item.active!==false&&String(item.type||'')!=='profile-share-campaign'&&String(item.title||'').trim();}).sort(compareNewest);
+        migrateLegacyReadState(notificationUserId());
+        await syncNotificationReads(false);
         loaded=true;
         notificationsLoadedAt=Date.now();
         renderPreviews();
@@ -15622,7 +15785,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(document.body.classList.contains('notification-page-active')){run();return;}
     if(window.requestIdleCallback)window.requestIdleCallback(run,{timeout:1800});else window.setTimeout(run,900);
   });
-  window.addEventListener('be:auth-changed',function(){syncPageAvatar();loadNotifications(false);});
+  window.addEventListener('be:auth-changed',function(){
+    syncPageAvatar();
+    readSyncedAt=0;
+    readServerUser='';
+    readServerState=Object.create(null);
+    readSyncGeneration++;
+    loaded=false;
+    renderPreviews();
+    loadNotifications(false);
+  });
+  window.addEventListener('focus',function(){
+    if(notificationUserId())syncNotificationReads(false);
+  });
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden&&notificationUserId())syncNotificationReads(false);
+  });
   window.addEventListener('be:profile-avatar-changed',syncPageAvatar);
   window.addEventListener('be:content-ready',syncPageAvatar);
   window.addEventListener('hashchange',function(){
