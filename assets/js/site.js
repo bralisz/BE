@@ -15486,6 +15486,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function openPage(id,updateRoute){
     closeMenus();
+    // Notification previews can open from Avocados without the usual route event.
+    // Close the Community surface before rendering the notification article.
+    if(document.body.classList.contains('community-page-active')&&
+      window.BETVCommunity&&typeof window.BETVCommunity.close==='function'){
+      window.BETVCommunity.close(false);
+    }
                                                                            
                                                                      
     window.dispatchEvent(new CustomEvent('be:detail-close',{detail:{preserveRoute:true}}));
