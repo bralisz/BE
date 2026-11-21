@@ -6,7 +6,7 @@ const publicSource = source.slice(source.indexOf('  const publicDataMemoryCache 
 function harness({saved=null,fetcher=async()=>({ok:true,json:async()=>bundle})}={}) {
   const storage=new Map(),timers=new Map(),idle=[],events=[];let id=0,calls=[];
   const bundle={sections:[{id:'s'}],videos:[{id:'v'}],movies:[],series:[],featured:[{id:'f'}],news:[],settings:{site:{}},__versions:{catalogVersion:'c1',settingsVersion:'s1'}};
-  if(saved)storage.set('betvHomeBootstrapV6:pt-br',JSON.stringify(saved));
+  if(saved)storage.set('betvHomeBootstrapV7:pt-br',JSON.stringify(saved));
   const localStorage={getItem:key=>storage.get(key)||null,setItem:(key,v)=>storage.set(key,v),removeItem:key=>storage.delete(key),key:i=>Array.from(storage.keys())[i],get length(){return storage.size;}};
   const window={__beContentReady:true,setTimeout:fn=>{timers.set(++id,fn);return id;},clearTimeout:id=>timers.delete(id),requestIdleCallback:fn=>idle.push(fn),dispatchEvent:e=>events.push(e)};
   const context={window,location:new URL('https://billieilishtv.site/pt-br'),document:{hidden:false,body:{classList:{contains:()=>false}}},localStorage,URLSearchParams,AbortController,Date,Promise,Map,Set,CustomEvent:class{constructor(type,options){this.type=type;this.detail=options?.detail;}},activeLocaleSlug:()=> 'pt-br',backendError:(code,message)=>Object.assign(new Error(message),{code}),fetch:async url=>{calls.push(url);return fetcher(url,bundle);}};
@@ -61,11 +61,11 @@ function harness({saved=null,fetcher=async()=>({ok:true,json:async()=>bundle})}=
   vm.createContext(resumeCtx);vm.runInContext(resume+'\nthis.resume=refreshFeaturedAfterResume;',resumeCtx);
   await resumeCtx.resume(true);assert.equal(resumeCalls,1,'resume calls the backend adapter across IIFE boundaries');
   const clear=source.slice(source.indexOf('  function clearTransientStorage()'),source.indexOf('  function clearBrowserCaches()',source.indexOf('  function clearTransientStorage()')));
-  const stored=new Map([['betvHomeBootstrapV6:pt-br',JSON.stringify(saved)],['betvDynamicI18n:pt-br','old'],['auth-token','session']]);
+  const stored=new Map([['betvHomeBootstrapV7:pt-br',JSON.stringify(saved)],['betvDynamicI18n:pt-br','old'],['auth-token','session']]);
   const storage={get length(){return stored.size;},key:index=>Array.from(stored.keys())[index],getItem:key=>stored.get(key),setItem:(key,value)=>stored.set(key,value),removeItem:key=>stored.delete(key)};
   const storageCtx={localStorage:storage,sessionStorage:{length:0},JSON};
   vm.createContext(storageCtx);vm.runInContext(clear+'\nclearTransientStorage();',storageCtx);
-  assert.equal(JSON.parse(stored.get('betvHomeBootstrapV6:pt-br')).validatedAt,1,'release preserves cached catalog and forces version validation');
+  assert.equal(JSON.parse(stored.get('betvHomeBootstrapV7:pt-br')).validatedAt,1,'release preserves cached catalog and forces version validation');
   assert.equal(stored.get('auth-token'),'session');assert(!stored.has('betvDynamicI18n:pt-br'));
   assert(!source.includes('refreshNetworkResources'),'release must not download all assets before downloading them again on reload');
   console.log('PASS loading: warm cache, background featured refresh, cold single request, timeout including JSON body, retry after outage, failed version validation, public startup without auth, coalesced renders');

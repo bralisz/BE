@@ -21,15 +21,17 @@ const media = {
   }
 };
 const url = PAGES.contentPath(media);
-assert.equal(url,'/show/coachella-2023-legendado-12345678');
-assert.equal(PAGES.contentRouteId(url),'12345678');
+assert.equal(url,'/show/coachella-2023-legendado');
+assert.equal(PAGES.contentRouteId(url+'-12345678'),'12345678');
 assert(PAGES.friendlyContentRoute(url));
+const repeats = PAGES.distinguishVideoPaths([media,{...media,id:'another',data:{...media.data,publicId:'87654321'}}].map(row=>({...row})));
+assert.deepEqual(repeats.map(row=>row.seoPath),[url+'-12345678',url+'-87654321']);
 assert.equal(PAGES.contentType({...media,data:{category:'Entrevistas'}}),'entrevista');
 assert.equal(PAGES.contentType({...media,data:{category:'Podcasts'}}),'podcast');
 assert.equal(PAGES.contentType({...media,data:{sectionName:'Music videos'}}),'videoclipe');
 assert.equal(PAGES.contentType({...media,collection:'movies'}),'filme');
 assert.equal(PAGES.contentType({...media,collection:'series'}),'serie');
-assert.equal(PAGES.contentPath({...media,data:{...media.data,title:'Outra apresentação'}}),'/show/outra-apresentacao-12345678');
+assert.equal(PAGES.contentPath({...media,data:{...media.data,title:'Outra apresentação'}}),'/show/outra-apresentacao');
 assert.deepEqual(PAGES.mediaSetlist(media.data).slice(0,2),['Happier Than Ever','bad guy']);
 
 for (const locale of ['pt-br','en-us','es','fr','it']) {

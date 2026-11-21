@@ -38,7 +38,7 @@ global.fetch = async (url, options = {}) => {
   return { ok: true, json: async () => collections[collection] || [] };
 };
 
-async function render(path, method = 'GET', extraHeaders = {}, query = {}) {
+async function render(path, method = 'GET', extraHeaders = {}, query = {}, follow = true) {
   const response = {
     headers: {}, code: null, body: '',
     setHeader(key, value) { this.headers[key.toLowerCase()] = value; },
@@ -47,6 +47,11 @@ async function render(path, method = 'GET', extraHeaders = {}, query = {}) {
     end() { return this; }
   };
   await require(handlerPath)({ method, url: path, headers: { host: 'billieilishtv.site', ...extraHeaders }, query }, response);
+  if (follow && response.code === 308) {
+    const next = new URL(response.headers.location);
+    assert.notEqual(next.pathname, path);
+    return render(next.pathname, method);
+  }
   return response;
 }
 function documentOf(response) {
@@ -153,7 +158,7 @@ function documentOf(response) {
     assert.equal(JSON.parse(seoResponse.body).publicFactsHtml, '', 'SPA SEO refresh must not re-add duplicate details');
     const canonicalDoc = documentOf(await render('/' + slug + friendly));
     assert.equal(canonicalDoc.querySelector('link[rel="canonical"]').href, 'https://billieilishtv.site/' + slug + friendly);
-    const alias = await render('/' + slug + friendly.replace(/-\d{8}$/, ''));
+    const alias = await render('/' + slug + friendly + '-' + collections.videos[3].data.publicId, 'GET', {}, {}, false);
     assert.equal(alias.code, 308);
     assert.equal(alias.headers.location, 'https://billieilishtv.site/' + slug + friendly);
   }
@@ -169,7 +174,7 @@ function documentOf(response) {
       assert(doc.querySelector('meta[name="description"]').content.length > 30);
     }
   }
-  assert.equal(documentOf(await render('/es/23456789')).title, 'WILDFLOWER | Billie Eilish TV', 'original music names stay intact');
+  assert.equal(documentOf(await render('/es/23456789')).title, 'WILDFLOWER — Videoclip de Billie Eilish | Billie Eilish TV', 'original music names stay intact');
   assert.equal(documentOf(await render('/pt-br/34567890')).title, "Título $& $' $$ | Billie Eilish TV", 'replacement tokens must remain literal title text');
   assert(requestedCollections.every(name => name === 'videos'), 'video metadata does not wait for unrelated collections');
   const missing = await render('/es/99999999');

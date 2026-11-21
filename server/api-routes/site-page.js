@@ -216,8 +216,9 @@ function routeLocaleInfo(req) {
   };
 }
 
-function injectLocaleDocument(html, routeInfo) {
-  return html.replace(/<html\s+lang=["'][^"']+["']/i, `<html lang="${attr(routeInfo.locale)}"`);
+function injectLocaleDocument(html, routeInfo, record) {
+  const detail = record && record.collection !== 'news' ? ' data-detail-id="' + numericPublicId(record.data.publicId || record.id) + '" data-detail-path="' + attr(routeInfo.logicalPath) + '"' : '';
+  return html.replace(/<html\s+lang=["'][^"']+["']/i, `<html lang="${attr(routeInfo.locale)}"${detail}`);
 }
 
 function decodeHtmlText(value) {
@@ -337,6 +338,7 @@ async function cachedSeoCollection(collection, deadline) {
   entry.promise = (async () => {
     try {
       entry.records = await fetchSeoCollection(collection, deadline);
+      if (collection === 'videos') CONTENT_PAGE.distinguishVideoPaths(entry.records);
       entry.complete = true;
       entry.expiresAt = Date.now() + SEO_CATALOG_CACHE_TTL_MS;
     } catch (_) {
@@ -375,7 +377,7 @@ function seoRecordFromRoute(routeInfo, catalog) {
 
   if (CONTENT_PAGE.friendlyContentRoute(logical) && !CONTENT_PAGE.contentRouteId(logical)) {
     const matching = (catalog || []).filter(record => record.collection !== 'news' &&
-      CONTENT_PAGE.contentPath(record).replace(/-\d{8}$/, '') === logical);
+      (CONTENT_PAGE.contentPath(record) === logical || (record.collection !== 'videos' && CONTENT_PAGE.contentPath(record).replace(/-\d{8}$/, '') === logical)));
     return matching.length === 1 ? matching[0] : null;
   }
   const albumMatch = logical.match(/^\/(?:albuns|álbuns|albums)\/([^/]+)$/i);
@@ -993,7 +995,7 @@ module.exports = async function sitePage(req, res) {
     const seoRecord = needsSeoCatalog ? seoRecordFromRoute(routeInfo, seoCatalog.records) : null;
     const responseStatus = needsSeoCatalog && !seoRecord ? (seoCatalog.complete ? 404 : 503) : 200;
     if (responseStatus !== 200) routeInfo.contentUnavailable = responseStatus;
-    if (!metadataOnly && responseStatus === 200 && seoRecord && CONTENT_PAGE.friendlyContentRoute(routeInfo.logicalPath)) {
+    if (!metadataOnly && responseStatus === 200 && seoRecord && (CONTENT_PAGE.friendlyContentRoute(routeInfo.logicalPath) || /^\/\d{6,12}$/.test(routeInfo.logicalPath))) {
       const friendly = CONTENT_PAGE.contentPath(seoRecord);
       if (routeInfo.logicalPath !== friendly) {
         const destination = localizedRouteUrl(origin, routeInfo.slug, friendly);
@@ -1011,7 +1013,7 @@ module.exports = async function sitePage(req, res) {
     const html = injectDeploymentVersion(
       injectLocalePreload(
         localizeStaticText(
-          injectContentFacts(injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo), settings, origin, routeInfo, publicProfile, seoRecord), seoRecord, routeInfo.slug),
+          injectContentFacts(injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo, seoRecord), settings, origin, routeInfo, publicProfile, seoRecord), seoRecord, routeInfo.slug),
           routeInfo
         ),
         routeInfo

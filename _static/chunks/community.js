@@ -1548,7 +1548,7 @@
       if(profileRoute&&document.body.classList.contains('community-page-active'))closeCommunity(false);
       var notificationHome=event.target&&event.target.closest?event.target.closest('#notificationPageClose,#notificationPageHome'):null;
       if(notificationHome)setHomeTab('home');
-      var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;
+      var nav=event.target&&event.target.closest?event.target.closest('#logoBtn,button[data-home-view],a[data-home-view],[data-public-action="support"],[data-public-action="donate"]'):null;
       if(nav&&!nav.matches('[data-community-tab]')){var target='home';if(nav.dataset&&nav.dataset.homeView)target=nav.dataset.homeView;else if(nav.matches('[data-public-action="support"]'))target='support';closeCommunity(false,target);}
     },true);
 

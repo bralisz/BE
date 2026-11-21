@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {execFileSync}=require('node:child_process');
 if(!process.argv[2]){
-  for(const scenario of ['mobile-navigation','mobile-settings','profile','mobile-profile','guest-profile','community','community-fans','stale-community','guest-login','chunk-retry','history','images','settings','search']){
+  for(const scenario of ['mobile-community-search','mobile-navigation','mobile-settings','profile','mobile-profile','guest-profile','community','community-fans','stale-community','guest-login','chunk-retry','history','images','settings','search']){
     process.stdout.write(execFileSync(process.execPath,[__filename,scenario],{timeout:10000,encoding:'utf8'}));
   }
   for(const locale of ['pt-br','en-us','es','fr','it']){
@@ -17,7 +17,7 @@ const errors=[];
 const vc=new VirtualConsole();vc.on('jsdomError',error=>{if(!error.message.includes('Not implemented'))errors.push(error.cause||error);});
 const dom=new JSDOM(fs.readFileSync('index.html','utf8'),{url:'https://billieilishtv.site/'+(process.argv[3]|| (scenario==='guest-profile'?'@other':'')),runScripts:'outside-only',pretendToBeVisual:true,virtualConsole:vc});
 const w=dom.window;
-const mobileScenario=['mobile-profile','guest-login','mobile-settings','mobile-navigation'].includes(scenario);
+const mobileScenario=['mobile-community-search','mobile-profile','guest-login','mobile-settings','mobile-navigation'].includes(scenario);
 if(mobileScenario)w.innerWidth=390;
 w.matchMedia=query=>({matches:mobileScenario&&query.includes('max-width'),addEventListener(){},addListener(){}});
 w.scrollTo=options=>{w.scrollY=Number(options.top)||0;w.scrollX=Number(options.left)||0;};
@@ -80,6 +80,21 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(2
     await until(()=>w.document.getElementById('profilePageName').textContent==='Outro perfil');
     assert(w.document.body.classList.contains('profile-viewer-guest'));
     assert.equal(w.document.getElementById('profilePage').hidden,false);
+  }
+  if(scenario==='mobile-community-search'){
+    const queries=[];
+    Object.defineProperty(w.beBackend,'client',{get:()=>({rpc:async(name,args)=>{
+      if(name==='search_public_profiles'){queries.push(args.p_query);return {data:[{username:'billiefan'}]};}
+      return {data:{}};
+    }})});
+    w.dispatchEvent(new w.CustomEvent('be:open-community'));
+    await until(()=>w.document.body.classList.contains('community-page-active'));
+    const button=w.document.getElementById('mobileSearchButton'), input=w.document.getElementById('mobileSearchInput');
+    button.click();assert.equal(button.getAttribute('aria-expanded'),'true');assert(w.document.body.classList.contains('community-page-active'));
+    input.value='billie';input.dispatchEvent(new w.Event('input',{bubbles:true}));
+    await until(()=>w.document.querySelector('#publicUserSearchResults [data-profile-username="billiefan"]'));
+    assert.deepEqual(queries,['billie']);
+    button.click();assert(w.document.getElementById('publicUserSearchResults').hidden);
   }
   if(scenario==='community'){
     let fail=true,calls=0;

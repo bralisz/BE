@@ -40,11 +40,28 @@ function contentPath(record) {
   const data = record && record.data || {};
   const id = numericPublicId(data.publicId || record && record.id || data.id || data.title);
   const slug = contentSlug(data.slug || data.title || data.name);
-  return '/' + contentType(record) + '/' + slug + '-' + id;
+  if (record.seoPath) return record.seoPath;
+  const base = '/' + contentType(record) + '/' + slug;
+  return record.collection === 'videos' && !/-\d{8}$/.test(slug) ? base : base + '-' + id;
+}
+
+// Add an ID only where a title alone would resolve to multiple videos.
+function distinguishVideoPaths(rows) {
+  const counts = new Map();
+  for (const row of rows) {
+    if (!row.seoPath) row.seoPath = contentPath({collection:'videos', id:row.id, data:row.data});
+    counts.set(row.seoPath, (counts.get(row.seoPath) || 0) + 1);
+  }
+  for (const row of rows) {
+    if (counts.get(row.seoPath) > 1) {
+      row.seoPath += '-' + numericPublicId((row.data || row).publicId || row.id);
+    }
+  }
+  return rows;
 }
 
 function friendlyContentRoute(value) {
-  return /^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\/[a-z0-9-]{2,120}$/i.test(String(value || ''));
+  return /^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\/[a-z0-9-]{1,120}$/i.test(String(value || ''));
 }
 
 function contentRouteId(value) {
@@ -65,6 +82,6 @@ function mediaSetlist(data) {
 }
 
 module.exports = {
-  numericPublicId, contentSlug, contentType, contentPath,
+  numericPublicId, contentSlug, contentType, contentPath, distinguishVideoPaths,
   friendlyContentRoute, contentRouteId, mediaSetlist
 };

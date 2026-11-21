@@ -42,7 +42,7 @@ async function request(method = 'GET') {
   const entries = [...doc.getElementsByTagName('url')];
   const friendly = CONTENT_PAGE.contentPath({collection:'videos',id:'one',data:rows.videos[0].data});
   const videoEntries = entries.filter(el => el.querySelector('loc').textContent.endsWith(friendly));
-  assert.equal(friendly, '/show/video-title-12345678');
+  assert.equal(friendly, '/show/video-title');
   assert.equal(videoEntries.length, 5, 'One canonical URL per supported language, no duplicate IDs');
   for (const entry of videoEntries) {
     assert.equal(entry.getElementsByTagNameNS('http://www.google.com/schemas/sitemap-image/1.1', 'loc')[0].textContent, 'https://example.test/a.jpg?a=1&b=2');
@@ -55,9 +55,14 @@ async function request(method = 'GET') {
   assert(result.body.includes('/albuns/album%20%26%20one'));
   assert.equal((await request('HEAD')).body, '');
   assert.equal((await request('POST')).code, 405);
+  const clock = Date.now;
+  let now = clock();
+  Date.now = () => now;
+  now += 61000;
   useLegacy = true;
   assert.equal((await request()).body, result.body, 'Legacy response produces the same sitemap');
   useLegacy = false;
+  now += 61000;
   failing = true;
   const partial = await request();
   assert.equal(partial.code, 503, 'A failed collection must not silently remove URLs from a successful sitemap');

@@ -489,6 +489,13 @@ async function fetchRowsUncached(name, id, locale) {
       sanitizedRows = rows.map(row => sanitizeItem(name, row, locale, false)).filter(Boolean);
     }
   }
+  if (name === 'videos') {
+    if (!id) CONTENT_PAGE.distinguishVideoPaths(sanitizedRows);
+    else for (const row of sanitizedRows) {
+      // A single-row read lacks the catalog context needed to rule out duplicate titles.
+      if (!CONTENT_PAGE.contentRouteId(row.seoPath)) row.seoPath += '-' + CONTENT_PAGE.numericPublicId(row.publicId || row.id);
+    }
+  }
   return name === 'movies' ? mergeMovieDashboardDrive(sanitizedRows, id) : sanitizedRows;
 }
 
@@ -524,6 +531,7 @@ async function fetchHomeBootstrapUncached(locale) {
         const rows = Array.isArray(value[name]) ? value[name] : [];
         bundle[name] = rows.map(row => sanitizeItem(name, row, locale, true)).filter(Boolean);
       }
+      CONTENT_PAGE.distinguishVideoPaths(bundle.videos);
       bundle.movies = await mergeMovieDashboardDrive(bundle.movies || []);
       const rawSite = value.settings && typeof value.settings === 'object' ? value.settings.site : null;
       bundle.settings = { site: sanitizeSettings('site', rawSite) };
@@ -543,6 +551,7 @@ async function fetchHomeBootstrapUncached(locale) {
         const rows = Array.isArray(value[name]) ? value[name] : [];
         bundle[name] = rows.map(row => sanitizeItem(name, row, locale, true)).filter(Boolean);
       }
+      CONTENT_PAGE.distinguishVideoPaths(bundle.videos);
       bundle.movies = await mergeMovieDashboardDrive(bundle.movies || []);
       const rawSite = value.settings && typeof value.settings === 'object' ? value.settings.site : null;
       bundle.settings = { site: sanitizeSettings('site', rawSite) };

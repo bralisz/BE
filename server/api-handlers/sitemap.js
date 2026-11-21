@@ -162,13 +162,14 @@ async function collectPages() {
   const seenContentIds = new Set();
   results.slice(0, CONTENT_COLLECTIONS.length).forEach((result, collectionIndex) => {
     if (result.status !== 'fulfilled') return;
+    if (CONTENT_COLLECTIONS[collectionIndex] === 'videos') CONTENT_PAGE.distinguishVideoPaths(result.value);
     result.value.forEach(row => {
       const data = row.data || {};
       if (!String(data.title || '').trim() && !row.id) return;
       const id = numericPublicId(data.publicId || row.id || data.title);
       if (!/^\d{8}$/.test(id) || seenContentIds.has(id)) return;
       seenContentIds.add(id);
-      const record = { collection: CONTENT_COLLECTIONS[collectionIndex], id: row.id, data };
+      const record = { collection: CONTENT_COLLECTIONS[collectionIndex], id: row.id, seoPath:row.seoPath, data };
       addPage(pages, CONTENT_PAGE.contentPath(record), row.updatedAt, contentImage(data));
     });
   });
@@ -203,6 +204,25 @@ function sitemapUrlEntry(page, locale) {
   return `  <url>\n    <loc>${xml(loc)}</loc>${lastmod}${image}\n${alternateLinks(page.logicalPath)}\n  </url>`;
 }
 
+let sitemapCache;
+let sitemapPending;
+async function sitemapBody() {
+  if (sitemapCache && sitemapCache.expires > Date.now()) return sitemapCache.body;
+  if (!sitemapPending) {
+    sitemapPending = buildSitemap().then(body => {
+      sitemapCache = { body, expires:Date.now() + 60000 };
+      return body;
+    }).finally(() => { sitemapPending = null; });
+  }
+  return sitemapPending;
+}
+
+async function buildSitemap() {
+  const pages = await collectPages();
+  const urls = pages.flatMap(page => LOCALES.map(locale => sitemapUrlEntry(page, locale))).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls}\n</urlset>\n`;
+}
+
 module.exports = async function sitemap(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
@@ -210,10 +230,7 @@ module.exports = async function sitemap(req, res) {
   }
 
   try {
-    const pages = await collectPages();
-    const urls = pages.flatMap(page => LOCALES.map(locale => sitemapUrlEntry(page, locale))).join('\n');
-    const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls}\n</urlset>\n`;
-
+    const body = await sitemapBody();
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400');
     res.setHeader('X-Content-Type-Options', 'nosniff');

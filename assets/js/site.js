@@ -1844,7 +1844,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   const publicDataMemoryCache = new Map();
   const HOME_BOOTSTRAP_COLLECTIONS = new Set(['sections', 'videos', 'movies', 'series', 'featured', 'news']);
   const homeBootstrapMemoryCache = new Map();
-  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV6:';
+  const HOME_BOOTSTRAP_BROWSER_CACHE_PREFIX = 'betvHomeBootstrapV7:';
   // O bundle pesado fica salvo localmente, mas a cada ~30 minutos validamos
   // apenas duas versões minúsculas. O JSON completo só volta a ser baixado se
   // o catálogo realmente mudou.
@@ -2113,7 +2113,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (existing) return existing;
     const promise = (async () => {
       let versions = normalizeHomeVersionState(versionHint);
-      const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale });
+      const params = new URLSearchParams({ name: 'home-bootstrap', locale: normalizedLocale, paths:'2' });
       if (versions.catalogVersion) params.set('v', versions.catalogVersion);
       const bundle = await fetchPublicJson(`/api/public-data?${params.toString()}`);
       const bundleVersions = normalizeHomeVersionState(bundle && bundle.__versions);
@@ -5339,6 +5339,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const pathMatch = cleanPathname().match(/^\/(\d{6,12})$/) ||
       cleanPathname().match(/^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\/[a-z0-9-]*-(\d{8})$/i);
     if (pathMatch) return pathMatch[1];
+    const path = cleanPathname();
+    if (/^\/(?:show|entrevista|podcast|videoclipe|video)\/[a-z0-9-]+$/i.test(path)) {
+      if (history.state?.beRoute === 'video' && history.state.itemId) return String(history.state.itemId);
+      if (document.documentElement.dataset.detailPath === path) return document.documentElement.dataset.detailId;
+      return document.querySelector('[data-seo-path="' + path + '"][data-item-id]')?.dataset.itemId || '';
+    }
     const legacyMatch = String(location.hash || '').match(/^#\/video\/([^/?#]+)/i);
     if (!legacyMatch) return '';
     try { return decodeURIComponent(legacyMatch[1]); } catch (_) { return legacyMatch[1]; }
@@ -5347,7 +5353,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function detailRoutePath(itemId, data = {}) {
     const id = String(itemId || '').trim();
     if (!id) return '/';
-    const stored = String(data.seoPath || '').trim();
+    const card = !data.seoPath && /^\d{8}$/.test(id) ? document.querySelector('.video-card[data-item-id="' + id + '"]') : null;
+    const stored = String(data.seoPath || card?.dataset.seoPath || '').trim();
+    if (/^\/(?:show|entrevista|podcast|videoclipe|video)\/[a-z0-9-]+$/i.test(stored)) return stored;
     if (/^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\/[a-z0-9-]+-\d{8}$/i.test(stored) && stored.endsWith('-' + id)) return stored;
     if (!/^\d{8}$/.test(id) || !String(data.title || '').trim()) return '/' + encodeURIComponent(id);
     const collection = String(data.collection || 'videos').toLowerCase();
@@ -12116,7 +12124,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let userSearchTimer = 0;
     let userSearchRequest = 0;
 
-    const isUserSearchQuery = value => String(value || '').trim().startsWith('@');
+    const isUserSearchQuery = value => {
+      const query = String(value || '').trim();
+      return query.startsWith('@') || Boolean(query && document.body.classList.contains('community-page-active'));
+    };
     const normalizeUserSearchQuery = value => String(value || '')
       .trim()
       .replace(/^@+/, '')
@@ -12977,6 +12988,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (profileButton) profileButton.setAttribute('aria-expanded', 'false');
   }
 
+  function localizedCommunitySearchHint() {
+    const labels = {'pt-br':'Buscar fãs pelo nome de usuário','en-us':'Search fans by username',es:'Buscar fans por nombre de usuario',fr:'Rechercher des fans par pseudo',it:'Cerca fan per nome utente'};
+    return labels[window.BETVLocale?.slug] || labels['pt-br'];
+  }
+
   function openMobileSearch(open, clearOnClose = true) {
     const shouldOpen = Boolean(open) && isMobile();
     const input = document.getElementById('mobileSearchInput');
@@ -12990,7 +13006,11 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       closeMobileAccountPopover();
       window.dispatchEvent(new CustomEvent('be:close-notification-menus'));
       openDrawer(false);
-      window.requestAnimationFrame(() => input?.focus({ preventScroll:true }));
+      if (input) {
+        if (!input.dataset.catalogPlaceholder) input.dataset.catalogPlaceholder = input.placeholder;
+        input.placeholder = document.body.classList.contains('community-page-active') ? localizedCommunitySearchHint() : input.dataset.catalogPlaceholder;
+      }
+      input?.focus({ preventScroll:true });
     } else if (clearOnClose && input) {
       input.value = '';
       syncMobileSearch('');
@@ -13897,7 +13917,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function isLoginRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/login'||hash==='#login'||hash==='#/login';}
   function isPasswordRecoveryRoute(){var path=cleanPathname().toLowerCase(),hash=location.hash.toLowerCase();return path==='/reset-password'||hash==='#reset-password'||hash==='#/reset-password'||sessionStorage.getItem('bePasswordRecoveryActive')==='1';}
   function isProfileRoute(){return /^\/@[^/?#]+$/i.test(cleanPathname())||/^#\/perfil\/@[^/?#]+/i.test(location.hash);}
-  function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\/[a-z0-9-]*-\d{8}$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
+  function isVideoRoute(){return /^\/\d{6,12}$/i.test(cleanPathname())||/^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\/[a-z0-9-]+$/i.test(cleanPathname())||/^#\/video\/[^/?#]+/i.test(location.hash);}
   function isLegalRoute(){var path=cleanPathname().toLowerCase();return /^\/(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(path)||/^#\/?(?:terms|privacy|cookies|dmca|comunidade|community|comunidad)$/i.test(String(location.hash||''));}
   function isAvocadosRoute(){var path=cleanPathname().toLowerCase();return path==='/avocados'||/^#\/?avocados$/i.test(String(location.hash||''));}
   function isNotificationsRoute(){var path=cleanPathname().toLowerCase(),hash=String(location.hash||'').toLowerCase();return /^\/(?:atualizacoes|notificacoes)(?:\/[^/]+)?$/i.test(path)||/^#\/?(?:atualizacoes|notificacoes|updates|notifications)(?:\/|$)/i.test(hash);}
@@ -16030,7 +16050,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var removableLocalKeys = [];
       for (var index = 0; index < localStorage.length; index += 1) {
         var key = String(localStorage.key(index) || '');
-        if (key.indexOf('betvHomeBootstrapV6:') === 0) {
+        if (key.indexOf('betvHomeBootstrapV7:') === 0) {
           // Preserve the public catalog, but validate its versions on next startup.
           try {
             var cachedHome = JSON.parse(localStorage.getItem(key) || 'null');

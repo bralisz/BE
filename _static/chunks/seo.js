@@ -185,7 +185,7 @@
     var data = event.detail || {};
     var id = String(data.itemId || '');
     var route = logicalPath();
-    if (route !== '/' + id && !(id && route.endsWith('-' + id) && /^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\//i.test(route))) return;
+    if (route !== data.seoPath && route !== '/' + id && !(id && route.endsWith('-' + id) && /^\/(?:show|entrevista|podcast|videoclipe|video|filme|serie)\//i.test(route))) return;
     var metadata = contentMetadata(data);
     if (metadata) {
       remember(location.pathname,metadata); apply(metadata);
