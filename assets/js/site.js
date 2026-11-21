@@ -5092,9 +5092,13 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             const image = directImageUrlValue(album.imageUrl || album.thumbnailUrl || album.bannerUrl || '');
             const type = String(album.type || 'Álbum');
             const year = String(album.year || '');
+            const hasPlayer = /^https:\/\//i.test(String(album.contentUrl || album.link || '').trim());
+            const hasTracks = Array.isArray(album.tracks) && album.tracks.some(track => String(track?.title || track?.name || '').trim());
+            const comingSoon = !hasPlayer && !hasTracks;
+            const soonLabel = localizedUiText('Em breve');
             const route = localizedRoute('/albuns/' + encodeURIComponent(String(album.id || '')));
-            return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml('/albuns/' + encodeURIComponent(String(album.id || '')))}" aria-label="${escapeHtml(title)}">
-              <span class="album-home-cover">${image ? `<img src="${safeAssetUrl(image, 240)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}</span>
+            return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml('/albuns/' + encodeURIComponent(String(album.id || '')))}" aria-label="${escapeHtml(title + (comingSoon ? ' • ' + soonLabel : ''))}">
+              <span class="album-home-cover">${image ? `<img src="${safeAssetUrl(image, 240)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}${comingSoon ? `<span class="album-home-coming-soon" aria-hidden="true">${escapeHtml(soonLabel)}</span>` : ''}</span>
               <strong class="notranslate" translate="no">${escapeHtml(title)}</strong>
               <small>${escapeHtml([localizedUiText(type), year].filter(Boolean).join(' • '))}</small>
             </a>`;
