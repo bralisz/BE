@@ -63,7 +63,7 @@ begin
     and n.collection = 'notifications'
   group by n.id
   on conflict (user_id,notification_id) do update
-    set read_through = pg_catalog.greatest(
+    set read_through = greatest(
       public.notification_reads.read_through,excluded.read_through),
         read_at = now();
   get diagnostics v_count = row_count;
