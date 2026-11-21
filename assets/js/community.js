@@ -9,11 +9,11 @@
   var preferenceRequest=0;
 
   var similarFanTranslations={
-    'pt-br':{instagramTitle:'Últimos posts feitos no Instagram',title:'Encontre outros fãs da Billie',subtitle:'Encontre fãs com vídeos, álbuns e conteúdos salvos em comum com você.',loading:'Buscando fãs com gostos parecidos…',login:'Entre na sua conta para encontrar fãs com favoritos em comum.',loginAction:'Entrar',add:'Salve vídeos ou escolha seus álbuns favoritos para encontrar fãs parecidos.',addAction:'Abrir meu perfil',empty:'Ainda não encontramos fãs com os mesmos favoritos. Volte depois para ver novas combinações.',error:'Não foi possível encontrar fãs agora.',retry:'Tentar novamente',one:'1 favorito em comum',many:'{count} favoritos em comum',view:'Ver perfil',follow:'Seguir',following:'Seguindo…',retryFollow:'Tentar novamente',followError:'Não foi possível seguir este fã.',more:'Ver mais fãs',loadingMore:'Carregando…',retryMore:'Tentar novamente'},
-    'en-us':{instagramTitle:'Latest Instagram posts',title:'Meet other Billie fans',subtitle:'Find fans who share your favorite videos, albums and saved content.',loading:'Finding fans with similar taste…',login:'Sign in to find fans who share your favorites.',loginAction:'Sign in',add:'Save videos or pick favorite albums to find fans with similar taste.',addAction:'Open my profile',empty:'No fans share your favorites yet. Check back for new matches.',error:'We could not find fans right now.',retry:'Try again',one:'1 shared favorite',many:'{count} shared favorites',view:'View profile',follow:'Follow',following:'Following…',retryFollow:'Try again',followError:'Could not follow this fan.',more:'More fans',loadingMore:'Loading…',retryMore:'Try again'},
-    es:{instagramTitle:'Últimas publicaciones en Instagram',title:'Encuentra otros fans de Billie',subtitle:'Encuentra fans con vídeos, álbumes y contenidos guardados en común.',loading:'Buscando fans con gustos similares…',login:'Inicia sesión para encontrar fans con favoritos en común.',loginAction:'Iniciar sesión',add:'Guarda vídeos o elige tus álbumes favoritos para descubrir fans similares.',addAction:'Abrir mi perfil',empty:'Todavía no hay fans con los mismos favoritos. Vuelve más tarde.',error:'No pudimos encontrar fans ahora.',retry:'Reintentar',one:'1 favorito en común',many:'{count} favoritos en común',view:'Ver perfil',follow:'Seguir',following:'Siguiendo…',retryFollow:'Reintentar',followError:'No fue posible seguir a este fan.',more:'Ver más fans',loadingMore:'Cargando…',retryMore:'Reintentar'},
-    fr:{instagramTitle:'Dernières publications sur Instagram',title:'Rencontrez d’autres fans de Billie',subtitle:'Trouvez des fans qui partagent vos vidéos, albums et contenus enregistrés.',loading:'Recherche de fans aux goûts similaires…',login:'Connectez-vous pour trouver des fans partageant vos favoris.',loginAction:'Se connecter',add:'Enregistrez des vidéos ou choisissez des albums favoris pour trouver des fans similaires.',addAction:'Ouvrir mon profil',empty:'Aucun fan ne partage encore vos favoris. Revenez plus tard.',error:'Impossible de trouver des fans pour le moment.',retry:'Réessayer',one:'1 favori en commun',many:'{count} favoris en commun',view:'Voir le profil',follow:'Suivre',following:'Abonnement…',retryFollow:'Réessayer',followError:'Impossible de suivre ce fan.',more:'Voir plus de fans',loadingMore:'Chargement…',retryMore:'Réessayer'},
-    it:{instagramTitle:'Ultimi post su Instagram',title:'Trova altri fan di Billie',subtitle:'Trova fan con video, album e contenuti salvati in comune.',loading:'Ricerca di fan con gusti simili…',login:'Accedi per trovare fan con preferiti in comune.',loginAction:'Accedi',add:'Salva video o scegli album preferiti per trovare fan simili.',addAction:'Apri il mio profilo',empty:'Non ci sono ancora fan con gli stessi preferiti. Riprova più tardi.',error:'Impossibile trovare fan al momento.',retry:'Riprova',one:'1 preferito in comune',many:'{count} preferiti in comune',view:'Apri profilo',follow:'Segui',following:'Seguendo…',retryFollow:'Riprova',followError:'Impossibile seguire questo fan.',more:'Altri fan',loadingMore:'Caricamento…',retryMore:'Riprova'}
+    'pt-br':{instagramAction:"Confira agora",instagramActionLabel:"Confira agora: abrir publicação no Instagram",instagramTitle:'Últimos posts feitos no Instagram',title:'Encontre outros fãs da Billie',subtitle:'Encontre fãs com vídeos, álbuns e conteúdos salvos em comum com você.',loading:'Buscando fãs com gostos parecidos…',login:'Entre na sua conta para encontrar fãs com favoritos em comum.',loginAction:'Entrar',add:'Salve vídeos ou escolha seus álbuns favoritos para encontrar fãs parecidos.',addAction:'Abrir meu perfil',empty:'Ainda não encontramos fãs com os mesmos favoritos. Volte depois para ver novas combinações.',error:'Não foi possível encontrar fãs agora.',retry:'Tentar novamente',one:'1 favorito em comum',many:'{count} favoritos em comum',view:'Ver perfil',follow:'Seguir',following:'Seguindo…',retryFollow:'Tentar novamente',followError:'Não foi possível seguir este fã.',more:'Ver mais fãs',loadingMore:'Carregando…',retryMore:'Tentar novamente'},
+    'en-us':{instagramAction:"Check it out",instagramActionLabel:"Check it out: open post on Instagram",instagramTitle:'Latest Instagram posts',title:'Meet other Billie fans',subtitle:'Find fans who share your favorite videos, albums and saved content.',loading:'Finding fans with similar taste…',login:'Sign in to find fans who share your favorites.',loginAction:'Sign in',add:'Save videos or pick favorite albums to find fans with similar taste.',addAction:'Open my profile',empty:'No fans share your favorites yet. Check back for new matches.',error:'We could not find fans right now.',retry:'Try again',one:'1 shared favorite',many:'{count} shared favorites',view:'View profile',follow:'Follow',following:'Following…',retryFollow:'Try again',followError:'Could not follow this fan.',more:'More fans',loadingMore:'Loading…',retryMore:'Try again'},
+    es:{instagramAction:"Ver ahora",instagramActionLabel:"Ver ahora: abrir la publicación en Instagram",instagramTitle:'Últimas publicaciones en Instagram',title:'Encuentra otros fans de Billie',subtitle:'Encuentra fans con vídeos, álbumes y contenidos guardados en común.',loading:'Buscando fans con gustos similares…',login:'Inicia sesión para encontrar fans con favoritos en común.',loginAction:'Iniciar sesión',add:'Guarda vídeos o elige tus álbumes favoritos para descubrir fans similares.',addAction:'Abrir mi perfil',empty:'Todavía no hay fans con los mismos favoritos. Vuelve más tarde.',error:'No pudimos encontrar fans ahora.',retry:'Reintentar',one:'1 favorito en común',many:'{count} favoritos en común',view:'Ver perfil',follow:'Seguir',following:'Siguiendo…',retryFollow:'Reintentar',followError:'No fue posible seguir a este fan.',more:'Ver más fans',loadingMore:'Cargando…',retryMore:'Reintentar'},
+    fr:{instagramAction:"Voir maintenant",instagramActionLabel:"Voir maintenant : ouvrir la publication sur Instagram",instagramTitle:'Dernières publications sur Instagram',title:'Rencontrez d’autres fans de Billie',subtitle:'Trouvez des fans qui partagent vos vidéos, albums et contenus enregistrés.',loading:'Recherche de fans aux goûts similaires…',login:'Connectez-vous pour trouver des fans partageant vos favoris.',loginAction:'Se connecter',add:'Enregistrez des vidéos ou choisissez des albums favoris pour trouver des fans similaires.',addAction:'Ouvrir mon profil',empty:'Aucun fan ne partage encore vos favoris. Revenez plus tard.',error:'Impossible de trouver des fans pour le moment.',retry:'Réessayer',one:'1 favori en commun',many:'{count} favoris en commun',view:'Voir le profil',follow:'Suivre',following:'Abonnement…',retryFollow:'Réessayer',followError:'Impossible de suivre ce fan.',more:'Voir plus de fans',loadingMore:'Chargement…',retryMore:'Réessayer'},
+    it:{instagramAction:"Guarda ora",instagramActionLabel:"Guarda ora: apri il post su Instagram",instagramTitle:'Ultimi post su Instagram',title:'Trova altri fan di Billie',subtitle:'Trova fan con video, album e contenuti salvati in comune.',loading:'Ricerca di fan con gusti simili…',login:'Accedi per trovare fan con preferiti in comune.',loginAction:'Accedi',add:'Salva video o scegli album preferiti per trovare fan simili.',addAction:'Apri il mio profilo',empty:'Non ci sono ancora fan con gli stessi preferiti. Riprova più tardi.',error:'Impossibile trovare fan al momento.',retry:'Riprova',one:'1 preferito in comune',many:'{count} preferiti in comune',view:'Apri profilo',follow:'Segui',following:'Seguendo…',retryFollow:'Riprova',followError:'Impossibile seguire questo fan.',more:'Altri fan',loadingMore:'Caricamento…',retryMore:'Riprova'}
   };
   function similarCopy(key,count){
     var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
@@ -839,6 +839,11 @@
     }
     window.requestAnimationFrame(rail.__betvInstagramArrowUpdate);
   }
+  function localizeInstagramPost(link){
+    link.setAttribute('aria-label', similarCopy('instagramActionLabel'));
+    link.querySelector('.community-instagram-post-cta').textContent = similarCopy('instagramAction');
+  }
+
   async function refreshInstagramReel(){
     var request = ++reelRequest;
     var card = page && page.querySelector('#communityLatestReel');
@@ -887,7 +892,7 @@
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       link.className = 'community-instagram-post';
-      link.setAttribute('aria-label', 'Confira agora: abrir post no Instagram');
+      link.setAttribute('data-i18n-ignore', '');
       var img = document.createElement('img');
       img.className = 'community-instagram-post-cover';
       img.src = post.thumbnail;
@@ -899,9 +904,9 @@
       img.onerror = function(){ link.remove(); if (card.__betvInstagramArrowUpdate) card.__betvInstagramArrowUpdate(); };
       var action = document.createElement('span');
       action.className = 'community-instagram-post-cta';
-      action.textContent = 'Confira agora';
       action.setAttribute('aria-hidden', 'true');
       link.append(img, action);
+      localizeInstagramPost(link);
       cards.append(link);
     });
     card.replaceChildren(cards);
@@ -1574,6 +1579,9 @@
     new MutationObserver(syncMobileMenuPosition).observe(document.body,{attributes:true,attributeFilter:['class']});
     document.addEventListener('keydown',function(event){if(event.key==='Escape')closeMobileAccountMenu();});
     var settingsBody=document.getElementById('settingsPageBody');if(settingsBody){new MutationObserver(function(){injectPrivacySettings();}).observe(settingsBody,{childList:true,subtree:true});}
+    window.addEventListener('be:i18n-ready', function(){
+      if (page) page.querySelectorAll('.community-instagram-post').forEach(localizeInstagramPost);
+    });
     window.addEventListener('be:catalog-ready',function(){if(document.body.classList.contains('community-page-active')){toggleCatalogVisibility(true);setHomeTab('community');}});
     window.addEventListener('be:open-config',function(){setTimeout(injectPrivacySettings,0);});
     window.addEventListener('be:user-data-synced',function(event){var user=currentUser();var data=event&&event.detail&&event.detail.data;if(user&&data&&Object.prototype.hasOwnProperty.call(data,'communityRankingsPublic'))writeRankingPreference(user.uid,data.communityRankingsPublic!==false);});
