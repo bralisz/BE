@@ -24008,13 +24008,20 @@ body.billie-page-active .home-topbar.search-open .home-nav-leading{
 
 /* Compact Billie introduction widget on desktop only. */
 @media (min-width: 761px) {
-  .billie-home-spotlight-frame {
-    height: clamp(280px, 24vw, 340px);
+  .album-home-section > .billie-home-spotlight .billie-home-spotlight-frame {
+    width: min(100%, 1280px);
+    max-width: 1280px;
+    height: clamp(210px, 19vw, 250px);
+    min-height: 0;
+    margin-inline: auto;
+    border-radius: 26px;
   }
-  .billie-home-spotlight-copy strong {
-    font-size: clamp(30px, 2.7vw, 44px);
+  .album-home-section > .billie-home-spotlight .billie-home-spotlight-copy {
+    left: clamp(26px, 3vw, 44px);
+    max-width: min(520px, 58%);
   }
-  .billie-home-spotlight-copy {
-    left: clamp(28px, 4vw, 60px);
+  .album-home-section > .billie-home-spotlight .billie-home-spotlight-copy strong {
+    font-size: clamp(28px, 2.35vw, 36px);
+    line-height: 1.08;
   }
 }
