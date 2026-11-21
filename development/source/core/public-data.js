@@ -135,7 +135,7 @@
       const duration = item.duration || item.videoDuration || item.runtime || '';
       const year = item.year || '';
       const meta = [
-        duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
+        duration ? `<span class="f-duration">${escapeHtml(window.beBackend && window.beBackend.formatDuration ? window.beBackend.formatDuration(duration) : duration)}</span>` : '',
         duration && year ? '<span class="f-dot-sep"></span>' : '',
         year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
       ].join('');
@@ -300,7 +300,7 @@
       const contentUrl = item.videoUrl || item.contentUrl || item.link || '#';
       const publicId = numericPublicId(item.publicId || item.id || title);
       const meta = [
-        duration ? `<span class="f-duration">${escapeHtml(duration)}</span>` : '',
+        duration ? `<span class="f-duration">${escapeHtml(window.beBackend && window.beBackend.formatDuration ? window.beBackend.formatDuration(duration) : duration)}</span>` : '',
         duration && year ? '<span class="f-dot-sep"></span>' : '',
         year ? `<span class="f-year">${escapeHtml(year)}</span>` : ''
       ].join('');
@@ -968,7 +968,7 @@
     const metaParts = [];
     if (year) metaParts.push(`<span class="detail-year">${escapeHtml(year)}</span>`);
     if (year && duration) metaParts.push('<span class="detail-dot"></span>');
-    if (duration) metaParts.push(`<span class="detail-duration">${escapeHtml(duration)}</span>`);
+    if (duration) metaParts.push(`<span class="detail-duration">${escapeHtml(window.beBackend && window.beBackend.formatDuration ? window.beBackend.formatDuration(duration) : duration)}</span>`);
     meta.innerHTML = metaParts.join('');
     desc.textContent = description;
 
@@ -1400,7 +1400,7 @@
         title:String(row.title || '').trim(),
         description:String(row.description || '').trim(),
         imageUrl:validArtwork(row.imageUrl || row.bannerUrl || row.thumbnailUrl || ''),
-        duration:String(row.duration || '').trim(),
+        duration:(window.beBackend && typeof window.beBackend.formatDuration === 'function' ? window.beBackend.formatDuration(row.duration || '') : String(row.duration || '').trim()),
         contentUrl:safeLink(row.contentUrl || row.videoUrl || row.link || ''),
         subtitles:Object.fromEntries(Object.entries(row.subtitles && typeof row.subtitles==='object' ? row.subtitles : {}).filter(([locale])=>['pt-br','en-us','es','fr','it'].includes(locale)).map(([locale,url])=>[locale,safeLink(url)]).filter(([,url])=>Boolean(url))),
         season:Math.max(1,Number(row.season) || 1),
