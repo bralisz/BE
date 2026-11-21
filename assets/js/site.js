@@ -5107,10 +5107,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       </div>`;
     const billie = host.querySelector('.billie-home-spotlight');
     if (billie) {
-      // Place the Billie introduction inside Albums & Singles, below its heading.
+      // Keep the Billie spotlight first, then the section heading directly above the album covers.
       billie.insertAdjacentElement('afterend', block);
-      const railShell = block.querySelector('.album-home-shell');
-      if (railShell) block.insertBefore(billie, railShell);
+      block.insertBefore(billie, block.firstChild);
     } else host.append(block);
     setupRail(block);
   }
