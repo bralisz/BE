@@ -23975,3 +23975,90 @@ body.billie-page-active .billie-page-header{
     padding-top:calc(92px + env(safe-area-inset-top,0px));
   }
 }
+
+/* Billie artist page: one avatar ring and equal-size mobile header controls.
+   The global custom-profile ring previously decorated both the button and its
+   nested avatar, leaving two concentric outlines in the Wikipedia header. */
+@media(max-width:760px){
+  body.billie-page-active #billiePage .billie-page-header{
+    min-height:0!important;
+    height:76px!important;
+    padding:0 16px!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    background:transparent!important;
+  }
+  body.billie-page-active #billiePage .billie-page-header-actions{
+    display:flex!important;
+    align-items:center!important;
+    gap:12px!important;
+  }
+  body.billie-page-active #billiePageHome,
+  body.billie-page-active #billiePageNotifications,
+  body.billie-page-active #billiePageAvatar{
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    flex:0 0 48px!important;
+    border-radius:50%!important;
+    margin:0!important;
+    transform:none!important;
+    box-shadow:none!important;
+  }
+  body.billie-page-active #billiePageAvatar{
+    display:grid!important;
+    place-items:center!important;
+    padding:2px!important;
+    border:1px solid rgba(255,255,255,.18)!important;
+    background:rgba(15,19,28,.76)!important;
+    overflow:hidden!important;
+  }
+  html.profile-avatar-global-customized body.billie-page-active #billiePageAvatar{
+    border:2px solid var(--betv-user-avatar-border,rgba(255,255,255,.18))!important;
+    padding:2px!important;
+    background:transparent!important;
+  }
+  body.billie-page-active #billiePageAvatar::before,
+  body.billie-page-active #billiePageAvatar::after{
+    content:none!important;
+    display:none!important;
+  }
+  body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner,
+  html.profile-avatar-global-customized body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner{
+    position:relative!important;
+    display:grid!important;
+    place-items:center!important;
+    width:100%!important;
+    height:100%!important;
+    min-width:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    outline:0!important;
+    box-shadow:none!important;
+    background:transparent!important;
+    border-radius:50%!important;
+    overflow:hidden!important;
+  }
+  body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner>img{
+    display:block!important;
+    position:static!important;
+    width:100%!important;
+    height:100%!important;
+    min-width:0!important;
+    min-height:0!important;
+    border:0!important;
+    padding:0!important;
+    margin:0!important;
+    border-radius:50%!important;
+    object-fit:cover!important;
+    box-shadow:none!important;
+    transform:none!important;
+  }
+  body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner>img[hidden],
+  body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner>svg[hidden]{
+    display:none!important;
+  }
+}
