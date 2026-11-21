@@ -16755,22 +16755,22 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     // complete article from "Sources and credits" below.
     var overviewParagraphs=Array.from(parser.querySelectorAll('p')).filter(function(paragraph){
       if(paragraph.closest('li,blockquote,table,aside'))return false;
-      return String(paragraph.textContent||'').replace(/\\s+/g,' ').trim().length>=110;
+      return String(paragraph.textContent||'').replace(/\s+/g,' ').trim().length>=110;
     }).slice(0,2);
     var overview=doc.createElement('div');
     overview.className='billie-wikipedia-overview';
     overviewParagraphs.forEach(function(paragraph,index){
-      var text=String(paragraph.textContent||'').replace(/\\s+/g,' ').trim();
+      var text=String(paragraph.textContent||'').replace(/\s+/g,' ').trim();
       // Remove pronunciation notation from the lead (e.g. /ˈaɪlɪʃ/ EYE-lish)
       // while preserving the birth date and the actual biographical information.
       if(index===0){
-        text=text.replace(/\\(\\s*[^)]{0,140}(?:ˈ|EYE-lish|IPA)[^)]*;\\s*(born|naci[oó]|nascid[ao]|n[ée]e?|nat[ao])\\b/gi,'($1');
+        text=text.replace(/\(\s*[^)]{0,140}(?:ˈ|EYE-lish|IPA)[^)]*;\s*(born|naci[oó]|nascid[ao]|n[ée]e?|nat[ao])\b/gi,'($1');
       }
       var maximum=index===0?560:420;
       if(text.length>maximum){
         var excerpt=text.slice(0,maximum+1);
         var period=Math.max(excerpt.lastIndexOf('. '),excerpt.lastIndexOf('! '),excerpt.lastIndexOf('? '));
-        text=period>maximum*.55?excerpt.slice(0,period+1).trim():excerpt.slice(0,maximum).replace(/\\s+\\S*$/,'').trim()+'…';
+        text=period>maximum*.55?excerpt.slice(0,period+1).trim():excerpt.slice(0,maximum).replace(/\s+\S*$/,'').trim()+'…';
       }
       var node=doc.createElement('p');
       node.textContent=text;
