@@ -23954,3 +23954,24 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
 .community-albums-retry{display:block;margin-top:12px;padding:7px 12px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.07);color:#fff;font:inherit;font-weight:700;cursor:pointer}
 @media(max-width:760px){.community-album-rail{gap:12px}.community-album-card{flex-basis:min(56vw,205px)}.community-album-cover{border-radius:15px}.community-album-title{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.community-album-cover{transition:none}}
+
+/* Billie Wikipedia: use only its own navigation on mobile.
+   The shared mobile header previously duplicated the avatar and Home button. */
+body.billie-page-active .billie-page-header{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+@media(max-width:760px){
+  body.billie-page-active #mobileAppBar,
+  body.billie-page-active #mobileDrawer,
+  body.billie-page-active #mobileDrawerBackdrop{
+    display:none!important;
+  }
+  body.billie-page-active #billiePageHome{
+    display:grid!important;
+  }
+  body.billie-page-active .billie-page-content{
+    padding-top:calc(92px + env(safe-area-inset-top,0px));
+  }
+}
