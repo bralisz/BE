@@ -685,6 +685,13 @@
       +  '</div>'
       +'</div>';
     main.appendChild(page);
+    var similarRail=page.querySelector('#communitySimilarContent');
+    if(similarRail){
+      var similarShell=document.createElement('div');
+      similarRail.parentNode.insertBefore(similarShell,similarRail);
+      similarShell.appendChild(similarRail);
+      setupCommunityCarousel(similarRail,similarShell);
+    }
     renderSharePromotion();
     page.querySelector('#communityShareAction').addEventListener('click',shareFromCommunity);
     var shareAction=page.querySelector('#communityShareAction');
@@ -834,6 +841,62 @@
 
   var reelRequest = 0;
   var reelTimer;
+  // Apply the same desktop arrow controls used by the Instagram posts carousel.
+  // Keep touch/trackpad scrolling on every device and leave the mobile layout unchanged.
+  function setupCommunityCarousel(rail,shell){
+    if(!rail||!shell)return;
+    if(shell.__betvCommunityCarouselCleanup)shell.__betvCommunityCarouselCleanup();
+    shell.classList.add('video-rail-shell','community-carousel-shell');
+    var labels={
+      'pt-br':['Ver itens anteriores','Ver próximos itens'],
+      'en-us':['View previous items','View next items'],
+      es:['Ver elementos anteriores','Ver elementos siguientes'],
+      fr:['Voir les éléments précédents','Voir les éléments suivants'],
+      it:['Vedi elementi precedenti','Vedi elementi successivi']
+    };
+    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    var lang=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
+    function makeArrow(direction,label,path){
+      var arrow=document.createElement('button');
+      arrow.type='button';
+      arrow.className='video-rail-arrow '+direction;
+      arrow.hidden=true;
+      arrow.setAttribute('aria-label',label);
+      arrow.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="'+path+'"/></svg>';
+      return arrow;
+    }
+    var prev=makeArrow('prev',labels[lang][0],'m15 18-6-6 6-6');
+    var next=makeArrow('next',labels[lang][1],'m9 18 6-6-6-6');
+    shell.insertBefore(prev,rail);
+    shell.appendChild(next);
+    var update=function(){
+      var desktop=window.matchMedia?window.matchMedia('(min-width: 761px)').matches:window.innerWidth>760;
+      var max=Math.max(0,rail.scrollWidth-rail.clientWidth);
+      prev.hidden=!desktop||max<=4||rail.scrollLeft<=4;
+      next.hidden=!desktop||max<=4||rail.scrollLeft>=max-4;
+    };
+    var amount=function(){return Math.max(rail.clientWidth*0.82,320);};
+    var goPrev=function(){rail.scrollBy({left:-amount(),behavior:'smooth'});};
+    var goNext=function(){rail.scrollBy({left:amount(),behavior:'smooth'});};
+    prev.addEventListener('click',goPrev);
+    next.addEventListener('click',goNext);
+    rail.addEventListener('scroll',update,{passive:true});
+    window.addEventListener('resize',update,{passive:true});
+    var resizeObserver=null,mutationObserver=null;
+    if('ResizeObserver' in window){resizeObserver=new ResizeObserver(update);resizeObserver.observe(rail);}
+    if('MutationObserver' in window){mutationObserver=new MutationObserver(update);mutationObserver.observe(rail,{childList:true});}
+    shell.__betvCommunityCarouselCleanup=function(){
+      prev.removeEventListener('click',goPrev);
+      next.removeEventListener('click',goNext);
+      rail.removeEventListener('scroll',update);
+      window.removeEventListener('resize',update);
+      if(resizeObserver)resizeObserver.disconnect();
+      if(mutationObserver)mutationObserver.disconnect();
+      prev.remove();next.remove();
+      shell.__betvCommunityCarouselCleanup=null;
+    };
+    window.requestAnimationFrame(update);
+  }
   // Same SVG/buttons and scroll controls used by the Home video rails.
   function setupInstagramPostRail(rail){
     var shell = rail && rail.closest('.community-instagram-rail-shell');
@@ -1024,15 +1087,19 @@
 
   function renderRail(hostId,rows,emptyText,options){
     var host=document.getElementById(hostId);if(!host)return;
-    host.innerHTML='';
+    if(host.__betvCommunityCarouselCleanup)host.__betvCommunityCarouselCleanup();
+    host.replaceChildren();
     if(!Array.isArray(rows)||!rows.length){var empty=document.createElement('div');empty.className='community-empty';empty.textContent=emptyText;host.appendChild(empty);return;}
-    var rail=document.createElement('div');rail.className='community-rail';rows.forEach(function(row){rail.appendChild(createVideoCard(row,options));});host.appendChild(rail);
+    var rail=document.createElement('div');rail.className='community-rail';rows.forEach(function(row){rail.appendChild(createVideoCard(row,options));});
+    host.appendChild(rail);
+    setupCommunityCarousel(rail,host);
   }
 
 
   function renderPopularAlbums(rows,failed){
     var host=document.getElementById('communityPopularAlbumsContent');
     if(!host)return;
+    if(host.__betvCommunityCarouselCleanup)host.__betvCommunityCarouselCleanup();
     host.replaceChildren();
     if(!Array.isArray(rows)||!rows.length){
       var empty=document.createElement('div');empty.className='community-empty';
@@ -1087,7 +1154,7 @@
       });
       rail.appendChild(card);
     });
-    if(rail.childElementCount)host.appendChild(rail);
+    if(rail.childElementCount){host.appendChild(rail);setupCommunityCarousel(rail,host);}
     else renderPopularAlbums([],false);
   }
 
