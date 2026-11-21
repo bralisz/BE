@@ -5092,9 +5092,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             const image = directImageUrlValue(album.imageUrl || album.thumbnailUrl || album.bannerUrl || '');
             const type = String(album.type || 'Álbum');
             const year = String(album.year || '');
+            const upcoming = !String(album.contentUrl || album.link || '').trim() && !(Array.isArray(album.tracks) && album.tracks.length);
             const route = localizedRoute('/albuns/' + encodeURIComponent(String(album.id || '')));
             return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml('/albuns/' + encodeURIComponent(String(album.id || '')))}" aria-label="${escapeHtml(title)}">
-              <span class="album-home-cover">${image ? `<img src="${safeAssetUrl(image, 240)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}</span>
+              <span class="album-home-cover">${image ? `<img src="${safeAssetUrl(image, 240)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}${upcoming ? `<span class="album-coming-soon-badge">${escapeHtml(localizedUiText('Em breve'))}</span>` : ''}</span>
               <strong class="notranslate" translate="no">${escapeHtml(title)}</strong>
               <small>${escapeHtml([localizedUiText(type), year].filter(Boolean).join(' • '))}</small>
             </a>`;
@@ -5105,8 +5106,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         </button>
       </div>`;
     const billie = host.querySelector('.billie-home-spotlight');
-    if (billie) billie.insertAdjacentElement('afterend', block);
-    else host.append(block);
+    if (billie) {
+      // Place the Billie introduction inside Albums & Singles, below its heading.
+      billie.insertAdjacentElement('afterend', block);
+      const railShell = block.querySelector('.album-home-shell');
+      if (railShell) block.insertBefore(billie, railShell);
+    } else host.append(block);
     setupRail(block);
   }
 
@@ -17942,8 +17947,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var active=String(album.id)===String(selectedId);
       var albumTitle=String(album.title||'Álbum');
       var albumImage=image(album.imageUrl||album.thumbnailUrl||album.bannerUrl);
+      var upcoming=!href(album.contentUrl||album.link)&&!(Array.isArray(album.tracks)&&album.tracks.length);
       return '<a class="album-page-cover-card'+(active?' active':'')+'" href="'+esc(localized('/albuns/'+encodeURIComponent(String(album.id))))+'" data-album-id="'+esc(String(album.id))+'" aria-current="'+(active?'true':'false')+'">'+
-        '<span>'+(albumImage?'<img src="'+esc(albumImage)+'" alt="'+esc(albumTitle)+'" decoding="async" referrerpolicy="no-referrer">':'<i aria-hidden="true">♪</i>')+'</span>'+
+        '<span>'+(albumImage?'<img src="'+esc(albumImage)+'" alt="'+esc(albumTitle)+'" decoding="async" referrerpolicy="no-referrer">':'<i aria-hidden="true">♪</i>')+(upcoming?'<span class="album-coming-soon-badge">'+esc(t('Em breve'))+'</span>':'')+'</span>'+
         '<strong class="notranslate" translate="no">'+esc(albumTitle)+'</strong><small>'+esc([albumTypeLabel(album.type),String(album.year||'')].filter(Boolean).join(' • '))+'</small></a>';
     }).join('');
   }
