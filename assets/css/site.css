@@ -23922,3 +23922,20 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
     background: linear-gradient(180deg, transparent 15%, rgba(2,5,10,.25) 38%, rgba(2,5,10,.88) 100%) !important;
   }
 }
+
+/* Override the older section-view mobile headline positioning (which used an ID selector). */
+@media (max-width: 760px) {
+  body.section-catalog-active #dynamicSections.section-view-mode .album-home-section > .billie-home-spotlight .billie-home-spotlight-copy {
+    display: flex !important;
+    top: auto !important;
+    right: 20px !important;
+    bottom: 82px !important;
+    left: 20px !important;
+    max-width: calc(100% - 40px) !important;
+    transform: none !important;
+  }
+  body.section-catalog-active #dynamicSections.section-view-mode .album-home-section > .billie-home-spotlight .billie-home-spotlight-copy strong {
+    font-size: clamp(21px, 5.8vw, 27px) !important;
+    line-height: 1.15 !important;
+  }
+}
