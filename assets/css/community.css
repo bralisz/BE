@@ -562,3 +562,18 @@ body.community-page-active .community-page-inner:not(.has-community-banner) .com
   }
   .community-similar-load-more > .community-similar-more-label{font-size:12px}
 }
+
+
+/* Public album picks share the avatar/count overlay of Fan Favorites. */
+.community-popular-albums-section{margin-top:22px}
+.community-album-rail{gap:16px;padding-bottom:20px}
+.community-album-card{flex:0 0 clamp(170px,17vw,235px);display:flex;flex-direction:column;gap:10px;min-width:0;text-decoration:none;color:#fff;outline-offset:5px}
+.community-album-cover{position:relative;display:block;aspect-ratio:1 / 1;overflow:hidden;border-radius:18px;background:#1a202b;border:1px solid rgba(255,255,255,.11);box-shadow:0 8px 22px rgba(0,0,0,.2);transition:transform .2s ease,border-color .2s ease}
+.community-album-cover>img{display:block;width:100%;height:100%;object-fit:cover}
+.community-album-card:hover .community-album-cover{transform:translateY(-3px);border-color:rgba(110,180,255,.4)}
+.community-album-card:focus-visible{outline:2px solid #82bbff;border-radius:16px}
+.community-album-title{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:14px;font-weight:750;line-height:1.35;letter-spacing:-.01em}
+.community-album-cover .community-favorite-social{right:9px;bottom:9px}
+.community-albums-retry{display:block;margin-top:12px;padding:7px 12px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(255,255,255,.07);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+@media(max-width:760px){.community-album-rail{gap:12px}.community-album-card{flex-basis:min(56vw,205px)}.community-album-cover{border-radius:15px}.community-album-title{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.community-album-cover{transition:none}}
