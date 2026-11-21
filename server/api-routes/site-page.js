@@ -15,13 +15,7 @@ const SETTINGS_CACHE_TTL_MS = 5 * 60 * 1000;
 const SEO_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 const SEO_CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents', 'news']);
 const I18N_REV = '20260810-original-titles-v3';
-const LOCALIZED_ROUTE_SLUGS = Object.freeze({
-  'pt-br': Object.freeze({ '/avocados': '/avocados', '/comunidade': '/comunidade', '/fãs': '/fãs' }),
-  'en-us': Object.freeze({ '/avocados': '/avocados', '/comunidade': '/community', '/fãs': '/fans' }),
-  es: Object.freeze({ '/avocados': '/avocados', '/comunidade': '/comunidad', '/fãs': '/fans' }),
-  fr: Object.freeze({ '/avocados': '/avocados', '/comunidade': '/communaute', '/fãs': '/fans' }),
-  it: Object.freeze({ '/avocados': '/avocados', '/comunidade': '/comunita', '/fãs': '/fans' })
-});
+const { LOCALIZED_ROUTE_SLUGS, languageLinks } = require('../seo-locales');
 const LOCALIZED_ROUTE_ALIASES = Object.freeze({
   '/avocados': '/avocados',
   '/comunidade': '/comunidade', '/community': '/comunidade', '/comunidad': '/comunidade', '/communaute': '/comunidade', '/communauté': '/comunidade', '/comunita': '/comunidade', '/comunità': '/comunidade',
@@ -407,7 +401,9 @@ function localizedRecord(record, slug) {
   const translated = key ? translations[key] : null;
   const data = translated ? { ...base, ...translated } : { ...base };
   if (!String(data.title || '').trim()) data.title = base.title;
-  if (!String(data.description || '').trim()) data.description = base.description;
+  const descriptionSources = slug === 'pt-br' ? [translated, base] : [translated];
+  data.description = descriptionSources.flatMap(source => [source?.description, source?.synopsis, source?.summary])
+    .find(value => plainDescription(value)) || '';
   const collection = String(record.collection || base.collection || '').toLowerCase();
   const explicit = base.preserveTitle === true || String(base.preserveTitle || '').toLowerCase() === 'true';
   const music = collection === 'videos' && (MUSIC_SECTION_IDS.has(String(base.sectionId || '')) || MUSIC_SECTION_NAMES.has(String(base.sectionName || base.sourceSectionTitle || '').toLowerCase().trim()));
@@ -433,15 +429,10 @@ function localizedRouteUrl(origin, slug, logicalPath) {
   return `${origin}/${slug}${localized === '/' ? '' : localized}`;
 }
 
-function xDefaultRouteUrl(origin, logicalPath) {
-  const logical = String(logicalPath || '/').replace(/\/+$/, '') || '/';
-  return `${origin}${logical === '/' ? '/' : logical}`;
-}
-
 function isNoindexRoute(routeInfo) {
   const logical = String(routeInfo && routeInfo.logicalPath || '').replace(/\/+$/, '') || '/';
   return routeInfo.contentUnavailable === 404 || process.env.VERCEL_ENV === 'preview' ||
-    !(CONTENT_PAGE.friendlyContentRoute(logical) || /^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|ong$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
+    !(CONTENT_PAGE.friendlyContentRoute(logical) || /^\/(?:$|billie-eilish$|albuns(?:\/[^/]+)?$|ong$|avocados$|suporte$|atualizacoes(?:\/[^/]+)?$|terms$|privacy$|cookies$|dmca$|comunidade$|fãs$|@[^/]+$|\d{6,12}$)/.test(logical)) ||
     logical === '/login' ||
     logical === '/reset-password' ||
     logical === '/config' ||
@@ -775,7 +766,7 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
       name: String(data.title || '').trim() || copy.title,
       about: { '@type': 'Person', name: 'Billie Eilish' }
     };
-    if (String(data.description || '').trim()) mainEntity.description = plainDescription(data.description).slice(0, 1000);
+    mainEntity.description = plainDescription(data.description).slice(0, 1000) || copy.description;
     const videoKind = seoVideoKind(seoRecord);
     if (videoKind) mainEntity.genre = ({ interview:'Interview', performance:'Live performance', podcast:'Podcast', musicvideo:'Music video' })[videoKind] || 'Video';
     if (String(data.year || '').trim()) mainEntity.datePublished = String(data.year).trim();
@@ -814,18 +805,21 @@ function injectStructuredData(html, origin, canonical, routeInfo, copy, seoRecor
   return html.replace('</head>', `${script}\n</head>`);
 }
 
-function injectContentFacts(html, record, locale) {
-  if (!record || record.collection === 'news') return html;
+function injectContentFacts(html, record, locale, fallbackDescription) {
+  if (!record) return html;
+  html = html.replace(/<section\b[^>]*\bid="(?:supportPage|legalPage)"[^>]*>/g,
+    tag => tag.replace('<section ', '<section data-nosnippet '));
+  if (record.collection === 'news') return html;
   const localized = localizedRecord(record, locale).data;
   // The normal detail view already shows the title and description.
   // SEO metadata and structured data remain in the document head without
   // an extra visible synopsis, technical sheet or setlist panel.
   const title = CONTENT_DETAILS.plain(localized.title || record.data.title);
   if (title) html = html.replace('id="contentDetailLogo">Selecione um vídeo',
-    'id="contentDetailLogo">' + CONTENT_DETAILS.escapeHtml(title.slice(0, 240)));
-  const description = CONTENT_DETAILS.plain(localized.description || localized.synopsis || localized.summary);
+    () => 'id="contentDetailLogo">' + CONTENT_DETAILS.escapeHtml(title.slice(0, 240)));
+  const description = CONTENT_DETAILS.plain(localized.description) || fallbackDescription;
   if (description) html = html.replace('id="contentDetailDesc"></p>',
-    'id="contentDetailDesc">' + CONTENT_DETAILS.escapeHtml(description.slice(0, 2000)) + '</p>');
+    () => 'id="contentDetailDesc">' + CONTENT_DETAILS.escapeHtml(description.slice(0, 2000)) + '</p>');
   // Server-rendered content must be visible even when client JS is unavailable.
   return html.replace('class="content-detail-wrap" id="contentDetailSection" hidden', 'class="content-detail-wrap" id="contentDetailSection"');
 }
@@ -911,14 +905,9 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     .replace(/\s*<script\s+type=["']application\/ld\+json["'][^>]*data-betv-seo=["']true["'][^>]*>[\s\S]*?<\/script>/gi, '');
 
   const logical = seoRecord && seoRecord.collection !== 'news' ? CONTENT_PAGE.contentPath(seoRecord) : (routeInfo.logicalPath || '/');
-  const alternates = [
-    `<link rel="alternate" hreflang="pt-BR" href="${attr(localizedRouteUrl(origin, 'pt-br', logical))}">`,
-    `<link rel="alternate" hreflang="en-US" href="${attr(localizedRouteUrl(origin, 'en-us', logical))}">`,
-    `<link rel="alternate" hreflang="es" href="${attr(localizedRouteUrl(origin, 'es', logical))}">`,
-    `<link rel="alternate" hreflang="fr" href="${attr(localizedRouteUrl(origin, 'fr', logical))}">`,
-    `<link rel="alternate" hreflang="it" href="${attr(localizedRouteUrl(origin, 'it', logical))}">`,
-    `<link rel="alternate" hreflang="x-default" href="${attr(xDefaultRouteUrl(origin, logical))}">`
-  ].join('\n');
+  const alternates = languageLinks(slug => localizedRouteUrl(origin, slug, logical))
+    .map(([lang, href]) => `<link rel="alternate" hreflang="${lang}" href="${attr(href)}">`)
+    .join('\n');
 
   const metadata = `
 <meta name="description" content="${attr(socialDescription)}">
@@ -944,6 +933,7 @@ ${image === FIXED_SHARE_IMAGE_URL || ogType === 'profile' ? '<meta property="og:
 ${alternates}`;
 
   html = html.replace('</title>', () => `</title>${metadata}`);
+  html = injectContentFacts(html, seoRecord, routeInfo.slug, copy.description);
   return injectStructuredData(html, origin, canonical, routeInfo, { ...copy, title: socialTitle, description: socialDescription }, seoRecord, publicProfile);
 }
 
@@ -1013,7 +1003,7 @@ module.exports = async function sitePage(req, res) {
     const html = injectDeploymentVersion(
       injectLocalePreload(
         localizeStaticText(
-          injectContentFacts(injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo, seoRecord), settings, origin, routeInfo, publicProfile, seoRecord), seoRecord, routeInfo.slug),
+          injectSocialMetadata(injectLocaleDocument(readTemplate(), routeInfo, seoRecord), settings, origin, routeInfo, publicProfile, seoRecord),
           routeInfo
         ),
         routeInfo

@@ -5,13 +5,7 @@ const DEFAULT_SUPABASE_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
 const CONTENT_PAGE = require('../content-public-page');
 
-const LOCALES = Object.freeze([
-  Object.freeze({ slug: 'pt-br', hreflang: 'pt-BR' }),
-  Object.freeze({ slug: 'en-us', hreflang: 'en-US' }),
-  Object.freeze({ slug: 'es', hreflang: 'es' }),
-  Object.freeze({ slug: 'fr', hreflang: 'fr' }),
-  Object.freeze({ slug: 'it', hreflang: 'it' })
-]);
+const { LOCALES, LOCALIZED_ROUTE_SLUGS, languageLinks } = require('../seo-locales');
 
 const CONTENT_COLLECTIONS = Object.freeze(['videos', 'movies', 'series', 'contents']);
 const ALBUM_COLLECTION = 'news';
@@ -29,14 +23,6 @@ const STATIC_PATHS = Object.freeze([
   '/cookies',
   '/dmca'
 ]);
-
-const LOCALIZED_ROUTE_SLUGS = Object.freeze({
-  'pt-br': Object.freeze({ '/comunidade': '/comunidade', '/fãs': '/fãs' }),
-  'en-us': Object.freeze({ '/comunidade': '/community', '/fãs': '/fans' }),
-  es: Object.freeze({ '/comunidade': '/comunidad', '/fãs': '/fans' }),
-  fr: Object.freeze({ '/comunidade': '/communaute', '/fãs': '/fans' }),
-  it: Object.freeze({ '/comunidade': '/comunita', '/fãs': '/fans' })
-});
 
 function supabaseConfig() {
   return {
@@ -189,12 +175,9 @@ async function collectPages() {
 }
 
 function alternateLinks(logicalPath) {
-  const lines = LOCALES.map(locale => {
-    const href = absoluteUrl(localizedPath(logicalPath, locale.slug));
-    return `    <xhtml:link rel="alternate" hreflang="${xml(locale.hreflang)}" href="${xml(href)}" />`;
-  });
-  lines.push(`    <xhtml:link rel="alternate" hreflang="x-default" href="${xml(absoluteUrl(logicalPath))}" />`);
-  return lines.join('\n');
+  return languageLinks(slug => absoluteUrl(localizedPath(logicalPath, slug)))
+    .map(([lang, href]) => `    <xhtml:link rel="alternate" hreflang="${xml(lang)}" href="${xml(href)}" />`)
+    .join('\n');
 }
 
 function sitemapUrlEntry(page, locale) {
