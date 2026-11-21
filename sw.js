@@ -45,6 +45,7 @@ async function clearBetvCaches() {
     .map(key => caches.delete(key)));
   openedCaches.clear();
   writesSinceTrim.clear();
+  mediaLastRevalidated.clear();
 }
 
 async function trimCache(cacheName, maxEntries) {
@@ -64,6 +65,7 @@ function cacheableResponse(response) {
 const openedCaches = new Map();
 const inFlightRequests = new Map();
 const writesSinceTrim = new Map();
+const mediaLastRevalidated = new Map();
 function openCache(name) {
   if (!openedCaches.has(name)) {
     openedCaches.set(name, caches.open(name).catch(error => {
@@ -110,6 +112,27 @@ async function cacheFirst(request, cacheName, maxEntries, event) {
   }
 }
 
+// Fast cached covers, but refresh editable banners and avatars in the background.
+// Do not issue a second network request for every scroll or DOM rerender.
+async function mediaStaleWhileRevalidate(request,event){
+  let cache;
+  try{cache=await openCache(MEDIA_CACHE);}catch(_){return fetch(request);}
+  const cached=await cache.match(request).catch(()=>null);
+  if(!cached)return cacheFirst(request,MEDIA_CACHE,300,event);
+  const key=request.url;
+  const now=Date.now();
+  if(now-(mediaLastRevalidated.get(key)||0)>=30*60*1000){
+    mediaLastRevalidated.delete(key);
+    mediaLastRevalidated.set(key,now);
+    if(mediaLastRevalidated.size>360)mediaLastRevalidated.delete(mediaLastRevalidated.keys().next().value);
+    const refresh=fetch(request,{cache:'no-cache'}).then(async response=>{
+      if(cacheableResponse(response))await cache.put(request,response.clone());
+    }).catch(()=>{});
+    event.waitUntil(refresh);
+  }
+  return cached;
+}
+
 self.addEventListener('install', () => {
   self.skipWaiting();
 });
@@ -132,7 +155,7 @@ self.addEventListener('fetch', event => {
 
   const path = url.pathname;
   if (path.startsWith('/_static/media/')) {
-    event.respondWith(cacheFirst(request, MEDIA_CACHE, 300, event));
+    event.respondWith(mediaStaleWhileRevalidate(request, event));
     return;
   }
   if (path.startsWith('/_static/chunks/') || path.startsWith('/_static/styles/') || path.startsWith('/_static/locales/')) {
