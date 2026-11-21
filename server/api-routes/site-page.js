@@ -71,11 +71,13 @@ function injectDeploymentVersion(html) {
   const version = deploymentVersion();
   const serialized = JSON.stringify(version).replace(/</g, '\u003c');
   const buildToken = encodeURIComponent(version);
+  // Dynamic HTML supplies a deployment-scoped URL for every public JS/CSS
+  // asset so Vercel and the app's Service Worker never reuse a stale module.
   const withFreshCriticalAssets = String(html || '').replace(
-    /((?:src|href)=["']\/assets\/(?:js|css)\/[^"']+\?[^"']*)(["'])/gi,
-    `$1&build=${buildToken}$2`
+    /((?:src|href)=["'])(\/_static\/(?:chunks|styles|locales)\/[^"'?\s]+)(?:\?[^"']*)?(["'])/gi,
+    (_, prefix, asset, suffix) => `${prefix}${asset}?rev=${buildToken}${suffix}`
   );
-  const script = `<script>(function(){window.__BETV_DEPLOYMENT_VERSION__=${serialized};try{var u=new URL(window.location.href);if(!u.searchParams.has('__betv_update'))return;var localKeys=[];for(var i=0;i<localStorage.length;i+=1){var k=String(localStorage.key(i)||'');if(k.indexOf('betvDynamicI18n:')===0||k.indexOf('betvHomeBootstrap')===0||k.indexOf('betvDeploymentVersionCheck')===0||k.indexOf('betvObservedReleaseState')===0||k==='betvUpdateAssetCache'||k==='betvUpdateVersion'||k==='beContentAnalyticsSession')localKeys.push(k);}localKeys.forEach(function(k){try{localStorage.removeItem(k);}catch(_){}});var sessionKeys=[];for(var j=0;j<sessionStorage.length;j+=1){var sk=String(sessionStorage.key(j)||'');if(sk.indexOf('betvHomeBootstrap')===0)sessionKeys.push(sk);}sessionKeys.forEach(function(k){try{sessionStorage.removeItem(k);}catch(_){}});var jobs=[];if('serviceWorker'in navigator)jobs.push(navigator.serviceWorker.getRegistrations().then(function(regs){return Promise.all(regs.map(function(reg){try{return reg.update();}catch(_){return Promise.resolve();}}));}));window.__BETV_UPDATE_CACHE_CLEANUP__=Promise.allSettled(jobs);}catch(_){window.__BETV_UPDATE_CACHE_CLEANUP__=Promise.resolve();}})();<\/script>`;
+  const script = `<script>(function(){window.__BETV_DEPLOYMENT_VERSION__=${serialized};window.__BETV_ASSET_REV__=${serialized};try{var u=new URL(window.location.href);if(!u.searchParams.has('__betv_update'))return;var localKeys=[];for(var i=0;i<localStorage.length;i+=1){var k=String(localStorage.key(i)||'');if(k.indexOf('betvDynamicI18n:')===0||k.indexOf('betvHomeBootstrap')===0||k.indexOf('betvDeploymentVersionCheck')===0||k.indexOf('betvObservedReleaseState')===0||k==='betvUpdateAssetCache'||k==='betvUpdateVersion'||k==='beContentAnalyticsSession')localKeys.push(k);}localKeys.forEach(function(k){try{localStorage.removeItem(k);}catch(_){}});var sessionKeys=[];for(var j=0;j<sessionStorage.length;j+=1){var sk=String(sessionStorage.key(j)||'');if(sk.indexOf('betvHomeBootstrap')===0)sessionKeys.push(sk);}sessionKeys.forEach(function(k){try{sessionStorage.removeItem(k);}catch(_){}});var jobs=[];if('serviceWorker'in navigator)jobs.push(navigator.serviceWorker.getRegistrations().then(function(regs){return Promise.all(regs.map(function(reg){try{return reg.update();}catch(_){return Promise.resolve();}}));}));window.__BETV_UPDATE_CACHE_CLEANUP__=Promise.allSettled(jobs);}catch(_){window.__BETV_UPDATE_CACHE_CLEANUP__=Promise.resolve();}})();<\/script>`;
   return withFreshCriticalAssets.replace('</head>', `${script}
 </head>`);
 }
