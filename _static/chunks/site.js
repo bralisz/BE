@@ -16902,6 +16902,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var sourceDot=document.getElementById('notificationUnreadDot');
   if(window.MutationObserver&&sourceAvatar)new MutationObserver(syncAvatar).observe(sourceAvatar,{attributes:true,attributeFilter:['src','hidden']});
   if(window.MutationObserver&&sourceDot)new MutationObserver(syncUnread).observe(sourceDot,{attributes:true,attributeFilter:['hidden']});
+  window.addEventListener('click', function (event) {
+    if (page.hidden) return;
+    var tab = event.target.closest?.('#homeNavLinks button, #topbar #logoBtn');
+    if (!tab) return;
+
+    closePage();
+    // The catalog tabs share the home URL. Community and Support set their own routes.
+    var view = tab.id === 'logoBtn' ? 'home' : tab.dataset.homeView;
+    if (view) {
+      var root = window.BETVLocaleURL ? window.BETVLocaleURL('/') : '/';
+      history.pushState({ beRoute: 'catalog', homeView: view, scrollY: 0 }, '', root + location.search);
+      tab.dataset.beHistoryMode = 'none';
+    }
+  }, true);
   window.addEventListener('be:open-billie-page',openPage);
   window.addEventListener('be:close-billie-page',closePage);
   window.addEventListener('be:profile-avatar-changed',syncAvatar);
