@@ -53,10 +53,10 @@ assert(publicSource.includes('seoPath: stableSeoPath'));
 assert(publicSource.includes("'setlist'"));
 const admin = fs.readFileSync('server/handlers/admin-runtime.js','utf8');
 assert(admin.includes('ADMIN_SEO_FIELDS'));
-assert(fs.readFileSync('development/source/admin/seo-fields.js','utf8').includes("list.name = 'setlist'"));
+assert.equal(require('../development/source/admin/seo-fields'), '', 'Retired admin SEO editor must not inject fields');
 const html = fs.readFileSync('index.html','utf8');
 assert(html.includes('id="detailSeoFacts"'));
 assert.equal(fs.readFileSync('assets/js/site.js','utf8'),fs.readFileSync('_static/chunks/site.js','utf8'));
 assert.equal(fs.readFileSync('assets/js/seo.js','utf8'),fs.readFileSync('_static/chunks/seo.js','utf8'));
 
-console.log('Public media page checks passed: readable URLs, safe SSR facts, five locales and admin fields.');
+console.log('Public media page checks passed: readable URLs, safe SSR facts, five locales with retired admin fields.');
