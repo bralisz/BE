@@ -128,7 +128,8 @@
     name.className = 'betv-app-saved-name';
     const meta = document.createElement('small');
     meta.className = 'betv-app-saved-meta';
-    meta.textContent = [item.year, item.duration].filter(Boolean).join(' · ');
+    const duration = window.beBackend && typeof window.beBackend.formatDuration === 'function' ? window.beBackend.formatDuration(item.duration) : item.duration;
+    meta.textContent = [item.year, duration].filter(Boolean).join(' · ');
     const heart = document.createElement('span');
     heart.className = 'betv-app-saved-heart';
     heart.setAttribute('aria-hidden', 'true');
