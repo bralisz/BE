@@ -17962,9 +17962,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var albumTitle=String(album.title||'Álbum');
     var albumImage=image(album.imageUrl||album.thumbnailUrl||album.bannerUrl);
     var playerUrl=href(album.contentUrl||album.link);
+    var upcoming=!playerUrl&&!albumTracks.length;
     type.textContent=albumTypeLabel(album.type);
     title.textContent=albumTitle;
-    meta.textContent=[String(album.year||''),trackCountLabel(albumTracks.length)].filter(Boolean).join(' • ');
+    meta.textContent=[String(album.year||''),upcoming?t('Em breve'):trackCountLabel(albumTracks.length)].filter(Boolean).join(' • ');
     if(leadTrack){
       var singleTrackName=albumTracks.length===1?String(albumTracks[0]&&albumTracks[0].title||'').trim():'';
       // A single's track often has exactly the album title: do not repeat it below the metadata.
@@ -17987,7 +17988,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     player.setAttribute('aria-label',t('Ouvir álbum'));
     player.title=t('Ouvir álbum');
     syncAlbumFavorite();
-    tracks.innerHTML=albumTracks.length?albumTracks.map(function(track,index){return '<li><span class="album-track-index">'+(index+1)+'</span><strong class="notranslate" translate="no">'+esc(track&&track.title||'')+'</strong><small>'+esc(track&&track.duration||'')+'</small></li>';}).join(''):'<li class="album-track-empty">'+esc(t('Nenhuma faixa cadastrada.'))+'</li>';
+    tracks.innerHTML=albumTracks.length?albumTracks.map(function(track,index){return '<li><span class="album-track-index">'+(index+1)+'</span><strong class="notranslate" translate="no">'+esc(track&&track.title||'')+'</strong><small>'+esc(track&&track.duration||'')+'</small></li>';}).join(''):'<li class="album-track-empty">'+esc(t(upcoming?'Em breve':'Nenhuma faixa cadastrada.'))+'</li>';
     status.hidden=true;detail.hidden=false;
     renderRail(album.id);
     document.title=window.BETVPageTitle?window.BETVPageTitle():'Billie Eilish TV';
