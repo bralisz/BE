@@ -141,7 +141,7 @@ async function loadSettings() {
         },
         signal: AbortSignal.timeout(4000)
       });
-      if (!response.ok) return settingsCache.value || {};
+      if (!response.ok) throw new Error('settings_unavailable');
       const rows = await response.json();
       const row = Array.isArray(rows) ? rows[0] : null;
       settingsCache.value = row ? { ...(row.data || {}), _updatedAt: row.updated_at || '' } : {};

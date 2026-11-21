@@ -162,25 +162,28 @@ async function fetchPrivateSettingWithServiceRole(id) {
   return row && row.data && typeof row.data === 'object' ? row.data : null;
 }
 
-async function mergeMovieDashboardDrive(rows, id = '') {
-  if (!Array.isArray(rows) || !rows.length) return rows;
+async function fetchMovieDriveLinks(id) {
   const { url, key: publicKey } = config();
   const key = serviceRoleKey() || publicKey;
-  if (!key) return rows;
-  const params = new URLSearchParams({ select: 'id,data', collection: 'eq.movies' });
+  const params = new URLSearchParams({ select: 'id,mobileAppDriveUrl:data->>mobileAppDriveUrl,tvDriveUrl:data->>tvDriveUrl', collection: 'eq.movies' });
   if (id) params.set('id', `eq.${id}`);
   const response = await fetch(`${url}/rest/v1/content_items?${params.toString()}`, {
     headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json' },
     cache: 'no-store'
   }).catch(() => null);
-  if (!response || !response.ok) return rows;
+  if (!response || !response.ok) return new Map();
   const privateRows = await response.json().catch(() => []);
   const driveById = new Map();
   for (const row of Array.isArray(privateRows) ? privateRows : []) {
-    const raw = row && row.data && typeof row.data === 'object' ? row.data : {};
-    const drive = safeLink(raw.mobileAppDriveUrl || raw.tvDriveUrl || '', false);
+    const drive = safeLink(row?.mobileAppDriveUrl || row?.tvDriveUrl || '', false);
     if (drive) driveById.set(String(row.id || ''), drive);
   }
+  return driveById;
+}
+
+async function mergeMovieDashboardDrive(rows, id = '') {
+  if (!Array.isArray(rows) || !rows.length) return rows;
+  const driveById = await cachedUpstream('movie-drive-links:' + id, 0, () => fetchMovieDriveLinks(id));
   return rows.map(row => {
     const drive = driveById.get(String(row && row.id || ''));
     return drive ? { ...row, tvDriveUrl: drive, mobileAppDriveUrl: drive } : row;
@@ -654,7 +657,7 @@ module.exports = async function publicData(req, res) {
       hasData = HOME_BOOTSTRAP_COLLECTIONS.some(collection => Array.isArray(payload?.[collection]) && payload[collection].length > 0);
     } else {
       const rows = freshMovie
-        ? await fetchRowsUncached(name, id, locale)
+        ? await cachedUpstream(`fresh-movie:${id}:${locale}`, 0, () => fetchRowsUncached(name, id, locale))
         : await fetchRows(name, id, locale);
       payload = id ? (rows[0] || null) : rows;
       hasData = rows.length > 0;

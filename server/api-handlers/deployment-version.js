@@ -30,9 +30,8 @@ function supabaseConfig() {
 
 async function loadReleaseState(forceRefresh = false) {
   const now = Date.now();
-  if (forceRefresh) releaseCache = { value: null, expiresAt: 0, promise: null };
-  if (releaseCache.value && releaseCache.expiresAt > now) return releaseCache.value;
   if (releaseCache.promise) return releaseCache.promise;
+  if (!forceRefresh && releaseCache.value && releaseCache.expiresAt > now) return releaseCache.value;
 
   releaseCache.promise = (async () => {
     const { url, key } = supabaseConfig();
