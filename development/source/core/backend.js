@@ -436,15 +436,25 @@
 
   function localizeDurationLabel(value, requestedSlug = activeLocaleSlug()) {
     const raw = String(value || '').trim();
+    if (!raw) return raw;
     const slug = String(requestedSlug || 'pt-br').toLowerCase();
-    if (!raw || slug === 'pt-br') return raw;
     const normalized = raw.toLowerCase().replace(/,/g, ' ');
-    const hoursMatch = normalized.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i);
-    const minutesMatch = normalized.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);
+    const hoursMatch = normalized.match(/(\d+)\s*(?:hours?|hrs?|horas?|heures?|ore|ora|h)(?=\s|\d|$)/i);
+    const minutesMatch = normalized.match(/(\d+)\s*(?:minutes?|minutos?|minuti|mins?|m)(?=\s|$)/i);
     if (!hoursMatch && !minutesMatch) return raw;
+    const units = {
+      'pt-br': ['minuto', 'minutos'],
+      'en-us': ['minute', 'minutes'],
+      es: ['minuto', 'minutos'],
+      fr: ['minute', 'minutes'],
+      it: ['minuto', 'minuti']
+    }[slug] || ['minuto', 'minutos'];
     const parts = [];
     if (hoursMatch) parts.push(slug === 'en-us' ? `${Number(hoursMatch[1])} hr` : `${Number(hoursMatch[1])} h`);
-    if (minutesMatch) parts.push(`${Number(minutesMatch[1])} min`);
+    if (minutesMatch) {
+      const minutes = Number(minutesMatch[1]);
+      parts.push(hoursMatch ? `${minutes} min` : `${minutes} ${units[minutes === 1 ? 0 : 1]}`);
+    }
     return parts.join(' ');
   }
 
@@ -464,7 +474,13 @@
   function localizeContentRecord(record, collection = '') {
     if (!record || typeof record !== 'object') return record;
     const slug = activeLocaleSlug();
-    if (slug === 'pt-br') return record;
+    if (slug === 'pt-br') {
+      const result = { ...record };
+      ['duration','runtime','videoDuration'].forEach(field => {
+        if (result[field]) result[field] = localizeDurationLabel(result[field], slug);
+      });
+      return result;
+    }
     const normalizedCollection = String(collection || record?.collection || '').trim().toLowerCase();
     const translations = record.translations && typeof record.translations === 'object' ? record.translations : {};
     const localized = translations[slug] || translations[slug === 'en-us' ? 'en' : slug] || null;
@@ -1848,6 +1864,7 @@
 
   window.beBackend = {
     ADMIN_EMAIL,
+    formatDuration: localizeDurationLabel,
     mode: MODE,
     ready,
     now,
