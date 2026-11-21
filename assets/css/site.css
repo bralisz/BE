@@ -23759,3 +23759,59 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
     letter-spacing:-.025em!important;
   }
 }
+
+
+/* Billie spotlight now belongs to the Albums & Singles section. */
+.album-home-section > .billie-home-spotlight {
+  margin: 12px 0 28px;
+}
+.album-home-section > .billie-home-spotlight .billie-home-spotlight-frame {
+  max-width: var(--be-content-max, 1680px);
+}
+
+/* Upcoming albums and singles: localized labels over the cover artwork. */
+.album-page-cover-card > span {
+  position: relative;
+  isolation: isolate;
+}
+.album-home-cover {
+  isolation: isolate;
+}
+.album-coming-soon-badge {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100% - 24px);
+  padding: 7px 12px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+  background: rgba(7,9,13,.84);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -.005em;
+  white-space: normal;
+  text-align: center;
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  body.mobile-home-layout:not(.login-mode):not(.admin-mode) .album-home-section > .billie-home-spotlight {
+    margin: 10px 0 22px !important;
+    padding: 0 var(--mobile-home-gutter, 20px) !important;
+  }
+  .album-home-cover .album-coming-soon-badge,
+  .album-page-cover-card .album-coming-soon-badge {
+    left: 10px;
+    bottom: 10px;
+    max-width: calc(100% - 20px);
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
