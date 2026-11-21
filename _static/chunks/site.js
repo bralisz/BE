@@ -5683,13 +5683,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         if (!section) return;
         event.preventDefault();
         event.stopPropagation();
-        if (title.matches('[data-open-albums]')) {
-          const url = new URL(title.href || '/albuns', location.origin);
-          history.pushState({ beRoute: '/albuns' }, '', url.pathname + (location.search || ''));
-          window.dispatchEvent(new PopStateEvent('popstate', { state: { beRoute: '/albuns' } }));
-          return;
-        }
-
         const originView = currentCatalogView();
         const originScrollY = Math.max(0, window.scrollY || 0);
         const sectionTitle = normalizeText(title.querySelector('span')?.textContent || '');
