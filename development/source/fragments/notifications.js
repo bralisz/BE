@@ -429,6 +429,12 @@
 
   async function openPage(id,updateRoute){
     closeMenus();
+    // Notification previews can open from Avocados without the usual route event.
+    // Close the Community surface before rendering the notification article.
+    if(document.body.classList.contains('community-page-active')&&
+      window.BETVCommunity&&typeof window.BETVCommunity.close==='function'){
+      window.BETVCommunity.close(false);
+    }
     document.body.classList.remove('login-mode','profile-page-active','settings-page-active','legal-page-active','support-page-active','detail-page-active');
     document.body.classList.add('notification-page-active');
     page.hidden=false;
