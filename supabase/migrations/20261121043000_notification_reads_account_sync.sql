@@ -51,17 +51,31 @@ begin
   end if;
 
   insert into public.notification_reads (user_id,notification_id,read_through)
-  select p_expected_user_id, n.id, pg_catalog.max(
+  select p_expected_user_id, (receipt.value->>'id')::uuid, pg_catalog.max(
     case when receipt.value->>'through' ~ '^[0-9]{1,13}$'
       then (receipt.value->>'through')::bigint else 0 end
   )
   from pg_catalog.jsonb_array_elements(p_receipts) as receipt(value)
-  join public.content_items n
-    on n.id = case when receipt.value->>'id' ~*
-      '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$'
-      then (receipt.value->>'id')::uuid else null end
-    and n.collection = 'notifications'
-  group by n.id
+  where receipt.value->>'id' ~*
+    '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}
+  on conflict (user_id,notification_id) do update
+    set read_through = greatest(
+      public.notification_reads.read_through,excluded.read_through),
+        read_at = now();
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+revoke all on function public.mark_my_notifications_read(uuid,jsonb)
+  from public,anon;
+grant execute on function public.mark_my_notifications_read(uuid,jsonb)
+  to authenticated;
+
+comment on table public.notification_reads is
+  'Per-user notification read receipts, synchronized across BETV devices and protected by RLS.';
+
+  group by (receipt.value->>'id')::uuid
   on conflict (user_id,notification_id) do update
     set read_through = greatest(
       public.notification_reads.read_through,excluded.read_through),
