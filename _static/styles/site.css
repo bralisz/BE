@@ -1824,56 +1824,80 @@ body.billie-page-active .billie-page-header{
   }
 }
 
-/* Billie artist page: one avatar ring and equal-size mobile header controls.
-   The global custom-profile ring previously decorated both the button and its
-   nested avatar, leaving two concentric outlines in the Wikipedia header. */
+/* Billie Wikipedia mobile: prevent Chromium backdrop-filter ghost circles.
+   One actual button each for Home, notifications and avatar; no extra layers.
+   Keep a single customizable profile ring and the original click actions. */
 @media(max-width:760px){
   body.billie-page-active #billiePage .billie-page-header{
-    min-height:0!important;
     height:76px!important;
+    min-height:0!important;
     padding:0 16px!important;
+    display:flex!important;
     align-items:center!important;
     justify-content:space-between!important;
     background:transparent!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    box-shadow:none!important;
   }
   body.billie-page-active #billiePage .billie-page-header-actions{
     display:flex!important;
     align-items:center!important;
     gap:12px!important;
   }
-  body.billie-page-active #billiePageHome,
-  body.billie-page-active #billiePageNotifications,
-  body.billie-page-active #billiePageAvatar{
+  body.billie-page-active #billiePage :is(#billiePageHome,#billiePageNotifications,#billiePageAvatar){
+    position:relative!important;
+    display:grid!important;
+    place-items:center!important;
     width:48px!important;
     height:48px!important;
     min-width:48px!important;
     min-height:48px!important;
     flex:0 0 48px!important;
-    border-radius:50%!important;
     margin:0!important;
-    transform:none!important;
+    padding:0!important;
+    border:1px solid rgba(255,255,255,.15)!important;
+    border-radius:50%!important;
+    background:rgba(22,24,29,.98)!important;
+    background-image:none!important;
     box-shadow:none!important;
-  }
-  body.billie-page-active #billiePageAvatar{
-    display:grid!important;
-    place-items:center!important;
-    padding:2px!important;
-    border:1px solid rgba(255,255,255,.18)!important;
-    background:rgba(15,19,28,.76)!important;
+    filter:none!important;
+    -webkit-filter:none!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    transform:none!important;
+    translate:none!important;
+    animation:none!important;
+    transition:none!important;
+    will-change:auto!important;
+    contain:none!important;
+    isolation:auto!important;
+    clip-path:none!important;
     overflow:hidden!important;
+    cursor:pointer!important;
   }
-  html.profile-avatar-global-customized body.billie-page-active #billiePageAvatar{
-    border:2px solid var(--betv-user-avatar-border,rgba(255,255,255,.18))!important;
-    padding:2px!important;
-    background:transparent!important;
-  }
-  body.billie-page-active #billiePageAvatar::before,
-  body.billie-page-active #billiePageAvatar::after{
+  body.billie-page-active #billiePage :is(#billiePageHome,#billiePageNotifications,#billiePageAvatar)::before,
+  body.billie-page-active #billiePage :is(#billiePageHome,#billiePageNotifications,#billiePageAvatar)::after{
     content:none!important;
     display:none!important;
   }
-  body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner,
-  html.profile-avatar-global-customized body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner{
+  body.billie-page-active #billiePage :is(#billiePageHome,#billiePageNotifications) > svg{
+    position:relative!important;
+    width:21px!important;
+    height:21px!important;
+    transform:none!important;
+    filter:none!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+  }
+  body.billie-page-active #billiePage #billiePageAvatar{
+    padding:2px!important;
+  }
+  html.profile-avatar-global-customized body.billie-page-active #billiePage #billiePageAvatar{
+    border:2px solid var(--betv-user-avatar-border,rgba(255,255,255,.6))!important;
+  }
+  body.billie-page-active #billiePage #billiePageAvatar > .betv-header-avatar-inner,
+  html.profile-avatar-global-customized body.billie-page-active #billiePage #billiePageAvatar > .betv-header-avatar-inner{
     position:relative!important;
     display:grid!important;
     place-items:center!important;
@@ -1885,28 +1909,31 @@ body.billie-page-active .billie-page-header{
     padding:0!important;
     border:0!important;
     outline:0!important;
+    border-radius:50%!important;
     box-shadow:none!important;
     background:transparent!important;
-    border-radius:50%!important;
+    filter:none!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
     overflow:hidden!important;
   }
-  body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner>img{
-    display:block!important;
+  body.billie-page-active #billiePage #billiePageAvatar > .betv-header-avatar-inner > img{
     position:static!important;
+    display:block!important;
     width:100%!important;
     height:100%!important;
     min-width:0!important;
     min-height:0!important;
-    border:0!important;
-    padding:0!important;
     margin:0!important;
+    padding:0!important;
+    border:0!important;
     border-radius:50%!important;
-    object-fit:cover!important;
     box-shadow:none!important;
+    object-fit:cover!important;
     transform:none!important;
+    filter:none!important;
   }
-  body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner>img[hidden],
-  body.billie-page-active #billiePageAvatar>.betv-header-avatar-inner>svg[hidden]{
+  body.billie-page-active #billiePage #billiePageAvatar > .betv-header-avatar-inner > :is(img,svg)[hidden]{
     display:none!important;
   }
 }
