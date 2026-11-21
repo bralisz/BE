@@ -25,7 +25,7 @@ with selected as materialized (
       then (favorite.item->>'recordId')::uuid
     else null end
   where p.banned is false
-    and nullif(pg_catalog.trim(p.username::text),'') is not null
+    and nullif(pg_catalog.btrim(p.username::text),'') is not null
     and coalesce(up.data->'communityRankingsPublic','true'::jsonb) <> 'false'::jsonb
     and album.collection = 'news'
     and coalesce(pg_catalog.lower(album.data->>'active'),'true') <> 'false'
