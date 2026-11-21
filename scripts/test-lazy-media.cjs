@@ -30,9 +30,15 @@ window.IntersectionObserver = class {
   unobserve(node) { observed.delete(node); }
 };
 window.requestAnimationFrame = callback => { callback(); return 1; };
+const cached = document.createElement('img');
+cached.src = '/cached.webp';
+Object.defineProperties(cached, { complete: { value: true }, naturalWidth: { value: 320 } });
+document.body.appendChild(cached);
 window.eval(source);
 document.dispatchEvent(new window.Event('DOMContentLoaded'));
 
+assert(cached.classList.contains('betv-image-loaded'));
+assert(!cached.classList.contains('betv-image-pending'));
 const hero = document.querySelector('.f-media img');
 const poster = document.querySelector('.video-card img');
 const avatar = document.querySelector('.user-chip img');
@@ -54,8 +60,9 @@ assert(avatar.classList.contains('betv-image-pending'));
   assert(dynamic.classList.contains('betv-image-pending'));
 
   const deferred = document.createElement('img');
-  deferred.setAttribute('data-src', '/later.webp');
   document.body.appendChild(deferred);
+  await new Promise(resolve => setTimeout(resolve, 5));
+  deferred.setAttribute('data-src', '/later.webp');
   await new Promise(resolve => setTimeout(resolve, 5));
   assert(observed.has(deferred));
   assert.equal(deferred.hasAttribute('src'), false);

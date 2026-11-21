@@ -7,6 +7,8 @@
     '.f-slide.active .f-media img',
     '.f-slide.active .f-logo img',
     '.detail-bg img',
+    '.detail-background img',
+    '.home-logo-pill img',
     '.community-hero-banner-frame > img',
     '.login-brand img',
     '.logo-mark',
@@ -20,12 +22,13 @@
 
   function updateVisualState(image) {
     if (!image || image.nodeType !== 1 || image.tagName !== 'IMG') return;
-    const hasSource = Boolean(image.currentSrc || image.getAttribute('src') || image.hasAttribute('data-src'));
-    if (!hasSource) return;
-    const loaded = imageReady(image);
-    image.classList.toggle('betv-image-pending', !loaded);
+    const deferred = image.hasAttribute('data-src') || image.hasAttribute('data-srcset');
+    const hasSource = Boolean(image.getAttribute('src') || image.getAttribute('srcset') || image.currentSrc);
+    const loaded = !deferred && hasSource && imageReady(image);
+    const failed = !deferred && hasSource && image.complete && !loaded;
+    image.classList.toggle('betv-image-pending', deferred || (hasSource && !loaded && !failed));
     image.classList.toggle('betv-image-loaded', loaded);
-    if (loaded) image.classList.remove('betv-image-error');
+    image.classList.toggle('betv-image-error', failed);
   }
 
   function applyImagePolicy(image) {
@@ -53,7 +56,7 @@
   document.addEventListener('error', event => {
     const image = event.target;
     if (image && image.tagName === 'IMG') {
-      image.classList.remove('betv-image-pending');
+      image.classList.remove('betv-image-pending', 'betv-image-loaded');
       image.classList.add('betv-image-error');
     }
   }, true);
@@ -124,7 +127,7 @@
     const mutations = new MutationObserver(records => {
       for (const record of records) {
         if (record.type === 'attributes') {
-          if (record.target.tagName === 'IMG') pending.add(record.target);
+          pending.add(record.target);
         } else {
           for (const node of record.addedNodes) if (node instanceof Element) pending.add(node);
         }
@@ -138,7 +141,7 @@
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ['src', 'srcset']
+      attributeFilter: ['src', 'srcset', 'data-src', 'data-srcset', 'data-bg-src']
     });
   }
 
