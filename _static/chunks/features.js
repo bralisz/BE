@@ -1,7 +1,9 @@
 /* Load account and community code when a visitor asks for those areas. */
 (() => {
   'use strict';
-  const revisions = {account:'20261116-episode-community-profile-perf-v2',community:'20261120-instagram-cta-i18n-v1'};
+  // Build-generated content revision prevents long-lived caches from serving outdated modules.
+  const buildRevision=String(window.__BETV_ASSET_REV__||window.__BETV_DEPLOYMENT_VERSION__||'20261121-cache-safe-v1');
+  const revisions = {account:buildRevision,community:buildRevision};
   const pending = new Map();
   const ready = new Set();
   let actionVersion = 0;
