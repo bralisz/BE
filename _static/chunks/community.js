@@ -23,6 +23,21 @@
   }
 
 
+
+  var albumCommunityCopy={
+    'pt-br':{title:'Álbuns mais curtidos',loading:'Carregando álbuns…',empty:'Nenhum álbum escolhido pelos fãs ainda.',error:'Não foi possível carregar os álbuns.',retry:'Tentar novamente',open:'Abrir álbum'},
+    'en-us':{title:'Most loved albums',loading:'Loading albums…',empty:'No albums picked by fans yet.',error:'Albums could not be loaded.',retry:'Try again',open:'Open album'},
+    es:{title:'Álbumes más queridos',loading:'Cargando álbumes…',empty:'Los fans todavía no han elegido álbumes.',error:'No se pudieron cargar los álbumes.',retry:'Reintentar',open:'Abrir álbum'},
+    fr:{title:'Albums les plus aimés',loading:'Chargement des albums…',empty:'Aucun album choisi par les fans.',error:'Impossible de charger les albums.',retry:'Réessayer',open:'Ouvrir l’album'},
+    it:{title:'Album più amati',loading:'Caricamento album…',empty:'Nessun album scelto dai fan.',error:'Impossibile caricare gli album.',retry:'Riprova',open:'Apri album'}
+  };
+  function albumCopy(key){
+    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    var slug=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
+    return (albumCommunityCopy[slug]||albumCommunityCopy['pt-br'])[key]||key;
+  }
+  var popularAlbumsCache=null,popularAlbumsLoadedAt=0,popularAlbumsLoading=false,popularAlbumsObserver=null;
+
   var communityShareTranslations={
     'pt-br':{member:'Compartilhe seu perfil com seus amigos e ganhe uma tag',guest:'Compartilhe o site e crie uma conta para ganhar uma tag',tag:'Fã da Billie',share:'Compartilhar',signup:'Criar conta',missing:'Conclua seu perfil para compartilhar.',copied:'Link do perfil copiado e tag recebida!',success:'Sua tag Fã da Billie foi adicionada ao perfil!',error:'Não foi possível compartilhar agora. Tente novamente.',awardError:'Link compartilhado, mas não foi possível liberar a tag. Tente novamente.'},
     'en-us':{member:'Share your profile with friends and earn a badge',guest:'Share the site and create an account to earn a badge',tag:'Billie Fan',share:'Share',signup:'Create account',missing:'Complete your profile to share it.',copied:'Profile link copied and badge earned!',success:'Your Billie Fan badge has been added to your profile!',error:'Could not share right now. Please try again.',awardError:'Profile shared, but the badge could not be unlocked. Please try again.'},
@@ -664,6 +679,7 @@
       +      '</div>'
       +    '</section>'
       +    '<section class="community-section"><div class="community-section-head community-featured-head"><div class="community-section-title"><h2>Perfis em destaque</h2><p class="community-section-subtitle">Compartilhe seu perfil para receber curtidas e aparecer no ranking.</p></div><details class="community-rules-details"><summary class="community-rules-button">Regras</summary><div class="community-rules-panel" id="communityProfileRules"><p>Este ranking mostra os perfis que mais receberam curtidas da comunidade. Compartilhe seu perfil com outros usuários para que eles conheçam sua página e possam curti-la.</p><p>No final de cada mês, o 1º, 2º e 3º lugar ganham uma tag especial no perfil:</p><div class="community-rules-tags"><div class="community-rules-tag-row"><span class="community-rules-place">1° lugar</span><span class="community-award-tag is-avocado notranslate" data-i18n-ignore translate="no">Avocado</span></div><div class="community-rules-tag-row"><span class="community-rules-place">2° lugar</span><span class="community-award-tag is-eyelash notranslate" data-i18n-ignore translate="no">Eyelash</span></div><div class="community-rules-tag-row"><span class="community-rules-place">3° lugar</span><span class="community-award-tag is-blohsh notranslate" data-i18n-ignore translate="no">Blohsh</span></div></div></div></details></div><div class="community-ranking-wrap"><div class="community-ranking-card" id="communityProfileRanking"></div><div class="community-ranking-own" id="communityOwnProfile" hidden></div></div></section>'
+      +    '<section class="community-section community-popular-albums-section" id="communityPopularAlbumsSection" aria-labelledby="communityPopularAlbumsTitle"><div class="community-section-head"><h2 id="communityPopularAlbumsTitle">'+albumCopy('title')+'</h2></div><div id="communityPopularAlbumsContent" aria-live="polite"></div></section>'
       +    '<div class="community-supporters-cta-wrap"><button class="community-supporters-cta" id="communitySupportersButton" type="button">Ver fãs que apoiam o site</button></div>'
       +    '<section class="community-ong-spotlight" id="communityOngSpotlight" hidden aria-label="Apoie uma ONG"><div class="community-ong-spotlight-frame"><img id="communityOngSpotlightImage" alt="Apoie uma ONG" loading="lazy" decoding="async" fetchpriority="low"><div class="community-ong-spotlight-overlay" aria-hidden="true"></div><a class="community-ong-spotlight-button" href="/ong" data-open-donate="true">Apoie uma ONG</a></div></section>'
       +  '</div>'
@@ -769,6 +785,7 @@
   function closeCommunity(resetView,tabAfter){
     clearInterval(reelTimer);
     if(state.similarObserver){state.similarObserver.disconnect();state.similarObserver=null;}
+    if(popularAlbumsObserver){popularAlbumsObserver.disconnect();popularAlbumsObserver=null;}
     if(document.body.classList.contains('community-page-active'))state.communityScrollY=Math.max(0,Number(window.scrollY)||0);
     communityBannerRequest+=1; // Ignore late image loads after leaving this page.
     if(document.body.classList.contains('community-page-active')){
@@ -962,6 +979,7 @@
     chooseCommunityBanner();
     refreshCommunity();
     scheduleSimilarFans();
+    schedulePopularAlbums();
   }
   window.BETVCommunity={open:openCommunity,close:closeCommunity,refresh:refreshCommunity,record:recordRecentFromPlay};
   window.addEventListener('be:open-community',openCommunity);
@@ -1009,6 +1027,105 @@
     host.innerHTML='';
     if(!Array.isArray(rows)||!rows.length){var empty=document.createElement('div');empty.className='community-empty';empty.textContent=emptyText;host.appendChild(empty);return;}
     var rail=document.createElement('div');rail.className='community-rail';rows.forEach(function(row){rail.appendChild(createVideoCard(row,options));});host.appendChild(rail);
+  }
+
+
+  function renderPopularAlbums(rows,failed){
+    var host=document.getElementById('communityPopularAlbumsContent');
+    if(!host)return;
+    host.replaceChildren();
+    if(!Array.isArray(rows)||!rows.length){
+      var empty=document.createElement('div');empty.className='community-empty';
+      empty.textContent=albumCopy(failed?'error':'empty');
+      if(failed){
+        var retry=document.createElement('button');retry.type='button';
+        retry.className='community-albums-retry';retry.textContent=albumCopy('retry');
+        retry.addEventListener('click',function(){loadPopularAlbums(true);});
+        empty.appendChild(retry);
+      }
+      host.appendChild(empty);return;
+    }
+    var rail=document.createElement('div');rail.className='community-rail community-album-rail';
+    rows.forEach(function(album){
+      var id=String(album&&album.recordId||'');
+      if(!validUuid(id))return;
+      var title=String(album&&album.title||'Álbum');
+      var path='/albuns/'+encodeURIComponent(id);
+      var card=document.createElement('a');card.className='community-album-card';
+      card.href=window.BETVLocaleURL?window.BETVLocaleURL(path):path;
+      card.setAttribute('aria-label',albumCopy('open')+': '+title);
+      var cover=document.createElement('span');cover.className='community-album-cover';
+      var imageUrl=mediaUrl(album&&album.imageUrl||'');
+      if(imageUrl){
+        var img=document.createElement('img');img.alt='';img.loading='lazy';img.decoding='async';img.src=imageUrl;
+        cover.appendChild(img);
+      }
+      var saves=Math.max(0,Math.floor(Number(album&&album.saves)||0));
+      if(saves){
+        var social=document.createElement('span');social.className='community-favorite-social';
+        social.setAttribute('role','img');social.setAttribute('aria-label',t('{count} curtidas',{count:saves}));
+        var faces=document.createElement('span');faces.className='community-favorite-faces';
+        (Array.isArray(album.fanAvatars)?album.fanAvatars.slice(0,3):[]).forEach(function(person){
+          var face=document.createElement('span');face.className='community-favorite-face';
+          var avatar=document.createElement('img');avatar.alt='';avatar.decoding='async';avatar.loading='lazy';
+          avatar.src=window.BETVResolveAvatar?window.BETVResolveAvatar(person&&person.avatarUrl):mediaUrl(person&&person.avatarUrl||'/_static/media/profile/default-avatar.png');
+          face.appendChild(avatar);faces.appendChild(face);
+        });
+        social.appendChild(faces);
+        var count=document.createElement('span');count.className='community-favorite-count';count.textContent=String(saves);
+        social.appendChild(count);cover.appendChild(social);
+      }
+      card.appendChild(cover);
+      var name=document.createElement('strong');name.className='community-album-title notranslate';
+      name.setAttribute('translate','no');name.textContent=title;card.appendChild(name);
+      card.addEventListener('click',function(event){
+        if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.altKey||event.shiftKey)return;
+        event.preventDefault();state.detailReturnToCommunity=true;
+        closeCommunity(false,'community');
+        if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(path);
+        else location.assign(card.href);
+      });
+      rail.appendChild(card);
+    });
+    if(rail.childElementCount)host.appendChild(rail);
+    else renderPopularAlbums([],false);
+  }
+
+  async function loadPopularAlbums(force){
+    if(popularAlbumsLoading)return;
+    if(force!==true&&popularAlbumsCache&&Date.now()-popularAlbumsLoadedAt<300000){renderPopularAlbums(popularAlbumsCache,false);return;}
+    popularAlbumsLoading=true;
+    var host=document.getElementById('communityPopularAlbumsContent');
+    if(host&&!host.childElementCount){
+      var loading=document.createElement('div');loading.className='community-empty';
+      loading.textContent=albumCopy('loading');host.appendChild(loading);
+    }
+    try{
+      await Promise.resolve(window.beBackend&&window.beBackend.ready);
+      var client=window.beBackend&&window.beBackend.client;
+      if(!client||typeof client.rpc!=='function')throw new Error('popular_albums_backend_unavailable');
+      var result=await window.BETVFeatures.withTimeout(client.rpc('get_community_popular_albums',{p_limit:12}),10000);
+      if(result&&result.error)throw result.error;
+      popularAlbumsCache=Array.isArray(result&&result.data)?result.data:[];
+      popularAlbumsLoadedAt=Date.now();
+      renderPopularAlbums(popularAlbumsCache,false);
+    }catch(error){
+      renderPopularAlbums(popularAlbumsCache||[],!popularAlbumsCache);
+    }finally{popularAlbumsLoading=false;}
+  }
+
+  function schedulePopularAlbums(){
+    var section=document.getElementById('communityPopularAlbumsSection');
+    if(popularAlbumsObserver){popularAlbumsObserver.disconnect();popularAlbumsObserver=null;}
+    if(!section||!document.body.classList.contains('community-page-active'))return;
+    if(popularAlbumsCache&&Date.now()-popularAlbumsLoadedAt<300000){renderPopularAlbums(popularAlbumsCache,false);return;}
+    if(typeof window.IntersectionObserver!=='function'){loadPopularAlbums();return;}
+    popularAlbumsObserver=new IntersectionObserver(function(entries){
+      if(!entries.some(function(entry){return entry.isIntersecting;}))return;
+      if(popularAlbumsObserver){popularAlbumsObserver.disconnect();popularAlbumsObserver=null;}
+      loadPopularAlbums();
+    },{rootMargin:'500px 0px'});
+    popularAlbumsObserver.observe(section);
   }
 
   function normalizeProfileAvatarRing(value){
