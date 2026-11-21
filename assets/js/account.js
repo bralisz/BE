@@ -2448,7 +2448,8 @@ const userDropdown=document.getElementById('userDropdown');
       profileSavedGrid.innerHTML=profileSavedItems.map(function(item,index){
         var image=item.imageUrl||item.bannerUrl||'';
         var isAlbum=String(item.collection||'').toLowerCase()==='albums';
-        var meta=[isAlbum?'Álbum':'',item.year,item.duration].filter(Boolean).join(' • ');
+        var displayDuration=window.beBackend&&typeof window.beBackend.formatDuration==='function'?window.beBackend.formatDuration(item.duration):item.duration;
+        var meta=[isAlbum?'Álbum':'',item.year,displayDuration].filter(Boolean).join(' • ');
         return '<button class="profile-saved-card'+(isAlbum?' is-album':'')+'" type="button" data-saved-index="'+index+'" aria-label="Abrir '+escapePublic(item.title||'conteúdo salvo')+'">'
           +'<span class="profile-saved-thumb">'+(image?'<img decoding="async" src="'+escapePublic(window.beMediaUrl?window.beMediaUrl(image):image)+'" alt="">':'<span class="profile-saved-placeholder" aria-hidden="true"></span>')+'<span class="profile-saved-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7-11-7Z"></path></svg></span></span>'
           +'<span class="profile-saved-copy"><strong class="notranslate" translate="no">'+escapePublic(item.title||'Conteúdo salvo')+'</strong>'+(meta?'<small>'+escapePublic(meta)+'</small>':'')+'</span>'
