@@ -23815,3 +23815,110 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
     font-size: 11px;
   }
 }
+
+
+/* Billie album showcase: first the feature, then Albums & Singles immediately over the covers. */
+.album-home-section > .billie-home-spotlight {
+  width: 100%;
+  margin: 0 0 28px;
+  padding: 0;
+}
+.album-home-section > .billie-home-spotlight .billie-home-spotlight-copy {
+  display: flex !important;
+  position: absolute;
+  top: auto;
+  bottom: clamp(100px, 9vw, 126px);
+  left: clamp(24px, 4vw, 56px);
+  right: 24px;
+  max-width: min(660px, calc(100% - 48px));
+  transform: none;
+  z-index: 4;
+}
+.album-home-section > .billie-home-spotlight .billie-home-spotlight-button {
+  left: clamp(24px, 4vw, 56px);
+  right: auto;
+  bottom: clamp(24px, 3vw, 38px);
+  border-radius: 999px;
+}
+.album-home-section > .album-home-title {
+  display: inline-flex;
+  align-items: center;
+}
+@media (max-width: 760px) {
+  /* The full section viewer uses a two-column header grid: reserve a dedicated
+     first row for the Billie banner, a second for the title/back button. */
+  body.section-catalog-active #dynamicSections.section-view-mode > .album-home-section.section-view-active {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 46px !important;
+    grid-auto-rows: auto !important;
+    column-gap: 12px !important;
+    align-items: start !important;
+  }
+  body.section-catalog-active #dynamicSections.section-view-mode .album-home-section.section-view-active > .billie-home-spotlight {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 28px !important;
+    padding: 0 !important;
+  }
+  body.section-catalog-active #dynamicSections.section-view-mode .album-home-section.section-view-active > .album-home-title {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    margin: 0 0 18px !important;
+    padding: 0 !important;
+    min-width: 0 !important;
+    align-self: center !important;
+  }
+  body.section-catalog-active #dynamicSections.section-view-mode .album-home-section.section-view-active > .section-view-mobile-home {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+    margin: 0 0 18px !important;
+    align-self: center !important;
+  }
+  body.section-catalog-active #dynamicSections.section-view-mode .album-home-section.section-view-active > .album-home-shell {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+  /* Match the original mobile banner: readable headline and blue CTA on the left. */
+  .album-home-section > .billie-home-spotlight .billie-home-spotlight-frame {
+    height: clamp(230px, 65vw, 340px) !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    border-radius: 20px !important;
+  }
+  .album-home-section > .billie-home-spotlight .billie-home-spotlight-copy {
+    display: flex !important;
+    flex-direction: column !important;
+    position: absolute !important;
+    inset: auto 20px 82px !important;
+    max-width: calc(100% - 40px) !important;
+    transform: none !important;
+    z-index: 4 !important;
+    pointer-events: none;
+  }
+  .album-home-section > .billie-home-spotlight .billie-home-spotlight-copy strong {
+    color: #fff !important;
+    font-size: clamp(21px, 5.8vw, 27px) !important;
+    font-weight: 720 !important;
+    line-height: 1.15 !important;
+    letter-spacing: -.025em !important;
+    text-wrap: balance;
+  }
+  .album-home-section > .billie-home-spotlight .billie-home-spotlight-button {
+    position: absolute !important;
+    inset: auto auto 20px 20px !important;
+    min-height: 44px !important;
+    max-width: calc(100% - 40px) !important;
+    padding: 0 18px !important;
+    border-radius: 999px !important;
+    font-size: 13px !important;
+    white-space: normal !important;
+    text-align: center !important;
+  }
+  .album-home-section > .billie-home-spotlight .billie-home-spotlight-overlay {
+    background: linear-gradient(180deg, transparent 15%, rgba(2,5,10,.25) 38%, rgba(2,5,10,.88) 100%) !important;
+  }
+}
