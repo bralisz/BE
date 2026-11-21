@@ -12,7 +12,7 @@
   "scripts": {
     "build:static": "node scripts/build-static.mjs",
     "test:mobile-ui": "node scripts/test-mobile-interface.cjs && node scripts/test-featured-swipe.cjs && node scripts/test-area-loading.cjs mobile-navigation && node scripts/test-area-loading.cjs mobile-settings && node scripts/test-no-pwa-wallpaper.cjs",
-    "test:responsiveness": "node scripts/test-area-loading.cjs && node scripts/test-mobile-performance.cjs && node scripts/test-profile-navigation.cjs && node scripts/test-loading-recovery.cjs && node scripts/test-profile-follow.cjs && node scripts/test-static-css.cjs && node scripts/test-responsive-media.cjs && node scripts/test-lazy-media.cjs && node scripts/test-community-banner.cjs && node scripts/test-community-discovery.cjs",
+    "test:responsiveness": "node scripts/test-area-loading.cjs && node scripts/test-mobile-performance.cjs && node scripts/test-profile-navigation.cjs && node scripts/test-loading-recovery.cjs && node scripts/test-profile-follow.cjs && node scripts/test-static-css.cjs && node scripts/test-responsive-media.cjs && node scripts/test-lazy-media.cjs && node scripts/test-community-banner.cjs && node scripts/test-community-discovery.cjs && npm run test:notification-navigation",
     "test:seo": "node scripts/test-seo.cjs && node scripts/test-seo-navigation.cjs && node scripts/test-sitemap.cjs && node scripts/test-guest-access.cjs && node scripts/test-public-content-pages.cjs",
     "test:admin-ui": "node scripts/test-admin-media.cjs && node scripts/test-admin-studio.cjs && node scripts/test-admin-workspace.cjs && node scripts/test-mobile-interface.cjs",
     "test:lazy-media": "node scripts/test-lazy-media.cjs",
@@ -22,7 +22,8 @@
     "test:community-discovery": "node scripts/test-community-discovery.cjs",
     "test:profile-activity": "node scripts/test-profile-activity-refresh.cjs && node scripts/test-profile-last-watched.cjs && node scripts/test-profile-watch-click.cjs",
     "test:performance": "node scripts/test-performance-safety.cjs && node scripts/test-mobile-nav-loading.cjs && node scripts/test-data-analytics.cjs",
-    "test:scale": "node scripts/test-scaling-cache.cjs"
+    "test:scale": "node scripts/test-scaling-cache.cjs",
+    "test:notification-navigation": "node scripts/test-community-notification-navigation.cjs"
   },
   "devDependencies": {
     "jsdom": "^30.1.2"
