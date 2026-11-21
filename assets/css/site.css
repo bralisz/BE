@@ -23738,27 +23738,24 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
 #communityShareSection[hidden]{display:none!important}
 
 
-/* Albums and singles with no player or tracks remain available as upcoming releases. */
-.album-home-coming-soon{
-  position:absolute;
-  z-index:1;
-  bottom:10px;
-  left:10px;
-  max-width:calc(100% - 20px);
-  padding:7px 11px;
-  border:1px solid rgba(255,255,255,.25);
-  border-radius:999px;
-  background:rgba(10,12,16,.78);
-  color:#fff;
-  font-size:11px;
-  font-weight:750;
-  line-height:1.1;
-  letter-spacing:.01em;
-  text-align:center;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  pointer-events:none;
-  -webkit-backdrop-filter:blur(10px);
-  backdrop-filter:blur(10px);
+
+/* Keep the same Billie spotlight heading visible inside the album catalog banner on mobile. */
+@media(max-width:640px){
+  body.section-catalog-active #dynamicSections.section-view-mode .billie-home-spotlight-copy{
+    display:flex!important;
+    left:20px!important;
+    right:20px!important;
+    top:20px!important;
+    max-width:calc(100% - 40px)!important;
+    transform:none!important;
+    pointer-events:none;
+  }
+  body.section-catalog-active #dynamicSections.section-view-mode .billie-home-spotlight-copy strong{
+    max-width:100%;
+    color:#fff;
+    font-size:clamp(20px,5.8vw,25px)!important;
+    font-weight:650!important;
+    line-height:1.11!important;
+    letter-spacing:-.025em!important;
+  }
 }
