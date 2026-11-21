@@ -672,6 +672,17 @@ const EXTRA_EDITOR_LAYOUT_COMPACT_PATCH = String.raw`
 })();
 `;
 
+// Keep album and single drafts publishable without a streaming link or tracklist.
+ // The legacy authenticated admin bundle is embedded above; development/source/admin/admin.js
+ // is maintained separately and is not built into this bundle automatically.
+ function allowOptionalAlbumFields(runtime) {
+   return runtime
+     .replace('<label>Link do player *</label><input class="a-input" name="contentUrl" required',
+              '<label>Link do player (opcional)</label><input class="a-input" name="contentUrl"')
+     .replace('if (!/^https:\\/\\//i.test(data.contentUrl)) throw new Error(', 'if (data.contentUrl && !/^https:\\/\\//i.test(data.contentUrl)) throw new Error(')
+     .replace("if (!tracks.length) throw new Error('Adicione pelo menos uma faixa.');", '');
+ }
+
 module.exports = async function protectedAdminRuntime(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
@@ -744,7 +755,7 @@ module.exports = async function protectedAdminRuntime(req, res) {
 
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     if (req.method === 'HEAD') return res.status(200).end();
-    const runtimeSource = Buffer.from(ADMIN_BUNDLE_BASE64, 'base64').toString('utf8');
+    const runtimeSource = allowOptionalAlbumFields(Buffer.from(ADMIN_BUNDLE_BASE64, 'base64').toString('utf8'));
     return res.status(200).send(runtimeSource + EXTRA_ADMIN_PATCH + EXTRA_EDITOR_LAYOUT_PATCH + EXTRA_EDITOR_LAYOUT_REFINED_PATCH + EXTRA_EDITOR_LAYOUT_COMPACT_PATCH + ADMIN_MOBILE_UI + ADMIN_WORKSPACE_UI + ADMIN_STUDIO_UI + ADMIN_MEDIA_UI + ADMIN_IOS_UI + ADMIN_SEO_FIELDS);
   } catch (_) {
     return res.status(404).end();
