@@ -2684,15 +2684,15 @@ body.admin-preview-open{overflow:hidden}
       </section>
 
       <section class="editor-field-group">
-        <div class="editor-group-heading"><span>02</span><div><h3>Capa e player</h3><p>A capa aparece na home e o botão de reprodução abre o serviço escolhido.</p></div></div>
+        <div class="editor-group-heading"><span>02</span><div><h3>Capa e player</h3><p>A capa aparece na home. Adicione um link de reprodução apenas se estiver disponível.</p></div></div>
         <div class="form-grid modern-form-grid">
           ${imageField('Capa do álbum ou single *', 'imageUrl', item.imageUrl || item.thumbnailUrl || '', { directMedia: true })}
-          <div class="field full"><label>Link do player *</label><input class="a-input" name="contentUrl" required value="${esc(item.contentUrl || item.link || '')}" placeholder="https://open.spotify.com/... ou outro serviço"><small>Use um link HTTPS para Spotify, Apple Music, YouTube Music ou outro player.</small></div>
+          <div class="field full"><label>Link do player (opcional)</label><input class="a-input" name="contentUrl" value="${esc(item.contentUrl || item.link || '')}" placeholder="https://open.spotify.com/... ou outro serviço"><small>Opcional. Se preenchido, use HTTPS para Spotify, Apple Music, YouTube Music ou outro player.</small></div>
         </div>
       </section>
 
       <section class="editor-field-group album-track-field-group">
-        <div class="editor-group-heading"><span>03</span><div><h3>Faixas</h3><p>Adicione o nome oficial e a duração de cada música na ordem correta.</p></div></div>
+        <div class="editor-group-heading"><span>03</span><div><h3>Faixas (opcional)</h3><p>Adicione as faixas quando estiverem disponíveis. Sem link e sem faixas, o álbum aparecerá como Em breve.</p></div></div>
         <input type="hidden" name="tracksJson" value="${esc(tracksJson)}">
         <input type="hidden" name="duration" value="${esc(item.duration || (tracks.length ? `${tracks.length} músicas` : ''))}">
         <div class="album-track-editor" data-album-track-editor>
@@ -3225,7 +3225,7 @@ body.admin-preview-open{overflow:hidden}
           data.year = String(data.year || '').trim();
           if (!data.title) throw new Error('Informe o nome oficial do álbum ou single.');
           if (!String(data.imageUrl || '').trim()) throw new Error('Adicione a capa do álbum ou single.');
-          if (!/^https:\/\//i.test(data.contentUrl)) throw new Error('Informe um link HTTPS válido para o player.');
+          if (data.contentUrl && !/^https:\/\//i.test(data.contentUrl)) throw new Error('Informe um link HTTPS válido para o player.');
           let tracks;
           try { tracks = JSON.parse(String(data.tracksJson || '[]')); }
           catch (_) { throw new Error('Não foi possível ler a lista de faixas.'); }
@@ -3234,7 +3234,6 @@ body.admin-preview-open{overflow:hidden}
             duration: String(track?.duration || '').trim(),
             order: index
           })).filter(track => track.title || track.duration);
-          if (!tracks.length) throw new Error('Adicione pelo menos uma faixa.');
           const incomplete = tracks.find(track => !track.title || !track.duration);
           if (incomplete) throw new Error('Preencha o nome e a duração de todas as faixas.');
           data.tracks = tracks;
