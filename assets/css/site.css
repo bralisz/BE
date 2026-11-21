@@ -24005,3 +24005,16 @@ body.billie-page-active .home-topbar.search-open .home-nav-leading{
     padding-top:calc(92px + env(safe-area-inset-top,0px));
   }
 }
+
+/* Compact Billie introduction widget on desktop only. */
+@media (min-width: 761px) {
+  .billie-home-spotlight-frame {
+    height: clamp(280px, 24vw, 340px);
+  }
+  .billie-home-spotlight-copy strong {
+    font-size: clamp(30px, 2.7vw, 44px);
+  }
+  .billie-home-spotlight-copy {
+    left: clamp(28px, 4vw, 60px);
+  }
+}
