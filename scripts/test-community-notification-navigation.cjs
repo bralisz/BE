@@ -2,7 +2,6 @@
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
-const vm = require('node:vm');
 
 const read = path => fs.readFileSync(path,'utf8');
 for(const cssFile of ['assets/css/community.css','assets/css/site.css','_static/styles/site.css']){
@@ -43,10 +42,11 @@ for(const jsFile of ['assets/js/site.js','development/source/fragments/notificat
   const CustomEvent=function(type,options){this.type=type;this.detail=options&&options.detail;};
   const openPage=new Function('document','window','page','CustomEvent','closeMenus','syncPageAvatar',
     'setNotificationRoute','loadNotifications','renderPage','markNotificationRead','routeInfo',
+    'notifications','closePage','markAllRead',
     fragment+'\nreturn openPage;')(
     document,window,page,CustomEvent,()=>{},()=>{},
     ()=>events.push('route'),async()=>{},()=>({id:'notification-1'}),()=>{},
-    ()=>({legacy:false})
+    ()=>({legacy:false}),[{id:'notification-1'}],()=>{},()=>{}
   );
   (async()=>{
     await openPage('notification-1',true);
