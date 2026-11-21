@@ -18985,7 +18985,7 @@ html.betv-installed-app .install-app-action{
 
 
 #communityPage[hidden]{display:none!important}
-body.community-page-active main > :not(#communityPage){display:none!important}
+body.community-page-active > main > :not(#communityPage){display:none!important}
 body.community-page-active #dynamicSections{display:none!important}
 body.community-page-active #communityPage{display:block!important}
 body.community-page-active .home-nav-link.active:not([data-community-tab]),
