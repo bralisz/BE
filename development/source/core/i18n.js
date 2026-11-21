@@ -152,23 +152,35 @@
   }
   function translateDetailDuration(value){
     var units={
-      'en-us':['hour','hours','minute','minutes'],
-      es:['hora','horas','minuto','minutos'],
-      fr:['heure','heures','minute','minutes'],
-      it:['ora','ore','minuto','minuti']
+      'en-us':['minute','minutes'],
+      es:['minuto','minutos'],
+      fr:['minute','minutes'],
+      it:['minuto','minuti']
     }[slug];
     if(!units)return value;
-    return String(value).replace(/(\d+)\s*(horas?|minutos?)\b/gi,function(_,amount,unit){
-      var offset=/^hora/i.test(unit)?0:2;
-      return amount+' '+units[offset+(Number(amount)===1?0:1)];
-    });
+    var raw=String(value||'').trim();
+    var hours=raw.match(/(\d+)\s*(?:hours?|hrs?|horas?|heures?|ore|ora|h)(?=\s|\d|$)/i);
+    var minutes=raw.match(/(\d+)\s*(?:minutes?|minutos?|minuti|mins?|m)(?=\s|$)/i);
+    if(!hours&&!minutes)return value;
+    var result=[];
+    if(hours)result.push(Number(hours[1])+(slug==='en-us'?' hr':' h'));
+    if(minutes){
+      var count=Number(minutes[1]);
+      result.push(hours?count+' min':count+' '+units[count===1?0:1]);
+    }
+    return result.join(' ');
   }
   function translateTextNode(node){
     if(!node||node.nodeType!==3||parentSkipped(node))return;
     var raw=node.nodeValue||'';
     var key=normalize(raw);
     if(!eligibleText(key))return;
-    var translated=node.parentElement&&node.parentElement.closest('.detail-duration')?translateDetailDuration(key):map[key];
+    if(node.parentElement&&node.parentElement.closest('.detail-duration,.f-duration,.series-episode-duration')){
+      var duration=translateDetailDuration(key);
+      if(duration&&duration!==key)node.nodeValue=preserveWhitespace(raw,duration);
+      return;
+    }
+    var translated=map[key];
     if(translated&&translated!==key)node.nodeValue=preserveWhitespace(raw,translated);
     else rememberMissing(key);
   }
