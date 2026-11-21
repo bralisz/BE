@@ -7,9 +7,9 @@ const vm = require('node:vm');
 const read = path => fs.readFileSync(path,'utf8');
 for(const cssFile of ['assets/css/community.css','assets/css/site.css','_static/styles/site.css']){
   const css=read(cssFile);
-  assert.match(css,/body\\.community-page-active\\s*>\\s*main\\s*>\\s*:not\\(#communityPage\\)/,
+  assert.match(css,/body\.community-page-active\s*>\s*main\s*>\s*:not\(#communityPage\)/,
     cssFile+' must only hide catalog siblings, not notification article children');
-  assert.doesNotMatch(css,/body\\.community-page-active\\s+main\\s*>\\s*:not\\(#communityPage\\)/,
+  assert.doesNotMatch(css,/body\.community-page-active\s+main\s*>\s*:not\(#communityPage\)/,
     cssFile+' must never target every nested main element');
 }
 
@@ -43,7 +43,7 @@ for(const jsFile of ['assets/js/site.js','development/source/fragments/notificat
   const CustomEvent=function(type,options){this.type=type;this.detail=options&&options.detail;};
   const openPage=new Function('document','window','page','CustomEvent','closeMenus','syncPageAvatar',
     'setNotificationRoute','loadNotifications','renderPage','markNotificationRead','routeInfo',
-    fragment+'\\nreturn openPage;')(
+    fragment+'\nreturn openPage;')(
     document,window,page,CustomEvent,()=>{},()=>{},
     ()=>events.push('route'),async()=>{},()=>({id:'notification-1'}),()=>{},
     ()=>({legacy:false})
