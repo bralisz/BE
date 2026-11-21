@@ -15678,6 +15678,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function openPage(id,updateRoute){
     closeMenus();
+    if(document.body.classList.contains('billie-page-active')){
+      window.dispatchEvent(new CustomEvent('be:close-billie-page'));
+    }
     // Notification previews can open from Avocados without the usual route event.
     // Close the Community surface before rendering the notification article.
     if(document.body.classList.contains('community-page-active')&&
@@ -15728,6 +15731,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var userChip=document.getElementById('userChip');
     if(userDropdown)userDropdown.classList.remove('open');
     if(userChip)userChip.setAttribute('aria-expanded','false');
+  }
+
+  function activateBell(togglePreview,event){
+    if(document.body.classList.contains('billie-page-active')){
+      openPage('',true);
+      return;
+    }
+    togglePreview(event);
   }
 
   function toggleDesktop(event){
@@ -15783,7 +15794,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!desktopTrigger)return;
     event.preventDefault();
     event.stopPropagation();
-    toggleDesktop(event);
+    activateBell(toggleDesktop,event);
   },true);
 
   document.addEventListener('click',function(event){
@@ -15798,7 +15809,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else{closeDesktop({restoreCommunity:true});closeMobile({restoreCommunity:true});}
   });
 
-  window.addEventListener('be:toggle-mobile-notifications',toggleMobile);
+  window.addEventListener('be:toggle-mobile-notifications',function(event){activateBell(toggleMobile,event);});
 
   window.addEventListener('be:close-notification-menus',closeMenus);
   window.addEventListener('be:open-config',closeMenus);
