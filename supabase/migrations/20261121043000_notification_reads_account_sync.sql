@@ -57,7 +57,8 @@ begin
   )
   from pg_catalog.jsonb_array_elements(p_receipts) as receipt(value)
   where receipt.value->>'id' ~*
-    '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}
+    '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$'
+  group by (receipt.value->>'id')::uuid
   on conflict (user_id,notification_id) do update
     set read_through = greatest(
       public.notification_reads.read_through,excluded.read_through),
