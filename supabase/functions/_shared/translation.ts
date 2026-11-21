@@ -434,15 +434,21 @@ function active(v: unknown) {
 function duration(v: unknown, locale: string) {
   const raw = text(v, 120);
   if (!raw) return raw;
-  const h = raw.match(/(\d+)\s*(?:h|hr|hrs|hora|horas)\b/i),
-    m = raw.match(/(\d+)\s*(?:m|min|mins|minuto|minutos)\b/i);
+  const h = raw.match(/(\d+)\s*(?:hours?|hrs?|horas?|heures?|ore|ora|h)(?=\s|\d|$)/i),
+    m = raw.match(/(\d+)\s*(?:minutes?|minutos?|minuti|mins?|m)(?=\s|$)/i);
   if (!h && !m) return raw;
+  const units: Record<string, [string, string]> = {
+    "pt-br": ["minuto", "minutos"],
+    "en-us": ["minute", "minutes"],
+    es: ["minuto", "minutos"],
+    fr: ["minute", "minutes"],
+    it: ["minuto", "minuti"],
+  };
+  const minutes = m ? Number(m[1]) : 0;
   return [
     h ? (locale === "en-us" ? `${Number(h[1])} hr` : `${Number(h[1])} h`) : "",
-    m ? `${Number(m[1])} min` : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+    m ? (h ? `${minutes} min` : `${minutes} ${(units[locale] || units["pt-br"])[minutes === 1 ? 0 : 1]}`) : "",
+  ].filter(Boolean).join(" ");
 }
 function signature(data: Record<string, unknown>) {
   const src: Record<string, unknown> = {};
