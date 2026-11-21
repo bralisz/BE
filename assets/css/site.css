@@ -9147,7 +9147,7 @@ body.billie-page-active{
   overflow-x:hidden!important;
   background:#05070b!important;
 }
-body.billie-page-active > :not(#billiePage):not(footer):not(.cookie-notice):not(.betv-update-popup):not(#betvAppSavedPage):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
+body.billie-page-active > :not(#billiePage):not(footer):not(.topbar-wrap):not(#mobileDrawer):not(#mobileDrawerBackdrop):not(.cookie-notice):not(.betv-update-popup):not(#betvAppSavedPage):not(#betvMobileBottomNav):not(#mobileAppBar):not(#mobileAccountPopover):not(#mobileNotificationPopover):not(script):not(style){display:none!important}
 body.billie-page-active > #billiePage{display:block!important}
 body.billie-page-active > footer{
   display:block!important;
@@ -23955,137 +23955,53 @@ body.album-page-active .album-page-detail.is-single-track .album-track-list{disp
 @media(max-width:760px){.community-album-rail{gap:12px}.community-album-card{flex-basis:min(56vw,205px)}.community-album-cover{border-radius:15px}.community-album-title{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.community-album-cover{transition:none}}
 
-/* Billie Wikipedia: use only its own navigation on mobile.
-   The shared mobile header previously duplicated the avatar and Home button. */
-body.billie-page-active .billie-page-header{
+/* Wikipedia uses the exact same site header controls as Community, minus search.
+   Hide its legacy local header to avoid doubled icons and phantom avatar rings. */
+body.billie-page-active #billiePage > .billie-page-header{
+  display:none!important;
+}
+body.billie-page-active .topbar-wrap{
   background:transparent!important;
   border:0!important;
   box-shadow:none!important;
 }
-@media(max-width:760px){
-  body.billie-page-active #mobileAppBar,
-  body.billie-page-active #mobileDrawer,
-  body.billie-page-active #mobileDrawerBackdrop{
-    display:none!important;
-  }
-  body.billie-page-active #billiePageHome{
-    display:grid!important;
-  }
-  body.billie-page-active .billie-page-content{
-    padding-top:calc(92px + env(safe-area-inset-top,0px));
+body.billie-page-active .topbar-wrap #homeNavLinks,
+body.billie-page-active .topbar-wrap #homeSearchWrap{
+  display:none!important;
+}
+body.billie-page-active .home-topbar.search-open{
+  width:max-content!important;
+}
+body.billie-page-active .home-topbar.search-open .home-nav-leading{
+  max-width:none!important;
+  opacity:1!important;
+  transform:none!important;
+  pointer-events:auto!important;
+}
+@media(min-width:761px){
+  body.billie-page-active > .topbar-wrap{
+    display:flex!important;
   }
 }
-
-/* Billie Wikipedia mobile: prevent Chromium backdrop-filter ghost circles.
-   One actual button each for Home, notifications and avatar; no extra layers.
-   Keep a single customizable profile ring and the original click actions. */
 @media(max-width:760px){
-  body.billie-page-active #billiePage .billie-page-header{
-    height:76px!important;
-    min-height:0!important;
-    padding:0 16px!important;
+  body.billie-page-active > #mobileAppBar{
     display:flex!important;
-    align-items:center!important;
-    justify-content:space-between!important;
     background:transparent!important;
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    box-shadow:none!important;
-  }
-  body.billie-page-active #billiePage .billie-page-header-actions{
-    display:flex!important;
-    align-items:center!important;
-    gap:12px!important;
-  }
-  body.billie-page-active #billiePage :is(#billiePageHome,#billiePageNotifications,#billiePageAvatar){
-    position:relative!important;
-    display:grid!important;
-    place-items:center!important;
-    width:48px!important;
-    height:48px!important;
-    min-width:48px!important;
-    min-height:48px!important;
-    flex:0 0 48px!important;
-    margin:0!important;
-    padding:0!important;
-    border:1px solid rgba(255,255,255,.15)!important;
-    border-radius:50%!important;
-    background:rgba(22,24,29,.98)!important;
     background-image:none!important;
+    border:0!important;
     box-shadow:none!important;
-    filter:none!important;
-    -webkit-filter:none!important;
     backdrop-filter:none!important;
     -webkit-backdrop-filter:none!important;
-    transform:none!important;
-    translate:none!important;
-    animation:none!important;
-    transition:none!important;
-    will-change:auto!important;
-    contain:none!important;
-    isolation:auto!important;
-    clip-path:none!important;
-    overflow:hidden!important;
-    cursor:pointer!important;
   }
-  body.billie-page-active #billiePage :is(#billiePageHome,#billiePageNotifications,#billiePageAvatar)::before,
-  body.billie-page-active #billiePage :is(#billiePageHome,#billiePageNotifications,#billiePageAvatar)::after{
+  body.billie-page-active #mobileAppBar::before,
+  body.billie-page-active #mobileAppBar::after{
     content:none!important;
     display:none!important;
   }
-  body.billie-page-active #billiePage :is(#billiePageHome,#billiePageNotifications) > svg{
-    position:relative!important;
-    width:21px!important;
-    height:21px!important;
-    transform:none!important;
-    filter:none!important;
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-  }
-  body.billie-page-active #billiePage #billiePageAvatar{
-    padding:2px!important;
-  }
-  html.profile-avatar-global-customized body.billie-page-active #billiePage #billiePageAvatar{
-    border:2px solid var(--betv-user-avatar-border,rgba(255,255,255,.6))!important;
-  }
-  body.billie-page-active #billiePage #billiePageAvatar > .betv-header-avatar-inner,
-  html.profile-avatar-global-customized body.billie-page-active #billiePage #billiePageAvatar > .betv-header-avatar-inner{
-    position:relative!important;
-    display:grid!important;
-    place-items:center!important;
-    width:100%!important;
-    height:100%!important;
-    min-width:0!important;
-    min-height:0!important;
-    margin:0!important;
-    padding:0!important;
-    border:0!important;
-    outline:0!important;
-    border-radius:50%!important;
-    box-shadow:none!important;
-    background:transparent!important;
-    filter:none!important;
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    overflow:hidden!important;
-  }
-  body.billie-page-active #billiePage #billiePageAvatar > .betv-header-avatar-inner > img{
-    position:static!important;
-    display:block!important;
-    width:100%!important;
-    height:100%!important;
-    min-width:0!important;
-    min-height:0!important;
-    margin:0!important;
-    padding:0!important;
-    border:0!important;
-    border-radius:50%!important;
-    box-shadow:none!important;
-    object-fit:cover!important;
-    transform:none!important;
-    filter:none!important;
-  }
-  body.billie-page-active #billiePage #billiePageAvatar > .betv-header-avatar-inner > :is(img,svg)[hidden]{
+  body.billie-page-active #mobileSearchControl{
     display:none!important;
+  }
+  body.billie-page-active .billie-page-content{
+    padding-top:calc(92px + env(safe-area-inset-top,0px));
   }
 }
