@@ -2232,7 +2232,7 @@ const userDropdown=document.getElementById('userDropdown');
           var item=profileLovedAlbumsItems[Number(button.dataset.profileLovedAlbumIndex)];if(!item)return;
           var id=String(item.recordId||item.itemId||'').replace(/^album:/,'');if(!id)return;
           closePublicPages(false);
-          var path='/albuns/'+encodeURIComponent(id);
+          var path=window.BETVAlbumRoutes.path(id);
           if(window.BETVPublicRoutes&&typeof window.BETVPublicRoutes.go==='function')window.BETVPublicRoutes.go(path);else location.assign(window.BETVLocaleURL?window.BETVLocaleURL(path):path);
         });
       }
