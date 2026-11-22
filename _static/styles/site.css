@@ -1875,3 +1875,11 @@ body.billie-page-active .home-topbar.search-open .home-nav-leading{
     line-height: 1.08;
   }
 }
+
+.catalog-search-results:not([hidden]){
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,clamp(145px,22vw,240px)),1fr));
+  gap:clamp(10px,1.5vw,20px);
+  margin:1rem clamp(16px,4vw,64px);
+}
+.catalog-search-results .video-card{width:100%;min-width:0}
