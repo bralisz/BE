@@ -1,5 +1,6 @@
 'use strict';
 
+const ALBUM_ROUTES = require('../../assets/js/album-routes');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -334,6 +335,10 @@ async function cachedSeoCollection(collection, deadline) {
   entry.promise = (async () => {
     try {
       entry.records = await fetchSeoCollection(collection, deadline);
+      if (collection === 'news') {
+        const keys = ALBUM_ROUTES.build(entry.records);
+        for (const row of entry.records) if (keys.has(row.id)) row.albumPath = '/albuns/' + keys.get(row.id);
+      }
       if (collection === 'videos') CONTENT_PAGE.distinguishVideoPaths(entry.records);
       entry.complete = true;
       entry.expiresAt = Date.now() + SEO_CATALOG_CACHE_TTL_MS;
@@ -380,7 +385,7 @@ function seoRecordFromRoute(routeInfo, catalog) {
   if (albumMatch) {
     let albumId = albumMatch[1];
     try { albumId = decodeURIComponent(albumId); } catch (_) {}
-    return (catalog || []).find(record => record.collection === 'news' && record.id === albumId) || null;
+    return (catalog || []).find(record => record.collection === 'news' && (record.id === albumId || record.albumPath === '/albuns/' + albumId)) || null;
   }
   return null;
 }
@@ -419,6 +424,7 @@ function localizedRecord(record, slug) {
 }
 
 function canonicalPathForRoute(routeInfo, seoRecord) {
+  if (seoRecord?.albumPath) return '/' + routeInfo.slug + localizedLogicalRoutePath(seoRecord.albumPath, routeInfo.slug);
   const logical = seoRecord && seoRecord.collection !== 'news' ? CONTENT_PAGE.contentPath(seoRecord) : (String(routeInfo.logicalPath || '/').replace(/\/+$/, '') || '/');
   if (seoRecord && seoRecord.collection !== 'news') return `/${routeInfo.slug}${logical}`;
   if (routeInfo.hasPrefix) return routeInfo.publicPath === '/' ? `/${routeInfo.slug}` : routeInfo.publicPath;
@@ -906,7 +912,7 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     .replace(/\s*<meta\s+name=["']robots["'][^>]*>/gi, '')
     .replace(/\s*<script\s+type=["']application\/ld\+json["'][^>]*data-betv-seo=["']true["'][^>]*>[\s\S]*?<\/script>/gi, '');
 
-  const logical = seoRecord && seoRecord.collection !== 'news' ? CONTENT_PAGE.contentPath(seoRecord) : (routeInfo.logicalPath || '/');
+  const logical = seoRecord && seoRecord.collection !== 'news' ? CONTENT_PAGE.contentPath(seoRecord) : (seoRecord?.albumPath || routeInfo.logicalPath || '/');
   const alternates = languageLinks(slug => localizedRouteUrl(origin, slug, logical))
     .map(([lang, href]) => `<link rel="alternate" hreflang="${lang}" href="${attr(href)}">`)
     .join('\n');
@@ -987,8 +993,8 @@ module.exports = async function sitePage(req, res) {
     const seoRecord = needsSeoCatalog ? seoRecordFromRoute(routeInfo, seoCatalog.records) : null;
     const responseStatus = needsSeoCatalog && !seoRecord ? (seoCatalog.complete ? 404 : 503) : 200;
     if (responseStatus !== 200) routeInfo.contentUnavailable = responseStatus;
-    if (!metadataOnly && responseStatus === 200 && seoRecord && (CONTENT_PAGE.friendlyContentRoute(routeInfo.logicalPath) || /^\/\d{6,12}$/.test(routeInfo.logicalPath))) {
-      const friendly = CONTENT_PAGE.contentPath(seoRecord);
+    if (!metadataOnly && responseStatus === 200 && seoRecord && (seoRecord.albumPath || CONTENT_PAGE.friendlyContentRoute(routeInfo.logicalPath) || /^\/\d{6,12}$/.test(routeInfo.logicalPath))) {
+      const friendly = seoRecord.albumPath || CONTENT_PAGE.contentPath(seoRecord);
       if (routeInfo.logicalPath !== friendly) {
         const destination = localizedRouteUrl(origin, routeInfo.slug, friendly);
         res.setHeader('Location', destination);

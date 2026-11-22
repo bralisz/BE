@@ -17,7 +17,7 @@ for (const path of ['assets/js/site.js', '_static/chunks/site.js']) {
   assert.ok(rank('ever happier') < rank('paris 2022'));
   assert.ok(Number.isFinite(rank('live happier 2022')));
   assert.ok(Number.isFinite(rank('happi')));
-  for (const miss of ['ever 2023', 'happier acoustic', 'it', 'everlasting', 'appy']) {
+  for (const miss of ['ever 2023', 'happier acoustic', 'it', 'everlasting', 'appy', 'happier paris', '2022', 'live', 'ever ete']) {
     assert.equal(rank(miss), Infinity, miss);
   }
   assert.equal(search({title: 'Billie’s Covers'}, '', "Billie's Covers"), 0);

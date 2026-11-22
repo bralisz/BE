@@ -13,6 +13,11 @@ const source=fs.readFileSync('assets/js/profile-activity.js','utf8');
  // Match the existing Drive/YouTube handlers registered before activity boot.
  w.document.addEventListener('click',event=>{playerClicks++;event.preventDefault();event.stopImmediatePropagation();},true);
  try{
+  w.eval(fs.readFileSync('assets/js/album-routes.js','utf8'));
+  const albums=[{id:'abc-123',title:'HIT ME HARD AND SOFT'},{id:'xyz',title:'Hit Me Hard & Soft'}];
+  w.BETVAlbumRoutes.update(albums);
+  assert.equal(w.BETVAlbumRoutes.resolve('abc-123',albums),albums[0]);
+  assert.equal(w.BETVAlbumRoutes.resolve('hit-me-hard-and-soft',albums),albums[0]);
   w.eval(source);w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
   await new Promise(setImmediate);
   assert.equal(w.document.querySelector('.profile-recent-watch-title').textContent,'Swarm');
@@ -46,7 +51,7 @@ const source=fs.readFileSync('assets/js/profile-activity.js','utf8');
   assert.equal(writes,2,'album Play triggers history');
   assert.equal(card.querySelector('.profile-recent-watch-tag').textContent,'Album');
   assert.equal(card.querySelector('.profile-recent-watch-title').textContent,'HIT ME HARD AND SOFT');
-  assert(card.querySelector('.profile-recent-watch-media').href.includes('/albuns/abc-123'));
+  assert(card.querySelector('.profile-recent-watch-media').href.endsWith('/albuns/hit-me-hard-and-soft'));
   complete({data:true});await new Promise(setImmediate);
   console.log('PASS video and album Play, last-watched cover/tag/route, duplicate prevention');
  }finally{w.close()}

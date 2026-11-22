@@ -47,12 +47,12 @@ async function request(method = 'GET') {
   for (const entry of videoEntries) {
     assert.equal(entry.getElementsByTagNameNS('http://www.google.com/schemas/sitemap-image/1.1', 'loc')[0].textContent, 'https://example.test/a.jpg?a=1&b=2');
     assert.equal(entry.querySelector('lastmod').textContent, '2026-10-20T12:00:00.000Z');
-    assert.equal(entry.getElementsByTagNameNS('http://www.w3.org/1999/xhtml', 'link').length, 6);
+    assert.equal(entry.getElementsByTagNameNS('http://www.w3.org/1999/xhtml', 'link').length, 8);
   }
   assert(!result.body.includes('11111111'));
   assert(!result.body.includes('javascript:'));
   assert(result.body.includes('https://billieilishtv.site/cover.jpg'));
-  assert(result.body.includes('/albuns/album%20%26%20one'));
+  assert(result.body.includes('/albuns/album<'));
   assert.equal((await request('HEAD')).body, '');
   assert.equal((await request('POST')).code, 405);
   const clock = Date.now;

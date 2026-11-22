@@ -22,6 +22,7 @@ function minifyCss(input){
 const out='_static';
 await rm(out,{recursive:true,force:true});
 const copies=[
+  ['assets/js/album-routes.js',`${out}/chunks/album-routes.js`],
   ['assets/js/features.js',`${out}/chunks/features.js`],
   ['assets/js/account.js',`${out}/chunks/account.js`],
   ['assets/js/community.js',`${out}/chunks/community.js`],

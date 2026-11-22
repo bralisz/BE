@@ -52,7 +52,7 @@
   if(id){
    const albumId=id.startsWith('album:')?id.slice('album:'.length):'';
    media.href=albumId&&['albums','singles'].includes(item.collection)
-    ?'/'+locale()+'/albuns/'+encodeURIComponent(albumId)
+    ?'/'+locale()+window.BETVAlbumRoutes.path(albumId)
     :/^\d{6,12}$/.test(id)?'/'+locale()+'/'+encodeURIComponent(id):'/'+locale()+'/#/video/'+encodeURIComponent(id);
    media.setAttribute('aria-label',String(item.title||'').slice(0,180));
   }

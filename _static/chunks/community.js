@@ -1117,7 +1117,7 @@
       var id=String(album&&album.recordId||'');
       if(!validUuid(id))return;
       var title=String(album&&album.title||'Álbum');
-      var path='/albuns/'+encodeURIComponent(id);
+      var path=window.BETVAlbumRoutes.path(id);
       var card=document.createElement('a');card.className='community-album-card';
       card.href=window.BETVLocaleURL?window.BETVLocaleURL(path):path;
       card.setAttribute('aria-label',albumCopy('open')+': '+title);

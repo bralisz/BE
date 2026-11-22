@@ -4846,6 +4846,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const allMovies = movieRows.filter(movie => movie.active !== false);
     const allSeries = seriesRows.filter(series => series.active !== false);
     const allAlbums = albumRows.filter(album => album.active !== false);
+    window.BETVAlbumRoutes.update(allAlbums);
     randomFeaturedPools.videos = allVideos.map(item => ({ ...item, collection: 'videos' }));
     randomFeaturedPools.movies = allMovies.map(item => ({ ...item, collection: 'movies' }));
     randomFeaturedPools.series = allSeries.map(item => ({ ...item, collection: 'series' }));
@@ -5134,8 +5135,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             const type = String(album.type || 'Álbum');
             const year = String(album.year || '');
             const upcoming = !String(album.contentUrl || album.link || '').trim() && !(Array.isArray(album.tracks) && album.tracks.length);
-            const route = localizedRoute('/albuns/' + encodeURIComponent(String(album.id || '')));
-            return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml('/albuns/' + encodeURIComponent(String(album.id || '')))}" aria-label="${escapeHtml(title)}">
+            const route = localizedRoute(window.BETVAlbumRoutes.path(album.id));
+            return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml(window.BETVAlbumRoutes.path(album.id))}" aria-label="${escapeHtml(title)}">
               <span class="album-home-cover">${image ? `<img src="${safeAssetUrl(image, 240)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}${upcoming ? `<span class="album-coming-soon-badge">${escapeHtml(localizedUiText('Em breve'))}</span>` : ''}</span>
               <strong class="notranslate" translate="no">${escapeHtml(title)}</strong>
               <small>${escapeHtml([localizedUiText(type), year].filter(Boolean).join(' • '))}</small>
@@ -5325,7 +5326,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (mobileButton) mobileButton.hidden = false;
   }
 
-  function videoCard(video) {
+  function videoCard(video, showSearchTitle = false) {
     const image = video.thumbnailUrl || video.imageUrl || video.bannerUrl || '';
     const contentHref = video.videoUrl || video.contentUrl || video.link || '#';
     const title = video.title || 'Abrir conteúdo';
@@ -5369,6 +5370,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(video.streamingLinks))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}">
       <img class="video-card-thumbnail" src="${safeAssetUrl(image, 320)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async" fetchpriority="low">
+      ${showSearchTitle === true ? `<strong class="catalog-result-title">${escapeHtml(title)}</strong>` : ''}
       ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo, 240)}" alt="" loading="lazy" decoding="async" fetchpriority="low" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
     </a>`;
   }
@@ -11636,23 +11638,36 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       ['entrevista', 'entrevistas', 'interview', 'interviews', 'intervista', 'entrevue'],
       ['acustico', 'acustica', 'acoustic', 'acoustique']
     ].filter(group => group.some(term => formats.includes(' ' + term + ' '))).flat();
-    const words = new Set(normalizeSearchText([...titles, ...metadata, ...variants].filter(Boolean).join(' ')).split(' '));
-    const description = normalizeSearchText([item.description, ...translations.map(entry => entry.description)].filter(Boolean).join(' '));
-    return { item, titles, words, descriptionWords: new Set(description.split(' ')) };
+    const filters = new Set(normalizeSearchText([...metadata, ...variants].filter(Boolean).join(' ')).split(' '));
+    return { item, titles, filters };
   }
 
   function catalogSearchRank(entry, query, terms) {
     if (entry.titles.includes(query)) return 0;
-    if (entry.titles.some(title => (' ' + title + ' ').includes(' ' + query + ' '))) return 1;
-    if (entry.titles.some(title => terms.every(term => title.split(' ').includes(term)))) return 2;
-    if (terms.every(term => entry.words.has(term))) return 3;
-    if (terms.every(term => entry.words.has(term) || entry.descriptionWords.has(term))) return 4;
-    // Allow the last title word to be unfinished while the visitor is typing.
-    const prefix = terms[terms.length - 1];
-    if (prefix.length >= 3 && !/\d/.test(prefix) &&
-        terms.slice(0, -1).every(term => entry.words.has(term)) &&
-        entry.titles.some(title => title.split(' ').some(word => word.startsWith(prefix)))) return 5;
-    return Infinity;
+    if (entry.titles.some(title => title.startsWith(query + ' '))) return 1;
+    if (entry.titles.some(title => (' ' + title + ' ').includes(' ' + query + ' '))) return 2;
+    let best = Infinity;
+    for (const title of entry.titles) {
+      const words = title.split(' ');
+      let titleMatches = 0;
+      let partial = false;
+      const matched = terms.every((term, index) => {
+        if (words.includes(term)) {
+          titleMatches++;
+          return true;
+        }
+        if (entry.filters.has(term)) return true;
+        if (index === terms.length - 1 && term.length >= 2 && !/\d/.test(term) &&
+            words.some(word => word.startsWith(term))) {
+          partial = true;
+          titleMatches++;
+          return true;
+        }
+        return false;
+      });
+      if (matched && titleMatches) best = Math.min(best, (partial ? 5 : 3) + (terms.length - titleMatches));
+    }
+    return best;
   }
 
   const SAVED_CONTENTS_KEY = 'beSavedContents';
@@ -11843,7 +11858,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (item.collection === 'albums' || item.collection === 'news') {
       const albumId = String(item.recordId || item.itemId || '').replace(/^album:/, '');
       if (!albumId) return;
-      const route = '/albuns/' + encodeURIComponent(albumId);
+      const route = window.BETVAlbumRoutes.path(albumId);
       if (window.BETVPublicRoutes && typeof window.BETVPublicRoutes.go === 'function') window.BETVPublicRoutes.go(route);
       else location.assign(window.BETVLocaleURL ? window.BETVLocaleURL(route) : route);
       return;
@@ -12216,7 +12231,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           if (Number.isFinite(rank)) matches.push({ item: entry.item, rank });
         }
         matches.sort((a, b) => a.rank - b.rank);
-        results.innerHTML = matches.map(match => videoCard(match.item)).join('');
+        results.innerHTML = matches.map(match => videoCard(match.item, true)).join('');
         results.hidden = !matches.length;
         setupContentDetailInteractions(results);
         visibleTotal = matches.length;
@@ -12256,7 +12271,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                 : currentView === 'videos'
                   ? collection === 'videos'
                   : true;
-          const searchMatches = !query || terms.every(term => normalizeSearchText([title, category, collection].join(' ')).split(' ').includes(term));
+          const searchMatches = !query || Number.isFinite(catalogSearchRank({ titles: [normalizeSearchText(title)], filters: new Set() }, query, terms));
           const show = sectionMatchesView && contentMatchesView && searchMatches;
           card.hidden = !show;
           if (show) visibleInSection += 1;
@@ -12412,6 +12427,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       else closeUserSearchResults();
       scheduleCatalogFilter(false, 200);
     });
+    window.addEventListener('be:catalog-search-commit', () => {
+      if (!input.value.trim() || isUserSearchQuery(input.value)) return;
+      applyCatalogFilter();
+      const target = document.querySelector('#dynamicSections .catalog-search-results:not([hidden]), #dynamicSections .home-filter-empty.show, #dynamicSections .album-home-section:not([hidden])');
+      target?.scrollIntoView({ block:'start' });
+    });
     input.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -12419,6 +12440,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       } else if (event.key === 'Enter' && document.body.classList.contains('album-page-active')) {
         event.preventDefault();
         window.dispatchEvent(new CustomEvent('be:album-search-commit', { detail:{ query:String(input.value || '') } }));
+      } else if (event.key === 'Enter' && !event.isComposing) {
+        event.preventDefault();
+        window.dispatchEvent(new Event('be:catalog-search-commit'));
       }
     });
     document.addEventListener('keydown', event => {
@@ -13114,6 +13138,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         } else if (event.key === 'Enter' && document.body.classList.contains('album-page-active')) {
           event.preventDefault();
           window.dispatchEvent(new CustomEvent('be:album-search-commit', { detail:{ query:String(searchInput.value || '') } }));
+          searchInput.blur();
+        } else if (event.key === 'Enter' && !event.isComposing) {
+          event.preventDefault();
+          window.dispatchEvent(new Event('be:catalog-search-commit'));
           searchInput.blur();
         }
       });
@@ -18039,7 +18067,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       title:String(album&&album.title||'Álbum'),
       year:String(album&&album.year||''),
       duration:'',
-      contentUrl:id?'/albuns/'+encodeURIComponent(id):'#',
+      contentUrl:id?window.BETVAlbumRoutes.path(id):'#',
       imageUrl:storedImage,
       bannerUrl:storedImage,
       collection:'albums'
@@ -18071,7 +18099,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var albumTitle=String(album.title||'Álbum');
       var albumImage=image(album.imageUrl||album.thumbnailUrl||album.bannerUrl);
       var upcoming=!href(album.contentUrl||album.link)&&!(Array.isArray(album.tracks)&&album.tracks.length);
-      return '<a class="album-page-cover-card'+(active?' active':'')+'" href="'+esc(localized('/albuns/'+encodeURIComponent(String(album.id))))+'" data-album-id="'+esc(String(album.id))+'" aria-current="'+(active?'true':'false')+'">'+
+      return '<a class="album-page-cover-card'+(active?' active':'')+'" href="'+esc(localized(window.BETVAlbumRoutes.path(album.id)))+'" data-album-id="'+esc(String(album.id))+'" aria-current="'+(active?'true':'false')+'">'+
         '<span>'+(albumImage?'<img src="'+esc(albumImage)+'" alt="'+esc(albumTitle)+'" decoding="async" referrerpolicy="no-referrer">':'<i aria-hidden="true">♪</i>')+(upcoming?'<span class="album-coming-soon-badge">'+esc(t('Em breve'))+'</span>':'')+'</span>'+
         '<strong class="notranslate" translate="no">'+esc(albumTitle)+'</strong><small>'+esc([albumTypeLabel(album.type),String(album.year||'')].filter(Boolean).join(' • '))+'</small></a>';
     }).join('');
@@ -18120,7 +18148,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function renderSearch(query){
     activeSearch=String(query||'').trim();
     if(!records.length){renderSelected(null);return;}
-    if(!activeSearch){renderSelected(records.find(function(album){return String(album.id)===String(routeId());})||records[0]);return;}
+    if(!activeSearch){
+      var key=routeId();
+      var selected=key?window.BETVAlbumRoutes.resolve(key,records):records[0];
+      if(key&&selected&&String(selected.id)===key){
+        var path=localized(window.BETVAlbumRoutes.path(selected.id));
+        if(location.pathname!==path||location.hash)history.replaceState(history.state,'',path+location.search);
+      }
+      renderSelected(selected);
+      return;
+    }
     var match=findBySearch(activeSearch);
     if(match){renderSelected(match);return;}
     currentAlbum=null;detail.hidden=true;status.hidden=false;status.textContent=t('Nenhum álbum encontrado para “{query}”.',{query:activeSearch});
@@ -18136,6 +18173,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         await window.beBackend.ready;
         var values=await window.beBackend.data.list('news',{orderBy:'order',direction:'asc'});
         records=(Array.isArray(values)?values:[]).filter(function(album){return album&&album.active!==false&&String(album.title||'').trim();}).sort(function(a,b){return Number(a.order||0)-Number(b.order||0)||String(a.title||'').localeCompare(String(b.title||''),'pt-BR');});
+        window.BETVAlbumRoutes.update(records);
         loaded=true;
         renderSearch(activeSearch);
       }catch(error){(void 0);records=[];status.hidden=false;status.textContent=t('Não foi possível carregar os álbuns agora.');detail.hidden=true;}
@@ -18210,12 +18248,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.beSetSavedContent(record,!active);
     syncAlbumFavorite();
   });
-  rail.addEventListener('click',function(event){var link=event.target.closest('[data-album-id]');if(!link)return;event.preventDefault();navigate('/albuns/'+encodeURIComponent(link.dataset.albumId),false);});
+  rail.addEventListener('click',function(event){var link=event.target.closest('[data-album-id]');if(!link)return;event.preventDefault();navigate(window.BETVAlbumRoutes.path(link.dataset.albumId),false);});
   document.addEventListener('click',function(event){var link=event.target.closest('[data-album-route],[data-open-albums]');if(!link)return;if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();var path=link.getAttribute('data-album-route')||'/albuns';navigate(path,false);});
   window.addEventListener('be:open-album-page',open);
   window.addEventListener('be:close-album-page',close);
   window.addEventListener('be:album-search',function(event){if(!isRoute()||page.hidden)return;renderSearch(event&&event.detail?event.detail.query:'');});
-  window.addEventListener('be:album-search-commit',function(event){if(!isRoute()||page.hidden)return;var query=event&&event.detail?event.detail.query:activeSearch;var match=findBySearch(query)||currentAlbum;if(match)navigate('/albuns/'+encodeURIComponent(String(match.id)),false);});
+  window.addEventListener('be:album-search-commit',function(event){if(!isRoute()||page.hidden)return;var query=event&&event.detail?event.detail.query:activeSearch;var match=findBySearch(query)||currentAlbum;if(match)navigate(window.BETVAlbumRoutes.path(match.id),false);});
   window.addEventListener('be:content-ready',function(){loaded=false;if(isRoute())load(true);});
   window.addEventListener('be:favorites-changed',function(){if(currentAlbum&&!page.hidden)syncAlbumFavorite();});
   window.addEventListener('be:i18n-ready',function(){if(!page.hidden){if(window.BETVI18n)window.BETVI18n.apply(page);setSearchContext(true);renderSearch(activeSearch);}});
