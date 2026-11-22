@@ -1,5 +1,6 @@
 'use strict';
 
+const ALBUM_ROUTES = require('../../assets/js/album-routes');
 const SITE_ORIGIN = String(process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://billieilishtv.site').replace(/\/$/, '');
 const DEFAULT_SUPABASE_URL = 'https://cxkevnnxibhezvospkce.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_yj_yBwVhaUPj7nQdcFDxrg_g_ukcwTX';
@@ -162,12 +163,13 @@ async function collectPages() {
 
   const albums = results[CONTENT_COLLECTIONS.length];
   if (albums && albums.status === 'fulfilled') {
+    const albumKeys = ALBUM_ROUTES.build(albums.value);
     const seenAlbums = new Set();
     albums.value.forEach(row => {
       const id = String(row.id || '').trim();
       if (!id || seenAlbums.has(id) || !String(row.data?.title || '').trim()) return;
       seenAlbums.add(id);
-      addPage(pages, `/albuns/${encodeURIComponent(id)}`, row.updatedAt, contentImage(row.data));
+      addPage(pages, `/albuns/${encodeURIComponent(albumKeys.get(id))}`, row.updatedAt, contentImage(row.data));
     });
   }
 

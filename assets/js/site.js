@@ -4846,6 +4846,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const allMovies = movieRows.filter(movie => movie.active !== false);
     const allSeries = seriesRows.filter(series => series.active !== false);
     const allAlbums = albumRows.filter(album => album.active !== false);
+    window.BETVAlbumRoutes.update(allAlbums);
     randomFeaturedPools.videos = allVideos.map(item => ({ ...item, collection: 'videos' }));
     randomFeaturedPools.movies = allMovies.map(item => ({ ...item, collection: 'movies' }));
     randomFeaturedPools.series = allSeries.map(item => ({ ...item, collection: 'series' }));
@@ -5122,8 +5123,8 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
             const type = String(album.type || 'Álbum');
             const year = String(album.year || '');
             const upcoming = !String(album.contentUrl || album.link || '').trim() && !(Array.isArray(album.tracks) && album.tracks.length);
-            const route = localizedRoute('/albuns/' + encodeURIComponent(String(album.id || '')));
-            return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml('/albuns/' + encodeURIComponent(String(album.id || '')))}" aria-label="${escapeHtml(title)}">
+            const route = localizedRoute(window.BETVAlbumRoutes.path(album.id));
+            return `<a class="album-home-card" href="${escapeHtml(route)}" data-album-route="${escapeHtml(window.BETVAlbumRoutes.path(album.id))}" aria-label="${escapeHtml(title)}">
               <span class="album-home-cover">${image ? `<img src="${safeAssetUrl(image, 240)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer">` : '<i aria-hidden="true">♪</i>'}${upcoming ? `<span class="album-coming-soon-badge">${escapeHtml(localizedUiText('Em breve'))}</span>` : ''}</span>
               <strong class="notranslate" translate="no">${escapeHtml(title)}</strong>
               <small>${escapeHtml([localizedUiText(type), year].filter(Boolean).join(' • '))}</small>
@@ -12003,7 +12004,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (item.collection === 'albums' || item.collection === 'news') {
       const albumId = String(item.recordId || item.itemId || '').replace(/^album:/, '');
       if (!albumId) return;
-      const route = '/albuns/' + encodeURIComponent(albumId);
+      const route = window.BETVAlbumRoutes.path(albumId);
       if (window.BETVPublicRoutes && typeof window.BETVPublicRoutes.go === 'function') window.BETVPublicRoutes.go(route);
       else location.assign(window.BETVLocaleURL ? window.BETVLocaleURL(route) : route);
       return;
@@ -18154,7 +18155,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       title:String(album&&album.title||'Álbum'),
       year:String(album&&album.year||''),
       duration:'',
-      contentUrl:id?'/albuns/'+encodeURIComponent(id):'#',
+      contentUrl:id?window.BETVAlbumRoutes.path(id):'#',
       imageUrl:storedImage,
       bannerUrl:storedImage,
       collection:'albums'
@@ -18186,7 +18187,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       var albumTitle=String(album.title||'Álbum');
       var albumImage=image(album.imageUrl||album.thumbnailUrl||album.bannerUrl);
       var upcoming=!href(album.contentUrl||album.link)&&!(Array.isArray(album.tracks)&&album.tracks.length);
-      return '<a class="album-page-cover-card'+(active?' active':'')+'" href="'+esc(localized('/albuns/'+encodeURIComponent(String(album.id))))+'" data-album-id="'+esc(String(album.id))+'" aria-current="'+(active?'true':'false')+'">'+
+      return '<a class="album-page-cover-card'+(active?' active':'')+'" href="'+esc(localized(window.BETVAlbumRoutes.path(album.id)))+'" data-album-id="'+esc(String(album.id))+'" aria-current="'+(active?'true':'false')+'">'+
         '<span>'+(albumImage?'<img src="'+esc(albumImage)+'" alt="'+esc(albumTitle)+'" decoding="async" referrerpolicy="no-referrer">':'<i aria-hidden="true">♪</i>')+(upcoming?'<span class="album-coming-soon-badge">'+esc(t('Em breve'))+'</span>':'')+'</span>'+
         '<strong class="notranslate" translate="no">'+esc(albumTitle)+'</strong><small>'+esc([albumTypeLabel(album.type),String(album.year||'')].filter(Boolean).join(' • '))+'</small></a>';
     }).join('');
@@ -18235,7 +18236,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function renderSearch(query){
     activeSearch=String(query||'').trim();
     if(!records.length){renderSelected(null);return;}
-    if(!activeSearch){renderSelected(records.find(function(album){return String(album.id)===String(routeId());})||records[0]);return;}
+    if(!activeSearch){
+      var key=routeId();
+      var selected=key?window.BETVAlbumRoutes.resolve(key,records):records[0];
+      if(key&&selected&&String(selected.id)===key){
+        var path=localized(window.BETVAlbumRoutes.path(selected.id));
+        if(location.pathname!==path||location.hash)history.replaceState(history.state,'',path+location.search);
+      }
+      renderSelected(selected);
+      return;
+    }
     var match=findBySearch(activeSearch);
     if(match){renderSelected(match);return;}
     currentAlbum=null;detail.hidden=true;status.hidden=false;status.textContent=t('Nenhum álbum encontrado para “{query}”.',{query:activeSearch});
@@ -18251,6 +18261,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         await window.beBackend.ready;
         var values=await window.beBackend.data.list('news',{orderBy:'order',direction:'asc'});
         records=(Array.isArray(values)?values:[]).filter(function(album){return album&&album.active!==false&&String(album.title||'').trim();}).sort(function(a,b){return Number(a.order||0)-Number(b.order||0)||String(a.title||'').localeCompare(String(b.title||''),'pt-BR');});
+        window.BETVAlbumRoutes.update(records);
         loaded=true;
         renderSearch(activeSearch);
       }catch(error){(void 0);records=[];status.hidden=false;status.textContent=t('Não foi possível carregar os álbuns agora.');detail.hidden=true;}
@@ -18325,12 +18336,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     window.beSetSavedContent(record,!active);
     syncAlbumFavorite();
   });
-  rail.addEventListener('click',function(event){var link=event.target.closest('[data-album-id]');if(!link)return;event.preventDefault();navigate('/albuns/'+encodeURIComponent(link.dataset.albumId),false);});
+  rail.addEventListener('click',function(event){var link=event.target.closest('[data-album-id]');if(!link)return;event.preventDefault();navigate(window.BETVAlbumRoutes.path(link.dataset.albumId),false);});
   document.addEventListener('click',function(event){var link=event.target.closest('[data-album-route],[data-open-albums]');if(!link)return;if(event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;event.preventDefault();var path=link.getAttribute('data-album-route')||'/albuns';navigate(path,false);});
   window.addEventListener('be:open-album-page',open);
   window.addEventListener('be:close-album-page',close);
   window.addEventListener('be:album-search',function(event){if(!isRoute()||page.hidden)return;renderSearch(event&&event.detail?event.detail.query:'');});
-  window.addEventListener('be:album-search-commit',function(event){if(!isRoute()||page.hidden)return;var query=event&&event.detail?event.detail.query:activeSearch;var match=findBySearch(query)||currentAlbum;if(match)navigate('/albuns/'+encodeURIComponent(String(match.id)),false);});
+  window.addEventListener('be:album-search-commit',function(event){if(!isRoute()||page.hidden)return;var query=event&&event.detail?event.detail.query:activeSearch;var match=findBySearch(query)||currentAlbum;if(match)navigate(window.BETVAlbumRoutes.path(match.id),false);});
   window.addEventListener('be:content-ready',function(){loaded=false;if(isRoute())load(true);});
   window.addEventListener('be:favorites-changed',function(){if(currentAlbum&&!page.hidden)syncAlbumFavorite();});
   window.addEventListener('be:i18n-ready',function(){if(!page.hidden){if(window.BETVI18n)window.BETVI18n.apply(page);setSearchContext(true);renderSearch(activeSearch);}});
