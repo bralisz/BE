@@ -4997,6 +4997,16 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return false;
     };
 
+    const searchRecords = new Map();
+    const addSearchRecord = (item, sectionTitle) => {
+      const key = item.collection + ':' + (item.id || item.videoId || item.title);
+      if (!searchRecords.has(key)) searchRecords.set(key, { item, sectionNames: new Set() });
+      if (sectionTitle) searchRecords.get(key).sectionNames.add(sectionTitle);
+    };
+    for (const [collection, rows] of Object.entries(sourceMaps)) {
+      for (const item of rows.values()) addSearchRecord({ ...item, collection });
+    }
+
     for (const section of sections) {
       const category = String(section.category || section.slug || section.id).trim().toLowerCase();
       const legacyIds = (Array.isArray(section.contentIds) ? section.contentIds : []).map(String);
@@ -5019,6 +5029,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         sectionContents = allSectionContents.slice(0, limit);
       }
 
+      allSectionContents.forEach(item => addSearchRecord(item, section.title));
       sectionViewItemsMemory.set(String(section.id || ''), allSectionContents);
       const block = document.createElement('section');
       block.className = 'video-rail-section';
@@ -5052,6 +5063,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       setupRail(block);
     }
 
+    host.catalogSearchEntries = Array.from(searchRecords.values(), record => catalogSearchEntry(record.item, record.sectionNames));
     await addBillieHomeSpotlight(host);
     await addAlbumsHomeSection(host, allAlbums);
     if (old) old.replaceWith(host);
@@ -5314,7 +5326,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if (mobileButton) mobileButton.hidden = false;
   }
 
-  function videoCard(video) {
+  function videoCard(video, showSearchTitle = false) {
     const image = video.thumbnailUrl || video.imageUrl || video.bannerUrl || '';
     const contentHref = video.videoUrl || video.contentUrl || video.link || '#';
     const title = video.title || 'Abrir conteúdo';
@@ -5332,7 +5344,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const itemId = numericPublicId(video.publicId || recordId);
     const routeHref = detailRoutePath(itemId, { ...video, collection, title });
     const preserveTitle = preservesOriginalMusicTitle({ ...video, collection });
-    const searchText = buildContentSearchIndex({ ...video, collection, title, description, year, duration, category });
     return `<a class="video-card${preserveTitle ? ' notranslate' : ''}" ${preserveTitle ? 'translate="no"' : ''} href="${safeUrl(routeHref)}" aria-label="${escapeHtml(title)}"
       data-item-id="${escapeHtml(String(itemId))}"
       data-record-id="${escapeHtml(String(recordId))}"
@@ -5351,7 +5362,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       data-logo-url="${safeAssetUrl(logo)}"
       data-show-card-logo="${showCardLogo ? 'true' : 'false'}"
       data-title-search="${escapeHtml(normalizeText(title))}"
-      data-search-text="${escapeHtml(searchText)}"
       data-category="${escapeHtml(normalizeText(category))}"
       data-collection="${escapeHtml(normalizeText(collection))}"
       data-section-id="${escapeHtml(String(video.sectionId || ''))}"
@@ -5360,6 +5370,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
               data-streaming-links="${escapeHtml(serializeMovieStreamingLinks(video.streamingLinks))}"
       data-preserve-title="${preserveTitle ? 'true' : 'false'}">
       <img class="video-card-thumbnail" src="${safeAssetUrl(image, 320)}" alt="${escapeHtml(video.title || '')}" loading="lazy" decoding="async" fetchpriority="low">
+      ${showSearchTitle === true ? `<strong class="catalog-result-title">${escapeHtml(title)}</strong>` : ''}
       ${showCardLogo ? `<span class="video-card-logo-slot" aria-hidden="true"><img class="video-card-logo" src="${safeAssetUrl(logo, 240)}" alt="" loading="lazy" decoding="async" fetchpriority="low" onerror="this.closest('.video-card-logo-slot')?.remove()"></span>` : ''}
     </a>`;
   }
@@ -11601,219 +11612,62 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function normalizeSearchText(value) {
     return normalizeText(value)
-      .replace(/&/g, ' e ')
-      .replace(/[^a-z0-9]+/g, ' ')
-      .replace(/\s+/g, ' ')
+      .replace(/['’‘]/g, '')
+      .replace(/&/g, ' and ')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
       .trim();
   }
 
-  const CONTENT_SEARCH_STOP_WORDS = new Set([
-    'a','o','as','os','de','da','do','das','dos','e','em','no','na','nos','nas','um','uma','uns','umas','para','por','com',
-    'the','a','an','of','and','in','on','at','to','for','with',
-    'el','la','los','las','de','del','y','en','un','una','para','por','con'
-  ]);
+  const catalogTypeNames = {
+    videos: 'video videos',
+    movies: 'filme filmes pelicula peliculas film films movie movies',
+    series: 'serie series'
+  };
 
-  const CONTENT_SEARCH_ALIAS_GROUPS = [
-    ['ao vivo','live','show','shows','concerto','concert','concertos','festival','festivais','performance','performances','apresentacao','apresentacoes','palco','stage'],
-    ['clipe','clipes','videoclipe','videoclipes','music video','music videos','video musical','videos musicais','official video','video oficial'],
-    ['entrevista','entrevistas','interview','interviews','conversa','bate papo','talk','talk show','podcast'],
-    ['filme','filmes','movie','movies','cinema','longa','longa metragem','feature film'],
-    ['serie','series','episodio','episodios','episode','episodes','temporada','season'],
-    ['documentario','documentarios','documentary','documentaries','doc'],
-    ['bastidores','behind the scenes','behind scenes','making of','backstage'],
-    ['premiacao','premiacoes','award','awards','cerimonia','ceremony','red carpet','tapete vermelho'],
-    ['acustico','acustica','acoustic','unplugged'],
-    ['oficial','official'],
-    ['novo','nova','novos','novas','recente','recentes','new','latest','nuevo','nueva','reciente'],
-    ['antigo','antiga','antigos','antigas','classico','classica','old','classic','archive','arquivo','archivo'],
-    ['curto','curta','curtos','curtas','rapido','rapida','short','clip'],
-    ['longo','longa','longos','longas','completo','completa','full','complete','integral','full length'],
-    ['especial','special'],
-    ['intimo','intima','intimate'],
-    ['emocionante','emocional','emotional','moving'],
-    ['energetico','energetica','energetic'],
-    ['sombrio','sombria','dark'],
-    ['feliz','alegre','happy'],
-    ['triste','sad']
-  ].map(group => group.map(normalizeSearchText).filter(Boolean));
-
-  function durationMinutesForSearch(value) {
-    const text = normalizeSearchText(value);
-    if (!text) return 0;
-    const clock = text.match(/\b(\d{1,2})\s*[:h]\s*(\d{1,2})\b/);
-    if (clock) return (Number(clock[1]) * 60) + Number(clock[2]);
-    const hours = text.match(/\b(\d+(?:[.,]\d+)?)\s*(?:h|hora|horas|hour|hours)\b/);
-    const minutes = text.match(/\b(\d+)\s*(?:m|min|mins|minuto|minutos|minute|minutes)\b/);
-    if (hours || minutes) return Math.round((Number(String(hours?.[1] || '0').replace(',', '.')) * 60) + Number(minutes?.[1] || 0));
-    const lone = text.match(/^\d+$/);
-    return lone ? Number(lone[0]) : 0;
+  function catalogSearchEntry(item, sectionNames) {
+    const translations = Object.values(item.translations || {}).filter(Boolean);
+    const titles = [item.title, ...translations.map(entry => entry.title)]
+      .filter(Boolean).map(normalizeSearchText);
+    const metadata = [item.year, item.duration, item.videoDuration, item.runtime, item.category,
+      item.type, item.contentType, item.sectionName, item.sourceSectionTitle, ...sectionNames,
+      catalogTypeNames[item.collection], ...translations.flatMap(entry => [entry.category, entry.type, entry.sectionName])];
+    const formats = ' ' + normalizeSearchText(metadata.filter(Boolean).join(' ')) + ' ';
+    const variants = [
+      ['cover', 'covers'],
+      ['ao vivo', 'live', 'en vivo', 'en direct', 'dal vivo'],
+      ['entrevista', 'entrevistas', 'interview', 'interviews', 'intervista', 'entrevue'],
+      ['acustico', 'acustica', 'acoustic', 'acoustique']
+    ].filter(group => group.some(term => formats.includes(' ' + term + ' '))).flat();
+    const filters = new Set(normalizeSearchText([...metadata, ...variants].filter(Boolean).join(' ')).split(' '));
+    return { item, titles, filters };
   }
 
-  function collectTranslationSearchValues(translations) {
-    if (!translations || typeof translations !== 'object') return [];
-    const values = [];
-    Object.values(translations).forEach(entry => {
-      if (!entry || typeof entry !== 'object') return;
-      ['title','description','category','type','contentType','sectionName','duration','year'].forEach(key => {
-        if (entry[key] !== undefined && entry[key] !== null) values.push(entry[key]);
-      });
-    });
-    return values;
-  }
-
-  function semanticSearchTags(content) {
-    const tags = [];
-    const collection = normalizeSearchText(content?.collection || 'videos');
-    const category = normalizeSearchText([content?.category, content?.type, content?.contentType, content?.sectionName, content?.sourceSectionTitle].filter(Boolean).join(' '));
-    const combined = `${collection} ${category}`.trim();
-
-    if (collection === 'movies' || /\b(filme|movie|cinema)\b/.test(combined)) tags.push('filme filmes movie movies cinema longa longa metragem');
-    if (collection === 'series' || /\b(serie|series|episode|episodio|season|temporada)\b/.test(combined)) tags.push('serie series episodio episodios episode episodes temporada season');
-    if (collection === 'videos') tags.push('video videos conteudo content');
-    if (/\b(live|show|concert|concerto|festival|performance|palco|stage)\b/.test(combined)) tags.push('ao vivo live show concerto concert festival performance apresentacao palco stage');
-    if (/\b(videoclipe|clipe|music video|video musical)\b/.test(combined)) tags.push('clipe videoclipe music video video musical official video');
-    if (/\b(interview|entrevista|podcast|talk)\b/.test(combined)) tags.push('entrevista interview conversa bate papo podcast talk');
-    if (/\b(documentary|documentario|documentario)\b/.test(combined)) tags.push('documentario documentary doc');
-    if (/\b(award|premiacao|ceremony|cerimonia|red carpet)\b/.test(combined)) tags.push('premiacao award awards cerimonia red carpet tapete vermelho');
-    if (/\b(backstage|bastidores|making of|behind)\b/.test(combined)) tags.push('bastidores backstage behind the scenes making of');
-
-    const minutes = durationMinutesForSearch(content?.duration || content?.videoDuration || content?.runtime || '');
-    if (minutes > 0 && minutes <= 15) tags.push('curto curta short rapido clip');
-    if (minutes >= 60) tags.push('longo longa completo completa full complete integral full length');
-
-    const year = Number(String(content?.year || '').match(/\b(19|20)\d{2}\b/)?.[0] || 0);
-    const currentYear = new Date().getFullYear();
-    if (year && year >= currentYear - 1) tags.push('novo nova recente new latest nuevo reciente');
-    if (year && year <= currentYear - 7) tags.push('antigo antiga classico classica old classic archive arquivo');
-
-    return tags.join(' ');
-  }
-
-  function buildContentSearchIndex(content) {
-    const values = [
-      content?.title,
-      content?.description,
-      content?.category,
-      content?.type,
-      content?.contentType,
-      content?.collection,
-      content?.sectionName,
-      content?.sourceSectionTitle,
-      content?.year,
-      content?.duration,
-      content?.videoDuration,
-      content?.runtime,
-      semanticSearchTags(content),
-      ...collectTranslationSearchValues(content?.translations)
-    ];
-    return normalizeSearchText(values.filter(Boolean).join(' '));
-  }
-
-  function searchAliasVariants(term) {
-    const normalized = normalizeSearchText(term);
-    if (!normalized) return [];
-    const variants = new Set([normalized]);
-    CONTENT_SEARCH_ALIAS_GROUPS.forEach(group => {
-      if (group.includes(normalized)) group.forEach(item => variants.add(item));
-    });
-    return Array.from(variants);
-  }
-
-  function searchEditDistanceWithin(left, right, limit) {
-    if (left === right) return true;
-    if (!left || !right || Math.abs(left.length - right.length) > limit) return false;
-
-                                                                                   
-                                                                                    
-    let previousPrevious = null;
-    let previous = Array.from({ length:right.length + 1 }, (_, index) => index);
-    for (let i = 1; i <= left.length; i += 1) {
-      const current = [i];
-      let rowMin = current[0];
-      for (let j = 1; j <= right.length; j += 1) {
-        let value = Math.min(
-          current[j - 1] + 1,
-          previous[j] + 1,
-          previous[j - 1] + (left[i - 1] === right[j - 1] ? 0 : 1)
-        );
-        if (
-          previousPrevious && i > 1 && j > 1 &&
-          left[i - 1] === right[j - 2] && left[i - 2] === right[j - 1]
-        ) {
-          value = Math.min(value, previousPrevious[j - 2] + 1);
+  function catalogSearchRank(entry, query, terms) {
+    if (entry.titles.includes(query)) return 0;
+    if (entry.titles.some(title => title.startsWith(query + ' '))) return 1;
+    if (entry.titles.some(title => (' ' + title + ' ').includes(' ' + query + ' '))) return 2;
+    let best = Infinity;
+    for (const title of entry.titles) {
+      const words = title.split(' ');
+      let titleMatches = 0;
+      let partial = false;
+      const matched = terms.every((term, index) => {
+        if (words.includes(term)) {
+          titleMatches++;
+          return true;
         }
-        current[j] = value;
-        if (value < rowMin) rowMin = value;
-      }
-      if (rowMin > limit) return false;
-      previousPrevious = previous;
-      previous = current;
-    }
-    return previous[right.length] <= limit;
-  }
-
-  function searchTypoLimit(candidate) {
-    const length = String(candidate || '').length;
-    if (length <= 1) return 0;
-    if (length <= 4) return 1;
-    if (length <= 7) return 2;
-    return 3;
-  }
-
-  function fuzzySearchTokenMatch(indexTokens, candidate) {
-    if (!candidate || candidate.length < 2) return false;
-    const limit = searchTypoLimit(candidate);
-    return indexTokens.some(token => {
-      if (!token) return false;
-      if (token.startsWith(candidate) || candidate.startsWith(token)) {
-        return Math.min(token.length, candidate.length) >= 2;
-      }
-      return searchEditDistanceWithin(token, candidate, Math.min(limit, searchTypoLimit(token)));
-    });
-  }
-
-  function buildJoinedSearchTokens(tokens) {
-    const joined = [];
-                                                                                 
-                                             
-    for (let start = 0; start < tokens.length; start += 1) {
-      let value = '';
-      for (let end = start; end < tokens.length && end < start + 5; end += 1) {
-        value += tokens[end];
-        if (end > start) joined.push(value);
-      }
-    }
-    return joined;
-  }
-
-  function contentSearchMatches(indexValue, queryValue) {
-    const index = normalizeSearchText(indexValue);
-    const query = normalizeSearchText(queryValue);
-    if (!query) return true;
-    if (!index) return false;
-    if (index.includes(query)) return true;
-
-    const wholeAliases = searchAliasVariants(query);
-    if (wholeAliases.some(alias => index.includes(alias))) return true;
-
-    const indexTokens = index.split(' ').filter(Boolean);
-    const queryTokens = query.split(' ').filter(token => token && !CONTENT_SEARCH_STOP_WORDS.has(token));
-    if (!queryTokens.length) return index.includes(query);
-
-                                                                                  
-                                                                                   
-    if (queryTokens.length === 1) {
-      const joinedIndexTokens = buildJoinedSearchTokens(indexTokens);
-      if (fuzzySearchTokenMatch(indexTokens.concat(joinedIndexTokens), queryTokens[0])) return true;
-    }
-
-    return queryTokens.every(token => {
-      const variants = searchAliasVariants(token);
-      return variants.some(variant => {
-        const directMatch = variant.length <= 2 ? indexTokens.includes(variant) : index.includes(variant);
-        return directMatch || fuzzySearchTokenMatch(indexTokens, variant);
+        if (entry.filters.has(term)) return true;
+        if (index === terms.length - 1 && term.length >= 2 && !/\d/.test(term) &&
+            words.some(word => word.startsWith(term))) {
+          partial = true;
+          titleMatches++;
+          return true;
+        }
+        return false;
       });
-    });
+      if (matched && titleMatches) best = Math.min(best, (partial ? 5 : 3) + (terms.length - titleMatches));
+    }
+    return best;
   }
 
   const SAVED_CONTENTS_KEY = 'beSavedContents';
@@ -12360,8 +12214,36 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       if (billieSpotlight) billieSpotlight.hidden = currentView !== 'home' || Boolean(query);
       if (donateSpotlight) donateSpotlight.remove();
       let visibleTotal = 0;
+      const terms = query.split(' ');
+      let results = host.querySelector('.catalog-search-results');
+      if (query) {
+        if (!results) {
+          results = document.createElement('div');
+          results.className = 'catalog-search-results';
+          host.prepend(results);
+        }
+        const matches = [];
+        for (const entry of host.catalogSearchEntries || []) {
+          const collection = entry.item.collection;
+          if (currentView === 'films' && collection !== 'movies' && collection !== 'series') continue;
+          if (['videos','movies','series'].includes(currentView) && currentView !== collection) continue;
+          const rank = catalogSearchRank(entry, query, terms);
+          if (Number.isFinite(rank)) matches.push({ item: entry.item, rank });
+        }
+        matches.sort((a, b) => a.rank - b.rank);
+        results.innerHTML = matches.map(match => videoCard(match.item, true)).join('');
+        results.hidden = !matches.length;
+        setupContentDetailInteractions(results);
+        visibleTotal = matches.length;
+      } else if (results) {
+        results.remove();
+      }
 
       sections.forEach(section => {
+        if (query && !section.classList.contains('album-home-section')) {
+          section.hidden = true;
+          return;
+        }
         const sectionCategory = section.dataset.category || '';
         const sectionView = section.dataset.homeView || 'default';
         const cards = Array.from(section.querySelectorAll('.video-card, .album-home-card'));
@@ -12380,17 +12262,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
           const category = card.dataset.category || sectionCategory;
           const collection = card.dataset.collection || section.dataset.collection || 'videos';
           const title = card.dataset.titleSearch || normalizeText(card.getAttribute('aria-label'));
-          const searchIndex = card.dataset.searchText || normalizeSearchText([
-            title,
-            card.dataset.description,
-            card.dataset.year,
-            card.dataset.duration,
-            category,
-            card.dataset.sectionName,
-            sectionCategory,
-            collection,
-            card.getAttribute('aria-label')
-          ].filter(Boolean).join(' '));
           const contentMatchesView = currentView === 'films'
             ? (collection === 'movies' || collection === 'series')
             : currentView === 'movies'
@@ -12400,7 +12271,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
                 : currentView === 'videos'
                   ? collection === 'videos'
                   : true;
-          const searchMatches = !query || contentSearchMatches(searchIndex, query);
+          const searchMatches = !query || Number.isFinite(catalogSearchRank({ titles: [normalizeSearchText(title)], filters: new Set() }, query, terms));
           const show = sectionMatchesView && contentMatchesView && searchMatches;
           card.hidden = !show;
           if (show) visibleInSection += 1;
@@ -12417,7 +12288,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       const featuredSection = document.getElementById('featuredSection');
       const randomFeaturedSection = document.getElementById('randomFeaturedSection');
       if (!document.body.classList.contains('detail-page-active')) {
-        if (currentView === 'home') {
+        if (query) {
+          if (featuredSection) featuredSection.hidden = true;
+          if (randomFeaturedSection) randomFeaturedSection.hidden = true;
+        } else if (currentView === 'home') {
           if (featuredSection) featuredSection.hidden = !document.getElementById('featured')?.children.length;
           if (randomFeaturedSection) randomFeaturedSection.hidden = true;
         } else if (['films', 'movies', 'series', 'videos'].includes(currentView)) {
@@ -12442,7 +12316,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         } else {
           empty.textContent = 'Nenhum filme ou série publicado.';
         }
-        empty.classList.toggle('show', visibleTotal === 0 && sections.length > 0 && Boolean(query));
+        empty.classList.toggle('show', visibleTotal === 0 && Boolean(query));
       }
     };
 
@@ -12553,6 +12427,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       else closeUserSearchResults();
       scheduleCatalogFilter(false, 200);
     });
+    window.addEventListener('be:catalog-search-commit', () => {
+      if (!input.value.trim() || isUserSearchQuery(input.value)) return;
+      applyCatalogFilter();
+      const target = document.querySelector('#dynamicSections .catalog-search-results:not([hidden]), #dynamicSections .home-filter-empty.show, #dynamicSections .album-home-section:not([hidden])');
+      target?.scrollIntoView({ block:'start' });
+    });
     input.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -12560,6 +12440,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       } else if (event.key === 'Enter' && document.body.classList.contains('album-page-active')) {
         event.preventDefault();
         window.dispatchEvent(new CustomEvent('be:album-search-commit', { detail:{ query:String(input.value || '') } }));
+      } else if (event.key === 'Enter' && !event.isComposing) {
+        event.preventDefault();
+        window.dispatchEvent(new Event('be:catalog-search-commit'));
       }
     });
     document.addEventListener('keydown', event => {
@@ -13255,6 +13138,10 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         } else if (event.key === 'Enter' && document.body.classList.contains('album-page-active')) {
           event.preventDefault();
           window.dispatchEvent(new CustomEvent('be:album-search-commit', { detail:{ query:String(searchInput.value || '') } }));
+          searchInput.blur();
+        } else if (event.key === 'Enter' && !event.isComposing) {
+          event.preventDefault();
+          window.dispatchEvent(new Event('be:catalog-search-commit'));
           searchInput.blur();
         }
       });
