@@ -10,7 +10,7 @@
   fr:['Offrir +1 accès','Choisissez qui recevra Watch Party et le badge doré Happier Than Ever.','Chercher @pseudo','Saisissez au moins 2 caractères du @pseudo.','Aucun fan trouvé.','Offrir l’accès à @','Ce cadeau permanent ne peut être envoyé qu’une seule fois.','Confirmer le cadeau','Annuler','Accès et badge offerts à @','Vous avez déjà offert l’accès à @','Seuls les membres ayant acheté Watch Party peuvent offrir +1 accès.','Impossible d’envoyer le cadeau.','Ce compte a déjà accès. Choisissez-en un autre.','Vous avez déjà utilisé votre cadeau +1.','Fermer','Cadeau envoyé','Envoi…','Chercher des fans'],
   it:['Regala +1 accesso','Scegli chi riceverà Watch Party e il badge dorato Happier Than Ever.','Cerca @utente','Scrivi almeno 2 caratteri del nome @utente.','Nessun fan trovato.','Regala accesso a @','Questo regalo permanente può essere inviato una sola volta.','Conferma regalo','Annulla','Accesso e badge regalati a @','Hai già regalato accesso a @','Solo chi acquista Watch Party può regalare il +1.','Impossibile inviare il regalo.','Questo account ha già accesso. Scegline un altro.','Hai già usato il regalo +1.','Chiudi','Regalo inviato','Invio…','Cerca fan']
  };
- const txt=i=>(messages[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||messages['pt-br'])[i];
+ const txt=i=>(messages[String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase()]||messages['pt-br'])[i];
  const client=()=>window.beBackend?.client;
  const userid=()=>window.beBackend?.auth?.currentUser?.uid;
  const safeUrl=v=>{try{const u=new URL(String(v||'').trim());return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch{return '';}};
@@ -154,7 +154,7 @@
       throw Error(txt(12));
     }
     if(data!=='gift_pending')throw Error(txt(12));
-    feedback(String(window.BETVLocale?.slug||'pt-br').toLowerCase()==='pt-br'?'Presente enviado! O fã poderá aceitar ou recusar na notificação.':'Gift sent! The fan can accept or decline in notifications.');
+    feedback(String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase()==='pt-br'?'Presente enviado! O fã poderá aceitar ou recusar na notificação.':'Gift sent! The fan can accept or decline in notifications.');
     $('watchPartyGiftMatches').replaceChildren();selected=null;
     await refresh();
     await window.BETVWatchPartyPaywall?.refresh?.();

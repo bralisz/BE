@@ -43,11 +43,11 @@ async function request(method = 'GET') {
   const friendly = CONTENT_PAGE.contentPath({collection:'videos',id:'one',data:rows.videos[0].data});
   const videoEntries = entries.filter(el => el.querySelector('loc').textContent.endsWith(friendly));
   assert.equal(friendly, '/show/video-title');
-  assert.equal(videoEntries.length, 5, 'One canonical URL per supported language, no duplicate IDs');
+  assert.equal(videoEntries.length, 6, 'One canonical URL per supported language, no duplicate IDs');
   for (const entry of videoEntries) {
     assert.equal(entry.getElementsByTagNameNS('http://www.google.com/schemas/sitemap-image/1.1', 'loc')[0].textContent, 'https://example.test/a.jpg?a=1&b=2');
     assert.equal(entry.querySelector('lastmod').textContent, '2026-10-20T12:00:00.000Z');
-    assert.equal(entry.getElementsByTagNameNS('http://www.w3.org/1999/xhtml', 'link').length, 8);
+    assert.equal(entry.getElementsByTagNameNS('http://www.w3.org/1999/xhtml', 'link').length, 9);
   }
   assert(!result.body.includes('11111111'));
   assert(!result.body.includes('javascript:'));

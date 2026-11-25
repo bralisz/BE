@@ -229,7 +229,15 @@
       "destination": "/api?route=site-page"
     },
     {
+      "source": "/es-419/@:username",
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/es/:videoId(\\d{6,12})",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/es-419/:videoId(\\d{6,12})",
       "destination": "/api?route=site-page"
     },
     {
@@ -237,11 +245,23 @@
       "destination": "/api?route=site-page"
     },
     {
+      "source": "/es-419/albuns/:albumId",
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/es/álbuns/:albumId",
       "destination": "/api?route=site-page"
     },
     {
+      "source": "/es-419/álbuns/:albumId",
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/es/albums/:albumId",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/es-419/albums/:albumId",
       "destination": "/api?route=site-page"
     },
     {
@@ -359,7 +379,15 @@
       "destination": "/api?route=site-page"
     },
     {
+      "source": "/es-419",
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/es/:path*",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/es-419/:path*",
       "destination": "/api?route=site-page"
     },
     {
@@ -563,7 +591,15 @@
       "destination": "/api?route=site-page"
     },
     {
+      "source": "/es-419/avocados",
+      "destination": "/api?route=site-page"
+    },
+    {
       "source": "/es/avocados/",
+      "destination": "/api?route=site-page"
+    },
+    {
+      "source": "/es-419/avocados/",
       "destination": "/api?route=site-page"
     },
     {
@@ -834,6 +870,23 @@
       ]
     },
     {
+      "source": "/es-419/reset-password/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
       "source": "/en-us/reset-password/",
       "headers": [
         {
@@ -886,6 +939,23 @@
     },
     {
       "source": "/es/reset-password",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/es-419/reset-password",
       "headers": [
         {
           "key": "Cache-Control",

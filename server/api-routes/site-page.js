@@ -27,6 +27,7 @@ const LOCALE_PREFIXES = Object.freeze({
   'pt-br': { locale: 'pt-BR', ogLocale: 'pt_BR', slug: 'pt-br' },
   'en-us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
   'us': { locale: 'en-US', ogLocale: 'en_US', slug: 'en-us' },
+  'es-419': { locale: 'es-419', ogLocale: 'es_419', slug: 'es-419' },
   'es': { locale: 'es', ogLocale: 'es_ES', slug: 'es' },
   'fr': { locale: 'fr-FR', ogLocale: 'fr_FR', slug: 'fr' },
   'it': { locale: 'it-IT', ogLocale: 'it_IT', slug: 'it' }
@@ -209,6 +210,7 @@ function routeLocaleInfo(req) {
     localizedLogicalPath: localizedLogicalPath || '/',
     publicPath: publicPath || '/',
     slug: config.slug,
+    contentSlug: config.slug === 'es-419' ? 'es' : config.slug,
     hasPrefix
   };
 }
@@ -236,7 +238,7 @@ function escapeHtmlText(value) {
 }
 
 function localizeStaticText(html, routeInfo) {
-  const translations = LEGAL_TRANSLATIONS[routeInfo.slug];
+  const translations = LEGAL_TRANSLATIONS[routeInfo.contentSlug];
   if (!translations) return html;
   return html.replace(/>([^<>]+)</g, (match, rawText) => {
     const leading = (rawText.match(/^\s*/) || [''])[0];
@@ -392,7 +394,7 @@ function seoRecordFromRoute(routeInfo, catalog) {
 
 const LOCALE_TRANSLATION_KEYS = Object.freeze({
   'pt-br': ['pt-br', 'pt-BR', 'pt'], 'en-us': ['en-us', 'en-US', 'en'],
-  es: ['es', 'es-ES'], fr: ['fr', 'fr-FR'], it: ['it', 'it-IT']
+  'es-419': ['es-419', 'es', 'es-ES'], es: ['es', 'es-ES'], fr: ['fr', 'fr-FR'], it: ['it', 'it-IT']
 });
 const MUSIC_SECTION_IDS = new Set(['18db9515-179c-4bad-9646-1fcda63df14a', '14386598-4978-403a-8548-db0ee582e291']);
 const MUSIC_SECTION_NAMES = new Set(['videoclipes', 'videoclips', 'music videos', 'music video', 'videos musicais', 'vídeos musicais', 'videos musicales', 'vídeos musicales', 'vidéos musicales', 'vidéos musicaux', 'live performances & tv']);
@@ -636,9 +638,9 @@ function pageCopy(routeInfo, settings, seoRecord) {
       fanProject: 'Progetto non ufficiale creato dai fan per organizzare contenuti e informazioni su Billie Eilish.'
     }
   };
-  const copy = copies[routeInfo.slug] || copies['pt-br'];
+  const copy = copies[routeInfo.contentSlug] || copies['pt-br'];
   const localizedSettings = settings.translations && typeof settings.translations === 'object'
-    ? settings.translations[routeInfo.slug]
+    ? settings.translations[routeInfo.contentSlug]
     : null;
   const configuredDescription = String(
     (localizedSettings && localizedSettings.description) ||
@@ -699,14 +701,14 @@ function pageCopy(routeInfo, settings, seoRecord) {
     const data = localized.data || {};
     const recordTitle = String(data.title || data.name || '').trim();
     const recordDescription = plainDescription(data.description);
-    const contentLabel = { 'pt-br': 'Conteúdo', 'en-us': 'Content', es: 'Contenido', fr: 'Contenu', it: 'Contenuto' }[routeInfo.slug] || 'Content';
+    const contentLabel = { 'pt-br': 'Conteúdo', 'en-us': 'Content', es: 'Contenido', fr: 'Contenu', it: 'Contenuto' }[routeInfo.contentSlug] || 'Content';
     const videoKind = seoVideoKind(seoRecord);
-    title = seoVideoTitle(recordTitle || contentLabel, videoKind, routeInfo.slug);
+    title = seoVideoTitle(recordTitle || contentLabel, videoKind, routeInfo.contentSlug);
     if (recordDescription) description = recordDescription.slice(0, 300);
     else if (recordTitle) {
-      description = seoVideoDescription(recordTitle, videoKind, routeInfo.slug) || (routeInfo.slug === 'en-us'
+      description = seoVideoDescription(recordTitle, videoKind, routeInfo.contentSlug) || (routeInfo.slug === 'en-us'
         ? `Explore ${recordTitle} and more Billie Eilish content on Billie Eilish TV.`
-        : routeInfo.slug === 'es'
+        : routeInfo.contentSlug === 'es'
           ? `Explora ${recordTitle} y más contenido de Billie Eilish en Billie Eilish TV.`
           : routeInfo.slug === 'fr'
             ? `Explore ${recordTitle} et d’autres contenus sur Billie Eilish sur Billie Eilish TV.`
@@ -724,7 +726,7 @@ function pageCopy(routeInfo, settings, seoRecord) {
       es: ['Contenido no disponible', 'No se pudo encontrar o cargar este contenido.'],
       fr: ['Contenu indisponible', 'Ce contenu est introuvable ou ne peut pas être chargé.'],
       it: ['Contenuto non disponibile', 'Non è stato possibile trovare o caricare questo contenuto.']
-    }[routeInfo.slug] || ['Content unavailable', 'This content could not be found or loaded.'];
+    }[routeInfo.contentSlug] || ['Content unavailable', 'This content could not be found or loaded.'];
     title = `${unavailable[0]} | ${siteTitle}`; description = unavailable[1];
   }
   return { title, description, pageType, fanProject: copy.fanProject };
@@ -859,21 +861,21 @@ function injectSocialMetadata(html, settings, origin, routeInfo, publicProfile, 
     es: 'Billie Eilish TV — proyecto de fans sobre Billie Eilish',
     fr: 'Billie Eilish TV — projet de fans consacré à Billie Eilish',
     it: 'Billie Eilish TV — progetto fan dedicato a Billie Eilish'
-  }[routeInfo.slug] || 'Billie Eilish TV';
+  }[routeInfo.contentSlug] || 'Billie Eilish TV';
   const profileDescription = {
     'pt-br': name => `Veja os quatro conteúdos favoritos de ${name} na Billie Eilish TV.`,
     'en-us': name => `See ${name}'s four favorite picks on Billie Eilish TV.`,
     es: name => `Mira los cuatro contenidos favoritos de ${name} en Billie Eilish TV.`,
     fr: name => `Découvre les quatre contenus préférés de ${name} sur Billie Eilish TV.`,
     it: name => `Scopri i quattro contenuti preferiti di ${name} su Billie Eilish TV.`
-  }[routeInfo.slug] || (name => `Perfil de ${name} na Billie Eilish TV.`);
+  }[routeInfo.contentSlug] || (name => `Perfil de ${name} na Billie Eilish TV.`);
   const profileImageAlt = {
     'pt-br': name => `Perfil de ${name} com seus conteúdos favoritos na Billie Eilish TV`,
     'en-us': name => `${name}'s profile with favorite picks on Billie Eilish TV`,
     es: name => `Perfil de ${name} con sus contenidos favoritos en Billie Eilish TV`,
     fr: name => `Profil de ${name} avec ses contenus préférés sur Billie Eilish TV`,
     it: name => `Profilo di ${name} con i suoi contenuti preferiti su Billie Eilish TV`
-  }[routeInfo.slug] || (name => `Perfil de ${name}`);
+  }[routeInfo.contentSlug] || (name => `Perfil de ${name}`);
 
   const copy = pageCopy(routeInfo, settings, seoRecord);
   const canonicalPath = canonicalPathForRoute(routeInfo, seoRecord);

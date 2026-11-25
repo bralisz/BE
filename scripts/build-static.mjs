@@ -28,6 +28,7 @@ const copies=[
   ['assets/js/community.js',`${out}/chunks/community.js`],
   ['assets/js/performance.js',`${out}/chunks/performance.js`],
   ['assets/js/locale-routing.js',`${out}/chunks/locale.js`],
+  ['assets/js/in-app-browser.js',`${out}/chunks/in-app-browser.js`],
   ['assets/js/seo.js',`${out}/chunks/seo.js`],
   ['assets/js/site.js',`${out}/chunks/site.js`],
   ['assets/js/watch-party.js',`${out}/chunks/watch-party.js`],
@@ -48,6 +49,9 @@ await writeFile(`${out}/styles/profile-activity.css`,minifyCss(await readFile('a
 await cp('assets/css/tv-pairing.css',`${out}/styles/tv.css`);
 await mkdir(`${out}/locales`,{recursive:true});
 for(const lang of ['en-us','es','fr','it'])await cp(`assets/i18n/${lang}.json`,`${out}/locales/${lang}.json`);
+const spanish = JSON.parse(await readFile('assets/i18n/es.json','utf8'));
+const latam = JSON.parse(await readFile('assets/i18n/es-419.json','utf8'));
+await writeFile(out+'/locales/es-419.json', JSON.stringify({...spanish,...latam},null,2)+'\n');
 await mkdir(`${out}/media/icons`,{recursive:true});
 await cp('assets/images',`${out}/media`,{recursive:true});
 await cp('assets/icons',`${out}/media/icons`,{recursive:true});
@@ -58,7 +62,7 @@ await cp('assets/icons',`${out}/media/icons`,{recursive:true});
 const hashedFiles=[
   ...copies.map(([,destination])=>destination),
   ...['site','watch-party','watch-party-paywall','profile-activity','tv'].map(name=>`${out}/styles/${name}.css`),
-  ...['en-us','es','fr','it'].map(locale=>`${out}/locales/${locale}.json`)
+  ...['en-us','es','es-419','fr','it'].map(locale=>`${out}/locales/${locale}.json`)
 ];
 const fingerprint=createHash('sha256');
 for(const file of hashedFiles){

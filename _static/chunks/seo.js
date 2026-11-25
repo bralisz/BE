@@ -35,7 +35,7 @@
     return entry && entry.expires > Date.now() ? entry.value : null;
   }
   function publicRoute() {
-    return !/^#\/admin/.test(location.hash) && !/^\/(?:pt-br\/|en-us\/|es\/|fr\/|it\/)?(?:admin|api|oauth)(?:\/|$)/i.test(location.pathname);
+    return !/^#\/admin/.test(location.hash) && !/^\/(?:pt-br\/|en-us\/|es-419\/|es\/|fr\/|it\/)?(?:admin|api|oauth)(?:\/|$)/i.test(location.pathname);
   }
   function apply(data) {
     if (!data || typeof data.title !== 'string' || !Array.isArray(data.meta) || !Array.isArray(data.links)) return;
@@ -65,7 +65,7 @@
     }
   }
   function locale() {return String(window.BETVLocale && window.BETVLocale.slug || 'pt-br');}
-  function logicalPath() {return location.pathname.replace(/^\/(?:pt-br|en-us|es|fr|it)(?=\/|$)/i,'') || '/';}
+  function logicalPath() {return location.pathname.replace(/^\/(?:pt-br|en-us|es-419|es|fr|it)(?=\/|$)/i,'') || '/';}
   function plain(value) {
     var source = String(value || '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<[^>]*>/g,' ');
     var decoder = document.createElement('textarea'); decoder.innerHTML = source.replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -125,24 +125,26 @@
     var title = String(data.title || '').trim();
     if (!title) return null;
     var slug = locale(), logical = logicalPath();
+    var routeSlug = slug;
+    if (slug === 'es-419') slug = 'es';
     var descriptions = {
       'pt-br': 'Explore {title} na Billie Eilish TV.', 'en-us': 'Explore {title} on Billie Eilish TV.',
       es: 'Explora {title} en Billie Eilish TV.', fr: 'Découvrez {title} sur Billie Eilish TV.', it: 'Scopri {title} su Billie Eilish TV.'
     };
     var kind = contentKind(data);
     var description = plain(data.description) || videoDescription(title,kind,slug) || (descriptions[slug] || descriptions['pt-br']).replace('{title}',title);
-    var canonical = origin + '/' + slug + logical;
+    var canonical = origin + '/' + routeSlug + logical;
     var image = fallbackImage;
     try { var candidate = new URL(data.thumbnailUrl || data.imageUrl || data.bannerUrl || '',origin); if (/^https?:$/.test(candidate.protocol) && (data.thumbnailUrl || data.imageUrl || data.bannerUrl)) image = candidate.href; } catch (_) {}
     var name = videoTitle(title,kind,slug);
     var values = [
       ['name','description',description.slice(0,300)], ['name','robots','index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'],
-      ['property','og:type','website'], ['property','og:site_name','Billie Eilish TV'], ['property','og:locale',({'pt-br':'pt_BR','en-us':'en_US',es:'es_ES',fr:'fr_FR',it:'it_IT'})[slug]],
+      ['property','og:type','website'], ['property','og:site_name','Billie Eilish TV'], ['property','og:locale',({'pt-br':'pt_BR','en-us':'en_US',es:'es_ES','es-419':'es_419',fr:'fr_FR',it:'it_IT'})[routeSlug]],
       ['property','og:title',name], ['property','og:description',description.slice(0,300)], ['property','og:url',canonical], ['property','og:image',image], ['property','og:image:alt',title],
       ['name','twitter:card','summary_large_image'], ['name','twitter:title',name], ['name','twitter:description',description.slice(0,300)], ['name','twitter:image',image], ['name','twitter:image:alt',title]
     ];
     var links = [{rel:'canonical',href:canonical}];
-    [['pt-br','pt-BR'],['en-us','en-US'],['es','es'],['fr','fr'],['it','it']].forEach(function (item) {links.push({rel:'alternate',hreflang:item[1],href:origin + '/' + item[0] + logical});});
+    [['pt-br','pt-BR'],['en-us','en-US'],['es','es'],['es-419','es-419'],['fr','fr'],['it','it']].forEach(function (item) {links.push({rel:'alternate',hreflang:item[1],href:origin + '/' + item[0] + logical});});
     links.push({rel:'alternate',hreflang:'x-default',href:origin + logical});
     return {title:name,meta:values.map(function (item) {return {kind:item[0],key:item[1],content:item[2]};}),links:links,structuredData:null,publicFactsHtml:''};
   }

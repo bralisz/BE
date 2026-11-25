@@ -37,7 +37,7 @@ const NOTIFICATIONS_CACHE_TAG = 'betv-notifications';
 function normalizeLocale(value) {
   const locale = String(value || 'pt-br').trim().toLowerCase();
   if (locale === 'en' || locale === 'en-us') return 'en-us';
-  if (locale === 'es') return 'es';
+  if (/^es(?:[-_](?:[a-z]{2}|419))?$/.test(locale)) return 'es';
   if (locale === 'fr') return 'fr';
   if (locale === 'it') return 'it';
   return 'pt-br';
