@@ -78,7 +78,7 @@
   window.addEventListener('hashchange', () => { actionVersion++; dismiss(); });
   // On direct /avocados requests the social module is needed before a user clicks anything.
   function isAvocadosPath(){
-    const path=window.BETVLocalePath?window.BETVLocalePath():location.pathname.replace(/^\/(?:pt-br|en-us|es|fr|it)(?=\/|$)/i,'');
+    const path=window.BETVLocalePath?window.BETVLocalePath():location.pathname.replace(/^\/(?:pt-br|en-us|es-419|es|fr|it)(?=\/|$)/i,'');
     return String(path||'').replace(/\/+$/,'').toLowerCase()==='/avocados';
   }
   if(isAvocadosPath())ensure('community').catch(()=>{});

@@ -16,7 +16,7 @@
     it:{instagramAction:"Guarda ora",instagramActionLabel:"Guarda ora: apri il post su Instagram",instagramTitle:'Ultimi post su Instagram',title:'Trova altri fan di Billie',subtitle:'Trova fan con video, album e contenuti salvati in comune.',loading:'Ricerca di fan con gusti simili…',login:'Accedi per trovare fan con preferiti in comune.',loginAction:'Accedi',add:'Salva video o scegli album preferiti per trovare fan simili.',addAction:'Apri il mio profilo',empty:'Non ci sono ancora fan con gli stessi preferiti. Riprova più tardi.',error:'Impossibile trovare fan al momento.',retry:'Riprova',one:'1 preferito in comune',many:'{count} preferiti in comune',view:'Apri profilo',follow:'Segui',following:'Seguendo…',retryFollow:'Riprova',followError:'Impossibile seguire questo fan.',more:'Altri fan',loadingMore:'Caricamento…',retryMore:'Riprova'}
   };
   function similarCopy(key,count){
-    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&(window.BETVLocale.contentSlug||window.BETVLocale.slug)||document.documentElement.lang||'pt-br').toLowerCase();
     var slug=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
     var message=(similarFanTranslations[slug]||similarFanTranslations['pt-br'])[key]||key;
     return message.replace('{count}',String(count||0));
@@ -32,14 +32,14 @@
     it:{title:'Album più amati',loading:'Caricamento album…',empty:'Nessun album scelto dai fan.',error:'Impossibile caricare gli album.',retry:'Riprova',open:'Apri album'}
   };
   function albumCopy(key){
-    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&(window.BETVLocale.contentSlug||window.BETVLocale.slug)||document.documentElement.lang||'pt-br').toLowerCase();
     var slug=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
     return (albumCommunityCopy[slug]||albumCommunityCopy['pt-br'])[key]||key;
   }
   // The badge shows the total number of saves, including avatar previews.
   function communitySaveLabel(value){
     var saves=Math.max(0,Math.floor(Number(value)||0));
-    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&(window.BETVLocale.contentSlug||window.BETVLocale.slug)||document.documentElement.lang||'pt-br').toLowerCase();
     var slug=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
     var formatted;
     try{formatted=new Intl.NumberFormat(slug).format(saves);}catch(_){formatted=String(saves);}
@@ -63,7 +63,7 @@
     it:{member:'Condividi il tuo profilo con gli amici e ottieni un badge',guest:'Condividi il sito e crea un account per ottenere un badge',tag:'Fan di Billie',share:'Condividi',signup:'Crea account',missing:'Completa il profilo per condividerlo.',copied:'Link del profilo copiato e badge ottenuto!',success:'Il badge Fan di Billie è stato aggiunto al tuo profilo!',error:'Impossibile condividere ora. Riprova.',awardError:'Profilo condiviso, ma non è stato possibile sbloccare il badge. Riprova.'}
   };
   function shareCopy(key){
-    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&(window.BETVLocale.contentSlug||window.BETVLocale.slug)||document.documentElement.lang||'pt-br').toLowerCase();
     var lang=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
     return (communityShareTranslations[lang]||communityShareTranslations['pt-br'])[key]||key;
   }
@@ -294,7 +294,7 @@
   function isBoafLoginSurface(){
     var path=String(location.pathname||'').replace(/\/+$/,'').toLowerCase();
     var hash=String(location.hash||'').toLowerCase();
-    return document.body.classList.contains('login-mode')||path==='/login'||/\/(?:pt-br|en-us|es|fr|it)\/login$/.test(path)||hash==='#login'||hash==='#/login';
+    return document.body.classList.contains('login-mode')||path==='/login'||/\/(?:pt-br|en-us|es-419|es|fr|it)\/login$/.test(path)||hash==='#login'||hash==='#/login';
   }
   function canShowBoafNotice(){
     var user=boafNoticeUser();
@@ -871,7 +871,7 @@
       fr:['Voir les éléments précédents','Voir les éléments suivants'],
       it:['Vedi elementi precedenti','Vedi elementi successivi']
     };
-    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    var raw=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&(window.BETVLocale.contentSlug||window.BETVLocale.slug)||document.documentElement.lang||'pt-br').toLowerCase();
     var lang=raw.indexOf('en')===0?'en-us':raw.indexOf('es')===0?'es':raw.indexOf('fr')===0?'fr':raw.indexOf('it')===0?'it':'pt-br';
     function makeArrow(direction,label,path){
       var arrow=document.createElement('button');

@@ -12,7 +12,7 @@
     fr: ['Regarder ensemble','Invitez un ami','Chercher @pseudo','Quitter','Créer un salon','Connectez-vous pour inviter ou recevoir des invitations.','En attente des invités…','Invitation envoyée !','Échec de l’invitation.','Salon connecté','En attente de l’hôte…','Synchronisation indisponible pour les lecteurs externes.','Synchronisation…','Appuyez sur Lecture.','Watch Party','vous invite à regarder','Accepter','Refuser','Invitation expirée.','Aucun fan trouvé.','Recherchez un fan par @pseudo.','Participants','Fermer','Erreur de connexion.'],
     it: ['Guarda insieme','Invita un amico','Cerca @utente','Esci dalla stanza','Crea stanza','Accedi per invitare o ricevere inviti.','In attesa di invitati…','Invito inviato!','Impossibile inviare.','Stanza connessa','In attesa dell’host…','Il player esterno non supporta la sincronizzazione.','Sincronizzazione…','Tocca Riproduci.','Watch Party','ti ha invitato a guardare','Accetta','Rifiuta','Invito scaduto.','Nessun fan trovato.','Cerca un fan per @utente.','Persone nella stanza','Chiudi','Errore di connessione.']
   };
-  const t = i => (strings[String(window.BETVLocale?.slug || 'pt-br').toLowerCase()] || strings['pt-br'])[i];
+  const t = i => (strings[String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || 'pt-br').toLowerCase()] || strings['pt-br'])[i];
   const extra = {
     'pt-br':{host:'Anfitrião',members:'Na sala',room:'Sala compartilhada',profile:'Perfil do fã',invite:'Convite para assistir juntos',gift:'Presentear +1 acesso',search:'Buscar fãs por @usuário'},
     'en-us':{host:'Host',members:'In the room',room:'Shared room',profile:'Fan profile',invite:'Watch together invitation',gift:'Gift +1 access',search:'Find fans by @username'},
@@ -20,7 +20,7 @@
     fr:{host:'Hôte',members:'Dans le salon',room:'Salon partagé',profile:'Profil du fan',invite:'Invitation à regarder ensemble',gift:'Offrir +1 accès',search:'Chercher des fans par @pseudo'},
     it:{host:'Host',members:'Nella stanza',room:'Stanza condivisa',profile:'Profilo del fan',invite:'Invito a guardare insieme',gift:'Regala +1 accesso',search:'Cerca fan per @utente'}
   };
-  const xt = key => (extra[String(window.BETVLocale?.slug || 'pt-br').toLowerCase()] || extra['pt-br'])[key];
+  const xt = key => (extra[String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || 'pt-br').toLowerCase()] || extra['pt-br'])[key];
   const cleanImage = value => {
     try {
       const u = new URL(String(value || '').trim());
@@ -179,7 +179,7 @@
     fr:{invalidCode:'Saisissez un code de salon valide.',mustAccept:'Acceptez votre invitation dans les notifications.',join:'Rejoindre avec un code',code:'Code du salon',codeHint:'Réservé aux fans ayant accepté une invitation.',copy:'Copier le code',copied:'Code copié.',inviteTitle:'Invitez un ami',inviteSubtitle:'Trouvez un profil et invitez-le à regarder ensemble.',sent:'Invitation envoyée',lookup:'Chercher par @pseudo',startHint:'Salon prêt. Appuyez sur Lecture pour commencer.',connected:'Vous avez rejoint le salon. Attendez le lancement de l’hôte.'},
     it:{invalidCode:'Inserisci un codice stanza valido.',mustAccept:'Accetta prima l’invito dalle notifiche.',join:'Entra con codice',code:'Codice stanza',codeHint:'Valido solo per fan che hanno accettato un invito.',copy:'Copia codice',copied:'Codice copiato.',inviteTitle:'Invita un amico',inviteSubtitle:'Trova un profilo e invitalo a guardare insieme.',sent:'Invito inviato',lookup:'Cerca per @utente',startHint:'Stanza pronta. Premi Riproduci per iniziare.',connected:'Sei nella stanza. Attendi che l’host avvii il video.'}
   };
-  const extraText=key=>(additional[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||additional['pt-br'])[key];
+  const extraText=key=>(additional[String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase()]||additional['pt-br'])[key];
   function publish(force = false) {
     if (!isHost || !joined || !channel) return;
     if (!force && Date.now()-lastPublish < 700) return;
@@ -328,7 +328,7 @@
     if(!photo.hidden){avatar.textContent='';avatar.append(photo);}
     const copy=document.createElement('div');copy.className='watch-party-invite-copy';
     const title=document.createElement('strong');title.textContent=label;
-    const sub=document.createElement('span');sub.textContent=giftWords[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||giftWords['pt-br'];
+    const sub=document.createElement('span');sub.textContent=giftWords[String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase()]||giftWords['pt-br'];
     copy.append(title,sub);identity.append(avatar,copy);row.append(identity);
     const actions=document.createElement('div');actions.className='watch-party-invite-actions';
     const yes=btn(t(16),'watch-party-accept'),no=btn(t(17),'watch-party-decline');

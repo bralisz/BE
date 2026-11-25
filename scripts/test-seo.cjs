@@ -61,11 +61,11 @@ function documentOf(response) {
 
 (async () => {
   delete process.env.VERCEL_ENV;
-  for (const locale of ['pt-br', 'en-us', 'es', 'fr', 'it']) {
+  for (const locale of ['pt-br', 'en-us', 'es', 'es-419', 'fr', 'it']) {
     const result = await render(`/${locale}`);
     const doc = documentOf(result);
     assert.equal(doc.querySelector('link[rel="canonical"]').href, `https://billieilishtv.site/${locale}`);
-    assert.equal(doc.querySelectorAll('link[hreflang]').length, 6);
+    assert.equal(doc.querySelectorAll('link[hreflang]').length, 9);
     const brandGraph = JSON.parse(doc.querySelector('[data-betv-seo]').textContent)['@graph'];
     const organization = brandGraph.find(item => item['@type'] === 'Organization');
     assert.equal(organization.name, 'Billie Eilish TV');
@@ -128,10 +128,10 @@ function documentOf(response) {
     assert.equal(metadata.title, doc.title, 'SPA and direct visits use the same content/locale');
     assert.equal(metadata.meta.find(item => item.key === 'description').content, description);
     assert.equal(metadata.links.find(item => item.rel === 'canonical').href, contentUrl);
-    assert.equal(metadata.links.filter(item => item.rel === 'alternate').length, 6);
+    assert.equal(metadata.links.filter(item => item.rel === 'alternate').length, 9);
     assert.equal(metadata.structuredData['@graph'].find(item => item['@type'] === 'ItemPage').mainEntity.name, name);
   }
-  for (const slug of ['pt-br','en-us','es','fr','it']) {
+  for (const slug of ['pt-br','en-us','es','es-419','fr','it']) {
     const interviewDoc = documentOf(await render('/' + slug + '/87654322'));
     assert.match(interviewDoc.title, /Zane Lowe 2024.*Billie Eilish/);
     assert.match(interviewDoc.querySelector('meta[name="description"]').content, /Zane Lowe 2024/);
@@ -162,7 +162,7 @@ function documentOf(response) {
     assert.equal(alias.code, 308);
     assert.equal(alias.headers.location, 'https://billieilishtv.site/' + slug + friendly);
   }
-  for (const slug of ['pt-br','en-us','es','fr','it']) {
+  for (const slug of ['pt-br','en-us','es','es-419','fr','it']) {
     for (const [id,kind,genre] of [['87654324','podcast','Podcast'],['87654325','musicvideo','Music video']]) {
       const doc = documentOf(await render('/' + slug + '/' + id));
       assert.match(doc.title, /Billie Eilish/);

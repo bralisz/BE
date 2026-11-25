@@ -2,7 +2,7 @@
   'use strict';
 
   var localeApi=window.BETVLocale||{slug:'pt-br',locale:'pt-BR',target:'pt'};
-  var slug=String(localeApi.slug||'pt-br').toLowerCase();
+  var slug=String(localeApi.contentSlug||localeApi.slug||'pt-br').toLowerCase();
   var locale=String(localeApi.locale||'pt-BR');
   var target=String(localeApi.target||({'en-us':'en','es':'es','fr':'fr','it':'it'}[slug]||'pt'));
   var map=Object.create(null);
@@ -387,7 +387,7 @@
       enforceItalianCanonicalLabels(document);
       readyResolve(api);
       try{window.dispatchEvent(new CustomEvent('be:i18n-ready',{detail:api}));}catch(_){ }
-      fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'})
+      fetch('/assets/i18n/'+encodeURIComponent(localeApi.slug||slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'})
         .then(function(response){return response.ok?response.json():null;})
         .then(function(payload){if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:true});})
         .catch(function(){});
@@ -396,7 +396,7 @@
     }
 
     try{
-      var response=await fetch('/assets/i18n/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
+      var response=await fetch('/assets/i18n/'+encodeURIComponent(localeApi.slug||slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
       if(response.ok){
         var payload=await response.json();
         if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:false});

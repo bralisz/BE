@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const {JSDOM}=require('jsdom');
 const handler=require('../server/api-routes/site-page');
 const savedFetch=global.fetch;
-const locales=['pt-br','en-us','es','fr','it'];
+const locales=['pt-br','en-us','es','es-419','fr','it'];
 const translated=Object.fromEntries(locales.map(slug=>[slug,{title:'Vídeo A '+slug,description:'Descrição A '+slug}]));
 const records=[{id:'a',data:{publicId:'12345678',title:'Vídeo A pt-br',description:'Descrição A pt-br',thumbnailUrl:'https://example.test/a.webp',translations:translated}},{id:'b',data:{publicId:'87654321',title:'Vídeo B',description:'Descrição B',thumbnailUrl:'https://example.test/b.webp'}}];
 global.fetch=async(url,options)=>({ok:true,json:async()=>String(url).includes('site_settings')?[]:JSON.parse(options.body).p_collection==='videos'?records:[]});
@@ -39,7 +39,7 @@ async function until(test){for(let i=0;i<100;i++){if(test())return;await delay(1
   assert.equal(d.querySelector('meta[name="description"]').content,'Descrição A '+slug);
   assert.equal(w.BETVPageTitle(),d.title,'settings/startup cannot restore the previous page title');
   assert.equal(d.querySelector('meta[property="og:image"]').content,'https://example.test/a.webp');
-  assert.equal(d.querySelectorAll('link[hreflang]').length,6);
+  assert.equal(d.querySelectorAll('link[hreflang]').length,9);
   assert.equal(d.querySelector('title').getAttribute('translate'),'no');
   navigate('87654321','Vídeo B','Descrição B');
   assert.equal(d.title,'Vídeo B | Billie Eilish TV');

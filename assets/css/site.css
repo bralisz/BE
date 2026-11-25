@@ -24036,3 +24036,23 @@ body.billie-page-active .home-topbar.search-open .home-nav-leading{
 
 .catalog-search-results,.home-filter-empty{scroll-margin-top:6rem}
 .catalog-result-title{position:absolute;inset:auto 0 0;z-index:3;padding:1.5em .75em .6em;background:linear-gradient(transparent,rgba(0,0,0,.88));color:white;font-size:clamp(.85rem,2vw,1rem);line-height:1.25}
+
+/* Solid iOS-style action sheet for embedded Android browsers. */
+dialog.betv-browser-notice {
+  box-sizing: border-box; position: fixed; inset: auto 0 max(12px, env(safe-area-inset-bottom)); margin: 0 auto;
+  width: min(440px, calc(100% - 24px)); max-height: 90dvh; overflow: auto;
+  padding: 18px 20px 20px; border: 1px solid #424246; border-radius: 24px;
+  background: #1c1c1e; color: #fff; text-align: start; font: 16px/1.45 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+.betv-browser-notice::backdrop { background: rgba(0,0,0,.52); }
+.betv-browser-notice header, .betv-browser-notice .actions { display: flex; align-items: center; gap: 10px; }
+.betv-browser-notice header { justify-content: space-between; position: static; background: none; }
+.betv-browser-notice h2 { margin: 0; font-size: 1.25rem; line-height: 1.2; color: #fff; }
+.betv-browser-notice p { margin: 8px 0 18px; color: #e5e5ea; }
+.betv-browser-notice button { min-height: 44px; padding: 10px 14px; border: 0; border-radius: 14px; color: #fff; background: #38383a; font: inherit; font-weight: 600; }
+.betv-browser-notice button.dismiss { flex: 0 0 44px; border-radius: 50%; font-size: 22px; line-height: 1; }
+.betv-browser-notice .actions { flex-wrap: wrap; align-items: stretch; }
+.betv-browser-notice .actions button { flex: 1 1 120px; }
+.betv-browser-notice button.open { background: #0062cf; }
+.betv-browser-notice small, .betv-browser-notice [role=status]:not(:empty) { display: block; margin-top: 14px; color: #c7c7cc; }
+.betv-browser-notice input { width: 100%; margin-top: 8px; }

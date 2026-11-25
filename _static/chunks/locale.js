@@ -5,14 +5,16 @@
     'pt-br':{locale:'pt-BR',slug:'pt-br',target:'pt'},
     'en-us':{locale:'en-US',slug:'en-us',target:'en'},
     'us':{locale:'en-US',slug:'en-us',target:'en',alias:true},
+    'es-419':{locale:'es-419',slug:'es-419',target:'es'},
     'es':{locale:'es-ES',slug:'es',target:'es'},
     'fr':{locale:'fr-FR',slug:'fr',target:'fr'},
     'it':{locale:'it-IT',slug:'it',target:'it'}
   };
-  var SUPPORTED=['pt-br','en-us','es','fr','it'];
+  var SUPPORTED=['pt-br','en-us','es','es-419','fr','it'];
   var ROUTE_SLUGS={
     'pt-br':{'/avocados':'/avocados','/comunidade':'/comunidade','/fãs':'/fãs'},
     'en-us':{'/avocados':'/avocados','/comunidade':'/community','/fãs':'/fans'},
+    'es-419':{'/avocados':'/avocados','/comunidade':'/comunidad','/fãs':'/fans'},
     'es':{'/avocados':'/avocados','/comunidade':'/comunidad','/fãs':'/fans'},
     'fr':{'/avocados':'/avocados','/comunidade':'/communaute','/fãs':'/fans'},
     'it':{'/avocados':'/avocados','/comunidade':'/comunita','/fãs':'/fans'}
@@ -83,6 +85,7 @@
     for(var index=0;index<languages.length;index+=1){
       var language=languages[index].toLowerCase();
       if(language.indexOf('pt')===0)return 'pt-br';
+      if(/^es[-_](?:419|ar|bo|br|bz|cl|co|cr|cu|do|ec|gt|hn|mx|ni|pa|pe|pr|py|sv|us|uy|ve)(?:[-_]|$)/.test(language))return 'es-419';
       if(language.indexOf('es')===0)return 'es';
       if(language.indexOf('fr')===0)return 'fr';
       if(language.indexOf('it')===0)return 'it';
@@ -135,7 +138,7 @@
     try{localStorage.setItem(LOCALE_STORAGE_KEY,config.slug);}catch(_){ }
   }
 
-  if(!prefix&&/^\/(?:auth\/callback|oauth\/consent)(?:\/|$)/i.test(logicalAtBoot)&&/^\/(?:pt-br|en-us|es|fr|it)$/.test(storedPrefix)){
+  if(!prefix&&/^\/(?:auth\/callback|oauth\/consent)(?:\/|$)/i.test(logicalAtBoot)&&/^\/(?:pt-br|en-us|es-419|es|fr|it)$/.test(storedPrefix)){
     prefix=storedPrefix;
     var storedSlug=storedPrefix.slice(1);
     locale=(LOCALES[storedSlug]&&LOCALES[storedSlug].locale)||locale;
@@ -223,6 +226,7 @@
     slug:prefix?prefix.slice(1):'pt-br',
     prefix:prefix,
     target:(LOCALES[prefix?prefix.slice(1):'pt-br']||LOCALES['pt-br']).target,
+    contentSlug:prefix==='/es-419'?'es':(prefix.slice(1)||'pt-br'),
     isPrefixed:Boolean(prefix),
     stripPath:stripLocale,
     localizePath:localize,

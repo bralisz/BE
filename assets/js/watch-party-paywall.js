@@ -12,11 +12,11 @@
     it:['Guarda lo stesso film o video con gli amici in una stanza sincronizzata.','Pagamento una tantum · accesso permanente','≈ 27,19 R$ · 4,49 € (stime; importo finale su Stripe)','Il tuo badge esclusivo','Ricevi il badge dorato Happier Than Ever dopo la conferma del pagamento.','Guardate insieme','Invita un amico tramite @utente in una stanza sincronizzata. Ogni partecipante deve avere accesso a Watch Together.','Sblocca Watch Party e guarda insieme','Chiudi','Accedi al tuo account BETV per continuare.','Connessione a Stripe…','Verifica del pagamento con Stripe…','Pagamento confermato! Watch Party è attiva.','Pagamento non ancora confermato.','Accesso attivato','Hai già accesso a Watch Party.','Il tuo regalo +1','Scegli un fan a cui regalare accesso permanente e il badge Happier Than Ever.','Cerca @utente','Digita almeno due caratteri per trovare un fan.','Nessun fan trovato.','Regala accesso a questo fan','Scegli un altro fan','Regalo inviato! Il tuo amico ha già accesso e il badge dorato.','Hai già regalato l’accesso a','Il regalo +1 è riservato a chi ha acquistato l’accesso.','Questo fan ha già accesso. Scegline un altro.','Impossibile completare. Riprova.','Guarda insieme a un amico','Seleziona','Accesso concesso a','Il tuo profilo BETV']
   };
   const t = key => {
-    const index=keys.indexOf(key),locale=String(window.BETVLocale?.slug||'pt-br').toLowerCase();
+    const index=keys.indexOf(key),locale=String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase();
     return (dict[locale]||dict['pt-br'])[index] || dict['pt-br'][index] || key;
   };
   const pixWords={"pt-br":{"pay":"Pagar com Pix","panel":"Pagamento Pix","title":"Pagamento via Pix","back":"Voltar","instructions":"Escaneie o QR Code ou copie o código Pix. O acesso é liberado após a confirmação.","copyLabel":"Pix copia e cola","copyCodeLabel":"Código Pix para copiar","copy":"Copiar código Pix","copied":"Código Pix copiado.","copyFallback":"Código selecionado. Use Copiar no menu do aparelho.","waiting":"Aguardando confirmação do Mercado Pago…","status":"Status: ","verification":"Verificação indisponível. Tentaremos novamente.","generating":"Gerando Pix seguro…","errorPrefix":"Não foi possível gerar o Pix: ","retry":"tente novamente","stripeUnavailable":"Pix indisponível nesta conta Stripe. Tente o pagamento por cartão."},"en-us":{"pay":"Pay with Pix","panel":"Pix payment","title":"Pay via Pix","back":"Back","instructions":"Scan the QR code or copy the Pix code. Access unlocks after payment confirmation.","copyLabel":"Pix copy and paste","copyCodeLabel":"Pix code to copy","copy":"Copy Pix code","copied":"Pix code copied.","copyFallback":"Code selected. Use Copy in your device menu.","waiting":"Waiting for Mercado Pago confirmation…","status":"Status: ","verification":"Verification unavailable. We will try again.","generating":"Generating a secure Pix payment…","errorPrefix":"Could not generate Pix: ","retry":"try again","stripeUnavailable":"Pix is unavailable on this Stripe account. Please pay by card."},"es":{"pay":"Pagar con Pix","panel":"Pago Pix","title":"Pago mediante Pix","back":"Volver","instructions":"Escanea el código QR o copia el código Pix. El acceso se activa tras la confirmación.","copyLabel":"Pix copia y pega","copyCodeLabel":"Código Pix para copiar","copy":"Copiar código Pix","copied":"Código Pix copiado.","copyFallback":"Código seleccionado. Usa Copiar en el menú del dispositivo.","waiting":"Esperando confirmación de Mercado Pago…","status":"Estado: ","verification":"No se puede verificar ahora. Volveremos a intentarlo.","generating":"Generando un pago Pix seguro…","errorPrefix":"No se pudo generar Pix: ","retry":"inténtalo de nuevo","stripeUnavailable":"Pix no está disponible en esta cuenta de Stripe. Paga con tarjeta."},"fr":{"pay":"Payer avec Pix","panel":"Paiement Pix","title":"Paiement via Pix","back":"Retour","instructions":"Scannez le code QR ou copiez le code Pix. L’accès est activé après confirmation.","copyLabel":"Code Pix à copier-coller","copyCodeLabel":"Code Pix à copier","copy":"Copier le code Pix","copied":"Code Pix copié.","copyFallback":"Code sélectionné. Utilisez Copier dans le menu de votre appareil.","waiting":"En attente de la confirmation de Mercado Pago…","status":"Statut : ","verification":"Vérification indisponible. Nous réessaierons.","generating":"Création du paiement Pix sécurisé…","errorPrefix":"Impossible de générer le Pix : ","retry":"réessayez","stripeUnavailable":"Pix n’est pas disponible sur ce compte Stripe. Payez par carte."},"it":{"pay":"Paga con Pix","panel":"Pagamento Pix","title":"Pagamento tramite Pix","back":"Indietro","instructions":"Scansiona il codice QR o copia il codice Pix. L’accesso viene attivato dopo la conferma.","copyLabel":"Pix copia e incolla","copyCodeLabel":"Codice Pix da copiare","copy":"Copia il codice Pix","copied":"Codice Pix copiato.","copyFallback":"Codice selezionato. Usa Copia nel menu del dispositivo.","waiting":"In attesa di conferma da Mercado Pago…","status":"Stato: ","verification":"Verifica non disponibile. Riproveremo.","generating":"Generazione del pagamento Pix sicuro…","errorPrefix":"Impossibile generare il Pix: ","retry":"riprova","stripeUnavailable":"Pix non è disponibile su questo account Stripe. Paga con carta."}};
-  const px=key=>(pixWords[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||pixWords['pt-br'])[key];
+  const px=key=>(pixWords[String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase()]||pixWords['pt-br'])[key];
   function renderPixLocale(){
     if(!panel)return;
     $('watchPartyUnlockPix').textContent=px('pay');
@@ -30,7 +30,7 @@
   }
   const CURRENCY_PRICE = Object.freeze({brl:2719,usd:500,eur:449});
   function priceForLocale(){
-    const locale=String(window.BETVLocale?.slug||'pt-br').toLowerCase();
+    const locale=String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase();
     const currency=locale==='pt-br'?'brl':locale==='en-us'?'usd':'eur';
     const fmt=locale==='pt-br'?'pt-BR':locale==='en-us'?'en-US':locale==='fr'?'fr-FR':locale==='it'?'it-IT':'es-ES';
     return {currency,cents:CURRENCY_PRICE[currency],text:new Intl.NumberFormat(fmt,{style:'currency',currency:currency.toUpperCase()}).format(CURRENCY_PRICE[currency]/100)};
@@ -253,7 +253,7 @@
     if(busy)return;
     busy=true;const button=$('watchPartyUnlockCheckout'),pix=$('watchPartyUnlockPix');button.disabled=true;pix.disabled=true;status('');
     try{
-      const data=await invoke({action:'create',locale:String(window.BETVLocale?.slug||'pt-br').toLowerCase(),paymentMethod:method});
+      const data=await invoke({action:'create',locale:String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase(),paymentMethod:method});
       if(data?.unlocked){unlocked=true;checked=true;render();await loadGift();return;}
       const url=new URL(String(data?.url||''));
       if(url.protocol!=='https:'||!/(^|\.)stripe\.com$/.test(url.hostname))throw Error(t('error'));
@@ -285,7 +285,7 @@
           fr:'En attente de la confirmation du paiement. Vous pouvez revenir plus tard ; nous vérifierons à nouveau.',
           it:'In attesa della conferma del pagamento. Puoi tornare più tardi; controlleremo di nuovo.'
         };
-        status(waiting[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||waiting['pt-br']);
+        status(waiting[String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase()]||waiting['pt-br']);
         if(!panel.hidden&&pendingTries<24){pendingTries++;pendingTimer=setTimeout(()=>verifyReturn(),15000);}
         return;
       }
@@ -328,7 +328,7 @@
       $('watchPartyOneTime').textContent=t('oneTime');
       $('watchPartyRewardTitle').textContent=t('reward');$('watchPartyRewardInfo').textContent=t('rewardInfo');
       $('watchPartyPlusTitle').textContent=t('plus');$('watchPartyPlusInfo').textContent=t('plusInfo');
-      $('watchPartyUnlockCheckout').textContent=t('checkout');$('watchPartyUnlockPix').hidden=unlocked||String(window.BETVLocale?.slug||'pt-br').toLowerCase()!=='pt-br';if(unlocked){$('watchPartyPixPanel').hidden=true;clearPix();renderGift();}
+      $('watchPartyUnlockCheckout').textContent=t('checkout');$('watchPartyUnlockPix').hidden=unlocked||String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase()!=='pt-br';if(unlocked){$('watchPartyPixPanel').hidden=true;clearPix();renderGift();}
     }
     const button=$('contentDetailWatchParty');
     if(button){
@@ -336,7 +336,7 @@
       if(actions&&actions.firstElementChild!==button)actions.prepend(button);
       button.classList.add('watch-party-main-cta');
       button.dataset.watchPartyUnlock=unlocked?'true':'false';
-      const actionLabel=({'pt-br':'Assistir junto','en-us':'Watch together',es:'Ver juntos',fr:'Regarder ensemble',it:'Guarda insieme'})[String(window.BETVLocale?.slug||'pt-br').toLowerCase()]||'Assistir junto';
+      const actionLabel=({'pt-br':'Assistir junto','en-us':'Watch together',es:'Ver juntos',fr:'Regarder ensemble',it:'Guarda insieme'})[String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||'pt-br').toLowerCase()]||'Assistir junto';
       button.setAttribute('aria-label',actionLabel);
       const label=button.querySelector('span');if(label)label.textContent=actionLabel;
     }

@@ -3,7 +3,7 @@
   'use strict';
 
   var localeApi=window.BETVLocale||{slug:'pt-br',locale:'pt-BR',target:'pt'};
-  var slug=String(localeApi.slug||'pt-br').toLowerCase();
+  var slug=String(localeApi.contentSlug||localeApi.slug||'pt-br').toLowerCase();
   var locale=String(localeApi.locale||'pt-BR');
   var target=String(localeApi.target||({'en-us':'en','es':'es','fr':'fr','it':'it'}[slug]||'pt'));
   var map=Object.create(null);
@@ -433,7 +433,7 @@
       enforceItalianCanonicalLabels(document);
       readyResolve(api);
       try{window.dispatchEvent(new CustomEvent('be:i18n-ready',{detail:api}));}catch(_){ }
-      fetch('/_static/locales/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'})
+      fetch('/_static/locales/'+encodeURIComponent(localeApi.slug||slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'})
         .then(function(response){return response.ok?response.json():null;})
         .then(function(payload){if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:true});})
         .catch(function(){});
@@ -442,7 +442,7 @@
     }
 
     try{
-      var response=await fetch('/_static/locales/'+encodeURIComponent(slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
+      var response=await fetch('/_static/locales/'+encodeURIComponent(localeApi.slug||slug)+'.json?rev='+encodeURIComponent(STATIC_REV)+'&build='+encodeURIComponent(BUILD_REV),{credentials:'same-origin',cache:'default'});
       if(response.ok){
         var payload=await response.json();
         if(payload&&typeof payload==='object')mergeTranslations(payload,{applyNow:false});
@@ -1692,7 +1692,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function activeLocaleSlug() {
     if (String(location.hash || '').startsWith('#/admin')) return 'pt-br';
-    const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+    const slug = String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || 'pt-br').toLowerCase();
     return ['en-us','es','fr','it'].includes(slug) ? slug : 'pt-br';
   }
 
@@ -3473,7 +3473,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       return currentUser ? { ...currentUser } : null;
     },
     async sendPasswordReset(email) {
-      const locale = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+      const locale = String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || 'pt-br').toLowerCase();
       const safeLocale = ['pt-br', 'en-us', 'es', 'fr', 'it'].includes(locale) ? locale : 'pt-br';
       const redirectTo = `${location.origin}/${safeLocale}/reset-password`;
       const { error } = await supabaseClient.auth.resetPasswordForEmail(String(email || '').trim().toLowerCase(), { redirectTo });
@@ -4081,7 +4081,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   window.BETVRunWhenMainThreadIdle = window.BETVRunWhenMainThreadIdle || runWhenMainThreadIsIdle;
 
   function activeLocaleSlug() {
-    const slug = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+    const slug = String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || 'pt-br').toLowerCase();
     return ['en-us', 'es', 'fr', 'it'].includes(slug) ? slug : 'pt-br';
   }
 
@@ -5164,7 +5164,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     'videoclipes','videoclips','music videos','music video','videos musicais','vídeos musicais','videos musicales','vídeos musicales','vidéos musicales','vidéos musicaux','live performances & tv'
   ]);
   function preservesOriginalMusicTitle(data) {
-    const locale = String(window.BETVLocale?.slug || 'pt-br').toLowerCase();
+    const locale = String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || 'pt-br').toLowerCase();
     if (!['es','fr','it'].includes(locale)) return false;
     const collection = String(data?.collection || 'videos').toLowerCase();
     if (data?.preserveTitle === true || String(data?.preserveTitle || '').toLowerCase() === 'true') return true;
@@ -7027,139 +7027,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
                                                                                
                                                                             
-  function isInstagramMobileBrowser() {
-    const ua = String(navigator.userAgent || '');
-    return /Instagram/i.test(ua) && /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
-  }
-
-  function instagramBrowserHelpCopy() {
-    const lang = String(document.documentElement.lang || navigator.language || 'pt').toLowerCase();
-    if (lang.startsWith('es')) return {
-      title: 'Abre el sitio en tu navegador',
-      text: 'El navegador de Instagram puede limitar algunos videos. Toca ••• y elige “Abrir en el navegador” para una mejor compatibilidad.',
-      button: 'Entendido'
-    };
-    if (lang.startsWith('fr')) return {
-      title: 'Ouvrez le site dans votre navigateur',
-      text: 'Le navigateur Instagram peut limiter certaines vidéos. Touchez ••• puis choisissez « Ouvrir dans le navigateur » pour une meilleure compatibilité.',
-      button: 'Compris'
-    };
-    if (lang.startsWith('it')) return {
-      title: 'Apri il sito nel browser',
-      text: 'Il browser di Instagram può limitare alcuni video. Tocca ••• e scegli “Apri nel browser” per una compatibilità migliore.',
-      button: 'Ho capito'
-    };
-    if (lang.startsWith('en')) return {
-      title: 'Open the site in your browser',
-      text: 'Instagram’s browser can limit some videos. Tap ••• and choose “Open in browser” for better compatibility.',
-      button: 'Got it'
-    };
-    return {
-      title: 'Acesse o site no navegador',
-      text: 'O navegador do Instagram pode limitar alguns vídeos. Toque em ••• e escolha “Abrir no navegador” para ter melhor compatibilidade.',
-      button: 'Entendi'
-    };
-  }
-
-  const INSTAGRAM_BROWSER_HELP_SEEN_KEY = 'be_instagram_browser_help_seen_v1';
-
-  function hasSeenInstagramMobileBrowserHelp() {
-    try { return window.localStorage.getItem(INSTAGRAM_BROWSER_HELP_SEEN_KEY) === '1'; }
-    catch (_) { return false; }
-  }
-
-  function markInstagramMobileBrowserHelpSeen() {
-    try { window.localStorage.setItem(INSTAGRAM_BROWSER_HELP_SEEN_KEY, '1'); }
-    catch (_) {}
-  }
-
-  function showInstagramMobileBrowserHelp() {
-    if (!isInstagramMobileBrowser() || hasSeenInstagramMobileBrowserHelp() || document.getElementById('beInstagramBrowserHelp')) return;
-    markInstagramMobileBrowserHelpSeen();
-    const copy = instagramBrowserHelpCopy();
-    const wrap = document.createElement('div');
-    wrap.id = 'beInstagramBrowserHelp';
-    wrap.setAttribute('role', 'dialog');
-    wrap.setAttribute('aria-modal', 'true');
-    wrap.setAttribute('aria-labelledby', 'beInstagramBrowserHelpTitle');
-    wrap.innerHTML = `<div class="be-instagram-browser-help-backdrop"></div>
-      <section class="be-instagram-browser-help-card">
-        <h2 id="beInstagramBrowserHelpTitle"></h2>
-        <p></p>
-        <button type="button"></button>
-      </section>`;
-    wrap.querySelector('h2').textContent = copy.title;
-    wrap.querySelector('p').textContent = copy.text;
-    wrap.querySelector('button').textContent = copy.button;
-    const close = () => wrap.remove();
-    wrap.querySelector('button').addEventListener('click', close);
-    wrap.querySelector('.be-instagram-browser-help-backdrop').addEventListener('click', close);
-    document.body.appendChild(wrap);
-    if (!document.getElementById('beInstagramBrowserHelpStyle')) {
-      const style = document.createElement('style');
-      style.id = 'beInstagramBrowserHelpStyle';
-      style.textContent = `#beInstagramBrowserHelp{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:20px}.be-instagram-browser-help-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(7px)}.be-instagram-browser-help-card{position:relative;width:min(92vw,390px);box-sizing:border-box;padding:22px 20px 18px;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:#111;color:#fff;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.45)}.be-instagram-browser-help-card h2{margin:0 0 9px;font-size:20px;line-height:1.2}.be-instagram-browser-help-card p{margin:0 0 18px;color:rgba(255,255,255,.78);font-size:14px;line-height:1.5}.be-instagram-browser-help-card button{width:100%;border:0;border-radius:14px;padding:13px 16px;font:inherit;font-weight:700;background:#fff;color:#111}`;
-      document.head.appendChild(style);
-    }
-    wrap.querySelector('button').focus({ preventScroll: true });
-  }
-
-                                                   
-                                                                               
-                                                                                    
-  function scheduleInstagramMobileSiteHelp() {
-    if (!isInstagramMobileBrowser() || hasSeenInstagramMobileBrowserHelp() || window.__beInstagramMobileSiteHelpScheduled) return 0;
-    window.__beInstagramMobileSiteHelpScheduled = true;
-
-    const requiredVisibleMs = 2 * 60 * 1000;
-    let visibleMs = 0;
-    let visibleStartedAt = document.visibilityState === 'visible' ? Date.now() : 0;
-    let timer = 0;
-    let shown = false;
-
-    const remainingMs = () => Math.max(0, requiredVisibleMs - visibleMs - (visibleStartedAt ? Date.now() - visibleStartedAt : 0));
-    const clearTimer = () => { if (timer) { window.clearTimeout(timer); timer = 0; } };
-    const showOnce = () => {
-      if (shown) return;
-      shown = true;
-      clearTimer();
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      showInstagramMobileBrowserHelp();
-    };
-    const arm = () => {
-      clearTimer();
-      if (shown || document.visibilityState !== 'visible') return;
-      const wait = remainingMs();
-      if (wait <= 0) { showOnce(); return; }
-      timer = window.setTimeout(showOnce, wait);
-    };
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') {
-        if (!visibleStartedAt) visibleStartedAt = Date.now();
-        arm();
-      } else {
-        if (visibleStartedAt) visibleMs += Date.now() - visibleStartedAt;
-        visibleStartedAt = 0;
-        clearTimer();
-      }
-    }
-
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    arm();
-    return timer;
-  }
-
-                                                                        
-                                                                               
-                                                                              
-  function scheduleInstagramMobilePlayerHelp() { return 0; }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', scheduleInstagramMobileSiteHelp, { once: true });
-  } else {
-    scheduleInstagramMobileSiteHelp();
-  }
-
   function googleDrivePreviewUrl(fileId, resourceKey = '') {
     const params = new URLSearchParams({ autoplay: '1' });
     if (resourceKey) params.set('resourcekey', resourceKey);
@@ -7600,12 +7467,12 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   });
 
   function subtitleStartNoticeText() {
-    const slug = String(window.BETVLocale?.slug || 'pt-br').trim().toLowerCase();
+    const slug = String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || 'pt-br').trim().toLowerCase();
     return SUBTITLE_START_NOTICE_TEXT[slug] || SUBTITLE_START_NOTICE_TEXT['pt-br'];
   }
 
   function subtitleSyncNoticeText() {
-    const slug = String(window.BETVLocale?.slug || 'pt-br').trim().toLowerCase();
+    const slug = String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || 'pt-br').trim().toLowerCase();
     return SUBTITLE_SYNC_NOTICE_TEXT[slug] || SUBTITLE_SYNC_NOTICE_TEXT['pt-br'];
   }
 
@@ -8342,7 +8209,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       previousFocus = document.activeElement;
       activeProvider = normalizedProvider;
       activeVkInfo = normalizedProvider === 'vk' ? info : null;
-      let instagramMobileFrameLoaded = false;
       vkEmbedAttempt = 0;
       vkPlaybackConfirmed = false;
       configureExternalSubtitles(normalizedProvider === 'vk' ? context?.subtitleUrl : '', normalizedProvider === 'vk' ? context?.subtitleLocale : '');
@@ -8360,9 +8226,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       overlay.dataset.provider = normalizedProvider;
       overlay.classList.add('is-open', normalizedProvider === 'vk' ? 'is-vk' : 'is-youtube');
       autoEnableItalianSubtitles(subtitleButton, activeSubtitleUrl);
-      if (normalizedProvider === 'youtube' && isInstagramMobileBrowser()) {
-        frame.addEventListener('load', () => { instagramMobileFrameLoaded = true; }, { once: true });
-      }
       frame.src = embedUrl;
       overlay.hidden = false;
       overlay.setAttribute('aria-hidden', 'false');
@@ -8375,12 +8238,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
         frame.addEventListener('load', bindVkApi, { once: true });
         window.setTimeout(bindVkApi, 900);
         scheduleVkFallback();
-        scheduleInstagramMobilePlayerHelp(() => !overlay.hidden && activeProvider === 'vk' && !vkPlaybackConfirmed, 9000);
         window.setTimeout(() => {
           if (!overlay.hidden && activeProvider === 'vk') showControls(false);
         }, 80);
-      } else if (normalizedProvider === 'youtube') {
-        scheduleInstagramMobilePlayerHelp(() => !overlay.hidden && activeProvider === 'youtube' && !instagramMobileFrameLoaded, 9000);
       }
       closeButton.focus({ preventScroll: true });
     };
@@ -8694,7 +8554,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     let legacySmartTvMode = false;
     let mediaReady = false;
     let frameMode = false;
-    let instagramMobileDriveFrameLoaded = false;
     let fallbackTimer = 0;
     let inactivityTimer = 0;
     let controlsInteracting = false;
@@ -8987,9 +8846,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       video.removeAttribute('src');
       video.load();
       frame.title = 'Reprodutor nativo do Google Drive';
-      instagramMobileDriveFrameLoaded = false;
       frame.src = googleDrivePreviewUrl(activeFileId, activeResourceKey);
-      scheduleInstagramMobilePlayerHelp(() => !overlay.hidden && frameMode && !instagramMobileDriveFrameLoaded, 9000);
       frameShell.hidden = false;
       overlay.classList.remove('is-error', 'is-source-syncing');
       overlay.classList.add('is-frame-mode');
@@ -9409,7 +9266,6 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
     frame.addEventListener('load', () => {
       if (overlay.hidden || !frameMode || frame.src === 'about:blank') return;
-      instagramMobileDriveFrameLoaded = true;
       setFrameSubtitleClock(readFrameSubtitleTime(), true);
       syncDriveSubtitle();
       syncMobileDriveFrameViewport();
@@ -10986,14 +10842,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       mobileAppDriveUrl: movieHasDashboardDrive ? dashboardTvDrive : String(data.mobileAppDriveUrl || ''),
       tvDriveUrl: movieHasDashboardDrive ? dashboardTvDrive : String(data.tvDriveUrl || data.mobileAppDriveUrl || ''),
       subtitleUrl: String(data.subtitleUrl || ''),
-      subtitleLocale: String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase(),
+      subtitleLocale: String(window.BETVI18n?.slug || (window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || document.documentElement.lang || 'pt-br').trim().toLowerCase(),
       imageUrl: String(data.imageUrl || ''),
       bannerUrl: String(data.bannerUrl || ''),
       logoUrl: String(data.logoUrl || ''),
       collection: String(data.collection || 'videos')
     };
 
-    const castLocaleRaw = String(window.BETVI18n?.slug || window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').trim().toLowerCase();
+    const castLocaleRaw = String(window.BETVI18n?.slug || (window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || document.documentElement.lang || 'pt-br').trim().toLowerCase();
     const castLocale = castLocaleRaw === 'en' || castLocaleRaw === 'en-us' || castLocaleRaw.startsWith('en-') ? 'en-us'
       : castLocaleRaw === 'es' || castLocaleRaw.startsWith('es-') ? 'es'
         : castLocaleRaw === 'fr' || castLocaleRaw.startsWith('fr-') ? 'fr'
@@ -12900,7 +12756,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   function localizedCommunitySearchHint() {
     const labels = {'pt-br':'Buscar fãs pelo nome de usuário','en-us':'Search fans by username',es:'Buscar fans por nombre de usuario',fr:'Rechercher des fans par pseudo',it:'Cerca fan per nome utente'};
-    return labels[window.BETVLocale?.slug] || labels['pt-br'];
+    return labels[(window.BETVLocale?.contentSlug || window.BETVLocale?.slug)] || labels['pt-br'];
   }
 
   function openMobileSearch(open, clearOnClose = true) {
@@ -15509,7 +15365,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   }
 
   function notificationI18nAttributes(item){
-    var slug=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
+    var slug=String(window.BETVI18n&&window.BETVI18n.slug||window.BETVLocale&&(window.BETVLocale.contentSlug||window.BETVLocale.slug)||'pt-br').toLowerCase();
     var localized=item&&item.translations&&(item.translations[slug]||item.translations[slug==='en-us'?'en':slug]);
     return slug==='pt-br'||(localized&&String(localized.title||'').trim()&&String(localized.description||'').trim())?' data-i18n-ignore translate="no"':'';
   }
@@ -15566,6 +15422,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
 
   async function openPage(id,updateRoute){
     closeMenus();
+    if(document.body.classList.contains('billie-page-active')){
+      window.dispatchEvent(new CustomEvent('be:close-billie-page'));
+    }
     // Notification previews can open from Avocados without the usual route event.
     // Close the Community surface before rendering the notification article.
     if(document.body.classList.contains('community-page-active')&&
@@ -15616,6 +15475,14 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var userChip=document.getElementById('userChip');
     if(userDropdown)userDropdown.classList.remove('open');
     if(userChip)userChip.setAttribute('aria-expanded','false');
+  }
+
+  function activateBell(togglePreview,event){
+    if(document.body.classList.contains('billie-page-active')){
+      openPage('',true);
+      return;
+    }
+    togglePreview(event);
   }
 
   function toggleDesktop(event){
@@ -15671,7 +15538,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     if(!desktopTrigger)return;
     event.preventDefault();
     event.stopPropagation();
-    toggleDesktop(event);
+    activateBell(toggleDesktop,event);
   },true);
 
   document.addEventListener('click',function(event){
@@ -15686,7 +15553,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     else{closeDesktop({restoreCommunity:true});closeMobile({restoreCommunity:true});}
   });
 
-  window.addEventListener('be:toggle-mobile-notifications',toggleMobile);
+  window.addEventListener('be:toggle-mobile-notifications',function(event){activateBell(toggleMobile,event);});
 
   window.addEventListener('be:close-notification-menus',closeMenus);
   window.addEventListener('be:open-config',closeMenus);
@@ -15782,9 +15649,9 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   };
 
   function updateLocaleSlug() {
-    var configured = String(window.BETVLocale && window.BETVLocale.slug || '').toLowerCase();
+    var configured = String(window.BETVLocale && (window.BETVLocale.contentSlug || window.BETVLocale.slug) || '').toLowerCase();
     if (UPDATE_COPY[configured]) return configured;
-    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es|fr|it)(?:\/|$)/);
+    var match = String(window.location.pathname || '').toLowerCase().match(/^\/(pt-br|en-us|es-419|es|fr|it)(?:\/|$)/);
     return match && UPDATE_COPY[match[1]] ? match[1] : 'pt-br';
   }
 
@@ -16469,7 +16336,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     }
   }
   function currentLocaleSlug(){
-    var value=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
+    var value=String(window.BETVLocale&&(window.BETVLocale.contentSlug||window.BETVLocale.slug)||'pt-br').toLowerCase();
     return value==='en-us'||value==='es'||value==='fr'||value==='it'?value:'pt-br';
   }
   function wikipediaLocaleCopy(){
@@ -16790,6 +16657,20 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   var sourceDot=document.getElementById('notificationUnreadDot');
   if(window.MutationObserver&&sourceAvatar)new MutationObserver(syncAvatar).observe(sourceAvatar,{attributes:true,attributeFilter:['src','hidden']});
   if(window.MutationObserver&&sourceDot)new MutationObserver(syncUnread).observe(sourceDot,{attributes:true,attributeFilter:['hidden']});
+  window.addEventListener('click', function (event) {
+    if (page.hidden) return;
+    var tab = event.target.closest?.('#homeNavLinks button, #topbar #logoBtn');
+    if (!tab) return;
+
+    closePage();
+    // The catalog tabs share the home URL. Community and Support set their own routes.
+    var view = tab.id === 'logoBtn' ? 'home' : tab.dataset.homeView;
+    if (view) {
+      var root = window.BETVLocaleURL ? window.BETVLocaleURL('/') : '/';
+      history.pushState({ beRoute: 'catalog', homeView: view, scrollY: 0 }, '', root + location.search);
+      tab.dataset.beHistoryMode = 'none';
+    }
+  }, true);
   window.addEventListener('be:open-billie-page',openPage);
   window.addEventListener('be:close-billie-page',closePage);
   window.addEventListener('be:profile-avatar-changed',syncAvatar);
@@ -17547,7 +17428,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     notificationPreviewList.innerHTML=visibleItems.slice(0,3).map(function(item){
       return '<button class="notification-preview-item" type="button" data-donate-notification-id="'+esc(item.id)+'">'+
         '<span class="notification-preview-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.5 8.5 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.7v4.7l3.2 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+ 
-        '<span class="notification-preview-copy"'+(item.translations&&item.translations[String(window.BETVLocale&&window.BETVLocale.slug||'pt-br')]?' data-i18n-ignore translate="no"':'')+'><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimNotification(item.description,100)||'Confira esta atualização.')+'</span></span>'+
+        '<span class="notification-preview-copy"'+(item.translations&&item.translations[String(window.BETVLocale&&(window.BETVLocale.contentSlug||window.BETVLocale.slug)||'pt-br')]?' data-i18n-ignore translate="no"':'')+'><strong>'+esc(item.title||'Atualização')+'</strong><span>'+esc(trimNotification(item.description,100)||'Confira esta atualização.')+'</span></span>'+
         '<span class="notification-preview-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'+ 
       '</button>';
     }).join('');
@@ -17850,7 +17731,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     var avatarAlt=partner?t('Ícone de {name}',{name:displayName}):t('Avatar de {name}',{name:displayName});
     var attributes=partner?' target="_blank" rel="noopener noreferrer" data-fans-community':' data-fans-profile data-profile-route="'+esc(route)+'"';
     var avatarMarkup=avatar?'<img class="donate-supporter-avatar-image" decoding="async" src="'+esc(avatar)+'"'+(partner?'':' data-avatar-fallback="/_static/media/profile/default-avatar.png"')+' alt="'+esc(avatarAlt)+'">':'<span class="donate-supporter-avatar-fallback" aria-hidden="true">'+esc(initials(displayName))+'</span>';
-    var locale=String(window.BETVLocale&&window.BETVLocale.slug||'pt-br').toLowerCase();
+    var locale=String(window.BETVLocale&&(window.BETVLocale.contentSlug||window.BETVLocale.slug)||'pt-br').toLowerCase();
     var tag='';
     if(community){
       tag=locale==='es'?'Comunidad':(locale==='fr'?'Communauté':(locale==='it'?'Comunità':'Community'));
@@ -18246,7 +18127,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
   function currentProfileUrl(){
     try{
       var url=new URL(window.location.href);
-      if(/^\/@[^/?#]+$/i.test(url.pathname)||/^\/(?:pt-br|en-us|es|fr|it)\/@[^/?#]+$/i.test(url.pathname)){
+      if(/^\/@[^/?#]+$/i.test(url.pathname)||/^\/(?:pt-br|en-us|es-419|es|fr|it)\/@[^/?#]+$/i.test(url.pathname)){
         url.search='';
         url.hash='';
       }
@@ -18295,7 +18176,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     try{
       var path=decodeURIComponent(String(location.pathname||''));
       var parts=path.split('/').filter(Boolean);
-      if(parts.length&&/^(pt-br|en-us|es|fr|it)$/i.test(parts[0]))parts.shift();
+      if(parts.length&&/^(pt-br|en-us|es-419|es|fr|it)$/i.test(parts[0]))parts.shift();
       return parts.length&&String(parts[0]||'').charAt(0)==='@'?normalizedHandle(parts[0]):'';
     }catch(_){return '';}
   }
@@ -19115,7 +18996,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     it:{episodes:'Episodi',season:'Stagione',episode:'Episodio',soon:'Prossimamente',see:'Vedi episodi',loading:'Caricamento episodi',previous:'Episodi precedenti',next:'Altri episodi'}
   };
   const t = () => {
-    const locale = String(window.BETVLocale?.slug || document.documentElement.lang || 'pt-br').toLowerCase();
+    const locale = String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug) || document.documentElement.lang || 'pt-br').toLowerCase();
     return dict[locale] || dict['pt-br'];
   };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19243,7 +19124,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
       let records=[];
       // Bypass stale Home bootstrap data: fetch the published series with its episodes.
       try {
-        const query=new URLSearchParams({name:'series',locale:String(window.BETVLocale?.slug||document.documentElement.lang||'pt-br').toLowerCase(),episodes:'1'});
+        const query=new URLSearchParams({name:'series',locale:String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||document.documentElement.lang||'pt-br').toLowerCase(),episodes:'1'});
         if(recordId)query.set('id',recordId);
         let response=await fetch('/api/public-data?'+query.toString(),{cache:'no-store',credentials:'same-origin'});
         if(response.ok) {
@@ -19305,7 +19186,7 @@ window.BE_SUPABASE_CONFIG = window.BE_SUPABASE_CONFIG || Object.freeze({
     const play=document.getElementById('contentDetailPlay');
     if(!play)return;
     const previousSubtitle=play.dataset.subtitleUrl,previousLocale=play.dataset.subtitleLocale,previousEpisodePlayback=play.dataset.seriesEpisodePlayback;
-    const locale=String(window.BETVLocale?.slug||document.documentElement.lang||'pt-br').toLowerCase();
+    const locale=String((window.BETVLocale?.contentSlug || window.BETVLocale?.slug)||document.documentElement.lang||'pt-br').toLowerCase();
     let subtitleFiles={};try{subtitleFiles=JSON.parse(card.dataset.episodeSubtitles||'{}')}catch(_){}
     play.dataset.subtitleUrl=subtitleFiles[locale]||'';
     play.dataset.subtitleLocale=subtitleFiles[locale]?locale:'';
