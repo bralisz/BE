@@ -31,8 +31,8 @@ html.admin-workspace.admin-studio body.admin-mode .dashboard-metric-label i {col
 html.admin-workspace.admin-studio body.admin-mode .primary-metric .dashboard-metric-label i {color:#ffffff!important}
 .studio-menu-toggle {display:none}
 html.admin-workspace.admin-studio body.admin-mode .studio-dashboard {display:grid!important;gap:20px!important}
-html.admin-workspace.admin-studio body.admin-mode .studio-top {display:grid;grid-template-columns:minmax(200px,1fr) minmax(0,2fr);gap:24px;align-items:stretch}
-.studio-welcome {display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:8px 4px;min-width:0}
+html.admin-workspace.admin-studio body.admin-mode .studio-top {display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:stretch}
+.studio-welcome {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:4px 0;min-width:0}
 .studio-eyebrow {margin:0 0 12px;font-size:11px;color:#b3bfda;letter-spacing:.05em}
 html.admin-workspace.admin-studio body.admin-mode .studio-welcome h1 {margin:0 0 12px!important;font-size:clamp(28px,3vw,42px)!important;font-weight:500!important;line-height:1.08!important;letter-spacing:-.045em!important;color:#f3f6ff!important}
 .studio-welcome p {font-size:12px;line-height:1.6;color:#aebdd9;max-width:29ch;margin:0}
@@ -79,7 +79,7 @@ html.admin-workspace.admin-studio body.admin-mode .studio-highlights .dashboard-
 html.admin-workspace.admin-studio body.admin-mode .studio-highlights .dashboard-metric-title {font-size:11px!important;line-height:1.5!important;font-weight:450!important;color:#d4dff6!important}
 .studio-tools-row {display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:4px 0}
 .studio-overview-label {display:inline-flex;gap:8px;align-items:center;padding:9px 15px;border-radius:20px;background:#7657e8;color:#ffffff;font-size:11px;font-weight:550}
-html.admin-workspace.admin-studio body.admin-mode .studio-tools-row .dashboard-update-notice {padding:8px 12px!important;max-width:320px!important;min-height:0!important;background:transparent!important;border:1px solid #455777!important;border-radius:18px!important;box-shadow:none!important}
+html.admin-workspace.admin-studio body.admin-mode .studio-welcome .dashboard-update-notice {padding:8px 12px!important;max-width:320px!important;min-height:0!important;background:transparent!important;border:1px solid #455777!important;border-radius:18px!important;box-shadow:none!important}
 .studio-disclosures {display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 .studio-disclosure {min-width:0;border:1px solid #40516f;border-radius:20px;background:#222d42;overflow:hidden}
 .studio-disclosure[open] {grid-column:1/-1}
@@ -136,7 +136,7 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
   html.admin-workspace.admin-studio body.admin-mode .workspace-search {font-size:0!important;padding:10px!important;gap:0!important;width:40px!important;height:40px!important;min-height:40px!important}
   .studio-bento {grid-template-columns:1fr;gap:16px}
   html.admin-workspace.admin-studio body.admin-mode .studio-bento > :is(.dashboard-weekly-users,.dashboard-side,.activity-log) {padding:20px!important;border-radius:22px!important}
-  .studio-tools-row {gap:12px}.studio-tools-row .dashboard-update-notice {width:auto!important;flex:1;max-width:none!important}
+  .studio-tools-row {gap:12px}.studio-welcome .dashboard-update-notice {width:auto!important;flex:1;max-width:none!important}
   .studio-disclosures {grid-template-columns:1fr}
   .studio-highlights {gap:10px}
   html.admin-workspace.admin-studio body.admin-mode .studio-highlights .dashboard-metric-card {min-height:230px!important;padding:16px!important;border-radius:20px!important}
@@ -189,29 +189,26 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     if (!hero || !workspace || cards.length !== 5 || !weekly || !library || !activity || !donations || !settings) return;
     const top = make('section', 'studio-top'); top.setAttribute('aria-label', 'Resumo do painel');
     const welcome = make('div', 'studio-welcome');
-    welcome.append(make('span', 'studio-eyebrow', 'Seu espaço na BETV'), make('h1', '', 'Conteúdo que conecta.'), make('p', '', 'Acompanhe sua comunidade, publique novidades e cuide do seu site.'));
+    welcome.append(make('h1', '', 'Visão geral'));
+    const release = hero.querySelector('.dashboard-update-notice');
+    if (release) welcome.append(release);
     const primary = make('div', 'studio-primary-metrics');
     // Existing order: new users, most saved, most viewed, most commented, donations.
     primary.append(cards[0], cards[2], cards[4]); top.append(welcome, primary);
-    const tools = make('div', 'studio-tools-row');
-    tools.append(make('span', 'studio-overview-label', 'Visão geral'));
-    const release = hero.querySelector('.dashboard-update-notice'); if (release) tools.append(release);
     const grid = make('div', 'studio-bento');
     const highlights = make('section', 'studio-highlights'); highlights.setAttribute('aria-label', 'Conteúdos em destaque');
     highlights.append(cards[1], cards[3]);
     const newButton = library.querySelector('.side-new');
     if (newButton) Array.from(newButton.childNodes).filter(node => node.nodeType === 3).forEach(node => { node.nodeValue = node.nodeValue.replace('＋', '+'); });
-    const title = library.querySelector('h2'); if (title) title.textContent = 'O que vamos publicar?';
-    const copy = make('p', 'studio-create-copy', 'Escolha uma categoria ou comece um novo conteúdo.');
-    if (title) title.after(copy); else library.prepend(copy);
+    const title = library.querySelector('h2'); if (title) title.textContent = 'Catálogo';
     const logTitle = activity.querySelector('h2'); if (logTitle) logTitle.textContent = 'Atividade recente';
-    grid.append(weekly, library, activity, highlights);
+    grid.append(weekly, library, highlights, activity);
     const more = make('div', 'studio-disclosures');
     // Move rather than recreate: search, checkboxes, new content and settings
     // keep their original event listeners and current form values.
     more.append(disclosure('Apoios a ONGs', 'Histórico de doações e indicadores', donations), disclosure('Ajustes do site', 'Cores e links das redes sociais', settings));
     hero.remove(); workspace.remove();
-    content.classList.add('studio-dashboard'); content.append(top, tools, grid, more);
+    content.classList.add('studio-dashboard'); content.append(top, grid, more);
   }
 
 
@@ -373,3 +370,4 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
 }
 
 module.exports = '(' + installAdminStudio.toString() + ')();';
+

@@ -192,6 +192,31 @@ function installAdminIOSTheme() {
 @media (prefers-reduced-motion:reduce) {
   @scope *,@scope *::before,@scope *::after {transition:none!important;animation:none!important;scroll-behavior:auto!important}
 }
+
+@scope .studio-dashboard {gap:clamp(16px,2vw,28px)!important}
+@scope .studio-top {grid-template-columns:minmax(0,1fr);gap:18px}
+@scope .studio-welcome h1 {margin:0!important;max-width:none;font-size:clamp(30px,4vw,48px)!important}
+@scope .studio-welcome .dashboard-update-notice {flex:0 1 auto;max-width:100%!important}
+@scope .studio-primary-metrics .dashboard-metric-card {min-height:145px!important;border-radius:18px!important;padding:20px!important;border-top:3px solid #83abff!important;background:#17273b!important}
+@scope .studio-primary-metrics .dashboard-metric-card:nth-child(2) {border-top-color:#aa98f4!important;background:#242336!important}
+@scope .studio-primary-metrics .dashboard-metric-card:nth-child(3) {border-top-color:#7bbbb5!important;background:#182b30!important}
+@scope .studio-primary-metrics .dashboard-metric-card :is(.dashboard-metric-big-number,.dashboard-metric-number) {margin:16px 0 6px!important;font-variant-numeric:tabular-nums}
+@scope .studio-bento {grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+@scope .studio-bento .weekly-user-bar-track span {background:linear-gradient(0deg,#586aba,#98baff)!important}
+@scope .studio-bento .dashboard-side {align-content:start;min-height:0!important}
+@scope .studio-bento .activity-log {min-height:0!important}
+@scope .studio-bento .studio-highlights {padding:0!important;background:transparent!important;border:0!important}
+@scope .studio-highlights .dashboard-metric-card {min-height:170px!important}
+@media(max-width:900px) {
+  @scope .studio-bento {grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:600px) {
+  @scope .studio-primary-metrics {grid-template-columns:minmax(0,1fr)!important;gap:8px}
+  @scope .studio-primary-metrics .dashboard-metric-card {min-height:0!important;padding:14px 16px!important;display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center;gap:4px 12px}
+  @scope .studio-primary-metrics .dashboard-metric-card :is(.dashboard-metric-big-number,.dashboard-metric-number) {grid-column:2;grid-row:1/3;margin:0!important;font-size:26px!important}
+  @scope .studio-primary-metrics .dashboard-metric-card :is(small,.dashboard-metric-title) {grid-column:1;margin:0!important}
+  @scope .studio-disclosures {grid-template-columns:minmax(0,1fr)}
+}
 @media (prefers-reduced-transparency:reduce) {
   @scope :is(.admin-topbar,.toast) {background:#1c1c1e!important;backdrop-filter:none!important}
   @scope .gallery-lightbox::backdrop {backdrop-filter:none}
@@ -204,3 +229,4 @@ function installAdminIOSTheme() {
 }
 
 module.exports = '(' + installAdminIOSTheme.toString() + ')();';
+
