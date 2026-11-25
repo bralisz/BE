@@ -2179,7 +2179,7 @@ body.admin-preview-open{overflow:hidden}
       } else if (name === 'ongs') {
         $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>ONG</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => { const minimum = Number.isInteger(Number(item.minimumDonationCents)) && Number(item.minimumDonationCents) >= 100 ? Number(item.minimumDonationCents) : 500; const minimumUsd = Number.isInteger(Number(item.minimumDonationUsdCents)) && Number(item.minimumDonationUsdCents) >= 100 ? Number(item.minimumDonationUsdCents) : 100; return `<tr><td><strong>${esc(item.title || item.name || item.id)}</strong><br><small style="color:var(--a-muted)">Mínimos: ${esc(new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(minimum/100))} · ${esc(new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(minimumUsd/100))} · ${esc(item.id)}</small></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions"><button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button></div></td></tr>`; }).join('')}</tbody></table></div>`;
       } else {
-        $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.displayName || item.email || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}${name === 'videos' ? `<br>Link: /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id))}` : ''}</small></td><td>${esc(item.type || name)}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions">${name === 'users' ? '' : `<button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button>`}</div></td></tr>`).join('')}</tbody></table></div>`;
+        $('#list').innerHTML = `<div class="table-wrap"><table class="a-table"><thead><tr><th>Item</th><th>Tipo</th><th>Ordem</th><th>Status</th><th>Atualização</th><th>Ações</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.title || item.name || item.displayName || item.email || item.id)}</strong><br><small style="color:var(--a-muted)">${esc(item.id)}</small></td><td>${esc(item.type || name)}</td><td>${esc(item.order ?? 0)}</td><td><span class="status ${item.active === false ? 'off' : 'on'}">${item.active === false ? 'Oculto' : 'Ativo'}</span></td><td>${formatDate(item.updatedAt)}</td><td><div class="row-actions">${name === 'users' ? '' : `<button class="a-btn" data-edit="${item.id}">Editar</button><button class="a-btn danger" data-del="${item.id}">Excluir</button>`}</div></td></tr>`).join('')}</tbody></table></div>`;
       }
       document.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => openEditor(name, items.find(item => item.id === button.dataset.edit)));
       document.querySelectorAll('[data-del]').forEach(button => button.onclick = () => confirmDelete(name, button.dataset.del));
@@ -2358,7 +2358,7 @@ body.admin-preview-open{overflow:hidden}
     const sectionFields = name === 'sections' ? `<div class="field"><label>Categoria / identificador *</label><input class="a-input" name="category" required value="${esc(item.category || item.slug || '')}" placeholder="ex.: vanity-fair"><small>Identificador interno usado também para manter compatibilidade com conteúdos antigos.</small></div><div class="field"><label>Quantidade inicial</label><input class="a-input" type="number" min="1" max="50" name="itemLimit" value="${esc(item.itemLimit ?? 12)}"></div>` : '';
     const contentSectionFields = sectionLinkedContent ? `<div class="field full"><label>Tipo / seção do site *</label><input class="a-input" id="contentSectionSearch" name="sectionSearch" list="createdSectionsList" required autocomplete="off" value="${esc(currentSection?.title || currentSection?.category || '')}" placeholder="Selecione uma seção criada em Seções do site"><input type="hidden" id="contentSectionId" name="sectionId" value="${esc(currentSection?.id || item.sectionId || '')}"><datalist id="createdSectionsList">${sectionOptions}</datalist><small>Este campo usa somente as seções criadas em “Seções do site”. O conteúdo aparecerá automaticamente na seção escolhida.</small></div>` : '';
     const typeField = sectionLinkedContent ? '' : `<div class="field"><label>Tipo</label><input class="a-input" name="type" value="${esc(item.type || name)}"></div>`;
-    const videoFields = name === 'videos' ? `<div class="field"><label>ID público do vídeo</label><input class="a-input" name="publicId" value="${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" readonly><small>O link público será /${esc(normalizePublicId(item.publicId) || generatePublicId(item.id || ''))}.</small></div><div class="field full"><label>URL do vídeo</label><input class="a-input" name="videoUrl" value="${esc(item.videoUrl || item.contentUrl || item.link || '')}" placeholder="https://youtube.com/..."></div>` : '';
+    const videoFields = name === 'videos' ? `<div class="field full"><label>URL do vídeo</label><input class="a-input" name="videoUrl" value="${esc(item.videoUrl || item.contentUrl || item.link || '')}" placeholder="https://youtube.com/..."></div>` : '';
     const titleLabel = ['movies','series'].includes(name) ? 'Título interno / busca *' : 'Título *';
     const titleHelp = ['movies','series'].includes(name) ? '<small>Este texto serve para busca, acessibilidade e administração. No site, o título visual será a logo cadastrada.</small>' : '';
     const logoField = ['movies','series'].includes(name) ? imageField('Logo do título *', 'logoUrl', item.logoUrl || '') : (name === 'featured' ? imageField('Logo do conteúdo', 'logoUrl', item.logoUrl || '') : '');
@@ -2735,7 +2735,6 @@ body.admin-preview-open{overflow:hidden}
       return [item.type, item.category, item.sectionName, item.sectionSearch].some(value => value && keys.includes(String(value).trim().toLowerCase()));
     });
     const sectionOptions = sections.map(section => `<option value="${esc(section.title || section.category || section.id)}"></option>`).join('');
-    const publicId = normalizePublicId(item.publicId) || generatePublicId(item.id || '');
     const festivalsShowsVideo = name === 'videos' && isFestivalsShowsSection(currentSection || item);
     const categoryName = LABELS[name] || 'Conteúdo';
 
@@ -2775,7 +2774,6 @@ body.admin-preview-open{overflow:hidden}
           <div class="field"><label>Duração</label><input class="a-input" name="duration" value="${esc(item.duration || item.videoDuration || item.runtime || '')}" placeholder="1h 42min"></div>
           <div class="field"><label>Ordem</label><input class="a-input" type="number" name="order" value="${esc(item.order ?? 0)}"></div>
           <div class="field"><label>Status</label><select class="a-select" name="active"><option value="true" ${item.active !== false ? 'selected' : ''}>Ativo</option><option value="false" ${item.active === false ? 'selected' : ''}>Oculto</option></select></div>
-          ${name === 'videos' ? `<div class="field full"><label>ID público</label><div class="public-id-row"><input class="a-input" name="publicId" value="${esc(publicId)}" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" readonly><span>/${esc(publicId)}</span></div><small>O endereço público é criado automaticamente.</small></div>` : ''}
         </div>
       </section>
     </div>`;
@@ -3337,7 +3335,7 @@ body.admin-preview-open{overflow:hidden}
           delete data.sectionSearch;
         }
         if (name === 'videos') {
-          data.publicId = normalizePublicId(data.publicId) || generatePublicId(item?.id || '');
+          data.publicId = normalizePublicId(draft.publicId) || generatePublicId(item?.id || '');
           const existingVideos = await db.list('videos');
           const duplicated = existingVideos.some(video => video.id !== item?.id && String(normalizePublicId(video.publicId) || generatePublicId(video.id)) === data.publicId);
           if (duplicated) {
