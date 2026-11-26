@@ -357,6 +357,17 @@ html.admin-workspace.admin-studio body.admin-mode .studio-disclosure :is(.dashbo
     });
     const content = shell.querySelector('#adminContent');
     if (content?.classList.contains('studio-dashboard') && !content.querySelector('.studio-top')) content.classList.remove('studio-dashboard');
+    // Older embedded editors submit this read-only input to preserve legacy video links.
+    const publicId = document.querySelector('#editorForm input[name="publicId"]');
+    const idField = publicId?.closest('.field');
+    if (idField) idField.style.display = 'none';
+    content?.querySelectorAll('#list .a-table td small > br').forEach(lineBreak => {
+      const linkText = lineBreak.nextSibling;
+      if (linkText?.nodeType === Node.TEXT_NODE && /^Link: \/\d{8}$/.test(linkText.textContent.trim())) {
+        linkText.remove();
+        lineBreak.remove();
+      }
+    });
     recomposeDashboard(content);
     attachReelEditor(content?.querySelector('#instagramPostsEditor'));
   }
